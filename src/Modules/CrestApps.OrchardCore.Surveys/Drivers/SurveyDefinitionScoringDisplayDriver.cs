@@ -32,7 +32,7 @@ internal sealed class SurveyDefinitionScoringDisplayDriver : DisplayDriver<Surve
             model.ReviewImmediatelyAfter = Flags(review.ImmediatelyAfter);
             model.ReviewLaterWhileOpen = Flags(review.LaterWhileOpen);
             model.ReviewAfterClose = Flags(review.AfterClose);
-        }).Location("Content:1#Scoring");
+        }).Location("Content:1#Scoring;2");
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)

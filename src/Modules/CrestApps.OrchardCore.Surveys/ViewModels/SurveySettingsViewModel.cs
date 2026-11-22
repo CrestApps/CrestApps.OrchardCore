@@ -29,4 +29,9 @@ public class SurveySettingsViewModel
     /// Gets or sets the minimum group size of new anonymous surveys.
     /// </summary>
     public int DefaultMinimumGroupSize { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets the smallest minimum group size any anonymous survey may use.
+    /// </summary>
+    public int MinimumGroupSizeFloor { get; set; } = CrestApps.OrchardCore.Surveys.Models.SurveySettings.DefaultMinimumGroupSizeFloor;
 }

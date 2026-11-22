@@ -445,6 +445,8 @@
 		let targetPageId = "";
 		/** @type {string | null} */
 		let draggedQuestion = null;
+		let leaving = false;
+		let discarding = false;
 		const token = () => document.querySelector("input[name=\"__RequestVerificationToken\"]")?.value ?? "";
 		const outline = () => outlineHost.querySelector("[data-survey-outline]");
 		/**
@@ -477,10 +479,61 @@
 			setTimeout(() => alert.remove(), 6e3);
 		};
 		/**
+		* Reads a form as text to tell whether it changed. The draft version and the antiforgery token are left out, since
+		* saves made on this page change them.
+		* @param {HTMLFormElement} form The form.
+		* @returns {string} The form's values.
+		*/
+		const snapshot = (form) => {
+			/** @type {string[]} */
+			const values = [];
+			new FormData(form).forEach((value, key) => {
+				if (key !== "draftVersion" && key !== "__RequestVerificationToken") values.push(`${key}=${typeof value === "string" ? value : value.name}`);
+			});
+			return values.join("&");
+		};
+		const panelForm = () => panel.querySelector("form[data-survey-panel-form]");
+		let panelBaseline = "";
+		let settingsBaseline = "";
+		const resetPanelBaseline = () => {
+			const form = panelForm();
+			panelBaseline = form ? snapshot(form) : "";
+		};
+		const isPanelDirty = () => {
+			const form = panelForm();
+			return !!form && snapshot(form) !== panelBaseline;
+		};
+		const isSettingsDirty = () => !!settingsForm && snapshot(settingsForm) !== settingsBaseline;
+		/**
+		* Saves the question or page open in the panel and shows the editor the server returns.
+		* @param {HTMLFormElement} form The panel's form.
+		* @returns {Promise<boolean>} Whether it was saved.
+		*/
+		const savePanel = async (form) => {
+			const response = await fetch(form.action, {
+				method: "POST",
+				credentials: "same-origin",
+				headers: { "X-Requested-With": "XMLHttpRequest" },
+				body: new FormData(form)
+			});
+			if (!response.ok && response.status !== 422) {
+				showError(context.texts.failed);
+				return false;
+			}
+			panel.innerHTML = await response.text();
+			wire(panel);
+			if (!response.ok) return false;
+			resetPanelBaseline();
+			trackVersion(response);
+			await refreshOutline();
+			return true;
+		};
+		/**
 		* Loads an editor into the panel.
 		* @param {string} url The editor's URL.
 		*/
 		const loadPanel = async (url) => {
+			if (isPanelDirty() && !window.confirm(context.texts.discardPanel)) return;
 			const response = await fetch(url, {
 				headers: { "X-Requested-With": "XMLHttpRequest" },
 				credentials: "same-origin"
@@ -491,6 +544,7 @@
 			}
 			panel.innerHTML = await response.text();
 			wire(panel);
+			resetPanelBaseline();
 			/** @type {HTMLElement | null} */ panel.querySelector("input:not([type=hidden]), textarea, select")?.focus();
 		};
 		/**
@@ -570,7 +624,10 @@
 				});
 				if (id && command === "duplicate") editQuestion(id);
 				else if (id && (command === "addPage" || command === "duplicatePage")) editPage(id);
-				else if (command === "delete" || command === "deletePage") panel.innerHTML = "";
+				else if (command === "delete" || command === "deletePage") {
+					panel.innerHTML = "";
+					resetPanelBaseline();
+				}
 				return;
 			}
 			const picker = target.closest("[data-survey-open-picker]");
@@ -602,28 +659,62 @@
 			if (page) {
 				event.preventDefault();
 				editPage(page.dataset.surveyEditPage ?? "");
+				return;
 			}
+			if (target.closest("[data-survey-discard]")) {
+				discarding = true;
+				return;
+			}
+			const link = target.closest("a[href]");
+			if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+			const href = link.getAttribute("href") ?? "";
+			if (href === "" || href.startsWith("#") || href.startsWith("javascript:") || link.target === "_blank" || link.hasAttribute("download") || link.hasAttribute("data-bs-toggle")) return;
+			if (isPanelDirty() || isSettingsDirty()) {
+				if (window.confirm(context.texts.unsaved)) leaving = true;
+				else event.preventDefault();
+			}
+		});
+		document.addEventListener("hidden.bs.modal", () => {
+			discarding = false;
+		});
+		window.addEventListener("beforeunload", (event) => {
+			if (leaving || discarding || !(isPanelDirty() || isSettingsDirty())) return;
+			event.preventDefault();
+			event.returnValue = "";
+		});
+		settingsForm?.addEventListener("submit", async (event) => {
+			const submitter = event.submitter ?? null;
+			if (leaving || submitter?.hasAttribute("data-survey-discard")) {
+				leaving = true;
+				return;
+			}
+			const form = panelForm();
+			if (form && isPanelDirty()) {
+				event.preventDefault();
+				const saved = await savePanel(form);
+				settingsForm.classList.remove("submitting");
+				if (!saved) {
+					showError(context.texts.panelInvalid);
+					return;
+				}
+				leaving = true;
+				settingsForm.requestSubmit(submitter ?? void 0);
+				return;
+			}
+			const publishUrl = submitter?.dataset.surveyPublish;
+			if (publishUrl && !isSettingsDirty()) {
+				event.preventDefault();
+				leaving = true;
+				window.location.href = publishUrl;
+				return;
+			}
+			leaving = true;
 		});
 		panel.addEventListener("submit", async (event) => {
 			const form = event.target;
 			if (!form.matches("[data-survey-panel-form]")) return;
 			event.preventDefault();
-			const response = await fetch(form.action, {
-				method: "POST",
-				credentials: "same-origin",
-				headers: { "X-Requested-With": "XMLHttpRequest" },
-				body: new FormData(form)
-			});
-			if (!response.ok && response.status !== 422) {
-				showError(context.texts.failed);
-				return;
-			}
-			panel.innerHTML = await response.text();
-			wire(panel);
-			if (response.ok) {
-				trackVersion(response);
-				await refreshOutline();
-			}
+			await savePanel(form);
 		});
 		outlineHost.addEventListener("dragstart", (event) => {
 			const item = event.target.closest("[data-question-id]");
@@ -662,6 +753,7 @@
 			outlineHost.querySelectorAll(".opacity-50").forEach((item) => item.classList.remove("opacity-50"));
 		});
 		wire(document);
+		settingsBaseline = settingsForm ? snapshot(settingsForm) : "";
 	}
 	//#endregion
 })();

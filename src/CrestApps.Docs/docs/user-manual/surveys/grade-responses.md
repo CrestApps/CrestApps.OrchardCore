@@ -11,7 +11,7 @@ Some answers, such as long texts and file uploads, need a person to score them.
 | | |
 | --- | --- |
 | **Menu** | Surveys > Grading |
-| **Permission** | Grade survey responses |
+| **Permission** | Grade survey responses, or Grade responses of own surveys for your own surveys |
 | **Feature** | Surveys |
 
 <AskYourAdmin />

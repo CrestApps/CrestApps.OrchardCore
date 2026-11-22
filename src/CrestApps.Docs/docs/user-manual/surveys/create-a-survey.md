@@ -32,7 +32,7 @@ You can delete only a survey that has no responses. Archive a survey with respon
 
 ## The survey's pages
 
-Every page of a survey shows a header with its status (**Draft**, **Open**, **Closed** or **Archived**), the published version, an **Unpublished changes** badge when the draft differs, and the **Preview** and **Publish** buttons. A menu at the side moves between its pages:
+Every page of a survey shows a header with its status (**Draft**, **Open**, **Closed** or **Archived**), the published version, an **Unpublished changes** badge when the draft differs, and the **Preview** and **Publish** buttons. In the designer, **Publish** is the **Save and publish** button at the bottom of the page, so your changes are saved first. A menu at the side moves between its pages:
 
 | Group | Pages |
 | --- | --- |
@@ -50,11 +50,11 @@ Open the survey's menu and select **Access and settings**. These settings apply 
 | --- | --- |
 | **Title**, **Technical name**, **Notes**, **Tags** | What staff see. Tags filter the survey list. |
 | **Audience** | **Anyone with the link**, **Signed-in users**, **Members of chosen audiences** or **Only invited people**. |
-| **Audiences** | The ids of the user audiences that may respond, separated by commas, when the audience is **Members of chosen audiences**. |
+| **Audiences** | Tick the audiences whose members may respond, when the audience is **Members of chosen audiences**. Audiences are kept in **Content > User Audiences**. |
 | **CAPTCHA** | Ask respondents who are not signed in to pass a CAPTCHA. |
-| **Responses** | **Identified: record who responded**, or **Anonymous: record nobody**. A change applies to new responses only. |
+| **Responses** | **Identified: record who responded**, or **Anonymous: record nobody**. Choose before the first response: this can't change once the survey has responses. |
 | **IP address** | Record the IP address of identified responses. |
-| **Minimum group size** | Reports of an anonymous survey hide any group with fewer responses. 0 turns this off. |
+| **Minimum group size** | Reports, lists and exports of an anonymous survey hide any group with fewer responses. It can't go below the smallest size your site allows (5 unless your administrator changes it). |
 | **Opens**, **Closes** | When the survey takes responses, in your time zone. |
 | **Weekly schedule** | Let responses start only on some days and hours, in the site time zone. |
 | **Abandon after** | Idle hours after which an unfinished response is abandoned. |

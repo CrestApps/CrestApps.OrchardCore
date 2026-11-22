@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -79,7 +80,7 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
         var courseId = _courseStructure.GetCourseId(item);
         var access = new CourseItemAccess { CourseId = courseId };
         var authenticated = user?.Identity?.IsAuthenticated == true;
-        var userId = authenticated ? user.FindFirstValue(ClaimTypes.NameIdentifier) : null;
+        var userId = LearningSurveyUsers.GetUserId(user);
 
         if (authenticated
             && (await _authorizationService.Value.AuthorizeAsync(user, LearningPermissions.ManageCourses)

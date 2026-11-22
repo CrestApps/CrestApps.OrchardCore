@@ -107,7 +107,7 @@ public static class SurveysControlsServiceCollectionExtensions
             descriptor.Category = SurveyControlCategories.Text;
             descriptor.Icon = "fa-solid fa-align-left";
             descriptor.Position = 20;
-            descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.Scorable | SurveyControlCapabilities.ManuallyGraded | SurveyControlCapabilities.SupportsValidation | SurveyControlCapabilities.Aggregatable;
+            descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.Scorable | SurveyControlCapabilities.ManuallyGraded | SurveyControlCapabilities.ConditionSource | SurveyControlCapabilities.SupportsValidation | SurveyControlCapabilities.Aggregatable;
             descriptor.SettingsType = typeof(LongTextSettings);
         });
         services.AddSurveyControlScorer<LongTextScorer>();
@@ -156,6 +156,7 @@ public static class SurveysControlsServiceCollectionExtensions
             descriptor.Icon = "fa-solid fa-sliders";
             descriptor.Position = 20;
             descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.Scorable | SurveyControlCapabilities.ConditionSource | SurveyControlCapabilities.Aggregatable | SurveyControlCapabilities.ClientScript;
+            descriptor.ScriptResourceName = SurveyControlScripts.Controls;
             descriptor.SettingsType = typeof(SliderSettings);
         });
         services.AddSurveyControlScorer<SliderScorer>();
@@ -169,6 +170,7 @@ public static class SurveysControlsServiceCollectionExtensions
             descriptor.Icon = "fa-solid fa-calculator";
             descriptor.Position = 30;
             descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.UsesRows | SurveyControlCapabilities.Aggregatable | SurveyControlCapabilities.ClientScript;
+            descriptor.ScriptResourceName = SurveyControlScripts.Controls;
             descriptor.SettingsType = typeof(ConstantSumSettings);
         });
         services.AddSurveyControlAnalyzer<ConstantSumAnalyzer>();
@@ -228,6 +230,7 @@ public static class SurveysControlsServiceCollectionExtensions
             descriptor.Icon = "fa-solid fa-arrow-down-short-wide";
             descriptor.Position = 40;
             descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.UsesChoices | SurveyControlCapabilities.Scorable | SurveyControlCapabilities.Aggregatable | SurveyControlCapabilities.ClientScript;
+            descriptor.ScriptResourceName = SurveyControlScripts.Controls;
             descriptor.SettingsType = typeof(RankingSettings);
         });
         services.AddSurveyControlScorer<RankingScorer>();
@@ -312,6 +315,7 @@ public static class SurveysControlsServiceCollectionExtensions
             descriptor.Icon = "fa-solid fa-signature";
             descriptor.Position = 30;
             descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.StoresFiles | SurveyControlCapabilities.ClientScript;
+            descriptor.ScriptResourceName = SurveyControlScripts.Controls;
             descriptor.SettingsType = typeof(SignatureSettings);
         });
 

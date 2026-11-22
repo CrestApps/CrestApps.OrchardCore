@@ -6,7 +6,11 @@
     </breadcrumb>
 </zone>
 
-<div class="survey-message">
-    <h1 class="h3 mb-3">@Model.Title</h1>
-    <div class="alert alert-info" role="status">@Model.Message</div>
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    <div class="survey-message">
+        <h1 class="h3 mb-3">@Model.Title</h1>
+        <div class="alert alert-info" role="status">@Model.Message</div>
+    </div>
 </div>

@@ -1389,7 +1389,7 @@ All eight checks pass; three need a small change of approach, recorded here.
 | C3 | Pass. `CatalogItem` derives from CrestApps.Core's `ExtensibleEntity`, which has `Properties` and `As<T>()` / `TryGet<T>()` / `Put<T>()` (used by Calendars) | Surveys records use the inherited bag; no extra `Properties` member is declared on catalog records. `SurveyDefinition`, `SurveyQuestion` and `SurveyAnswer`, which are not catalog items, keep their own `JsonObject` members |
 | C4 | Pass. `NamedCatalogRecipeStep<T>` exposes `Preparing(entry, token)`, `CreateAsync`, `CommitUpdateAsync` and `FindExistingAsync` overrides | `SurveysRecipeStep` captures the token's `Versions` and `Collectors` arrays in `Preparing` and writes them after the survey in `CreateAsync` / `CommitUpdateAsync` |
 | C5 | Pass. `AttachmentUpload` takes an `Owner` (`RecordRef`) and an optional `UploadedBy` (`PartyRef`); access is decided per owner kind by `IAttachmentAccessProvider` | Owner kind `SurveyResponse`; `UploadedBy` stays empty for anonymous respondents; the access provider allows staff with response permissions and the respondent who holds the response |
-| C6 | Pass, partly. Outreach runs page an `IOutreachAudienceSource`, render per recipient through `IOutreachTemplateRenderer`, and apply `IOutreachRecipientPolicy`; it has no reminder schedule of its own | Invitations add an audience source over pending invitations and a renderer that writes each recipient's personal link. Reminders are new runs started by `SurveyInvitationReminderTask` over invitations that are due |
+| C6 | Pass, partly. Outreach runs page an `IOutreachAudienceSource`, render per recipient through `IOutreachTemplateRenderer`, and apply `IOutreachRecipientPolicy`; it has no reminder schedule of its own | Planned: an audience source over pending invitations and a renderer that writes each recipient's personal link, with reminders as new runs. Not built that way: invitations are sent by the Surveys service and `SurveyInvitationReminderTask` (see phase 6). The PR 1349 review round replaced the Outreach integration with a contact opt-out check before each e-mail invitation is sent <!-- TODO: confirm the wording against the opt-out fix once it lands --> |
 | C7 | Pass. `ReportDocument` sections hold metrics, tables, bars and charts (`ReportChart`, `ReportBar`, `ReportMetric`); the Report Builder reads any registered `IDataSource`, dynamic sets included (as Connected data does) | Analyzers return `ReportSection`s directly |
 | C8 | Pass. YesSql serializes documents with System.Text.Json: typed `Dictionary<string, SurveyAnswer>` and `JsonObject` round-trip without type names (the DictionaryDocument trap only affects whole-set catalogs, and we use one document per record). `DateTime` values come back with an unspecified or UTC kind | No `object`-typed members anywhere (ExpandoObject trap). Every displayed time goes through `ILocalClock` after `DateTime.SpecifyKind(value, DateTimeKind.Utc)`. A storage round-trip test covers a response with every answer shape |
 
@@ -1438,11 +1438,19 @@ All eight checks pass; three need a small change of approach, recorded here.
 
 - `8c7fd4bdb` the question type settings shape was named so no view matched, which broke the question editor; `69ad82525` respondent display names and the report filter key `ReportFilter.SurveyId`; `907000245` ordered and localized picker categories.
 
+### Review round (PR 1349)
+
+- Designer: Save draft also saves the open question or page; the bottom bar's **Save and publish** saves the draft and then opens the publish page (it was a link that dropped unsaved edits); leaving the designer with unsaved edits asks first; Preview and Publish appear once (the header holds Preview, and Publish on every page but the designer); the survey settings tabs are ordered General, Scoring, Endings, Variables, Quotas. Discard draft is a confirmed link, since a confirmed `formaction` button posted the form to Save draft.
+- Admin links use route names (`Url.RouteUrl`) or `AdminOptions.AdminUrlPrefix` instead of `~/Admin/surveys/...`, so a custom admin prefix works.
+- The **Results** links (survey menu and survey list row) show only when the Reports feature is on.
+- Access and settings picks audiences from a checklist of the User Audiences feature's audiences instead of comma-separated ids.
+- <!-- TODO: the security, privacy and Learning fixes of this round are recorded by their owners. -->
+
 ### Open issues
 
 - The "matches condition" workflow event takes its rule as JSON; its optional formula is not evaluated yet.
 - The override grant form takes a user name rather than the user picker (the picker lives in the CrestApps Users module, which Surveys does not depend on).
-- Invitations do not go through Outreach yet, so contact opt-outs are not checked before an e-mail invitation is sent.
+- Invitations do not go through Outreach; instead each e-mail invitation is checked against contact opt-outs before it is sent. <!-- TODO: confirm against the opt-out fix of the PR 1349 review round; the unsubscribe link may still be open. -->
 - QTI images used only in feedback go to the public media library (Learning kept them in a protected store).
 - The Excel reader of bank imports repeats a private reader of ContentTransfer.OpenXml; extracting a shared reader is a follow-up.
 

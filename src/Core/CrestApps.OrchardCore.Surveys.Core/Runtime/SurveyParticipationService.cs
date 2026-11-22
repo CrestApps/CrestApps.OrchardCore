@@ -1,7 +1,10 @@
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -9,7 +12,9 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
 /// <summary>
 /// Keeps participation records: how many responses each respondent started and completed each day, without a response
-/// id, so limits never link an anonymous respondent to their answers.
+/// id, so limits never link an anonymous respondent to their answers. For an anonymous survey a record also keeps no
+/// time finer than the day and only a hash of the context, so it can't be joined to a response by its timestamps; the
+/// cooldown of an anonymous survey is then counted from the end of the day of the last completion.
 /// </summary>
 public sealed class SurveyParticipationService
 {
@@ -21,6 +26,7 @@ public sealed class SurveyParticipationService
     private readonly SurveyParticipationStore _store;
     private readonly ILocalClock _localClock;
     private readonly ISurveyWeekStartProvider _weekStart;
+    private readonly SurveyContextKindOptions _contextKinds;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyParticipationService"/> class.
@@ -28,14 +34,17 @@ public sealed class SurveyParticipationService
     /// <param name="store">The participation store.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="weekStart">The first day of the week.</param>
+    /// <param name="contextKinds">The registered context kinds.</param>
     public SurveyParticipationService(
         SurveyParticipationStore store,
         ILocalClock localClock,
-        ISurveyWeekStartProvider weekStart)
+        ISurveyWeekStartProvider weekStart,
+        IOptions<SurveyContextKindOptions> contextKinds)
     {
         _store = store;
         _localClock = localClock;
         _weekStart = weekStart;
+        _contextKinds = contextKinds.Value;
     }
 
     /// <summary>
@@ -45,6 +54,25 @@ public sealed class SurveyParticipationService
     /// <returns>The key, or an empty string.</returns>
     public static string ContextKey(RecordRef? context)
         => context?.ToString() ?? string.Empty;
+
+    /// <summary>
+    /// Gets the key of a context for the participation records of a survey: for an anonymous survey, the hash of the
+    /// context its responses keep (the kind only for a context that can point to one person).
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="context">The context, or <see langword="null"/>.</param>
+    /// <returns>The key, or an empty string.</returns>
+    public string ContextKey(Survey survey, RecordRef? context)
+    {
+        if (!SurveyAnonymity.IsAnonymous(survey))
+        {
+            return ContextKey(context);
+        }
+
+        var key = ContextKey(SurveyAnonymity.StoredContext(survey, context, _contextKinds));
+
+        return key.Length > 0 ? "h:" + SurveyRespondentKeys.Hash(key) : key;
+    }
 
     /// <summary>
     /// Counts a respondent's responses in each limit window.
@@ -61,7 +89,7 @@ public sealed class SurveyParticipationService
         var weekStart = today.AddDays(-(((int)today.DayOfWeek - (int)firstDay + 7) % 7));
         var monthStart = new DateOnly(today.Year, today.Month, 1);
         var from = today.AddDays(-RetentionDays);
-        var contextKey = ContextKey(context);
+        var contextKey = ContextKey(survey, context);
         var rows = (await _store.ListAsync(survey.ItemId, respondentKey, from))
             .Where(row => string.Equals(row.ContextKey ?? string.Empty, contextKey, StringComparison.Ordinal))
             .ToList();
@@ -73,9 +101,17 @@ public sealed class SurveyParticipationService
             Add(counts.Started, row.Day, row.StartedCount, today, weekStart, monthStart);
             Add(counts.Completed, row.Day, row.CompletedCount, today, weekStart, monthStart);
 
-            if (row.LastCompletedUtc is { } completed && (counts.LastCompletedUtc is null || completed > counts.LastCompletedUtc))
+            var completed = row.LastCompletedUtc;
+
+            if (completed is null && row.CompletedCount > 0)
             {
-                counts.LastCompletedUtc = completed;
+                // An anonymous survey keeps the day only: count from the end of that day, so a cooldown is never short.
+                completed = await EndOfDayUtcAsync(row.Day);
+            }
+
+            if (completed is { } last && (counts.LastCompletedUtc is null || last > counts.LastCompletedUtc))
+            {
+                counts.LastCompletedUtc = last;
             }
         }
 
@@ -91,11 +127,7 @@ public sealed class SurveyParticipationService
     /// <param name="utcNow">The current time, in UTC.</param>
     /// <returns>A task.</returns>
     public Task RecordStartedAsync(Survey survey, string respondentKey, RecordRef? context, DateTime utcNow)
-        => RecordAsync(survey, respondentKey, context, utcNow, row =>
-        {
-            row.StartedCount++;
-            row.LastStartedUtc = utcNow;
-        });
+        => RecordAsync(survey, respondentKey, context, utcNow, row => row.StartedCount++);
 
     /// <summary>
     /// Records that a respondent completed a response.
@@ -109,7 +141,7 @@ public sealed class SurveyParticipationService
         => RecordAsync(survey, respondentKey, context, utcNow, row =>
         {
             row.CompletedCount++;
-            row.LastCompletedUtc = utcNow;
+            row.LastCompletedUtc = SurveyAnonymity.IsAnonymous(survey) ? null : utcNow;
         });
 
     /// <summary>
@@ -145,7 +177,7 @@ public sealed class SurveyParticipationService
         }
 
         var today = await TodayAsync(utcNow);
-        var contextKey = ContextKey(context);
+        var contextKey = ContextKey(survey, context);
         var row = (await _store.ListAsync(survey.ItemId, respondentKey, today))
             .FirstOrDefault(item => item.Day == today && string.Equals(item.ContextKey ?? string.Empty, contextKey, StringComparison.Ordinal));
 
@@ -167,6 +199,21 @@ public sealed class SurveyParticipationService
 
         update(row);
         await _store.UpdateAsync(row);
+    }
+
+    private async Task<DateTime> EndOfDayUtcAsync(DateOnly day)
+    {
+        var midnight = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+
+        try
+        {
+            return DateTime.SpecifyKind(await _localClock.ConvertToUtcAsync(midnight), DateTimeKind.Utc);
+        }
+        catch (ArgumentException)
+        {
+            // Midnight skipped by a daylight-saving change: an hour later is still the start of the next day.
+            return DateTime.SpecifyKind(await _localClock.ConvertToUtcAsync(midnight.AddHours(1)), DateTimeKind.Utc);
+        }
     }
 
     private async Task<DateOnly> TodayAsync(DateTime utcNow)

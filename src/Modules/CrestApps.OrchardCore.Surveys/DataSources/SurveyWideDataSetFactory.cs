@@ -25,6 +25,7 @@ internal sealed class SurveyWideDataSetFactory
     private readonly SurveyStore _surveys;
     private readonly SurveyVersionStore _versions;
     private readonly ISurveyControlRegistry _registry;
+    private readonly SurveyRespondentNames _names;
     private readonly IStringLocalizer S;
 
     public SurveyWideDataSetFactory(
@@ -34,6 +35,7 @@ internal sealed class SurveyWideDataSetFactory
         SurveyStore surveys,
         SurveyVersionStore versions,
         ISurveyControlRegistry registry,
+        SurveyRespondentNames names,
         IStringLocalizer<SurveyWideDataSet> stringLocalizer)
     {
         _session = session;
@@ -42,6 +44,7 @@ internal sealed class SurveyWideDataSetFactory
         _surveys = surveys;
         _versions = versions;
         _registry = registry;
+        _names = names;
         S = stringLocalizer;
     }
 
@@ -104,6 +107,6 @@ internal sealed class SurveyWideDataSetFactory
     {
         var versions = await _versions.ListBySurveyAsync(survey.ItemId, cancellationToken);
 
-        return new SurveyWideDataSet(survey, versions, SurveyResponseColumns.Build(versions, _registry), _session, _authorizationService, _access, S);
+        return new SurveyWideDataSet(survey, versions, SurveyResponseColumns.Build(versions, _registry), _names, _session, _authorizationService, _access, S);
     }
 }

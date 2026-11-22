@@ -5,11 +5,14 @@ using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DataSources;
+using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.DataSources;
 
 /// <summary>
-/// Decides which surveys' rows a principal may read in the Surveys data sets, and whether it may read who responded.
+/// Decides which surveys' rows a principal may read in the Surveys data sets, and reads what anonymous surveys need:
+/// the site's minimum group size settings and the time zone their days are read in.
 /// </summary>
 internal sealed class SurveyDataSetAccess
 {
@@ -64,12 +67,23 @@ internal sealed class SurveyDataSetAccess
     }
 
     /// <summary>
-    /// Decides whether the principal of a run may read who responded (blank for anonymous surveys whatever it holds).
+    /// Reads the site settings of Surveys and the site's time zone, each optional.
     /// </summary>
-    /// <param name="context">The context of the run.</param>
-    /// <returns><see langword="true"/> when it may.</returns>
-    public async Task<bool> CanSeeIdentityAsync(DataSourceContext context)
-        => context?.User is { } user && await _authorizationService.AuthorizeAsync(user, SurveysPermissions.ExportSurveyResponses);
+    /// <returns>The settings, or <see langword="null"/>, and the time zone (UTC when unknown).</returns>
+    public async Task<(SurveySettings Settings, TimeZoneInfo TimeZone)> AnonymityAsync()
+    {
+        var settings = _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
+        var timeZone = TimeZoneInfo.Utc;
+
+        if (_serviceProvider.GetService<ILocalClock>() is { } localClock
+            && (await localClock.GetLocalTimeZoneAsync())?.TimeZoneId is { Length: > 0 } timeZoneId
+            && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var found))
+        {
+            timeZone = found;
+        }
+
+        return (settings, timeZone);
+    }
 
     /// <summary>
     /// Gets whether a survey hides who responded.

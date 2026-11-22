@@ -305,7 +305,7 @@ internal static class MoodleCourseRows
                 case "quiz":
                     if (!string.IsNullOrEmpty(activity.Get("password")))
                     {
-                        Attention(S["{0}: the quiz \"{1}\" has a password in Moodle, which is not imported; set an access code on the quiz.", title, name]);
+                        Attention(S["{0}: the quiz \"{1}\" has a password in Moodle, which is not imported: only the learners enrolled in the course can take the quiz.", title, name]);
                     }
 
                     foreach (var refusal in QuestionRefusals(backup, activity))

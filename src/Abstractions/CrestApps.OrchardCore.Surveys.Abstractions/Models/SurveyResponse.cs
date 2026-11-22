@@ -203,4 +203,11 @@ public sealed class SurveyResponse : CatalogItem
     /// Gets or sets the SHA-256 of the token that lets a respondent who is not signed in resume.
     /// </summary>
     public string ResumeTokenHash { get; set; }
+
+    /// <summary>
+    /// Gets or sets, on an anonymous response started from a personal invitation, an HMAC of the invitation id with the
+    /// survey's protected secret, so completing the response can mark the invitation completed without the response
+    /// naming it. It is cleared when the response completes.
+    /// </summary>
+    public string InvitationSeal { get; set; }
 }

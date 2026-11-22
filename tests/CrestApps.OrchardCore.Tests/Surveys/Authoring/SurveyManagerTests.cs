@@ -35,7 +35,8 @@ public sealed class SurveyManagerTests : IAsyncLifetime
         Assert.Equal("customer-feedback-2", second.Name);
         Assert.Equal(SurveyStatus.Draft, first.Status);
         Assert.False(string.IsNullOrEmpty(first.AnonymitySecret));
-        Assert.Equal(32, Convert.FromBase64String(first.AnonymitySecret).Length);
+        // The secret is stored only as Data Protection ciphertext, never in plain text.
+        Assert.True(CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymitySecrets.IsProtected(first.AnonymitySecret));
         Assert.Equal(72, first.Access.IncompleteExpiryHours);
         Assert.Equal(7, first.Access.MinimumGroupSize);
         Assert.Single(first.Draft.Endings, ending => ending.IsDefault);

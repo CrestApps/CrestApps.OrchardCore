@@ -14,14 +14,14 @@ Surveys, polls, forms and quizzes for Orchard Core, as a building block other mo
 
 ## Authoring
 
-- **Surveys** (admin menu **Surveys → Surveys**) lists the surveys on `<admin-list>` with kind, status, owner and tag filters. Surveys owned by another feature (such as a course item) are hidden unless the list shows them too.
+- **Surveys** (admin menu **Surveys → Surveys**) lists the surveys on `<admin-list>` with search and kind, status and tag filters. Surveys owned by another feature (such as a course item) are hidden unless **Show** is set to include them.
 - **New survey** starts from a template: blank, customer satisfaction, Net Promoter Score, employee engagement, event feedback, course feedback, quiz or poll. Modules add templates with `services.AddSurveyTemplateProvider<T>()`.
 - **The designer** edits the draft only. The outline adds, moves (buttons or drag and drop), copies and deletes pages and questions; the side panel edits a question (`IDisplayManager<SurveyQuestion>`: common settings, choices, rows, validation, scoring, and the settings driver of the question type) or a page (visibility, branches, pools and bank draws). Survey-wide settings (`IDisplayManager<SurveyDefinition>`) cover presentation, navigation, scoring and review, timing, endings, variables, score categories and bands. Rules are edited with the rule builder, which writes the shared `ConditionRule` model; the server checks every rule again.
 - **Publish** checks the draft (`ISurveyDefinitionValidator`), copies the question bank questions each pool draws, compares it with the published version (`ISurveyDefinitionDiffer`, with changes that affect existing answers flagged), and creates an immutable version. The first publish opens the survey and creates its default public link.
 - **Versions** lists the published versions with their responses; a version can be viewed, compared with the draft, or restored into the draft.
 - **Collect** lists the collectors: public links and kiosks, each with its window, response limit, password, hidden variables, language and QR code.
 - **Access and settings** holds the live settings that apply without a new version: audience, anonymity, IP address, open and close times, weekly schedule, respondent limits, most responses, CAPTCHA, abandoning unfinished responses, retention and the minimum group size of anonymous reports.
-- **Configuration → Settings → Surveys** holds the defaults of new surveys, the largest upload and the hosts endings may redirect to.
+- **Settings → Surveys** holds the defaults of new surveys, the largest upload and the hosts endings may redirect to.
 
 ## Extending
 

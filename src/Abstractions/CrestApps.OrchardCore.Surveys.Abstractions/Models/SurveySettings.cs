@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.Surveys.Models;
 public sealed class SurveySettings
 {
     /// <summary>
+    /// The floor of the minimum group size of anonymous surveys when the site sets none.
+    /// </summary>
+    public const int DefaultMinimumGroupSizeFloor = 5;
+
+    /// <summary>
     /// Gets or sets the retention of new surveys, in days, or null to keep responses.
     /// </summary>
     public int? DefaultRetentionDays { get; set; }
@@ -29,4 +34,10 @@ public sealed class SurveySettings
     /// Gets or sets the minimum group size of new anonymous surveys.
     /// </summary>
     public int DefaultMinimumGroupSize { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets the smallest minimum group size any anonymous survey may use. A survey may ask for more, never for
+    /// less, and the floor applies to surveys saved before it was raised. At least 1.
+    /// </summary>
+    public int MinimumGroupSizeFloor { get; set; } = DefaultMinimumGroupSizeFloor;
 }

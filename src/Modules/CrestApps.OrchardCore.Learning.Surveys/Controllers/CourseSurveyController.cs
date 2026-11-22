@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -18,6 +19,7 @@ public sealed class CourseSurveyController : Controller
     private readonly IContentManager _contentManager;
     private readonly ILearningSurveyService _learningSurveys;
     private readonly INotifier _notifier;
+    private readonly SurveyResumeCookies _resumeCookies;
 
     internal readonly IHtmlLocalizer H;
 
@@ -27,16 +29,19 @@ public sealed class CourseSurveyController : Controller
     /// <param name="contentManager">The content manager.</param>
     /// <param name="learningSurveys">The Learning survey service.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="resumeCookies">The survey resume cookies.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public CourseSurveyController(
         IContentManager contentManager,
         ILearningSurveyService learningSurveys,
         INotifier notifier,
+        SurveyResumeCookies resumeCookies,
         IHtmlLocalizer<CourseSurveyController> htmlLocalizer)
     {
         _contentManager = contentManager;
         _learningSurveys = learningSurveys;
         _notifier = notifier;
+        _resumeCookies = resumeCookies;
         H = htmlLocalizer;
     }
 
@@ -70,8 +75,12 @@ public sealed class CourseSurveyController : Controller
             return LocalRedirect(back);
         }
 
-        var url = Url.Content("~/s/r/" + result.Response.ItemId);
+        // The resume token goes in the survey's cookie, never in a URL.
+        if (!string.IsNullOrEmpty(result.ResumeToken))
+        {
+            _resumeCookies.Write(result.Response.SurveyId, result.ResumeToken);
+        }
 
-        return LocalRedirect(string.IsNullOrEmpty(result.ResumeToken) ? url : url + "?t=" + Uri.EscapeDataString(result.ResumeToken));
+        return LocalRedirect(Url.Content("~/s/r/" + Uri.EscapeDataString(result.Response.ItemId)));
     }
 }

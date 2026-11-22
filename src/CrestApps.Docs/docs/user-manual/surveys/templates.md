@@ -41,6 +41,6 @@ The template copies the survey's draft. Surveys you create from it get their own
 4. For a new template, pick a survey under **Copy questions from**, or leave it empty to start with an empty page.
 5. Select **Save**.
 
-**Definition (JSON)** holds the questions in the shape of the Surveys recipe step. To change the questions of a template without editing JSON, create a survey from it, design the survey, and save that survey as a template.
+**Definition (JSON)** holds the template's questions as text, for people who copy templates between sites. To change the questions of a template, create a survey from it, design the survey, and save that survey as a template.
 
 To remove a template, select **Delete** in its row menu.

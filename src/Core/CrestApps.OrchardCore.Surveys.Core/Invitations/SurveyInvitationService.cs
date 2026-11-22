@@ -28,6 +28,8 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private readonly SurveyInvitationLinks _links;
     private readonly SurveyParticipationStore _participationStore;
     private readonly IEnumerable<ISurveyInvitationSender> _senders;
+    private readonly IEnumerable<ISurveyInvitationRecipientPolicy> _recipientPolicies;
+    private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
 
     /// <summary>
@@ -39,6 +41,8 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <param name="links">The link builder.</param>
     /// <param name="participationStore">The participation store, which tells when an anonymous invitation was answered.</param>
     /// <param name="senders">The invitation sender, when the module registers one.</param>
+    /// <param name="recipientPolicies">The opt-out and consent checks asked before an e-mail invitation is sent.</param>
+    /// <param name="secrets">The anonymity secrets, which sign the invitation links.</param>
     /// <param name="clock">The clock.</param>
     public SurveyInvitationService(
         SurveyStore surveyStore,
@@ -47,6 +51,8 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         SurveyInvitationLinks links,
         SurveyParticipationStore participationStore,
         IEnumerable<ISurveyInvitationSender> senders,
+        IEnumerable<ISurveyInvitationRecipientPolicy> recipientPolicies,
+        SurveyAnonymitySecrets secrets,
         IClock clock)
     {
         _surveyStore = surveyStore;
@@ -55,6 +61,8 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         _links = links;
         _participationStore = participationStore;
         _senders = senders;
+        _recipientPolicies = recipientPolicies;
+        _secrets = secrets;
         _clock = clock;
     }
 
@@ -146,7 +154,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             invitation.Put(new SurveyInvitationContext { Context = context.ToString() });
         }
 
-        var token = SurveyInvitationTokens.Create(survey, invitation.ItemId);
+        var token = await _secrets.InvitationTokenAsync(survey, invitation.ItemId, cancellationToken);
         invitation.TokenHash = SurveyInvitationTokens.Hash(token);
 
         if (existing is null)
@@ -181,7 +189,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         foreach (var invitation in await _invitationStore.ListByCollectorAsync(collector.ItemId, [SurveyInvitationStatus.Pending], SurveysConstants.PageSize, cancellationToken))
         {
-            var link = await _links.BuildAsync(SurveyInvitationTokens.Create(survey, invitation.ItemId));
+            var link = await _links.BuildAsync(await _secrets.InvitationTokenAsync(survey, invitation.ItemId, cancellationToken));
 
             if (await DeliverAsync(survey, collector, invitation, link, isReminder: false, cancellationToken))
             {
@@ -245,7 +253,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 continue;
             }
 
-            var link = await _links.BuildAsync(SurveyInvitationTokens.Create(survey, invitation.ItemId));
+            var link = await _links.BuildAsync(await _secrets.InvitationTokenAsync(survey, invitation.ItemId, cancellationToken));
 
             if (await DeliverAsync(survey, collector, invitation, link, isReminder: true, cancellationToken))
             {
@@ -337,6 +345,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return false;
         }
 
+        if (await HasOptedOutAsync(survey, invitation, cancellationToken))
+        {
+            invitation.Status = SurveyInvitationStatus.OptedOut;
+            await _invitationStore.UpdateAsync(invitation, cancellationToken);
+
+            return false;
+        }
+
         var delivered = await sender.SendAsync(survey, collector, invitation, link, isReminder, cancellationToken);
         var now = _clock.UtcNow;
 
@@ -371,6 +387,31 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         return true;
     }
 
+    private async Task<bool> HasOptedOutAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken)
+    {
+        if (invitation.Status == SurveyInvitationStatus.OptedOut)
+        {
+            return true;
+        }
+
+        // A user invitation goes to the user's notification inbox, which follows the user's own notification
+        // preferences; only e-mail invitations are checked against opt-outs and unsubscribes.
+        if (!string.IsNullOrEmpty(invitation.UserId) || string.IsNullOrWhiteSpace(invitation.Email))
+        {
+            return false;
+        }
+
+        foreach (var policy in _recipientPolicies)
+        {
+            if (await policy.HasOptedOutAsync(survey, invitation, cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task<bool> IsAnsweredAnonymouslyAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken)
     {
         if (survey.Access?.Anonymity != AnonymityMode.Anonymous)
@@ -378,7 +419,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return false;
         }
 
-        var key = SurveyRespondentKeys.For(survey, new SurveyRespondentIdentity(), invitation);
+        var key = await _secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity(), invitation, cancellationToken);
 
         if (string.IsNullOrEmpty(key))
         {

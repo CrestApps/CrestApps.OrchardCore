@@ -23,9 +23,9 @@ Both types are defined in code with `TitlePart`, `HtmlBodyPart` (the introductio
 
 The **Course feedback** template is a survey template record that this feature seeds from `Migrations/course-feedback-template.recipe.json` when it is first enabled (name `LearningSurveysConstants.CourseFeedbackTemplate`). Administrators change it under **Surveys > Templates**; if it is removed, new feedback survey items start blank.
 
-`CourseSurveyPart` holds one property, `SurveyId`. `CourseSurveyPartHandler` creates the survey when the item is first saved, with the owner `ContentItem:{item id}`. The item's editor shows the survey's status, its question count and published version, and links to **Edit questions** (the Surveys designer), **Access and settings** and **Totals** (the Surveys results report for the survey). The designer of an owned survey links back to its course item (`LearningSurveyOwnerLinkProvider`). Learners can answer once the survey is published.
+`CourseSurveyPart` holds one property, `SurveyId`. `CourseSurveyPartHandler` creates the survey when the item is first saved, with the owner `Content:{item id}`, a signed-in audience and no public web link; a copied item gets a copy of the original's survey. The item's editor shows the survey's status, its question count and published version, and links to **Edit questions** (the Surveys designer), **Access and settings** and **Totals** (the Surveys results report for the survey). The designer of an owned survey links back to its course item (`LearningSurveyOwnerLinkProvider`). Learners can answer once the survey is published.
 
-What the earlier `SurveyPart` held is now a setting of the survey:
+What the earlier `SurveyPart` held is now a setting of the survey. On a site from that release, the feature's migration removes `SurveyPart` (now the name of the Surveys embed part) from the two types, moves each item to `CourseSurveyPart`, builds its survey from the old questions (single and multiple choice, rating and text become Single choice, Multiple choice, Rating and Long text; `LegacyCourseSurveyUpgrade`), carries anonymity and the close date, publishes the survey when the item is published, and drops the old `LearningSurveyResponses_SurveyResponseIndex` table. Old responses are not carried over.
 
 | Earlier | On the survey |
 | --- | --- |

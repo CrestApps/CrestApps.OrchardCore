@@ -32,7 +32,7 @@ internal sealed class SurveyDefinitionQuotasDisplayDriver : DisplayDriver<Survey
             model.QuotaRules = model.Quotas.Select(quota => SurveyRuleJson.Write(quota.Rule)).ToList();
             model.Endings = (definition.Endings ?? []).ToList();
             model.Sources = SurveyRuleSources.Build(definition, _registry, int.MaxValue);
-        }).Location("Content:1#Quotas");
+        }).Location("Content:1#Quotas;5");
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)

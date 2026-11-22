@@ -48,7 +48,8 @@ public interface ISurveyControlRegistry
     ISurveyControlScorer GetScorer(string controlType);
 
     /// <summary>
-    /// Gets the analyzer of a question type, or <see langword="null"/>.
+    /// Gets the analyzer of a question type, or <see langword="null"/> when the type has none or does not declare
+    /// <see cref="CrestApps.OrchardCore.Surveys.Controls.SurveyControlCapabilities.Aggregatable"/>.
     /// </summary>
     /// <param name="controlType">The name.</param>
     /// <returns>The analyzer, or <see langword="null"/>.</returns>

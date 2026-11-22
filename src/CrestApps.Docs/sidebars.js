@@ -288,6 +288,7 @@ const sidebars = {
                 'user-manual/surveys/logic',
                 'user-manual/surveys/quizzes',
                 'user-manual/surveys/question-banks',
+                'user-manual/surveys/qti-import',
                 'user-manual/surveys/publish-and-versions',
                 'user-manual/surveys/share-and-invite',
                 'user-manual/surveys/view-results',

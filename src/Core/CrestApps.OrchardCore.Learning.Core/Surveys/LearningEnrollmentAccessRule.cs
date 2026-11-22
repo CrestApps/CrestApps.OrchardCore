@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -8,9 +7,9 @@ using Microsoft.AspNetCore.Http;
 namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 
 /// <summary>
-/// Lets only enrolled learners respond to the survey of a course item: the response must be started through the learner's
-/// own active enrollment, with the item released to them. A survey's public link therefore never opens a course quiz to
-/// someone outside the course.
+/// Lets only enrolled learners respond to the survey of a course item: the response must be started, resumed and completed
+/// through the learner's own active enrollment, with the item published in its course and released to them. A survey's
+/// link or the API therefore never opens a course quiz to someone outside the course, nor an unpublished one to anybody.
 /// </summary>
 public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
 {
@@ -41,7 +40,20 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
     public int Order => 350;
 
     /// <inheritdoc />
-    public async Task<SurveyAccessDecision> CheckStartAsync(SurveyAccessContext context)
+    public Task<SurveyAccessDecision> CheckStartAsync(SurveyAccessContext context)
+        => CheckAsync(context);
+
+    /// <inheritdoc />
+    public Task<SurveyAccessDecision> CheckResumeAsync(SurveyAccessContext context)
+        => CheckAsync(context);
+
+    /// <inheritdoc />
+    public Task<SurveyAccessDecision> CheckCompleteAsync(SurveyAccessContext context)
+        => CheckAsync(context);
+
+    // The same check runs when a response starts, resumes and completes: a learner withdrawn from the course, or an item
+    // unpublished or moved out of it meanwhile, stops the response there.
+    private async Task<SurveyAccessDecision> CheckAsync(SurveyAccessContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -50,21 +62,29 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
             return SurveyAccessDecision.Allow;
         }
 
-        var item = await _learningSurveys.FindOwnerItemAsync(context.Survey);
-
-        if (item is null)
+        // Ownership is decided whatever the item's publish state, so an unpublished quiz fails closed, never open.
+        if (!await _learningSurveys.IsOwnedByCourseItemAsync(context.Survey))
         {
             return SurveyAccessDecision.Allow;
         }
 
+        // Only the published item, in its course, may be answered.
+        var item = await _learningSurveys.FindOwnerItemAsync(context.Survey);
+
+        if (item is null)
+        {
+            return SurveyAccessDecision.Deny(SurveyErrorCode.NotOpen);
+        }
+
         var user = _httpContextAccessor.HttpContext?.User;
-        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = LearningSurveyUsers.GetUserId(user);
 
         if (string.IsNullOrEmpty(userId) || !string.Equals(userId, context.Identity?.UserId, StringComparison.Ordinal))
         {
             return SurveyAccessDecision.Deny(SurveyErrorCode.SignInRequired);
         }
 
+        // The learner must be enrolled and the item released to them now.
         var access = await _courseAccess.GetItemAccessAsync(user, item);
 
         if (access.Reason != CourseItemAccessReason.Enrolled || access.Enrollment is null)

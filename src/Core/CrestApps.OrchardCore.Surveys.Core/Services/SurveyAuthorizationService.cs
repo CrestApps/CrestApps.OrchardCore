@@ -71,13 +71,13 @@ public sealed class SurveyAuthorizationService : ISurveyAuthorizationService
         => operation switch
         {
             SurveyOperation.Manage => (SurveysPermissions.ManageSurveys, SurveysPermissions.ManageOwnSurveys),
-            SurveyOperation.Publish => (SurveysPermissions.PublishSurveys, SurveysPermissions.ManageOwnSurveys),
+            SurveyOperation.Publish => (SurveysPermissions.PublishSurveys, SurveysPermissions.PublishOwnSurveys),
             SurveyOperation.ViewResponses => (SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses),
             SurveyOperation.ExportResponses => (SurveysPermissions.ExportSurveyResponses, null),
-            SurveyOperation.DeleteResponses => (SurveysPermissions.DeleteSurveyResponses, SurveysPermissions.ManageOwnSurveys),
-            SurveyOperation.Grade => (SurveysPermissions.GradeSurveyResponses, SurveysPermissions.ManageOwnSurveys),
-            SurveyOperation.ManageOverrides => (SurveysPermissions.ManageSurveyOverrides, SurveysPermissions.ManageOwnSurveys),
-            SurveyOperation.ManageInvitations => (SurveysPermissions.ManageSurveyInvitations, SurveysPermissions.ManageOwnSurveys),
+            SurveyOperation.DeleteResponses => (SurveysPermissions.DeleteSurveyResponses, SurveysPermissions.DeleteOwnSurveyResponses),
+            SurveyOperation.Grade => (SurveysPermissions.GradeSurveyResponses, SurveysPermissions.GradeOwnSurveyResponses),
+            SurveyOperation.ManageOverrides => (SurveysPermissions.ManageSurveyOverrides, SurveysPermissions.ManageOwnSurveyOverrides),
+            SurveyOperation.ManageInvitations => (SurveysPermissions.ManageSurveyInvitations, SurveysPermissions.ManageOwnSurveyInvitations),
             _ => (SurveysPermissions.ManageSurveys, null),
         };
 }

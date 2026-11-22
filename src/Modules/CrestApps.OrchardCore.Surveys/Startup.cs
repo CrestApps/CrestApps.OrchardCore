@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.Surveys.Core;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Migrations;
 using CrestApps.OrchardCore.Surveys.Navigation;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
@@ -28,7 +30,11 @@ public sealed class Startup : StartupBase
         });
 
         services.AddSurveysStorage();
+
+        // The stores sanitize the HTML texts of drafts, versions, templates and bank questions on every save.
+        services.TryAddScoped<SurveyContentSanitizer>();
         services.AddDataMigration<SurveysMigrations>();
+        services.AddDataMigration<SurveyAnonymityMigrations>();
         services.AddIndexProvider<SurveyIndexProvider>()
             .AddIndexProvider<SurveyTemplateIndexProvider>()
             .AddIndexProvider<SurveyVersionIndexProvider>()

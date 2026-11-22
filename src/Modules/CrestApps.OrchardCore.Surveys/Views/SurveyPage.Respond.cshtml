@@ -1,4 +1,5 @@
 @model CrestApps.OrchardCore.Surveys.ViewModels.SurveyPageRespondViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
 
 @{
     var screen = Model.Page;
@@ -10,7 +11,7 @@
 {
     <div class="alert alert-info d-flex flex-wrap align-items-center gap-2" role="status">
         <span class="me-auto"><i class="fa-solid fa-eye" aria-hidden="true"></i> @T["Preview: this test response is left out of results and limits."]</span>
-        <form method="post" action="@Url.Content("~/admin/surveys/responses/" + Model.Response.ItemId + "/jump")" class="d-flex gap-2">
+        <form method="post" action="@Url.RouteUrl("SurveysPreviewJump", new { id = Model.Response.ItemId })" class="d-flex gap-2">
             @Html.AntiForgeryToken()
             <label class="visually-hidden" for="survey-jump">@T["Go to page"]</label>
             <select id="survey-jump" name="screen" class="form-select form-select-sm w-auto">
@@ -52,7 +53,7 @@
         <div class="alert alert-danger" role="alert" tabindex="-1" data-survey-message>@Model.Message</div>
     }
 
-    <form action="@formUrl" method="post" enctype="multipart/form-data" class="survey-form" novalidate
+    <form action="@formUrl" method="post" enctype="@(Model.UploadsFiles ? "multipart/form-data" : "application/x-www-form-urlencoded")" class="survey-form" novalidate
           data-survey-form
           data-response-id="@Model.Response.ItemId"
           data-page-id="@screen.Id"
@@ -74,7 +75,7 @@
 
         @if (!string.IsNullOrWhiteSpace(screen.Description))
         {
-            <div class="survey-page-description mb-3">@Html.Raw(screen.Description)</div>
+            <div class="survey-page-description mb-3">@Html.Raw(HtmlSanitizer.Sanitize(screen.Description))</div>
         }
 
         @foreach (var question in Model.Questions)

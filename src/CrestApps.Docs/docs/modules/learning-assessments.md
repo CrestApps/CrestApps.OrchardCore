@@ -25,7 +25,7 @@ QTI files import into Surveys question banks through the **QTI Question Import**
 
 | Property | Meaning |
 | --- | --- |
-| `SurveyId` | The survey the quiz owns. `QuizPartHandler` creates it from the Surveys **Quiz** template (kind `Quiz`, owner `ContentItem:{quiz id}`) when the quiz is first saved. |
+| `SurveyId` | The survey the quiz owns. `QuizPartHandler` creates it from the Surveys **Quiz** template (kind `Quiz`, owner `Content:{quiz id}`) when the quiz is first saved, with a signed-in audience and no public web link (`Survey.NoDefaultWebLink`). A copied quiz (`IContentManager.CloneAsync`) gets a copy of the original's survey, published when the original is (`ILearningSurveyService.CopyOwnedSurveyAsync`). |
 | `GradingMethod` | How the scores of a learner's attempts combine into the quiz grade: `Highest`, `Average`, `First` or `Latest`. |
 
 Every other setting belongs to the survey, edited in the Surveys designer and on the survey's **Access and settings** page: the questions, question pools that draw from question banks, the time limit, the pass mark, the review options, immediate feedback, questions per page, the attempt limit, the delay between attempts and the opening window. The quiz editor shows the survey's status, its question count and published version, and links to **Edit questions** and **Accommodations**. Learners can attempt the quiz once its survey is published.
@@ -34,13 +34,17 @@ Every other setting belongs to the survey, edited in the Surveys designer and on
 
 An attempt is a Surveys response (`SurveyResponse`). The quiz panel posts to `learning/quizzes/{quizId}/start`; `ILearningSurveyService.StartAsync` (`Learning.Core`) starts or continues a response with the learner's enrollment as its context (`LearningEnrollment:{enrollment id}`) and `CourseId`, `EnrollmentId` and `CourseItemId` in its properties, and the learner answers on the Surveys runner (`/s/r/{response id}`), which links back to the course when the response ends. What Learning adds to Surveys:
 
-- `LearningEnrollmentAccessRule` lets a learner start only while they may open the item (enrolled, item released, access not ended), for a response of their own enrollment.
+- `LearningEnrollmentAccessRule` lets a learner start, resume (`CheckResumeAsync`) and complete (`CheckCompleteAsync`) a response only while they may open the item (enrolled, the item published in its course and released, access not ended), for a response of their own enrollment. Ownership is decided whatever the item's publish state (`ILearningSurveyService.IsOwnedByCourseItemAsync`), so the survey of an unpublished quiz, or of one moved out of its course, refuses everyone instead of opening to anyone with its link or id. The learner is the signed-in user, read from the name identifier claim or, as the Surveys API does, the `sub` claim.
 - `LearningSurveyResultObserver` hears completed, graded, rescored, voided and deleted responses and records the course item result through `ILearnerProgressService`. For a quiz, `QuizResultProvider` gives the grade with `QuizGradeCalculator` (the quiz's grading method over the graded responses of the enrollment, voided ones left out) and passes it against the survey's pass mark.
 - `LearningSurveyAccessProvider` lets course staff manage the surveys owned by their course items, and `LearningSurveyGradingScope` lets a course's Graders, Instructors and Assistants grade its quiz responses.
 - `LearningSurveyResponseFieldProvider` adds `CourseId`, `CourseTitle` and `EnrollmentId` to the Surveys `SurveyResponses` data set.
 - Removing a quiz removes its survey: deleted when it has no responses, closed and archived when it has.
 
 Grading, regrades, accommodations, score history, workflow events, webhooks, notifications, the audit trail, reports (quiz results and item analysis) and the data sets of attempts are those of Surveys; see [Surveys](/docs/modules/surveys).
+
+## Upgrading from the first release
+
+Version 4 of `AssessmentsMigrations` upgrades a site whose Learning Assessments came from a 3.0 preview built before quizzes moved to Surveys (version 3). `UpdateFrom3Async` drops the old `Learning_AssessmentAttemptIndex`, `Learning_AttemptItemIndex`, `Learning_AssessmentOverrideIndex`, `QuestionSourceIndex` and `LearningAttemptDeadlines` work queue tables; deletes the question bank and question items and removes the `QuestionBank` type, the thirteen question types and their parts (`LegacyQuizUpgrade.RemovedContentTypes` and `RemovedContentParts`); and creates a scored survey for every quiz, carrying the pass mark, time limit, attempt limit (counted on started attempts) and window from the old `QuizPart` (`LegacyQuizUpgrade.ApplySettings`). Questions, attempts, overrides and access codes are not carried over. A quiz whose survey could not be made is logged and gets one when it is next saved.
 
 ## The grading list
 

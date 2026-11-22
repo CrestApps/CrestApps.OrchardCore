@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.PersonalData;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.PersonalData;
@@ -37,7 +38,7 @@ public sealed class SurveysPersonalDataContributorTests
             });
             await responses.CreateAsync(new SurveyResponse { ItemId = otherId, SurveyId = "s1", UserId = "user-other" });
             await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(new SurveyInvitation { ItemId = IdGenerator.GenerateId(), SurveyId = "s1", UserId = "user-learner1", Email = "learner@example.com" });
-            await services.GetRequiredService<SurveyParticipationStore>().CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "s1", RespondentKey = "user-learner1", Day = new DateOnly(2026, 11, 1), StartedCount = 1 });
+            await services.GetRequiredService<SurveyParticipationStore>().CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "s1", RespondentKey = "u:user-learner1", Day = new DateOnly(2026, 11, 1), StartedCount = 1 });
         });
 
         // Act
@@ -77,5 +78,74 @@ public sealed class SurveysPersonalDataContributorTests
         Assert.Equal("user-other", other.UserId);
         Assert.Empty(invitations);
         Assert.Empty(participation);
+    }
+
+    [Fact]
+    public async Task Erasure_FindsParticipationByEveryRealKeyFormat_AndClearsContextVariablesAndProperties()
+    {
+        // Arrange
+        const string userId = "user-learner1";
+        var responseId = IdGenerator.GenerateId();
+        var invitation = new SurveyInvitation { ItemId = IdGenerator.GenerateId(), SurveyId = "anon", UserId = userId, Email = "learner@example.com" };
+        string anonymousKey = null;
+        string invitationKey = null;
+        string userKey = null;
+        await using var harness = await IntegrationsTestHarness.CreateAsync(services => services.AddScoped<SurveysPersonalDataContributor>());
+        await harness.RunAsync(async services =>
+        {
+            var surveys = services.GetRequiredService<SurveyStore>();
+            var secrets = services.GetRequiredService<SurveyAnonymitySecrets>();
+            var anonymous = IntegrationsTestHarness.NewSurvey("anon", "anon", AnonymityMode.Anonymous);
+            secrets.Assign(anonymous);
+            await surveys.CreateAsync(anonymous);
+
+            // The keys participation is really stored under: the HMAC of the user on an anonymous survey, the HMAC of
+            // the person's invitation, and the plain key of identified surveys.
+            anonymousKey = await secrets.RespondentKeyAsync(anonymous, new SurveyRespondentIdentity { UserId = userId }, null);
+            invitationKey = await secrets.RespondentKeyAsync(anonymous, new SurveyRespondentIdentity(), invitation);
+            userKey = SurveyRespondentKeys.For(IntegrationsTestHarness.NewSurvey("open", "open"), null, new SurveyRespondentIdentity { UserId = userId }, null);
+
+            var participation = services.GetRequiredService<SurveyParticipationStore>();
+            await participation.CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "anon", RespondentKey = anonymousKey, Day = new DateOnly(2026, 11, 1), StartedCount = 1 });
+            await participation.CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "anon", RespondentKey = invitationKey, Day = new DateOnly(2026, 11, 1), StartedCount = 1 });
+            await participation.CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "open", RespondentKey = userKey, Day = new DateOnly(2026, 11, 1), StartedCount = 1 });
+            await participation.CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "open", RespondentKey = "u:user-other", Day = new DateOnly(2026, 11, 1), StartedCount = 1 });
+            await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(invitation);
+
+            var response = new SurveyResponse
+            {
+                ItemId = responseId,
+                SurveyId = "open",
+                Number = "R1",
+                UserId = userId,
+                Context = new CrestApps.OrchardCore.Records.RecordRef("LearningEnrollment", "enrollment-1"),
+                Status = SurveyResponseStatus.Completed,
+            };
+            response.Variables["email"] = "learner@example.com";
+            response.Properties["crm"] = "contact-1";
+            await services.GetRequiredService<SurveyResponseStore>().CreateAsync(response);
+        });
+
+        // Act
+        var erased = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataAnonymizeResult();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject(userId), "[removed]", result));
+
+            return result;
+        });
+
+        // Assert
+        Assert.StartsWith("a:", anonymousKey, StringComparison.Ordinal);
+        Assert.StartsWith("a:", invitationKey, StringComparison.Ordinal);
+        Assert.Equal("u:" + userId, userKey);
+        Assert.Equal(3, erased.Records["SurveyParticipation"]);
+        var (left, response) = await harness.RunAsync(async services => (
+            await services.GetRequiredService<SurveyParticipationStore>().GetAllAsync(),
+            await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(responseId)));
+        Assert.Equal("u:user-other", Assert.Single(left).RespondentKey);
+        Assert.Null(response.Context);
+        Assert.Empty(response.Variables);
+        Assert.Empty(response.Properties);
     }
 }

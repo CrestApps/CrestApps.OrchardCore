@@ -75,7 +75,7 @@ internal sealed class SurveyAnswersDataSet : SurveyResponseChildDataSet
                 ["TextValue"] = row.TextValue,
                 ["Score"] = row.Score,
                 ["MaxPoints"] = row.MaxPoints,
-                ["CompletedUtc"] = Utc(row.CompletedUtc),
+                ["CompletedUtc"] = TimeOf(response.SurveyId, row.CompletedUtc),
             };
         }
     }

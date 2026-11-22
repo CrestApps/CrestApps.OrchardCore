@@ -41,6 +41,28 @@ public sealed class SurveyAccessEvaluator
     }
 
     /// <summary>
+    /// Decides whether a response left in progress may be resumed.
+    /// </summary>
+    /// <param name="context">The context.</param>
+    /// <returns>The decision.</returns>
+    public async Task<SurveyAccessDecision> CheckResumeAsync(SurveyAccessContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        foreach (var rule in _rules)
+        {
+            var decision = await rule.CheckResumeAsync(context);
+
+            if (decision is { IsAllowed: false })
+            {
+                return decision;
+            }
+        }
+
+        return SurveyAccessDecision.Allow;
+    }
+
+    /// <summary>
     /// Decides whether a response may complete.
     /// </summary>
     /// <param name="context">The context.</param>

@@ -42,25 +42,53 @@ The constants are in `SurveyControlNames`. A question whose type is not register
 
 A type declares what it can do with `SurveyControlCapabilities` flags. The designer, the runner and the reports read the flags, never the name.
 
-| Flag | Meaning |
-| --- | --- |
-| `Answerable` | Collects an answer |
-| `UsesChoices` | The editor shows the choice list; shuffle, carry forward and choice visibility apply |
-| `UsesRows` | The editor shows rows |
-| `Scorable` | Has a scorer |
-| `ManuallyGraded` | Its scorer may leave the score to a grader |
-| `ConditionSource` | Other questions may test its answer |
-| `SupportsOther` | Supports an other choice with a text box |
-| `SupportsValidation` | Supports validation rules |
-| `Aggregatable` | Has an analyzer for results |
-| `StoresFiles` | Stores uploaded files |
-| `ClientScript` | Ships a script that raises `survey:change` |
+| Flag | Meaning | Read by |
+| --- | --- | --- |
+| `Answerable` | Collects an answer | The runner (a type without it shows no answer area), required checks |
+| `UsesChoices` | The editor shows the choice list; shuffle, carry forward and choice visibility apply | The designer, the publish checks, spreadsheet imports, results filters |
+| `UsesRows` | The editor shows rows | The designer, spreadsheet imports |
+| `Scorable` | Has a scorer | The designer's scoring card, the publish checks |
+| `ManuallyGraded` | Its scorer may leave the score to a grader | The scoring card, grading, AI scoring help |
+| `ConditionSource` | Other questions may test its answer | The rule builder offers only these questions as rule sources |
+| `SupportsOther` | Supports an other choice with a text box | The choices editor |
+| `SupportsValidation` | Supports validation rules | The validation card |
+| `Aggregatable` | Has an analyzer for results | The registry returns a type's analyzer only with this flag, so the results report summarizes only these types |
+| `StoresFiles` | Stores uploaded files | The runner posts a page as `multipart/form-data` only when one of its questions stores files |
+| `ClientScript` | Ships a script that raises `survey:change` | The runner loads the type's `ScriptResourceName` at the foot of every page that shows the type |
+
+When the tenant starts, Surveys logs a warning for every registration that can't work: a type whose handler reports another `ControlType` (the type would be missing from the picker, the runner and the results), a handler no type is registered for, an analyzer of a type without `Aggregatable`, and a `ClientScript` type without a `ScriptResourceName`.
 
 ## Building a custom question type
 
-This example adds a star-shaped "Thumbs" question type in a module named `Acme.Surveys`.
+This example adds a "Thumbs up or down" question type in a module named `Acme.Surveys`. In short:
 
-### 1. Register the type
+1. Reference the **CrestApps.OrchardCore.Surveys.Core** package (the handler, settings driver and view model base classes live there, not in Abstractions) and add `CrestApps.OrchardCore.Surveys` to the feature's `Dependencies` in your manifest.
+2. Write a settings class. Mark answer-key data `[SurveyKey]`.
+3. Write the handler, `ThumbsControlHandler : SurveyControlHandlerBase<ThumbsSettings>`, with an `(IStringLocalizer<ThumbsControlHandler> stringLocalizer) : base(stringLocalizer)` constructor.
+4. Register `AddSurveyControl<ThumbsControlHandler>(name, ...)` and `AddDisplayDriver<SurveyQuestion, ThumbsSettingsDisplayDriver>()`, where the driver derives from `SurveyControlSettingsDisplayDriver<ThumbsSettings>`.
+5. Add the views `SurveyControlSettings-{Name}.Edit`, `SurveyControl-{Name}.Respond` and `SurveyControl-{Name}.Review`.
+6. If the type has its own UI, set `ClientScript` and `ScriptResourceName`, define the script in a resource manifest, and fire `survey:change` from it.
+
+### 1. Reference Surveys and depend on it
+
+```xml
+<PackageReference Include="CrestApps.OrchardCore.Surveys.Core" />
+```
+
+```csharp
+[assembly: Feature(
+    Id = "Acme.Surveys",
+    Name = "Acme Survey Types",
+    Dependencies =
+    [
+        "CrestApps.OrchardCore.Surveys",
+    ]
+)]
+```
+
+`Surveys.Core` brings `Surveys.Abstractions` (the records, `ISurveyControlHandler`, `SurveyControlDescriptor` and the `AddSurvey*` helpers).
+
+### 2. Register the type
 
 ```csharp
 services.AddSurveyControl<ThumbsControlHandler>("Acme.Thumbs", descriptor =>
@@ -68,22 +96,32 @@ services.AddSurveyControl<ThumbsControlHandler>("Acme.Thumbs", descriptor =>
     descriptor.DisplayName = LocalizationSource.Create<ThumbsControlHandler>("Thumbs up or down");
     descriptor.Category = SurveyControlCategories.Rating;
     descriptor.Icon = "fa-solid fa-thumbs-up";
-    descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.ConditionSource;
+    descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.ConditionSource | SurveyControlCapabilities.ClientScript;
+    descriptor.ScriptResourceName = "acme-survey-thumbs";
     descriptor.SettingsType = typeof(ThumbsSettings);
 });
 
 services.AddDisplayDriver<SurveyQuestion, ThumbsSettingsDisplayDriver>();
 ```
 
-Add `AddSurveyControlScorer<T>()` and `AddSurveyControlAnalyzer<T>()` when the type scores or summarizes answers, and `AddSurveyControlPreset(name, baseControl, configure)` for a preset of an existing type.
+The name passed to `AddSurveyControl` and the handler's `ControlType` must be the same string. Add `AddSurveyControlScorer<T>()` and `AddSurveyControlAnalyzer<T>()` (with `Aggregatable`) when the type scores or summarizes answers, and `AddSurveyControlPreset(name, baseControl, configure)` for a preset of an existing type.
 
-### 2. Write the handler
+### 3. Write the handler
 
-Derive from `SurveyControlHandlerBase<TSettings>` (or `SurveyChoiceControlHandlerBase<TSettings>` for choice types) and override only what differs. The base reads `q.{questionId}` into `Answer.Values`, reports a missing required answer, gives the values to conditions, formats the values as text, writes one export column and one index row per value.
+Derive from `SurveyControlHandlerBase<TSettings>` (or `SurveyChoiceControlHandlerBase<TSettings>` for choice types) and override only what differs. The base reads `q.{questionId}` into `Answer.Values`, reports a missing required answer, gives the values to conditions, formats the values as text, writes one export column and one index row per value. Its constructor takes the localizer it uses for its messages.
 
 ```csharp
+using CrestApps.OrchardCore.Surveys.Core.Controls;
+using CrestApps.OrchardCore.Surveys.Models;
+using Microsoft.Extensions.Localization;
+
 public sealed class ThumbsControlHandler : SurveyControlHandlerBase<ThumbsSettings>
 {
+    public ThumbsControlHandler(IStringLocalizer<ThumbsControlHandler> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
     public override string ControlType => "Acme.Thumbs";
 
     public override string FormatAnswer(SurveyQuestion question, SurveyAnswer answer, SurveyFormatContext context)
@@ -103,9 +141,9 @@ public sealed class ThumbsSettings
 }
 ```
 
-Read and write settings with `question.GetSettings<T>()` and `question.SetSettings(settings)`. Mark key data on a settings class with `[SurveyKey]` so the respondent projection leaves it out.
+Read and write settings with `question.GetSettings<T>()` and `question.SetSettings(settings)`. Mark key data on a settings class with `[SurveyKey]` so the respondent projection leaves it out. A settings property named `Html` holds author HTML: it is sanitized on save, like the text block's.
 
-### 3. Add the settings editor
+### 4. Add the settings editor
 
 ```csharp
 public sealed class ThumbsSettingsDisplayDriver : SurveyControlSettingsDisplayDriver<ThumbsSettings>
@@ -114,24 +152,46 @@ public sealed class ThumbsSettingsDisplayDriver : SurveyControlSettingsDisplayDr
 }
 ```
 
-The driver renders the shape `SurveyControlSettings` with the alternate for the type, so the view is `Views/SurveyControlSettings-Acme.Thumbs.Edit.cshtml`, with the model `SurveyControlSettingsViewModel<ThumbsSettings>`. Put the fields in an `ocat` card, like the built-in editors.
+The driver renders the shape `SurveyControlSettings_Edit__Acme_Thumbs`, so the view is `Views/SurveyControlSettings-Acme.Thumbs.Edit.cshtml`, with the model `SurveyControlSettingsViewModel<ThumbsSettings>`. Put the fields in an `ocat` card, like the built-in editors.
 
-### 4. Add the views
+### 5. Add the views
 
-The runner renders each question with the `SurveyControl` shape in a display type, with alternates for the type (a dot in the name becomes an underscore in the shape name and a dot again in the file name), the survey name and the question name:
+The runner renders each question with the `SurveyControl` shape in a display type, with the alternates `SurveyControl_{DisplayType}__{Name}`, then `__{SurveyName}` and `__{QuestionName}` overrides (a dot or a dash in a name becomes an underscore in the shape name). Name the views **`SurveyControl-{Name}.{DisplayType}.cshtml`**, with the display type last:
 
 | View | Display type |
 | --- | --- |
-| `SurveyControl.Respond-Acme.Thumbs.cshtml` | Respond: the inputs |
-| `SurveyControl.Review-Acme.Thumbs.cshtml` | Review: the answer, read-only, with feedback as the review settings allow |
-| `SurveyControl.Print-Acme.Thumbs.cshtml` | Print (optional) |
-| `SurveyControl.Summary-Acme.Thumbs.cshtml` | Summary (optional) |
+| `SurveyControl-Acme.Thumbs.Respond.cshtml` | Respond: the inputs |
+| `SurveyControl-Acme.Thumbs.Review.cshtml` | Review: the answer, read-only, with feedback as the review settings allow |
+| `SurveyControl-Acme.Thumbs-customer_feedback.Respond.cshtml` | Respond, only in the survey named `customer-feedback` |
+
+Orchard Core reads the text after the **last** dot of a view name as its display type. The form the built-in views use, `SurveyControl.Respond-Boolean.cshtml`, works only for a name without a dot: `SurveyControl.Respond-Acme.Thumbs.cshtml` would be read as the display type `Thumbs`, and respondents would see "This question type is not available".
 
 The model is `SurveyControlViewModel`: `Question` (the respondent projection), `Settings`, `Answer`, `Prefix` (the input name, `q.{questionId}`), `Choices` in plan order, `Errors`, `ReadOnly`, `Feedback`, `Culture`, and `InputId`, `HintId` and `ErrorId` for the ARIA attributes. A template uses `fieldset` and `legend` for groups, labels every input, sets `aria-required`, `aria-invalid` and `aria-describedby`, renders its own errors under `ErrorId`, and works without JavaScript. Inputs for rows are named `q.{questionId}.{rowId}` and the other text `q.{questionId}.other`.
 
-### 5. Add a script (optional)
+Surveys shows questions in the Respond and Review display types only; there is no print or results display type to add.
 
-A type with its own UI (drag, draw, slide) sets `ClientScript`, writes hidden inputs under its prefix, and dispatches the change event so the runner re-evaluates the page:
+### 6. Add a script (optional)
+
+A type with its own UI (drag, draw, slide) sets `ClientScript` and `ScriptResourceName`, and defines the script in a resource manifest of its module:
+
+```csharp
+public sealed class AcmeSurveysResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
+{
+    private static readonly ResourceManifest _manifest = new();
+
+    static AcmeSurveysResourceManagementOptionsConfiguration()
+        => _manifest
+            .DefineScript("acme-survey-thumbs")
+            .SetUrl("~/Acme.Surveys/scripts/thumbs.min.js", "~/Acme.Surveys/scripts/thumbs.js");
+
+    public void Configure(ResourceManagementOptions options)
+        => options.ResourceManifests.Add(_manifest);
+}
+
+services.AddTransient<IConfigureOptions<ResourceManagementOptions>, AcmeSurveysResourceManagementOptionsConfiguration>();
+```
+
+The runner registers the script once at the foot of every page that shows the type, so the Respond view adds no script tag. The script writes hidden inputs under the question's prefix and dispatches the change event so the runner re-evaluates the page:
 
 ```js
 element.dispatchEvent(new CustomEvent('survey:change', { bubbles: true, detail: { questionId } }));
@@ -156,4 +216,4 @@ The runner raises `survey:page-loaded` when it inserts a new page, so a script c
 | `DescribeColumns`, `WriteColumns` | Exports and the wide data set |
 | `GetIndexRows(question, answer)` | A response is completed; rows feed the SQL aggregates |
 
-`ISurveyControlScorer` has `Score` (a result without points means a grader scores it), `MaxPoints` and `GetFeedback`. `ISurveyControlAnalyzer` has `SummarizeAsync` (aggregates from `ISurveyAnswerAggregates`) and `ToReportSections`; an analyzer hides groups smaller than `context.MinimumGroupSize`.
+`ISurveyControlScorer` has `Score` (a result without points means a grader scores it), `MaxPoints`, `GetFeedback` and `AnswerKeyIsOrder` (`false` by default). A type whose answer key is an order of its choices, such as Ranking, returns `true`: its choices then always start shuffled in a respondent's plan, the API definition shuffles them and the public results page lists them by text. `ISurveyControlAnalyzer` has `SummarizeAsync` (aggregates from `ISurveyAnswerAggregates`) and `ToReportSections`; an analyzer hides groups smaller than `context.MinimumGroupSize`.

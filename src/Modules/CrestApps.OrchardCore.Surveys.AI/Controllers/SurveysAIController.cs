@@ -196,7 +196,7 @@ public sealed class SurveysAIController : Controller
 
         await _notifier.SuccessAsync(H["{0} texts were translated into the draft. Review them, then publish the survey.", written.Value]);
 
-        return Redirect(Url.Content($"~/Admin/surveys/{id}/translations?culture={Uri.EscapeDataString(model.Culture)}"));
+        return RedirectToRoute("SurveysTranslations", new { id, culture = model.Culture });
     }
 
     private async Task<SurveyAISummarizeViewModel> SummarizeModelAsync(string id)

@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Logic;
 
 /// <summary>
 /// Replaces <c>{name}</c> references in texts with answers, variables and scores, HTML-encoded. Unknown names render
-/// empty.
+/// empty. In HTML mode the braces of a value are encoded too, so a piped answer never reads as a reference, or as
+/// Liquid, in whatever processes the text next.
 /// </summary>
 public sealed class SurveyPipingRenderer
 {
@@ -107,7 +108,7 @@ public sealed class SurveyPipingRenderer
                 {
                     builder.Append(text, last, start - last);
                     var value = Resolve(name, definition, response, hiddenQuestionIds, format) ?? string.Empty;
-                    builder.Append(urlEncode ? Uri.EscapeDataString(value) : encode ? WebUtility.HtmlEncode(value) : value);
+                    builder.Append(urlEncode ? Uri.EscapeDataString(value) : encode ? HtmlEncode(value) : value);
                     last = i + 1;
                 }
 
@@ -119,6 +120,16 @@ public sealed class SurveyPipingRenderer
 
         return builder.ToString();
     }
+
+    /// <summary>
+    /// HTML-encodes a piped value, with its braces encoded as well.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The encoded value.</returns>
+    public static string HtmlEncode(string value)
+        => WebUtility.HtmlEncode(value ?? string.Empty)
+            .Replace("{", "&#123;", StringComparison.Ordinal)
+            .Replace("}", "&#125;", StringComparison.Ordinal);
 
     private string Resolve(string name, SurveyDefinition definition, SurveyResponse response, ISet<string> hidden, SurveyFormatContext format)
     {

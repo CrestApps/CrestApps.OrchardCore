@@ -11,7 +11,7 @@ Surveys AI helps you read answers, translate surveys and grade. A person always 
 | | |
 | --- | --- |
 | **Menu** | Surveys > Surveys, then the survey's menu; Surveys > Grading |
-| **Permission** | Manage own surveys, or Manage all surveys; Grade survey responses for scoring help |
+| **Permission** | Manage own surveys, or Manage all surveys; Grade survey responses (or Grade responses of own surveys) for scoring help |
 | **Feature** | Surveys AI |
 
 <AskYourAdmin />
@@ -25,7 +25,7 @@ The summary reads the latest answers and never names a respondent. Check it agai
 
 ## Translate with AI
 
-In the survey's menu, select **Translate with AI**, pick the culture in **Translate into**, and select **Translate**. Tick **Replace existing translations** to translate every text again. Review the result on the **Translations** page (in the survey's side menu), then publish.
+In the survey's menu, select **Translate with AI**, pick the language in **Translate into**, and select **Translate**. Tick **Replace existing translations** to translate every text again. Review the result on the **Translations** page (in the survey's side menu), then publish.
 
 ## Suggest a score
 

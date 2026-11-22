@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -24,6 +25,8 @@ public static class SurveysCoreServiceCollectionExtensions
         services.AddMemoryCache();
 
         services.TryAddScoped<SurveyStore>();
+        services.TryAddScoped<SurveyAnonymitySecrets>();
+        services.TryAddScoped<SurveyRespondentNames>();
         services.TryAddScoped<ICatalog<Survey>>(provider => provider.GetRequiredService<SurveyStore>());
         services.TryAddScoped<INamedCatalog<Survey>>(provider => provider.GetRequiredService<SurveyStore>());
         services.TryAddScoped<SurveyTemplateStore>();

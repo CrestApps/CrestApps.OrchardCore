@@ -2,18 +2,24 @@ using System.Globalization;
 using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Surveys.PersonalData;
 
 /// <summary>
 /// Exports a person's identified survey responses, with their answers, and their invitations; erasure removes who gave
-/// the responses (the answers stay for results), deletes the files they uploaded, their invitations and their
-/// participation counts.
+/// the responses and everything that could point back to them (context, variables and properties; the answers stay for
+/// results), deletes the files they uploaded, their invitations and their participation counts. Participation is found
+/// by the keys it is really stored under: <c>u:{id}</c> (or its hash when long) on identified surveys, the key of each of
+/// the person's invitations, and <c>a:{hmac}</c> on each anonymous survey, recomputed with that survey's protected
+/// secret.
 /// </summary>
 internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
 {
@@ -26,6 +32,8 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
     private readonly ISession _session;
     private readonly ISurveyVersionCache _versions;
     private readonly ISurveyControlRegistry _registry;
+    private readonly SurveyStore _surveyStore;
+    private readonly SurveyAnonymitySecrets _secrets;
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
@@ -34,16 +42,22 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
     /// <param name="session">The YesSql session.</param>
     /// <param name="versions">The version cache.</param>
     /// <param name="registry">The question type registry.</param>
+    /// <param name="surveyStore">The survey store.</param>
+    /// <param name="secrets">The anonymity secrets, to recompute the participation keys of anonymous surveys.</param>
     /// <param name="serviceProvider">The services, for the optional attachment service.</param>
     public SurveysPersonalDataContributor(
         ISession session,
         ISurveyVersionCache versions,
         ISurveyControlRegistry registry,
+        SurveyStore surveyStore,
+        SurveyAnonymitySecrets secrets,
         IServiceProvider serviceProvider)
     {
         _session = session;
         _versions = versions;
         _registry = registry;
+        _surveyStore = surveyStore;
+        _secrets = secrets;
         _serviceProvider = serviceProvider;
     }
 
@@ -111,6 +125,13 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         ArgumentNullException.ThrowIfNull(context);
 
         var attachments = _serviceProvider.GetService<IAttachmentService>();
+        var surveys = (await _surveyStore.GetAllAsync(cancellationToken)).ToDictionary(survey => survey.ItemId, StringComparer.Ordinal);
+        var anonymousSecrets = new List<string>();
+
+        foreach (var survey in surveys.Values.Where(SurveyAnonymity.IsAnonymous))
+        {
+            anonymousSecrets.Add(await _secrets.RevealAsync(survey, cancellationToken));
+        }
 
         foreach (var userId in context.Subject.UserIds)
         {
@@ -129,29 +150,44 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
                     answer.AttachmentIds = [];
                 }
 
-                // The answers stay for results; nothing that names the person does.
+                // The answers stay for results; nothing that names the person, or points back to them, does.
                 response.UserId = null;
                 response.Respondent = null;
                 response.IpAddress = null;
                 response.InvitationId = null;
+                response.InvitationSeal = null;
                 response.ResumeTokenHash = null;
+                response.Context = null;
+                response.Variables.Clear();
+                response.Properties.Clear();
                 await _session.SaveAsync(response, collection: SurveysConstants.ResponsesCollectionName, cancellationToken: cancellationToken);
                 context.Result.Count(ResponseKind);
             }
 
+            var keys = new HashSet<string>(SurveyRespondentKeys.ForUser(userId, anonymousSecrets), StringComparer.Ordinal);
+
             foreach (var invitation in await InvitationsAsync(userId, cancellationToken))
             {
+                if (surveys.TryGetValue(invitation.SurveyId ?? string.Empty, out var survey))
+                {
+                    // A participation counted by invitation (a guest who opened the personal link) is the person's too.
+                    keys.Add(await _secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity(), invitation, cancellationToken));
+                }
+
                 _session.Delete(invitation, SurveysConstants.CollectionName);
                 context.Result.Count(InvitationKind);
             }
 
-            var participation = await _session.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.RespondentKey == userId, collection: SurveysConstants.CollectionName)
-                .ListAsync(cancellationToken);
-
-            foreach (var row in participation)
+            foreach (var batch in keys.Where(key => !string.IsNullOrEmpty(key)).Chunk(200))
             {
-                _session.Delete(row, SurveysConstants.CollectionName);
-                context.Result.Count(ParticipationKind);
+                var participation = await _session.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.RespondentKey.IsIn(batch), collection: SurveysConstants.CollectionName)
+                    .ListAsync(cancellationToken);
+
+                foreach (var row in participation)
+                {
+                    _session.Delete(row, SurveysConstants.CollectionName);
+                    context.Result.Count(ParticipationKind);
+                }
             }
         }
     }

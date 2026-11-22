@@ -13,6 +13,9 @@ public sealed class RankingScorer : SurveyControlScorerBase
     public override string ControlType => SurveyControlNames.Ranking;
 
     /// <inheritdoc />
+    public override bool AnswerKeyIsOrder => true;
+
+    /// <inheritdoc />
     public override SurveyScoreResult Score(SurveyQuestion question, SurveyAnswer answer, SurveyScoringContext context)
     {
         ArgumentNullException.ThrowIfNull(question);

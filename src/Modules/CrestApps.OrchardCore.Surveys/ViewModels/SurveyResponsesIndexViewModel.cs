@@ -75,4 +75,11 @@ public class SurveyResponsesIndexViewModel
     /// </summary>
     [BindNever]
     public AdminListContext List { get; set; }
+
+    /// <summary>
+    /// Gets or sets, when an anonymous survey hides its responses because the filters select too few, the minimum group
+    /// size they must reach; otherwise 0.
+    /// </summary>
+    [BindNever]
+    public int HiddenBelow { get; set; }
 }

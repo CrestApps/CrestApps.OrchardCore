@@ -4,6 +4,9 @@
  * question and page editors loaded into the side panel and saved without leaving the page, and the lists and rule
  * builders of every editor on the page. Everything posts to the server, which applies the change to the draft and
  * returns the new markup.
+ *
+ * Unsaved edits are never lost silently: Save draft (and Save and publish) first saves the open question or page,
+ * opening another item asks before it replaces unsaved edits, and leaving the page asks too.
  */
 import { initRepeaters } from './designer/repeater.js';
 import { initRuleBuilders } from './designer/rule-builder.js';
@@ -38,6 +41,10 @@ if (designer) {
     let targetPageId = '';
     /** @type {string | null} */
     let draggedQuestion = null;
+    // True once the page is about to unload on purpose (a save, or a link the user confirmed).
+    let leaving = false;
+    // True while the confirm dialog of Discard draft is open: discarding drops the edits on purpose.
+    let discarding = false;
 
     const token = () => /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="__RequestVerificationToken"]'))?.value ?? '';
     const outline = () => /** @type {HTMLElement | null} */ (outlineHost.querySelector('[data-survey-outline]'));
@@ -79,10 +86,85 @@ if (designer) {
     };
 
     /**
+     * Reads a form as text to tell whether it changed. The draft version and the antiforgery token are left out, since
+     * saves made on this page change them.
+     * @param {HTMLFormElement} form The form.
+     * @returns {string} The form's values.
+     */
+    const snapshot = form => {
+        /** @type {string[]} */
+        const values = [];
+
+        new FormData(form).forEach((value, key) => {
+            if (key !== 'draftVersion' && key !== '__RequestVerificationToken') {
+                values.push(`${key}=${typeof value === 'string' ? value : value.name}`);
+            }
+        });
+
+        return values.join('&');
+    };
+
+    const panelForm = () => /** @type {HTMLFormElement | null} */ (panel.querySelector('form[data-survey-panel-form]'));
+    let panelBaseline = '';
+    let settingsBaseline = '';
+
+    const resetPanelBaseline = () => {
+        const form = panelForm();
+
+        panelBaseline = form ? snapshot(form) : '';
+    };
+
+    const isPanelDirty = () => {
+        const form = panelForm();
+
+        return !!form && snapshot(form) !== panelBaseline;
+    };
+
+    const isSettingsDirty = () => !!settingsForm && snapshot(settingsForm) !== settingsBaseline;
+
+    /**
+     * Saves the question or page open in the panel and shows the editor the server returns.
+     * @param {HTMLFormElement} form The panel's form.
+     * @returns {Promise<boolean>} Whether it was saved.
+     */
+    const savePanel = async form => {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: new FormData(form),
+        });
+
+        if (!response.ok && response.status !== 422) {
+            showError(context.texts.failed);
+
+            return false;
+        }
+
+        panel.innerHTML = await response.text();
+        wire(panel);
+
+        if (!response.ok) {
+            // The editor now shows the problems, and its edits still count as unsaved.
+            return false;
+        }
+
+        resetPanelBaseline();
+        trackVersion(response);
+        await refreshOutline();
+
+        return true;
+    };
+
+    /**
      * Loads an editor into the panel.
      * @param {string} url The editor's URL.
      */
     const loadPanel = async url => {
+        if (isPanelDirty() && !window.confirm(context.texts.discardPanel)) {
+            return;
+        }
+
         const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
 
         if (!response.ok) {
@@ -93,6 +175,7 @@ if (designer) {
 
         panel.innerHTML = await response.text();
         wire(panel);
+        resetPanelBaseline();
         /** @type {HTMLElement | null} */ (panel.querySelector('input:not([type=hidden]), textarea, select'))?.focus();
     };
 
@@ -203,6 +286,7 @@ if (designer) {
                 editPage(id);
             } else if (command === 'delete' || command === 'deletePage') {
                 panel.innerHTML = '';
+                resetPanelBaseline();
             }
 
             return;
@@ -249,7 +333,96 @@ if (designer) {
         if (page) {
             event.preventDefault();
             editPage(page.dataset.surveyEditPage ?? '');
+
+            return;
         }
+
+        if (target.closest('[data-survey-discard]')) {
+            discarding = true;
+
+            return;
+        }
+
+        // A link that leaves the designer asks first when there are unsaved edits.
+        const link = /** @type {HTMLAnchorElement | null} */ (target.closest('a[href]'));
+
+        if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+            return;
+        }
+
+        const href = link.getAttribute('href') ?? '';
+
+        if (href === '' || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank' || link.hasAttribute('download') || link.hasAttribute('data-bs-toggle')) {
+            return;
+        }
+
+        if (isPanelDirty() || isSettingsDirty()) {
+            if (window.confirm(context.texts.unsaved)) {
+                leaving = true;
+            } else {
+                event.preventDefault();
+            }
+        }
+    });
+
+    // The confirm dialog of Discard draft closed; when it was cancelled, the edits count again.
+    document.addEventListener('hidden.bs.modal', () => {
+        discarding = false;
+    });
+
+    window.addEventListener('beforeunload', event => {
+        if (leaving || discarding || !(isPanelDirty() || isSettingsDirty())) {
+            return;
+        }
+
+        event.preventDefault();
+        event.returnValue = '';
+    });
+
+    // Save draft, and Save and publish, first save the open question or page, so one click saves everything.
+    settingsForm?.addEventListener('submit', async event => {
+        const submitter = /** @type {HTMLButtonElement | null} */ (/** @type {SubmitEvent} */ (event).submitter ?? null);
+
+        if (leaving || submitter?.hasAttribute('data-survey-discard')) {
+            leaving = true;
+
+            return;
+        }
+
+        const form = panelForm();
+
+        if (form && isPanelDirty()) {
+            event.preventDefault();
+
+            const saved = await savePanel(form);
+
+            // The admin theme marked the form as submitting to block a double post; this post is retried or continued.
+            settingsForm.classList.remove('submitting');
+
+            if (!saved) {
+                showError(context.texts.panelInvalid);
+
+                return;
+            }
+
+            leaving = true;
+            settingsForm.requestSubmit(submitter ?? undefined);
+
+            return;
+        }
+
+        // Publishing with nothing to save goes straight to the publish page, without saving an unchanged draft.
+        const publishUrl = submitter?.dataset.surveyPublish;
+
+        if (publishUrl && !isSettingsDirty()) {
+            event.preventDefault();
+            leaving = true;
+            window.location.href = publishUrl;
+
+            return;
+        }
+
+        leaving = true;
     });
 
     panel.addEventListener('submit', async event => {
@@ -260,27 +433,7 @@ if (designer) {
         }
 
         event.preventDefault();
-
-        const response = await fetch(form.action, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: new FormData(form),
-        });
-
-        if (!response.ok && response.status !== 422) {
-            showError(context.texts.failed);
-
-            return;
-        }
-
-        panel.innerHTML = await response.text();
-        wire(panel);
-
-        if (response.ok) {
-            trackVersion(response);
-            await refreshOutline();
-        }
+        await savePanel(form);
     });
 
     outlineHost.addEventListener('dragstart', event => {
@@ -329,4 +482,5 @@ if (designer) {
     });
 
     wire(document);
+    settingsBaseline = settingsForm ? snapshot(settingsForm) : '';
 }

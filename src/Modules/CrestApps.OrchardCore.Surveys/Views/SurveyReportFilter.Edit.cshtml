@@ -53,6 +53,17 @@
         <select asp-for="TrendPeriod" asp-items="Model.TrendPeriods" class="form-select"></select>
     </div>
 }
+@if (Model.ShowStatus)
+{
+    <div class="col p-1">
+        <label asp-for="Status" class="form-label">@T["Status"]</label>
+        <select asp-for="Status" asp-items="Model.Statuses" class="form-select"></select>
+    </div>
+    <div class="col p-1">
+        <label asp-for="Page" class="form-label">@T["Page"]</label>
+        <input asp-for="Page" type="number" min="1" class="form-control" />
+    </div>
+}
 @if (Model.ShowAudience)
 {
     <div class="col p-1">

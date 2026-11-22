@@ -22,6 +22,7 @@ internal sealed class SurveySettingsSchema : SiteSettingsSchemaBase
                 (nameof(SurveySettings.DefaultIncompleteExpiryHours), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("After how many idle hours unfinished responses of new surveys are abandoned.")),
                 (nameof(SurveySettings.MaxUploadMegabytes), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("The largest file a respondent may upload, in megabytes.")),
                 (nameof(SurveySettings.AllowedRedirectHosts), new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The hosts endings may redirect to besides this site.")),
-                (nameof(SurveySettings.DefaultMinimumGroupSize), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(0).Description("The minimum group size of new anonymous surveys; 0 turns the check off.")))
+                (nameof(SurveySettings.DefaultMinimumGroupSize), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("The minimum group size of new anonymous surveys; never below the floor.")),
+                (nameof(SurveySettings.MinimumGroupSizeFloor), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(1000).Description("The smallest minimum group size any anonymous survey may use; a survey may ask for more, never less. Defaults to 5.")))
             .AdditionalProperties(true);
 }

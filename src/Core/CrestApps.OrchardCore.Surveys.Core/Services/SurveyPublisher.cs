@@ -119,7 +119,7 @@ public sealed class SurveyPublisher : ISurveyPublisher
 
         await _surveyManager.UpdateAsync(survey, data: null, cancellationToken);
 
-        if (await _collectorStore.FindDefaultAsync(survey.ItemId, cancellationToken) is null)
+        if (!survey.NoDefaultWebLink && await _collectorStore.FindDefaultAsync(survey.ItemId, cancellationToken) is null)
         {
             await _collectorStore.CreateAsync(new SurveyCollector
             {

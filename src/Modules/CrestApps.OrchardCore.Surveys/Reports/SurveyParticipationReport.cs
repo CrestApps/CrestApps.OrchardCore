@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Surveys.Core.Results;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -102,7 +103,7 @@ internal sealed class SurveyParticipationReport : IReport
 
             rows.Add(new ReportRow(
             [
-                await _names.GetAsync(member, cancellationToken),
+                await _names.GetUserAsync(member, cancellationToken),
                 done ? S["Completed"].Value : S["Not yet"].Value,
                 done ? await _data.LocalAsync(when) : string.Empty,
             ]));

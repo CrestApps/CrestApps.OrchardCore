@@ -1,5 +1,12 @@
 @using CrestApps.OrchardCore.Surveys.ViewModels
 @model SurveyCollectorsViewModel
+@inject IEnumerable<CrestApps.OrchardCore.Surveys.Services.ISurveyAuthorizationService> SurveyAuthorization
+
+@{
+    // Invitations send site e-mail, so the button shows only to users who may send them for this survey.
+    var canInvite = SurveyAuthorization.FirstOrDefault() is { } surveyAuthorization
+        && await surveyAuthorization.AuthorizeAsync(User, Model.Survey, CrestApps.OrchardCore.Surveys.Services.SurveyOperation.ManageInvitations);
+}
 
 <zone Name="Title">
     <breadcrumb name="SurveyCollectorsIndex" title="@T["Collect responses"]">
@@ -23,7 +30,7 @@
                 <div class="col-auto">
                     <a class="btn btn-secondary" role="button" asp-action="Create" asp-route-id="@Model.Survey.ItemId" asp-route-kind="@SurveyCollectorKinds.WebLink">@T["Add web link"]</a>
                     <a class="btn btn-secondary" role="button" asp-action="Create" asp-route-id="@Model.Survey.ItemId" asp-route-kind="@SurveyCollectorKinds.Kiosk">@T["Add kiosk"]</a>
-                    @if (Url.Action("Create", "SurveyInvitations", new { area = "CrestApps.OrchardCore.Surveys", surveyId = Model.Survey.ItemId }) is { } inviteUrl)
+                    @if (canInvite && Url.Action("Create", "SurveyInvitations", new { area = "CrestApps.OrchardCore.Surveys", surveyId = Model.Survey.ItemId }) is { } inviteUrl)
                     {
                         <a class="btn btn-secondary" role="button" href="@inviteUrl">@T["Add invitations"]</a>
                     }

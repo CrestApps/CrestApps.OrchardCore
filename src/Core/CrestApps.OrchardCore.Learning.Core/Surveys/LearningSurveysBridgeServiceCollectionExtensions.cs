@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Learning.Core.Surveys;
-using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Localization;
@@ -26,10 +25,11 @@ public static class LearningSurveysBridgeServiceCollectionExtensions
         services.AddSurveyAccessProvider<LearningSurveyAccessProvider>();
         services.AddSurveyGradingScope<LearningSurveyGradingScope>();
         services.AddSurveyResponseObserver<LearningSurveyResultObserver>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISurveyOwnerLinkProvider, LearningSurveyOwnerLinkProvider>());
+        services.AddSurveyOwnerLinkProvider<LearningSurveyOwnerLinkProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IContentHandler, LearningOwnedSurveyContentHandler>());
         services.AddSurveyContextKind(LearningSurveyContexts.EnrollmentKind, LocalizationSource.Create<LearningSurveyService>("Learning enrollment"));
-        services.AddSurveyContextKind(LearningSurveyContexts.CourseKind, LocalizationSource.Create<LearningSurveyService>("Learning course (anonymous)"));
+        services.AddSurveyContextKind(LearningSurveyContexts.CourseKind, LocalizationSource.Create<LearningSurveyService>("Learning course (anonymous)"), identifiesRespondent: false);
+        services.AddSurveyContextOwnershipCheck<LearningSurveyContextOwnershipCheck>();
 
         return services;
     }

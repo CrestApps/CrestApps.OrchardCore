@@ -11,7 +11,7 @@ Most quiz questions are scored automatically. Essays and coursework need a perso
 | | |
 | --- | --- |
 | **Menu** | Learning > Grading; Learning > Gradebook. Course staff with Manage the courses you teach see both, for their own courses. |
-| **Permission** | Grade the work of every course, or Manage the courses you teach for a course's graders, instructors and assistants; Grade survey responses (or the course staff grading scope) to grade quiz answers |
+| **Permission** | Grade the work of every course, or Manage the courses you teach for a course's graders, instructors and assistants; Grade survey responses to grade quiz answers; a course's graders, instructors and assistants grade the quizzes of their own course without it |
 | **Feature** | Learning Assessments; Learning Gradebook for the gradebook |
 
 <AskYourAdmin />

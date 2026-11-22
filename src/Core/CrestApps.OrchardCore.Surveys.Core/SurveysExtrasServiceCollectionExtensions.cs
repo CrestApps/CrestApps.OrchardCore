@@ -49,4 +49,21 @@ public static class SurveysExtrasServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a check asked before an e-mail invitation is sent, such as an opt-out, unsubscribe or consent check.
+    /// An invitation that any check refuses is not sent and is marked opted out.
+    /// </summary>
+    /// <typeparam name="TPolicy">The policy type.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddSurveyInvitationRecipientPolicy<TPolicy>(this IServiceCollection services)
+        where TPolicy : class, ISurveyInvitationRecipientPolicy
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISurveyInvitationRecipientPolicy, TPolicy>());
+
+        return services;
+    }
 }

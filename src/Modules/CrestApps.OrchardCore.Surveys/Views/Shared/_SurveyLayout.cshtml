@@ -3,7 +3,10 @@
 
 @{
     var survey = Model.Survey;
-    var canPublish = survey.Status != SurveyStatus.Archived && (string.IsNullOrEmpty(survey.PublishedVersionId) || survey.HasUnpublishedChanges);
+    // The designer's own action bar has Save and publish, which saves the edits first, so the header leaves Publish out there.
+    var onDesigner = string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "SurveyDesigner", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "Design", StringComparison.OrdinalIgnoreCase);
+    var canPublish = !onDesigner && survey.Status != SurveyStatus.Archived && (string.IsNullOrEmpty(survey.PublishedVersionId) || survey.HasUnpublishedChanges);
     var (statusText, statusCss) = survey.Status switch
     {
         SurveyStatus.Open => (T["Open"], "text-bg-success"),
@@ -26,7 +29,7 @@
             <span class="badge text-bg-info">@T["Unpublished changes"]</span>
         }
     </div>
-    <a class="btn btn-sm btn-outline-secondary" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/preview")">
+    <a class="btn btn-sm btn-outline-secondary" href="@Url.RouteUrl("SurveysPreview", new { id = survey.ItemId })">
         <i class="fa-solid fa-eye" aria-hidden="true"></i> @T["Preview"]
     </a>
     @if (canPublish)

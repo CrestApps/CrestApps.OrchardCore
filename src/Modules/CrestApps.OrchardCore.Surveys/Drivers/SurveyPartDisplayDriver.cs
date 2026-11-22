@@ -19,6 +19,7 @@ namespace CrestApps.OrchardCore.Surveys.Drivers;
 internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyPart>
 {
     private readonly SurveyEmbedResolver _resolver;
+    private readonly SurveyContentSanitizer _sanitizer;
     private readonly SurveyCollectorStore _collectorStore;
     private readonly ISession _session;
 
@@ -28,16 +29,19 @@ internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyP
     /// Initializes a new instance of the <see cref="SurveyPartDisplayDriver"/> class.
     /// </summary>
     /// <param name="resolver">The embed resolver.</param>
+    /// <param name="sanitizer">The HTML sanitizer of survey texts.</param>
     /// <param name="collectorStore">The collector store.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="stringLocalizer">The localizer.</param>
     public SurveyPartDisplayDriver(
         SurveyEmbedResolver resolver,
+        SurveyContentSanitizer sanitizer,
         SurveyCollectorStore collectorStore,
         ISession session,
         IStringLocalizer<SurveyPartDisplayDriver> stringLocalizer)
     {
         _resolver = resolver;
+        _sanitizer = sanitizer;
         _collectorStore = collectorStore;
         _session = session;
         S = stringLocalizer;
@@ -51,7 +55,7 @@ internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyP
             var title = string.IsNullOrWhiteSpace(version?.Definition?.Title) ? survey?.Title : version.Definition.Title;
 
             model.Title = title;
-            model.Introduction = new HtmlString(version?.Definition?.Introduction ?? string.Empty);
+            model.Introduction = new HtmlString(_sanitizer.Sanitize(version?.Definition?.Introduction));
             model.Token = version is null ? null : collector?.Token;
             model.Display = part.Display;
             model.Text = string.IsNullOrWhiteSpace(part.Text) ? title : part.Text;

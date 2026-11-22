@@ -21,10 +21,24 @@
             </div>
         </div>
         <div class="ocat-wrapper">
-            <label asp-for="AudienceIds" class="ocat-label">@T["Audiences"]</label>
-            <div class="ocat-end">
-                <input asp-for="AudienceIds" class="form-control" />
-                <span class="hint">@T["The ids of the user audiences that may respond, separated by commas. Used when the audience is Members of chosen audiences."]</span>
+            <span class="ocat-label" id="survey-audiences-label">@T["Audiences"]</span>
+            <div class="ocat-end" role="group" aria-labelledby="survey-audiences-label">
+                @if (Model.AudienceOptions.Count == 0)
+                {
+                    <p class="form-text mb-1">@(Model.AudiencesAvailable ? T["No audience exists yet. Add one under Content > User Audiences."] : T["Turn on the User Audiences feature to choose audiences."])</p>
+                }
+                @for (var i = 0; i < Model.AudienceOptions.Count; i++)
+                {
+                    var option = Model.AudienceOptions[i];
+                    var inputId = Html.IdFor(m => m.AudienceIds) + "_" + i;
+
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="@inputId" name="@Html.NameFor(m => m.AudienceIds)" value="@option.Value" checked="@option.Selected" />
+                        <label class="form-check-label" for="@inputId">@option.Text</label>
+                    </div>
+                }
+                <span asp-validation-for="AudienceIds" class="text-danger"></span>
+                <span class="hint">@T["Used when the audience is Members of chosen audiences: a person may respond when they belong to any audience checked here."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
@@ -50,7 +64,7 @@
                     <option value="@AnonymityMode.Identified">@T["Identified: record who responded"]</option>
                     <option value="@AnonymityMode.Anonymous">@T["Anonymous: record nobody"]</option>
                 </select>
-                <span class="hint">@(Model.WasIdentified ? T["Switching to anonymous applies to new responses only; responses already given keep who gave them."] : T["Switching to identified applies to new responses only."])</span>
+                <span class="hint">@(Model.AnonymityLocked ? T["This survey has responses, so its anonymity can't change any more."] : T["Choose before the first response: anonymity can't change once the survey has responses."])</span>
             </div>
         </div>
         <div class="ocat-wrapper">
@@ -65,8 +79,8 @@
         <div class="ocat-wrapper">
             <label asp-for="MinimumGroupSize" class="ocat-label">@T["Minimum group size"]</label>
             <div class="ocat-end">
-                <input asp-for="MinimumGroupSize" type="number" min="0" class="form-control" />
-                <span class="hint">@T["Reports of an anonymous survey hide any group with fewer responses. 0 turns this off."]</span>
+                <input asp-for="MinimumGroupSize" type="number" min="@Model.MinimumGroupSizeFloor" class="form-control" />
+                <span class="hint">@T["Reports, lists and exports of an anonymous survey hide any group with fewer responses. The site allows no less than {0}.", Model.MinimumGroupSizeFloor]</span>
             </div>
         </div>
     </div>

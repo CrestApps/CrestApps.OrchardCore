@@ -12,14 +12,14 @@ You change a survey in its draft. Publishing makes a numbered version that respo
 | | |
 | --- | --- |
 | **Menu** | Surveys > Surveys, then **Design** |
-| **Permission** | Publish, restore and close surveys |
+| **Permission** | Publish, restore and close surveys, or Publish, restore and close own surveys for your own surveys |
 | **Feature** | Surveys |
 
 <AskYourAdmin />
 
 ## Publish
 
-1. In the designer, select **Publish**.
+1. In the designer, select **Save and publish** at the bottom of the page: it saves your changes, then opens the publish page. On the survey's other pages, select **Publish** in the header.
 2. Fix the problems under **Fix these problems before publishing**, and read **Check these before publishing**.
 3. Read **Changes since version** N. When a change affects existing answers, tick **I understand that some changes affect existing answers and comparisons**.
 4. Enter **Notes** and select **Publish**.

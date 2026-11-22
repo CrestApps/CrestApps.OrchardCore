@@ -88,6 +88,12 @@ public class SurveyPageEditorViewModel
     public IReadOnlyList<SelectListItem> Targets { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether the user may see and attach question banks.
+    /// </summary>
+    [BindNever]
+    public bool CanUseBanks { get; set; }
+
+    /// <summary>
     /// Gets or sets the question banks a pool may draw from.
     /// </summary>
     [BindNever]

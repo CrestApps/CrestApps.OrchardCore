@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     private readonly IEnumerable<ISurveyTemplateProvider> _templateProviders;
     private readonly IEnumerable<ISurveyObserver> _observers;
     private readonly ISiteService _siteService;
+    private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
 
     /// <summary>
@@ -32,6 +34,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     /// <param name="templateProviders">The template providers.</param>
     /// <param name="observers">The survey observers.</param>
     /// <param name="siteService">The site service.</param>
+    /// <param name="secrets">The anonymity secrets.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="handlers">The catalog entry handlers.</param>
     /// <param name="logger">The logger.</param>
@@ -43,6 +46,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         IEnumerable<ISurveyTemplateProvider> templateProviders,
         IEnumerable<ISurveyObserver> observers,
         ISiteService siteService,
+        SurveyAnonymitySecrets secrets,
         IClock clock,
         IEnumerable<ICatalogEntryHandler<Survey>> handlers,
         ILogger<NamedCatalogManager<Survey>> logger)
@@ -55,6 +59,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         _templateProviders = templateProviders;
         _observers = observers;
         _siteService = siteService;
+        _secrets = secrets;
         _clock = clock;
     }
 
@@ -90,9 +95,9 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         survey.DraftModifiedUtc = _clock.UtcNow;
         survey.HasUnpublishedChanges = true;
         survey.Owner = request.Owner;
-        survey.AnonymitySecret = SurveyNames.NewSecret();
+        _secrets.Assign(survey);
         survey.Access.IncompleteExpiryHours = settings.DefaultIncompleteExpiryHours > 0 ? settings.DefaultIncompleteExpiryHours : 168;
-        survey.Access.MinimumGroupSize = settings.DefaultMinimumGroupSize;
+        survey.Access.MinimumGroupSize = Math.Max(settings.DefaultMinimumGroupSize, SurveyAnonymity.Floor(settings));
         survey.Retention.Days = settings.DefaultRetentionDays;
 
         if (survey.CreatedUtc == default)

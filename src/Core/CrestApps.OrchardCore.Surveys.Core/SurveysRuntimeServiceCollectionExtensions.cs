@@ -59,9 +59,12 @@ public static class SurveysRuntimeServiceCollectionExtensions
         services.TryAddScoped<SurveyParticipationService>();
         services.TryAddScoped<SurveyResponseCounter>();
         services.TryAddScoped<SurveyAccessEvaluator>();
+        services.TryAddScoped<SurveyContextGuard>();
         services.TryAddScoped<SurveyResponseService>();
         services.TryAddScoped<ISurveyResponseService>(provider => provider.GetRequiredService<SurveyResponseService>());
         services.TryAddScoped<SurveyMaintenanceService>();
+        services.AddHttpContextAccessor();
+        services.TryAddScoped<SurveyResumeCookies>();
 
         services.AddSurveyAccessRule<SurveyStatusRule>()
             .AddSurveyAccessRule<AvailabilityWindowRule>()
@@ -71,6 +74,23 @@ public static class SurveysRuntimeServiceCollectionExtensions
             .AddSurveyAccessRule<InvitationRule>()
             .AddSurveyAccessRule<RespondentLimitsRule>()
             .AddSurveyAccessRule<MaxResponsesRule>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the renderer of ending messages. The last registered renderer renders every ending, so a module
+    /// replaces the built-in Liquid renderer by registering its own after it.
+    /// </summary>
+    /// <typeparam name="TRenderer">The renderer type.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddSurveyEndingRenderer<TRenderer>(this IServiceCollection services)
+        where TRenderer : class, ISurveyEndingRenderer
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISurveyEndingRenderer, TRenderer>());
 
         return services;
     }

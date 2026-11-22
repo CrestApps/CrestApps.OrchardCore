@@ -89,12 +89,14 @@ public sealed class SurveyResultsReportTests : IAsyncLifetime
     private static SurveyResultsReport Report(ISession session)
     {
         var authorization = TestSecurity.Granting(SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+        var services = new ServiceCollection().BuildServiceProvider();
         var data = new SurveyReportData(
             new SurveyStore(session),
             new SurveyVersionStore(session),
             authorization,
-            new ServiceCollection().BuildServiceProvider(),
+            services,
             new FixedOffsetLocalClock(() => _day, TimeSpan.Zero),
+            new SurveyRespondentNames(services, RecipeRoundTrip.Localizer<SurveyRespondentNames>()),
             RecipeRoundTrip.Localizer<SurveyReportData>());
         var options = new SurveyControlOptions();
         options.Controls[ResultsTestControlHandler.Name] = new SurveyControlDescriptor

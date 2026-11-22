@@ -53,6 +53,24 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         await session.SaveChangesAsync(cancellationToken);
     }
 
+    // Adds completed responses to the anonymous survey, so it reaches its minimum group size of 5.
+    private async Task AddAnonymousResponsesAsync(int count)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var anonymous = Version("v2", "survey2");
+
+        await using var session = _store.OpenSession();
+
+        for (var index = 0; index < count; index++)
+        {
+            var response = ResultsSqliteStore.Response($"a{index}", anonymous, SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
+            response.Context = new CrestApps.OrchardCore.Records.RecordRef("LearningEnrollment", "e" + index);
+            await session.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+        }
+
+        await session.SaveChangesAsync(cancellationToken);
+    }
+
     public async ValueTask DisposeAsync()
         => await _store.DisposeAsync();
 
@@ -87,23 +105,59 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         Assert.Empty(sets);
     }
 
-    [Theory]
-    [InlineData(true, "u1")]
-    [InlineData(false, null)]
-    public async Task SurveyResponses_ShowsTheRespondentOnlyWithExport_AndNeverForAnonymousSurveys(bool canExport, string expectedUser)
+    [Fact]
+    public async Task SurveyResponses_ShowsTheRespondentOfIdentifiedSurveys_WithoutExportPermission()
     {
         // Arrange
         await using var session = _store.OpenSession();
-        Permission[] grants = canExport
-            ? [SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses, SurveysPermissions.ExportSurveyResponses]
-            : [SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses];
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
 
         // Act
-        var rows = await ReadAsync(Source(session, grants), "SurveyResponses", TestSecurity.User("kim"));
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
 
         // Assert
-        Assert.Equal(expectedUser, rows["r1"]["UserName"]);
+        Assert.Equal("Deleted user", rows["r1"]["UserName"]);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AnAnonymousSurveyBelowItsMinimumGroupSize_ShowsNoRow()
+    {
+        // Arrange
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+        var answers = await ReadAsync(source, "SurveyAnswers", TestSecurity.User("kim"), "ResponseId");
+        var wide = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
+
+        // Assert
+        Assert.Equal(["r1"], rows.Keys);
+        Assert.Equal(["r1"], answers.Keys);
+        Assert.Empty(wide);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AnAnonymousSurveyAtItsMinimumGroupSize_ShowsRowsWithDaysOnlyAndNobody()
+    {
+        // Arrange
+        await AddAnonymousResponsesAsync(4);
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+        var wide = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
+
+        // Assert
+        Assert.Equal(6, rows.Count);
         Assert.Null(rows["r2"]["UserName"]);
+        Assert.Equal("LearningEnrollment", rows["a0"]["ContextKind"]);
+        Assert.Null(rows["a0"]["ContextId"]);
+        Assert.Equal(_day.Date, Assert.IsType<DateTime>(rows["r2"]["CompletedUtc"]));
+        Assert.Equal(_day, Assert.IsType<DateTime>(rows["r1"]["CompletedUtc"]));
+        Assert.Equal(5, wide.Count);
+        Assert.All(wide.Values, row => Assert.Equal("Anonymous", row["Respondent"]));
     }
 
     [Fact]
@@ -140,6 +194,7 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
     public async Task SurveyAnswers_HasOneRowPerAnswerValue_WithItsChoice()
     {
         // Arrange
+        await AddAnonymousResponsesAsync(4);
         await using var session = _store.OpenSession();
         var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
 
@@ -158,14 +213,15 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         var access = new SurveyDataSetAccess(new SurveyStore(session), authorization, services);
         var registry = Registry();
         var versions = new SurveyVersionStore(session);
+        var names = new SurveyRespondentNames(services, RecipeRoundTrip.Localizer<SurveyRespondentNames>());
 
         ISurveysDataSet[] sets =
         [
-            new SurveyResponsesDataSet(session, authorization, access, [], new SurveyRespondentNames(services), versions, new SurveyCollectorStore(session), RecipeRoundTrip.Localizer<SurveyResponsesDataSet>()),
+            new SurveyResponsesDataSet(session, authorization, access, [], names, versions, new SurveyCollectorStore(session), RecipeRoundTrip.Localizer<SurveyResponsesDataSet>()),
             new SurveyAnswersDataSet(session, authorization, access, new ResultsVersionCache(versions), registry, RecipeRoundTrip.Localizer<SurveyAnswersDataSet>()),
         ];
 
-        return new SurveysDataSource(sets, new SurveyWideDataSetFactory(session, authorization, access, new SurveyStore(session), versions, registry, RecipeRoundTrip.Localizer<SurveyWideDataSet>()));
+        return new SurveysDataSource(sets, new SurveyWideDataSetFactory(session, authorization, access, new SurveyStore(session), versions, registry, names, RecipeRoundTrip.Localizer<SurveyWideDataSet>()));
     }
 
     private static async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>> ReadAsync(SurveysDataSource source, string dataSet, ClaimsPrincipal user, string key = "Id")

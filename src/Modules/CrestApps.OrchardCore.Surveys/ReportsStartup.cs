@@ -19,7 +19,6 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<SurveyReportData>();
-        services.TryAddScoped<SurveyRespondentNames>();
         services.AddDisplayDriver<ReportFilter, SurveyReportFilterDisplayDriver>();
         services
             .AddReport<SurveyResultsReport>()

@@ -27,6 +27,12 @@ public sealed class SurveyResponseColumns
     public IReadOnlyList<SurveyExportColumn> Columns { get; private set; } = [];
 
     /// <summary>
+    /// Gets the titles of the questions that have no column because their question type is turned off, so a report can
+    /// say so instead of dropping them silently.
+    /// </summary>
+    public IReadOnlyList<string> MissingQuestions { get; private set; } = [];
+
+    /// <summary>
     /// Builds the columns of a survey's versions.
     /// </summary>
     /// <param name="versions">The versions, in any order.</param>
@@ -41,6 +47,8 @@ public sealed class SurveyResponseColumns
         var columns = new List<SurveyExportColumn>();
         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var missing = new List<string>();
+        var missingIds = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var version in versions.Where(version => version?.Definition is not null).OrderByDescending(version => version.Number))
         {
@@ -53,7 +61,17 @@ public sealed class SurveyResponseColumns
 
                 var handler = registry.GetHandler(question.ControlType);
 
-                if (handler is null || registry.GetControl(question.ControlType) is { } descriptor && !descriptor.Has(SurveyControlCapabilities.Answerable))
+                if (handler is null)
+                {
+                    if (missingIds.Add(question.Id))
+                    {
+                        missing.Add(string.IsNullOrWhiteSpace(question.Title) ? question.Name ?? question.Id : question.Title);
+                    }
+
+                    continue;
+                }
+
+                if (registry.GetControl(question.ControlType) is { } descriptor && !descriptor.Has(SurveyControlCapabilities.Answerable))
                 {
                     continue;
                 }
@@ -81,6 +99,7 @@ public sealed class SurveyResponseColumns
         }
 
         result.Columns = columns;
+        result.MissingQuestions = missing;
 
         return result;
     }

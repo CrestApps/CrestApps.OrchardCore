@@ -80,6 +80,19 @@ internal sealed class SurveyReportFilterDisplayDriver : DisplayDriver<ReportFilt
             model.TrendQuestionId = filter.GetOrDefault<string>(SurveyReportKeys.TrendQuestionId);
             model.TrendPeriod = filter.GetOrDefault<string>(SurveyReportKeys.TrendPeriod) ?? "week";
             model.AudienceId = filter.GetOrDefault<string>(SurveyReportKeys.AudienceId);
+            model.Status = filter.GetOrDefault<string>(SurveyReportKeys.Status) ?? SurveyReportKeys.CompletedStatus;
+            model.Page = filter.GetOrDefault<int?>(SurveyReportKeys.Page);
+            model.ShowStatus = filter.ReportName == SurveyReportNames.Responses;
+            model.Statuses =
+            [
+                new SelectListItem(S["Completed"], SurveyReportKeys.CompletedStatus, model.Status == SurveyReportKeys.CompletedStatus),
+                new SelectListItem(S["Completed or screened out"], SurveyReportKeys.FinishedStatus, model.Status == SurveyReportKeys.FinishedStatus),
+                new SelectListItem(S["In progress"], nameof(Models.SurveyResponseStatus.InProgress), model.Status == nameof(Models.SurveyResponseStatus.InProgress)),
+                new SelectListItem(S["Screened out"], nameof(Models.SurveyResponseStatus.ScreenedOut), model.Status == nameof(Models.SurveyResponseStatus.ScreenedOut)),
+                new SelectListItem(S["Abandoned"], nameof(Models.SurveyResponseStatus.Abandoned), model.Status == nameof(Models.SurveyResponseStatus.Abandoned)),
+                new SelectListItem(S["Voided"], nameof(Models.SurveyResponseStatus.Voided), model.Status == nameof(Models.SurveyResponseStatus.Voided)),
+                new SelectListItem(S["Every status"], SurveyReportKeys.AllStatuses, model.Status == SurveyReportKeys.AllStatuses),
+            ];
             model.ShowSegment = filter.ReportName == SurveyReportNames.Results;
             model.ShowTrend = filter.ReportName == SurveyReportNames.Trend;
             model.ShowAudience = filter.ReportName == SurveyReportNames.Participation;
@@ -156,6 +169,16 @@ internal sealed class SurveyReportFilterDisplayDriver : DisplayDriver<ReportFilt
         filter.Set(SurveyReportKeys.TrendQuestionId, model.TrendQuestionId?.Trim());
         filter.Set(SurveyReportKeys.TrendPeriod, model.TrendPeriod?.Trim());
         filter.Set(SurveyReportKeys.AudienceId, model.AudienceId?.Trim());
+        filter.Set(SurveyReportKeys.Status, model.Status?.Trim());
+
+        if (model.Page is > 1)
+        {
+            filter.Set(SurveyReportKeys.Page, model.Page.Value);
+        }
+        else
+        {
+            filter.Remove(SurveyReportKeys.Page);
+        }
 
         if (model.IncludeTest)
         {

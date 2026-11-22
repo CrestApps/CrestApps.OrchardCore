@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -21,6 +22,7 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
     private readonly SurveyVersionStore _versionStore;
     private readonly SurveyCollectorStore _collectorStore;
     private readonly ISurveyUserLookup _users;
+    private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
 
     /// <summary>
@@ -30,12 +32,14 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
     /// <param name="versionStore">The version store.</param>
     /// <param name="collectorStore">The collector store.</param>
     /// <param name="users">The user lookup.</param>
+    /// <param name="secrets">The anonymity secrets.</param>
     /// <param name="clock">The clock.</param>
     public SurveysRecipeStep(
         SurveyStore surveyStore,
         SurveyVersionStore versionStore,
         SurveyCollectorStore collectorStore,
         ISurveyUserLookup users,
+        SurveyAnonymitySecrets secrets,
         IClock clock)
         : base(SurveysRecipeSteps.Surveys)
     {
@@ -43,6 +47,7 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
         _versionStore = versionStore;
         _collectorStore = collectorStore;
         _users = users;
+        _secrets = secrets;
         _clock = clock;
     }
 
@@ -79,7 +84,7 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
             }
 
             survey.Name = name;
-            survey.AnonymitySecret ??= SurveyTokens.NewAnonymitySecret();
+            _secrets.EnsureProtected(survey);
             survey.Draft ??= new SurveyDefinition();
             survey.ModifiedUtc = now;
 

@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Surveys.Core.Access;
-using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
@@ -16,15 +15,14 @@ public static class SurveyInvitationTokens
     /// <summary>
     /// Makes the token of an invitation.
     /// </summary>
-    /// <param name="survey">The survey.</param>
+    /// <param name="secret">The survey's anonymity secret in plain text, from <see cref="SurveyAnonymitySecrets"/>.</param>
     /// <param name="invitationId">The id of the invitation.</param>
     /// <returns>The URL-safe token.</returns>
-    public static string Create(Survey survey, string invitationId)
+    public static string Create(string secret, string invitationId)
     {
-        ArgumentNullException.ThrowIfNull(survey);
+        ArgumentException.ThrowIfNullOrEmpty(secret);
         ArgumentException.ThrowIfNullOrEmpty(invitationId);
 
-        var secret = string.IsNullOrEmpty(survey.AnonymitySecret) ? survey.ItemId ?? string.Empty : survey.AnonymitySecret;
         var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("invitation:" + secret), Encoding.UTF8.GetBytes(invitationId));
 
         return WebEncoders.Base64UrlEncode(mac);

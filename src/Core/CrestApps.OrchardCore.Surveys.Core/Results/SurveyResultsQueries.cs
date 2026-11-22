@@ -81,65 +81,53 @@ public sealed class SurveyResultsQueries
     /// <param name="scope">The scope.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The responses.</returns>
-    public async IAsyncEnumerable<SurveyResponse> ReadAsync(SurveyResultsScope scope, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<SurveyResponse> ReadAsync(SurveyResultsScope scope, CancellationToken cancellationToken = default)
+        => ReadAsync(scope, 0, int.MaxValue, cancellationToken);
+
+    /// <summary>
+    /// Reads a slice of the response documents of a scope, oldest first, loading a page at a time.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="skip">How many responses to skip.</param>
+    /// <param name="take">The most responses to read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The responses.</returns>
+    public async IAsyncEnumerable<SurveyResponse> ReadAsync(SurveyResultsScope scope, int skip, int take, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(scope);
 
-        for (var skip = 0; ; skip += SurveysConstants.PageSize)
+        var read = 0;
+
+        for (var offset = Math.Max(0, skip); read < take; offset += SurveysConstants.PageSize)
         {
-            var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == scope.SurveyId, collection: SurveysConstants.ResponsesCollectionName);
-
-            if (!scope.IncludeTest)
-            {
-                query = query.Where(index => !index.IsTest);
-            }
-
-            if (scope.CompletedOnly)
-            {
-                var completed = nameof(SurveyResponseStatus.Completed);
-                query = query.Where(index => index.Status == completed);
-            }
-
-            if (scope.VersionNumbers is { Count: > 0 })
-            {
-                var numbers = scope.VersionNumbers.ToArray();
-                query = query.Where(index => index.VersionNumber.IsIn(numbers));
-            }
-
-            if (scope.FromUtc is { } from)
-            {
-                query = query.Where(index => index.StartedUtc >= from);
-            }
-
-            if (scope.ToUtc is { } to)
-            {
-                query = query.Where(index => index.StartedUtc < to);
-            }
-
-            if (!string.IsNullOrEmpty(scope.CollectorId))
-            {
-                var collector = scope.CollectorId;
-                query = query.Where(index => index.CollectorId == collector);
-            }
-
-            if (!string.IsNullOrEmpty(scope.ContextKind))
-            {
-                var kind = scope.ContextKind;
-                query = query.Where(index => index.ContextKind == kind);
-            }
-
-            var page = (await query.OrderBy(index => index.Id).Skip(skip).Take(SurveysConstants.PageSize).ListAsync(cancellationToken)).ToList();
+            var size = (int)Math.Min(SurveysConstants.PageSize, (long)take - read);
+            var page = (await Filter(scope).OrderBy(index => index.Id).Skip(offset).Take(size).ListAsync(cancellationToken)).ToList();
 
             foreach (var response in page)
             {
+                read++;
+
                 yield return response;
             }
 
-            if (page.Count < SurveysConstants.PageSize)
+            if (page.Count < size)
             {
                 yield break;
             }
         }
+    }
+
+    /// <summary>
+    /// Counts the responses of a scope with a count query, without loading a document.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The count.</returns>
+    public Task<int> CountAsync(SurveyResultsScope scope, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        return Filter(scope).CountAsync(cancellationToken);
     }
 
     /// <summary>
@@ -226,6 +214,58 @@ public sealed class SurveyResultsQueries
             .CountAsync(cancellationToken);
     }
 
+    private IQuery<SurveyResponse, SurveyResponseIndex> Filter(SurveyResultsScope scope)
+    {
+        var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == scope.SurveyId, collection: SurveysConstants.ResponsesCollectionName);
+
+        if (!scope.IncludeTest)
+        {
+            query = query.Where(index => !index.IsTest);
+        }
+
+        if (scope.CompletedOnly)
+        {
+            var completed = nameof(SurveyResponseStatus.Completed);
+            query = query.Where(index => index.Status == completed);
+        }
+
+        if (scope.Statuses is { Count: > 0 })
+        {
+            var statuses = scope.Statuses.Select(status => status.ToString()).ToArray();
+            query = query.Where(index => index.Status.IsIn(statuses));
+        }
+
+        if (scope.VersionNumbers is { Count: > 0 })
+        {
+            var numbers = scope.VersionNumbers.ToArray();
+            query = query.Where(index => index.VersionNumber.IsIn(numbers));
+        }
+
+        if (scope.FromUtc is { } from)
+        {
+            query = query.Where(index => (index.CompletedUtc != null && index.CompletedUtc >= from) || (index.CompletedUtc == null && index.StartedUtc >= from));
+        }
+
+        if (scope.ToUtc is { } to)
+        {
+            query = query.Where(index => (index.CompletedUtc != null && index.CompletedUtc < to) || (index.CompletedUtc == null && index.StartedUtc < to));
+        }
+
+        if (!string.IsNullOrEmpty(scope.CollectorId))
+        {
+            var collector = scope.CollectorId;
+            query = query.Where(index => index.CollectorId == collector);
+        }
+
+        if (!string.IsNullOrEmpty(scope.ContextKind))
+        {
+            var kind = scope.ContextKind;
+            query = query.Where(index => index.ContextKind == kind);
+        }
+
+        return query;
+    }
+
     private void Where(ISqlBuilder builder, DynamicParameters parameters, SurveyResultsScope scope)
     {
         builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.SurveyId))} = @SurveyId");
@@ -243,21 +283,30 @@ public sealed class SurveyResultsQueries
             parameters.Add("Status", nameof(SurveyResponseStatus.Completed));
         }
 
+        if (scope.Statuses is { Count: > 0 })
+        {
+            builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Status))} IN @Statuses");
+            parameters.Add("Statuses", scope.Statuses.Select(status => status.ToString()).ToArray());
+        }
+
         if (scope.VersionNumbers is { Count: > 0 })
         {
             builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.VersionNumber))} IN @VersionNumbers");
             parameters.Add("VersionNumbers", scope.VersionNumbers.ToArray());
         }
 
+        var completedUtc = _sql.Column(nameof(SurveyResponseIndex.CompletedUtc));
+        var startedUtc = _sql.Column(nameof(SurveyResponseIndex.StartedUtc));
+
         if (scope.FromUtc is { } from)
         {
-            builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.StartedUtc))} >= @FromUtc");
+            builder.WhereAnd($"(({completedUtc} IS NOT NULL AND {completedUtc} >= @FromUtc) OR ({completedUtc} IS NULL AND {startedUtc} >= @FromUtc))");
             parameters.Add("FromUtc", from);
         }
 
         if (scope.ToUtc is { } to)
         {
-            builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.StartedUtc))} < @ToUtc");
+            builder.WhereAnd($"(({completedUtc} IS NOT NULL AND {completedUtc} < @ToUtc) OR ({completedUtc} IS NULL AND {startedUtc} < @ToUtc))");
             parameters.Add("ToUtc", to);
         }
 

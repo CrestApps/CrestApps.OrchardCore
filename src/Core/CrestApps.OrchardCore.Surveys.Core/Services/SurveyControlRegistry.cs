@@ -74,7 +74,10 @@ public sealed class SurveyControlRegistry : ISurveyControlRegistry
 
     /// <inheritdoc />
     public ISurveyControlAnalyzer GetAnalyzer(string controlType)
-        => !string.IsNullOrEmpty(controlType) && _analyzers.TryGetValue(controlType, out var analyzer) ? analyzer : null;
+        => GetControl(controlType)?.Has(SurveyControlCapabilities.Aggregatable) == true
+            && _analyzers.TryGetValue(controlType, out var analyzer)
+            ? analyzer
+            : null;
 
     private static Dictionary<string, T> ToLookup<T>(IEnumerable<T> items, Func<T, string> key)
     {

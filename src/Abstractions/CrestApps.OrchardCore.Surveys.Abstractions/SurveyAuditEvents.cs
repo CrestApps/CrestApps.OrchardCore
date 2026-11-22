@@ -79,9 +79,4 @@ public static class SurveyAuditEvents
     /// An accommodation was revoked.
     /// </summary>
     public const string OverrideRevoked = "SurveyOverrideRevoked";
-
-    /// <summary>
-    /// The existing responses of a survey were anonymized.
-    /// </summary>
-    public const string ResponsesAnonymized = "SurveyResponsesAnonymized";
 }

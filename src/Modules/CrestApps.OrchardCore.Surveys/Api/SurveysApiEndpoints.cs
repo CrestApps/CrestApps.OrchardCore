@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -8,7 +10,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
+using OrchardCore.Modules;
+using OrchardCore.RateLimits;
+using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -28,10 +34,11 @@ internal static class SurveysApiEndpoints
         var group = routes.MapGroup(RoutePrefix)
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OrchardCoreConstants.AuthenticationSchemes.Api })
             .DisableAntiforgery()
+            .WithRateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)
             .WithTags("Surveys");
 
         group.MapGet(string.Empty, ListSurveysAsync).WithName("SurveysApiList").WithSummary("Lists the surveys the caller may manage.");
-        group.MapGet("{id}/definition", GetDefinitionAsync).WithName("SurveysApiDefinition").WithSummary("Gets what a respondent sees of a survey's published version, without answer keys.");
+        group.MapGet("{id}/definition", GetDefinitionAsync).WithName("SurveysApiDefinition").WithSummary("Gets what a respondent sees of a survey: the published version after the access rules, or the version of the caller's started response (responseId). No answer keys, no pooled questions without a response, and choices whose order is a key are shuffled.");
         group.MapGet("{id}/responses", ListResponsesAsync).WithName("SurveysApiResponses").WithSummary("Lists a page of a survey's responses.");
         group.MapPost("responses", StartAsync).WithName("SurveysApiStart").WithSummary("Starts, or resumes, the caller's response to a survey.");
         group.MapGet("responses/{responseId}", GetPageAsync).WithName("SurveysApiPage").WithSummary("Gets the current page of the caller's response.");
@@ -77,7 +84,21 @@ internal static class SurveysApiEndpoints
         return Results.Ok(result);
     }
 
-    internal static async Task<IResult> GetDefinitionAsync(string id, string collector, HttpContext httpContext, IAuthorizationService authorizationService, SurveyStore surveyStore, SurveyCollectorStore collectorStore, ISurveyVersionCache versionCache, SurveyRespondentProjector projector)
+    internal static async Task<IResult> GetDefinitionAsync(
+        string id,
+        string collector,
+        string responseId,
+        HttpContext httpContext,
+        IAuthorizationService authorizationService,
+        SurveyStore surveyStore,
+        SurveyCollectorStore collectorStore,
+        ISurveyVersionCache versionCache,
+        ISurveyResponseService responses,
+        SurveyRuntimeVersions runtimeVersions,
+        SurveyAccessEvaluator access,
+        SurveyPlanBuilder planBuilder,
+        SurveyRespondentProjector projector,
+        IClock clock)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, SurveysPermissions.RespondToSurveys))
         {
@@ -86,22 +107,80 @@ internal static class SurveysApiEndpoints
 
         var survey = await surveyStore.FindByIdAsync(id, httpContext.RequestAborted);
 
-        if (survey is null || survey.Status != SurveyStatus.Open)
+        if (survey is null)
         {
             return Results.NotFound();
         }
 
-        if (!string.IsNullOrEmpty(collector))
-        {
-            var found = await collectorStore.FindByTokenAsync(collector, httpContext.RequestAborted);
+        var identity = new SurveyRespondentIdentity { UserId = UserId(httpContext.User) };
+        SurveyVersion version;
+        SurveyResponsePlan plan;
+        var fromResponse = !string.IsNullOrWhiteSpace(responseId);
 
-            if (found is null || found.SurveyId != survey.ItemId)
+        if (fromResponse)
+        {
+            // The definition of the caller's own started response: its version, and only the questions its plan drew.
+            var response = await responses.FindForRespondentAsync(responseId, identity, httpContext.RequestAborted);
+
+            if (response is null || !string.Equals(response.SurveyId, survey.ItemId, StringComparison.Ordinal) || response.Status != SurveyResponseStatus.InProgress)
             {
                 return Results.NotFound();
             }
-        }
 
-        var version = await versionCache.GetPublishedAsync(survey, httpContext.RequestAborted);
+            version = await runtimeVersions.GetAsync(survey, response, httpContext.RequestAborted);
+            plan = response.Plan;
+        }
+        else
+        {
+            if (survey.Status != SurveyStatus.Open)
+            {
+                return Results.NotFound();
+            }
+
+            SurveyCollector found;
+
+            if (!string.IsNullOrEmpty(collector))
+            {
+                found = await collectorStore.FindByTokenAsync(collector, httpContext.RequestAborted);
+
+                if (found is null || found.SurveyId != survey.ItemId)
+                {
+                    return Results.NotFound();
+                }
+            }
+            else
+            {
+                found = await collectorStore.FindDefaultAsync(survey.ItemId, httpContext.RequestAborted);
+            }
+
+            version = await versionCache.GetPublishedAsync(survey, httpContext.RequestAborted);
+
+            if (version?.Definition is null)
+            {
+                return Results.NotFound();
+            }
+
+            // The same access rules as starting a response (audience, password, invitation, enrollment...). Limits are
+            // not counted here: seeing the questions is not an attempt.
+            var overrides = httpContext.RequestServices?.GetService<ISurveyOverrideService>();
+            var decision = await access.CheckStartAsync(new SurveyAccessContext
+            {
+                Survey = survey,
+                Version = version,
+                Collector = found,
+                Identity = identity,
+                Override = overrides is null ? null : await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, null, httpContext.RequestAborted),
+                UtcNow = clock.UtcNow,
+            });
+
+            if (!decision.IsAllowed)
+            {
+                return Problem(decision.Error);
+            }
+
+            // A plan made for this call only: it shuffles the choices of types whose key is an order, as the runner does.
+            plan = planBuilder.Build(survey.ItemId, version.Definition);
+        }
 
         if (version?.Definition is null)
         {
@@ -109,25 +188,33 @@ internal static class SurveysApiEndpoints
         }
 
         var definition = version.Definition;
+        var sanitizer = httpContext.RequestServices?.GetService<SurveyContentSanitizer>();
+        var drawn = (plan?.QuestionOrder ?? []).Values.SelectMany(ids => ids ?? []).ToHashSet(StringComparer.Ordinal);
 
         return Results.Ok(new
         {
             id = survey.ItemId,
             version = version.Number,
             title = string.IsNullOrWhiteSpace(definition.Title) ? survey.Title : definition.Title,
-            introduction = definition.Introduction,
-            pages = definition.Pages.Select(page => new
+            introduction = Html(sanitizer, definition.Introduction),
+            pages = (definition.Pages ?? []).Where(page => page is not null).Select(page => new
             {
                 id = page.Id,
                 name = page.Name,
                 title = page.Title,
-                description = page.Description,
-                questions = (page.Questions ?? []).Select(question => projector.Project(question, definition, null, null, null)),
-            }),
+                description = Html(sanitizer, page.Description),
+
+                // Without a started response, pooled questions are left out: a fresh draw on every call would show the
+                // whole pool.
+                questions = (page.Questions ?? [])
+                    .Where(question => question is not null && (fromResponse ? drawn.Contains(question.Id) : !IsPooled(page, question)))
+                    .Select(question => Sanitized(sanitizer, projector.Project(question, definition, plan, null, null)))
+                    .ToList(),
+            }).ToList(),
         });
     }
 
-    internal static async Task<IResult> ListResponsesAsync(string id, int? skip, int? take, HttpContext httpContext, IAuthorizationService authorizationService, ISurveyAuthorizationService surveyAuthorization, SurveyStore surveyStore, ISurveyResponseQueries queries)
+    internal static async Task<IResult> ListResponsesAsync(string id, int? skip, int? take, HttpContext httpContext, ISurveyAuthorizationService surveyAuthorization, SurveyStore surveyStore, ISurveyResponseQueries queries)
     {
         var survey = await surveyStore.FindByIdAsync(id, httpContext.RequestAborted);
 
@@ -141,14 +228,32 @@ internal static class SurveysApiEndpoints
             return Results.Forbid();
         }
 
-        var withIdentity = survey.Access?.Anonymity != AnonymityMode.Anonymous
-            && await authorizationService.AuthorizeAsync(httpContext.User, SurveysPermissions.ExportSurveyResponses);
+        // The one identity rule: who responded shows on an identified survey to whoever may read its responses. An
+        // anonymous survey lists nothing below its minimum group size, and shows days only and context kinds only.
+        var services = httpContext.RequestServices;
+        var withIdentity = await services.GetRequiredService<SurveyRespondentNames>().CanSeeIdentityAsync(httpContext.User, survey, httpContext.RequestAborted);
+        var anonymous = SurveyAnonymity.IsAnonymous(survey);
         var (count, items) = await queries.ListAsync(new SurveyResponseQuery
         {
             SurveyIds = [survey.ItemId],
             Skip = Math.Max(skip ?? 0, 0),
             Take = Math.Clamp(take ?? 50, 1, SurveysConstants.PageSize),
         }, httpContext.RequestAborted);
+
+        var settings = services.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
+
+        if (SurveyAnonymity.IsTooSmall(survey, settings, count))
+        {
+            return Results.Ok(new { count = 0, hidden = true, items = Array.Empty<object>() });
+        }
+
+        var timeZone = anonymous && services.GetService<ILocalClock>() is { } localClock
+            && TimeZoneInfo.TryFindSystemTimeZoneById((await localClock.GetLocalTimeZoneAsync())?.TimeZoneId ?? string.Empty, out var found)
+            ? found
+            : TimeZoneInfo.Utc;
+
+        DateTime? Shown(DateTime? utc)
+            => utc is not { } value ? null : anonymous ? SurveyAnonymity.StartOfDayUtc(value, timeZone) : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
         return Results.Ok(new
         {
@@ -162,9 +267,9 @@ internal static class SurveysApiEndpoints
                 grading = response.Grading.ToString(),
                 userId = withIdentity ? response.UserId : null,
                 respondent = withIdentity ? response.Respondent?.ToString() : null,
-                context = response.Context?.ToString(),
-                startedUtc = DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc),
-                completedUtc = response.CompletedUtc is { } completed ? DateTime.SpecifyKind(completed, DateTimeKind.Utc) : (DateTime?)null,
+                context = anonymous ? response.Context?.Kind : response.Context?.ToString(),
+                startedUtc = Shown(response.StartedUtc),
+                completedUtc = Shown(response.CompletedUtc),
                 score = response.Score,
                 maxScore = response.MaxScore,
                 percent = response.Percent,
@@ -173,7 +278,7 @@ internal static class SurveysApiEndpoints
         });
     }
 
-    internal static async Task<IResult> StartAsync(StartResponseInput input, HttpContext httpContext, IAuthorizationService authorizationService, ISurveyResponseService responses)
+    internal static async Task<IResult> StartAsync(StartResponseInput input, HttpContext httpContext, IAuthorizationService authorizationService, ISurveyResponseService responses, SurveyStore surveyStore, SurveyCollectorStore collectorStore, SurveyContextGuard contextGuard)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, SurveysPermissions.RespondToSurveys))
         {
@@ -185,6 +290,7 @@ internal static class SurveysApiEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["surveyId"] = ["Give the survey id or a collector token."] });
         }
 
+        var identity = new SurveyRespondentIdentity { UserId = UserId(httpContext.User) };
         RecordRef? context = null;
 
         if (!string.IsNullOrWhiteSpace(input.Context))
@@ -194,6 +300,22 @@ internal static class SurveysApiEndpoints
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["context"] = ["Write the context as Kind:Id."] });
             }
 
+            // A context counts attempts and starts workflows, so a caller may only name a registered kind and a record
+            // the kind's ownership check says the caller owns.
+            var survey = !string.IsNullOrWhiteSpace(input.CollectorToken)
+                ? await FindByCollectorAsync(input.CollectorToken, surveyStore, collectorStore, httpContext.RequestAborted)
+                : await surveyStore.FindByIdAsync(input.SurveyId, httpContext.RequestAborted);
+
+            if (survey is null)
+            {
+                return Problem(SurveyErrorCode.NotFound);
+            }
+
+            if (!await contextGuard.IsAllowedAsync(survey, parsed, identity, httpContext.RequestAborted))
+            {
+                return Problem(SurveyErrorCode.NotOwner);
+            }
+
             context = parsed;
         }
 
@@ -201,9 +323,12 @@ internal static class SurveysApiEndpoints
         {
             SurveyId = input.SurveyId,
             CollectorToken = input.CollectorToken,
-            Identity = new SurveyRespondentIdentity { UserId = UserId(httpContext.User) },
+            Identity = identity,
             Context = context,
-            Variables = input.Variables ?? [],
+
+            // API variables are as untrusted as query string values: only hidden variables that accept a value from the
+            // URL take them, and the collector's values are kept otherwise.
+            QueryVariables = input.Variables ?? [],
             Culture = input.Culture,
         }, httpContext.RequestAborted);
 
@@ -214,7 +339,7 @@ internal static class SurveysApiEndpoints
 
         var page = await responses.GetPageAsync(result.Response, httpContext.RequestAborted);
 
-        return Results.Ok(PageResult(page, result.Resumed));
+        return Results.Ok(PageResult(page, result.Resumed, httpContext));
     }
 
     internal static async Task<IResult> GetPageAsync(string responseId, HttpContext httpContext, IAuthorizationService authorizationService, ISurveyResponseService responses)
@@ -231,7 +356,7 @@ internal static class SurveysApiEndpoints
             return Results.NotFound();
         }
 
-        return Results.Ok(PageResult(await responses.GetPageAsync(response, httpContext.RequestAborted), resumed: true));
+        return Results.Ok(PageResult(await responses.GetPageAsync(response, httpContext.RequestAborted), resumed: true, httpContext));
     }
 
     internal static Task<IResult> SubmitPageAsync(string responseId, string pageId, SubmitPageInput input, HttpContext httpContext, IAuthorizationService authorizationService, ISurveyResponseService responses)
@@ -261,11 +386,14 @@ internal static class SurveysApiEndpoints
             return Results.ValidationProblem(result.Errors.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray()));
         }
 
-        return result.Succeeded ? Results.Ok(PageResult(result, resumed: false)) : Problem(result.Error);
+        return result.Succeeded ? Results.Ok(PageResult(result, resumed: false, httpContext)) : Problem(result.Error);
     }
 
-    private static object PageResult(SurveyPageResult result, bool resumed)
-        => new
+    private static object PageResult(SurveyPageResult result, bool resumed, HttpContext httpContext)
+    {
+        var sanitizer = httpContext?.RequestServices?.GetService<SurveyContentSanitizer>();
+
+        return new
         {
             responseId = result.Response?.ItemId,
             number = result.Response?.Number,
@@ -278,27 +406,54 @@ internal static class SurveysApiEndpoints
                 {
                     id = result.Page.Id,
                     title = result.Page.Title,
-                    description = result.Page.Description,
+                    description = Html(sanitizer, result.Page.Description),
                     position = result.Page.Position,
                     pageCount = result.Page.PageCount,
                     isLast = result.Page.IsLast,
                     canGoBack = result.Page.CanGoBack,
                     deadlineUtc = result.Page.DeadlineUtc,
-                    questions = result.Page.Questions.Where(question => !result.Page.HiddenQuestionIds.Contains(question.Id)),
+                    questions = result.Page.Questions.Where(question => !result.Page.HiddenQuestionIds.Contains(question.Id)).Select(question => Sanitized(sanitizer, question)).ToList(),
                 },
         };
+    }
 
     private static IResult Problem(SurveyErrorCode error)
     {
         var status = error switch
         {
             SurveyErrorCode.NotFound => StatusCodes.Status404NotFound,
-            SurveyErrorCode.NotOwner or SurveyErrorCode.NotInAudience or SurveyErrorCode.SignInRequired => StatusCodes.Status403Forbidden,
+            SurveyErrorCode.NotOwner or SurveyErrorCode.NotInAudience or SurveyErrorCode.SignInRequired
+                or SurveyErrorCode.PasswordRequired or SurveyErrorCode.PasswordInvalid or SurveyErrorCode.CaptchaRequired
+                or SurveyErrorCode.InvitationInvalid or SurveyErrorCode.InvitationUsed => StatusCodes.Status403Forbidden,
             SurveyErrorCode.Busy or SurveyErrorCode.AlreadyInProgress or SurveyErrorCode.InvalidState => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status422UnprocessableEntity,
         };
 
         return Results.Problem(statusCode: status, title: error.ToString(), type: "https://crestapps.com/surveys/errors/" + error.ToString().ToLowerInvariant());
+    }
+
+    private static async Task<Survey> FindByCollectorAsync(string token, SurveyStore surveyStore, SurveyCollectorStore collectorStore, CancellationToken cancellationToken)
+    {
+        var collector = await collectorStore.FindByTokenAsync(token.Trim(), cancellationToken);
+
+        return collector is null ? null : await surveyStore.FindByIdAsync(collector.SurveyId, cancellationToken);
+    }
+
+    private static bool IsPooled(SurveyPage page, SurveyQuestion question)
+        => !string.IsNullOrEmpty(question.PoolId) && (page.Pools ?? []).Any(pool => string.Equals(pool?.Id, question.PoolId, StringComparison.Ordinal));
+
+    private static string Html(SurveyContentSanitizer sanitizer, string html)
+        => sanitizer is null || string.IsNullOrEmpty(html) ? html : sanitizer.Sanitize(html);
+
+    private static SurveyQuestionView Sanitized(SurveyContentSanitizer sanitizer, SurveyQuestionView view)
+    {
+        if (view is not null)
+        {
+            view.Title = Html(sanitizer, view.Title);
+            view.Description = Html(sanitizer, view.Description);
+        }
+
+        return view;
     }
 
     private static string UserId(ClaimsPrincipal user)

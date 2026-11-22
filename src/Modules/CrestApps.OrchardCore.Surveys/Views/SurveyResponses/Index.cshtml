@@ -27,11 +27,16 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary" href="@Url.Content("~/admin/surveys/" + Model.Survey.ItemId + "/preview")">@T["Preview"]</a>
+                    <a class="btn btn-secondary" href="@Url.RouteUrl("SurveysPreview", new { id = Model.Survey.ItemId })">@T["Preview"]</a>
                 </div>
             </div>
         </div>
     </div>
+
+    @if (Model.HiddenBelow > 0)
+    {
+        <div class="alert alert-info">@T["This survey is anonymous, and fewer than {0} responses match these filters. They are hidden so no one can be recognized.", Model.HiddenBelow]</div>
+    }
 
     <admin-list name="SurveyResponses" context="Model.List"
                 bulk-actions="Model.BulkActions"

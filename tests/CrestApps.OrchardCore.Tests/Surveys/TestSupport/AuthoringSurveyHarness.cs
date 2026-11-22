@@ -141,6 +141,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
             [templates],
             [],
             siteService.Object,
+            new CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymitySecrets(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(), surveyStore, NullLogger<CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymitySecrets>.Instance),
             clock.Object,
             [],
             NullLogger<CrestApps.Core.Services.NamedCatalogManager<Survey>>.Instance);

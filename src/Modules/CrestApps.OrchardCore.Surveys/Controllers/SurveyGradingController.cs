@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -92,6 +94,15 @@ public sealed class SurveyGradingController : Controller
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
+        var allowed = string.IsNullOrEmpty(surveyId)
+            ? await _queue.CanOpenAsync(User, HttpContext.RequestAborted)
+            : await _queue.CanGradeAsync(User, surveyId, HttpContext.RequestAborted);
+
+        if (!allowed)
+        {
+            return Forbid();
+        }
+
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var (count, items) = await _queue.ListAsync(User, surveyId, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
         var surveyIds = items.Select(item => item.SurveyId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
@@ -428,15 +439,12 @@ public sealed class SurveyGradingController : Controller
             && await authorization.AuthorizeAsync(User, survey, SurveyOperation.Grade, HttpContext.RequestAborted);
     }
 
+    // The shared respondent names: a grader sees who responded on an identified survey only (Guest or Deleted user
+    // when there is no user), and Anonymous on an anonymous survey.
     private async Task<string> RespondentNameAsync(SurveyResponse response)
-    {
-        if (string.IsNullOrEmpty(response?.UserId))
-        {
-            return null;
-        }
-
-        return (await _userManager.FindByIdAsync(response.UserId))?.UserName;
-    }
+        => response is null
+            ? null
+            : await HttpContext.RequestServices.GetRequiredService<SurveyRespondentNames>().GetAsync(response, HttpContext.RequestAborted);
 
     private ValueTask NotifyErrorAsync(SurveyErrorCode error)
         => error switch

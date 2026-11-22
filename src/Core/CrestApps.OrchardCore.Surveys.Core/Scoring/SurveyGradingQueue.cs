@@ -92,6 +92,31 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     }
 
     /// <inheritdoc />
+    public async Task<bool> CanOpenAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        // GradeOwnSurveyResponses is implied by GradeSurveyResponses, so this covers both.
+        if (await _authorizationService.AuthorizeAsync(user, SurveysPermissions.GradeOwnSurveyResponses))
+        {
+            return true;
+        }
+
+        foreach (var scope in _scopes)
+        {
+            if ((await scope.GetGradableSurveyIdsAsync(user, cancellationToken))?.Count > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc />
     public async Task<bool> CanGradeAsync(ClaimsPrincipal user, string surveyId, CancellationToken cancellationToken = default)
     {
         if (user is null || string.IsNullOrEmpty(surveyId))

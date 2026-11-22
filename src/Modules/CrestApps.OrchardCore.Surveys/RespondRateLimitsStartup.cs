@@ -5,8 +5,9 @@ using OrchardCore.RateLimits;
 namespace CrestApps.OrchardCore.Surveys;
 
 /// <summary>
-/// Holds each visitor to a number of requests a minute on the respondent pages (start, page posts, autosave, live
-/// evaluation and answer checks), when Orchard Core Rate Limits is on.
+/// Holds each visitor to a number of requests a minute on every respondent route (the landing, invitation, response,
+/// ending, review, results and "my surveys" pages, and the start, page, autosave, evaluation, answer check, resume and
+/// reopen posts), when Orchard Core Rate Limits is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
 public sealed class RespondRateLimitsStartup : StartupBase

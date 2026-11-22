@@ -17,7 +17,6 @@ public sealed class DataSourcesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<SurveyDataSetAccess>();
-        services.TryAddScoped<SurveyRespondentNames>();
         services.TryAddScoped<SurveyWideDataSetFactory>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISurveysDataSet, SurveysDataSet>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISurveysDataSet, SurveyVersionsDataSet>());

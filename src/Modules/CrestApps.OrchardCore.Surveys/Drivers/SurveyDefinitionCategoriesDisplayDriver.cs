@@ -18,7 +18,7 @@ internal sealed class SurveyDefinitionCategoriesDisplayDriver : DisplayDriver<Su
         {
             model.Categories = definition.ScoreCategories.ToList();
             model.Bands = definition.ScoreBands.OrderByDescending(band => band.MinPercent).ToList();
-        }).Location("Content:1#Scoring");
+        }).Location("Content:1#Scoring;2");
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)

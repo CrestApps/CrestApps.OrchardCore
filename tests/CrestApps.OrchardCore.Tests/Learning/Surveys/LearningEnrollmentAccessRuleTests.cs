@@ -13,8 +13,9 @@ using OrchardCore.ContentManagement;
 namespace CrestApps.OrchardCore.Tests.Learning.Surveys;
 
 /// <summary>
-/// A survey owned by a course item can only be started by a learner enrolled in the course who may open the item now,
-/// for a response that belongs to their own enrollment (or to the course, for an anonymous survey).
+/// A survey owned by a course item can only be started, resumed and completed by a learner enrolled in the course who may
+/// open the published item now, for a response that belongs to their own enrollment (or to the course, for an anonymous
+/// survey).
 /// </summary>
 public sealed class LearningEnrollmentAccessRuleTests
 {
@@ -110,6 +111,78 @@ public sealed class LearningEnrollmentAccessRuleTests
         Assert.True(testDecision.IsAllowed);
     }
 
+    [Fact]
+    public async Task CheckStart_AnUnpublishedCourseItem_IsRefused_NotLeftOpen()
+    {
+        // Arrange
+        var rule = Rule(Enrolled(), published: false);
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.NotOpen, decision.Error);
+    }
+
+    [Fact]
+    public async Task CheckStart_ASurveyOwnedByAContentItemThatIsNotACourseItem_IsLeftToTheOtherRules()
+    {
+        // Arrange
+        var rule = Rule(new CourseItemAccess { Reason = CourseItemAccessReason.NotEnrolled }, courseOwned: false);
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
+    [Theory]
+    [InlineData(CourseItemAccessReason.NotEnrolled)]
+    [InlineData(CourseItemAccessReason.Suspended)]
+    public async Task CheckResumeAndComplete_ALearnerNoLongerEnrolled_IsRefused(CourseItemAccessReason reason)
+    {
+        // Arrange
+        var rule = Rule(new CourseItemAccess { Reason = reason });
+        var context = Context(LearningSurveyContexts.Enrollment("e1"));
+        context.Response = new SurveyResponse { ItemId = "r1", Context = context.Context };
+
+        // Act
+        var resume = await rule.CheckResumeAsync(context);
+        var complete = await rule.CheckCompleteAsync(context);
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.NotInAudience, resume.Error);
+        Assert.Equal(SurveyErrorCode.NotInAudience, complete.Error);
+    }
+
+    [Fact]
+    public async Task CheckComplete_AnEnrolledLearner_ForTheirOwnEnrollment_IsAllowed()
+    {
+        // Arrange
+        var rule = Rule(Enrolled());
+
+        // Act
+        var decision = await rule.CheckCompleteAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CheckStart_AnApiCallerIdentifiedOnlyByTheSubClaim_IsRecognized()
+    {
+        // Arrange
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", UserId)], "Bearer"));
+        var rule = Rule(Enrolled(), user: user);
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
     private static CourseItemAccess Enrolled()
         => new()
         {
@@ -118,16 +191,17 @@ public sealed class LearningEnrollmentAccessRuleTests
             CourseId = "course1",
         };
 
-    private static LearningEnrollmentAccessRule Rule(CourseItemAccess access, bool signedIn = true)
+    private static LearningEnrollmentAccessRule Rule(CourseItemAccess access, bool signedIn = true, bool published = true, bool courseOwned = true, ClaimsPrincipal user = null)
     {
         var item = new ContentItem { ContentItemId = "item1" };
         var learningSurveys = new Mock<ILearningSurveyService>();
-        learningSurveys.Setup(service => service.FindOwnerItemAsync(It.IsAny<Survey>())).ReturnsAsync(item);
+        learningSurveys.Setup(service => service.IsOwnedByCourseItemAsync(It.IsAny<Survey>())).ReturnsAsync(courseOwned);
+        learningSurveys.Setup(service => service.FindOwnerItemAsync(It.IsAny<Survey>())).ReturnsAsync(published ? item : null);
 
         var courseAccess = new Mock<ICourseAccessService>();
         courseAccess.Setup(service => service.GetItemAccessAsync(It.IsAny<ClaimsPrincipal>(), item)).ReturnsAsync(access);
 
-        var user = signedIn
+        user ??= signedIn
             ? new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "Test"))
             : new ClaimsPrincipal(new ClaimsIdentity());
         var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } };

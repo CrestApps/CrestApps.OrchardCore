@@ -2,15 +2,15 @@
 
 @if (Model.Value.Status != SurveyResponseStatus.Voided)
 {
-    <a href="@Url.Content("~/admin/surveys/responses/" + Model.Value.ItemId + "/void")"
+    <a href="@Url.RouteUrl("SurveysResponseVoid", new { id = Model.Value.ItemId })"
        class="dropdown-item"
-       data-url-af="UnsafeUrl"
+       data-url-af="RemoveUrl UnsafeUrl"
        data-title="@T["Void response"]"
        data-message="@T["Void this response? It stays in the list but is left out of results."]"
        data-ok-text="@T["Void"]"
        data-cancel-text="@T["Cancel"]">@T["Void"]</a>
 }
-<a href="@Url.Content("~/admin/surveys/responses/" + Model.Value.ItemId + "/delete")"
+<a href="@Url.RouteUrl("SurveysResponseDelete", new { id = Model.Value.ItemId })"
    class="dropdown-item text-danger"
    data-url-af="RemoveUrl UnsafeUrl"
    data-title="@T["Delete response"]"

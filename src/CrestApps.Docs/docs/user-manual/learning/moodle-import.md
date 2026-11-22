@@ -68,7 +68,7 @@ Each of these is a failed row of the import, naming the course and the activity:
 - SCORM packages kept outside the backup (from a repository or a web address), and a package the package checks refuse, with the reason;
 - questions of a kind the site does not have (embedded answers, calculated, drag and drop onto an image), questions whose text shows a picture, answers with pictures, matching questions with extra answers, and short answers with a wildcard;
 - a cohort the site does not have or the importer may not link, guest access and other enrolment methods, and completion on a date, a length of enrolment, unenrolment, self completion or other courses;
-- things to finish by hand: the enrollment key to set, a quiz password (set an access code on the quiz), a hidden course or activity (unpublish it if it should stay hidden), an assignment graded on a scale, a feedback item such as a captcha, restrictions on groups, grades or other profile fields, and a completion role no course staff role matches (kept on the course, and kept by the course editor, but nobody approves until you choose who does), and several completion roles (only the first is imported).
+- things to finish by hand: the enrollment key to set, a quiz password (not imported: only the learners enrolled in the course can take the quiz), a hidden course or activity (unpublish it if it should stay hidden), an assignment graded on a scale, a feedback item such as a captcha, restrictions on groups, grades or other profile fields, and a completion role no course staff role matches (kept on the course, and kept by the course editor, but nobody approves until you choose who does), and several completion roles (only the first is imported).
 
 ## Import a course again
 

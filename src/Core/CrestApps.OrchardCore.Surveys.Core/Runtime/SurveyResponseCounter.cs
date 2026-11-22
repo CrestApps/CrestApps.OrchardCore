@@ -69,6 +69,24 @@ public sealed class SurveyResponseCounter
     }
 
     /// <summary>
+    /// Finds the response in progress started from a personal invitation, test responses left out.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="invitationId">The invitation.</param>
+    /// <returns>The response, or <see langword="null"/>.</returns>
+    public Task<SurveyResponse> FindInProgressByInvitationAsync(string surveyId, string invitationId)
+    {
+        if (string.IsNullOrEmpty(surveyId) || string.IsNullOrEmpty(invitationId))
+        {
+            return Task.FromResult<SurveyResponse>(null);
+        }
+
+        var inProgress = nameof(SurveyResponseStatus.InProgress);
+
+        return _store.YesSqlSession.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.InvitationId == invitationId && index.Status == inProgress && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).FirstOrDefaultAsync();
+    }
+
+    /// <summary>
     /// Lists the responses of a user that are not tests or voided, newest first.
     /// </summary>
     /// <param name="userId">The user.</param>

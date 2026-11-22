@@ -28,6 +28,70 @@ public sealed class SurveyAuthorizationServiceTests
         Assert.False(await service.AuthorizeAsync(TestSecurity.User("lee"), _ownSurvey, SurveyOperation.Manage, TestContext.Current.CancellationToken));
     }
 
+    [Theory]
+    [InlineData(SurveyOperation.ManageInvitations)]
+    [InlineData(SurveyOperation.Publish)]
+    [InlineData(SurveyOperation.DeleteResponses)]
+    [InlineData(SurveyOperation.Grade)]
+    [InlineData(SurveyOperation.ManageOverrides)]
+    public async Task AuthorizeAsync_ManageOwnSurveysAlone_DoesNotGrantTheDedicatedOperations(SurveyOperation operation)
+    {
+        // Arrange: the Editor role's survey permissions, without the dedicated own permissions.
+        var service = new SurveyAuthorizationService(TestSecurity.Granting(SurveysPermissions.ManageOwnSurveys, SurveysPermissions.ViewOwnSurveyResponses), []);
+
+        // Act
+        var allowed = await service.AuthorizeAsync(TestSecurity.User("pat"), _ownSurvey, operation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_ManageOwnSurveysAlone_CannotSendInvitations()
+    {
+        // Arrange
+        var service = new SurveyAuthorizationService(TestSecurity.Granting(SurveysPermissions.ManageOwnSurveys), []);
+
+        // Act
+        var canManage = await service.AuthorizeAsync(TestSecurity.User("pat"), _ownSurvey, SurveyOperation.Manage, TestContext.Current.CancellationToken);
+        var canInvite = await service.AuthorizeAsync(TestSecurity.User("pat"), _ownSurvey, SurveyOperation.ManageInvitations, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(canManage);
+        Assert.False(canInvite);
+    }
+
+    [Fact]
+    public async Task AuthorizeAsync_OwnInvitationsPermission_AllowsOnlyOwnSurveys()
+    {
+        // Arrange
+        var service = new SurveyAuthorizationService(TestSecurity.Granting(SurveysPermissions.ManageOwnSurveyInvitations), []);
+
+        // Act
+        var own = await service.AuthorizeAsync(TestSecurity.User("pat"), _ownSurvey, SurveyOperation.ManageInvitations, TestContext.Current.CancellationToken);
+        var other = await service.AuthorizeAsync(TestSecurity.User("lee"), _ownSurvey, SurveyOperation.ManageInvitations, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(own);
+        Assert.False(other);
+    }
+
+    [Theory]
+    [InlineData(SurveyOperation.Publish)]
+    [InlineData(SurveyOperation.DeleteResponses)]
+    [InlineData(SurveyOperation.Grade)]
+    [InlineData(SurveyOperation.ManageOverrides)]
+    [InlineData(SurveyOperation.ManageInvitations)]
+    public void PermissionsOf_EveryOwnPermission_IsImpliedByItsGlobalPermission(SurveyOperation operation)
+    {
+        // Act
+        var (global, own) = SurveyAuthorizationService.PermissionsOf(operation);
+
+        // Assert
+        Assert.NotEqual(SurveysPermissions.ManageOwnSurveys, own);
+        Assert.Contains(global, own.ImpliedBy);
+    }
+
     [Fact]
     public async Task AuthorizeAsync_ExportNeedsTheGlobalPermission()
     {

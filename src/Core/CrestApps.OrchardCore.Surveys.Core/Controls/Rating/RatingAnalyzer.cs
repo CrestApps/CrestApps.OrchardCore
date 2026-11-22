@@ -24,6 +24,16 @@ public sealed class RatingAnalyzer : SurveyNumberAnalyzerBase
     public override string ControlType => SurveyControlNames.Rating;
 
     /// <summary>
+    /// Gets whether a question is a Net Promoter Score question: a rating that reports the Net Promoter Score.
+    /// </summary>
+    /// <param name="question">The question, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> for a Net Promoter Score question.</returns>
+    public static bool IsNps(SurveyQuestion question)
+        => question is not null
+            && string.Equals(question.ControlType, SurveyControlNames.Rating, StringComparison.Ordinal)
+            && question.GetSettings<RatingSettings>().Metric == RatingMetric.Nps;
+
+    /// <summary>
     /// Computes the Net Promoter Score of a distribution: percent of 9 and 10 minus percent of 0 to 6.
     /// </summary>
     /// <param name="distribution">How many responses gave each value.</param>

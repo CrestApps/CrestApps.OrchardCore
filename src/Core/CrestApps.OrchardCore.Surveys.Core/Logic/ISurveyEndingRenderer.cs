@@ -3,8 +3,9 @@ using CrestApps.OrchardCore.Surveys.Models;
 namespace CrestApps.OrchardCore.Surveys.Core.Logic;
 
 /// <summary>
-/// Renders the message of an ending: piping, then Liquid with a model of the survey, the response, the answers and the
-/// score, sanitized. The module implements it with Orchard Core's Liquid manager.
+/// Renders the message of an ending: the author's message as Liquid with a model of the survey, the response, the
+/// answers and the score, then piping, sanitized. A respondent's text must never reach the Liquid parser. The module
+/// implements it with Orchard Core's Liquid manager.
 /// </summary>
 public interface ISurveyEndingRenderer
 {

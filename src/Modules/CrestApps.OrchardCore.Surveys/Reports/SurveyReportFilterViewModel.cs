@@ -53,6 +53,26 @@ public class SurveyReportFilterViewModel
     public string AudienceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the statuses the Survey Responses report lists.
+    /// </summary>
+    public string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the page of the Survey Responses report shown on screen, from 1.
+    /// </summary>
+    public int? Page { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status choices.
+    /// </summary>
+    public IList<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the status and page filters show.
+    /// </summary>
+    public bool ShowStatus { get; set; }
+
+    /// <summary>
     /// Gets or sets the report the filter belongs to.
     /// </summary>
     public string ReportName { get; set; }

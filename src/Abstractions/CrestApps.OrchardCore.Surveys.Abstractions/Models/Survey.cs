@@ -66,6 +66,12 @@ public sealed class Survey : CatalogItem, IAuditedModel, INameAwareModel
     public RecordRef? Owner { get; set; }
 
     /// <summary>
+    /// Gets or sets whether publishing leaves out the default web link. An owner that starts every response itself, such
+    /// as a course quiz started through the learner's enrollment, sets it so the survey has no public link.
+    /// </summary>
+    public bool NoDefaultWebLink { get; set; }
+
+    /// <summary>
     /// Gets or sets free tags used to filter the survey list.
     /// </summary>
     public List<string> Tags { get; set; } = [];

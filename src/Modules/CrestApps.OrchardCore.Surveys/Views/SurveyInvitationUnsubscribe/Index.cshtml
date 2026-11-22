@@ -1,0 +1,33 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyInvitationUnsubscribeViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyInvitationUnsubscribe" title="@T["Unsubscribe"]">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    <div class="survey-message">
+        <h1 class="h3 mb-3">@T["Unsubscribe from survey invitations"]</h1>
+
+        @if (Model.IsUnsubscribed)
+        {
+            <div class="alert alert-success" role="status">@T["{0} will not get any more survey invitations or reminders.", Model.Email]</div>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(Model.Title))
+            {
+                <p>@T["You were invited to answer {0}.", Model.Title]</p>
+            }
+
+            <p>@T["Stop all survey invitations and reminders to {0}?", Model.Email]</p>
+
+            <form action="@Url.Content("~/s/i/" + Uri.EscapeDataString(Model.Token) + "/unsubscribe")" method="post" class="no-multisubmit">
+                <button type="submit" class="btn btn-primary">@T["Unsubscribe"]</button>
+            </form>
+        }
+    </div>
+</div>

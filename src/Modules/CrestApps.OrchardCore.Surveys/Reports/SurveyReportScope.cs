@@ -45,7 +45,8 @@ internal sealed class SurveyReportScope
     public bool IsAnonymous { get; set; }
 
     /// <summary>
-    /// Gets or sets the fewest responses a group may show, or 0 when there is no limit.
+    /// Gets or sets the fewest responses a group may show: the survey's minimum, never below the site's floor, or 0 for
+    /// an identified survey.
     /// </summary>
     public int MinimumGroupSize { get; set; }
 
@@ -60,5 +61,5 @@ internal sealed class SurveyReportScope
     /// <param name="size">The size.</param>
     /// <returns><see langword="true"/> when the group must be hidden.</returns>
     public bool IsTooSmall(long size)
-        => IsAnonymous && MinimumGroupSize > 0 && size < MinimumGroupSize;
+        => MinimumGroupSize > 0 && size < MinimumGroupSize;
 }

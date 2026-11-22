@@ -29,7 +29,7 @@ public sealed class SurveysApiEndpointsTests
         var http = Context();
 
         // Act
-        var result = await SurveysApiEndpoints.GetDefinitionAsync("s1", null, http, Deny(), null, null, null, null);
+        var result = await SurveysApiEndpoints.GetDefinitionAsync("s1", null, null, http, Deny(), null, null, null, null, null, null, null, null, null);
 
         // Assert
         Assert.IsType<ForbidHttpResult>(result);
@@ -42,7 +42,7 @@ public sealed class SurveysApiEndpointsTests
         var http = Context();
 
         // Act
-        var result = await SurveysApiEndpoints.StartAsync(new StartResponseInput { SurveyId = "s1" }, http, Deny(), null);
+        var result = await SurveysApiEndpoints.StartAsync(new StartResponseInput { SurveyId = "s1" }, http, Deny(), null, null, null, null);
 
         // Assert
         Assert.IsType<ForbidHttpResult>(result);

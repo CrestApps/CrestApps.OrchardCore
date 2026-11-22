@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Formulas;
@@ -14,6 +15,7 @@ using CrestApps.OrchardCore.WorkQueues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -152,6 +154,36 @@ public sealed class SurveyResponseService : ISurveyResponseService
     public static string ResponseLockKey(string responseId)
         => "Surveys:ResponseWrite:" + responseId;
 
+    /// <summary>
+    /// Gets the lock key of starting a response for a respondent. A resume token is a secret, so only its SHA-256 hash
+    /// goes into the key (lock keys can end up in a distributed cache).
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="respondentKey">The respondent key, or <see langword="null"/>.</param>
+    /// <param name="resumeToken">The caller's resume token, or <see langword="null"/>.</param>
+    /// <returns>The key.</returns>
+    public static string StartLockKey(string surveyId, string respondentKey, string resumeToken)
+    {
+        var who = !string.IsNullOrEmpty(respondentKey)
+            ? respondentKey
+            : !string.IsNullOrEmpty(resumeToken)
+                ? "t:" + SurveyResumeTokens.Hash(resumeToken)
+                : global::OrchardCore.IdGenerator.GenerateId();
+
+        return $"Surveys:Start:{surveyId}:{who}";
+    }
+
+    /// <inheritdoc />
+    public Task<string> RotateResumeTokenAsync(string responseId, string presentedToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(responseId) || !string.Equals(SurveyResumeTokens.ResponseIdOf(presentedToken), responseId, StringComparison.Ordinal))
+        {
+            return Task.FromResult<string>(null);
+        }
+
+        return IssueResumeTokenAsync(responseId, response => SurveyResumeTokens.Matches(presentedToken, response.ResumeTokenHash), cancellationToken);
+    }
+
     /// <inheritdoc />
     public async Task<SurveyStartResult> StartAsync(StartResponseRequest request, CancellationToken cancellationToken = default)
     {
@@ -200,8 +232,8 @@ public sealed class SurveyResponseService : ISurveyResponseService
         }
 
         var anonymous = survey.Access?.Anonymity == AnonymityMode.Anonymous;
-        var respondentKey = isTest ? null : SurveyRespondentKeys.For(survey, identity, invitation);
-        var lockKey = $"Surveys:Start:{survey.ItemId}:{respondentKey ?? identity.ResumeToken ?? (global::OrchardCore.IdGenerator.GenerateId())}";
+        var respondentKey = isTest ? null : await Secrets.RespondentKeyAsync(survey, identity, invitation, cancellationToken);
+        var lockKey = StartLockKey(survey.ItemId, respondentKey, identity.ResumeToken);
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(lockKey, _lockTimeout, _lockExpiration);
 
         if (!locked)
@@ -215,7 +247,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
         await using (locker)
         {
             var now = _clock.UtcNow;
-            var existing = await FindOpenAsync(survey, request, identity, anonymous, isTest, cancellationToken);
+            var existing = await FindOpenAsync(survey, request, identity, invitation, anonymous, isTest, cancellationToken);
 
             if (existing is not null)
             {
@@ -223,9 +255,43 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 {
                     await SubmitAtDeadlineAsync(existing.ItemId, cancellationToken);
                 }
-                else
+                else if (await _access.CheckResumeAsync(new SurveyAccessContext
+                {
+                    // Who the respondent is may have changed since the response started (a learner withdrawn from the
+                    // course, say), so the rules about that decide again before the response is handed back.
+                    Survey = survey,
+                    Version = version,
+                    Collector = collector,
+                    Invitation = invitation,
+                    Identity = identity,
+                    RespondentKey = respondentKey,
+                    Context = existing.Context,
+                    Response = existing,
+                    UtcNow = now,
+                    IsTest = existing.IsTest,
+                }) is { IsAllowed: false } refusal)
+                {
+                    return new SurveyStartResult { Error = refusal.Error };
+                }
+                else if (IsOwner(existing, identity))
                 {
                     return new SurveyStartResult { Response = existing, Resumed = true };
+                }
+                else
+                {
+                    // Found by its invitation: the personal link is the invitee's key, so this browser resumes the
+                    // response with a new resume token and the token held before stops working. A response that
+                    // belongs to a user account resumes only for that user.
+                    if (string.IsNullOrEmpty(existing.ResumeTokenHash))
+                    {
+                        return new SurveyStartResult { Error = SurveyErrorCode.SignInRequired };
+                    }
+
+                    var reissued = await IssueResumeTokenAsync(existing.ItemId, _ => true, cancellationToken);
+
+                    return reissued is null
+                        ? new SurveyStartResult { Error = SurveyErrorCode.Busy }
+                        : new SurveyStartResult { Response = existing, Resumed = true, ResumeToken = reissued };
                 }
             }
 
@@ -272,7 +338,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 Status = SurveyResponseStatus.InProgress,
                 Grading = definition.Scoring?.Enabled == true ? GradingStatus.Pending : GradingStatus.NotScored,
                 CollectorId = collector?.ItemId,
-                Context = request.Context,
+                Context = StoredContext(survey, request.Context),
                 Culture = request.Culture ?? collector?.Culture,
                 IsTest = isTest,
                 StartedUtc = now,
@@ -293,9 +359,17 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 }
             }
 
+            else if (invitation is not null && !isTest)
+            {
+                // An anonymous response never names its invitation; the seal lets its completion mark the
+                // invitation completed, so the personal link can't be used again.
+                response.InvitationSeal = SurveyRespondentKeys.InvitationSeal(await Secrets.RevealAsync(survey, cancellationToken), invitation.ItemId);
+            }
+
             response.AttemptNumber = await AttemptNumberAsync(survey, response, respondentKey, request, isTest);
 
-            if (request.Properties is not null)
+            // Properties come from the caller and can name the person, so an anonymous response keeps none.
+            if (request.Properties is not null && !anonymous)
             {
                 foreach (var property in request.Properties)
                 {
@@ -833,7 +907,71 @@ public sealed class SurveyResponseService : ISurveyResponseService
         return _pageViews.Build(version.Definition, response, state, response.CurrentPageId);
     }
 
-    private async Task<SurveyResponse> FindOpenAsync(Survey survey, StartResponseRequest request, SurveyRespondentIdentity identity, bool anonymous, bool isTest, CancellationToken cancellationToken)
+    // Issues a new resume token for a response under its write lock and stores its hash, so the token held before
+    // stops working. Returns null when the response has no resume token, the check fails or the lock is busy.
+    private async Task<string> IssueResumeTokenAsync(string responseId, Func<SurveyResponse, bool> allowed, CancellationToken cancellationToken)
+    {
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(ResponseLockKey(responseId), _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using (locker)
+        {
+            var response = await FindFreshAsync(responseId, cancellationToken);
+
+            if (response is null || string.IsNullOrEmpty(response.ResumeTokenHash) || !allowed(response))
+            {
+                return null;
+            }
+
+            var token = SurveyResumeTokens.Issue(response.ItemId);
+
+            response.ResumeTokenHash = SurveyResumeTokens.Hash(token);
+            await _responseStore.UpdateAsync(response, cancellationToken);
+
+            try
+            {
+                await _session.SaveChangesAsync(cancellationToken);
+            }
+            catch (ConcurrencyException)
+            {
+                return null;
+            }
+
+            return token;
+        }
+    }
+
+    private SurveyAnonymitySecrets Secrets
+        => _serviceProvider.GetRequiredService<SurveyAnonymitySecrets>();
+
+    // An anonymous response keeps a context only when its kind can't point to one person; otherwise its kind only.
+    private RecordRef? StoredContext(Survey survey, RecordRef? context)
+        => SurveyAnonymity.StoredContext(survey, context, _serviceProvider.GetService<IOptions<SurveyContextKindOptions>>()?.Value);
+
+    // Finds the invitation an anonymous response was started from by recomputing the seal of each open invitation of
+    // its collector: nothing stored links the two, so only the survey's protected secret can.
+    private async Task<SurveyInvitation> FindSealedInvitationAsync(Survey survey, SurveyResponse response, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(response.CollectorId))
+        {
+            return null;
+        }
+
+        var secret = await Secrets.RevealAsync(survey, cancellationToken);
+        var open = await _invitationStore.ListByCollectorAsync(
+            response.CollectorId,
+            [SurveyInvitationStatus.Pending, SurveyInvitationStatus.Sent, SurveyInvitationStatus.Opened, SurveyInvitationStatus.Started, SurveyInvitationStatus.Completed],
+            int.MaxValue,
+            cancellationToken);
+
+        return open.FirstOrDefault(candidate => string.Equals(SurveyRespondentKeys.InvitationSeal(secret, candidate.ItemId), response.InvitationSeal, StringComparison.Ordinal));
+    }
+
+    private async Task<SurveyResponse> FindOpenAsync(Survey survey, StartResponseRequest request, SurveyRespondentIdentity identity, SurveyInvitation invitation, bool anonymous, bool isTest, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrEmpty(identity.ResumeToken))
         {
@@ -842,15 +980,23 @@ public sealed class SurveyResponseService : ISurveyResponseService
             if (byToken is { Status: SurveyResponseStatus.InProgress }
                 && string.Equals(byToken.SurveyId, survey.ItemId, StringComparison.Ordinal)
                 && byToken.IsTest == isTest
-                && Nullable.Equals(byToken.Context, request.Context))
+                && Nullable.Equals(byToken.Context, StoredContext(survey, request.Context)))
             {
                 return byToken;
             }
         }
 
-        if (!anonymous && !isTest && !string.IsNullOrEmpty(identity.UserId))
+        if (!anonymous && !isTest && !string.IsNullOrEmpty(identity.UserId)
+            && await _counter.FindInProgressAsync(survey.ItemId, identity.UserId, request.Context?.ToString()) is { } byUser)
         {
-            return await _counter.FindInProgressAsync(survey.ItemId, identity.UserId, request.Context?.ToString());
+            return byUser;
+        }
+
+        // A personal invitation resumes its own response wherever the link is opened: a link scanner that opened it
+        // first must not lock the invitee out.
+        if (invitation is not null && !isTest)
+        {
+            return await _counter.FindInProgressByInvitationAsync(survey.ItemId, invitation.ItemId);
         }
 
         return null;
@@ -1159,8 +1305,12 @@ public sealed class SurveyResponseService : ISurveyResponseService
             {
                 invitation = await _invitationStore.FindByIdAsync(response.InvitationId, cancellationToken);
             }
+            else if (!string.IsNullOrEmpty(response.InvitationSeal) && !response.IsTest)
+            {
+                invitation = await FindSealedInvitationAsync(survey, response, cancellationToken);
+            }
 
-            var respondentKey = response.IsTest || identity is null ? null : SurveyRespondentKeys.For(survey, identity, invitation);
+            var respondentKey = response.IsTest || identity is null ? null : await Secrets.RespondentKeyAsync(survey, identity, invitation, cancellationToken);
 
             if (!autoSubmitted)
             {
@@ -1253,6 +1403,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
                     await _invitationStore.UpdateAsync(invitation, cancellationToken);
                 }
+
+                // The seal has done its work: a completed anonymous response keeps nothing of its invitation.
+                response.InvitationSeal = null;
             }
 
             var context = new SurveyResponseEventContext { Survey = survey, Version = version, Response = response };

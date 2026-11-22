@@ -40,9 +40,17 @@ When a page is completed, its `Branches` are evaluated in order; the first that 
 
 After the last page, the first ending whose condition holds is used, else the default ending. An ending with the outcome **Screened out** ends the response as screened out. Ending messages are Liquid with sanitized HTML; a redirect goes only to the site or a host listed in the site settings.
 
+An ending message renders in this order (`LiquidSurveyEndingRenderer`):
+
+1. The message the author wrote is rendered as Liquid, with `Survey` (`Name`, `Title`), `Response` (`Number`, `Status`, `Percent`, `Passed`), `Answers` (each answer by question name, through the type's `FormatAnswer`) and `Score`. Every value Liquid writes is HTML-encoded, with `{` and `}` encoded too.
+2. `{name}` references are piped in, HTML-encoded with their braces encoded.
+3. The result is sanitized.
+
+A respondent's text never reaches the Liquid parser: an answer such as `{{ Site.SiteName }}` shows as written. An ending message that holds Liquid is not sanitized when it is saved (the sanitizer would encode its operators); its output is.
+
 ## Piping
 
-`{name}` in titles, descriptions, choice texts, ending messages and redirect URLs shows an earlier answer (through the type's `FormatAnswer`), HTML-encoded. Also `{name.row}`, `{var:name}`, `{score}`, `{score:category}` and `{percent}`. An unknown name shows nothing; publishing checks that names exist and come earlier.
+`{name}` in titles, descriptions, choice texts, ending messages and redirect URLs shows an earlier answer (through the type's `FormatAnswer`), HTML-encoded with `{` and `}` encoded too, so a piped answer never reads as a reference or as Liquid (URL-encoded in redirect URLs). Also `{name.row}`, `{var:name}`, `{score}`, `{score:category}` and `{percent}`. An unknown name shows nothing; publishing checks that names exist and come earlier.
 
 ## Formulas and variables
 

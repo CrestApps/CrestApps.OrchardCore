@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +31,7 @@ public sealed class SurveyTemplatesController : Controller
     private readonly SurveyTemplateStore _store;
     private readonly SurveyStore _surveys;
     private readonly IAuthorizationService _authorizationService;
+    private readonly ISurveyAuthorizationService _surveyAuthorization;
     private readonly IShapeFactory _shapeFactory;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
@@ -44,6 +46,7 @@ public sealed class SurveyTemplatesController : Controller
     /// <param name="store">The template store.</param>
     /// <param name="surveys">The survey store.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="surveyAuthorization">The survey authorization service.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="clock">The clock.</param>
@@ -54,6 +57,7 @@ public sealed class SurveyTemplatesController : Controller
         SurveyTemplateStore store,
         SurveyStore surveys,
         IAuthorizationService authorizationService,
+        ISurveyAuthorizationService surveyAuthorization,
         IShapeFactory shapeFactory,
         INotifier notifier,
         IClock clock,
@@ -64,6 +68,7 @@ public sealed class SurveyTemplatesController : Controller
         _store = store;
         _surveys = surveys;
         _authorizationService = authorizationService;
+        _surveyAuthorization = surveyAuthorization;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
         _clock = clock;
@@ -136,7 +141,7 @@ public sealed class SurveyTemplatesController : Controller
         }
 
         var model = new SurveyTemplateEditViewModel { FromSurveyId = fromSurveyId };
-        var survey = string.IsNullOrEmpty(fromSurveyId) ? null : await _surveys.FindByIdAsync(fromSurveyId, HttpContext.RequestAborted);
+        var survey = await FindCopyableSurveyAsync(fromSurveyId);
 
         if (survey is not null)
         {
@@ -277,6 +282,28 @@ public sealed class SurveyTemplatesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Finds a survey to copy into a template. A template carries the draft with its answer keys, so the user must be
+    /// allowed to edit the survey; course-owned surveys are never copied.
+    /// </summary>
+    private async Task<Survey> FindCopyableSurveyAsync(string surveyId)
+    {
+        if (string.IsNullOrEmpty(surveyId))
+        {
+            return null;
+        }
+
+        var survey = await _surveys.FindByIdAsync(surveyId, HttpContext.RequestAborted);
+
+        if (survey is null || survey.Owner is not null
+            || !await _surveyAuthorization.AuthorizeAsync(User, survey, SurveyOperation.Manage, HttpContext.RequestAborted))
+        {
+            return null;
+        }
+
+        return survey;
+    }
+
     private async Task<bool> ApplyAsync(SurveyTemplate template, SurveyTemplateEditViewModel model, bool isNew)
     {
         var name = SurveyNames.Slugify(string.IsNullOrWhiteSpace(model.Name) ? model.Title : model.Name);
@@ -299,7 +326,16 @@ public sealed class SurveyTemplatesController : Controller
 
         if (isNew && string.IsNullOrWhiteSpace(model.DefinitionJson) && !string.IsNullOrEmpty(model.FromSurveyId))
         {
-            definition = (await _surveys.FindByIdAsync(model.FromSurveyId, HttpContext.RequestAborted))?.Draft ?? definition;
+            var survey = await FindCopyableSurveyAsync(model.FromSurveyId);
+
+            if (survey is null)
+            {
+                ModelState.AddModelError(nameof(model.FromSurveyId), S["Pick a survey you may edit."]);
+            }
+            else
+            {
+                definition = survey.Draft ?? definition;
+            }
         }
         else if (!string.IsNullOrWhiteSpace(model.DefinitionJson))
         {
@@ -351,6 +387,12 @@ public sealed class SurveyTemplatesController : Controller
 
             foreach (var survey in (await _surveys.GetAllAsync(HttpContext.RequestAborted)).Where(survey => survey.Owner is null).OrderBy(survey => survey.Title, StringComparer.CurrentCulture))
             {
+                // A template copies the draft with its answer keys, so only surveys the user may edit are offered.
+                if (!await _surveyAuthorization.AuthorizeAsync(User, survey, SurveyOperation.Manage, HttpContext.RequestAborted))
+                {
+                    continue;
+                }
+
                 model.Surveys.Add(new SelectListItem(survey.Title, survey.ItemId, survey.ItemId == model.FromSurveyId));
             }
         }

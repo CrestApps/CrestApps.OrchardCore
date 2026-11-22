@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Surveys.ViewModels;
 
@@ -14,9 +15,22 @@ public class SurveyAccessEditViewModel
     public SurveyAudienceMode Audience { get; set; }
 
     /// <summary>
-    /// Gets or sets the ids of the user audiences, separated by commas.
+    /// Gets or sets the names of the chosen user audiences.
     /// </summary>
-    public string AudienceIds { get; set; }
+    public string[] AudienceIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the user audiences to choose from, chosen ones selected. A chosen audience that no longer exists
+    /// is listed too, so saving doesn't drop it unseen.
+    /// </summary>
+    [BindNever]
+    public List<SelectListItem> AudienceOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the User Audiences feature is on.
+    /// </summary>
+    [BindNever]
+    public bool AudiencesAvailable { get; set; }
 
     /// <summary>
     /// Gets or sets whether responses record who responded.
@@ -102,6 +116,18 @@ public class SurveyAccessEditViewModel
     /// Gets or sets the minimum group size of anonymous reports.
     /// </summary>
     public int MinimumGroupSize { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets the smallest minimum group size the site allows.
+    /// </summary>
+    [BindNever]
+    public int MinimumGroupSizeFloor { get; set; } = SurveySettings.DefaultMinimumGroupSizeFloor;
+
+    /// <summary>
+    /// Gets or sets whether anonymity can no longer change because the survey has responses.
+    /// </summary>
+    [BindNever]
+    public bool AnonymityLocked { get; set; }
 
     /// <summary>
     /// Gets or sets after how many days responses are removed.

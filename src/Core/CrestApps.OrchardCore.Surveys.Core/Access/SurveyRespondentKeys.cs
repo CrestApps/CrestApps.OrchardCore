@@ -7,18 +7,25 @@ namespace CrestApps.OrchardCore.Surveys.Core.Access;
 
 /// <summary>
 /// Makes the key limits count a respondent by. For an anonymous survey the key is an HMAC of the identity with the
-/// survey's secret, so participation records never name the person.
+/// survey's secret, so participation records never name the person; the secret comes from
+/// <see cref="SurveyAnonymitySecrets"/>, which keeps it out of the readable database.
 /// </summary>
 public static class SurveyRespondentKeys
 {
     /// <summary>
+    /// The longest key; a longer raw key is hashed.
+    /// </summary>
+    public const int MaxLength = 64;
+
+    /// <summary>
     /// Gets the respondent key, or <see langword="null"/> when the respondent cannot be recognized.
     /// </summary>
     /// <param name="survey">The survey.</param>
+    /// <param name="secret">The survey's anonymity secret in plain text; required for an anonymous survey.</param>
     /// <param name="identity">Who responds.</param>
     /// <param name="invitation">The invitation, or <see langword="null"/>.</param>
     /// <returns>The key, at most 64 characters.</returns>
-    public static string For(Survey survey, SurveyRespondentIdentity identity, SurveyInvitation invitation)
+    public static string For(Survey survey, string secret, SurveyRespondentIdentity identity, SurveyInvitation invitation)
     {
         ArgumentNullException.ThrowIfNull(survey);
 
@@ -33,15 +40,55 @@ public static class SurveyRespondentKeys
             return null;
         }
 
-        if (survey.Access?.Anonymity != AnonymityMode.Anonymous)
+        if (!SurveyAnonymity.IsAnonymous(survey))
         {
-            return raw.Length <= 64 ? raw : Hash(raw);
+            return Plain(raw);
         }
 
-        var secret = string.IsNullOrEmpty(survey.AnonymitySecret) ? survey.ItemId ?? string.Empty : survey.AnonymitySecret;
-        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(raw));
+        return Anonymous(secret, raw);
+    }
 
-        return "a:" + Convert.ToHexString(mac).Substring(0, 62).ToLowerInvariant();
+    /// <summary>
+    /// Gets every key a user's participation may be stored under: the plain key of identified surveys and the
+    /// pseudonymous key of each anonymous survey whose secret is given.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
+    /// <param name="anonymousSecrets">The secrets of the anonymous surveys, in plain text.</param>
+    /// <returns>The keys.</returns>
+    public static IReadOnlyCollection<string> ForUser(string userId, IEnumerable<string> anonymousSecrets)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        var raw = "u:" + userId;
+        var keys = new HashSet<string>(StringComparer.Ordinal) { Plain(raw) };
+
+        foreach (var secret in anonymousSecrets ?? [])
+        {
+            if (!string.IsNullOrEmpty(secret))
+            {
+                keys.Add(Anonymous(secret, raw));
+            }
+        }
+
+        return keys;
+    }
+
+    /// <summary>
+    /// Gets the seal an anonymous response keeps of the personal invitation it was started from, so the invitation can be
+    /// marked completed without the response naming it: an HMAC of the invitation id with the survey's secret, which
+    /// nobody without the secret can link back to the invitation.
+    /// </summary>
+    /// <param name="secret">The survey's anonymity secret in plain text.</param>
+    /// <param name="invitationId">The id of the invitation.</param>
+    /// <returns>The seal.</returns>
+    public static string InvitationSeal(string secret, string invitationId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(secret);
+        ArgumentException.ThrowIfNullOrEmpty(invitationId);
+
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("seal:" + secret), Encoding.UTF8.GetBytes(invitationId));
+
+        return Convert.ToHexString(mac).ToLowerInvariant();
     }
 
     /// <summary>
@@ -51,4 +98,19 @@ public static class SurveyRespondentKeys
     /// <returns>The lowercase hex.</returns>
     public static string Hash(string value)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value ?? string.Empty))).ToLowerInvariant();
+
+    private static string Plain(string raw)
+        => raw.Length <= MaxLength ? raw : Hash(raw);
+
+    private static string Anonymous(string secret, string raw)
+    {
+        if (string.IsNullOrEmpty(secret))
+        {
+            throw new InvalidOperationException("An anonymous survey needs its anonymity secret to make a respondent key.");
+        }
+
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(raw));
+
+        return "a:" + Convert.ToHexString(mac).Substring(0, 62).ToLowerInvariant();
+    }
 }

@@ -8,9 +8,11 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 /// <summary>
 /// Works out the style of each cell of a table column from the column's <see cref="ReportColumnColors"/>: the color of
 /// every cell, then the color scale over the numbers the table shows, then the first rule the value meets. A cell given
-/// a background color gets a text color that stays readable on it.
+/// a background color gets a text color that stays readable on it. Designed reports use it for their columns, and coded
+/// reports use it through <see cref="Create(DataFieldType, ReportColumnColors, IEnumerable{object}, DateTime)"/> to color
+/// their own cells the same way.
 /// </summary>
-internal sealed class ReportColumnColorizer
+public sealed class ReportColumnColorizer
 {
     private const string LightText = "#FFFFFF";
     private const string DarkText = "#212529";
@@ -41,8 +43,21 @@ internal sealed class ReportColumnColorizer
     {
         ArgumentNullException.ThrowIfNull(column);
 
-        var colors = column.Colors;
+        return Create(column.DataType, column.Colors, values, today);
+    }
 
+    /// <summary>
+    /// Creates the colorizer of a column of values of a data type, or returns <see langword="null"/> when the colors
+    /// color no cell.
+    /// </summary>
+    /// <param name="dataType">The type of the values, which decides how rule values are read.</param>
+    /// <param name="colors">The colors of the column, or <see langword="null"/>.</param>
+    /// <param name="values">The values of the cells the table shows in the column, which the color scale spans; may be
+    /// <see langword="null"/> when the colors have no scale.</param>
+    /// <param name="today">The time the report ran in the site's time zone, which relative date rules are measured from.</param>
+    /// <returns>The colorizer, or <see langword="null"/>.</returns>
+    public static ReportColumnColorizer Create(DataFieldType dataType, ReportColumnColors colors, IEnumerable<object> values, DateTime today)
+    {
         if (colors is null || (colors.Color is null && colors.BackgroundColor is null && colors.Scale is null && (colors.Rules?.Count ?? 0) == 0))
         {
             return null;
@@ -57,7 +72,7 @@ internal sealed class ReportColumnColorizer
                 continue;
             }
 
-            var matches = DataFilterPredicates.Build(rule.Operator, column.DataType, rule.Values ?? [], today);
+            var matches = DataFilterPredicates.Build(rule.Operator, dataType, rule.Values ?? [], today);
 
             if (matches is not null)
             {
@@ -89,9 +104,16 @@ internal sealed class ReportColumnColorizer
     /// <param name="column">The column.</param>
     /// <returns>The style, or <see langword="null"/>.</returns>
     public static ReportStyle HeaderStyleOf(ReportResultColumn column)
-    {
-        var colors = column?.Colors;
+        => HeaderStyleOf(column?.Colors);
 
+    /// <summary>
+    /// Gets the style of the header of a column with these colors, or <see langword="null"/> when they don't color the
+    /// header.
+    /// </summary>
+    /// <param name="colors">The colors, or <see langword="null"/>.</param>
+    /// <returns>The style, or <see langword="null"/>.</returns>
+    public static ReportStyle HeaderStyleOf(ReportColumnColors colors)
+    {
         if (colors is null || (colors.HeaderColor is null && colors.HeaderBackgroundColor is null))
         {
             return null;

@@ -35,6 +35,7 @@ internal sealed class IntegrationsTestHarness : IAsyncDisposable
                 services.AddOptions();
                 services.AddSingleton(new ShellSettings { Name = "Default" });
                 services.AddSurveysStorage();
+                services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider());
                 services.AddSingleton<ISurveyUserLookup, IntegrationsUsers>();
                 services.AddScoped<ISurveyAuditTrail, NullSurveyAuditTrail>();
                 services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();

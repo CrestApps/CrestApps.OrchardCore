@@ -1,9 +1,12 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Surveys.Core.Results;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -11,7 +14,8 @@ namespace CrestApps.OrchardCore.Surveys.Reports;
 
 /// <summary>
 /// The scores of a quiz: how scores spread, the pass rate, the average of each score category, and each respondent's best
-/// and latest score when the survey is identified and the viewer may see who responded.
+/// and latest score when the survey is identified and the viewer may see who responded. Scores below the pass mark are
+/// colored with the shared report colorizer.
 /// </summary>
 internal sealed class SurveyScoresReport : IReport
 {
@@ -94,19 +98,34 @@ internal sealed class SurveyScoresReport : IReport
         if (scope.CanSeeIdentity)
         {
             var people = new List<ReportRow>();
+            var belowPass = scope.Definition?.Scoring?.PassMarkPercent is { } passMark
+                ? ReportColumnColorizer.Create(DataFieldType.Decimal, SurveyReportColors.BelowPass(passMark), null, await _data.NowAsync())
+                : null;
 
             foreach (var person in rows.Where(row => !string.IsNullOrEmpty(row.UserId)).GroupBy(row => row.UserId, StringComparer.Ordinal))
             {
                 var latest = person.OrderByDescending(row => row.CompletedUtc).First();
-
-                people.Add(new ReportRow(
+                var best = person.Max(row => row.Percent);
+                var row = new ReportRow(
                 [
-                    await _names.GetAsync(person.Key, cancellationToken),
+                    await _names.GetUserAsync(person.Key, cancellationToken),
                     ReportFormat.Number(person.Count()),
-                    SurveyReportData.Percent(person.Max(row => row.Percent)),
+                    SurveyReportData.Percent(best),
                     SurveyReportData.Percent(latest.Percent),
                     await _data.LocalAsync(latest.CompletedUtc),
-                ]));
+                ]);
+
+                if (belowPass?.StyleOf(best) is { } bestStyle)
+                {
+                    row.WithCellStyle(2, bestStyle);
+                }
+
+                if (belowPass?.StyleOf(latest.Percent) is { } latestStyle)
+                {
+                    row.WithCellStyle(3, latestStyle);
+                }
+
+                people.Add(row);
             }
 
             var table = ReportSection.ForTable(S["People"].Value,

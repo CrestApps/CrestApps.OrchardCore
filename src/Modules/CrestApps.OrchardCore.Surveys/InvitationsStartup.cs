@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Surveys.Core;
 using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Drivers;
+using CrestApps.OrchardCore.Surveys.Invitations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,12 @@ public sealed class InvitationsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSurveysInvitations();
+
+        // E-mail invitations honor the opt-outs every Outreach send honors, and their unsubscribe link records the
+        // address through the consent service, which Outreach's consent policy asks.
+        services.AddSurveyInvitationRecipientPolicy<OutreachSurveyInvitationRecipientPolicy>();
+        services.TryAddScoped<SurveyInvitationOptOutStore>();
+        services.AddConsentSource<SurveyInvitationConsentSource>();
         services.AddTemplatedEmails();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISurveyInvitationSender, SurveyInvitationSender>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SurveyInvitationReminderBackgroundTask>());

@@ -7,7 +7,8 @@ using OrchardCore.ContentManagement.Handlers;
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 
 /// <summary>
-/// Creates the survey a quiz owns when the quiz is first saved: a scored survey from the quiz template.
+/// Creates the survey a quiz owns when the quiz is first saved: a scored survey from the quiz template. A copied quiz
+/// gets a copy of the original's survey, never the original itself.
 /// </summary>
 public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
 {
@@ -29,6 +30,22 @@ public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
     /// <inheritdoc />
     public override Task UpdatingAsync(UpdateContentContext context, QuizPart part)
         => EnsureSurveyAsync(part);
+
+    /// <inheritdoc />
+    public override async Task CloningAsync(CloneContentContext context, QuizPart part)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (context.CloneContentItem is null || !context.CloneContentItem.TryGet<QuizPart>(out var clone))
+        {
+            return;
+        }
+
+        var survey = await _learningSurveys.CopyOwnedSurveyAsync(context.CloneContentItem, part.SurveyId, SurveyKinds.Quiz, SurveyTemplateNames.Quiz);
+
+        clone.SurveyId = survey?.ItemId;
+        context.CloneContentItem.Apply(clone);
+    }
 
     private async Task EnsureSurveyAsync(QuizPart part)
     {

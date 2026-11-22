@@ -11,7 +11,7 @@ A collector is a way to reach respondents. A survey can have many.
 | | |
 | --- | --- |
 | **Menu** | Surveys > Surveys, then **Collect responses** in the survey's menu |
-| **Permission** | Manage own surveys, or Manage all surveys; Manage survey invitations for invitations |
+| **Permission** | Manage own surveys, or Manage all surveys; for invitations, Manage survey invitations, or Manage invitations of own surveys for your own surveys |
 | **Feature** | Surveys; Survey Invitations for invitations; Survey Embedding for pages and widgets |
 
 <AskYourAdmin />
@@ -26,7 +26,7 @@ The first publish makes a public link. Select **Add web link** for more, such as
 | **Opens**, **Closes**, **Most responses** | When and how much the link takes. |
 | **Password** | Respondents enter it before they start. |
 | **Hidden variables** | One name=value per line, such as source=newsletter. |
-| **Language** | The culture the survey shows in. Leave empty for the visitor's language. |
+| **Language** | The language the survey shows in. Leave empty for the visitor's language. |
 
 Use **Copy** to copy the link and **QR code** to download its QR code.
 
@@ -40,7 +40,22 @@ Select **Add kiosk** for a tablet at a front desk. After each response the endin
 2. Enter **User names** (users get a notification), pick an **Audience** or a **Cohort**, or enter **E-mail addresses** for other people.
 3. Tick **Send the invitations now**, or send them later from the list, and select **Invite**.
 
+One invite reaches at most 5,000 people. For a bigger audience, invite the rest in another batch.
+
 Each person gets a personal link. **Settings** sets the e-mail **Subject** and **Message**, **Links expire after (days)**, the **Number of reminders** and the **Days between reminders**. **Send reminders now** reminds everyone who has not completed the survey. The list shows each invitation's status.
+
+Opening a personal link marks the invitation **Opened**, but the survey starts only when the person continues (it starts by itself in most browsers, and a **Start** button shows otherwise). So an e-mail scanner that checks the link uses nothing up, and the person can come back to an unfinished response from the link, even on another device (except on anonymous surveys).
+
+Turning on Survey Invitations also turns on Outreach, the part of the site that sends messages in bulk.
+
+### People who don't want e-mail
+
+Invitations by e-mail respect the choices people made:
+
+- Before each invitation or reminder e-mail goes out, the site checks whether the address asked not to be contacted, for example in a contact's preferences or by unsubscribing from an earlier e-mail. Such a person gets nothing, and the list shows the invitation as **Opted out**.
+- Every invitation e-mail ends with an **unsubscribe** link. A person who uses it gets no more survey invitations or reminders at that address, from any survey.
+
+People invited by user name get the invitation in their notifications instead of an e-mail.
 
 ## Show a survey in a page
 

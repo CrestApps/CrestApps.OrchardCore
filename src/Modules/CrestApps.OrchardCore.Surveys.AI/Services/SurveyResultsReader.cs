@@ -82,7 +82,8 @@ public sealed class SurveyResultsReader
 
         var filter = new SurveyAnswerFilter { SurveyId = survey.ItemId };
         var responses = await _aggregates.CountResponsesAsync(filter, cancellationToken);
-        var minimum = survey.Access?.Anonymity == AnonymityMode.Anonymous ? Math.Max(0, survey.Access.MinimumGroupSize) : 0;
+        // The survey's minimum group size, never below the default floor of the site settings.
+        var minimum = CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.MinimumGroupSize(survey, null);
 
         if (minimum > 0 && responses < minimum)
         {

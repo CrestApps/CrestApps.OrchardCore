@@ -26,6 +26,16 @@ public interface ISurveyResponseService
     Task<SurveyResponse> FindForRespondentAsync(string responseId, SurveyRespondentIdentity identity, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Trades a response's resume token for a new one: the presented token must be the response's current token, and
+    /// it stops working once the new one is stored. A resume link uses this so its token resumes only once.
+    /// </summary>
+    /// <param name="responseId">The response.</param>
+    /// <param name="presentedToken">The resume token presented, such as the one on a resume link.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The new token, or <see langword="null"/> when the presented token is not the response's current one.</returns>
+    Task<string> RotateResumeTokenAsync(string responseId, string presentedToken, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the current page of a response.
     /// </summary>
     /// <param name="response">The response.</param>

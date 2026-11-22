@@ -47,5 +47,5 @@ Inputs include `ResponseId`, `Number`, `Status`, `Grading`, `VersionNumber`, `At
 ## Notifications, audit trail and webhooks
 
 - **Notifications** (Notifications feature): `SurveyResponseGraded` to the identified respondent when a person grades it, and `SurveyNeedsGrading` to the survey's owner. Invitations add `SurveyInvitation` and `SurveyReminder`.
-- **Audit Trail**: survey created, published, restored, closed, archived and deleted; access changed; responses exported; response voided, deleted and reopened; score changed; accommodation granted and revoked; responses anonymized.
+- **Audit Trail**: survey created, published, restored, closed, archived and deleted; access changed; responses exported; response voided, deleted and reopened; score changed; accommodation granted and revoked.
 - **Webhooks**: `survey.published`, `survey.response.completed` and `survey.response.graded`, with the context and properties of the response and no identity for anonymous surveys.

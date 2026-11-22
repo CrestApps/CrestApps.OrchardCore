@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -35,6 +36,7 @@ public sealed class SurveyDesignerController : Controller
     private readonly IDisplayManager<SurveyDefinition> _definitionDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly QuestionBankStore _bankStore;
+    private readonly IAuthorizationService _authorizationService;
     private readonly IHtmlSanitizerService _htmlSanitizer;
     private readonly INotifier _notifier;
 
@@ -57,6 +59,7 @@ public sealed class SurveyDesignerController : Controller
         IDisplayManager<SurveyDefinition> definitionDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         QuestionBankStore bankStore,
+        IAuthorizationService authorizationService,
         IHtmlSanitizerService htmlSanitizer,
         INotifier notifier,
         IStringLocalizerFactory localizerFactory,
@@ -73,6 +76,7 @@ public sealed class SurveyDesignerController : Controller
         _definitionDisplayManager = definitionDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _bankStore = bankStore;
+        _authorizationService = authorizationService;
         _htmlSanitizer = htmlSanitizer;
         _notifier = notifier;
         _localizerFactory = localizerFactory;
@@ -138,6 +142,12 @@ public sealed class SurveyDesignerController : Controller
         }
 
         await _notifier.SuccessAsync(H["The draft has been saved."]);
+
+        // Save and publish: the draft is saved first, so no edit is lost on the way to the publish page.
+        if (Request.Form.ContainsKey("submit.Publish"))
+        {
+            return RedirectToAction(nameof(Publish), new { id });
+        }
 
         return RedirectToAction(nameof(Design), new { id });
     }
@@ -369,9 +379,36 @@ public sealed class SurveyDesignerController : Controller
 
             var pools = new List<QuestionPool>();
 
+            // Without ViewQuestionBanks the bank fields are not shown, so the pool keeps the bank draws it already has
+            // and the user can't attach a bank. With it, only a bank that exists may be attached.
+            var bankIds = await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ViewQuestionBanks)
+                ? (await _bankStore.GetAllAsync()).Select(bank => bank.ItemId).ToHashSet(StringComparer.Ordinal)
+                : null;
+
             foreach (var pool in (model.Pools ?? []).Where(pool => pool is not null && !string.IsNullOrWhiteSpace(pool.Title)))
             {
                 var existing = page.Pools.FirstOrDefault(item => item.Id == pool.Id);
+
+                if (bankIds is null)
+                {
+                    pools.Add(new QuestionPool
+                    {
+                        Id = string.IsNullOrEmpty(pool.Id) ? IdGenerator.GenerateId() : pool.Id,
+                        Name = SurveyNames.IsValidVariableCode(pool.Name?.Trim()) ? pool.Name.Trim() : $"pool_{pools.Count + 1}",
+                        Title = pool.Title.Trim(),
+                        DrawCount = Math.Max(0, pool.DrawCount),
+                        Shuffle = pool.Shuffle,
+                        EvenlyPresent = pool.EvenlyPresent,
+                        BankDraws = existing?.BankDraws ?? [],
+                    });
+
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(pool.BankId) && !bankIds.Contains(pool.BankId))
+                {
+                    pool.BankId = null;
+                }
 
                 pools.Add(new QuestionPool
                 {
@@ -609,7 +646,8 @@ public sealed class SurveyDesignerController : Controller
     private async Task<SurveyPageEditorViewModel> BuildPageEditorAsync(Survey survey, SurveyDefinition definition, SurveyPage page)
     {
         var pageIndex = definition.Pages.IndexOf(page);
-        var banks = await _bankStore.GetAllAsync();
+        var canUseBanks = await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ViewQuestionBanks);
+        IEnumerable<QuestionBank> banks = canUseBanks ? await _bankStore.GetAllAsync() : [];
         var targets = definition.Pages
             .Skip(pageIndex + 1)
             .Select((later, index) => new SelectListItem(S["Page: {0}", string.IsNullOrWhiteSpace(later.Title) ? (pageIndex + index + 2).ToString(CultureInfo.CurrentCulture) : later.Title], "page:" + later.Id))
@@ -652,6 +690,7 @@ public sealed class SurveyDesignerController : Controller
             PageRuleSources = SurveyRuleSources.Build(definition, _registry, pageIndex, excludeLastPage: true),
             BranchRuleSources = SurveyRuleSources.Build(definition, _registry, pageIndex),
             Targets = targets,
+            CanUseBanks = canUseBanks,
             Banks = banks.OrderBy(bank => bank.Title).Select(bank => new SelectListItem(bank.Title ?? bank.Name, bank.ItemId)).ToList(),
         };
     }

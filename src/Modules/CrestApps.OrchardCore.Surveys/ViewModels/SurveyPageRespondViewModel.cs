@@ -65,6 +65,11 @@ public class SurveyPageRespondViewModel
     public bool ShowHidden { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a question on the page stores files, so the form posts as multipart.
+    /// </summary>
+    public bool UploadsFiles { get; set; }
+
+    /// <summary>
     /// Gets or sets the screens a preview may jump to: id and title.
     /// </summary>
     public IList<KeyValuePair<string, string>> Screens { get; set; } = [];

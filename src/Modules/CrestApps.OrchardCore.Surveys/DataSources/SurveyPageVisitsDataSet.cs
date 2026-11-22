@@ -50,8 +50,8 @@ internal sealed class SurveyPageVisitsDataSet : SurveyResponseChildDataSet
                 ["ResponseId"] = response.ItemId,
                 ["SurveyId"] = response.SurveyId,
                 ["PageName"] = pages.GetValueOrDefault(pageId ?? string.Empty) ?? pageId,
-                ["EnteredUtc"] = Utc(visit.EnteredUtc),
-                ["LeftUtc"] = Utc(visit.LeftUtc),
+                ["EnteredUtc"] = TimeOf(response.SurveyId, visit.EnteredUtc),
+                ["LeftUtc"] = TimeOf(response.SurveyId, visit.LeftUtc),
                 ["Seconds"] = visit.LeftUtc is { } left && left >= visit.EnteredUtc ? (long)(left - visit.EnteredUtc).TotalSeconds : null,
             };
         }

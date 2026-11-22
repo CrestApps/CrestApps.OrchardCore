@@ -49,9 +49,9 @@ public class SurveyEndingViewModel
     public int KioskResetSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the collector token of a poll whose totals respondents may see, or <see langword="null"/>.
+    /// Gets or sets the URL of the page with the survey's totals, or <see langword="null"/> when the respondent may not see them.
     /// </summary>
-    public string ResultsToken { get; set; }
+    public string ResultsUrl { get; set; }
 
     /// <summary>
     /// Gets or sets the local URL a consumer asked the respondent to return to, or <see langword="null"/>.

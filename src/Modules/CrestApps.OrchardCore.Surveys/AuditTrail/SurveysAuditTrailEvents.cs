@@ -24,6 +24,5 @@ internal sealed class SurveysAuditTrailEvents : IConfigureOptions<AuditTrailOpti
             .WithEvent(SurveyAuditEvents.ResponseReopened, S => S["Survey response reopened"], S => S["A completed survey response was reopened."], enableByDefault: true)
             .WithEvent(SurveyAuditEvents.ScoreChanged, S => S["Survey score changed"], S => S["The score of a survey response was regraded or changed, with a reason."], enableByDefault: true)
             .WithEvent(SurveyAuditEvents.OverrideGranted, S => S["Survey accommodation granted"], S => S["A respondent was given extra time, extra attempts or another window."], enableByDefault: true)
-            .WithEvent(SurveyAuditEvents.OverrideRevoked, S => S["Survey accommodation revoked"], S => S["An accommodation was revoked."], enableByDefault: true)
-            .WithEvent(SurveyAuditEvents.ResponsesAnonymized, S => S["Survey responses anonymized"], S => S["The existing responses of a survey were anonymized."], enableByDefault: true);
+            .WithEvent(SurveyAuditEvents.OverrideRevoked, S => S["Survey accommodation revoked"], S => S["An accommodation was revoked."], enableByDefault: true);
 }

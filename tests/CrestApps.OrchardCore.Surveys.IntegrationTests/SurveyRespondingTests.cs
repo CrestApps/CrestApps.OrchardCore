@@ -77,8 +77,12 @@ public sealed partial class SurveyRespondingTests
         using var http = await _fixture.CreateClientAsync();
         var path = invitation.Link.Substring(invitation.Link.IndexOf("s/i/", StringComparison.Ordinal));
 
-        // Act
-        var opened = await http.GetAsync(path, TestContext.Current.CancellationToken);
+        // Act: opening the link shows a page that posts the start.
+        var page = await http.GetStringAsync(path, TestContext.Current.CancellationToken);
+        var opened = await http.PostAsync(path, new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = SurveysSiteFixture.Token(page),
+        }), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(invitation.Succeeded);

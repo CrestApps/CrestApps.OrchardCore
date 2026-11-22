@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.Reports;
 
@@ -23,6 +25,7 @@ internal sealed class SurveyReportData
     private readonly IAuthorizationService _authorizationService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILocalClock _localClock;
+    private readonly SurveyRespondentNames _names;
 
     internal readonly IStringLocalizer S;
 
@@ -32,6 +35,7 @@ internal sealed class SurveyReportData
         IAuthorizationService authorizationService,
         IServiceProvider serviceProvider,
         ILocalClock localClock,
+        SurveyRespondentNames names,
         IStringLocalizer<SurveyReportData> stringLocalizer)
     {
         _surveys = surveys;
@@ -39,6 +43,7 @@ internal sealed class SurveyReportData
         _authorizationService = authorizationService;
         _serviceProvider = serviceProvider;
         _localClock = localClock;
+        _names = names;
         S = stringLocalizer;
     }
 
@@ -101,14 +106,14 @@ internal sealed class SurveyReportData
     }
 
     /// <summary>
-    /// Decides whether a person may see who responded to a survey.
+    /// Decides whether a person may see who responded to a survey, by the one rule of
+    /// <see cref="SurveyRespondentNames.CanSeeIdentityAsync"/>.
     /// </summary>
     /// <param name="user">The person.</param>
     /// <param name="survey">The survey.</param>
     /// <returns><see langword="true"/> when allowed.</returns>
-    public async Task<bool> CanSeeIdentityAsync(ClaimsPrincipal user, Survey survey)
-        => survey?.Access?.Anonymity != AnonymityMode.Anonymous
-            && await _authorizationService.AuthorizeAsync(user, SurveysPermissions.ExportSurveyResponses);
+    public Task<bool> CanSeeIdentityAsync(ClaimsPrincipal user, Survey survey)
+        => _names.CanSeeIdentityAsync(user, survey);
 
     /// <summary>
     /// Works out the scope a report's filter selects, or <see langword="null"/> when no readable survey is selected.
@@ -160,8 +165,8 @@ internal sealed class SurveyReportData
             Versions = selected,
             AllVersions = versions.ToDictionary(version => version.ItemId, StringComparer.Ordinal),
             Definition = (selected.Count > 0 ? selected[0].Definition : null),
-            IsAnonymous = survey.Access?.Anonymity == AnonymityMode.Anonymous,
-            MinimumGroupSize = Math.Max(0, survey.Access?.MinimumGroupSize ?? 0),
+            IsAnonymous = SurveyAnonymity.IsAnonymous(survey),
+            MinimumGroupSize = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync()),
             CanSeeIdentity = await CanSeeIdentityAsync(context.User, survey),
             AnswerFilter = new SurveyAnswerFilter
             {
@@ -228,12 +233,40 @@ internal sealed class SurveyReportData
     }
 
     /// <summary>
+    /// Converts a time stored in UTC to the user's or site's time zone and formats its date only, as the times of an
+    /// anonymous survey are shown.
+    /// </summary>
+    /// <param name="utc">The time in UTC.</param>
+    /// <returns>The local date as text, or an empty string.</returns>
+    public async Task<string> LocalDayAsync(DateTime? utc)
+    {
+        if (utc is not { } value || value == DateTime.MinValue)
+        {
+            return string.Empty;
+        }
+
+        var local = await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)));
+
+        return local.DateTime.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    /// <summary>
+    /// Gets the time the report runs in the user's or site's time zone, which relative color rules are measured from.
+    /// </summary>
+    /// <returns>The local time.</returns>
+    public async Task<DateTime> NowAsync()
+        => (await _localClock.GetLocalNowAsync()).DateTime;
+
+    /// <summary>
     /// Converts a time stored in UTC to the local date and time.
     /// </summary>
     /// <param name="utc">The time in UTC.</param>
     /// <returns>The local date and time.</returns>
     public async Task<DateTime> ToLocalAsync(DateTime utc)
         => (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)))).DateTime;
+
+    private async Task<SurveySettings> SettingsAsync()
+        => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
 
     /// <summary>
     /// Formats a number in the current culture.

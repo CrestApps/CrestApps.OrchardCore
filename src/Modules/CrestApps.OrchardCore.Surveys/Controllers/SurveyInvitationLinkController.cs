@@ -2,14 +2,18 @@ using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Surveys.Controllers;
 
 /// <summary>
-/// Opens a personal invitation link: starts or resumes the invited person's response.
+/// Opens a personal invitation link. Opening the link (GET) only marks the invitation opened and shows a page that
+/// posts the start; the post starts or resumes the invited person's response. A mail scanner that follows the link
+/// therefore uses up nothing, and the invitee resumes their response from any browser.
 /// </summary>
 [Feature(SurveysConstants.Features.Invitations)]
 public sealed class SurveyInvitationLinkController : Controller
@@ -56,28 +60,55 @@ public sealed class SurveyInvitationLinkController : Controller
     }
 
     /// <summary>
-    /// Opens an invitation link.
+    /// Opens an invitation link: marks the invitation opened and shows the page that posts the start.
     /// </summary>
     /// <param name="token">The invitation token.</param>
-    /// <returns>A redirect to the response, or a page that says why the link does not work.</returns>
+    /// <returns>The page, or a page that says why the link does not work.</returns>
     [HttpGet("s/i/{token}")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> Open(string token)
     {
-        var invitation = string.IsNullOrWhiteSpace(token) || token.Length > 128
-            ? null
-            : await _invitationStore.FindByTokenHashAsync(SurveyInvitationTokens.Hash(token));
-        var survey = invitation is null ? null : await _surveyStore.FindByIdAsync(invitation.SurveyId);
-        var collector = invitation is null ? null : await _collectorStore.FindByIdAsync(invitation.CollectorId);
+        var (invitation, survey, collector) = await FindAsync(token);
 
         if (survey is null || collector is null)
         {
-            return Message(S["Survey not found"], S["This link does not work. It may have been replaced by a newer one."]);
+            return NotFoundMessage();
         }
 
         if (invitation.Status is SurveyInvitationStatus.Pending or SurveyInvitationStatus.Sent)
         {
             invitation.Status = SurveyInvitationStatus.Opened;
             await _invitationStore.UpdateAsync(invitation);
+        }
+
+        if (invitation.ExpiresUtc is { } expires && _clock.UtcNow >= expires)
+        {
+            return Message(survey.Title, _messages.For(SurveyErrorCode.InvitationInvalid));
+        }
+
+        return View("Open", new SurveyInvitationOpenViewModel
+        {
+            Token = token,
+            Title = survey.Title,
+        });
+    }
+
+    /// <summary>
+    /// Starts the invited person's response, or resumes it when it is in progress.
+    /// </summary>
+    /// <param name="token">The invitation token.</param>
+    /// <returns>A redirect to the response, or a page that says why the link does not work.</returns>
+    [HttpPost("s/i/{token}")]
+    [ActionName(nameof(Open))]
+    [ValidateAntiForgeryToken]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    public async Task<IActionResult> Start(string token)
+    {
+        var (invitation, survey, collector) = await FindAsync(token);
+
+        if (survey is null || collector is null)
+        {
+            return NotFoundMessage();
         }
 
         if (invitation.ExpiresUtc is { } expires && _clock.UtcNow >= expires)
@@ -109,6 +140,24 @@ public sealed class SurveyInvitationLinkController : Controller
         return Redirect(Url.Content("~/s/r/" + Uri.EscapeDataString(result.Response.ItemId)));
     }
 
+    private async Task<(SurveyInvitation Invitation, Survey Survey, SurveyCollector Collector)> FindAsync(string token)
+    {
+        var invitation = string.IsNullOrWhiteSpace(token) || token.Length > 128
+            ? null
+            : await _invitationStore.FindByTokenHashAsync(SurveyInvitationTokens.Hash(token));
+        var survey = invitation is null ? null : await _surveyStore.FindByIdAsync(invitation.SurveyId);
+        var collector = invitation is null ? null : await _collectorStore.FindByIdAsync(invitation.CollectorId);
+
+        return (invitation, survey, collector);
+    }
+
+    private ViewResult NotFoundMessage()
+    {
+        Response.StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status404NotFound;
+
+        return Message(S["Survey not found"], S["This link does not work. It may have been replaced by a newer one."]);
+    }
+
     private ViewResult Message(string title, string message)
-        => View("~/Views/SurveyRunner/Message.cshtml", new ViewModels.SurveyMessageViewModel { Title = title, Message = message });
+        => View("~/Views/SurveyInvitationLink/Message.cshtml", new SurveyMessageViewModel { Title = title, Message = message });
 }

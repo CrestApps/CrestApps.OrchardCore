@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
-using CrestApps.OrchardCore.Surveys.Reports;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
@@ -16,8 +15,8 @@ namespace CrestApps.OrchardCore.Surveys.DataSources;
 
 /// <summary>
 /// One row per response, read newest change first so a pipeline can read only what changed. Fields of the respondent are
-/// empty without Export survey responses, and always for anonymous surveys. Modules add fields through
-/// <see cref="ISurveyResponseFieldProvider"/>.
+/// always empty for anonymous surveys, whose rows also show their times by the day only and no context id. Modules add
+/// fields through <see cref="ISurveyResponseFieldProvider"/>.
 /// </summary>
 internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse, SurveyResponseIndex, SurveyResponseDataRow>
 {
@@ -55,11 +54,11 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
         AddField("Respondent", S["Respondent"], DataFieldType.Text, row => row.ShowsIdentity ? row.Response.Respondent?.ToString() : null, respondent);
         AddField("UserName", S["User name"], DataFieldType.Text, row => row.ShowsIdentity ? row.UserName : null, respondent);
         AddField("ContextKind", S["Context kind"], DataFieldType.Text, row => row.Response.Context?.Kind, group);
-        AddField("ContextId", S["Context ID"], DataFieldType.Text, row => row.Response.Context?.Id, group).IsIdentifier = true;
+        AddField("ContextId", S["Context ID"], DataFieldType.Text, row => IsAnonymous(row.Response.SurveyId) ? null : row.Response.Context?.Id, group).IsIdentifier = true;
         AddField("Collector", S["Collector"], DataFieldType.Text, row => row.Collector, group);
         AddField("Attempt", S["Attempt"], DataFieldType.Integer, row => (long)row.Response.AttemptNumber, group);
-        AddField("StartedUtc", S["Started"], DataFieldType.DateTime, row => Utc(row.Response.StartedUtc), group);
-        AddField("CompletedUtc", S["Completed"], DataFieldType.DateTime, row => row.Response.CompletedUtc is { } completed ? Utc(completed) : null, group);
+        AddField("StartedUtc", S["Started"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.StartedUtc), group);
+        AddField("CompletedUtc", S["Completed"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.CompletedUtc), group);
         AddField("DurationSeconds", S["Duration (seconds)"], DataFieldType.Integer, row => row.Response.CompletedUtc is { } completed && completed >= row.Response.StartedUtc ? (long)(completed - row.Response.StartedUtc).TotalSeconds : null, group);
         AddField("Score", S["Score"], DataFieldType.Decimal, row => row.Response.Score, group);
         AddField("MaxScore", S["Max score"], DataFieldType.Decimal, row => row.Response.MaxScore, group);
@@ -67,7 +66,7 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
         AddField("Passed", S["Passed"], DataFieldType.Boolean, row => row.Response.Passed, group);
         AddField("Ending", S["Ending"], DataFieldType.Text, row => row.Ending, group);
         AddField("IsTest", S["Test"], DataFieldType.Boolean, row => row.Response.IsTest, group);
-        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, row => Utc(row.Response.ModifiedUtc), group);
+        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.ModifiedUtc), group);
 
         foreach (var provider in _providers)
         {
@@ -107,7 +106,7 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
 
             if (row.ShowsIdentity)
             {
-                row.UserName = await _names.GetAsync(response.UserId, cancellationToken);
+                row.UserName = await _names.GetUserAsync(response.UserId, cancellationToken);
             }
 
             if (!string.IsNullOrEmpty(response.EndingId))
@@ -146,6 +145,6 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
     protected override IQueryIndex<SurveyResponseIndex> OfSurveys(IQueryIndex<SurveyResponseIndex> rows, string[] surveyIds)
         => rows.Where(index => index.SurveyId.IsIn(surveyIds));
 
-    private static DateTime Utc(DateTime value)
-        => DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    protected override SurveyResponse ResponseOf(SurveyResponseDataRow row)
+        => row?.Response;
 }

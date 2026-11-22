@@ -52,6 +52,13 @@ public sealed class SurveyControlDescriptor
     public Type SettingsType { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the script resource the respondent form needs, defined in a resource manifest. With
+    /// <see cref="SurveyControlCapabilities.ClientScript"/>, the runner registers it at the foot of every page that
+    /// shows a question of the type, so the Respond view doesn't add its own script tag.
+    /// </summary>
+    public string ScriptResourceName { get; set; }
+
+    /// <summary>
     /// Gets or sets the type of the handler.
     /// </summary>
     [JsonIgnore]

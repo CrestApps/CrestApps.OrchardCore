@@ -45,7 +45,7 @@ public sealed class SurveysAdminMenu : AdminNavigationProvider
             .Add(S["Grading"], S["Grading"].PrefixPosition("3"), grading => grading
                 .Id("surveysGrading")
                 .Action("Index", "SurveyGrading", SurveysConstants.Features.Surveys)
-                .Permission(SurveysPermissions.GradeSurveyResponses)
+                .Permission(SurveysPermissions.GradeOwnSurveyResponses)
                 .LocalNav()), priority: 1);
 
         return ValueTask.CompletedTask;

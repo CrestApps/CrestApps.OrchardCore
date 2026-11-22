@@ -21,9 +21,11 @@ The designer shows the pages and questions on the left and the editor on the rig
 
 1. Select **Add page** to add a page.
 2. Select the plus button of a page (**Add a question to this page**) and choose a question type.
-3. Select a page or a question in **Pages and questions** to edit it on the right, then select **Save question** or **Save page**.
+3. Select a page or a question in **Pages and questions** to edit it on the right. **Save question** or **Save page** saves that item right away; **Save draft** at the bottom of the page saves it too.
 4. Drag a question to move it (**Drag to move**), or use **Move up** and **Move down**. **Duplicate** copies it and **Delete** removes it.
-5. Select **Save draft**. Respondents see nothing until you [publish](./publish-and-versions.md).
+5. Select **Save draft**. It saves the survey settings and the question or page open on the right. Respondents see nothing until you [publish](./publish-and-versions.md).
+
+If you leave the designer, or open another question, while some changes are not saved, you are asked first.
 
 ## Question types
 

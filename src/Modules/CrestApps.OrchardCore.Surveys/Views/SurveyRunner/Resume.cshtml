@@ -1,0 +1,25 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResumeViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerResume" title="@Html.Raw(Html.Encode(Model.Title))">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    <div class="survey-resume">
+        <h1 class="h3 mb-3">@Model.Title</h1>
+        <div class="alert alert-warning" role="alert">
+            @T["This link continues a response that was not started with your account. Its answers may belong to someone else. Continue only if you started this response."]
+        </div>
+
+        <form action="@Url.Content("~/s/r/" + Uri.EscapeDataString(Model.ResponseId) + "/resume")@Model.QueryString" method="post" class="no-multisubmit d-flex gap-2">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="token" value="@Model.Token" />
+            <button type="submit" class="btn btn-primary">@T["Continue the response"]</button>
+            <a class="btn btn-secondary" href="@Url.Content("~/")">@T["Cancel"]</a>
+        </form>
+    </div>
+</div>

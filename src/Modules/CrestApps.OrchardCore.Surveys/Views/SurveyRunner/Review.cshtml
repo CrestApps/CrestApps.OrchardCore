@@ -6,16 +6,20 @@
     </breadcrumb>
 </zone>
 
-<div class="survey-review">
-    <h1 class="h3 mb-3">@Model.Title</h1>
+<partial name="_SurveyRunnerStyles" />
 
-    @if ((Model.Shows & ReviewShows.Score) != 0 && Model.Response.Score is not null && Model.Response.Grading == GradingStatus.Graded)
-    {
-        <p class="lead">@T["Your score: {0} of {1} ({2}%)", Model.Response.Score.Value.ToString("0.##"), (Model.Response.MaxScore ?? 0).ToString("0.##"), (Model.Response.Percent ?? 0).ToString("0.#")]</p>
-    }
+<div class="container survey-runner my-4">
+    <div class="survey-review">
+        <h1 class="h3 mb-3">@Model.Title</h1>
 
-    @foreach (var question in Model.Questions)
-    {
-        @await DisplayAsync(question)
-    }
+        @if ((Model.Shows & ReviewShows.Score) != 0 && Model.Response.Score is not null && Model.Response.Grading == GradingStatus.Graded)
+        {
+            <p class="lead">@T["Your score: {0} of {1} ({2}%)", Model.Response.Score.Value.ToString("0.##"), (Model.Response.MaxScore ?? 0).ToString("0.##"), (Model.Response.Percent ?? 0).ToString("0.#")]</p>
+        }
+
+        @foreach (var question in Model.Questions)
+        {
+            @await DisplayAsync(question)
+        }
+    </div>
 </div>

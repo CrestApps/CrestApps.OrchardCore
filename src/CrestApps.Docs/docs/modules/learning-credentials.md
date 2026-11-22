@@ -43,7 +43,7 @@ The part is `CredentialDefinitionPart`. Rule kinds are open strings registered w
 | `Manual` | Staff with **Award and revoke digital credentials** award it under **Learning → Credential Awards → Award a credential**. | |
 | `Workflow` | The **Award Credential** workflow task runs. | Workflows |
 
-The rules hear the owners' observers only (`IEnrollmentObserver`, `IAttemptObserver`, `ILearningPathObserver`, `ICertificationRecordObserver`). They queue the award; it runs as a deferred task after the triggering request is saved, so it reads what was saved and a failure never undoes the learner's change (it is logged).
+The rules hear the owners' observers only (`IEnrollmentObserver`, `ISurveyResponseObserver` for quiz responses through `CredentialSurveyObserver`, `ILearningPathObserver`, `ICertificationRecordObserver`). They queue the award; it runs as a deferred task after the triggering request is saved, so it reads what was saved and a failure never undoes the learner's change (it is logged).
 
 `ICredentialAwardService.AwardAsync` is idempotent per definition, rule kind, source id (the enrollment, attempt, path progress, certificate or workflow source) and recipient, under one distributed lock, and the award is saved before the lock is released. A person who holds a valid (not revoked, not expired) award of a definition gets no second one, whichever rule asks. A revoked award is not made again by the same source; a staff member can award again by hand.
 

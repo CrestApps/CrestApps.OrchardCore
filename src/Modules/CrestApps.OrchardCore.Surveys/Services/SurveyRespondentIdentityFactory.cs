@@ -1,15 +1,19 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Parties.Models;
-using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
-/// Builds the respondent identity of a request: the signed-in user, the resume token from the survey's cookie or the
-/// link, the browser key cookie and the IP address; and writes the resume cookie.
+/// Builds the respondent identity of a request: the signed-in user, the resume token from the survey's cookie, the
+/// browser key cookie and the IP address; and writes the resume cookie.
 /// </summary>
+/// <remarks>
+/// The resume token comes from the cookie only. A token on a resume link (<c>?t=</c>) is never read here: the runner
+/// trades it for a new token and a cookie, then redirects to the address without it.
+/// </remarks>
 public sealed class SurveyRespondentIdentityFactory
 {
     /// <summary>
@@ -23,14 +27,19 @@ public sealed class SurveyRespondentIdentityFactory
     public const string ResumeQueryKey = "t";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly SurveyResumeCookies _resumeCookies;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyRespondentIdentityFactory"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
-    public SurveyRespondentIdentityFactory(IHttpContextAccessor httpContextAccessor)
+    /// <param name="resumeCookies">The resume cookies.</param>
+    public SurveyRespondentIdentityFactory(
+        IHttpContextAccessor httpContextAccessor,
+        SurveyResumeCookies resumeCookies)
     {
         _httpContextAccessor = httpContextAccessor;
+        _resumeCookies = resumeCookies;
     }
 
     /// <summary>
@@ -39,7 +48,7 @@ public sealed class SurveyRespondentIdentityFactory
     /// <param name="surveyId">The survey.</param>
     /// <returns>The cookie name.</returns>
     public static string ResumeCookie(string surveyId)
-        => "sr_" + surveyId;
+        => SurveyResumeCookies.CookieName(surveyId);
 
     /// <summary>
     /// Builds the identity of the current request for a survey.
@@ -67,11 +76,7 @@ public sealed class SurveyRespondentIdentityFactory
             }
         }
 
-        var query = httpContext.Request.Query[ResumeQueryKey].ToString();
-
-        identity.ResumeToken = !string.IsNullOrEmpty(query)
-            ? query
-            : !string.IsNullOrEmpty(surveyId) && httpContext.Request.Cookies.TryGetValue(ResumeCookie(surveyId), out var cookie) ? cookie : null;
+        identity.ResumeToken = _resumeCookies.Read(surveyId);
 
         if (httpContext.Request.Cookies.TryGetValue(BrowserKeyCookie, out var browserKey) && browserKey.Length <= 64)
         {
@@ -80,15 +85,7 @@ public sealed class SurveyRespondentIdentityFactory
         else if (ensureBrowserKey)
         {
             identity.BrowserKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-            httpContext.Response.Cookies.Append(BrowserKeyCookie, identity.BrowserKey, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = httpContext.Request.IsHttps,
-                SameSite = SameSiteMode.Lax,
-                IsEssential = true,
-                MaxAge = TimeSpan.FromDays(365),
-                Path = "/s",
-            });
+            httpContext.Response.Cookies.Append(BrowserKeyCookie, identity.BrowserKey, SurveyResumeCookies.Options(httpContext, TimeSpan.FromDays(365)));
         }
 
         identity.IpAddress = httpContext.Connection?.RemoteIpAddress?.ToString();
@@ -102,36 +99,12 @@ public sealed class SurveyRespondentIdentityFactory
     /// <param name="surveyId">The survey.</param>
     /// <param name="token">The resume token.</param>
     public void WriteResumeCookie(string surveyId, string token)
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-
-        if (httpContext is null || string.IsNullOrEmpty(surveyId) || string.IsNullOrEmpty(token))
-        {
-            return;
-        }
-
-        httpContext.Response.Cookies.Append(ResumeCookie(surveyId), token, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = httpContext.Request.IsHttps,
-            SameSite = SameSiteMode.Lax,
-            IsEssential = true,
-            MaxAge = TimeSpan.FromDays(30),
-            Path = "/s",
-        });
-    }
+        => _resumeCookies.Write(surveyId, token);
 
     /// <summary>
     /// Removes the resume cookie of a survey, for kiosks.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
     public void ClearResumeCookie(string surveyId)
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-
-        if (httpContext is not null && !string.IsNullOrEmpty(surveyId))
-        {
-            httpContext.Response.Cookies.Delete(ResumeCookie(surveyId), new CookieOptions { Path = "/s" });
-        }
-    }
+        => _resumeCookies.Clear(surveyId);
 }

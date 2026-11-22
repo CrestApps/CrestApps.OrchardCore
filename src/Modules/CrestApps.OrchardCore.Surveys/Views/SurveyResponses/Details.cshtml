@@ -1,13 +1,18 @@
 @model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResponseDetailsViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames RespondentNames
 
 @{
     var response = Model.Response;
+
+    // An anonymous survey names nobody and shows its times by the day only.
+    var anonymous = Model.Survey.Access?.Anonymity == AnonymityMode.Anonymous;
+    var timeFormat = anonymous ? "d" : "g";
 }
 
 <zone Name="Title">
     <breadcrumb name="SurveysResponse" title="@T["Response {0}", response.Number]">
         <breadcrumb-item id="Surveys" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
-        <breadcrumb-item id="Responses" url="@Url.Content("~/admin/surveys/" + Model.Survey.ItemId + "/responses")">@T["Responses"]</breadcrumb-item>
+        <breadcrumb-item id="Responses" url="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId })">@T["Responses"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 <survey-layout survey="Model.Survey">
@@ -21,13 +26,13 @@
             <dt class="col-sm-3">@T["Status"]</dt>
             <dd class="col-sm-9">@response.Status @(response.IsTest ? T["(test)"].Value : string.Empty)</dd>
             <dt class="col-sm-3">@T["Respondent"]</dt>
-            <dd class="col-sm-9"><partial name="_SurveyRespondentName" model="response" /></dd>
+            <dd class="col-sm-9">@await RespondentNames.GetAsync(response, Model.Survey)</dd>
             <dt class="col-sm-3">@T["Started"]</dt>
-            <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+            <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: timeFormat))</dd>
             @if (response.CompletedUtc is { } completed)
             {
                 <dt class="col-sm-3">@T["Completed"]</dt>
-                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) @(response.AutoSubmitted ? T["(at the deadline)"].Value : string.Empty)</dd>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: timeFormat)) @(response.AutoSubmitted ? T["(at the deadline)"].Value : string.Empty)</dd>
             }
             @if (response.Score is not null)
             {
@@ -85,7 +90,10 @@
             <li class="list-group-item d-flex flex-wrap justify-content-between">
                 <span>@(Model.PageNames.TryGetValue(pageId ?? string.Empty, out var pageName) ? pageName : visit.PageId)</span>
                 <span class="text-muted small">
-                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(visit.EnteredUtc, DateTimeKind.Utc), Format: "T"))
+                    @if (!anonymous)
+                    {
+                        @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(visit.EnteredUtc, DateTimeKind.Utc), Format: "T"))
+                    }
                     @if (visit.LeftUtc is { } left)
                     {
                         <text>&ndash; @((left - visit.EnteredUtc).ToString(@"m\:ss"))</text>
@@ -104,7 +112,7 @@
             @foreach (var change in response.ScoreHistory)
             {
                 <li class="list-group-item">
-                    <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g"))</span>
+                    <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: timeFormat))</span>
                     @change.Kind: @(change.From?.ToString("0.##") ?? "-") &rarr; @(change.To?.ToString("0.##") ?? "-") @change.Reason
                 </li>
             }
@@ -114,15 +122,16 @@
 
 @if (Model.CanDelete)
 {
-    <form method="post" action="@Url.Content("~/admin/surveys/responses/" + response.ItemId + "/void")">
+    @* Void and Delete are links: the admin theme's confirm posts the link's own URL with the antiforgery token. *@
+    <form method="post" action="@Url.RouteUrl("SurveysResponseVoid", new { id = response.ItemId })">
         @Html.AntiForgeryToken()
         <div class="action-bar-bottom">
-            <a class="btn btn-secondary cancel" role="button" href="@Url.Content("~/admin/surveys/" + Model.Survey.ItemId + "/responses")">@T["Back"]</a>
+            <a class="btn btn-secondary cancel" role="button" href="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId })">@T["Back"]</a>
             @if (response.Status != SurveyResponseStatus.Voided)
             {
-                <button type="submit" class="btn btn-warning action-bar-secondary" data-url-af="UnsafeUrl" data-title="@T["Void response"]" data-message="@T["Void this response?"]">@T["Void"]</button>
+                <a class="btn btn-warning action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseVoid", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Void response"]" data-message="@T["Void this response?"]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">@T["Void"]</a>
             }
-            <button type="submit" class="btn btn-danger action-bar-secondary" formaction="@Url.Content("~/admin/surveys/responses/" + response.ItemId + "/delete")" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete response"]" data-message="@T["Delete this response? This cannot be undone."]">@T["Delete"]</button>
+            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseDelete", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete response"]" data-message="@T["Delete this response? This cannot be undone."]">@T["Delete"]</a>
         </div>
     </form>
 }

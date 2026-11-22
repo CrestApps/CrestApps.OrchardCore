@@ -1,0 +1,30 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyInvitationOpenViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyInvitationOpen" title="@Html.Raw(Html.Encode(Model.Title))">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    <div class="survey-landing">
+        <h1 class="h3 mb-3">@Model.Title</h1>
+
+        <form action="@Url.Content("~/s/i/" + Uri.EscapeDataString(Model.Token))" method="post" class="no-multisubmit" data-survey-autostart="true">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-primary">@T["Start"]</button>
+        </form>
+
+        <script at="Foot">
+            (function () {
+                var form = document.querySelector('[data-survey-autostart="true"]');
+
+                if (form) {
+                    form.submit();
+                }
+            })();
+        </script>
+    </div>
+</div>

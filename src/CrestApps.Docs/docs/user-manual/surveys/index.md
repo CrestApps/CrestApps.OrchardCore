@@ -37,3 +37,9 @@ Surveys lets you build surveys, polls, forms and quizzes, share them, and read t
 | **Grading** | Answers that wait for a person to score them |
 
 Reports are under **Reports > Surveys**. The defaults for new surveys are under **Settings > Surveys**.
+
+## Surveys of courses and other features
+
+Some surveys belong to something else, such as the quizzes, feedback surveys and choices of a course. The **Surveys** list leaves them out at first. To see them, set **Show** to **Also surveys owned by other features**. Open them from the course item when you can: its **Edit questions** button leads to the same designer, and the item's own settings stay with the item.
+
+A course item's survey has no public link. Only learners enrolled in the course can answer it, from the course, and only while the item is published.

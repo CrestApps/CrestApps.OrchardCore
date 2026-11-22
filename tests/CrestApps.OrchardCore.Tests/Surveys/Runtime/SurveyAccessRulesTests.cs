@@ -106,11 +106,11 @@ public sealed class SurveyAccessRulesTests
     public void RespondentKeys_AnonymousSurvey_NeverContainsTheUserId()
     {
         // Arrange
-        var survey = new Survey { AnonymitySecret = "secret", Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous } };
+        var survey = new Survey { Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous } };
 
         // Act
-        var key = SurveyRespondentKeys.For(survey, new SurveyRespondentIdentity { UserId = "user-1" }, null);
-        var again = SurveyRespondentKeys.For(survey, new SurveyRespondentIdentity { UserId = "user-1" }, null);
+        var key = SurveyRespondentKeys.For(survey, "secret", new SurveyRespondentIdentity { UserId = "user-1" }, null);
+        var again = SurveyRespondentKeys.For(survey, "secret", new SurveyRespondentIdentity { UserId = "user-1" }, null);
 
         // Assert
         Assert.DoesNotContain("user-1", key, StringComparison.Ordinal);

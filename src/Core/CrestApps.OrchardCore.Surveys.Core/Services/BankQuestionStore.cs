@@ -11,14 +11,26 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 /// </summary>
 public sealed class BankQuestionStore : DocumentCatalog<BankQuestion, BankQuestionIndex>
 {
+    private readonly SurveyContentSanitizer _sanitizer;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="BankQuestionStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
-    public BankQuestionStore(ISession session)
+    /// <param name="sanitizer">Sanitizes the question's HTML texts on every save; the module registers it.</param>
+    public BankQuestionStore(ISession session, SurveyContentSanitizer sanitizer = null)
         : base(session)
     {
         CollectionName = SurveysConstants.CollectionName;
+        _sanitizer = sanitizer;
+    }
+
+    /// <inheritdoc />
+    protected override ValueTask SavingAsync(BankQuestion record)
+    {
+        _sanitizer?.Sanitize(record?.Question);
+
+        return base.SavingAsync(record);
     }
 
     /// <summary>

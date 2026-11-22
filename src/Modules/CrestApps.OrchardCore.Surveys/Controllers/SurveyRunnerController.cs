@@ -103,11 +103,13 @@ public sealed class SurveyRunnerController : Controller
     }
 
     /// <summary>
-    /// Shows the landing page of a link, or starts at once when the survey skips it.
+    /// Shows the landing page of a link. When the survey skips it, the page posts its start form at once (a GET never
+    /// starts a response, so link previews and mail scanners create nothing); without script it shows a Start button.
     /// </summary>
     /// <param name="token">The collector token.</param>
     /// <returns>The page.</returns>
     [HttpGet("s/{token}")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> Landing(string token)
     {
         var (survey, collector) = await FindByTokenAsync(token);
@@ -125,7 +127,7 @@ public sealed class SurveyRunnerController : Controller
         }
         else if (model.CanStart && !model.NeedsPassword && !model.NeedsCaptcha && model.SkipLanding)
         {
-            return await StartCoreAsync(token, survey, collector, password: null, captchaPassed: false);
+            model.AutoStart = true;
         }
 
         return View("Landing", model);
@@ -167,22 +169,23 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="hidden">Whether a preview shows hidden questions.</param>
     /// <returns>The page.</returns>
     [HttpGet("s/r/{responseId}")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> Respond(string responseId, bool preview = false, bool hidden = false)
     {
+        // A resume link carries its token once: it is traded for a new token in the cookie, and the page redirects to
+        // the address without it, so the token never stays in the address bar, the history or a Referer header.
+        var linkToken = Request.Query[SurveyRespondentIdentityFactory.ResumeQueryKey].ToString();
+
+        if (!string.IsNullOrEmpty(linkToken))
+        {
+            return await ClaimResumeLinkAsync(responseId, linkToken, confirmed: false);
+        }
+
         var response = await FindOwnAsync(responseId);
 
         if (response is null)
         {
             return NotFoundPage();
-        }
-
-        // A resume link (a consumer that started the response for someone, such as a course) carries the token once;
-        // keep it as the resume cookie so the page posts that follow still find the response.
-        var linkToken = Request.Query[SurveyRespondentIdentityFactory.ResumeQueryKey].ToString();
-
-        if (!string.IsNullOrEmpty(linkToken) && !string.IsNullOrEmpty(response.ResumeTokenHash))
-        {
-            _identities.WriteResumeCookie(response.SurveyId, linkToken);
         }
 
         if (response.Status != SurveyResponseStatus.InProgress)
@@ -194,6 +197,21 @@ public sealed class SurveyRunnerController : Controller
 
         return await RenderPageAsync(result, message: null, preview && response.IsTest, hidden && response.IsTest);
     }
+
+    /// <summary>
+    /// Resumes a response from a resume link once a signed-in visitor confirmed it: the response does not belong to
+    /// their account, so they are asked first.
+    /// </summary>
+    /// <param name="responseId">The response.</param>
+    /// <param name="token">The resume token of the link.</param>
+    /// <returns>A redirect to the response, or a page that says why it cannot resume.</returns>
+    [HttpPost("s/r/{responseId}/resume")]
+    [ValidateAntiForgeryToken]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    public Task<IActionResult> Resume(string responseId, string token)
+        => string.IsNullOrEmpty(token)
+            ? Task.FromResult<IActionResult>(NotFoundPage())
+            : ClaimResumeLinkAsync(responseId, token, confirmed: true);
 
     /// <summary>
     /// Posts the current page: next, back or finish.
@@ -350,6 +368,7 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="responseId">The response.</param>
     /// <returns>The page or a redirect.</returns>
     [HttpGet("s/r/{responseId}/done")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> Done(string responseId)
     {
         var response = await FindOwnAsync(responseId);
@@ -390,7 +409,12 @@ public sealed class SurveyRunnerController : Controller
             CanReview = response.Status == SurveyResponseStatus.Completed && (shows & ReviewShows.Responses) != 0,
             CanReopen = response.Status == SurveyResponseStatus.Completed && definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open,
             ShowScore = definition.Scoring?.Enabled == true && definition.Scoring.ShowScoreToRespondent && (shows & ReviewShows.Score) != 0 && response.Grading == GradingStatus.Graded,
-            ResultsToken = definition.Review?.ResultsVisibility is ResultsVisibility.AfterAnswer or ResultsVisibility.Always ? collector?.Token : null,
+            // A response started without a collector (a course item's survey) reaches the totals through the response itself.
+            ResultsUrl = definition.Review?.ResultsVisibility is not (ResultsVisibility.AfterAnswer or ResultsVisibility.Always)
+                ? null
+                : collector is not null
+                    ? Url.Content("~/s/" + collector.Token + "/results")
+                    : response.Status == SurveyResponseStatus.Completed ? Url.Content("~/s/r/" + response.ItemId + "/results") : null,
         };
 
         // A consumer that started the response (a course item) may ask for a link back; only a local URL is followed.
@@ -442,6 +466,7 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="responseId">The response.</param>
     /// <returns>The page.</returns>
     [HttpGet("s/r/{responseId}/review")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> Review(string responseId)
     {
         var response = await FindOwnAsync(responseId);
@@ -482,6 +507,7 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="token">The collector token.</param>
     /// <returns>The page.</returns>
     [HttpGet("s/{token}/results")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> Results(string token)
     {
         var (survey, _) = await FindByTokenAsync(token);
@@ -491,12 +517,38 @@ public sealed class SurveyRunnerController : Controller
             return NotFoundPage();
         }
 
+        return await ResultsCoreAsync(survey, () => HasAnsweredAsync(survey));
+    }
+
+    /// <summary>
+    /// Shows the totals of a survey's choice questions to the respondent of one of its responses, for a survey reached
+    /// without a public link (a course item's survey), when the survey allows it.
+    /// </summary>
+    /// <param name="responseId">The respondent's own response.</param>
+    /// <returns>The page.</returns>
+    [HttpGet("s/r/{responseId}/results")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    public async Task<IActionResult> ResponseResults(string responseId)
+    {
+        var response = await FindOwnAsync(responseId);
+        var survey = response is null ? null : await _surveyStore.FindByIdAsync(response.SurveyId);
+
+        if (survey is null)
+        {
+            return NotFoundPage();
+        }
+
+        return await ResultsCoreAsync(survey, () => Task.FromResult(response.Status == SurveyResponseStatus.Completed));
+    }
+
+    private async Task<IActionResult> ResultsCoreAsync(Survey survey, Func<Task<bool>> hasAnswered)
+    {
         var version = await _versionCache.GetPublishedAsync(survey);
         var visibility = version?.Definition?.Review?.ResultsVisibility ?? ResultsVisibility.Never;
         var closed = survey.Status is SurveyStatus.Closed or SurveyStatus.Archived;
         var allowed = visibility == ResultsVisibility.Always
             || (visibility == ResultsVisibility.AfterClose && closed)
-            || (visibility == ResultsVisibility.AfterAnswer && await HasAnsweredAsync(survey));
+            || (visibility == ResultsVisibility.AfterAnswer && await hasAnswered());
 
         var aggregates = _serviceProvider.GetService<ISurveyAnswerAggregates>();
 
@@ -518,17 +570,25 @@ public sealed class SurveyRunnerController : Controller
             return MessagePage(survey.Title, S["The results show once enough people have responded."]);
         }
 
+        var registry = _serviceProvider.GetService<ISurveyControlRegistry>();
+
         foreach (var question in version.Definition.Pages.SelectMany(page => page.Questions ?? []).Where(question => question.Choices?.Count > 0 && question.Rows?.Count == 0))
         {
             var counts = await aggregates.CountChoicesAsync(filter, question.Id);
             var row = counts.TryGetValue(string.Empty, out var values) ? values : new Dictionary<string, long>();
             var total = Math.Max(row.Values.Sum(), 1);
+            var choices = question.Choices.Where(choice => !choice.Retired);
+
+            if (registry?.GetScorer(question.ControlType)?.AnswerKeyIsOrder == true)
+            {
+                // The designed order is the answer key of this type (a ranking), so the choices are listed by text.
+                choices = choices.OrderBy(choice => choice.Text, StringComparer.CurrentCultureIgnoreCase).ThenBy(choice => choice.Id, StringComparer.Ordinal);
+            }
 
             model.Questions.Add(new SurveyResultsQuestion
             {
                 Title = question.Title,
-                Choices = question.Choices
-                    .Where(choice => !choice.Retired)
+                Choices = choices
                     .Select(choice => (choice.Text, row.TryGetValue(choice.Id, out var count) ? count : 0L, Math.Round((row.TryGetValue(choice.Id, out var c) ? c : 0L) * 100m / total, 1)))
                     .ToList(),
             });
@@ -542,6 +602,7 @@ public sealed class SurveyRunnerController : Controller
     /// </summary>
     /// <returns>The page.</returns>
     [HttpGet("surveys/my")]
+    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> My()
     {
         var identity = _identities.Build(null);
@@ -713,6 +774,81 @@ public sealed class SurveyRunnerController : Controller
         return !string.IsNullOrEmpty(identity.UserId)
             && (await _counter.ListForUserAsync(identity.UserId, SurveysConstants.PageSize)).Any(response => response.SurveyId == survey.ItemId && response.Status == SurveyResponseStatus.Completed);
     }
+
+    // Trades the token of a resume link for a new one in this browser's cookie. The link resumes only its own response,
+    // only while its token is the response's current one (so once), never replaces the cookie of another response this
+    // browser has open, and asks a signed-in visitor before resuming a response that is not their account's.
+    private async Task<IActionResult> ClaimResumeLinkAsync(string responseId, string linkToken, bool confirmed)
+    {
+        if (string.IsNullOrEmpty(responseId)
+            || responseId.Length > 64
+            || !string.Equals(SurveyResumeTokens.ResponseIdOf(linkToken), responseId, StringComparison.Ordinal))
+        {
+            return NotFoundPage();
+        }
+
+        var response = await _responseStore.FindByIdAsync(responseId);
+
+        if (response is null)
+        {
+            return NotFoundPage();
+        }
+
+        var identity = _identities.Build(response.SurveyId);
+        var cleanUrl = Url.Content("~/s/r/" + Uri.EscapeDataString(responseId)) + QueryWithoutResumeToken();
+
+        // This browser holds the response already (the same link opened twice): nothing to trade.
+        if (SurveyResponseService.IsOwner(response, identity))
+        {
+            return Redirect(cleanUrl);
+        }
+
+        if (string.IsNullOrEmpty(response.ResumeTokenHash) || !SurveyResumeTokens.Matches(linkToken, response.ResumeTokenHash))
+        {
+            return NotFoundPage();
+        }
+
+        var heldId = SurveyResumeTokens.ResponseIdOf(identity.ResumeToken);
+
+        if (!string.IsNullOrEmpty(heldId)
+            && !string.Equals(heldId, responseId, StringComparison.Ordinal)
+            && await _responses.FindForRespondentAsync(heldId, identity) is { Status: SurveyResponseStatus.InProgress })
+        {
+            Response.StatusCode = StatusCodes.Status409Conflict;
+
+            return MessagePage(S["Survey"], S["This browser already has a response in progress for this survey. Finish it before you open another one."]);
+        }
+
+        if (!confirmed && !string.IsNullOrEmpty(identity.UserId) && string.IsNullOrEmpty(response.UserId))
+        {
+            var survey = await _surveyStore.FindByIdAsync(response.SurveyId);
+
+            return View("Resume", new SurveyResumeViewModel
+            {
+                ResponseId = responseId,
+                Token = linkToken,
+                Title = survey?.Title ?? S["Survey"].Value,
+                QueryString = QueryWithoutResumeToken(),
+            });
+        }
+
+        var token = await _responses.RotateResumeTokenAsync(responseId, linkToken, HttpContext.RequestAborted);
+
+        if (string.IsNullOrEmpty(token))
+        {
+            return NotFoundPage();
+        }
+
+        _identities.WriteResumeCookie(response.SurveyId, token);
+
+        return Redirect(cleanUrl);
+    }
+
+    private string QueryWithoutResumeToken()
+        => QueryString.Create(Request.Query
+            .Where(pair => !string.Equals(pair.Key, SurveyRespondentIdentityFactory.ResumeQueryKey, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(pair => pair.Value.Select(value => new KeyValuePair<string, string>(pair.Key, value))))
+            .ToUriComponent();
 
     private async Task<(Survey Survey, SurveyCollector Collector)> FindByTokenAsync(string token)
     {

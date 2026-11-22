@@ -42,8 +42,8 @@
             }
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
-                    <a class="btn btn-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/design")"><i class="fa-solid fa-pen-ruler me-1" aria-hidden="true"></i>@T["Edit questions"]</a>
-                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/access")"><i class="fa-solid fa-sliders me-1" aria-hidden="true"></i>@T["Access and settings"]</a>
+                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("SurveysDesign", new { id = survey.ItemId })"><i class="fa-solid fa-pen-ruler me-1" aria-hidden="true"></i>@T["Edit questions"]</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("SurveysAccess", new { id = survey.ItemId })"><i class="fa-solid fa-sliders me-1" aria-hidden="true"></i>@T["Access and settings"]</a>
                     <a class="btn btn-outline-secondary btn-sm" href="@(Url.RouteUrl("ReportsDisplay", new { id = "survey-results" }) + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(survey.ItemId))"><i class="fa-solid fa-square-poll-vertical me-1" aria-hidden="true"></i>@T["Totals"]</a>
                     <span class="hint">@T["The close date, anonymity and when learners see the totals are the survey's own settings."]</span>
                 </div>

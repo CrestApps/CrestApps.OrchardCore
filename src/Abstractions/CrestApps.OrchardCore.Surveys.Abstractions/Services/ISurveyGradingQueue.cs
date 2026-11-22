@@ -27,4 +27,13 @@ public interface ISurveyGradingQueue
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns><see langword="true"/> when the user may grade them.</returns>
     Task<bool> CanGradeAsync(ClaimsPrincipal user, string surveyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets whether a user may open the grading queue at all: a grading permission, or a grading scope that gives the
+    /// user at least one survey.
+    /// </summary>
+    /// <param name="user">The user.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when the user may open the queue.</returns>
+    Task<bool> CanOpenAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default);
 }

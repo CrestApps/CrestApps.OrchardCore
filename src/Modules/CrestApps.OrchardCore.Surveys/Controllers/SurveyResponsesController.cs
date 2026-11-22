@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
@@ -20,6 +21,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -170,7 +172,19 @@ public sealed class SurveyResponsesController : Controller
         }
 
         var count = await query.CountAsync();
-        var items = await query.OrderByDescending(index => index.StartedUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync();
+        IEnumerable<SurveyResponse> items;
+
+        // An anonymous survey lists nothing until the responses the filters select reach its minimum group size.
+        if (SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), count))
+        {
+            options.HiddenBelow = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
+            items = [];
+            count = 0;
+        }
+        else
+        {
+            items = await query.OrderByDescending(index => index.StartedUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync();
+        }
 
         options.StatusOptions =
         [
@@ -319,6 +333,15 @@ public sealed class SurveyResponsesController : Controller
             return Forbid();
         }
 
+        // One response of an anonymous survey shows only once the survey's completed responses reach its minimum
+        // group size, so a single answer can't be read before there is a crowd to hide in.
+        if (!response.IsTest && await IsTooFewAsync(survey))
+        {
+            await _notifier.WarningAsync(H["This survey is anonymous, and it has fewer than {0} completed responses. Its responses are hidden so no one can be recognized.", SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync())]);
+
+            return RedirectToAction(nameof(Index), new { id = survey.ItemId });
+        }
+
         var version = await _versions.GetAsync(survey, response);
 
         if (version?.Definition is null)
@@ -415,13 +438,47 @@ public sealed class SurveyResponsesController : Controller
     }
 
     /// <summary>
+    /// Shows the page that starts a preview: it posts the start at once (or with its button), so opening the Preview
+    /// link alone creates no test response.
+    /// </summary>
+    /// <param name="id">The survey.</param>
+    /// <param name="version">Draft to run the draft, anything else to run the published version.</param>
+    /// <returns>The page.</returns>
+    [HttpGet]
+    [Admin("surveys/{id}/preview", "SurveysPreview")]
+    public async Task<IActionResult> Preview(string id, string version = "draft")
+    {
+        var survey = await _surveyStore.FindByIdAsync(id);
+
+        if (survey is null)
+        {
+            return NotFound();
+        }
+
+        if (!await AuthorizeAsync(survey, SurveyOperation.Manage))
+        {
+            return Forbid();
+        }
+
+        return View("PreviewStart", new SurveyPreviewStartViewModel
+        {
+            SurveyId = survey.ItemId,
+            Title = survey.Title,
+            Version = string.Equals(version, "published", StringComparison.OrdinalIgnoreCase) ? "published" : "draft",
+        });
+    }
+
+    /// <summary>
     /// Previews a survey: runs its draft (or its published version) as a test response, left out of results and limits.
     /// </summary>
     /// <param name="id">The survey.</param>
     /// <param name="version">Draft to run the draft, anything else to run the published version.</param>
     /// <returns>A redirect to the runner in preview mode.</returns>
-    [Admin("surveys/{id}/preview", "SurveysPreview")]
-    public async Task<IActionResult> Preview(string id, string version = "draft")
+    [HttpPost]
+    [ActionName(nameof(Preview))]
+    [ValidateAntiForgeryToken]
+    [Admin("surveys/{id}/preview")]
+    public async Task<IActionResult> PreviewPost(string id, string version = "draft")
     {
         var survey = await _surveyStore.FindByIdAsync(id);
 
@@ -491,6 +548,24 @@ public sealed class SurveyResponsesController : Controller
         await _responseStore.UpdateAsync(response);
 
         return Redirect(Url.Action(nameof(SurveyRunnerController.Respond), "SurveyRunner", new { area = SurveysConstants.Features.Surveys, responseId = id, preview = true }));
+    }
+
+    private async Task<SurveySettings> SettingsAsync()
+        => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
+
+    private async Task<bool> IsTooFewAsync(Survey survey)
+    {
+        if (!SurveyAnonymity.IsAnonymous(survey))
+        {
+            return false;
+        }
+
+        var surveyId = survey.ItemId;
+        var completed = nameof(SurveyResponseStatus.Completed);
+        var count = await _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == completed && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName)
+            .CountAsync(HttpContext.RequestAborted);
+
+        return SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), count);
     }
 
     private async Task<bool> AuthorizeAsync(Survey survey, SurveyOperation operation)

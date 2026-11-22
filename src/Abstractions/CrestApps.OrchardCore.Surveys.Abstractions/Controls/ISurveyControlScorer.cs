@@ -37,4 +37,11 @@ public interface ISurveyControlScorer
     /// <param name="answer">The answer, or <see langword="null"/>.</param>
     /// <returns>The feedback.</returns>
     SurveyAnswerFeedback GetFeedback(SurveyQuestion question, SurveyAnswer answer);
+
+    /// <summary>
+    /// Gets whether the answer key is an order of the choices, as in a ranking. The choices of such a type are never
+    /// shown in their designed order outside a respondent's own shuffled plan: the runner shuffles them, and the API
+    /// definition and the public results do not give the designed order away.
+    /// </summary>
+    bool AnswerKeyIsOrder => false;
 }

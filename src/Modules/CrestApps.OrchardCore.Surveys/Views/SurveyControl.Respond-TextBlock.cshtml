@@ -1,4 +1,5 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
 @using CrestApps.OrchardCore.Surveys.Core.Controls.TextBlock
 @{
     var settings = Model.GetSettings<TextBlockSettings>();
@@ -8,6 +9,6 @@
     {
         <img src="@settings.ImageUrl" alt="" class="img-fluid mb-2" />
     }
-    @* The HTML was sanitized when the survey was saved. *@
-    @Html.Raw(settings.Html)
+    @* The HTML is sanitized when the survey is saved, and again here for content saved before that. *@
+    @Html.Raw(HtmlSanitizer.Sanitize(settings.Html))
 </div>

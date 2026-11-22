@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Surveys.Core.ViewModels;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using OrchardCore.DisplayManagement;
+using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Surveys.Services;
 
@@ -30,6 +31,7 @@ public sealed class SurveyRunnerShapes
     private readonly ISurveyControlRegistry _registry;
     private readonly SurveyLogicEngine _logic;
     private readonly SurveyPageViewBuilder _pageViews;
+    private readonly IResourceManager _resourceManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyRunnerShapes"/> class.
@@ -38,16 +40,19 @@ public sealed class SurveyRunnerShapes
     /// <param name="registry">The control registry.</param>
     /// <param name="logic">The logic engine.</param>
     /// <param name="pageViews">The page view builder.</param>
+    /// <param name="resourceManager">The resource manager, which loads the scripts of the types on a page.</param>
     public SurveyRunnerShapes(
         IShapeFactory shapeFactory,
         ISurveyControlRegistry registry,
         SurveyLogicEngine logic,
-        SurveyPageViewBuilder pageViews)
+        SurveyPageViewBuilder pageViews,
+        IResourceManager resourceManager)
     {
         _shapeFactory = shapeFactory;
         _registry = registry;
         _logic = logic;
         _pageViews = pageViews;
+        _resourceManager = resourceManager;
     }
 
     /// <summary>
@@ -71,6 +76,7 @@ public sealed class SurveyRunnerShapes
 
         var definition = version.Definition;
         var questions = new List<IShape>();
+        var uploadsFiles = false;
 
         foreach (var view in page.Questions)
         {
@@ -80,6 +86,8 @@ public sealed class SurveyRunnerShapes
             {
                 continue;
             }
+
+            uploadsFiles |= _registry.GetControl(question.ControlType)?.Has(SurveyControlCapabilities.StoresFiles) == true;
 
             response.Answers.TryGetValue(view.Id, out var answer);
             var questionErrors = errors is not null && errors.TryGetValue(view.Id, out var list) ? list : [];
@@ -113,6 +121,7 @@ public sealed class SurveyRunnerShapes
             model.ConfirmBeforeSubmit = definition.Navigation?.ConfirmBeforeSubmit == true;
             model.IsPreview = preview;
             model.ShowHidden = showHidden;
+            model.UploadsFiles = uploadsFiles;
 
             if (preview)
             {
@@ -255,6 +264,16 @@ public sealed class SurveyRunnerShapes
         }
 
         var descriptor = _registry.GetControl(question.ControlType);
+
+        // A type with its own UI names its script; the runner loads it once for the page, so the Respond view adds no
+        // script tag of its own.
+        if (displayType == Respond
+            && descriptor is not null
+            && descriptor.Has(SurveyControlCapabilities.ClientScript)
+            && !string.IsNullOrEmpty(descriptor.ScriptResourceName))
+        {
+            _resourceManager.RegisterResource("script", descriptor.ScriptResourceName).AtFoot();
+        }
 
         return await _shapeFactory.CreateAsync<SurveyQuestionRespondViewModel>("SurveyQuestion_Respond", model =>
         {

@@ -30,6 +30,8 @@ Select questions in the list to retire, restore, move them (**Move selected ques
 2. Choose the **File** and its **Format**. A spreadsheet has the columns Id, Type, Question, Choices, Correct, Points, Tags, Difficulty and Feedback.
 3. Select **Check the file** to see what can be imported, then **Import**. A question whose Id is already in the bank is updated.
 
+For QTI files from other learning and testing tools, see [Import QTI questions](./qti-import.md).
+
 ## Draw from a bank
 
 In the designer, open a page, select **Add pool**, choose the **Question bank**, the **Tags** and **Difficulty**, and the number of **Questions drawn**. The questions are copied into the survey when you publish. When a bank question changes, publish the survey again to use the change.

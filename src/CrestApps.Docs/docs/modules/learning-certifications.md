@@ -43,7 +43,7 @@ Every change to a person's progress runs under one lock per path and person and 
 
 ### Events, and what catches up when one is lost
 
-A completed enrollment (`IEnrollmentObserver`) and a passed, graded or regraded attempt (`IAttemptObserver`) check the paths that ask for that course or quiz. Observers run after the commit and log their failures, so an event can be lost. The hourly **Learning certification upkeep** background task therefore:
+A completed enrollment (`IEnrollmentObserver`) and a completed, graded or regraded quiz response (`ISurveyResponseObserver`, as `CertificationSurveyObserver`) check the paths that ask for that course or quiz. Observers run after the commit and log their failures, so an event can be lost. The hourly **Learning certification upkeep** background task therefore:
 
 1. opens the renewals whose day has come, from a leased work queue (`CertificationRenewalWork`), and any renewal the queue missed;
 2. checks again everyone who met a path's requirement since the last look (from the path's creation the first time) and everyone still working on a cycle.

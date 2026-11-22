@@ -10,4 +10,8 @@
     </breadcrumb>
 </zone>
 
-@await DisplayAsync((OrchardCore.DisplayManagement.IShape)Model)
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    @await DisplayAsync((OrchardCore.DisplayManagement.IShape)Model)
+</div>

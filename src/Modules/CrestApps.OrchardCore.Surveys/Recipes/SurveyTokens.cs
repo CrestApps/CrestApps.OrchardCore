@@ -16,11 +16,4 @@ internal static class SurveyTokens
             .Replace('+', '-')
             .Replace('/', '_')
             .TrimEnd('=');
-
-    /// <summary>
-    /// Makes a new anonymity secret: 32 random bytes in base64.
-    /// </summary>
-    /// <returns>The secret.</returns>
-    public static string NewAnonymitySecret()
-        => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 }

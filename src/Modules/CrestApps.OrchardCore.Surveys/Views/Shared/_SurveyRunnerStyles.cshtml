@@ -1,0 +1,17 @@
+@* The respondent pages sit in a centered container with side margins. A theme with a fixed navbar (such as Agency)
+   covers the top of the page, so the pages leave room for it. *@
+<style>
+    .survey-runner {
+        max-width: 860px;
+    }
+
+    body:has(.fixed-top) .survey-runner {
+        padding-top: 5rem;
+    }
+
+    @@media (min-width: 992px) {
+        body:has(.fixed-top) .survey-runner {
+            padding-top: 7rem;
+        }
+    }
+</style>

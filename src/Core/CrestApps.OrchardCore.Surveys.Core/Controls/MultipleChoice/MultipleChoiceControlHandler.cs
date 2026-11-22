@@ -91,9 +91,12 @@ public sealed class MultipleChoiceControlHandler : SurveyChoiceControlHandlerBas
 
         row[question.Name] = FormatAnswer(question, answer, context);
 
+        // An unanswered question leaves its choice columns blank rather than "No" for every choice.
+        var answered = answer?.Values is { Count: > 0 } || !string.IsNullOrEmpty(answer?.OtherText);
+
         foreach (var choice in question.Choices.Where(choice => choice is not null))
         {
-            row[$"{question.Name}.{ColumnName(choice)}"] = answer?.Values?.Contains(choice.Id, StringComparer.Ordinal) == true;
+            row[$"{question.Name}.{ColumnName(choice)}"] = answered ? answer.Values?.Contains(choice.Id, StringComparer.Ordinal) == true : (object)null;
         }
     }
 

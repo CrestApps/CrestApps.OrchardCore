@@ -214,6 +214,18 @@ public static class SurveysServiceCollectionExtensions
     /// <param name="displayName">The name shown.</param>
     /// <returns>The services.</returns>
     public static IServiceCollection AddSurveyContextKind(this IServiceCollection services, string kind, LocalizationSource displayName)
+        => services.AddSurveyContextKind(kind, displayName, identifiesRespondent: true);
+
+    /// <summary>
+    /// Registers a kind of record responses may belong to, saying whether one of its records can point to one person.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="kind">The record kind.</param>
+    /// <param name="displayName">The name shown.</param>
+    /// <param name="identifiesRespondent">Whether a record can point to one person; an anonymous response then keeps
+    /// only the kind.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddSurveyContextKind(this IServiceCollection services, string kind, LocalizationSource displayName, bool identifiesRespondent)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrEmpty(kind);
@@ -222,10 +234,33 @@ public static class SurveysServiceCollectionExtensions
         {
             Kind = kind,
             DisplayName = displayName,
+            IdentifiesRespondent = identifiesRespondent,
         });
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a check of who owns the records of a context kind. The Surveys API accepts a context only when its kind
+    /// is registered and a check says the caller owns the record.
+    /// </summary>
+    /// <typeparam name="TCheck">The check type.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddSurveyContextOwnershipCheck<TCheck>(this IServiceCollection services)
+        where TCheck : class, ISurveyContextOwnershipCheck
+        => services.AddEnumerable<ISurveyContextOwnershipCheck, TCheck>();
+
+    /// <summary>
+    /// Registers a provider of the links to the records that own surveys (such as a course), shown in the survey
+    /// list and the designer for owned surveys.
+    /// </summary>
+    /// <typeparam name="TProvider">The provider type.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddSurveyOwnerLinkProvider<TProvider>(this IServiceCollection services)
+        where TProvider : class, ISurveyOwnerLinkProvider
+        => services.AddEnumerable<ISurveyOwnerLinkProvider, TProvider>();
 
     private static IServiceCollection AddEnumerable<TService, TImplementation>(this IServiceCollection services)
         where TService : class

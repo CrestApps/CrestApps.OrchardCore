@@ -13,16 +13,21 @@ internal sealed class SurveysPermissionProvider : IPermissionProvider
         SurveysPermissions.ManageSurveys,
         SurveysPermissions.ManageOwnSurveys,
         SurveysPermissions.PublishSurveys,
+        SurveysPermissions.PublishOwnSurveys,
         SurveysPermissions.ManageSurveyTemplates,
         SurveysPermissions.ViewSurveyResponses,
         SurveysPermissions.ViewOwnSurveyResponses,
         SurveysPermissions.ExportSurveyResponses,
         SurveysPermissions.DeleteSurveyResponses,
+        SurveysPermissions.DeleteOwnSurveyResponses,
         SurveysPermissions.GradeSurveyResponses,
+        SurveysPermissions.GradeOwnSurveyResponses,
         SurveysPermissions.ManageSurveyOverrides,
+        SurveysPermissions.ManageOwnSurveyOverrides,
         SurveysPermissions.ManageQuestionBanks,
         SurveysPermissions.ViewQuestionBanks,
         SurveysPermissions.ManageSurveyInvitations,
+        SurveysPermissions.ManageOwnSurveyInvitations,
         SurveysPermissions.RespondToSurveys,
         SurveysPermissions.ManageSurveySettings,
     ];
@@ -43,10 +48,17 @@ internal sealed class SurveysPermissionProvider : IPermissionProvider
             new PermissionStereotype
             {
                 Name = OrchardCoreConstants.Roles.Editor,
+
+                // Editors work on their own surveys. Invitations send site e-mail, so ManageOwnSurveyInvitations is
+                // left for an administrator to grant on purpose.
                 Permissions =
                 [
                     SurveysPermissions.ManageOwnSurveys,
+                    SurveysPermissions.PublishOwnSurveys,
                     SurveysPermissions.ViewOwnSurveyResponses,
+                    SurveysPermissions.DeleteOwnSurveyResponses,
+                    SurveysPermissions.GradeOwnSurveyResponses,
+                    SurveysPermissions.ManageOwnSurveyOverrides,
                     SurveysPermissions.ViewQuestionBanks,
                 ],
             },

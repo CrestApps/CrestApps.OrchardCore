@@ -61,4 +61,10 @@ public class SurveyLandingViewModel
     /// Gets or sets whether the link goes straight to the first page.
     /// </summary>
     public bool SkipLanding { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the page posts its start form at once (the survey skips its landing page). The form keeps
+    /// a visible Start button for browsers without script.
+    /// </summary>
+    public bool AutoStart { get; set; }
 }

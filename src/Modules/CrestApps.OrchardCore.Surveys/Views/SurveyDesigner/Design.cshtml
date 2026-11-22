@@ -42,6 +42,9 @@
         failed = T["The change could not be saved."].Value,
         confirmDelete = T["Delete this item?"].Value,
         confirmDeletePage = T["Delete this page and its questions?"].Value,
+        unsaved = T["You have unsaved changes. Leave the designer and lose them?"].Value,
+        discardPanel = T["The open item has unsaved changes. Open another item and lose them?"].Value,
+        panelInvalid = T["The open question or page has problems to fix before the draft can be saved."].Value,
     };
 }
 
@@ -140,13 +143,18 @@
     <h5 class="mb-3">@T["Survey settings"]</h5>
     @await DisplayAsync(Model.SettingsEditor)
 
+    @* Save draft also saves the question or page open in the editor. Publish saves first, then opens the publish page.
+       Preview sits in the survey header, so it is not repeated here. *@
     <div class="action-bar-bottom">
-        <button class="btn btn-primary" type="submit">@T["Save draft"]</button>
-        <a class="btn btn-success" role="button" asp-action="Publish" asp-route-id="@survey.ItemId">@T["Publish"]</a>
-        <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/preview")">@T["Preview"]</a>
-        @if (!string.IsNullOrEmpty(survey.PublishedVersionId))
+        <button class="btn btn-primary" type="submit" title="@T["Saves the survey settings and the question or page open in the editor."]">@T["Save draft"]</button>
+        @if (survey.Status != SurveyStatus.Archived)
         {
-            <button class="btn btn-danger action-bar-secondary" type="submit" asp-action="Discard" asp-route-id="@survey.ItemId" data-url-af="RemoveUrl" data-title="@T["Discard draft"]" data-message="@T["Replace the draft with the published version? Your unpublished changes are lost."]">@T["Discard draft"]</button>
+            <button class="btn btn-success" type="submit" name="submit.Publish" value="true" data-survey-publish="@Url.RouteUrl("SurveysPublish", new { id = survey.ItemId })">@T["Save and publish"]</button>
+        }
+        @if (!string.IsNullOrEmpty(survey.PublishedVersionId) && survey.HasUnpublishedChanges)
+        {
+            @* A link, not a formaction button: the admin theme's confirm posts the link's own URL, while a confirmed button would post the form to Save draft. *@
+            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysDraftDiscard", new { id = survey.ItemId })" data-survey-discard data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Discard draft"]" data-message="@T["Replace the draft with the published version? Your unpublished changes are lost."]">@T["Discard draft"]</a>
         }
         <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-controller="Surveys">@T["Back"]</a>
     </div>

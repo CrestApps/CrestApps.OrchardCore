@@ -26,16 +26,6 @@ public static class SurveyControlShapes
     public const string Review = "Review";
 
     /// <summary>
-    /// The printable display type.
-    /// </summary>
-    public const string Print = "Print";
-
-    /// <summary>
-    /// The results display type.
-    /// </summary>
-    public const string Summary = "Summary";
-
-    /// <summary>
     /// Gets the alternates of a question shape, most specific last: <c>SurveyControl_{DisplayType}</c> (the fallback of
     /// every type), <c>SurveyControl_{DisplayType}__{ControlType}</c>, then the survey and question overrides.
     /// </summary>

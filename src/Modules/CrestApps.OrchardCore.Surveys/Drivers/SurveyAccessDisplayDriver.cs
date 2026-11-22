@@ -1,11 +1,18 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Drivers;
 
@@ -16,14 +23,17 @@ namespace CrestApps.OrchardCore.Surveys.Drivers;
 internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
 {
     private readonly ILocalClock _localClock;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
     public SurveyAccessDisplayDriver(
         ILocalClock localClock,
+        IServiceProvider serviceProvider,
         IStringLocalizer<SurveyAccessDisplayDriver> stringLocalizer)
     {
         _localClock = localClock;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
@@ -35,7 +45,8 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
             var limits = access.Limits ?? new RespondentLimits();
 
             model.Audience = access.Audience;
-            model.AudienceIds = string.Join(", ", access.AudienceIds ?? []);
+            model.AudienceIds = [.. access.AudienceIds ?? []];
+            await BuildAudienceOptionsAsync(model);
             model.Anonymity = access.Anonymity;
             model.WasIdentified = access.Anonymity == AnonymityMode.Identified;
             model.CollectIpAddress = access.CollectIpAddress;
@@ -64,7 +75,9 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
             model.MaxResponses = access.MaxResponses;
             model.RequireCaptcha = access.RequireCaptcha;
             model.IncompleteExpiryHours = access.IncompleteExpiryHours;
-            model.MinimumGroupSize = access.MinimumGroupSize;
+            model.MinimumGroupSizeFloor = await FloorAsync();
+            model.MinimumGroupSize = Math.Max(access.MinimumGroupSize, model.MinimumGroupSizeFloor);
+            model.AnonymityLocked = await HasResponsesAsync(survey);
             model.RetentionDays = survey.Retention?.Days;
             model.RetentionAction = survey.Retention?.Action ?? RetentionAction.Delete;
         }).Location("Content:5").OnGroup(SurveyDetailsDisplayDriver.GroupId);
@@ -84,8 +97,24 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
         var access = survey.Access ??= new SurveyAccessSettings();
 
         access.Audience = model.Audience;
-        access.AudienceIds = (model.AudienceIds ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.Ordinal).ToList();
-        access.Anonymity = model.Anonymity;
+        access.AudienceIds = (model.AudienceIds ?? []).Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.Ordinal).ToList();
+
+        if (access.Audience == SurveyAudienceMode.Audiences && access.AudienceIds.Count == 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AudienceIds), S["Choose at least one audience, or pick another option for who may respond."]);
+        }
+
+        // Anonymity can't change once there are responses: responses given under one promise are never shown under the
+        // other.
+        if (model.Anonymity != access.Anonymity && await HasResponsesAsync(survey))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Anonymity), S["Anonymity can't change once the survey has responses. Delete its responses first, or copy the survey."]);
+        }
+        else
+        {
+            access.Anonymity = model.Anonymity;
+        }
+
         access.CollectIpAddress = model.Anonymity == AnonymityMode.Identified && model.CollectIpAddress;
         access.OpensUtc = await UtcAsync(model.Opens);
         access.ClosesUtc = await UtcAsync(model.Closes);
@@ -127,7 +156,14 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
         access.MaxResponses = Positive(model.MaxResponses);
         access.RequireCaptcha = model.RequireCaptcha;
         access.IncompleteExpiryHours = Math.Max(1, model.IncompleteExpiryHours);
-        access.MinimumGroupSize = Math.Max(0, model.MinimumGroupSize);
+        var floor = await FloorAsync();
+
+        if (model.MinimumGroupSize < floor)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MinimumGroupSize), S["The minimum group size can't be below {0}, the smallest the site allows.", floor]);
+        }
+
+        access.MinimumGroupSize = Math.Max(floor, model.MinimumGroupSize);
 
         survey.Retention = new SurveyRetentionSettings
         {
@@ -136,6 +172,42 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
         };
 
         return Edit(survey, context);
+    }
+
+    // The audiences come from the Users module's User Audiences feature; without it there is nothing to pick.
+    private async Task BuildAudienceOptionsAsync(SurveyAccessEditViewModel model)
+    {
+        var chosen = new HashSet<string>(model.AudienceIds ?? [], StringComparer.Ordinal);
+
+        if (_serviceProvider.GetService<IUserAudienceService>() is { } audiences)
+        {
+            model.AudiencesAvailable = true;
+
+            foreach (var audience in (await audiences.ListAsync()).OrderBy(audience => audience.DisplayName ?? audience.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                model.AudienceOptions.Add(new SelectListItem(audience.DisplayName ?? audience.Name, audience.Name, chosen.Remove(audience.Name)));
+            }
+        }
+
+        foreach (var missing in chosen)
+        {
+            model.AudienceOptions.Add(new SelectListItem(S["{0} (not found)", missing], missing, true));
+        }
+    }
+
+    private async Task<int> FloorAsync()
+        => SurveyAnonymity.Floor(_serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null);
+
+    private async Task<bool> HasResponsesAsync(Survey survey)
+    {
+        if (string.IsNullOrEmpty(survey?.ItemId) || _serviceProvider.GetService<ISession>() is not { } session)
+        {
+            return false;
+        }
+
+        var surveyId = survey.ItemId;
+
+        return await session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).CountAsync() > 0;
     }
 
     private async Task<DateTime?> LocalAsync(DateTime? utc)

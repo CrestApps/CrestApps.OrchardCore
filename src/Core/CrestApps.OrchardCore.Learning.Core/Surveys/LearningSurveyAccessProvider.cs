@@ -48,7 +48,7 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
     /// <inheritdoc />
     public async Task<bool> GrantsAsync(ClaimsPrincipal user, Survey survey, SurveyOperation operation, CancellationToken cancellationToken = default)
     {
-        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = LearningSurveyUsers.GetUserId(user);
 
         if (string.IsNullOrEmpty(userId) || !LearningSurveyContexts.IsContentOwner(survey?.Owner))
         {

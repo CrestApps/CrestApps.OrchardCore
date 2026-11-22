@@ -26,7 +26,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = SurveysConstants.Features.Invitations,
     Name = "Survey Invitations",
-    Description = "Personal survey invitations with their own links, sent to users, audiences and contacts, with reminders.",
+    Description = "Personal survey invitations with their own links and reminders, sent to users, user audiences and e-mail addresses. E-mail invitations skip the addresses that opted out through Outreach and carry an unsubscribe link.",
     Category = "Surveys",
     Dependencies =
     [

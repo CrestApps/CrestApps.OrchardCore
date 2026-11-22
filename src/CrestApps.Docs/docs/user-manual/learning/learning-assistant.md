@@ -41,7 +41,7 @@ Any AI profile can also use two staff tools: **Overdue learners** and **Learners
 Go to **Learning > Authoring assistant**. Each card makes drafts that you review, change and publish yourself:
 
 - **Draft a course outline**: say what the course is about and who it is for. You get a draft course with sections and a draft page lesson for each item, and the course editor opens.
-- **Draft questions from a lesson**: pick a lesson and a question bank. Draft questions with their right answers are added to the bank, unpublished. Check every answer before you publish a question.
+- **Draft questions from a lesson**: pick a lesson and a question bank. Draft questions with their right answers are added to the bank marked **Retired**, so no quiz uses them yet. Check every answer, then clear **Retired** on the questions you keep.
 - **Draft a rubric**: describe the work it grades. You get a draft rubric with criteria and levels.
 - **Translate a lesson**: pick a lesson and a language. You get a draft copy with the translated title and text; the lesson itself does not change. Add the copy to the course outline when it is ready.
 

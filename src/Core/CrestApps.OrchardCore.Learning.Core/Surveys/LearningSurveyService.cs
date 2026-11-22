@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
@@ -65,14 +66,79 @@ public sealed class LearningSurveyService : ILearningSurveyService
             Owner = LearningSurveyContexts.Owner(item.ContentItemId),
         }, cancellationToken);
 
+        if (survey is null)
+        {
+            return null;
+        }
+
+        ApplyCourseDefaults(survey);
+
         // Templates are records an administrator may remove; a quiz is scored even when it started blank.
-        if (survey is not null && string.Equals(kind, SurveyKinds.Quiz, StringComparison.Ordinal) && survey.Draft is { Scoring.Enabled: false })
+        if (string.Equals(kind, SurveyKinds.Quiz, StringComparison.Ordinal) && survey.Draft is { Scoring.Enabled: false })
         {
             survey.Draft.Scoring.Enabled = true;
             await _surveyManager.SaveDraftAsync(survey, survey.Draft, cancellationToken: cancellationToken);
         }
+        else
+        {
+            await _surveyManager.UpdateAsync(survey, data: null, cancellationToken);
+        }
 
         return survey;
+    }
+
+    /// <inheritdoc />
+    public async Task<Survey> CopyOwnedSurveyAsync(ContentItem item, string sourceSurveyId, string kind, string template, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        var owner = LearningSurveyContexts.Owner(item.ContentItemId);
+
+        // A copy made while the item was created (with a blank survey) is replaced: nobody responded to it yet.
+        foreach (var existing in await _surveyManager.ListByOwnerAsync(owner, cancellationToken))
+        {
+            if (!string.Equals(existing.ItemId, sourceSurveyId, StringComparison.Ordinal))
+            {
+                await _surveyManager.DeleteSurveyAsync(existing.ItemId, cancellationToken);
+            }
+        }
+
+        var source = string.IsNullOrEmpty(sourceSurveyId) ? null : await _surveyManager.FindByIdAsync(sourceSurveyId, cancellationToken);
+
+        if (source?.Draft is null)
+        {
+            return await CreateOwnedSurveyAsync(item, kind, template, cancellationToken);
+        }
+
+        var copy = await _surveyManager.CreateSurveyAsync(new SurveyCreateRequest
+        {
+            Title = string.IsNullOrWhiteSpace(item.DisplayText) ? source.Title : item.DisplayText,
+            Kind = source.Kind,
+            Definition = source.Draft,
+            Owner = owner,
+        }, cancellationToken);
+
+        if (copy is null)
+        {
+            return null;
+        }
+
+        copy.Description = source.Description;
+        copy.Tags = [.. source.Tags];
+        copy.Access = CopyOf(source.Access) ?? new SurveyAccessSettings();
+        copy.Retention = CopyOf(source.Retention) ?? new SurveyRetentionSettings();
+        ApplyCourseDefaults(copy);
+
+        await _surveyManager.UpdateAsync(copy, data: null, cancellationToken);
+
+        // The copy opens like the original: a published original gives a published copy, so the copied item works at once.
+        if (!string.IsNullOrEmpty(source.PublishedVersionId))
+        {
+            await _serviceProvider.GetRequiredService<ISurveyPublisher>().PublishAsync(copy.ItemId, null, item.Owner, cancellationToken);
+            copy = await _surveyManager.FindByIdAsync(copy.ItemId, cancellationToken) ?? copy;
+        }
+
+        return copy;
     }
 
     /// <inheritdoc />
@@ -80,7 +146,7 @@ public sealed class LearningSurveyService : ILearningSurveyService
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = LearningSurveyUsers.GetUserId(user);
 
         if (string.IsNullOrEmpty(userId))
         {
@@ -164,4 +230,37 @@ public sealed class LearningSurveyService : ILearningSurveyService
 
         return item is not null && !string.IsNullOrEmpty(_courseStructure.GetCourseId(item)) ? item : null;
     }
+
+    /// <inheritdoc />
+    public async Task<bool> IsOwnedByCourseItemAsync(Survey survey)
+    {
+        if (!LearningSurveyContexts.IsContentOwner(survey?.Owner))
+        {
+            return false;
+        }
+
+        // Ownership does not depend on the publish state: a draft, an unpublished item or one moved out of its course
+        // still owns its survey. Only Learning makes surveys owned by a content item, so one whose item is gone is a
+        // course item's too, and stays closed.
+        var item = await _contentManager.GetAsync(survey.Owner.Value.Id, VersionOptions.Latest);
+
+        return item is null || item.Has<CourseItemPart>();
+    }
+
+    private static void ApplyCourseDefaults(Survey survey)
+    {
+        // Learners answer through their enrollment, so the survey needs a signed-in respondent and no public link.
+        survey.Access ??= new SurveyAccessSettings();
+
+        if (survey.Access.Audience == SurveyAudienceMode.Anyone)
+        {
+            survey.Access.Audience = SurveyAudienceMode.SignedIn;
+        }
+
+        survey.NoDefaultWebLink = true;
+    }
+
+    private static T CopyOf<T>(T value)
+        where T : class
+        => value is null ? null : JsonSerializer.Deserialize<T>(JsonSerializer.SerializeToUtf8Bytes(value));
 }

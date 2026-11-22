@@ -10,14 +10,26 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 /// </summary>
 public sealed class SurveyVersionStore : DocumentCatalog<SurveyVersion, SurveyVersionIndex>
 {
+    private readonly SurveyContentSanitizer _sanitizer;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyVersionStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
-    public SurveyVersionStore(ISession session)
+    /// <param name="sanitizer">Sanitizes the definition's HTML texts on every save; the module registers it.</param>
+    public SurveyVersionStore(ISession session, SurveyContentSanitizer sanitizer = null)
         : base(session)
     {
         CollectionName = SurveysConstants.CollectionName;
+        _sanitizer = sanitizer;
+    }
+
+    /// <inheritdoc />
+    protected override ValueTask SavingAsync(SurveyVersion record)
+    {
+        _sanitizer?.Sanitize(record?.Definition);
+
+        return base.SavingAsync(record);
     }
 
     /// <summary>

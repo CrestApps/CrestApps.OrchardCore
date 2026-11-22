@@ -72,6 +72,10 @@ public abstract class SurveyResponseChildDataSet : SurveysDataSetBase<SurveyResp
     }
 
     /// <inheritdoc />
+    protected override SurveyResponse ResponseOf(SurveyResponseChildRow row)
+        => row?.Response;
+
+    /// <inheritdoc />
     protected override IQueryIndex<SurveyResponseIndex> OfSurveys(IQueryIndex<SurveyResponseIndex> rows, string[] surveyIds)
     {
         var completed = nameof(SurveyResponseStatus.Completed);

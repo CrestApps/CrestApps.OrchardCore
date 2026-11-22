@@ -87,7 +87,8 @@ public sealed class SurveyAnswerSummarizer
 
         var filter = new SurveyAnswerFilter { SurveyId = survey.ItemId };
         var answers = await _aggregates.TextSamplesAsync(filter, question.Id, SurveysAIConstants.MaxSummarizedAnswers, cancellationToken);
-        var minimum = survey.Access?.Anonymity == AnonymityMode.Anonymous ? Math.Max(1, survey.Access.MinimumGroupSize) : 1;
+        // The survey's minimum group size, never below the default floor of the site settings.
+        var minimum = Math.Max(1, CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.MinimumGroupSize(survey, null));
 
         if (answers.Count < minimum)
         {

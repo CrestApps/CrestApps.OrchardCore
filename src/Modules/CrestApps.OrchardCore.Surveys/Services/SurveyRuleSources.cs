@@ -37,7 +37,7 @@ internal static class SurveyRuleSources
 
             var descriptor = registry.GetControl(question.ControlType);
 
-            if (descriptor is null || !descriptor.Has(SurveyControlCapabilities.Answerable))
+            if (descriptor is null || !descriptor.Has(SurveyControlCapabilities.ConditionSource))
             {
                 continue;
             }

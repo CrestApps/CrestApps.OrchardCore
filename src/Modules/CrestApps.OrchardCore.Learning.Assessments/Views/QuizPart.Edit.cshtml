@@ -42,10 +42,10 @@
             }
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
-                    <a class="btn btn-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/design")"><i class="fa-solid fa-pen-ruler me-1" aria-hidden="true"></i>@T["Edit questions"]</a>
-                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/access")"><i class="fa-solid fa-sliders me-1" aria-hidden="true"></i>@T["Attempts and window"]</a>
-                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/overrides")"><i class="fa-solid fa-user-clock me-1" aria-hidden="true"></i>@T["Accommodations"]</a>
-                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/responses")"><i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Attempts"]</a>
+                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("SurveysDesign", new { id = survey.ItemId })"><i class="fa-solid fa-pen-ruler me-1" aria-hidden="true"></i>@T["Edit questions"]</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("SurveysAccess", new { id = survey.ItemId })"><i class="fa-solid fa-sliders me-1" aria-hidden="true"></i>@T["Attempts and window"]</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("SurveyOverridesIndex", new { surveyId = survey.ItemId })"><i class="fa-solid fa-user-clock me-1" aria-hidden="true"></i>@T["Accommodations"]</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("SurveysResponses", new { id = survey.ItemId })"><i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Attempts"]</a>
                     <span class="hint">@T["The time limit, pass mark, review options and question pools are the survey's own settings; the attempt limit and window are on its access page."]</span>
                 </div>
             </div>

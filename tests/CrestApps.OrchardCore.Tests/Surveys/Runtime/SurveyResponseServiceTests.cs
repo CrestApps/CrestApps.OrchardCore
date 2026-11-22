@@ -191,6 +191,42 @@ public sealed class SurveyResponseServiceTests
     }
 
     [Fact]
+    public async Task Anonymous_KeepsNoPropertiesOrIdentifyingContext_AndParticipationKeepsTheDayOnly()
+    {
+        // Arrange
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(
+            RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))),
+            item => item.Access.Anonymity = AnonymityMode.Anonymous);
+        var context = new RecordRef("LearningEnrollment", "enrollment-1");
+
+        // Act
+        var start = await harness.StartAsync(survey, "u1", request =>
+        {
+            request.Context = context;
+            request.Properties = new System.Text.Json.Nodes.JsonObject { ["email"] = "person@example.com" };
+        });
+        var resumed = await harness.StartAsync(survey, "u1", request =>
+        {
+            request.Context = context;
+            request.Identity.ResumeToken = start.ResumeToken;
+        });
+        await harness.PostAsync(start.Response, new SurveyRespondentIdentity { UserId = "u1", ResumeToken = start.ResumeToken }, SurveyPageDirection.Finish, ("q1", "a"));
+        var participation = await harness.RunAsync(async services => await services.GetRequiredService<CrestApps.OrchardCore.Surveys.Core.Services.SurveyParticipationStore>().GetAllAsync());
+
+        // Assert
+        Assert.Empty(start.Response.Properties);
+        Assert.Equal("LearningEnrollment", start.Response.Context?.Kind);
+        Assert.Equal("anonymous", start.Response.Context?.Id);
+        Assert.True(resumed.Resumed);
+        var row = Assert.Single(participation);
+        Assert.StartsWith("a:", row.RespondentKey, StringComparison.Ordinal);
+        Assert.DoesNotContain("enrollment-1", row.ContextKey, StringComparison.Ordinal);
+        Assert.Equal(1, row.CompletedCount);
+        Assert.Null(row.LastCompletedUtc);
+    }
+
+    [Fact]
     public async Task Limits_PerDay_AreCheckedAtStartAndAgainAtCompletion()
     {
         // Arrange

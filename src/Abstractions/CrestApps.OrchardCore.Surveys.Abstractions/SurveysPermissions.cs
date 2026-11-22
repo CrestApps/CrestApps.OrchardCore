@@ -30,6 +30,11 @@ public static class SurveysPermissions
     public static readonly Permission PublishSurveys = new("PublishSurveys", LocalizationSource.Create("Publish, restore and close surveys", typeof(SurveysPermissions)), [ManageSurveys]);
 
     /// <summary>
+    /// Publish, restore and close the surveys the user owns.
+    /// </summary>
+    public static readonly Permission PublishOwnSurveys = new("PublishOwnSurveys", LocalizationSource.Create("Publish, restore and close own surveys", typeof(SurveysPermissions)), [PublishSurveys]);
+
+    /// <summary>
     /// See the responses and reports of every survey.
     /// </summary>
     public static readonly Permission ViewSurveyResponses = new("ViewSurveyResponses", LocalizationSource.Create("View responses of all surveys", typeof(SurveysPermissions)), [ManageSurveys]);
@@ -50,14 +55,29 @@ public static class SurveysPermissions
     public static readonly Permission DeleteSurveyResponses = new("DeleteSurveyResponses", LocalizationSource.Create("Void and delete survey responses", typeof(SurveysPermissions)), [ManageSurveys]);
 
     /// <summary>
+    /// Void and delete responses of the surveys the user owns.
+    /// </summary>
+    public static readonly Permission DeleteOwnSurveyResponses = new("DeleteOwnSurveyResponses", LocalizationSource.Create("Void and delete responses of own surveys", typeof(SurveysPermissions)), [DeleteSurveyResponses]);
+
+    /// <summary>
     /// Grade responses that need a grader.
     /// </summary>
     public static readonly Permission GradeSurveyResponses = new("GradeSurveyResponses", LocalizationSource.Create("Grade survey responses", typeof(SurveysPermissions)), [ManageSurveys]);
 
     /// <summary>
+    /// Grade responses of the surveys the user owns.
+    /// </summary>
+    public static readonly Permission GradeOwnSurveyResponses = new("GradeOwnSurveyResponses", LocalizationSource.Create("Grade responses of own surveys", typeof(SurveysPermissions)), [GradeSurveyResponses]);
+
+    /// <summary>
     /// Grant and revoke accommodations.
     /// </summary>
     public static readonly Permission ManageSurveyOverrides = new("ManageSurveyOverrides", LocalizationSource.Create("Manage survey accommodations", typeof(SurveysPermissions)), [ManageSurveys]);
+
+    /// <summary>
+    /// Grant and revoke accommodations on the surveys the user owns.
+    /// </summary>
+    public static readonly Permission ManageOwnSurveyOverrides = new("ManageOwnSurveyOverrides", LocalizationSource.Create("Manage accommodations of own surveys", typeof(SurveysPermissions)), [ManageSurveyOverrides]);
 
     /// <summary>
     /// Manage question banks and their questions.
@@ -73,6 +93,12 @@ public static class SurveysPermissions
     /// Send and manage invitations.
     /// </summary>
     public static readonly Permission ManageSurveyInvitations = new("ManageSurveyInvitations", LocalizationSource.Create("Manage survey invitations", typeof(SurveysPermissions)), [ManageSurveys]);
+
+    /// <summary>
+    /// Send and manage invitations of the surveys the user owns. Invitations send site e-mail, so this permission is
+    /// separate from <see cref="ManageOwnSurveys"/> and no role has it by default.
+    /// </summary>
+    public static readonly Permission ManageOwnSurveyInvitations = new("ManageOwnSurveyInvitations", LocalizationSource.Create("Manage invitations of own surveys", typeof(SurveysPermissions)), [ManageSurveyInvitations]);
 
     /// <summary>
     /// Respond to surveys open to signed-in users or to audiences.

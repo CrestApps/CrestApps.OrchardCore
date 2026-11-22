@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
@@ -13,18 +14,22 @@ namespace CrestApps.OrchardCore.Surveys.DataSources;
 
 /// <summary>
 /// One survey's responses, one row each, with a field per question across its versions (joined by question id, named as
-/// in the newest version): the data set reports and pipelines export most.
+/// in the newest version): the data set reports and pipelines export most. It names the respondent (display name, Guest
+/// or Deleted user) on an identified survey; an anonymous survey names nobody, shows its times by the day only and
+/// shows no context id.
 /// </summary>
 internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, SurveyResponseIndex, SurveyResponseChildRow>
 {
     private readonly Survey _survey;
     private readonly IReadOnlyDictionary<string, SurveyVersion> _versions;
     private readonly SurveyResponseColumns _columns;
+    private readonly SurveyRespondentNames _names;
 
     public SurveyWideDataSet(
         Survey survey,
         IReadOnlyList<SurveyVersion> versions,
         SurveyResponseColumns columns,
+        SurveyRespondentNames names,
         ISession session,
         IAuthorizationService authorizationService,
         SurveyDataSetAccess access,
@@ -42,6 +47,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
         _survey = survey;
         _versions = versions.ToDictionary(version => version.ItemId, StringComparer.Ordinal);
         _columns = columns;
+        _names = names;
 
         var group = S["Response"].Value;
         var answers = S["Answers"].Value;
@@ -58,6 +64,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
         AddValue("ContextKind", S["Context kind"], DataFieldType.Text, group);
         AddValue("ContextId", S["Context ID"], DataFieldType.Text, group).IsIdentifier = true;
         AddValue("UserId", S["User ID"], DataFieldType.Text, S["Respondent"].Value).IsIdentifier = true;
+        AddValue("Respondent", S["Respondent"], DataFieldType.Text, S["Respondent"].Value);
 
         foreach (var column in columns.Columns)
         {
@@ -78,13 +85,13 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
             ["Number"] = document.Number,
             ["VersionNumber"] = (long)document.VersionNumber,
             ["Status"] = document.Status.ToString(),
-            ["StartedUtc"] = DateTime.SpecifyKind(document.StartedUtc, DateTimeKind.Utc),
-            ["CompletedUtc"] = document.CompletedUtc is { } completed ? DateTime.SpecifyKind(completed, DateTimeKind.Utc) : null,
+            ["StartedUtc"] = TimeOf(document.SurveyId, document.StartedUtc),
+            ["CompletedUtc"] = TimeOf(document.SurveyId, document.CompletedUtc),
             ["Score"] = document.Score,
             ["Percent"] = document.Percent,
             ["Passed"] = document.Passed,
             ["ContextKind"] = document.Context?.Kind,
-            ["ContextId"] = document.Context?.Id,
+            ["ContextId"] = IsAnonymous(document.SurveyId) ? null : document.Context?.Id,
             ["UserId"] = ShowsIdentity(document.SurveyId) ? document.UserId : null,
         };
 
@@ -95,6 +102,21 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
             Response = document,
             Values = values,
         };
+    }
+
+    protected override SurveyResponse ResponseOf(SurveyResponseChildRow row)
+        => row?.Response;
+
+    protected override async IAsyncEnumerable<SurveyResponseChildRow> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var row in base.LoadAsync(query, cancellationToken))
+        {
+            row.Values["Respondent"] = ShowsIdentity(row.Response.SurveyId)
+                ? await _names.GetUserAsync(row.Response.UserId, cancellationToken)
+                : await _names.GetAsync(row.Response, Surveys.GetValueOrDefault(row.Response.SurveyId ?? string.Empty), cancellationToken);
+
+            yield return row;
+        }
     }
 
     protected override IQueryIndex<SurveyResponseIndex> OfSurveys(IQueryIndex<SurveyResponseIndex> rows, string[] surveyIds)

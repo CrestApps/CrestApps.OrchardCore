@@ -155,19 +155,22 @@
                                 <input asp-for="Pools[i].EvenlyPresent" type="checkbox" class="form-check-input" />
                                 <label asp-for="Pools[i].EvenlyPresent" class="form-check-label">@T["Present evenly"]</label>
                             </div>
-                            <div class="input-group mt-2">
-                                <span class="input-group-text">@T["Bank"]</span>
-                                <select asp-for="Pools[i].BankId" class="form-select" aria-label="@T["Question bank"]">
-                                    <option value="">@T["None"]</option>
-                                    @foreach (var bank in Model.Banks)
-                                    {
-                                        <option value="@bank.Value" selected="@(bank.Value == Model.Pools[i].BankId)">@bank.Text</option>
-                                    }
-                                </select>
-                                <input asp-for="Pools[i].BankTags" class="form-control" placeholder="@T["Tags"]" aria-label="@T["Tags"]" />
-                                <input asp-for="Pools[i].BankDifficulty" type="number" min="1" max="5" class="form-control" placeholder="@T["Difficulty"]" aria-label="@T["Difficulty"]" />
-                                <input asp-for="Pools[i].BankMaxCandidates" type="number" min="1" max="2000" class="form-control" placeholder="@T["Most questions"]" aria-label="@T["Most questions"]" />
-                            </div>
+                            @if (Model.CanUseBanks)
+                            {
+                                <div class="input-group mt-2">
+                                    <span class="input-group-text">@T["Bank"]</span>
+                                    <select asp-for="Pools[i].BankId" class="form-select" aria-label="@T["Question bank"]">
+                                        <option value="">@T["None"]</option>
+                                        @foreach (var bank in Model.Banks)
+                                        {
+                                            <option value="@bank.Value" selected="@(bank.Value == Model.Pools[i].BankId)">@bank.Text</option>
+                                        }
+                                    </select>
+                                    <input asp-for="Pools[i].BankTags" class="form-control" placeholder="@T["Tags"]" aria-label="@T["Tags"]" />
+                                    <input asp-for="Pools[i].BankDifficulty" type="number" min="1" max="5" class="form-control" placeholder="@T["Difficulty"]" aria-label="@T["Difficulty"]" />
+                                    <input asp-for="Pools[i].BankMaxCandidates" type="number" min="1" max="2000" class="form-control" placeholder="@T["Most questions"]" aria-label="@T["Most questions"]" />
+                                </div>
+                            }
                         </div>
                     }
                 </div>
@@ -182,17 +185,20 @@
                             <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                         </div>
                         <input type="hidden" name="@(Html.NameFor(m => m.Pools))[__index__].Shuffle" value="true" />
-                        <div class="input-group mt-2">
-                            <span class="input-group-text">@T["Bank"]</span>
-                            <select name="@(Html.NameFor(m => m.Pools))[__index__].BankId" class="form-select" aria-label="@T["Question bank"]">
-                                <option value="">@T["None"]</option>
-                                @foreach (var bank in Model.Banks)
-                                {
-                                    <option value="@bank.Value">@bank.Text</option>
-                                }
-                            </select>
-                            <input name="@(Html.NameFor(m => m.Pools))[__index__].BankTags" class="form-control" placeholder="@T["Tags"]" aria-label="@T["Tags"]" />
-                        </div>
+                        @if (Model.CanUseBanks)
+                        {
+                            <div class="input-group mt-2">
+                                <span class="input-group-text">@T["Bank"]</span>
+                                <select name="@(Html.NameFor(m => m.Pools))[__index__].BankId" class="form-select" aria-label="@T["Question bank"]">
+                                    <option value="">@T["None"]</option>
+                                    @foreach (var bank in Model.Banks)
+                                    {
+                                        <option value="@bank.Value">@bank.Text</option>
+                                    }
+                                </select>
+                                <input name="@(Html.NameFor(m => m.Pools))[__index__].BankTags" class="form-control" placeholder="@T["Tags"]" aria-label="@T["Tags"]" />
+                            </div>
+                        }
                     </div>
                 </template>
                 <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add pool"]</button>
@@ -202,6 +208,7 @@
         <div class="ocat-wrapper">
             <div class="ocat-end-offset">
                 <button type="submit" class="btn btn-primary">@T["Save page"]</button>
+                <span class="hint dashed d-block mt-1">@T["Saves this page to the draft. Save draft at the bottom of the page also saves it."]</span>
             </div>
         </div>
     </form>

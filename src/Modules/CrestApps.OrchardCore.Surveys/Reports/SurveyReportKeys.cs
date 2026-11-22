@@ -57,6 +57,32 @@ public static class SurveyReportKeys
     public const string AudienceId = "AudienceId";
 
     /// <summary>
+    /// The statuses the Survey Responses report lists: <c>completed</c> (the default), <c>finished</c> (completed or
+    /// screened out), <c>all</c>, or one status name.
+    /// </summary>
+    public const string Status = "Status";
+
+    /// <summary>
+    /// The page of the Survey Responses report shown on screen, from 1.
+    /// </summary>
+    public const string Page = "Page";
+
+    /// <summary>
+    /// The status scope that lists completed responses only.
+    /// </summary>
+    public const string CompletedStatus = "completed";
+
+    /// <summary>
+    /// The status scope that lists completed and screened-out responses.
+    /// </summary>
+    public const string FinishedStatus = "finished";
+
+    /// <summary>
+    /// The status scope that lists every response.
+    /// </summary>
+    public const string AllStatuses = "all";
+
+    /// <summary>
     /// The version scope that reads the published version.
     /// </summary>
     public const string PublishedVersion = "published";

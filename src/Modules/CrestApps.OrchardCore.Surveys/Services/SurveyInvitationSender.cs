@@ -100,6 +100,9 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
             return false;
         }
 
+        // Every invitation e-mail carries an unsubscribe link, whatever the collector's message says.
+        message += Environment.NewLine + Environment.NewLine + S["To stop getting survey invitations and reminders, open {0}", UnsubscribeLink(link)].Value;
+
         return await _emails.SendAsync(new TemplatedEmail
         {
             To = invitation.Email,
@@ -110,6 +113,14 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
             Text = message,
         }), cancellationToken);
     }
+
+    /// <summary>
+    /// Gets the unsubscribe link of an invitation link.
+    /// </summary>
+    /// <param name="link">The invitation link, which ends with the invitation token.</param>
+    /// <returns>The unsubscribe link.</returns>
+    internal static string UnsubscribeLink(string link)
+        => link.TrimEnd('/') + "/unsubscribe";
 
     private async Task<string> RenderAsync(string template, Survey survey, SurveyInvitation invitation, string link)
     {
@@ -125,6 +136,7 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
                 ["Survey"] = FluidValue.Create(new Dictionary<string, object> { ["Name"] = survey.Name, ["Title"] = survey.Title }, _templateOptions),
                 ["Invitation"] = FluidValue.Create(new Dictionary<string, object> { ["DisplayName"] = invitation.DisplayName, ["Email"] = invitation.Email, ["ExpiresUtc"] = invitation.ExpiresUtc }, _templateOptions),
                 ["Link"] = FluidValue.Create(link, _templateOptions),
+                ["UnsubscribeLink"] = FluidValue.Create(UnsubscribeLink(link), _templateOptions),
             });
         }
         catch (Exception exception) when (exception is not OperationCanceledException)

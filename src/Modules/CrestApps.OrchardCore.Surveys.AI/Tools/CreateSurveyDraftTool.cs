@@ -3,6 +3,8 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Surveys.AI.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Surveys.AI.Tools;
 
@@ -49,7 +51,7 @@ public sealed class CreateSurveyDraftTool : SurveysAIToolBase
             name = result.Survey.Name,
             title = result.Survey.Title,
             status = result.Survey.Status.ToString(),
-            designer = $"~/Admin/surveys/{result.Survey.ItemId}/design",
+            designer = $"~/{services.GetRequiredService<IOptions<AdminOptions>>().Value.AdminUrlPrefix}/surveys/{result.Survey.ItemId}/design",
             problems = result.Messages.Select(message => new { error = message.IsError, message = message.Message }),
         });
     }

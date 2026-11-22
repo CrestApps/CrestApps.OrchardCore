@@ -12,7 +12,8 @@ namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 public interface ILearningSurveyService
 {
     /// <summary>
-    /// Creates the survey a course item owns, from a template.
+    /// Creates the survey a course item owns, from a template. Learners answer it through their enrollment, so it needs a
+    /// signed-in respondent and gets no public web link.
     /// </summary>
     /// <param name="item">The course item.</param>
     /// <param name="kind">The kind of survey, such as Quiz.</param>
@@ -20,6 +21,19 @@ public interface ILearningSurveyService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The new survey.</returns>
     Task<Survey> CreateOwnedSurveyAsync(ContentItem item, string kind, string template, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gives a copied course item its own survey: a copy of the source item's survey (published when the source is),
+    /// replacing any survey made for the item while it was created. Falls back to a new survey from the template when
+    /// the source survey is gone.
+    /// </summary>
+    /// <param name="item">The copied course item.</param>
+    /// <param name="sourceSurveyId">The survey of the item it was copied from.</param>
+    /// <param name="kind">The kind of survey, used when the source survey is gone.</param>
+    /// <param name="template">The template, used when the source survey is gone.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The copied item's survey.</returns>
+    Task<Survey> CopyOwnedSurveyAsync(ContentItem item, string sourceSurveyId, string kind, string template, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Starts or resumes the learner's response to the survey of a course item.
@@ -47,4 +61,12 @@ public interface ILearningSurveyService
     /// <param name="survey">The survey.</param>
     /// <returns>The course item, or <see langword="null"/> when the survey is not owned by one.</returns>
     Task<ContentItem> FindOwnerItemAsync(Survey survey);
+
+    /// <summary>
+    /// Gets whether a survey belongs to a course item, whatever the item's publish state: a draft, an unpublished item,
+    /// an item moved out of its course and a removed one all still own their survey.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <returns><see langword="true"/> when Learning owns the survey.</returns>
+    Task<bool> IsOwnedByCourseItemAsync(Survey survey);
 }

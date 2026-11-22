@@ -364,6 +364,6 @@ public sealed partial class LearningActivitiesTests
         writer.Write(Encoding.UTF8.GetBytes(content));
     }
 
-    [GeneratedRegex("href=\"(?<path>[^\"]*/s/[^\"/]+/results)\"")]
+    [GeneratedRegex("href=\"(?<path>[^\"]*/s/(?:r/)?[^\"/]+/results)\"")]
     private static partial Regex ResultsLinkPattern();
 }

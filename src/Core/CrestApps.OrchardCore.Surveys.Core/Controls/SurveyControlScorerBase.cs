@@ -13,6 +13,9 @@ public abstract class SurveyControlScorerBase : ISurveyControlScorer
     public abstract string ControlType { get; }
 
     /// <inheritdoc />
+    public virtual bool AnswerKeyIsOrder => false;
+
+    /// <inheritdoc />
     public abstract SurveyScoreResult Score(SurveyQuestion question, SurveyAnswer answer, SurveyScoringContext context);
 
     /// <inheritdoc />

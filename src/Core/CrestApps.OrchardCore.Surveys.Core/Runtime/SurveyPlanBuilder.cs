@@ -198,7 +198,10 @@ public sealed class SurveyPlanBuilder
 
         if (!context.Plan.ChoiceOrder.ContainsKey(question.Id) && SurveyChoiceSource.GetChoices(question, context.Definition).Count > 0)
         {
-            context.Plan.ChoiceOrder[question.Id] = SurveyChoiceSource.OrderChoices(SurveyChoiceSource.GetChoices(question, context.Definition), question.ShuffleChoices, context.Random);
+            // A type whose answer key is an order always starts shuffled, so the designed order is not shown.
+            var shuffle = question.ShuffleChoices || _registry.GetScorer(question.ControlType)?.AnswerKeyIsOrder == true;
+
+            context.Plan.ChoiceOrder[question.Id] = SurveyChoiceSource.OrderChoices(SurveyChoiceSource.GetChoices(question, context.Definition), shuffle, context.Random);
         }
     }
 }

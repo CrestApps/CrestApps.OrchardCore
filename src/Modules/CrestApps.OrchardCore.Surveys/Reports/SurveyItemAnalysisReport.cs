@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -14,8 +16,7 @@ namespace CrestApps.OrchardCore.Surveys.Reports;
 /// </summary>
 internal sealed class SurveyItemAnalysisReport : IReport
 {
-    private const double WeakDiscrimination = 0.2;
-    private static readonly ReportStyle _weak = ReportStyle.Create("#92400E", "#FEF3C7");
+    private const decimal WeakDiscrimination = 0.2m;
 
     private readonly SurveyReportData _data;
     private readonly SurveyResultsQueries _queries;
@@ -72,6 +73,7 @@ internal sealed class SurveyItemAnalysisReport : IReport
         var scores = await _queries.ListQuestionScoresAsync(scope.AnswerFilter, cancellationToken);
         var analysis = SurveyItemAnalysisCalculator.Analyze(percents, scores).ToDictionary(item => item.QuestionId, StringComparer.Ordinal);
         var rows = new List<ReportRow>();
+        var weak = ReportColumnColorizer.Create(DataFieldType.Decimal, SurveyReportColors.WeakBelow(WeakDiscrimination), null, await _data.NowAsync());
 
         foreach (var (_, question) in SurveyDefinitionQuestions.All(scope.Definition))
         {
@@ -89,7 +91,7 @@ internal sealed class SurveyItemAnalysisReport : IReport
                 item.Discrimination is { } discrimination ? discrimination.ToString("0.00", System.Globalization.CultureInfo.CurrentCulture) : "-",
             ]);
 
-            rows.Add(item.Discrimination is < WeakDiscrimination ? row.WithCellStyle(4, _weak) : row);
+            rows.Add(item.Discrimination is { } value && weak?.StyleOf(value) is { } style ? row.WithCellStyle(4, style) : row);
         }
 
         var table = ReportSection.ForTable(S["Questions"].Value,

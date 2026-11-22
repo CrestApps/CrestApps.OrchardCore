@@ -1,18 +1,27 @@
 @model ShapeViewModel<Survey>
+@inject OrchardCore.Environment.Shell.Descriptor.Models.ShellDescriptor ShellDescriptor
 
 @{
     var survey = Model.Value;
+
+    // The Results report comes from the Reports feature, so without it the menu leaves Results out instead of showing a dead link.
+    var reportUrl = ShellDescriptor.Features.Any(feature => feature.Id == CrestApps.OrchardCore.Reports.ReportsConstants.Feature)
+        ? Url.RouteUrl("ReportsDisplay", new { id = "survey-results" })
+        : null;
 }
 
 <a asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Collect responses"]</a>
-<a href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/responses")" class="dropdown-item">@T["Responses"]</a>
-<a href="@(Url.RouteUrl("ReportsDisplay", new { id = "survey-results" }) + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(survey.ItemId))" class="dropdown-item">@T["Results"]</a>
+<a href="@Url.RouteUrl("SurveysResponses", new { id = survey.ItemId })" class="dropdown-item">@T["Responses"]</a>
+@if (reportUrl is not null)
+{
+    <a href="@(reportUrl + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(survey.ItemId))" class="dropdown-item">@T["Results"]</a>
+}
 <a asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Versions"]</a>
 <a asp-action="Access" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Access and settings"]</a>
 <a asp-action="Logic" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Logic overview"]</a>
-<a href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/overrides")" class="dropdown-item">@T["Accommodations"]</a>
-<a href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/regrade")" class="dropdown-item">@T["Regrade versions"]</a>
-<a href="@Url.Content("~/Admin/surveys/grading?surveyId=" + Uri.EscapeDataString(survey.ItemId))" class="dropdown-item">@T["Grading"]</a>
+<a href="@Url.RouteUrl("SurveyOverridesIndex", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Accommodations"]</a>
+<a href="@Url.RouteUrl("SurveyGradingRegradeVersions", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Regrade versions"]</a>
+<a href="@Url.RouteUrl("SurveyGradingIndex", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Grading"]</a>
 <a asp-action="Create" asp-controller="SurveyTemplates" asp-route-fromSurveyId="@survey.ItemId" class="dropdown-item">@T["Save as a template"]</a>
 <a asp-action="Duplicate" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Copy"]" data-message="@T["Create a draft copy of this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Copy as a draft"]</a>
 @if (survey.Status == SurveyStatus.Open)

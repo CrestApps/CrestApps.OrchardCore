@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -12,11 +13,19 @@ using OrchardCore.Liquid;
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
-/// Renders an ending's message: piping first, then Liquid with the survey, the response, the answers by question name
-/// and the score, then the HTML sanitizer.
+/// Renders an ending's message: the author's message as Liquid first, with the survey, the response, the answers by
+/// question name and the score; then piping of <c>{name}</c> references; then the HTML sanitizer.
 /// </summary>
+/// <remarks>
+/// A respondent's text never reaches the Liquid parser. Only the message the author wrote is parsed; answers are
+/// values of the model, and every value Liquid writes is HTML-encoded with <c>{</c> and <c>}</c> encoded too, so the
+/// piping that follows cannot read a reference out of an answer. Piped values are HTML-encoded with their braces
+/// encoded as well.
+/// </remarks>
 public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
 {
+    private static readonly HtmlEncoder _encoder = CreateEncoder();
+
     private readonly SurveyPipingRenderer _piping;
     private readonly ILiquidTemplateManager _liquid;
     private readonly IHtmlSanitizerService _sanitizer;
@@ -55,7 +64,8 @@ public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(response);
 
-        var message = _piping.Render(ending?.Message, definition, response);
+        // The author's message, as written: nothing a respondent typed is in it yet.
+        var message = ending?.Message;
 
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -79,7 +89,7 @@ public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
                     }
                 }
 
-                message = await _liquid.RenderStringAsync(message, HtmlEncoder.Default, null, new Dictionary<string, FluidValue>
+                message = await _liquid.RenderStringAsync(message, _encoder, null, new Dictionary<string, FluidValue>
                 {
                     ["Survey"] = FluidValue.Create(new Dictionary<string, object> { ["Name"] = survey?.Name, ["Title"] = survey?.Title }, _templateOptions),
                     ["Response"] = FluidValue.Create(new Dictionary<string, object> { ["Number"] = response.Number, ["Status"] = response.Status.ToString(), ["Percent"] = response.Percent, ["Passed"] = response.Passed }, _templateOptions),
@@ -93,6 +103,19 @@ public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
             }
         }
 
+        // Piping last: the values are HTML-encoded and their braces encoded, and nothing is parsed afterwards.
+        message = _piping.Render(message, definition, response);
+
         return _sanitizer.Sanitize(message);
+    }
+
+    private static HtmlEncoder CreateEncoder()
+    {
+        // HTML-encodes like the default encoder, and also encodes the braces so a written value is never read as a
+        // piping reference.
+        var settings = new TextEncoderSettings(UnicodeRanges.BasicLatin);
+        settings.ForbidCharacters('{', '}');
+
+        return HtmlEncoder.Create(settings);
     }
 }

@@ -57,7 +57,7 @@ The base module always supports CSV files (`.csv`).
 
 Enable **Content Transfer (OpenXml)** feature to add Excel workbook support (`.xlsx`).
 
-- other modules may add formats of their own, such as the QTI packages of Learning QTI Import, which import only and only some content types
+- other modules may add formats of their own, such as the Moodle course backups of Learning Moodle Import, which import only and only some content types
 - `.csv` keeps the base import and export experience lightweight and does not require OpenXml packages
 - `.xlsx` becomes available automatically in the import and export UI when the optional OpenXml feature is enabled
 - large imports and exports can stream in batches regardless of the enabled transfer format
@@ -847,7 +847,7 @@ A format can also be **import only** or **for some content types only**:
 - `CanImport(contentType)` (default `true`): the import page, the upload check and the background import offer and read the format only for the content types it accepts, so two formats may share an extension when they import different content types. The background import picks the first format, by extension, that handles the file name and imports the content type.
 - `DescribeImport(contentType)` (default `null`): a line the import page shows under the file requirements.
 
-The Learning QTI Import feature's `.zip` and `.xml` formats are import only and accept question types only.
+The Learning Moodle Import feature's `.mbz` format is import only and accepts the Course content type only. QTI files are not a Content Transfer format: they import into Surveys question banks through the Surveys **QTI Question Import** feature.
 
 ## Rows of several content types
 

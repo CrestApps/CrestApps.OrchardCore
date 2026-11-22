@@ -24,6 +24,8 @@ A quiz is a course item with scored questions. Its questions, question pools, ti
 4. In the designer's settings, set the **Scoring** (the pass mark, immediate feedback) and when learners may review their answers, the score and the right answers. On **Access and settings**, set how many attempts are allowed, the delay between them and when the quiz opens and closes.
 5. Select **Publish**. Learners can attempt the quiz only once its survey is published.
 
+A quiz's survey has no public link: only learners enrolled in the course can take it, from the course, while the quiz is published. Copying a quiz copies its questions into a survey of its own. Quiz surveys show in **Surveys > Surveys** only when **Show** is set to **Also surveys owned by other features**.
+
 Questions that many quizzes share are written once in **Surveys > Question banks**. Questions written in another system can be imported into a bank from a spreadsheet or, with the **QTI Question Import** feature, from QTI files. See [Surveys](/docs/user-manual/surveys).
 
 ## Taking a quiz

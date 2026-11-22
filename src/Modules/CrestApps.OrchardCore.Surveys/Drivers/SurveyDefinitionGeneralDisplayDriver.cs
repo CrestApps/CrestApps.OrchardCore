@@ -26,7 +26,7 @@ internal sealed class SurveyDefinitionGeneralDisplayDriver : DisplayDriver<Surve
             model.Introduction = definition.Introduction;
             model.Presentation = definition.Presentation ?? new SurveyPresentationSettings();
             model.Navigation = definition.Navigation ?? new SurveyNavigationSettings();
-        }).Location("Content:1#General");
+        }).Location("Content:1#General;1");
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)
