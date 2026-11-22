@@ -1,0 +1,17 @@
+@model BankAccountCheckSettingsViewModel
+
+@* Only the business's own accounts have checks drawn on them: the driver leaves the card off other accounts. *@
+<div class="card mb-3">
+    <div class="card-header">@T["Checks"]</div>
+    <div class="card-body">
+        <input type="hidden" asp-for="Shown" value="true" />
+        <div class="ocat-wrapper" asp-validation-class-for="DefaultLayoutId">
+            <label asp-for="DefaultLayoutId" class="ocat-label">@T["Default check layout"]</label>
+            <div class="ocat-end">
+                <select asp-for="DefaultLayoutId" asp-items="Model.LayoutOptions" class="form-select"></select>
+                <span asp-validation-for="DefaultLayoutId" class="text-danger"></span>
+                <span class="hint">@T["The layout this account's checks print with when you don't choose one, such as the layout of the pre-printed checks you load for it."]</span>
+            </div>
+        </div>
+    </div>
+</div>

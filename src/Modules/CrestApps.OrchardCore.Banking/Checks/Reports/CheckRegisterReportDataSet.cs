@@ -55,14 +55,17 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
         AddField("Amount", S["Amount"], DataFieldType.Decimal, record => record.Amount, group);
         AddField("Currency", S["Currency"], DataFieldType.Text, record => record.Currency, group);
         AddField("Memo", S["Memo"], DataFieldType.Text, record => record.Memo, group);
-        AddField("Status", S["Status"], DataFieldType.Text, record => record.Status.ToString(), group).Description = S["Issued, Printed, Voided, StopPayment, Cleared, Reissued or Stale."].Value;
-        AddField("IsVoid", S["Void"], DataFieldType.Boolean, record => record.Status is CheckStatus.Voided or CheckStatus.Reissued or CheckStatus.StopPayment, group).Description = S["Whether the bank must refuse the check: voided, stopped or replaced."].Value;
+        AddField("Status", S["Status"], DataFieldType.Text, record => record.Status.ToString(), group).Description = S["Queued, Issued, Printed, Voided, StopPayment, Cleared, Reissued or Stale. A queued check has no number yet."].Value;
+        AddField("IsVoid", S["Void"], DataFieldType.Boolean, record => record.Status is CheckStatus.Voided or CheckStatus.Reissued or CheckStatus.StopPayment, group).Description = S["Whether the bank must refuse the check: voided (a spoiled sheet too), stopped or replaced."].Value;
+        AddField("Numbering", S["Numbering"], DataFieldType.Text, record => record.Numbering.ToString(), group).Description = S["Next, AtPrint (numbered by a print run on pre-printed stock) or Handwritten."].Value;
+        AddField("IsSpoiled", S["Spoiled"], DataFieldType.Boolean, record => record.IsSpoiled, group).Description = S["Whether it is a sheet that misprinted in a print run."].Value;
         AddField("SourceKind", S["Source kind"], DataFieldType.Text, record => record.SourceKind, group);
         AddField("SourceId", S["Source ID"], DataFieldType.Text, record => record.SourceId, group);
         AddField("CheckDate", S["Check date"], DataFieldType.Date, record => record.CheckDate.ToDateTime(TimeOnly.MinValue), dates);
         AddField("IssuedUtc", S["Issued"], DataFieldType.DateTime, record => record.IssuedUtc, dates);
         AddField("PrintedUtc", S["Printed"], DataFieldType.DateTime, record => record.PrintedUtc, dates);
         AddField("ClosedUtc", S["Voided or stopped"], DataFieldType.DateTime, record => record.ClosedUtc, dates);
+        AddField("VoidedOn", S["Void date"], DataFieldType.Date, record => record.VoidedOn?.ToDateTime(TimeOnly.MinValue), dates);
         AddField("ClearedOn", S["Cleared"], DataFieldType.Date, record => record.ClearedOn?.ToDateTime(TimeOnly.MinValue), dates);
         AddField("ModifiedUtc", S["Changed"], DataFieldType.DateTime, record => record.ModifiedUtc ?? record.IssuedUtc, dates).Description = S["When the check last changed: what the positive pay file reads new rows by."].Value;
 

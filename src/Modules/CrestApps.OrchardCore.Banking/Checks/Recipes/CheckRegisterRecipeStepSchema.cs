@@ -36,7 +36,10 @@ internal sealed class CheckRegisterRecipeStepSchema : IRecipeStep
                             ("sourceId", Text("The id of the record the check paid.")),
                             ("status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Issued", "Printed", "Voided", "StopPayment", "Cleared", "Reissued", "Stale").Description("The status.")),
                             ("issuedUtc", Text("When the check was issued (UTC).")),
-                            ("clearedOn", Text("The date the bank paid it, yyyy-MM-dd.")))
+                            ("clearedOn", Text("The date the bank paid it, yyyy-MM-dd.")),
+                            ("voidedOn", Text("The date it was voided, yyyy-MM-dd.")),
+                            ("numbering", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Next", "AtPrint", "Handwritten").Description("How the check got its number: the account's series, a print run on pre-printed stock, or written by hand.")),
+                            ("isSpoiled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether it is a sheet that misprinted in a print run, kept voided so its number is never used again.")))
                         .Required("bankAccountId", "number")
                         .AdditionalProperties(true))
                     .Description("The checks to add to the register as history. They are never printed or changed.")))

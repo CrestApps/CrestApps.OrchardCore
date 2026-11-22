@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Banking.Checks.Recipes;
 using CrestApps.OrchardCore.Banking.Checks.Reports;
 using CrestApps.OrchardCore.Banking.Checks.Services;
 using CrestApps.OrchardCore.Banking.Checks.Workflows;
+using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Core.FileStorage;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
@@ -56,6 +57,7 @@ public sealed class Startup : StartupBase
             (serviceProvider, fileStore) => new CheckFileStore(new EncryptedFileStore(fileStore, serviceProvider.GetRequiredService<IDataProtectionProvider>(), ChecksConstants.FileProtectionPurpose)));
         services.AddDisplayDriver<CheckLayout, CheckLayoutDisplayDriver>();
         services.AddDisplayDriver<CheckRecord, CheckRecordDisplayDriver>();
+        services.AddDisplayDriver<BankAccount, BankAccountCheckSettingsDisplayDriver>();
         services.AddPermissionProvider<ChecksPermissionProvider>();
         services.AddNavigationProvider<ChecksAdminMenu>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ChecksResourceManagementOptionsConfiguration>();

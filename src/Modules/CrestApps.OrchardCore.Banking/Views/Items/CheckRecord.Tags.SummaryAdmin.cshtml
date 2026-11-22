@@ -10,6 +10,7 @@
         CheckStatus.StopPayment => (T["Stop payment"], "fa-solid fa-hand text-danger"),
         CheckStatus.Reissued => (T["Reissued"], "fa-solid fa-rotate text-secondary"),
         CheckStatus.Stale => (T["Stale"], "fa-solid fa-hourglass-end text-warning"),
+        CheckStatus.Queued => (T["Waiting to print"], "fa-solid fa-layer-group text-warning"),
         _ => (T["Issued"], "fa-solid fa-file-invoice-dollar text-warning"),
     };
 }
@@ -18,6 +19,18 @@
 @if (check.Status == CheckStatus.Cleared && !string.IsNullOrEmpty(check.ReissuedById))
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The bank paid this check after it was replaced: check whether the replacement was paid too."]"><i class="fa-solid fa-triangle-exclamation text-danger me-1" aria-hidden="true"></i>@T["Paid after reissue"]</span>
+}
+@if (check.IsSpoiled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A sheet that misprinted in a print run: its number is kept so it is never used again."]"><i class="fa-solid fa-trash-can text-secondary me-1" aria-hidden="true"></i>@T["Spoiled"]</span>
+}
+@if (check.Numbering == CheckNumbering.Handwritten)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Written by hand and recorded: it is never printed."]"><i class="fa-solid fa-pen text-secondary me-1" aria-hidden="true"></i>@T["Written by hand"]</span>
+}
+@if (check.VoidedOn is { } voidedOn && check.Status == CheckStatus.Voided)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Void date"]"><i class="fa-solid fa-calendar-xmark text-secondary me-1" aria-hidden="true"></i>@voidedOn.ToString("d")</span>
 }
 @if (check.IsHistorical)
 {
