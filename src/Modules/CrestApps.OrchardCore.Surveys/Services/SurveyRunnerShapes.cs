@@ -151,8 +151,10 @@ public sealed class SurveyRunnerShapes
     /// <param name="version">The version.</param>
     /// <param name="response">The response.</param>
     /// <param name="shows">What the review shows.</param>
+    /// <param name="forRespondent">Whether the respondent sees the review. Hidden questions hold values the respondent
+    /// never saw nor typed (from the link, a consumer or a workflow), so only staff see them.</param>
     /// <returns>The question shapes.</returns>
-    public async Task<IList<IShape>> BuildReviewAsync(Survey survey, SurveyVersion version, SurveyResponse response, ReviewShows shows)
+    public async Task<IList<IShape>> BuildReviewAsync(Survey survey, SurveyVersion version, SurveyResponse response, ReviewShows shows, bool forRespondent = false)
     {
         ArgumentNullException.ThrowIfNull(version);
         ArgumentNullException.ThrowIfNull(response);
@@ -169,7 +171,9 @@ public sealed class SurveyRunnerShapes
                 var question = Find(definition, questionId);
                 var handler = question is null ? null : _registry.GetHandler(question.ControlType);
 
-                if (handler is null || state.HiddenQuestionIds.Contains(questionId))
+                if (handler is null
+                    || state.HiddenQuestionIds.Contains(questionId)
+                    || (forRespondent && _registry.GetControl(question.ControlType)?.Has(SurveyControlCapabilities.NotShownToRespondents) == true))
                 {
                     continue;
                 }

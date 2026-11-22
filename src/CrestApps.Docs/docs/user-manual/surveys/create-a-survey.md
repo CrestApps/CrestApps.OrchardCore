@@ -51,8 +51,8 @@ Open the survey's menu and select **Access and settings**. These settings apply 
 | **Title**, **Technical name**, **Notes**, **Tags** | What staff see. Tags filter the survey list. |
 | **Audience** | **Anyone with the link**, **Signed-in users**, **Members of chosen audiences** or **Only invited people**. |
 | **Audiences** | Tick the audiences whose members may respond, when the audience is **Members of chosen audiences**. Audiences are kept in **Content > User Audiences**. |
-| **CAPTCHA** | Ask respondents who are not signed in to pass a CAPTCHA. |
-| **Responses** | **Identified: record who responded**, or **Anonymous: record nobody**. Choose before the first response: this can't change once the survey has responses. |
+| **CAPTCHA** | Ask respondents who are not signed in to pass a CAPTCHA. People you invited by name, user, e-mail or phone skip it; a personal link made for nobody in particular still asks. |
+| **Responses** | **Identified: record who responded**, or **Anonymous: record nobody**. Choose before the first response: this can't change once the survey has responses. If this page warns that the server can't read the survey's anonymity secret, ask your administrator to restore the site's keys before you use **Reset the anonymity secret**. On a site that runs on several servers that don't share their keys, a reset only moves the problem to the other servers. |
 | **IP address** | Record the IP address of identified responses. |
 | **Minimum group size** | Reports, lists and exports of an anonymous survey hide any group with fewer responses. It can't go below the smallest size your site allows (5 unless your administrator changes it). |
 | **Opens**, **Closes** | When the survey takes responses, in your time zone. |

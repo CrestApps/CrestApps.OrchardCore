@@ -6,7 +6,7 @@ user_manual:
   - user-manual/surveys/share-and-invite
 ---
 
-With **Surveys API** on, these endpoints are under `/api/surveys` on the `Api` authentication scheme. Errors are Problem Details responses. Answer keys never leave the server. When the Orchard Core **Rate Limits** feature is on, every endpoint is in the `Surveys.Respond` rate-limit group, like the runner (120 requests a minute per IP address).
+With **Surveys API** on, these endpoints are under `/api/surveys` on the `Api` authentication scheme. Errors are Problem Details responses. Answer keys never leave the server. Every response carries `Cache-Control: no-store`, so no browser or shared proxy keeps answers, pages or responses. An anonymous survey whose secret this server can't read (Data Protection keys that aren't shared) answers `503` with the problem type `surveyunavailable`. When the Orchard Core **Rate Limits** feature is on, every endpoint is in the `Surveys.Respond` rate-limit group, like the runner (120 requests a minute per IP address).
 
 | Endpoint | Permission | Does |
 | --- | --- | --- |

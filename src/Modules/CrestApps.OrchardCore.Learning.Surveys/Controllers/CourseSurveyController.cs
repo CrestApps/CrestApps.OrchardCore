@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -64,7 +66,19 @@ public sealed class CourseSurveyController : Controller
         }
 
         var back = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Content("~/");
-        var result = await _learningSurveys.StartAsync(User, item, part.SurveyId, back, HttpContext.RequestAborted);
+        SurveyStartResult result;
+
+        try
+        {
+            result = await _learningSurveys.StartAsync(User, item, part.SurveyId, back, HttpContext.RequestAborted);
+        }
+        catch (SurveyAnonymitySecretUnreadableException)
+        {
+            // The anonymous survey's secret can't be read on this server; an administrator resets it.
+            await _notifier.WarningAsync(H["This survey isn't available right now. Please try again later."]);
+
+            return LocalRedirect(back);
+        }
 
         if (!result.Succeeded)
         {

@@ -35,6 +35,7 @@ internal static class SurveysApiEndpoints
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = OrchardCoreConstants.AuthenticationSchemes.Api })
             .DisableAntiforgery()
             .WithRateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)
+            .AddEndpointFilter(NoStoreAndUnreadableSecretFilterAsync)
             .WithTags("Surveys");
 
         group.MapGet(string.Empty, ListSurveysAsync).WithName("SurveysApiList").WithSummary("Lists the surveys the caller may manage.");
@@ -46,6 +47,35 @@ internal static class SurveysApiEndpoints
         group.MapPost("responses/{responseId}/complete", CompleteAsync).WithName("SurveysApiComplete").WithSummary("Answers the last page and completes the response.");
 
         return routes;
+    }
+
+    /// <summary>
+    /// Runs around every Surveys API call. The answers, pages and responses it returns are never cached by a browser or a
+    /// shared proxy (<c>Cache-Control: no-store</c>), and an anonymous survey whose secret this server can't read (Data
+    /// Protection keys that aren't shared) answers 503 with a problem result instead of an unhandled error.
+    /// </summary>
+    /// <param name="context">The call.</param>
+    /// <param name="next">The endpoint.</param>
+    /// <returns>The endpoint's result, or the 503 problem result.</returns>
+    internal static async ValueTask<object> NoStoreAndUnreadableSecretFilterAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var headers = context.HttpContext.Response.Headers;
+
+        headers.CacheControl = "no-store";
+        headers.Pragma = "no-cache";
+
+        try
+        {
+            return await next(context);
+        }
+        catch (SurveyAnonymitySecretUnreadableException)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "SurveyUnavailable",
+                detail: "This survey isn't available right now. Please try again later.",
+                type: "https://crestapps.com/surveys/errors/surveyunavailable");
+        }
     }
 
     internal static async Task<IResult> ListSurveysAsync(HttpContext httpContext, IAuthorizationService authorizationService, ISurveyAuthorizationService surveyAuthorization, ISession session, SurveyStore surveyStore)

@@ -53,6 +53,6 @@ internal sealed class SurveyShortcodeProvider : IShortcodeProvider
         var url = pathBase.ToUriComponent() + "/s/" + Uri.EscapeDataString(collector.Token);
         var css = string.Equals(arguments.Named("display"), "link", StringComparison.OrdinalIgnoreCase) ? "survey-embed-link" : "btn btn-primary survey-embed-button";
 
-        return $"<a href=\"{_htmlEncoder.Encode(url)}\" class=\"{css}\">{_htmlEncoder.Encode(text ?? string.Empty)}</a>";
+        return $"<a href=\"{_htmlEncoder.Encode(url)}\" class=\"{css}\" rel=\"nofollow\">{_htmlEncoder.Encode(text ?? string.Empty)}</a>";
     }
 }

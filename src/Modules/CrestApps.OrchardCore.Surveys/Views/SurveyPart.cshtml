@@ -14,10 +14,10 @@
 @switch (Model.Display)
 {
     case SurveyEmbedDisplay.Link:
-        <a href="@url" class="survey-embed-link">@Model.Text</a>
+        <a href="@url" class="survey-embed-link" rel="nofollow">@Model.Text</a>
         break;
     case SurveyEmbedDisplay.Button:
-        <a href="@url" class="btn btn-primary survey-embed-button" role="button">@Model.Text</a>
+        <a href="@url" class="btn btn-primary survey-embed-button" role="button" rel="nofollow">@Model.Text</a>
         break;
     default:
         <section class="survey-embed card mb-3">
@@ -26,7 +26,7 @@
                 <div class="mb-3">@Model.Introduction</div>
                 @* The page around the embed may be cached for every visitor, so the card holds no form token: Start opens
                    the survey's own page, which posts its start form at once with a token of its own. *@
-                <a href="@(url + "?" + SurveyRunnerController.AutoStartQueryKey + "=1")" class="btn btn-primary" role="button">@T["Start"]</a>
+                <a href="@(url + "?" + SurveyRunnerController.AutoStartQueryKey + "=1")" class="btn btn-primary" role="button" rel="nofollow">@T["Start"]</a>
             </div>
         </section>
         break;

@@ -7,8 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CrestApps.OrchardCore.Tests.Surveys.Extras;
 
 /// <summary>
-/// A CAPTCHA that can't be shown fails closed, a personal invitation needs no CAPTCHA, and an e-mail invitation is for
-/// exactly one address.
+/// A CAPTCHA that can't be shown fails closed, an invitation sent to someone needs no CAPTCHA (a bare personal link
+/// does), and an e-mail invitation is for exactly one address.
 /// </summary>
 public sealed class SurveyAccessHardeningTests
 {
@@ -27,16 +27,32 @@ public sealed class SurveyAccessHardeningTests
     }
 
     [Fact]
-    public async Task CaptchaRule_PersonalInvitation_IsNotAskedForACaptcha()
+    public async Task CaptchaRule_InvitationSentToSomeone_IsNotAskedForACaptcha()
     {
         // Arrange
+        var rule = new CaptchaRule(new ServiceCollection().BuildServiceProvider());
+
+        // Act
+        var byEmail = await rule.CheckStartAsync(Context(new SurveyInvitation { ItemId = "i1", Email = "ann@example.com" }));
+        var byUser = await rule.CheckStartAsync(Context(new SurveyInvitation { ItemId = "i2", UserId = "u1" }));
+
+        // Assert
+        Assert.True(byEmail.IsAllowed);
+        Assert.True(byUser.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CaptchaRule_BarePersonalLinkWithNoRecipient_IsStillAskedForACaptcha()
+    {
+        // Arrange: a personal link made for no one proves nothing about who opens it.
         var rule = new CaptchaRule(new ServiceCollection().BuildServiceProvider());
 
         // Act
         var decision = await rule.CheckStartAsync(Context(new SurveyInvitation { ItemId = "i1" }));
 
         // Assert
-        Assert.True(decision.IsAllowed);
+        Assert.False(decision.IsAllowed);
+        Assert.Equal(SurveyErrorCode.CaptchaUnavailable, decision.Error);
     }
 
     [Fact]

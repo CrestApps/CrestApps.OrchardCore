@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
 
@@ -112,8 +113,8 @@ public sealed class SurveyResumeTokenTests
         var headers = context.Response.Headers.SetCookie.ToArray();
 
         // The generation sits on the tenant root, so pages outside /s (a course, admin Preview) see it.
-        Assert.Contains(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal) && header.Contains("path=/tenant1;", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal) && header.Contains("path=/tenant1/s", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(headers, header => header.StartsWith(Generation + "=", StringComparison.Ordinal) && header.Contains("path=/tenant1;", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(headers, header => header.StartsWith(Generation + "=", StringComparison.Ordinal) && header.Contains("path=/tenant1/s", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(headers, header => header.StartsWith("sr_s1=", StringComparison.Ordinal) && header.Contains("httponly", StringComparison.OrdinalIgnoreCase) && header.Contains("path=/tenant1/s", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -127,7 +128,7 @@ public sealed class SurveyResumeTokenTests
         cookies.Write("s1", "R1.secret");
 
         // Assert
-        var generation = Assert.Single(context.Response.Headers.SetCookie.ToArray(), header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal));
+        var generation = Assert.Single(context.Response.Headers.SetCookie.ToArray(), header => header.StartsWith(Generation + "=", StringComparison.Ordinal));
 
         Assert.Contains("path=/;", generation + ";", StringComparison.OrdinalIgnoreCase);
     }
@@ -140,7 +141,7 @@ public sealed class SurveyResumeTokenTests
         var coursePage = new DefaultHttpContext();
 
         coursePage.Request.Path = "/learning/surveys/item1/start";
-        coursePage.Request.Headers.Cookie = $"{SurveyResumeCookies.GenerationCookie}=current";
+        coursePage.Request.Headers.Cookie = $"{Generation}=current";
 
         var (cookies, context) = Cookies(coursePage);
 
@@ -150,7 +151,7 @@ public sealed class SurveyResumeTokenTests
         // Assert: no new generation, so s1's cookie (generation "current") still counts on the next respondent page.
         var headers = context.Response.Headers.SetCookie.ToArray();
 
-        Assert.DoesNotContain(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal));
+        Assert.DoesNotContain(headers, header => header.StartsWith(Generation + "=", StringComparison.Ordinal));
         Assert.Contains(headers, header => header.StartsWith("sr_s2=" + Uri.EscapeDataString(SurveyResumeCookies.Format("R2.secret", "current")), StringComparison.Ordinal));
     }
 
@@ -160,7 +161,7 @@ public sealed class SurveyResumeTokenTests
         // Arrange: the browser holds a resume cookie of generation "old".
         var request = new DefaultHttpContext();
 
-        request.Request.Headers.Cookie = $"{SurveyResumeCookies.GenerationCookie}=old; sr_s1={Uri.EscapeDataString(SurveyResumeCookies.Format("R1.secret", "old"))}";
+        request.Request.Headers.Cookie = $"{Generation}=old; sr_s1={Uri.EscapeDataString(SurveyResumeCookies.Format("R1.secret", "old"))}";
 
         var (cookies, context) = Cookies(request);
         var before = cookies.Read("s1");
@@ -176,11 +177,73 @@ public sealed class SurveyResumeTokenTests
         var headers = context.Response.Headers.SetCookie.ToArray();
 
         Assert.Contains(headers, header => header.StartsWith("sr_s1=;", StringComparison.Ordinal));
-        Assert.Contains(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal) && !header.StartsWith(SurveyResumeCookies.GenerationCookie + "=old", StringComparison.Ordinal));
+        Assert.Contains(headers, header => header.StartsWith(Generation + "=", StringComparison.Ordinal) && !header.StartsWith(Generation + "=old", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void GenerationCookieName_IsUniquePerTenant()
+    {
+        // Arrange: a tenant without a prefix writes its generation cookie on "/", which requests to "/t1/..." carry too.
+
+        // Act
+        var root = SurveyResumeCookies.GenerationCookieName("Default");
+        var prefixed = SurveyResumeCookies.GenerationCookieName("t1");
+
+        // Assert
+        Assert.NotEqual(root, prefixed);
+        Assert.StartsWith(SurveyResumeCookies.GenerationCookiePrefix, root, StringComparison.Ordinal);
+        Assert.Equal(SurveyResumeCookies.GenerationCookiePrefix.Length + 8, root.Length);
+        Assert.Equal(root, SurveyResumeCookies.GenerationCookieName("Default"));
+    }
+
+    [Fact]
+    public void Cookies_OfAPrefixedTenant_IgnoreTheRootTenantsGenerationCookie()
+    {
+        // Arrange: a request to tenant t1 carries the root tenant's generation cookie (path "/") and t1's resume cookie,
+        // written under t1's own generation.
+        var request = new DefaultHttpContext();
+
+        request.Request.PathBase = "/t1";
+        request.Request.Headers.Cookie = $"{SurveyResumeCookies.GenerationCookieName("Default")}=rootgen; {SurveyResumeCookies.GenerationCookieName("t1")}=t1gen; sr_s1={Uri.EscapeDataString(SurveyResumeCookies.Format("R1.secret", "t1gen"))}";
+
+        var cookies = new SurveyResumeCookies(new HttpContextAccessor { HttpContext = request }, new ShellSettings { Name = "t1" });
+
+        // Act
+        var token = cookies.Read("s1");
+        cookies.ClearAll();
+
+        // Assert: t1 reads its own generation, and signing in or out on t1 never touches the root tenant's cookie.
+        Assert.Equal("R1.secret", token);
+        Assert.DoesNotContain(request.Response.Headers.SetCookie.ToArray(), header => header.StartsWith(SurveyResumeCookies.GenerationCookieName("Default") + "=", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Cookies_AfterCompletion_LiveOneDay_AndStaleOnesAreRemovedOnTheNextWrite()
+    {
+        // Arrange: the browser holds a current resume cookie for s1 and one of an older generation for s2.
+        var request = new DefaultHttpContext();
+
+        request.Request.Headers.Cookie = $"{Generation}=current; sr_s1={Uri.EscapeDataString(SurveyResumeCookies.Format("R1.secret", "current"))}; sr_s2={Uri.EscapeDataString(SurveyResumeCookies.Format("R2.secret", "old"))}";
+
+        var (cookies, context) = Cookies(request);
+
+        // Act
+        cookies.ShortenAfterCompletion("s1");
+        cookies.Write("s3", "R3.secret");
+
+        // Assert
+        var headers = context.Response.Headers.SetCookie.ToArray();
+
+        Assert.Contains(headers, header => header.StartsWith("sr_s1=", StringComparison.Ordinal) && header.Contains("max-age=86400", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(headers, header => header.StartsWith("sr_s2=;", StringComparison.Ordinal));
+        Assert.DoesNotContain(headers, header => header.StartsWith("sr_s1=;", StringComparison.Ordinal));
+    }
+
+    private static string Generation
+        => SurveyResumeCookies.GenerationCookieName("Default");
+
     private static (SurveyResumeCookies Cookies, HttpContext Context) Cookies(HttpContext context)
-        => (new SurveyResumeCookies(new HttpContextAccessor { HttpContext = context }), context);
+        => (new SurveyResumeCookies(new HttpContextAccessor { HttpContext = context }, new ShellSettings { Name = "Default" }), context);
 
     private static SurveyDefinition TwoPages()
         => RuntimeSurveys.Definition(

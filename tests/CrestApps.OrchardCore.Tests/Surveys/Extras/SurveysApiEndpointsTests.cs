@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys.Api;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -59,6 +60,37 @@ public sealed class SurveysApiEndpointsTests
 
         // Assert
         Assert.IsType<ForbidHttpResult>(result);
+    }
+
+    [Fact]
+    public async Task EveryCall_SendsNoStore()
+    {
+        // Arrange: the respondent GETs return answers, so no browser or shared proxy may keep them.
+        var http = Context();
+        var invocation = new DefaultEndpointFilterInvocationContext(http);
+
+        // Act
+        var result = await SurveysApiEndpoints.NoStoreAndUnreadableSecretFilterAsync(invocation, _ => ValueTask.FromResult<object>(TypedResults.Ok()));
+
+        // Assert
+        Assert.IsType<Ok>(result);
+        Assert.Equal("no-store", http.Response.Headers.CacheControl.ToString());
+    }
+
+    [Fact]
+    public async Task UnreadableAnonymitySecret_Answers503ProblemInsteadOfAnUnhandledError()
+    {
+        // Arrange: minimal APIs skip MVC exception filters, so the group's endpoint filter turns the failure into a result.
+        var http = Context();
+        var invocation = new DefaultEndpointFilterInvocationContext(http);
+
+        // Act
+        var result = await SurveysApiEndpoints.NoStoreAndUnreadableSecretFilterAsync(invocation, _ => throw new SurveyAnonymitySecretUnreadableException("unreadable"));
+
+        // Assert
+        var problem = Assert.IsType<ProblemHttpResult>(result);
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, problem.StatusCode);
     }
 
     private static DefaultHttpContext Context()

@@ -96,6 +96,13 @@ public sealed class SurveyRespondentIdentityFactory
         => _resumeCookies.Write(surveyId, token);
 
     /// <summary>
+    /// Shortens the life of the resume cookie of a survey whose response has ended.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    public void ShortenResumeCookie(string surveyId)
+        => _resumeCookies.ShortenAfterCompletion(surveyId);
+
+    /// <summary>
     /// Removes the resume cookie of a survey, for kiosks.
     /// </summary>
     /// <param name="surveyId">The survey.</param>

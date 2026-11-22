@@ -15,4 +15,15 @@ public class SurveyInvitationOpenViewModel
     /// Gets or sets the survey title.
     /// </summary>
     public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the page asks for a CAPTCHA (a bare link made for no one, on a survey that
+    /// requires one), so it doesn't post at once.
+    /// </summary>
+    public bool NeedsCaptcha { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message to show, or <see langword="null"/>.
+    /// </summary>
+    public string Message { get; set; }
 }

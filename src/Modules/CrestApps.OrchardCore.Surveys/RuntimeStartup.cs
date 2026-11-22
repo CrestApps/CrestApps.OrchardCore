@@ -54,7 +54,7 @@ public sealed class RuntimeStartup : StartupBase
         // tells another site where the visitor came from. They also show answers, piped texts and scores (the ending,
         // the review, the totals), so no browser cache, back-forward cache or shared proxy keeps them for the next
         // person at a kiosk or shared computer; the same goes for the signed-in user's own list. Set as the response
-        // starts, so it wins over site defaults.
+        // starts, so it wins over site defaults. Search engines don't index them either.
         app.Use(next => context =>
         {
             var path = context.Request.Path;
@@ -67,6 +67,9 @@ public sealed class RuntimeStartup : StartupBase
                     context.Response.Headers["Referrer-Policy"] = "no-referrer";
                     context.Response.Headers.CacheControl = "no-store";
                     context.Response.Headers.Pragma = "no-cache";
+
+                    // Links and tokens of respondent pages never belong in a search index.
+                    context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
 
                     return Task.CompletedTask;
                 });

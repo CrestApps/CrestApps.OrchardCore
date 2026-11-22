@@ -133,14 +133,35 @@ public sealed class SurveyRunnerController : Controller
         if (collector.Kind == SurveyCollectorKinds.Kiosk)
         {
             _identities.ClearResumeCookie(survey.ItemId);
+
+            if (IsSignedIn())
+            {
+                RefuseSignedInKiosk(model);
+            }
         }
         else if (model.CanStart && !model.NeedsPassword && !model.NeedsCaptcha
-            && (model.SkipLanding || string.Equals(Request.Query[AutoStartQueryKey], "1", StringComparison.Ordinal)))
+            && (model.SkipLanding || IsTrustedAutoStart(Request)))
         {
             model.AutoStart = true;
         }
 
         return View("Landing", model);
+    }
+
+    /// <summary>
+    /// Gets whether a request may start a survey at once through <c>?autostart=1</c>: only a navigation from a page of
+    /// the same site (the Start button of an embedded survey) does, as the browser's <c>Sec-Fetch-Site</c> header tells.
+    /// A link on another site, in an e-mail or typed in shows the landing page, its introduction and its Start button,
+    /// so no outside link can skip the introduction or use up an attempt.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns><see langword="true"/> when the landing page posts its start form at once.</returns>
+    internal static bool IsTrustedAutoStart(HttpRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return string.Equals(request.Query[AutoStartQueryKey], "1", StringComparison.Ordinal)
+            && string.Equals(request.Headers["Sec-Fetch-Site"], "same-origin", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -387,6 +408,11 @@ public sealed class SurveyRunnerController : Controller
         {
             _identities.ClearResumeCookie(survey.ItemId);
         }
+        else
+        {
+            // The ended response keeps its cookie a day for the review, not the full 30 days, so cookies don't pile up.
+            _identities.ShortenResumeCookie(survey.ItemId);
+        }
 
         var ending = await _endings.RenderAsync(survey, version.Definition, response, Request.Host.Host);
 
@@ -451,7 +477,15 @@ public sealed class SurveyRunnerController : Controller
             return NotFoundPage();
         }
 
-        await _responses.ReopenAsync(responseId, _identities.Build(response.SurveyId));
+        var identity = _identities.Build(response.SurveyId);
+
+        await _responses.ReopenAsync(responseId, identity);
+
+        // The ending shortened the resume cookie; a response in progress again gets its full life back.
+        if (!string.IsNullOrEmpty(identity.ResumeToken))
+        {
+            _identities.WriteResumeCookie(response.SurveyId, identity.ResumeToken);
+        }
 
         return RedirectToAction(nameof(Respond), new { responseId });
     }
@@ -494,7 +528,7 @@ public sealed class SurveyRunnerController : Controller
             Title = string.IsNullOrWhiteSpace(version.Definition.Title) ? survey.Title : version.Definition.Title,
             Response = response,
             Shows = version.Definition.Scoring?.ShowScoreToRespondent == false ? shows & ~ReviewShows.Score : shows,
-            Questions = await _shapes.BuildReviewAsync(survey, version, response, shows),
+            Questions = await _shapes.BuildReviewAsync(survey, version, response, shows, forRespondent: true),
         });
     }
 
@@ -638,12 +672,23 @@ public sealed class SurveyRunnerController : Controller
 
     private async Task<IActionResult> StartCoreAsync(string token, Survey survey, SurveyCollector collector, string password, bool captchaPassed)
     {
+        // A kiosk starts guest responses that no per-person limit counts, so a signed-in visitor (someone who opened the
+        // kiosk address at home) is refused instead: answering as a guest there would bypass the survey's limits.
+        if (collector.Kind == SurveyCollectorKinds.Kiosk && IsSignedIn())
+        {
+            var refused = await LandingModelAsync(token, survey, collector);
+
+            RefuseSignedInKiosk(refused);
+
+            return View("Landing", refused);
+        }
+
         var identity = _identities.Build(survey.ItemId, ensureBrowserKey: survey.Access?.Limits?.Uniqueness == UniquenessMode.Cookie);
 
         identity.CaptchaPassed = captchaPassed;
 
-        // A kiosk is a shared device: each start is a new guest, even when the device stays signed in, so a response
-        // never belongs to the device's account (which would resume it for the next person).
+        // A kiosk is a shared device: each start is a new guest, so a response never belongs to anyone (which would
+        // resume it for the next person).
         if (collector.Kind == SurveyCollectorKinds.Kiosk)
         {
             identity.ResumeToken = null;
@@ -809,6 +854,16 @@ public sealed class SurveyRunnerController : Controller
         var response = await _responseStore.FindByIdAsync(responseId);
 
         return response is not null && SurveyResponseService.IsOwner(response, _identities.Build(response.SurveyId)) ? response : null;
+    }
+
+    private bool IsSignedIn()
+        => User?.Identity?.IsAuthenticated == true;
+
+    private void RefuseSignedInKiosk(SurveyLandingViewModel model)
+    {
+        model.CanStart = false;
+        model.AutoStart = false;
+        model.Message = S["This survey is set up for a shared device and records guest answers. Sign out to answer it here, or use the link you were given for your own answers."];
     }
 
     private static SurveyPageDirection ParseDirection(string direction)
