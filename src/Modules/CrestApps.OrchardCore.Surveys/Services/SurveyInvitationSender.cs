@@ -1,4 +1,4 @@
-using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -6,8 +6,7 @@ using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using OrchardCore.Liquid;
+using OrchardCore.Modules;
 using OrchardCore.Notifications;
 using OrchardCore.Notifications.Models;
 using OrchardCore.Users.Services;
@@ -16,15 +15,17 @@ namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
 /// Delivers survey invitations and reminders: a notification to a user of the site, an e-mail to anyone else. The
-/// collector's subject and message are Liquid with the model Survey, Invitation and Link.
+/// collector's subject and message are restricted Liquid (<see cref="RestrictedLiquid"/>): a fixed set of filters, a
+/// step limit, the site's time zone, and only the values Survey (Name, Title), Invitation (DisplayName, Email,
+/// ExpiresUtc), Link and UnsubscribeLink; the site's Liquid objects and filters (users, content, queries) are out of
+/// reach of a message that may go to thousands of people.
 /// </summary>
 internal sealed class SurveyInvitationSender : ISurveyInvitationSender
 {
     private readonly INotificationService _notifications;
     private readonly IUserService _users;
     private readonly ITemplatedEmailSender _emails;
-    private readonly ILiquidTemplateManager _liquid;
-    private readonly TemplateOptions _templateOptions;
+    private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -35,24 +36,21 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
     /// <param name="notifications">The notification service.</param>
     /// <param name="users">The user service.</param>
     /// <param name="emails">The e-mail sender.</param>
-    /// <param name="liquid">The Liquid template manager.</param>
-    /// <param name="templateOptions">The Liquid template options.</param>
+    /// <param name="localClock">The local clock, for the time zone templates show dates in.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The localizer.</param>
     public SurveyInvitationSender(
         INotificationService notifications,
         IUserService users,
         ITemplatedEmailSender emails,
-        ILiquidTemplateManager liquid,
-        IOptions<TemplateOptions> templateOptions,
+        ILocalClock localClock,
         ILogger<SurveyInvitationSender> logger,
         IStringLocalizer<SurveyInvitationSender> stringLocalizer)
     {
         _notifications = notifications;
         _users = users;
         _emails = emails;
-        _liquid = liquid;
-        _templateOptions = templateOptions.Value;
+        _localClock = localClock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -131,13 +129,25 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
 
         try
         {
-            return await _liquid.RenderStringAsync(template, NullEncoder.Default, null, new Dictionary<string, FluidValue>
+            var options = RestrictedLiquid.Options;
+            var values = new Dictionary<string, FluidValue>(StringComparer.Ordinal)
             {
-                ["Survey"] = FluidValue.Create(new Dictionary<string, object> { ["Name"] = survey.Name, ["Title"] = survey.Title }, _templateOptions),
-                ["Invitation"] = FluidValue.Create(new Dictionary<string, object> { ["DisplayName"] = invitation.DisplayName, ["Email"] = invitation.Email, ["ExpiresUtc"] = invitation.ExpiresUtc }, _templateOptions),
-                ["Link"] = FluidValue.Create(link, _templateOptions),
-                ["UnsubscribeLink"] = FluidValue.Create(UnsubscribeLink(link), _templateOptions),
-            });
+                ["Survey"] = FluidValue.Create(new Dictionary<string, object> { ["Name"] = survey.Name, ["Title"] = survey.Title }, options),
+                ["Invitation"] = FluidValue.Create(new Dictionary<string, object> { ["DisplayName"] = invitation.DisplayName, ["Email"] = invitation.Email, ["ExpiresUtc"] = invitation.ExpiresUtc }, options),
+                ["Link"] = StringValue.Create(link),
+                ["UnsubscribeLink"] = StringValue.Create(UnsubscribeLink(link)),
+            };
+
+            // Null when the template doesn't parse or uses a filter the restricted set doesn't have; the default text
+            // is sent instead.
+            var rendered = await RestrictedLiquid.RenderAsync(template, values, NullEncoder.Default, await RestrictedLiquidContexts.CreateAsync(_localClock, S));
+
+            if (rendered is null)
+            {
+                _logger.LogWarning("A survey invitation template doesn't parse or uses a filter that isn't available; the default text was sent.");
+            }
+
+            return rendered;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

@@ -130,6 +130,25 @@ public class SurveyAccessEditViewModel
     public bool AnonymityLocked { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a CAPTCHA can be shown: the reCAPTCHA feature is on.
+    /// </summary>
+    [BindNever]
+    public bool CaptchaAvailable { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the survey's anonymity secret can't be read on this server, so it fails closed until the
+    /// Data Protection keys come back or the secret is reset.
+    /// </summary>
+    [BindNever]
+    public bool SecretUnreadable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id of the survey, for the reset action.
+    /// </summary>
+    [BindNever]
+    public string SurveyId { get; set; }
+
+    /// <summary>
     /// Gets or sets after how many days responses are removed.
     /// </summary>
     public int? RetentionDays { get; set; }

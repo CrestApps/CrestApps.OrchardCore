@@ -59,5 +59,12 @@
                 <span class="hint">@T["Endings may send respondents to this site or to these hosts, one per line, such as www.example.com."]</span>
             </div>
         </div>
+        <div class="ocat-wrapper">
+            <label asp-for="InvitationEmailsPerDay" class="ocat-label">@T["Invitation e-mails a day"]</label>
+            <div class="ocat-end">
+                <input asp-for="InvitationEmailsPerDay" type="number" min="1" class="form-control" />
+                <span class="hint">@T["The most survey invitation and reminder e-mails the site sends in a day, across all surveys. Invitations over the limit go out on a later day."]</span>
+            </div>
+        </div>
     </div>
 </div>

@@ -35,6 +35,7 @@ public sealed class Startup : StartupBase
         services.TryAddScoped<SurveyContentSanitizer>();
         services.AddDataMigration<SurveysMigrations>();
         services.AddDataMigration<SurveyAnonymityMigrations>();
+        services.AddDataMigration<SurveyContentSanitizingMigrations>();
         services.AddIndexProvider<SurveyIndexProvider>()
             .AddIndexProvider<SurveyTemplateIndexProvider>()
             .AddIndexProvider<SurveyVersionIndexProvider>()

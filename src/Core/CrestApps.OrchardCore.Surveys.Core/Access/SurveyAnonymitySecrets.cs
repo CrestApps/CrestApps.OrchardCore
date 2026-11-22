@@ -112,12 +112,62 @@ public sealed class SurveyAnonymitySecrets
         }
         catch (CryptographicException exception)
         {
-            // The Data Protection keys were lost: the old secret can't be read again, so limits start over and the
-            // survey's invitation links must be sent again.
-            _logger.LogError(exception, "The anonymity secret of a survey could not be read; it was replaced.");
+            // The Data Protection keys are missing on this node (a key ring that isn't persisted, nodes that don't share
+            // keys, or a database restored on another host). Replacing the secret here would restart every limit, break
+            // every invitation link and let nodes overwrite each other's secret, so the survey fails closed until the
+            // keys come back or an administrator resets the secret.
+            _logger.LogError(exception, "The anonymity secret of the survey '{SurveyId}' could not be read. Restore the Data Protection keys, or reset the secret on the survey's access and settings page.", survey.ItemId);
 
-            return await ReplaceAsync(survey, cancellationToken);
+            throw new SurveyAnonymitySecretUnreadableException("The anonymity secret of the survey could not be read.", exception)
+            {
+                SurveyId = survey.ItemId,
+            };
         }
+    }
+
+    /// <summary>
+    /// Gets whether a survey's secret can be read on this node. A survey without a secret, or with one still stored in
+    /// plain text, can.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <returns><see langword="false"/> when the secret is protected with Data Protection keys this node doesn't have.</returns>
+    public bool CanReveal(Survey survey)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+
+        if (!IsProtected(survey.AnonymitySecret))
+        {
+            return true;
+        }
+
+        try
+        {
+            _protector.Unprotect(survey.AnonymitySecret.Substring(Prefix.Length));
+
+            return true;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Replaces a survey's secret with a new one and saves the survey. This is the explicit administrator action for a
+    /// secret that can't be read any more: once-per-person limits start over, invitation links already sent stop
+    /// working and must be sent again, and anonymous responses started from an invitation can no longer mark it
+    /// completed. The caller re-issues the invitation token hashes.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The new secret.</returns>
+    public Task<string> ResetAsync(Survey survey, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+
+        _logger.LogWarning("The anonymity secret of the survey '{SurveyId}' was reset.", survey.ItemId);
+
+        return ReplaceAsync(survey, cancellationToken);
     }
 
     /// <summary>

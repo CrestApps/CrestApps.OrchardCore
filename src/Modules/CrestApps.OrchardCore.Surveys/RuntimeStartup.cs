@@ -34,6 +34,9 @@ public sealed class RuntimeStartup : StartupBase
         services.AddSurveysRuntime();
         services.AddHttpContextAccessor();
         services.AddSurveyEndingRenderer<LiquidSurveyEndingRenderer>();
+
+        // Always registered, so a survey that requires a CAPTCHA fails closed when the reCAPTCHA feature is off.
+        services.AddSurveyAccessRule<CaptchaRule>();
         services.TryAddScoped<SurveyRespondentIdentityFactory>();
         services.TryAddScoped<SurveyErrorMessages>();
         services.TryAddScoped<SurveyRunnerShapes>();

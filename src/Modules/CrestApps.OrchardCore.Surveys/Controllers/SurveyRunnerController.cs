@@ -14,6 +14,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
 using OrchardCore.ReCaptcha.Services;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.Controllers;
 
@@ -559,7 +560,13 @@ public sealed class SurveyRunnerController : Controller
             Responses = await aggregates.CountResponsesAsync(filter),
         };
 
-        if (survey.Access?.Anonymity == AnonymityMode.Anonymous && model.Responses < Math.Max(survey.Access.MinimumGroupSize, 0))
+        // The survey's minimum group size, never below the site's floor, applies to the total and to each question: a
+        // question few people answered would show those few people's choices.
+        var siteSettings = _serviceProvider.GetService<ISiteService>() is { } siteService
+            ? await siteService.GetSettingsAsync<SurveySettings>()
+            : null;
+
+        if (Core.Access.SurveyAnonymity.IsTooSmall(survey, siteSettings, model.Responses))
         {
             return MessagePage(survey.Title, S["The results show once enough people have responded."]);
         }
@@ -568,6 +575,11 @@ public sealed class SurveyRunnerController : Controller
 
         foreach (var question in version.Definition.Pages.SelectMany(page => page.Questions ?? []).Where(question => question.Choices?.Count > 0 && question.Rows?.Count == 0))
         {
+            if (Core.Access.SurveyAnonymity.IsAnonymous(survey) && Core.Access.SurveyAnonymity.IsTooSmall(survey, siteSettings, await aggregates.CountAnsweredAsync(filter, question.Id)))
+            {
+                continue;
+            }
+
             var counts = await aggregates.CountChoicesAsync(filter, question.Id);
             var row = counts.TryGetValue(string.Empty, out var values) ? values : new Dictionary<string, long>();
             var total = Math.Max(row.Values.Sum(), 1);

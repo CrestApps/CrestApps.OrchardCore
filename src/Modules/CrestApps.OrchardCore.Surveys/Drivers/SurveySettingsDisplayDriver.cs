@@ -44,6 +44,7 @@ public sealed class SurveySettingsDisplayDriver : SiteDisplayDriver<SurveySettin
             model.AllowedRedirectHosts = string.Join(Environment.NewLine, settings.AllowedRedirectHosts ?? []);
             model.DefaultMinimumGroupSize = settings.DefaultMinimumGroupSize;
             model.MinimumGroupSizeFloor = settings.MinimumGroupSizeFloor;
+            model.InvitationEmailsPerDay = settings.InvitationEmailsPerDay;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, SurveysPermissions.ManageSurveySettings))
         .OnGroup(SettingsGroupId);
@@ -65,6 +66,7 @@ public sealed class SurveySettingsDisplayDriver : SiteDisplayDriver<SurveySettin
         settings.MaxUploadMegabytes = Math.Clamp(model.MaxUploadMegabytes, 1, 1024);
         settings.MinimumGroupSizeFloor = Math.Clamp(model.MinimumGroupSizeFloor, 1, 1000);
         settings.DefaultMinimumGroupSize = Math.Max(settings.MinimumGroupSizeFloor, model.DefaultMinimumGroupSize);
+        settings.InvitationEmailsPerDay = Math.Clamp(model.InvitationEmailsPerDay, 1, 1_000_000);
         settings.AllowedRedirectHosts = (model.AllowedRedirectHosts ?? string.Empty)
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(host => host.ToLowerInvariant())

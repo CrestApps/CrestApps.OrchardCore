@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Surveys.Reports;
 /// The responses of a survey, one row each, with a column per question across the versions read (joined by question id,
 /// named as in the newest version). The screen shows one page, chosen in the filter; the export holds every response.
 /// Completed responses are listed unless the filter asks for other statuses. An anonymous survey shows nothing until
-/// the filtered responses reach its minimum group size, and shows its times by the day only. Scores below the pass mark,
+/// the completed, non-test responses the filters select reach its minimum group size, and shows its times by the day only. Scores below the pass mark,
 /// failed responses and Net Promoter Score answers are colored with the shared report colorizer.
 /// </summary>
 internal sealed class SurveyResponsesReport : IReport
@@ -91,7 +91,8 @@ internal sealed class SurveyResponsesReport : IReport
 
         var total = await _queries.CountAsync(scope.ResultsScope, cancellationToken);
 
-        if (scope.IsTooSmall(total))
+        // The threshold counts completed, non-test responses only, so test rows or unfinished ones never pad the group.
+        if (scope.IsAnonymous && scope.IsTooSmall(await _queries.CountAsync(scope.GroupSizeScope(), cancellationToken)))
         {
             return _data.TooFewResponses(scope);
         }

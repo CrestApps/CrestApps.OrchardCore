@@ -39,6 +39,79 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
+    /// Finds an invitation of a collector by its seal lookup value.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="sealLookup">The seal lookup value.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The invitation, or <see langword="null"/>.</returns>
+    public async Task<SurveyInvitation> FindBySealLookupAsync(string collectorId, string sealLookup, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(collectorId) || string.IsNullOrEmpty(sealLookup))
+        {
+            return null;
+        }
+
+        return await Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.SealLookup == sealLookup, collection: SurveysConstants.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Lists the invitations of a collector made before seal lookup values were kept, oldest first.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="statuses">The statuses read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The invitations.</returns>
+    public async Task<IReadOnlyList<SurveyInvitation>> ListWithoutSealLookupAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(collectorId))
+        {
+            return [];
+        }
+
+        var names = (statuses ?? []).Select(status => status.ToString()).ToArray();
+        var query = Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.SealLookup == null, collection: SurveysConstants.CollectionName);
+
+        if (names.Length > 0)
+        {
+            query = query.Where(index => index.Status.IsIn(names));
+        }
+
+        return (await query.OrderBy(index => index.Id).ListAsync(cancellationToken)).ToList();
+    }
+
+    /// <summary>
+    /// Counts the e-mail invitations (to an address, not a user) sent or reminded since a time.
+    /// </summary>
+    /// <param name="sinceUtc">The time, in UTC.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The count.</returns>
+    public Task<int> CountEmailedSinceAsync(DateTime sinceUtc, CancellationToken cancellationToken = default)
+        => Session.QueryIndex<SurveyInvitationIndex>(
+            index => index.Email != null && index.UserId == null && (index.SentUtc >= sinceUtc || index.LastReminderUtc >= sinceUtc),
+            collection: SurveysConstants.CollectionName)
+            .CountAsync(cancellationToken);
+
+    /// <summary>
+    /// Lists the invitations of a survey, oldest first.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The invitations.</returns>
+    public async Task<IReadOnlyList<SurveyInvitation>> ListBySurveyAsync(string surveyId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(surveyId))
+        {
+            return [];
+        }
+
+        return (await Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.SurveyId == surveyId, collection: SurveysConstants.CollectionName)
+            .OrderBy(index => index.Id)
+            .ListAsync(cancellationToken)).ToList();
+    }
+
+    /// <summary>
     /// Lists the invitations of a collector, oldest first.
     /// </summary>
     /// <param name="collectorId">The collector.</param>

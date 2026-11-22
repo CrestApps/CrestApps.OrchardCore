@@ -30,6 +30,9 @@ public sealed class SurveyInvitationIndexProvider : IndexProvider<SurveyInvitati
                 UserId = item.UserId,
                 RecipientRef = Cut(item.Recipient?.ToString(), 255),
                 TokenHash = item.TokenHash,
+                SealLookup = item.SealLookup,
+                Email = Cut(item.Email?.Trim().ToLowerInvariant(), 254),
+                LastReminderUtc = item.LastReminderUtc,
                 SentUtc = item.SentUtc,
                 ExpiresUtc = item.ExpiresUtc,
             });

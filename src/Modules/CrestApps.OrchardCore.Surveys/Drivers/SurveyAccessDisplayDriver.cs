@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -78,6 +79,11 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
             model.MinimumGroupSizeFloor = await FloorAsync();
             model.MinimumGroupSize = Math.Max(access.MinimumGroupSize, model.MinimumGroupSizeFloor);
             model.AnonymityLocked = await HasResponsesAsync(survey);
+            model.CaptchaAvailable = CaptchaRule.IsAvailable(_serviceProvider);
+            model.SurveyId = survey.ItemId;
+            model.SecretUnreadable = !string.IsNullOrEmpty(survey.ItemId)
+                && _serviceProvider.GetService<SurveyAnonymitySecrets>() is { } secrets
+                && !secrets.CanReveal(survey);
             model.RetentionDays = survey.Retention?.Days;
             model.RetentionAction = survey.Retention?.Action ?? RetentionAction.Delete;
         }).Location("Content:5").OnGroup(SurveyDetailsDisplayDriver.GroupId);
@@ -154,6 +160,12 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
             Uniqueness = model.Uniqueness,
         };
         access.MaxResponses = Positive(model.MaxResponses);
+        // A CAPTCHA that can't be shown would refuse every guest, so it can only be required while reCAPTCHA is on.
+        if (model.RequireCaptcha && !access.RequireCaptcha && !CaptchaRule.IsAvailable(_serviceProvider))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.RequireCaptcha), S["Turn on the reCAPTCHA feature before you require a CAPTCHA."]);
+        }
+
         access.RequireCaptcha = model.RequireCaptcha;
         access.IncompleteExpiryHours = Math.Max(1, model.IncompleteExpiryHours);
         var floor = await FloorAsync();

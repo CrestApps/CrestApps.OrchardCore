@@ -89,6 +89,65 @@ public sealed class SurveyContentSanitizerTests
     }
 
     [Fact]
+    public void Sanitize_TranslationOfAnEmptyIntroduction_IsStillSanitized()
+    {
+        // Arrange: the introduction is left empty, and an imported translation, a template or a recipe fills it.
+        var sanitizer = Sanitizer();
+        var definition = new SurveyDefinition
+        {
+            Introduction = string.Empty,
+            Pages = [new SurveyPage { Id = "p1", Name = "p1", Description = null, Questions = [new SurveyQuestion { Id = "q2", Name = "q2", ControlType = SurveyControlNames.SingleChoice }] }],
+            Endings = [new SurveyEnding { Id = "e1", Name = "thanks" }],
+        };
+
+        definition.Translations["xx"] = new Dictionary<string, string>
+        {
+            ["survey:introduction"] = TitlePayload,
+            ["page-description:p1"] = FeedbackPayload,
+            ["description:q2"] = TitlePayload,
+            ["ending-message:e1"] = FeedbackPayload,
+            ["description:gone"] = TitlePayload,
+            ["placeholder:q2"] = "A & B",
+        };
+
+        // Act
+        sanitizer.Sanitize(definition);
+
+        // Assert
+        var texts = definition.Translations["xx"];
+
+        AssertSafe(texts["survey:introduction"]);
+        AssertSafe(texts["page-description:p1"]);
+        AssertSafe(texts["description:q2"]);
+        AssertSafe(texts["ending-message:e1"]);
+        AssertSafe(texts["description:gone"]);
+        Assert.Equal("A & B", texts["placeholder:q2"]);
+    }
+
+    [Theory]
+    [InlineData("survey:introduction", true)]
+    [InlineData("page-description:p1", true)]
+    [InlineData("title:q1", true)]
+    [InlineData("description:q1", true)]
+    [InlineData("ending-message:e1", true)]
+    [InlineData("survey:title", false)]
+    [InlineData("page-title:p1", false)]
+    [InlineData("choice:q1:c1", false)]
+    [InlineData("row:q1:r1", false)]
+    [InlineData("placeholder:q1", false)]
+    [InlineData("ending-title:e1", false)]
+    public void IsHtmlKey_FollowsTheKeyKind(string key, bool expected)
+    {
+        // Arrange
+
+        // Act
+        var isHtml = SurveyContentSanitizer.IsHtmlKey(key);
+
+        // Assert
+        Assert.Equal(expected, isHtml);
+    }
+
+    [Fact]
     public async Task SurveyStore_Save_StoresTheDraftSanitized()
     {
         // Arrange

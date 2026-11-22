@@ -48,6 +48,11 @@
                     <input asp-for="RequireCaptcha" type="checkbox" class="form-check-input" />
                     <label asp-for="RequireCaptcha" class="form-check-label">@T["Ask respondents who are not signed in to pass a CAPTCHA"]</label>
                     <span class="hint dashed">@T["Needs the reCAPTCHA feature."]</span>
+                    @if (Model.RequireCaptcha && !Model.CaptchaAvailable)
+                    {
+                        <span class="text-danger d-block">@T["The reCAPTCHA feature is off, so respondents who are not signed in can't start this survey. Turn reCAPTCHA on, or stop requiring a CAPTCHA."]</span>
+                    }
+                    <span asp-validation-for="RequireCaptcha" class="text-danger"></span>
                 </div>
             </div>
         </div>
@@ -83,6 +88,23 @@
                 <span class="hint">@T["Reports, lists and exports of an anonymous survey hide any group with fewer responses. The site allows no less than {0}.", Model.MinimumGroupSizeFloor]</span>
             </div>
         </div>
+        @if (Model.SecretUnreadable)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Anonymity secret"]</span>
+                <div class="ocat-end">
+                    <div class="alert alert-danger mb-2" role="alert">
+                        @T["This server can't read the survey's anonymity secret, because the Data Protection keys that protected it are missing (keys that aren't kept, servers that don't share keys, or a database restored on another server). Respondents can't start the survey and invitations can't be sent until the keys come back."]
+                    </div>
+                    <a href="@Url.Action("ResetAnonymitySecret", "Surveys", new { area = SurveysConstants.Features.Surveys, id = Model.SurveyId })"
+                       class="btn btn-sm btn-danger"
+                       data-url-af="RemoveUrl UnsafeUrl"
+                       data-title="@T["Reset the anonymity secret"]"
+                       data-message="@T["Restore the Data Protection keys instead if you can. A new secret starts every per-person limit over, and every invitation link already sent stops working, so the invitations must be sent again. This can't be undone."]"
+                       data-ok-text="@T["Reset"]">@T["Reset the anonymity secret"]</a>
+                </div>
+            </div>
+        }
     </div>
 </div>
 

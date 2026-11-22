@@ -19,6 +19,17 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 /// </remarks>
 public sealed class SurveyContentSanitizer
 {
+    private const string EndingMessagePrefix = "ending-message:";
+
+    // The kinds of keys whose texts are shown as HTML (question titles are shown as HTML too).
+    private static readonly string[] _htmlKeyPrefixes =
+    [
+        "page-description:",
+        "title:",
+        "description:",
+        EndingMessagePrefix,
+    ];
+
     private readonly IHtmlSanitizerService _sanitizer;
 
     /// <summary>
@@ -89,12 +100,6 @@ public sealed class SurveyContentSanitizer
             return;
         }
 
-        var html = SurveyTextCatalog.Describe(definition)
-            .Where(entry => entry.IsHtml)
-            .Select(entry => entry.Key)
-            .Concat((definition.Pages ?? []).SelectMany(page => page?.Questions ?? []).Where(question => question is not null).Select(question => SurveyTextKeys.QuestionTitle(question.Id)))
-            .ToHashSet(StringComparer.Ordinal);
-
         foreach (var texts in definition.Translations.Values)
         {
             if (texts is null)
@@ -104,12 +109,42 @@ public sealed class SurveyContentSanitizer
 
             foreach (var key in texts.Keys.ToList())
             {
-                if (html.Contains(key) && !(key.StartsWith("ending-message:", StringComparison.Ordinal) && HasLiquid(texts[key])))
+                if (IsHtmlKey(key) && !(key.StartsWith(EndingMessagePrefix, StringComparison.Ordinal) && HasLiquid(texts[key])))
                 {
                     texts[key] = Keep(texts[key]);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gets whether a translation key holds a text that is shown as HTML. The answer follows the key's kind (its
+    /// prefix), not the source text, so a translation whose source text is empty, or that names an item the definition
+    /// no longer has, is still sanitized.
+    /// </summary>
+    /// <param name="key">The translation key.</param>
+    /// <returns><see langword="true"/> when the key holds HTML.</returns>
+    public static bool IsHtmlKey(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return false;
+        }
+
+        if (string.Equals(key, SurveyTextKeys.SurveyIntroduction, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        foreach (var prefix in _htmlKeyPrefixes)
+        {
+            if (key.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

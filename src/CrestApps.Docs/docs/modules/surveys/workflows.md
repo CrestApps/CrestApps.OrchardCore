@@ -29,7 +29,7 @@ With Workflows on, Surveys adds these activities. Events fire after the change i
 
 Response events filter by surveys, kinds, collectors and context kinds, and have an **Include changes made by workflows** option (off by default) so a workflow does not trigger itself.
 
-Inputs include `ResponseId`, `Number`, `Status`, `Grading`, `VersionNumber`, `AttemptNumber`, `UserId`, `Respondent`, `Context`, `ContextId`, `CompletedUtc`, `Score`, `MaxScore`, `Percent`, `Passed`, `Answers` (question name to answer text) and `AnswerValues` (question name to raw values), and for survey events `SurveyId`, `SurveyName`, `SurveyTitle`, `SurveyStatus` and `PublishedVersionNumber`. Score events also have `From`, `To`, `Reason` and `Change`. Identity inputs are empty for anonymous surveys.
+Inputs include `ResponseId`, `Number`, `Status`, `Grading`, `VersionNumber`, `AttemptNumber`, `UserId`, `Respondent`, `Context`, `ContextId`, `CompletedUtc`, `Score`, `MaxScore`, `Percent`, `Passed`, `Answers` (question name to answer text) and `AnswerValues` (question name to raw values), and for survey events `SurveyId`, `SurveyName`, `SurveyTitle`, `SurveyStatus` and `PublishedVersionNumber`. Score events also have `From`, `To`, `Reason` and `Change`. Identity inputs are empty for anonymous surveys, and their response events have `Anonymous` set: those workflows run with no signed-in user (the request's user is swapped for an anonymous one while the workflow runs), so Liquid such as `{{ User.Identity.Name }}` can't write the respondent's identity into properties or webhooks.
 
 ## Tasks
 
@@ -47,5 +47,5 @@ Inputs include `ResponseId`, `Number`, `Status`, `Grading`, `VersionNumber`, `At
 ## Notifications, audit trail and webhooks
 
 - **Notifications** (Notifications feature): `SurveyResponseGraded` to the identified respondent when a person grades it, and `SurveyNeedsGrading` to the survey's owner. Invitations add `SurveyInvitation` and `SurveyReminder`.
-- **Audit Trail**: survey created, published, restored, closed, archived and deleted; access changed; responses exported; response voided, deleted and reopened; score changed; accommodation granted and revoked.
+- **Audit Trail**: survey created, published, restored, closed, archived and deleted; access changed; responses exported; response voided, deleted and reopened; score changed; accommodation granted and revoked. On an anonymous survey, events the respondent causes (reopening their own response) are not recorded, because the audit record would keep the respondent's IP address next to the response; the same events caused by staff or a workflow are.
 - **Webhooks**: `survey.published`, `survey.response.completed` and `survey.response.graded`, with the context and properties of the response and no identity for anonymous surveys.

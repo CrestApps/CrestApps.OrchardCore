@@ -62,4 +62,24 @@ internal sealed class SurveyReportScope
     /// <returns><see langword="true"/> when the group must be hidden.</returns>
     public bool IsTooSmall(long size)
         => MinimumGroupSize > 0 && size < MinimumGroupSize;
+
+    /// <summary>
+    /// Gets the scope the minimum group size is counted on: the responses the narrowing filters (versions, dates,
+    /// collector, context) select, completed and not tests, whatever status and test filters the report asks for, so
+    /// previews and unfinished responses can't pad a group.
+    /// </summary>
+    /// <returns>A copy of <see cref="ResultsScope"/> for the threshold count.</returns>
+    public SurveyResultsScope GroupSizeScope()
+        => new()
+        {
+            SurveyId = ResultsScope.SurveyId,
+            VersionNumbers = ResultsScope.VersionNumbers,
+            FromUtc = ResultsScope.FromUtc,
+            ToUtc = ResultsScope.ToUtc,
+            CollectorId = ResultsScope.CollectorId,
+            ContextKind = ResultsScope.ContextKind,
+            IncludeTest = false,
+            CompletedOnly = true,
+            Statuses = [],
+        };
 }

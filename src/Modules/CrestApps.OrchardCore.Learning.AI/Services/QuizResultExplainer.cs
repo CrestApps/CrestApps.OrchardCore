@@ -164,7 +164,9 @@ internal static partial class QuizResultExplainer
             return explanation;
         }
 
-        if (canSeeScore || canReview)
+        // The score, percent and pass/fail follow the score setting alone: a review that shows the answers but hides the
+        // score must not give the score away through the model.
+        if (canSeeScore)
         {
             explanation.Score = response.Score;
             explanation.MaxScore = response.MaxScore;
@@ -183,6 +185,11 @@ internal static partial class QuizResultExplainer
         }
 
         explanation.Feedback = response.Feedback;
+
+        if (!canSeeScore)
+        {
+            explanation.Message = "The quiz's review settings hide the score from the learner. Explain the answers and feedback only, and do not work out or guess the score, the percent or whether the attempt passed.";
+        }
 
         var format = new SurveyFormatContext { Definition = definition, Culture = CultureInfo.InvariantCulture };
         var shown = response.Plan?.QuestionOrder?.Values.SelectMany(ids => ids).ToHashSet(StringComparer.Ordinal) ?? [];

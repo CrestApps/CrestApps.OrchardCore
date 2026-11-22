@@ -92,6 +92,25 @@ public static class SurveyRespondentKeys
     }
 
     /// <summary>
+    /// Gets the lookup value an invitation keeps in its index so the invitation of an anonymous response's seal is found
+    /// with one indexed query: a second HMAC, of the seal, keyed by the survey's secret. Someone who reads the database
+    /// sees both the seal and the lookup value, but can't turn one into the other without the secret, so the response
+    /// still can't be linked to its invitation without it.
+    /// </summary>
+    /// <param name="secret">The survey's anonymity secret in plain text.</param>
+    /// <param name="seal">The seal, from <see cref="InvitationSeal"/>.</param>
+    /// <returns>The lookup value.</returns>
+    public static string InvitationSealLookup(string secret, string seal)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(secret);
+        ArgumentException.ThrowIfNullOrEmpty(seal);
+
+        var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes("seal-lookup:" + secret), Encoding.UTF8.GetBytes(seal));
+
+        return Convert.ToHexString(mac).ToLowerInvariant();
+    }
+
+    /// <summary>
     /// Gets the SHA-256 hex of a value.
     /// </summary>
     /// <param name="value">The value.</param>
