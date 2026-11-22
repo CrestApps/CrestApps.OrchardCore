@@ -170,7 +170,9 @@ public sealed class AdherenceController : Controller
             return NotFound();
         }
 
-        if (!await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted))
+        // A manager doesn't save their own day, which applies the exceptions on it, on the strength of managing their team.
+        if (!await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted) ||
+            !await _scopeService.CanDecideForWorkerAsync(User, worker.ItemId, HttpContext.RequestAborted))
         {
             return Forbid();
         }

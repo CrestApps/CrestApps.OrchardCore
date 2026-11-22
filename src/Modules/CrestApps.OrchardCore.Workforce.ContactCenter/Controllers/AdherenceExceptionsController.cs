@@ -183,6 +183,11 @@ public sealed class AdherenceExceptionsController : Controller
         {
             ModelState.AddModelError(nameof(model.WorkerId), H["Choose a worker on a team you manage."].Value);
         }
+        else if (!await _scopeService.CanDecideForWorkerAsync(User, worker.ItemId, HttpContext.RequestAborted))
+        {
+            // A manager doesn't excuse their own adherence on the strength of managing their own team.
+            ModelState.AddModelError(nameof(model.WorkerId), H["You can't record an exception on your own adherence."].Value);
+        }
         else
         {
             var zone = await ZoneOfAsync(worker);
@@ -245,6 +250,11 @@ public sealed class AdherenceExceptionsController : Controller
         var worker = await _workerManager.FindByIdAsync(exception.WorkerId, HttpContext.RequestAborted);
 
         if (worker is not null && !await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
+        if (!await _scopeService.CanDecideForWorkerAsync(User, exception.WorkerId, HttpContext.RequestAborted))
         {
             return Forbid();
         }
