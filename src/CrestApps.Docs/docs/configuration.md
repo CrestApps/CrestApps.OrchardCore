@@ -1742,6 +1742,36 @@ or a shared container with a folder per tenant; see
 }
 ```
 
+### Protected files in Azure Blob Storage
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:ProtectedFiles:AzureBlobStorage` |
+| **Feature** | Protected Files - Azure Blob Storage (`CrestApps.OrchardCore.ProtectedFiles.Azure`) |
+| **Controls** | Where learning packages, coursework files, xAPI attachments, learning evidence, QTI feedback images and digital downloads are stored |
+
+Keys: `ConnectionString` and `ContainerName` (both required), `BasePath`, `CreateContainer`,
+`RemoveContainer`, `RemoveFilesFromBasePath`. Each area is kept in a folder of its own below `BasePath`. When
+either required key is missing, the files stay in `App_Data` and an error is logged. A site that runs on more
+than one instance needs this; see [Protected Files](modules/protected-files.md#running-on-more-than-one-instance).
+`ContainerName` and `BasePath` accept Liquid such as `{{ ShellSettings.Name }}`.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "ProtectedFiles": {
+        "AzureBlobStorage": {
+          "ConnectionString": "<storage-connection-string>",
+          "ContainerName": "protected-files",
+          "BasePath": "{{ ShellSettings.Name }}"
+        }
+      }
+    }
+  }
+}
+```
+
 ### Background work pacing
 
 | | |

@@ -23,4 +23,13 @@ public static class TaxationPermissions
         "ManageIncomeTaxRules",
         LocalizationSource.Create("Manage income tax rules", typeof(TaxationPermissions)),
         isSecurityCritical: true);
+
+    /// <summary>
+    /// Grants marking an income tax rule as checked against the agency's publications. It only informs (an unchecked
+    /// rule is still worked out), but people rely on it, so it is kept to the ones who check.
+    /// </summary>
+    public static readonly Permission VerifyIncomeTaxRules = new(
+        "VerifyIncomeTaxRules",
+        LocalizationSource.Create("Verify income tax rules", typeof(TaxationPermissions)),
+        isSecurityCritical: true);
 }

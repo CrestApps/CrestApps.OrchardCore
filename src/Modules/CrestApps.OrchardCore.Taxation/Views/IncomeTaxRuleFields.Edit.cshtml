@@ -65,6 +65,35 @@
             </div>
         </div>
         <div class="ocat-wrapper">
+            <label asp-for="Residency" class="ocat-label">@T["Applies to"]</label>
+            <div class="ocat-end">
+                <select asp-for="Residency" class="form-select" style="max-width: 20rem">
+                    <option value="Any">@T["Anyone who lives or works there"]</option>
+                    <option value="Resident">@T["Residents only (home there)"]</option>
+                    <option value="Nonresident">@T["Nonresidents who work there"]</option>
+                </select>
+                <span class="hint">@T["For a jurisdiction below a country, such as a city taxing its residents at one rate and the people who only work there at another."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ExclusiveGroup" class="ocat-label">@T["Only one of the group"]</label>
+            <div class="ocat-end">
+                <div class="input-group" style="max-width: 24rem">
+                    <input asp-for="ExclusiveGroup" class="form-control text-uppercase" placeholder="US-MI-CITY" aria-label="@T["Group"]" />
+                    <span class="input-group-text">@T["priority"]</span>
+                    <input asp-for="GroupPriority" class="form-control" inputmode="numeric" style="max-width: 6rem" aria-label="@T["Priority"]" />
+                </div>
+                <span class="hint">@T["Of the rules with the same group that apply to a person, only the one with the lowest priority is worked out, such as a resident city rate (0) before a nonresident one (1); empty for none."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ElectionsFrom" class="ocat-label">@T["Election of"]</label>
+            <div class="ocat-end">
+                <input asp-for="ElectionsFrom" class="form-control text-uppercase" style="max-width: 10rem" placeholder="US-MI" />
+                <span class="hint">@T["The jurisdiction whose withholding election the rule reads when it isn't the rule's own, such as US-MI for a Michigan city that takes the state certificate's exemptions; empty for its own."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
             <label asp-for="Category" class="ocat-label">@T["Income taxed"]</label>
             <div class="ocat-end">
                 <select asp-for="Category" asp-items="Model.Categories" class="form-select" style="max-width: 20rem"></select>

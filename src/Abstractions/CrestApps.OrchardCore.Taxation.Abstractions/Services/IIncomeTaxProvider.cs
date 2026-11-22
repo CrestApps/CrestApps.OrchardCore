@@ -135,6 +135,13 @@ public sealed class IncomeTaxRegistration
 
     /// <summary>Gets or sets the rate the agency assigned the payer, in effect on the pay date, as a percent; or <see langword="null"/>.</summary>
     public decimal? Rate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tax categories the registration covers, such as Unemployment, when the payer has several
+    /// registrations in one jurisdiction (income tax withholding and unemployment insurance with a state); empty for any.
+    /// A rule that takes the payer's own rate reads the registration of its category first.
+    /// </summary>
+    public IList<string> Categories { get; set; } = [];
 }
 
 /// <summary>

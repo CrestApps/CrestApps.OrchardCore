@@ -488,9 +488,9 @@ Income Tax works out taxes on income: income tax withholding at every level (fed
 | Member | What it carries |
 | --- | --- |
 | `PayerId`, `EarnerId` | Ids for a provider that keeps its own records. |
-| `RegisteredJurisdictions`, `Registrations` | The jurisdictions the payer is registered in; its `IncomeTaxRegistration`s, each with the account id and the rate the agency assigned it on the pay date (a registration's jurisdiction counts as registered too). |
+| `RegisteredJurisdictions`, `Registrations` | The jurisdictions the payer is registered in; its `IncomeTaxRegistration`s, each with the account id, the rate the agency assigned it on the pay date and the tax `Categories` it covers when the payer has several accounts in one jurisdiction (a registration's jurisdiction counts as registered too). |
 | `IncomeKind`, `ContractorWithholding` | Employment, contractor, pension or other income; whether a contractor's payments are withheld on. |
-| `HomeJurisdictions`, `WorkJurisdictions` | Where the earner lives and works, such as `CA`, `CA-ON`. |
+| `HomeJurisdictions`, `WorkJurisdictions` | Where the earner lives and works, such as `CA`, `CA-ON`, or `US`, `US-MI`, `US-MI-DETROIT`. |
 | `Elections` | `IncomeTaxElection`s: the values of each jurisdiction's withholding form in effect. |
 | `PayDate`, `PeriodsPerYear`, `Currency` | When, how often, in what. |
 | `Income`, `SupplementalIncome`, `SupplementalMethod` | The period's regular and supplemental income of each tax category, and how supplemental income is withheld on. |
@@ -512,7 +512,12 @@ The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s 
 | `Category`, `IncomeKinds`, `Payer` | The income taxed, the kinds of income, who pays. |
 | `Source` | The kind of rule, chosen in **Add income tax rule** and fixed afterwards; it decides which fields the editor shows (see below). |
 | `Method` with `Rate`, `FixedAmount`, `TaxTableId` | A Taxation calculation method, or a country's withholding method with its `Tables` and `Parameters`. |
-| `RateFromRegistration` | The payer's own rate replaces `Rate`: its registration's rate on the pay date with the jurisdiction that collects the tax (an unemployment insurance rate, Quebec's health services fund rate). `Rate` applies when there is none; with neither, the rule isn't worked out and the result warns. |
+| `RateFromRegistration` | The payer's own rate replaces `Rate`: its registration's rate on the pay date with the jurisdiction that collects the tax (an unemployment insurance rate, Quebec's health services fund rate). With several registrations in that jurisdiction, the one whose `Categories` include the rule's category is read, else one that names no category, else the first (`IncomeTaxRulesProvider.RegistrationFor`). `Rate` applies when there is none; with neither, the rule isn't worked out and the result warns. |
+| `Residency` | `Any` (default): anyone in the jurisdiction, by home or work. `Resident`: only when the jurisdiction is among the person's home jurisdictions. `Nonresident`: only when it is among their work jurisdictions and not their home ones (`IncomeTaxRulesProvider.AppliesToResidency`). |
+| `ExclusiveGroup`, `GroupPriority` | Of the applicable rules that share a group, only the one with the lowest priority is worked out (`IncomeTaxRulesProvider.Exclusive`), such as Michigan's city taxes: the home city's resident rate (priority 0) before the work city's nonresident rate (priority 1). |
+| `ElectionsFrom` | The jurisdiction whose election the rule reads instead of its own, such as `US-MI` for `US-MI-DETROIT`. |
+| `ExemptionAllowance` | For a flat rate rule: each `Exemptions` claimed on the election (of `ElectionsFrom`, or its own jurisdiction; none when that election is exempt) lowers a year's income by this amount, so the tax is the rate on the period's income less a period's share of the exemptions, never below zero. It doesn't take the election's exemption or extra withholding. |
+| `DeductedTaxCodes` | For a withholding method that deducts the employee's other taxes of the same pay, such as the state certificate method's Social Security and Medicare. |
 | `WageBase`, `WageThreshold` | The most income taxed in a year; only the year's income above an amount (a second tier). |
 | `YearlyExemption` | An amount never taxed, taken off each pay in proportion to the periods of a year, cut to cents. |
 | `YearlyMaximum` | The most tax in a year. |
@@ -520,8 +525,13 @@ The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s 
 | `Annualize`, `UsesElections`, `AllowanceAmount` | Tables written for a year; the person's election (exempt, allowances, extra withholding). |
 | `SupplementalRate`, `SupplementalExcessRate`, `SupplementalExcessThreshold` | Flat rates on supplemental income. |
 | `EffectiveFrom`, `EffectiveTo`, `Enabled` | Dated versions; two versions of one tax code can't overlap. |
+| `VerifiedBy`, `VerifiedUtc`, `VerificationSource` | Who checked the rule against the agency's publications, when, and against what (`IsVerified`). Informational only: an unchecked rule is still worked out. |
 
 Contributions and flat taxes are worked out first, then withholding methods that give credits for them (`UsesOtherTaxes`), then shares; lines come back in jurisdiction and tax code order. Rules are imported and exported with the `IncomeTaxRules` recipe and deployment step, and kept in the `IncomeTax` YesSql collection.
+
+### Verifying rules
+
+The **Income tax rules** list shows a **Verified** or **Not verified** badge on each rule, and **Verify** in a row's actions marks it checked by the signed-in user now (`IncomeTaxRulesController.Verify`, with an optional `source`). Verifying needs **Verify income tax rules** (`TaxationPermissions.VerifyIncomeTaxRules`, security critical, Administrator by default). Any change to a rule clears the mark: `IncomeTaxRuleHandler` keeps `VerifiedBy`, `VerifiedUtc` and `VerificationSource` only when the values handed to the manager carry `VerifiedUtc` (the Verify action, or a recipe or deployment plan of a rule verified where it was exported); an edit on the page or an import without it clears them. The mark is informational only and never blocks a calculation.
 
 ### Rule sources
 
@@ -529,11 +539,13 @@ Contributions and flat taxes are worked out first, then withholding methods that
 
 | Source | Method | Fields | Driver |
 | --- | --- | --- | --- |
-| `FlatRate` | `Percentage` | `Rate`, `RateFromRegistration`, `WageBase`, `WageThreshold`, `YearlyExemption`, `YearlyMaximum` | `IncomeTaxFlatRateDisplayDriver` |
+| `FlatRate` | `Percentage` | `Rate`, `RateFromRegistration`, `WageBase`, `WageThreshold`, `YearlyExemption`, `YearlyMaximum`, `ExemptionAllowance` | `IncomeTaxFlatRateDisplayDriver` |
 | `ShareOfTax` | `Percentage` | `ShareOfTaxCode`, `ShareMultiplier`, `YearlyMaximum` | `IncomeTaxShareOfTaxDisplayDriver` |
 | `TaxTable` | `TaxTable`, `Progressive` or `Threshold` | `TaxTableId`, `WageBase`, `Annualize`, `UsesElections`, `AllowanceAmount`, supplemental rates | `IncomeTaxTableDisplayDriver` |
 | `FixedAmount` | `FixedAmount` | `FixedAmount`, `YearlyMaximum` | `IncomeTaxFixedAmountDisplayDriver` |
-| A pack's withholding source | the source's method | the method's `Tables` and `Parameters`, `UsesElections`, `AllowanceAmount`, supplemental rates unless the method `HandlesSupplementalIncome` | `IncomeTaxWithholdingDisplayDriver` |
+| A pack's withholding source | the source's method | the method's `Tables` and `Parameters`, `UsesElections`, `AllowanceAmount`, supplemental rates unless the method `HandlesSupplementalIncome`, and `DeductedTaxCodes` when the source's fields list it | `IncomeTaxWithholdingDisplayDriver` |
+
+`Residency`, `ExclusiveGroup`, `GroupPriority` and `ElectionsFrom` are fields every rule has, on the shared card.
 
 Each source declares the amount fields it owns (`IncomeTaxRuleSource.Fields`; `IncomeTaxRuleSources.FlatRateFields` and the others, and `WithholdingFields` for a pack's withholding source). The calculation reads every field whatever the source, so the handler clears the fields a rule's source doesn't own when it is saved or imported, refuses a `ShareOfTaxCode` outside a share of another tax, and validates what the source needs; a source driver clears every amount before setting its own. Editing a rule of an older layout warns which values saving will drop. A source registered with a method sets it (the handler sets it for a recipe too, so a recipe may name the source alone). A rule without a source gets one when it is loaded (`IncomeTaxRuleSources.Infer`: a share, the rate or amount methods, Taxation's table methods, and otherwise the method's own name, so a rule of a pack whose feature is off keeps its kind and isn't edited as another). A source whose feature is off isn't offered, and its rules show only the shared fields.
 
@@ -558,10 +570,50 @@ An `IIncomeTaxWithholdingMethod` declares its tables (optional ones with `Requir
 
 | Pack | Election forms | Methods | Recipe |
 | --- | --- | --- | --- |
-| United States Income Tax | Form W-4 (`US`) | `UnitedStatesFormW4` (Publication 15-T percentage method) | `IncomeTaxUnitedStatesFederal2026` |
+| United States Income Tax | Form W-4 (`US`), state withholding certificate (`US-*`) | `UnitedStatesFormW4` (Publication 15-T percentage method), `UnitedStatesStateCertificate` (a state's annualized method) | `IncomeTaxUnitedStatesFederal2026` |
 | Canada Income Tax | TD1 (`CA`), provincial TD1 (`CA-*`), TP-1015.3 (`CA-QC`) | `CanadaFederal` and `CanadaProvincial` (CRA T4127, Option 1, with the bonus method), `QuebecTP1015` (Revenu Québec TP-1015.F) | `IncomeTaxCanada2026` |
 
 The Canada recipe ships every province and territory, the July 1, 2026 changes for British Columbia, Newfoundland and Labrador and Prince Edward Island, CPP and CPP2 with the basic exemption, EI with the employer's 1.4 times, and in Quebec QPP, QPP2, QPIP and the reduced EI rate. A province's own items are parameters of its rule: a basic amount that falls with net income (Manitoba, Yukon), Alberta's supplemental credit, Yukon's employment credit, Ontario's surtax, health premium table and tax reduction, and British Columbia's tax reduction. The bracket tables carry small fixed amounts so the progressive method gives exactly R × A − K with the CRA's rounded constants.
+
+### United States: state and local taxes
+
+United States Income Tax adds a kind of rule for a state that withholds by the annualized method of its withholding guide (Michigan, Massachusetts, Virginia and others): **State income tax (withholding certificate)**, source and method `UnitedStatesStateCertificate` (`UnitedStatesIncomeTax.StateCertificateMethod`, `UnitedStatesStateCertificateWithholdingMethod`). A state is data: a rule per state and year with its amounts and brackets, never code. The method takes the period's wages times the periods of a year; withholds nothing when that is at or under the no-tax threshold; takes off the standard deduction, the head of household deduction, the exemptions (the first, then each further one) and each exemption for age or blindness, and the employee's taxes named by `DeductedTaxCodes` of the same pay (a year of them, up to the limit); works out the `Brackets` table on what is left; and divides by the periods. It runs after the contributions (`UsesOtherTaxes`). Exemption and extra withholding are the provider's, as for any rule with `UsesElections` on, so a state rule has `UsesElections` on.
+
+| Key (`UnitedStatesStateCertificateParameters`) | Kind | Use |
+| --- | --- | --- |
+| `Brackets` | table (required) | The brackets of a year's taxable wages, worked out as progressive brackets (rates in the rows are fractions). |
+| `NoTaxThreshold` | parameter | The year's wages at or under which nothing is withheld (Massachusetts' 8,000). |
+| `StandardDeduction` | parameter | Everyone's deduction (Virginia's 8,750). |
+| `HeadOfHouseholdDeduction` | parameter | Added for a head of household (Massachusetts' 2,400). |
+| `FirstExemption`, `AdditionalExemption` | parameters | The first exemption claimed and each further one (Massachusetts' 4,400 and 1,000; Michigan's 5,800 each). |
+| `SpecialExemption` | parameter | Each exemption for age or blindness. |
+| `DeductedTaxesLimit` | parameter | The most of the `DeductedTaxCodes` taxes taken off a year (Massachusetts' 2,000 of `US-SS-EE`, `US-MED-EE` and `US-MED-ADD`); with none given, all of them. |
+
+Every parameter is optional. The person's state certificate is the election field set of every US jurisdiction below the country (`US-*`, `UnitedStatesStateCertificateFields`), so the pay profile editor offers it for any state or city election:
+
+| Field | Kind | Meaning |
+| --- | --- | --- |
+| `Exemptions` | whole number | Personal and dependent exemptions. |
+| `SpecialExemptions` | whole number | Exemptions for age or blindness. |
+| `HeadOfHousehold` | yes or no | Files as head of household. |
+| `Allowances` | whole number | Allowances, for a state's tax table rule that counts allowances (`AllowanceAmount`). |
+| `ExtraWithholding` | amount | Extra withholding each pay period. |
+| `Exempt` | yes or no | Exempt from withholding. |
+
+A city or other local tax is a flat rate rule of its own jurisdiction. Michigan's city taxes, for example, are two rules per city in one exclusive group, each reading the state certificate's exemptions:
+
+```json
+{ "TaxCode": "US-MI-DETROIT-R", "Name": "Detroit income tax", "Jurisdiction": "US-MI-DETROIT", "Source": "FlatRate", "Rate": 2.4,
+  "Residency": "Resident", "ExclusiveGroup": "US-MI-CITY", "GroupPriority": 0, "ElectionsFrom": "US-MI", "ExemptionAllowance": 600,
+  "Category": "IncomeTax", "Payer": "Employee", "EffectiveFrom": "2026-01-01" },
+{ "TaxCode": "US-MI-DETROIT-NR", "Name": "Detroit income tax (nonresident)", "Jurisdiction": "US-MI-DETROIT", "Source": "FlatRate", "Rate": 1.2,
+  "Residency": "Nonresident", "ExclusiveGroup": "US-MI-CITY", "GroupPriority": 1, "ElectionsFrom": "US-MI", "ExemptionAllowance": 600,
+  "Category": "IncomeTax", "Payer": "Employee", "EffectiveFrom": "2026-01-01" }
+```
+
+A resident of a taxing city pays only its resident rate; anyone else who works in a taxing city pays its nonresident rate; with neither, no city tax. The payer must be registered in the city's jurisdiction (or the rule names `CollectedBy`). A contribution such as Massachusetts' paid family and medical leave is a flat rate rule of category `SocialInsurance` with its wage base. Payroll resolves the home jurisdictions from the home address (`US-MI-DETROIT` for a Detroit address) and the work jurisdictions from the work site team or the employer.
+
+Form W-4's election adds **Nonresident alien** (`UnitedStatesIncomeTax.Fields.NonresidentAlien`): for a form from 2020 or later, the rule's `NonresidentAlienAddition` parameter (`UnitedStatesIncomeTax.NonresidentAlienAddition`, 16,100 in the 2026 recipe, from Publication 15-T) is added to the year's wages before withholding.
 
 ## TaxJar
 

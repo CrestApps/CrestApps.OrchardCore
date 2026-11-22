@@ -154,6 +154,18 @@ public sealed class EmployerHandler : CatalogEntryHandlerBase<Employer>
         item.TaxId = string.IsNullOrWhiteSpace(item.TaxId) ? null : item.TaxId.Trim();
         item.Currency = string.IsNullOrWhiteSpace(item.Currency) ? null : item.Currency.Trim().ToUpperInvariant();
         item.CountryPack = string.IsNullOrWhiteSpace(item.CountryPack) ? null : item.CountryPack.Trim().ToUpperInvariant();
+        item.WorkJurisdictions = [.. (item.WorkJurisdictions ?? [])
+            .Where(jurisdiction => !string.IsNullOrWhiteSpace(jurisdiction))
+            .Select(jurisdiction => jurisdiction.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal)];
+
+        foreach (var registration in item.Registrations ?? [])
+        {
+            registration.Categories = [.. (registration.Categories ?? [])
+                .Where(category => !string.IsNullOrWhiteSpace(category))
+                .Select(category => category.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+        }
     }
 
     /// <inheritdoc />

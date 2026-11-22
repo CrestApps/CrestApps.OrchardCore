@@ -87,6 +87,7 @@
     <div class="card-header">@T["Tax registrations"]</div>
     <div class="card-body">
         <p class="hint">@T["The employer's accounts with tax agencies. For an agency rate that changes, add a row with the same jurisdiction, agency and account and the day the new rate starts. Leave a row empty to drop it."]</p>
+        <p class="hint">@T["When the employer has several accounts in one jurisdiction (a state's income tax withholding and its unemployment insurance), name the tax categories each covers under Taxes, such as IncomeTax or Unemployment: a tax on the employer's own rate reads the account of its category."]</p>
         <p class="hint">@T["In Canada, add CA with the CRA business number and its payroll program account (such as 123456789RP0001) and your remitter type, and CA-QC with the Revenu Québec identification number (such as 1234567890TQ0001) for employees in Quebec."]</p>
         <span asp-validation-for="Registrations" class="text-danger"></span>
         <div class="table-responsive">
@@ -97,6 +98,7 @@
                         <th scope="col">@T["Agency"]</th>
                         <th scope="col">@T["Account id"]</th>
                         <th scope="col">@T["Deposits"]</th>
+                        <th scope="col">@T["Taxes"]</th>
                         <th scope="col">@T["Rate %"]</th>
                         <th scope="col">@T["From"]</th>
                     </tr>
@@ -109,6 +111,7 @@
                             <td><input asp-for="Registrations[i].Agency" class="form-control form-control-sm" aria-label="@T["Agency"]" /></td>
                             <td><input asp-for="Registrations[i].AccountId" class="form-control form-control-sm" autocomplete="off" aria-label="@T["Account id"]" /></td>
                             <td><input asp-for="Registrations[i].DepositFrequency" class="form-control form-control-sm" placeholder="@T["Monthly"]" list="payroll-deposit-schedules" aria-label="@T["Deposits"]" /></td>
+                            <td><input asp-for="Registrations[i].Categories" class="form-control form-control-sm" placeholder="Unemployment" aria-label="@T["Taxes"]" /></td>
                             <td><input asp-for="Registrations[i].Rate" class="form-control form-control-sm" inputmode="decimal" style="max-width: 6rem" placeholder="2.7" aria-label="@T["Rate %"]" /></td>
                             <td><input asp-for="Registrations[i].RateFrom" type="date" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
                         </tr>
@@ -124,6 +127,13 @@
                 <option value="FourTimesMonthly">@T["Four times a month (Canada, accelerated threshold 2)"]</option>
                 <option value="Annual">@T["Once a year"]</option>
             </datalist>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="WorkJurisdictions" class="ocat-label">@T["Where people work"]</label>
+            <div class="ocat-end">
+                <input asp-for="WorkJurisdictions" class="form-control text-uppercase" style="max-width: 24rem" placeholder="US-MI, US-MI-DETROIT" />
+                <span class="hint">@T["The tax jurisdictions, separated by commas, of the place people work when their pay profile names no work site team or the team has no jurisdictions, such as a business with one location. A work site team's jurisdictions come first."]</span>
+            </div>
         </div>
     </div>
 </div>
