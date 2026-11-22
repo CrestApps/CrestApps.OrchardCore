@@ -53,6 +53,8 @@ public sealed class Startup : StartupBase
             .Configure<IShellConfiguration>((options, configuration) => configuration.GetSection(AzureAISearchHostIdentityOptions.SectionName).Bind(options));
         services.TryAddSingleton<AzureAISearchHostIdentity>();
         services.AddDisplayDriver<AIDataSource, AzureAISearchAIDataSourceDisplayDriver>();
+        // The search client connects through the egress guard (review 11, C14).
+        services.TryAddSingleton<AIEgressTransport>();
         services.AddAIDataSourceSourceHandler<AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
         services.Configure<IngestionSourceSecretOptions>(options => options.Protect<AIDataSource>(nameof(AzureAISearchSourceMetadata), AIDataSourceProtectionConstants.SourceSecretPurpose));
 

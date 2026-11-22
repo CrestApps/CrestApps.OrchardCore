@@ -27,9 +27,10 @@ internal static class ElasticsearchDataConnectionSettings
     /// </summary>
     /// <param name="settings">The connection's HTTP settings.</param>
     /// <param name="secrets">The connection's secrets.</param>
+    /// <param name="requestInvoker">The transport the requests go through, or <see langword="null"/> for the default.</param>
     /// <returns>The client settings.</returns>
     /// <exception cref="InvalidOperationException">The connection has no URL, misses a secret, or uses an authentication the Elasticsearch client cannot send.</exception>
-    public static ElasticsearchClientSettings Create(HttpConnectionSettings settings, IDataConnectorSecrets secrets)
+    public static ElasticsearchClientSettings Create(HttpConnectionSettings settings, IDataConnectorSecrets secrets, IRequestInvoker requestInvoker = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(secrets);
@@ -39,7 +40,9 @@ internal static class ElasticsearchDataConnectionSettings
             throw new InvalidOperationException("The data connection has no valid Elasticsearch URL.");
         }
 
-        var clientSettings = new ElasticsearchClientSettings(uri);
+        var clientSettings = requestInvoker is null
+            ? new ElasticsearchClientSettings(uri)
+            : new ElasticsearchClientSettings(new SingleNodePool(uri), requestInvoker);
         var headers = new NameValueCollection();
         var authentication = settings.Authentication ?? new HttpAuthenticationSettings();
 

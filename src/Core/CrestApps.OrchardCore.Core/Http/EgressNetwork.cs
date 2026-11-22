@@ -230,16 +230,39 @@ public static class EgressNetwork
     {
         var handler = new SocketsHttpHandler
         {
-            // Through a proxy the connect callback sees the proxy's address, not the destination's: ConnectAsync checks the
-            // destination on its own then.
-            UseProxy = proxy is not null,
-            Proxy = proxy,
             AllowAutoRedirect = allowRedirects,
             AutomaticDecompression = DecompressionMethods.All,
-            ConnectCallback = existingConnect is null
-                ? (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, proxy, cancellationToken)
-                : (context, cancellationToken) => ConnectThroughAsync(context, existingConnect, allowLoopback, allowPrivateNetwork, proxy, cancellationToken),
         };
+
+        Guard(handler, allowLoopback, allowPrivateNetwork, proxy);
+
+        if (existingConnect is not null)
+        {
+            handler.ConnectCallback = (context, cancellationToken) => ConnectThroughAsync(context, existingConnect, allowLoopback, allowPrivateNetwork, proxy, cancellationToken);
+        }
+
+        return handler;
+    }
+
+    /// <summary>
+    /// Puts the egress guard on a handler another library built, such as a search client's transport, so every address
+    /// it connects to is checked as <see cref="CreateHandler(bool, bool, bool, IWebProxy)"/> checks it. The handler's
+    /// own proxy is replaced: it goes through <paramref name="proxy"/> or connects directly.
+    /// </summary>
+    /// <param name="handler">The handler.</param>
+    /// <param name="allowLoopback">Whether loopback addresses are allowed (development only).</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed (never link-local, never a
+    /// cloud metadata service).</param>
+    /// <param name="proxy">The proxy to go through, or <see langword="null"/> for none.</param>
+    public static void Guard(SocketsHttpHandler handler, bool allowLoopback, bool allowPrivateNetwork, IWebProxy proxy)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+
+        // Through a proxy the connect callback sees the proxy's address, not the destination's: ConnectAsync checks the
+        // destination on its own then.
+        handler.UseProxy = proxy is not null;
+        handler.Proxy = proxy;
+        handler.ConnectCallback = (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, proxy, cancellationToken);
 
         if (proxy is not null)
         {
@@ -247,8 +270,55 @@ public static class EgressNetwork
             // connect, so every destination, each redirect hop included, is checked.
             handler.PooledConnectionLifetime = TimeSpan.Zero;
         }
+    }
 
-        return handler;
+    /// <summary>
+    /// Whether a host an administrator typed may be saved: an address that is not refused, <c>localhost</c> only where
+    /// loopback or a private network is allowed, and a name only when every address it resolves to now is allowed. A
+    /// name that does not resolve is refused, since it cannot be checked, unless the host allows a private network
+    /// (where a private resolver may answer it only when it is called). The connection is still checked when it is made.
+    /// </summary>
+    /// <param name="host">The host name or address.</param>
+    /// <param name="allowLoopback">Whether loopback addresses are allowed (development only).</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed (never link-local, never a
+    /// cloud metadata service).</param>
+    /// <param name="resolve">Resolves a name, or <see langword="null"/> for <see cref="Dns.GetHostAddresses(string)"/>.</param>
+    public static bool IsAllowedHost(string host, bool allowLoopback, bool allowPrivateNetwork, Func<string, IPAddress[]> resolve = null)
+    {
+        var trimmed = host?.Trim().Trim('[', ']');
+
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return false;
+        }
+
+        if (IPAddress.TryParse(trimmed, out var literal))
+        {
+            return !IsRefused(literal, allowLoopback, allowPrivateNetwork);
+        }
+
+        if (string.Equals(trimmed, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return allowLoopback || allowPrivateNetwork;
+        }
+
+        IPAddress[] addresses;
+
+        try
+        {
+            addresses = (resolve ?? Dns.GetHostAddresses)(trimmed);
+        }
+        catch (Exception exception) when (exception is SocketException or ArgumentException)
+        {
+            return allowPrivateNetwork;
+        }
+
+        if (addresses is not { Length: > 0 })
+        {
+            return allowPrivateNetwork;
+        }
+
+        return !addresses.Any(address => IsRefused(address, allowLoopback, allowPrivateNetwork));
     }
 
     /// <summary>
@@ -257,7 +327,15 @@ public static class EgressNetwork
     /// </summary>
     /// <param name="serviceProvider">The tenant's services.</param>
     public static IWebProxy GetProxy(IServiceProvider serviceProvider)
-        => bool.TryParse(serviceProvider?.GetService<IShellConfiguration>()?[UseSystemProxyKey], out var useProxy) && useProxy
+        => GetProxy(serviceProvider?.GetService<IShellConfiguration>());
+
+    /// <summary>
+    /// Returns the system proxy when the tenant's configuration sets <see cref="UseSystemProxyKey"/> to <c>true</c>, and
+    /// otherwise <see langword="null"/>.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration, or <see langword="null"/>.</param>
+    public static IWebProxy GetProxy(IShellConfiguration shellConfiguration)
+        => bool.TryParse(shellConfiguration?[UseSystemProxyKey], out var useProxy) && useProxy
             ? HttpClient.DefaultProxy
             : null;
 

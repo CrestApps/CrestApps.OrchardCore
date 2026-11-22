@@ -43,6 +43,8 @@ When the **Data Connectors** feature is on, the external source editor also offe
 
 Only people who may **Manage data connections and their credentials** see the picker; for anyone else, a data source that uses a connection keeps it when they save. A data source without a connection keeps its own endpoint and credentials, so existing data sources are unchanged.
 
+The search requests are checked when they connect, not only when the endpoint is saved: the data source's own endpoint follows the AI egress rule (it can't be on the site's own network unless the host sets `CrestApps:AI:Egress:AllowPrivateNetwork`, which a private endpoint needs), and a data connection follows the data connectors' network rule.
+
 ## Signing in as the host
 
 **Managed identity** and **Default credential**, and a data connection without authentication, sign in with the host's Azure identity, not with a credential the tenant entered. On a host that serves several tenants, that identity may read every tenant's index, so it works only:

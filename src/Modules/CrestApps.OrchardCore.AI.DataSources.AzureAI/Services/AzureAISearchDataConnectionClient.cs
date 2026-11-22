@@ -25,9 +25,10 @@ internal static class AzureAISearchDataConnectionClient
     /// <param name="settings">The connection's HTTP settings.</param>
     /// <param name="secrets">The connection's secrets.</param>
     /// <param name="indexName">The index the data source reads.</param>
+    /// <param name="options">The client options, such as the guarded transport, or <see langword="null"/>.</param>
     /// <returns>The client.</returns>
     /// <exception cref="InvalidOperationException">The connection has no URL, no API key, or an authentication Azure AI Search cannot use.</exception>
-    public static SearchClient Create(HttpConnectionSettings settings, IDataConnectorSecrets secrets, string indexName)
+    public static SearchClient Create(HttpConnectionSettings settings, IDataConnectorSecrets secrets, string indexName, SearchClientOptions options = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(secrets);
@@ -49,10 +50,10 @@ internal static class AzureAISearchDataConnectionClient
                     throw new InvalidOperationException("The data connection has no API key.");
                 }
 
-                return new SearchClient(endpoint, indexName, new AzureKeyCredential(apiKey));
+                return new SearchClient(endpoint, indexName, new AzureKeyCredential(apiKey), options);
 
             case HttpAuthenticationType.None:
-                return new SearchClient(endpoint, indexName, new DefaultAzureCredential());
+                return new SearchClient(endpoint, indexName, new DefaultAzureCredential(), options);
 
             default:
                 throw new InvalidOperationException($"The data connection uses {authentication.Type} authentication, which an Azure AI Search AI data source cannot use. Use an API key, or no authentication for the default Azure credential.");

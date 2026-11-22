@@ -184,7 +184,7 @@ public sealed class AzureAISearchHostIdentityTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
-        services.AddSingleton<IAIEndpointPolicy>(new AIEndpointPolicy(Mock.Of<IHostEnvironment>(), Options.Create(new AIEgressOptions()), _ => []));
+        services.AddSingleton<IAIEndpointPolicy>(new AIEndpointPolicy(Mock.Of<IHostEnvironment>(), Options.Create(new AIEgressOptions()), _ => [System.Net.IPAddress.Parse("203.0.113.10")]));
         services.AddSingleton(new ShellSettings { Name = tenant });
         services.AddSingleton(Options.Create(new AzureAISearchHostIdentityOptions()));
         services.AddSingleton<AzureAISearchHostIdentity>();
@@ -207,7 +207,7 @@ public sealed class AzureAISearchHostIdentityTests
             new EphemeralDataProtectionProvider(),
             NullLogger<AzureAISearchAIDataSourceSourceHandler>.Instance,
             resolver,
-            new AIEndpointPolicy(Mock.Of<IHostEnvironment>(), Options.Create(new AIEgressOptions()), _ => []),
+            new AIEndpointPolicy(Mock.Of<IHostEnvironment>(), Options.Create(new AIEgressOptions()), _ => [System.Net.IPAddress.Parse("203.0.113.10")]),
             new AzureAISearchHostIdentity(new ShellSettings { Name = tenant }, Options.Create(new AzureAISearchHostIdentityOptions { HostIdentityIndexes = [.. approved] })));
 
     private static AzureAISearchHostIdentityIndex Approved(string indexName, string identityClientId = null)

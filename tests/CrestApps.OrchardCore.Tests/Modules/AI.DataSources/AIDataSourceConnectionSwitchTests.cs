@@ -51,7 +51,7 @@ public sealed class AIDataSourceConnectionSwitchTests
             Authentication = new HttpAuthenticationSettings { Type = HttpAuthenticationType.ApiKey, ApiKeyName = "api-key" },
         });
 
-        var driver = new AzureAISearchAIDataSourceDisplayDriver(_protection, CreatePicker(connection), new CrestApps.OrchardCore.AI.Core.AIEndpointPolicy(Moq.Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions())), new PassThroughStringLocalizer<AzureAISearchAIDataSourceDisplayDriver>());
+        var driver = new AzureAISearchAIDataSourceDisplayDriver(_protection, CreatePicker(connection), EndpointPolicy(), new PassThroughStringLocalizer<AzureAISearchAIDataSourceDisplayDriver>());
         var protectedKey = _protection.ProtectSetting(AIDataSourceProtectionConstants.SourceSecretPurpose, "own-key");
         var dataSource = new AIDataSource { ItemId = "ds-1", Source = AIDataSourceSourceTypes.AzureAISearch };
         dataSource.Put(new AzureAISearchSourceMetadata
@@ -243,8 +243,9 @@ public sealed class AIDataSourceConnectionSwitchTests
         Assert.Contains(context.Updater.ModelState, entry => entry.Key.EndsWith(nameof(EditElasticsearchAIDataSourceViewModel.Url), StringComparison.Ordinal) && entry.Value.Errors.Count > 0);
     }
 
+    // Every name answers with a public address, so the tests do not depend on the network.
     private static CrestApps.OrchardCore.AI.Core.AIEndpointPolicy EndpointPolicy()
-        => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()));
+        => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()), _ => [System.Net.IPAddress.Parse("203.0.113.10")]);
 
     private static UpdateEditorContext Context(object model)
         => new(null, string.Empty, false, string.Empty, null, null, new FakeUpdateModel(model));

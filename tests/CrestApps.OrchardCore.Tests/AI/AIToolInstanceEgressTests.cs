@@ -170,13 +170,14 @@ public sealed class AIToolInstanceEgressTests
     }
 
     [Fact]
-    public void EndpointPolicy_AllowsAHostNameThatResolvesOutward_OrNotAtAll()
+    public void EndpointPolicy_AllowsAHostNameThatResolvesOutward_AndRefusesOneThatDoesNotResolve()
     {
         var resolvesOutward = new AIEndpointPolicy(null, Options.Create(new AIEgressOptions()), _ => [IPAddress.Parse("93.184.215.14")]);
         var doesNotResolve = new AIEndpointPolicy(null, Options.Create(new AIEgressOptions()), _ => throw new SocketException((int)SocketError.HostNotFound));
 
+        // A name that does not resolve cannot be checked, and could be pointed inside later (review 11, C14).
         Assert.True(resolvesOutward.IsAllowed("https://api.openai.com/v1"));
-        Assert.True(doesNotResolve.IsAllowed("https://models.example/v1"));
+        Assert.False(doesNotResolve.IsAllowed("https://models.example/v1"));
     }
 
     [Fact]

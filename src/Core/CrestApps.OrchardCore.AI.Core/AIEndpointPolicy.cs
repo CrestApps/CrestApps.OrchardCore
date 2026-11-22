@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -21,9 +20,10 @@ public interface IAIEndpointPolicy
 /// <inheritdoc/>
 /// <remarks>
 /// Besides the text of the address, the host name is resolved and refused when any address it answers with is on the
-/// site's own network. The model provider SDKs build their own transport, which the connect-time guard does not cover, so
-/// this is the check they get; a name that resolves differently later is still only caught at connect by the guarded
-/// clients. A name that does not resolve now is allowed, since a private resolver may answer it only when it is called.
+/// site's own network. A name that does not resolve now is refused too, since it cannot be checked (review 11, C14),
+/// unless the host allows a private network, where a private resolver may answer it only when it is called. The guarded
+/// clients and the search clients the data sources build check the address again when they connect; the model provider
+/// SDKs CrestApps.Core builds get this check only.
 /// </remarks>
 public sealed class AIEndpointPolicy : IAIEndpointPolicy
 {
@@ -59,25 +59,12 @@ public sealed class AIEndpointPolicy : IAIEndpointPolicy
 
         var host = uri.IdnHost.Trim('[', ']');
 
-        // An address literal was judged by its text already.
-        if (IPAddress.TryParse(host, out _))
+        // An address literal and localhost were judged by their text already.
+        if (IPAddress.TryParse(host, out _) || uri.IsLoopback)
         {
             return false;
         }
 
-        IPAddress[] addresses;
-
-        try
-        {
-            addresses = _resolve(host);
-        }
-        catch (Exception exception) when (exception is SocketException or ArgumentException)
-        {
-            return false;
-        }
-
-        var allowPrivateNetwork = _options?.AllowPrivateNetwork == true;
-
-        return addresses.Any(address => EgressNetwork.IsRefused(address, allowLoopback: _isDevelopment, allowPrivateNetwork));
+        return !EgressNetwork.IsAllowedHost(host, allowLoopback: _isDevelopment, _options?.AllowPrivateNetwork == true, _resolve);
     }
 }

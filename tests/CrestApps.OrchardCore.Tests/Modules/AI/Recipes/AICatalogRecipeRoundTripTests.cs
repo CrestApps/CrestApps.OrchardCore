@@ -416,8 +416,9 @@ public sealed class AICatalogRecipeRoundTripTests
     }
 
     // The policy the AI feature registers, on a production host that allows no private network.
+    // Every name answers with a public address, so the tests do not depend on the network.
     private static CrestApps.OrchardCore.AI.Core.AIEndpointPolicy Policy()
-        => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()));
+        => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()), _ => [System.Net.IPAddress.Parse("203.0.113.10")]);
 
     private sealed class RecipeEndpointMetadata
     {

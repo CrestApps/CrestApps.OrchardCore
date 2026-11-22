@@ -50,6 +50,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
         services.TryAddScoped<AIDataSourceConnectionPicker>();
         services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
+        // The search client connects through the egress guard (review 11, C14).
+        services.TryAddSingleton<AIEgressTransport>();
         services.AddAIDataSourceSourceHandler<ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
         services.Configure<IngestionSourceSecretOptions>(options => options.Protect<AIDataSource>(nameof(ElasticsearchSourceMetadata), AIDataSourceProtectionConstants.SourceSecretPurpose));
 

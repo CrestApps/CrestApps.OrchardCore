@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
@@ -31,6 +32,8 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly IDataConnectionResolver _dataConnectionResolver;
     private readonly IAIEndpointPolicy _endpointPolicy;
     private readonly AIDataSourceStoredSettings _storedSettings;
+    private readonly AIEgressTransport _egressTransport;
+    private readonly IHttpMessageHandlerFactory _handlerFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceSourceHandler"/> class.
@@ -41,14 +44,20 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
     /// <param name="endpointPolicy">The policy that keeps the cluster's URL off the site's own network; <see langword="null"/> refuses every private address.</param>
     /// <param name="storedSettings">The data sources as they were stored, read in this request, so a URL a save keeps is not checked again.</param>
+    /// <param name="egressTransport">The guard the cluster's requests connect through; <see langword="null"/> refuses every private address.</param>
+    /// <param name="handlerFactory">Gives the data connectors' shared handler, which a data connection's requests go through.</param>
     public ElasticsearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
         ILogger<ElasticsearchAIDataSourceSourceHandler> logger,
         IDataConnectionResolver dataConnectionResolver = null,
         IAIEndpointPolicy endpointPolicy = null,
-        AIDataSourceStoredSettings storedSettings = null)
+        AIDataSourceStoredSettings storedSettings = null,
+        AIEgressTransport egressTransport = null,
+        IHttpMessageHandlerFactory handlerFactory = null)
     {
+        _egressTransport = egressTransport ?? AIEgressTransport.Strict;
+        _handlerFactory = handlerFactory;
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _logger = logger;
@@ -380,7 +389,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         {
             var context = await ResolveConnectionAsync(connectionId, cancellationToken);
 
-            return (new ElasticsearchClient(ElasticsearchDataConnectionSettings.Create(context.Connection.GetOrCreate<HttpConnectionSettings>(), context.Secrets)), metadata);
+            return (new ElasticsearchClient(ElasticsearchDataConnectionSettings.Create(context.Connection.GetOrCreate<HttpConnectionSettings>(), context.Secrets, ConnectionInvoker())), metadata);
         }
 
         if (!HasStoredConnection(metadata))
@@ -406,11 +415,14 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             }
 
             settings = new ElasticsearchClientSettings(
-                new CloudNodePool(cloudId, authorizationHeader ?? throw new InvalidOperationException("Elastic Cloud connections require an authentication type and matching credentials.")));
+                new CloudNodePool(cloudId, authorizationHeader ?? throw new InvalidOperationException("Elastic Cloud connections require an authentication type and matching credentials.")),
+                GuardedInvoker(allowPrivateNetwork: false));
         }
         else
         {
-            settings = new ElasticsearchClientSettings(new Uri(metadata.Url));
+            // A self-managed cluster may stay on a private network (review 8, G7), but is checked when it is connected to,
+            // so it never reaches the link-local range or a cloud metadata service (review 11, C14).
+            settings = new ElasticsearchClientSettings(new SingleNodePool(new Uri(metadata.Url)), GuardedInvoker(allowPrivateNetwork: true));
         }
 
         if (authorizationHeader != null)
@@ -425,6 +437,31 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
 
         return (new ElasticsearchClient(settings), metadata);
     }
+
+    // The transport's own handler, with its TLS settings (a pinned fingerprint), connecting through the egress guard.
+    private HttpRequestInvoker GuardedInvoker(bool allowPrivateNetwork)
+        => new((handler, _) =>
+        {
+            if (handler is not SocketsHttpHandler sockets)
+            {
+                throw new InvalidOperationException("The Elasticsearch transport built a handler the egress guard cannot check.");
+            }
+
+            _egressTransport.Guard(sockets, allowPrivateNetwork);
+
+            return sockets;
+        });
+
+    // A data connection's requests are held to the data connectors' network rule, as its other requests are.
+    private HttpRequestInvoker ConnectionInvoker()
+        => _handlerFactory is null
+            ? GuardedInvoker(allowPrivateNetwork: false)
+            : new((handler, _) =>
+            {
+                handler.Dispose();
+
+                return _handlerFactory.CreateHandler(DataConnectorConstants.HttpClientName);
+            });
 
     private static bool HasStoredConnection(ElasticsearchSourceMetadata metadata)
         => !string.IsNullOrWhiteSpace(metadata.Url) || !string.IsNullOrWhiteSpace(metadata.CloudId);

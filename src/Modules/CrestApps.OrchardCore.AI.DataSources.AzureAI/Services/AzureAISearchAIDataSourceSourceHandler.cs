@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using Azure;
 using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
@@ -28,6 +30,8 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly IDataConnectionResolver _dataConnectionResolver;
     private readonly IAIEndpointPolicy _endpointPolicy;
     private readonly AzureAISearchHostIdentity _hostIdentity;
+    private readonly AIEgressTransport _egressTransport;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureAISearchAIDataSourceSourceHandler"/> class.
@@ -37,13 +41,19 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
     /// <param name="endpointPolicy">The policy that keeps the search endpoint off the site's own network; <see langword="null"/> refuses every private address.</param>
     /// <param name="hostIdentity">Where the data source may sign in as the host; <see langword="null"/> refuses it everywhere.</param>
+    /// <param name="egressTransport">The guard the search requests connect through; <see langword="null"/> refuses every private address.</param>
+    /// <param name="httpClientFactory">Gives the data connectors' shared client, which a data connection's requests go through.</param>
     public AzureAISearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<AzureAISearchAIDataSourceSourceHandler> logger,
         IDataConnectionResolver dataConnectionResolver = null,
         IAIEndpointPolicy endpointPolicy = null,
-        AzureAISearchHostIdentity hostIdentity = null)
+        AzureAISearchHostIdentity hostIdentity = null,
+        AIEgressTransport egressTransport = null,
+        IHttpClientFactory httpClientFactory = null)
     {
+        _egressTransport = egressTransport ?? AIEgressTransport.Strict;
+        _httpClientFactory = httpClientFactory;
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
         _dataConnectionResolver = dataConnectionResolver;
@@ -266,7 +276,7 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
                 throw new InvalidOperationException(AzureAISearchHostIdentity.NotApprovedError);
             }
 
-            return AzureAISearchDataConnectionClient.Create(settings, resolution.Context.Secrets, metadata.IndexName);
+            return AzureAISearchDataConnectionClient.Create(settings, resolution.Context.Secrets, metadata.IndexName, ConnectionOptions());
         }
 
         var endpoint = new Uri(metadata.Endpoint);
@@ -277,7 +287,7 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
             var apiKey = DataProtectionHelper.Unprotect(protector, metadata.ApiKey, _logger, "Failed to unprotect AI data source field '{FieldName}' for data source '{DataSourceId}'.", nameof(AzureAISearchSourceMetadata.ApiKey), dataSource.ItemId);
 
-            return new SearchClient(endpoint, metadata.IndexName, new AzureKeyCredential(apiKey));
+            return new SearchClient(endpoint, metadata.IndexName, new AzureKeyCredential(apiKey), EndpointOptions());
         }
 
         if (!MaySignInAsHost(metadata.Endpoint, metadata.IndexName, metadata.IdentityClientId))
@@ -299,8 +309,19 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             });
         }
 
-        return new SearchClient(endpoint, metadata.IndexName, credential);
+        return new SearchClient(endpoint, metadata.IndexName, credential, EndpointOptions());
     }
+
+    // The search requests connect through the egress guard, so the endpoint is checked when it is called, not only when
+    // it was saved (review 11, C14). A credential's own sign-in requests keep their transport.
+    private SearchClientOptions EndpointOptions()
+        => new() { Transport = new HttpClientTransport(_egressTransport.Handler) };
+
+    // A data connection's requests are held to the data connectors' network rule, as its other requests are.
+    private SearchClientOptions ConnectionOptions()
+        => new() { Transport = _httpClientFactory is null
+            ? new HttpClientTransport(_egressTransport.Handler)
+            : new HttpClientTransport(_httpClientFactory.CreateClient(DataConnectorConstants.HttpClientName)) };
 
     private static ManagedIdentityCredential CreateManagedIdentityCredential(string identityClientId)
     {

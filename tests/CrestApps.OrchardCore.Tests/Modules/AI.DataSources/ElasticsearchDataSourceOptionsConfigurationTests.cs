@@ -220,6 +220,8 @@ public sealed class ElasticsearchDataSourceOptionsConfigurationTests
             null,
             endpointPolicy,
             null,
+            null,
+            null,
         ]);
     }
 
