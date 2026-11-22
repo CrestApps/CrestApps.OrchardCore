@@ -68,12 +68,10 @@ internal static class DataConnectorNetwork
             throw new DataConnectorException($"The host '{trimmed}' couldn't be found.", exception) { IsTransient = true };
         }
 
-        if (options?.AllowPrivateNetworks == true || IsAllowedHost(trimmed, options))
-        {
-            return addresses;
-        }
-
-        var allowed = addresses.Where(address => !IsInternal(address)).ToArray();
+        // Allowing the site's own network, or naming a host, never opens the link-local range or a cloud metadata service
+        // (review 11).
+        var allowPrivateNetwork = options?.AllowPrivateNetworks == true || IsAllowedHost(trimmed, options);
+        var allowed = addresses.Where(address => !EgressNetwork.IsRefused(address, allowLoopback: false, allowPrivateNetwork)).ToArray();
 
         if (allowed.Length == 0)
         {
@@ -81,7 +79,9 @@ internal static class DataConnectorNetwork
             DataConnectorsTelemetry.Add(DataConnectorsTelemetry.NetworkBlocked);
             logger?.NetworkBlocked();
 
-            throw new DataConnectorException($"The host '{trimmed}' is on the site's own network. To reach it, add it to CrestApps:DataConnectors:Network:AllowedHosts or set AllowPrivateNetworks in the site's configuration.");
+            throw new DataConnectorException(allowPrivateNetwork
+                ? $"The host '{trimmed}' is a link-local or cloud metadata address, which connectors never reach."
+                : $"The host '{trimmed}' is on the site's own network. To reach it, add it to CrestApps:DataConnectors:Network:AllowedHosts or set AllowPrivateNetworks in the site's configuration.");
         }
 
         return allowed;

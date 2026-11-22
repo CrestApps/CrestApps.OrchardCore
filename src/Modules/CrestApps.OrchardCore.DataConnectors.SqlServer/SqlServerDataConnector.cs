@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Net;
 using CrestApps.Core;
 using CrestApps.OrchardCore.DataConnectors.Http;
 using CrestApps.OrchardCore.DataConnectors.Relational;
@@ -226,6 +227,57 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
         return end < 0 ? host : host[..end];
     }
 
+    // Azure SQL's gateway routes a connection by the server name, so it is never reached by address; its names are
+    // answered by Microsoft's DNS, which a tenant cannot point at the site's own network.
+    private static readonly string[] _nameRoutedDomains =
+    [
+        ".database.windows.net",
+        ".database.usgovcloudapi.net",
+        ".database.chinacloudapi.cn",
+        ".database.cloudapi.de",
+        ".sql.azuresynapse.net",
+        ".datawarehouse.fabric.microsoft.com",
+        ".database.fabric.microsoft.com",
+    ];
+
+    /// <summary>
+    /// Makes SqlClient connect to the address the network rule checked, rather than resolve the name again (which a name
+    /// that answers differently each time would turn to the site's own network), and keeps checking the server's
+    /// certificate against the name. A server given by address, a local server, Azure SQL (routed by name), and Windows
+    /// sign-in (Kerberos finds the server by name) are left as they are.
+    /// </summary>
+    /// <param name="builder">The connection string.</param>
+    /// <param name="server">The server setting.</param>
+    /// <param name="address">The checked address.</param>
+    internal static void PinToAddress(SqlConnectionStringBuilder builder, string server, IPAddress address)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(address);
+
+        var text = server?.Trim() ?? string.Empty;
+
+        if (text.StartsWith("tcp:", StringComparison.OrdinalIgnoreCase))
+        {
+            text = text[4..];
+        }
+
+        var host = GetHost(server);
+
+        if (builder.IntegratedSecurity ||
+            text.Contains(':', StringComparison.Ordinal) ||
+            text.StartsWith('(') ||
+            text == "." ||
+            IPAddress.TryParse(host.Trim('[', ']'), out _) ||
+            string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+            _nameRoutedDomains.Any(domain => host.EndsWith(domain, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        builder.DataSource = "tcp:" + address + text[host.Length..];
+        builder.HostNameInCertificate = host;
+    }
+
     protected override async Task<DbConnection> OpenConnectionAsync(DataConnectorContext context, CancellationToken cancellationToken)
     {
         var settings = context.Connection.GetOrCreate<SqlServerConnectionSettings>();
@@ -233,7 +285,10 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
 
         // The server goes through the same network rule as any other connector, so a connection can't reach the
         // site's own network unless the configuration allows it.
-        await DataConnectorNetwork.ResolveAllowedAsync(GetHost(settings.Server), _networkOptions, _logger, cancellationToken);
+        var addresses = await DataConnectorNetwork.ResolveAllowedAsync(GetHost(settings.Server), _networkOptions, _logger, cancellationToken);
+
+        // SqlClient connects to the checked address, not to whatever the name resolves to a moment later (review 11).
+        PinToAddress(builder, settings.Server, addresses[0]);
 
         var connection = new SqlConnection(builder.ConnectionString);
 
