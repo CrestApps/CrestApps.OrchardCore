@@ -12,7 +12,8 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 /// Only a signature bound to a time is remembered: one without a time would be valid again once forgotten, so it is
 /// refused before it gets here or, for legacy ACP signatures, not guarded at all. The same signature is accepted again
 /// only for the same idempotent request (the same <c>Idempotency-Key</c>), which the idempotency layer answers with its
-/// first response; callers pass the key only for an endpoint that has that layer. Each check takes a lock on the
+/// first response, and, where the caller gives a retry window, only within it; callers pass the key only for an endpoint
+/// that has that layer. Each check takes a lock on the
 /// signature, so parallel copies can't all pass; a lock that can't be taken is <see cref="AgentSignatureUse.Unavailable"/>,
 /// not a replay. With a shared cache and lock (Redis), every node knows what another accepted, and otherwise each node
 /// keeps its own. A signature is remembered a little longer than it could be valid, so a copy that arrives as the window
@@ -21,6 +22,7 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 public sealed class AgentSignatureReplayGuard
 {
     private const string KeyPrefix = "agentic-commerce:signature:";
+    private const string RetrySuffix = ":retry";
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
@@ -41,7 +43,8 @@ public sealed class AgentSignatureReplayGuard
     }
 
     /// <summary>
-    /// Returns whether a verified signature may be used now, and remembers it for <paramref name="window"/>.
+    /// Returns whether a verified signature may be used now, and remembers it for <paramref name="window"/>. The same
+    /// idempotent request may come again with it for as long as it is remembered.
     /// </summary>
     /// <param name="signer">Who signed: the platform and, when it has several, the key.</param>
     /// <param name="signedInput">The bytes the signature was verified over: the signature base or the signing input.</param>
@@ -52,7 +55,27 @@ public sealed class AgentSignatureReplayGuard
     /// <see cref="AgentSignatureUse.Replayed"/> when it was used before, by a request that isn't the same idempotent one;
     /// <see cref="AgentSignatureUse.Unavailable"/> when its lock couldn't be taken.
     /// </returns>
-    public async Task<AgentSignatureUse> UseAsync(string signer, byte[] signedInput, string idempotencyKey, TimeSpan window, CancellationToken cancellationToken = default)
+    public Task<AgentSignatureUse> UseAsync(string signer, byte[] signedInput, string idempotencyKey, TimeSpan window, CancellationToken cancellationToken = default)
+        => UseAsync(signer, signedInput, idempotencyKey, window, window, cancellationToken);
+
+    /// <summary>
+    /// Returns whether a verified signature may be used now, and remembers it for <paramref name="window"/>. The same
+    /// idempotent request may come again with it only within <paramref name="retryWindow"/> of its first use: the
+    /// idempotency layer keeps only a final answer, so a copy sent later, after a first attempt that failed, would run
+    /// the request again.
+    /// </summary>
+    /// <param name="signer">Who signed: the platform and, when it has several, the key.</param>
+    /// <param name="signedInput">The bytes the signature was verified over: the signature base or the signing input.</param>
+    /// <param name="idempotencyKey">The request's idempotency key, or <see langword="null"/>.</param>
+    /// <param name="window">How long the signature could be valid for.</param>
+    /// <param name="retryWindow">How long the same idempotent request may be sent again with the same signature.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// <see cref="AgentSignatureUse.Replayed"/> when it was used before, by a request that isn't the same idempotent one
+    /// sent within <paramref name="retryWindow"/>; <see cref="AgentSignatureUse.Unavailable"/> when its lock couldn't be
+    /// taken.
+    /// </returns>
+    public async Task<AgentSignatureUse> UseAsync(string signer, byte[] signedInput, string idempotencyKey, TimeSpan window, TimeSpan retryWindow, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(signedInput);
 
@@ -76,7 +99,13 @@ public sealed class AgentSignatureReplayGuard
 
             if (seen is not null)
             {
-                return !string.IsNullOrEmpty(idempotencyKey) && string.Equals(seen, idempotencyKey, StringComparison.Ordinal)
+                if (string.IsNullOrEmpty(idempotencyKey) || !string.Equals(seen, idempotencyKey, StringComparison.Ordinal))
+                {
+                    return AgentSignatureUse.Replayed;
+                }
+
+                // The same idempotent request, retried: only while its retry window is open, when that is shorter.
+                return retryWindow >= window || await _cache.GetStringAsync(key + RetrySuffix, cancellationToken) is not null
                     ? AgentSignatureUse.Accepted
                     : AgentSignatureUse.Replayed;
             }
@@ -85,6 +114,14 @@ public sealed class AgentSignatureReplayGuard
             {
                 AbsoluteExpirationRelativeToNow = (window > TimeSpan.Zero ? window : TimeSpan.FromMinutes(10)) + _margin,
             }, cancellationToken);
+
+            if (!string.IsNullOrEmpty(idempotencyKey) && retryWindow < window)
+            {
+                await _cache.SetStringAsync(key + RetrySuffix, idempotencyKey, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = (retryWindow > TimeSpan.Zero ? retryWindow : TimeSpan.Zero) + _margin,
+                }, cancellationToken);
+            }
 
             return AgentSignatureUse.Accepted;
         }

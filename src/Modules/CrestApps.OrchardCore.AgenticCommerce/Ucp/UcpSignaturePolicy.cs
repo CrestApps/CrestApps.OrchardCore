@@ -26,11 +26,40 @@ public static class UcpSignaturePolicy
     public static readonly TimeSpan MaxClockSkew = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// How long an accepted signature is remembered, so it isn't accepted twice.
+    /// How long an accepted signature is remembered at least, so it isn't accepted twice, and how long after its first use
+    /// the same idempotent request may be sent again with it. A signature that is valid longer is remembered until it
+    /// expires (<see cref="GetMemoryWindow"/>).
     /// </summary>
     public static readonly TimeSpan ReplayWindow = TimeSpan.FromMinutes(10);
 
     private static readonly string[] _requiredComponents = ["@method", "@authority", "@path"];
+
+    /// <summary>
+    /// Returns how long an accepted signature must be remembered: until it can't be valid any more. One with a
+    /// <c>created</c> time is valid for at most <see cref="MaxClockSkew"/> either side of now, inside
+    /// <see cref="ReplayWindow"/>; one without is valid until its <c>expires</c> time, at most
+    /// <see cref="MaxWriteSignatureLifetime"/> away.
+    /// </summary>
+    /// <param name="verification">The verified, accepted signature.</param>
+    /// <param name="now">The store's clock.</param>
+    public static TimeSpan GetMemoryWindow(HttpSignatureVerification verification, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+
+        if (verification.Created is not null || verification.Expires is not { } expires)
+        {
+            return ReplayWindow;
+        }
+
+        var left = expires - now;
+
+        if (left > MaxWriteSignatureLifetime)
+        {
+            left = MaxWriteSignatureLifetime;
+        }
+
+        return left > ReplayWindow ? left : ReplayWindow;
+    }
 
     /// <summary>
     /// Returns why a verified signature isn't accepted, or <see langword="null"/>.

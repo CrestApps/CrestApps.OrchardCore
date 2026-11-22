@@ -263,11 +263,14 @@ public sealed class UcpRequestFilter : IEndpointFilter
                 return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", policyError);
             }
 
-            // The key lets the same signature through again only where the idempotency layer answers it with its first result.
+            // The key lets the same signature through again only where the idempotency layer answers it with its first result,
+            // and only for a retry soon after: that layer keeps no failed answer, so a copy sent hours later would run again.
+            // The signature itself is remembered for as long as it could be valid.
             var use = await httpContext.RequestServices.GetRequiredService<AgentSignatureReplayGuard>().UseAsync(
                 $"{platform?.ItemId}|{verification.KeyId}",
                 System.Text.Encoding.UTF8.GetBytes(verification.SignatureBase),
                 idempotent ? idempotencyKey : null,
+                UcpSignaturePolicy.GetMemoryWindow(verification, now),
                 UcpSignaturePolicy.ReplayWindow,
                 httpContext.RequestAborted);
 

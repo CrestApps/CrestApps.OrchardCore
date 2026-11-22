@@ -283,6 +283,39 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
         Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(later));
     }
 
+    /// <summary>
+    /// Review 11 (C7): the guard remembered a signature for ten minutes, though one without created can be valid for 24
+    /// hours, and let the same idempotent request through again whenever it came. The idempotency layer keeps only a
+    /// final answer, so a captured write whose first attempt was answered with an error (here the 422 a request gets past
+    /// its signature to) ran again when it was sent hours later. The cache expires entries by the test clock.
+    /// </summary>
+    [Theory]
+    [InlineData(3)]
+    [InlineData(20)]
+    public async Task UcpFilter_ASignedWriteWhoseFirstAttemptFailed_IsRefused_WhenSentAgainHoursLater(int hoursLater)
+    {
+        // Arrange
+        _cache = new ClockCache(() => _clockNow);
+
+        var (input, signature) = SignUcp(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", created: false, expiresIn: TimeSpan.FromHours(23));
+
+        var first = await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
+
+        _clockNow = _now.AddMinutes(2);
+
+        var retried = await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
+
+        _clockNow = _now.AddHours(hoursLater);
+
+        // Act
+        var replayed = await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
+
+        // Assert: a retry right after the failure still gets past the signature; the copy sent hours later doesn't.
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, StatusCode(first));
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, StatusCode(retried));
+        Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(replayed));
+    }
+
     [Fact]
     public async Task UcpFilter_AnIdempotencyKeyOnAnEndpointWithoutTheIdempotencyLayer_DoesNotExemptAReplay()
     {
@@ -533,6 +566,51 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
 
     private static int? StatusCode(object result)
         => Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode;
+
+    // A distributed cache whose entries expire by the test's clock rather than the machine's.
+    private sealed class ClockCache : IDistributedCache
+    {
+        private readonly Dictionary<string, (byte[] Value, DateTime? Expires)> _entries = new(StringComparer.Ordinal);
+        private readonly Func<DateTime> _now;
+
+        public ClockCache(Func<DateTime> now)
+        {
+            _now = now;
+        }
+
+        public byte[] Get(string key)
+            => _entries.TryGetValue(key, out var entry) && (entry.Expires is null || entry.Expires > _now()) ? entry.Value : null;
+
+        public Task<byte[]> GetAsync(string key, CancellationToken token = default)
+            => Task.FromResult(Get(key));
+
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
+            => _entries[key] = (value, options.AbsoluteExpirationRelativeToNow is { } relative ? _now() + relative : options.AbsoluteExpiration?.UtcDateTime);
+
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
+        {
+            Set(key, value, options);
+
+            return Task.CompletedTask;
+        }
+
+        public void Refresh(string key)
+        {
+        }
+
+        public Task RefreshAsync(string key, CancellationToken token = default)
+            => Task.CompletedTask;
+
+        public void Remove(string key)
+            => _entries.Remove(key);
+
+        public Task RemoveAsync(string key, CancellationToken token = default)
+        {
+            Remove(key);
+
+            return Task.CompletedTask;
+        }
+    }
 
     private static string ErrorCode(JsonObject response)
         => response["error"]?["data"]?["code"]?.GetValue<string>();
