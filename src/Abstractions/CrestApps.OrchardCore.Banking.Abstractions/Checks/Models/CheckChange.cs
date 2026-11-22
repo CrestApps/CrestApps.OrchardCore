@@ -39,4 +39,16 @@ public sealed class CheckChange
     /// Gets or sets why.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date the check was voided, for <see cref="CheckChangeKind.Voided"/> and
+    /// <see cref="CheckChangeKind.Spoiled"/>: the date a module that booked the payment reverses it on.
+    /// </summary>
+    public DateOnly? VoidedOn { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date the bank paid the check, for <see cref="CheckChangeKind.Cleared"/>, or the date it was
+    /// recorded as paid before, for <see cref="CheckChangeKind.Uncleared"/>.
+    /// </summary>
+    public DateOnly? ClearedOn { get; set; }
 }

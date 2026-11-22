@@ -44,7 +44,8 @@ internal sealed class ChecksWorkflowObserver : ICheckObserver
             CheckChangeKind.Issued => [nameof(CheckIssuedEvent)],
             CheckChangeKind.Printed or CheckChangeKind.Reprinted => [nameof(CheckPrintedEvent)],
             CheckChangeKind.Cleared => [nameof(CheckClearedEvent)],
-            CheckChangeKind.Voided => [nameof(CheckVoidedEvent)],
+            CheckChangeKind.Voided or CheckChangeKind.Spoiled => [nameof(CheckVoidedEvent)],
+            CheckChangeKind.Uncleared => [nameof(CheckUnclearedEvent)],
             CheckChangeKind.StopPayment => [nameof(CheckStopPaymentEvent)],
             CheckChangeKind.Reissued => [nameof(CheckReissuedEvent)],
             CheckChangeKind.Stale => [nameof(CheckStaleEvent)],
@@ -71,6 +72,8 @@ internal sealed class ChecksWorkflowObserver : ICheckObserver
             ["ReplacedById"] = change.ReplacedBy?.ItemId,
             ["Reason"] = change.Reason,
             ["Actor"] = change.Actor,
+            ["VoidedOn"] = change.VoidedOn?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["ClearedOn"] = change.ClearedOn?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         };
     }
 }

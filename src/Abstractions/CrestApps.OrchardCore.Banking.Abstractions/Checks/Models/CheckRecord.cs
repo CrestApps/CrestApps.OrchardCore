@@ -23,9 +23,16 @@ public sealed class CheckRecord : CatalogItem, IModifiedUtcAwareModel
     public string BankAccountName { get; set; }
 
     /// <summary>
-    /// Gets or sets the check number, from the bank account's number series.
+    /// Gets or sets the check number: from the bank account's number series, typed for a check written by hand, or
+    /// given by the print run for a check printed on pre-printed stock. It is 0 while the check is
+    /// <see cref="CheckStatus.Queued"/>.
     /// </summary>
     public long Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the check got, or gets, its number.
+    /// </summary>
+    public CheckNumbering Numbering { get; set; }
 
     /// <summary>
     /// Gets or sets who is paid, when the payee is a party the site knows.
@@ -109,9 +116,22 @@ public sealed class CheckRecord : CatalogItem, IModifiedUtcAwareModel
     public string StatusReason { get; set; }
 
     /// <summary>
+    /// Gets or sets the date the check was voided, in the business's calendar: a module that booked the payment
+    /// reverses it on this date. Empty for a check voided before this date was kept.
+    /// </summary>
+    public DateOnly? VoidedOn { get; set; }
+
+    /// <summary>
     /// Gets or sets the date the bank paid the check.
     /// </summary>
     public DateOnly? ClearedOn { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status the check had when it cleared, which <see cref="Services.ICheckService.UnclearAsync"/>
+    /// returns it to; <see langword="null"/> for a check that has not cleared, or that cleared before this was kept
+    /// (it returns to <see cref="CheckStatus.Printed"/>).
+    /// </summary>
+    public CheckStatus? ClearedFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the check that replaced this one.
@@ -127,6 +147,18 @@ public sealed class CheckRecord : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets whether the check was imported from another system: it is history and is never printed.
     /// </summary>
     public bool IsHistorical { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the record is a sheet of pre-printed stock that misprinted in a print run: it is voided,
+    /// keeps the sheet's number so the number is never used again, and pays nothing (it has no
+    /// <see cref="SourceId"/>).
+    /// </summary>
+    public bool IsSpoiled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the check a spoiled sheet was printed for, which waits to print again.
+    /// </summary>
+    public string SpoiledForId { get; set; }
 
     /// <summary>
     /// Gets or sets when the check was last changed.
