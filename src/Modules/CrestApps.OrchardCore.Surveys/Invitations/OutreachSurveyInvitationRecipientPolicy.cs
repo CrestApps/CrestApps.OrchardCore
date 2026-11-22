@@ -30,7 +30,7 @@ internal sealed class OutreachSurveyInvitationRecipientPolicy : ISurveyInvitatio
     }
 
     /// <inheritdoc />
-    public async Task<bool> HasOptedOutAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken = default)
+    public async Task<bool?> HasOptedOutAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(survey);
         ArgumentNullException.ThrowIfNull(invitation);
@@ -60,12 +60,20 @@ internal sealed class OutreachSurveyInvitationRecipientPolicy : ISurveyInvitatio
             DisplayName = invitation.DisplayName,
         };
 
-        foreach (var policy in _policies)
+        try
         {
-            if (!string.IsNullOrEmpty(await policy.GetSkipReasonAsync(run, recipient, cancellationToken)))
+            foreach (var policy in _policies)
             {
-                return true;
+                if (!string.IsNullOrEmpty(await policy.GetSkipReasonAsync(run, recipient, cancellationToken)))
+                {
+                    return true;
+                }
             }
+        }
+        catch (SurveyInvitationOptOutUnavailableException)
+        {
+            // The unsubscribe list can't be read, so nobody can tell; the invitation waits, unchanged.
+            return null;
         }
 
         return false;

@@ -8,7 +8,13 @@ namespace CrestApps.OrchardCore.Surveys.Core.Results;
 public static class SurveyNumberSummary
 {
     /// <summary>
-    /// Summarizes values: count, average, lowest, highest, median and the count of each value.
+    /// The most distinct values kept in the distribution, the lowest first, as the totals of the whole survey keep.
+    /// </summary>
+    public const int DistributionLimit = 200;
+
+    /// <summary>
+    /// Summarizes values: count, average, lowest, highest, median and the count of each value (the lowest
+    /// <see cref="DistributionLimit"/> distinct values only).
     /// </summary>
     /// <param name="values">The values.</param>
     /// <returns>The statistics.</returns>
@@ -30,7 +36,8 @@ public static class SurveyNumberSummary
         statistics.Max = sorted[sorted.Count - 1];
         statistics.Median = Median(sorted);
 
-        foreach (var group in sorted.GroupBy(value => value))
+        // A free number question can have a different value in every answer; only the first values are kept.
+        foreach (var group in sorted.GroupBy(value => value).Take(DistributionLimit))
         {
             statistics.Distribution[group.Key] = group.Count();
         }

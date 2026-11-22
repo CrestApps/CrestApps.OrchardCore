@@ -5,13 +5,16 @@ using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 namespace CrestApps.OrchardCore.Tests.Surveys.Authoring;
 
 /// <summary>
-/// A scored survey can't let respondents reopen a response after its review showed them the key.
+/// A scored survey can't let respondents reopen a response after its review showed them the key, or the score, which
+/// gives the key away one changed answer at a time (R3-M12).
 /// </summary>
 public sealed class SurveyDefinitionValidatorReviewTests
 {
     [Theory]
     [InlineData(ReviewShows.RightAnswers, ReviewShows.None)]
     [InlineData(ReviewShows.None, ReviewShows.Feedback)]
+    [InlineData(ReviewShows.Score, ReviewShows.None)]
+    [InlineData(ReviewShows.None, ReviewShows.Score | ReviewShows.Responses)]
     public async Task ValidateAsync_ScoredEditAfterSubmitWithTheKeyBeforeClose_IsAnError(ReviewShows immediatelyAfter, ReviewShows laterWhileOpen)
     {
         // Arrange
@@ -31,9 +34,25 @@ public sealed class SurveyDefinitionValidatorReviewTests
     {
         // Arrange
         var definition = Scored();
+        definition.Review.ImmediatelyAfter = ReviewShows.Responses;
+        definition.Review.LaterWhileOpen = ReviewShows.Responses;
+        definition.Review.AfterClose = ReviewShows.All;
+
+        // Act
+        var codes = await CodesAsync(definition);
+
+        // Assert
+        Assert.DoesNotContain("edit-after-review", codes);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ScoredEditAfterSubmitWithTheScoreHiddenFromRespondents_IsAllowed()
+    {
+        // Arrange: the review would show the score, but respondents never see it.
+        var definition = Scored();
+        definition.Scoring.ShowScoreToRespondent = false;
         definition.Review.ImmediatelyAfter = ReviewShows.Score | ReviewShows.Responses;
         definition.Review.LaterWhileOpen = ReviewShows.Score | ReviewShows.Responses;
-        definition.Review.AfterClose = ReviewShows.All;
 
         // Act
         var codes = await CodesAsync(definition);

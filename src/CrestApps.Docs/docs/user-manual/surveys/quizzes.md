@@ -35,6 +35,8 @@ A long text or file upload is scored by a person. Write **Guidance for graders**
 
 In **What respondents see**, choose what shows **While answering**, **Right after**, **Later, while open** and **After the survey closes**: their **Score**, **Their answers**, **Right answers**, **Answer feedback** and **General feedback**. A response that waits for a grader shows no score until it is graded.
 
+If respondents may change a finished response (**Navigation**), they can't see their score, the right answers or answer feedback **Right after** or **Later, while open**: they could try one answer after another until the score goes up. Show those **After the survey closes**, or turn off changing a finished response.
+
 ## Time and attempts
 
 - **Time limit**: **Time to finish** in minutes, and **Submit unfinished responses when time runs out**. A page can also have its own **Time on the page**.

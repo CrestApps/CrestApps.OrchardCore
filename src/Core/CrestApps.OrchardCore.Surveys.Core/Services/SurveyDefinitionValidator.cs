@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Localization;
@@ -76,6 +77,16 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
         return context;
     }
 
+    /// <summary>
+    /// Gets whether a definition has a matrix row id longer than the answer index keeps, which would merge with another
+    /// row that shares its first characters. Publishing refuses it; an import of a published version checks it here.
+    /// </summary>
+    /// <param name="definition">The definition, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when a row id is too long.</returns>
+    public static bool HasTooLongRowId(SurveyDefinition definition)
+        => definition is not null
+            && SurveyDefinitions.Questions(definition).Any(entry => entry.Question.Rows.Any(row => row.Id?.Length > SurveyAnswerIndex.KeyLength));
+
     private void CheckIdsAndNames(SurveyDefinitionValidationContext context, DefinitionMap map)
     {
         var definition = context.Definition;
@@ -130,6 +141,12 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
                     if (string.IsNullOrWhiteSpace(row.Id) || !rowIds.Add(row.Id))
                     {
                         context.AddError("duplicate-row-id", S["The question {0} has a row without an id or with a repeated id.", Label(question)], question.Id, page.Id);
+                    }
+                    else if (row.Id.Length > SurveyAnswerIndex.KeyLength)
+                    {
+                        // The answer index keeps the first characters of a row id only, so two longer ids that share them
+                        // would merge into one in results and filters.
+                        context.AddError("long-row-id", S["The question {0} has a row id longer than {1} characters.", Label(question), SurveyAnswerIndex.KeyLength], question.Id, page.Id);
                     }
                 }
             }
@@ -412,15 +429,23 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
         }
 
         // A respondent who can change a finished response must not see the key first: they could read the right
-        // answers, reopen and submit again for a perfect score. After the survey closes no response can be reopened.
-        const ReviewShows key = ReviewShows.RightAnswers | ReviewShows.Feedback;
+        // answers, reopen and submit again for a perfect score. The score gives the key away too, one answer at a time:
+        // reopens are unlimited, so changing one answer and resubmitting tells whether it was right. After the survey
+        // closes no response can be reopened.
+        var key = ReviewShows.RightAnswers | ReviewShows.Feedback;
+
+        if (definition.Scoring.ShowScoreToRespondent)
+        {
+            key |= ReviewShows.Score;
+        }
+
         var review = definition.Review ?? new SurveyReviewSettings();
 
         if (definition.Scoring.Enabled
             && definition.Navigation?.AllowEditAfterSubmit == true
             && ((review.ImmediatelyAfter | review.LaterWhileOpen) & key) != 0)
         {
-            context.AddError("edit-after-review", S["Respondents can't change a finished response while the review shows the right answers or feedback before the survey closes. Turn off one of the two."]);
+            context.AddError("edit-after-review", S["Respondents can't change a finished response while the review shows the score, the right answers or feedback before the survey closes. Turn off one of the two."]);
         }
     }
 

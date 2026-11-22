@@ -73,6 +73,12 @@ public sealed class SurveyResponseQuery
     public string Search { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the page is read oldest first, by completion and then start, instead of newest first by
+    /// start. Work queues use it so the oldest waiting response comes first.
+    /// </summary>
+    public bool OldestFirst { get; set; }
+
+    /// <summary>
     /// Gets or sets how many to skip.
     /// </summary>
     public int Skip { get; set; }

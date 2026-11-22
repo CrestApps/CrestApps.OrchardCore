@@ -42,6 +42,8 @@ Select **Add kiosk** for a tablet at a front desk. After each response the endin
 
 One invite reaches at most 5,000 people. For a bigger audience, invite the rest in another batch.
 
+The site sends a limited number of invitation and reminder e-mails a day, set in **Settings > Surveys > Invitation e-mails a day** (2,000 unless you change it). The day starts at midnight in the site's time zone. Invitations over the limit wait and go out by themselves on a later day; nothing is lost. Invitations to users of the site go to their notifications and don't count.
+
 Each person gets a personal link. **Settings** sets the e-mail **Subject** and **Message**, **Links expire after (days)**, the **Number of reminders** and the **Days between reminders**. **Send reminders now** reminds everyone who has not completed the survey. The list shows each invitation's status.
 
 Opening a personal link marks the invitation **Opened**, but the survey starts only when the person continues (it starts by itself in most browsers, and a **Start** button shows otherwise). So an e-mail scanner that checks the link uses nothing up, and the person can come back to an unfinished response from the link, even on another device (except on anonymous surveys).

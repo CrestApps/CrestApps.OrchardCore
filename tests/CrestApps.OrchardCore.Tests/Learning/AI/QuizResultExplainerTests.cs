@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Learning.AI.Services;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 
 namespace CrestApps.OrchardCore.Tests.Learning.AI;
 
@@ -41,6 +42,27 @@ public sealed class QuizResultExplainerTests
         Assert.Equal(8m, explanation.Score);
         Assert.Equal(80m, explanation.Percent);
         Assert.True(explanation.Passed);
+    }
+
+    [Theory]
+    [InlineData(ReviewShows.Responses | ReviewShows.Score, false)]
+    [InlineData(ReviewShows.Responses | ReviewShows.Score | ReviewShows.Feedback, true)]
+    public void Describe_GradersWords_FollowTheFeedbackSetting(ReviewShows shows, bool expected)
+    {
+        // Arrange: a graded answer with a grader's comment, and the grader's overall feedback.
+        var definition = new SurveyDefinition();
+        definition.Pages.Add(new SurveyPage { Id = "p1", Questions = [new SurveyQuestion { Id = "q1", Name = "q1", Title = "Q1", ControlType = AuthoringSurveyHarness.TextControl }] });
+        var response = Response();
+        response.Feedback = "Overall: revise chapter 2.";
+        response.Answers["q1"] = new SurveyAnswer { Values = ["my answer"], ManualScore = 1m, MaxPoints = 2m, GraderComment = "The key is X." };
+
+        // Act
+        var explanation = QuizResultExplainer.Describe(response, definition, "Quiz", shows, AuthoringSurveyHarness.CreateRegistry());
+
+        // Assert
+        var question = Assert.Single(explanation.Questions);
+        Assert.Equal(expected, explanation.Feedback is not null);
+        Assert.Equal(expected, question.Feedback?.Contains("The key is X.", StringComparison.Ordinal) == true);
     }
 
     private static SurveyResponse Response()

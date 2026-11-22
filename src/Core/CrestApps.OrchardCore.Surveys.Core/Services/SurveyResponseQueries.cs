@@ -118,7 +118,10 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
         }
 
         var count = await q.CountAsync(cancellationToken);
-        var items = await q.OrderByDescending(index => index.StartedUtc).ThenByDescending(index => index.Id).Skip(skip).Take(take).ListAsync(cancellationToken);
+        var ordered = query.OldestFirst
+            ? q.OrderBy(index => index.CompletedUtc).ThenBy(index => index.StartedUtc).ThenBy(index => index.Id)
+            : q.OrderByDescending(index => index.StartedUtc).ThenByDescending(index => index.Id);
+        var items = await ordered.Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, items.ToList());
     }

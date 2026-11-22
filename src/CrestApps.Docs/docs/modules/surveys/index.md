@@ -106,7 +106,7 @@ Checks on one survey go through `ISurveyAuthorizationService`: the global permis
 
 ## Site settings
 
-**Settings > Surveys** (permission `ManageSurveySettings`) sets the defaults of new surveys (retention days, idle hours before an unfinished response is abandoned, minimum group size), the smallest minimum group size any anonymous survey may use (`MinimumGroupSizeFloor`, 5 by default), the largest upload in MB, the hosts an ending may redirect to besides the site, and the most invitation and reminder e-mails the site sends a day (`InvitationEmailsPerDay`, 2,000 by default; invitations over it go out on a later day). The settings travel in Orchard Core's `Settings` recipe step under `SurveySettings`.
+**Settings > Surveys** (permission `ManageSurveySettings`) sets the defaults of new surveys (retention days, idle hours before an unfinished response is abandoned, minimum group size), the smallest minimum group size any anonymous survey may use (`MinimumGroupSizeFloor`, 5 by default), the largest upload in MB, the hosts an ending may redirect to besides the site, and the most invitation and reminder e-mails the site sends a day (`InvitationEmailsPerDay`, 2,000 by default, counted from midnight in the site's time zone; invitations over it are held back and the hourly reminder task sends them on a later day, and invitations to users, which go to their notifications, don't count; see [Invitations](./collecting.md#invitations)). The settings travel in Orchard Core's `Settings` recipe step under `SurveySettings`.
 
 ## Privacy and security
 

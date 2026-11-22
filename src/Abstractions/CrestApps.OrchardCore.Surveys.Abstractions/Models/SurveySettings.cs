@@ -47,8 +47,10 @@ public sealed class SurveySettings
     public int MinimumGroupSizeFloor { get; set; } = DefaultMinimumGroupSizeFloor;
 
     /// <summary>
-    /// Gets or sets the most survey invitation and reminder e-mails the site sends in a day (UTC), across all surveys.
-    /// Invitations over the limit stay pending and go out on a later day. At least 1.
+    /// Gets or sets the most survey invitation and reminder e-mails the site sends in a day (from midnight in the site's
+    /// time zone), across all surveys. Invitations to users of the site go to their notifications and don't count. An
+    /// invitation over the limit is held back and the hourly reminder task sends it on a later day; a reminder over it
+    /// stays due. At least 1.
     /// </summary>
     public int InvitationEmailsPerDay { get; set; } = DefaultInvitationEmailsPerDay;
 }

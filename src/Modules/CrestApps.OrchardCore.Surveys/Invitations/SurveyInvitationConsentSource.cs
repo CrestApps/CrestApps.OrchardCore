@@ -30,16 +30,25 @@ internal sealed class SurveyInvitationConsentSource : IConsentSource
         => SourceName;
 
     /// <inheritdoc />
-    public Task<bool> HasOptedOutAsync(ConsentQuery query, CancellationToken cancellationToken = default)
+    /// <exception cref="SurveyInvitationOptOutUnavailableException">The opt-out list's key can't be read, so the source
+    /// can't tell. The consent contract has no "unknown" answer, so the source fails the question rather than saying the
+    /// person opted out (which would block every e-mail on the site) or did not (which could mail someone who
+    /// unsubscribed); the send that asked fails and is retried later.</exception>
+    public async Task<bool> HasOptedOutAsync(ConsentQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
 
         if (!string.Equals(query.Channel, ConsentChannels.Email, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(query.Address))
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        return _store.ContainsAsync(query.Address, cancellationToken);
+        return await _store.GetStateAsync(query.Address, cancellationToken) switch
+        {
+            SurveyInvitationOptOutState.OptedOut => true,
+            SurveyInvitationOptOutState.Unknown => throw new SurveyInvitationOptOutUnavailableException(),
+            _ => false,
+        };
     }
 
     /// <inheritdoc />

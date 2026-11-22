@@ -63,7 +63,7 @@
             <label asp-for="InvitationEmailsPerDay" class="ocat-label">@T["Invitation e-mails a day"]</label>
             <div class="ocat-end">
                 <input asp-for="InvitationEmailsPerDay" type="number" min="1" class="form-control" />
-                <span class="hint">@T["The most survey invitation and reminder e-mails the site sends in a day, across all surveys. Invitations over the limit go out on a later day."]</span>
+                <span class="hint">@T["The most survey invitation and reminder e-mails the site sends in a day, counted from midnight in the site's time zone, across all surveys. Invitations over the limit are sent automatically on a later day. Invitations to users of the site go to their notifications and don't count."]</span>
             </div>
         </div>
     </div>

@@ -24,6 +24,6 @@ internal sealed class SurveySettingsSchema : SiteSettingsSchemaBase
                 (nameof(SurveySettings.AllowedRedirectHosts), new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The hosts endings may redirect to besides this site.")),
                 (nameof(SurveySettings.DefaultMinimumGroupSize), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("The minimum group size of new anonymous surveys; never below the floor.")),
                 (nameof(SurveySettings.MinimumGroupSizeFloor), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(1000).Description("The smallest minimum group size any anonymous survey may use; a survey may ask for more, never less. Defaults to 5.")),
-                (nameof(SurveySettings.InvitationEmailsPerDay), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("The most survey invitation and reminder e-mails the site sends a day; invitations over it go out on a later day. Defaults to 2000.")))
+                (nameof(SurveySettings.InvitationEmailsPerDay), new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("The most survey invitation and reminder e-mails the site sends a day, counted from midnight in the site's time zone; invitations over it are held back and the hourly reminder task sends them on a later day. Notifications to users don't count. Defaults to 2000.")))
             .AdditionalProperties(true);
 }
