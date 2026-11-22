@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -5,6 +6,7 @@ using CrestApps.OrchardCore.Throttling;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 
@@ -13,11 +15,17 @@ namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 /// network or a signed-in customer whose declines reached the limit, a checkout that has begun too many payments, and,
 /// during a store-wide run of declines, guests as the store chose. Always on: it needs no rate limit feature.
 /// </summary>
+/// <remarks>
+/// The store's choice during a run of declines applies to signed-in customers who have never completed a checkout here
+/// as well as to guests: an account costs a card tester nothing, so signing in proves nothing on its own, while a
+/// completed purchase does. Customers who have bought before pay as usual.
+/// </remarks>
 public sealed class PaymentVelocityGate : ICheckoutPaymentGate
 {
     private readonly IAttemptLimiter _limiter;
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly ISiteService _siteService;
+    private readonly ISession _session;
 
     internal readonly IStringLocalizer S;
 
@@ -28,11 +36,13 @@ public sealed class PaymentVelocityGate : ICheckoutPaymentGate
         IAttemptLimiter limiter,
         ICheckoutPaymentProviderResolver providerResolver,
         ISiteService siteService,
+        ISession session,
         IStringLocalizer<PaymentVelocityGate> stringLocalizer)
     {
         _limiter = limiter;
         _providerResolver = providerResolver;
         _siteService = siteService;
+        _session = session;
         S = stringLocalizer;
     }
 
@@ -73,15 +83,29 @@ public sealed class PaymentVelocityGate : ICheckoutPaymentGate
             return;
         }
 
-        // A store-wide run of declines is testers rotating networks, so no single network is stopped. Guests are who the
-        // store's choice applies to: a signed-in customer has a limit of their own.
-        if (!string.IsNullOrEmpty(ownerId) ||
-            (await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.PaymentDeclineStore, PaymentDeclineRecorder.StoreKey, cancellationToken)).Allowed)
+        // A store-wide run of declines is testers rotating networks, so no single network is stopped. The store's choice
+        // applies to guests and to accounts that never completed a checkout, which a tester can open for free.
+        if ((await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.PaymentDeclineStore, PaymentDeclineRecorder.StoreKey, cancellationToken)).Allowed)
         {
             return;
         }
 
         var settings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<PaymentProtectionSettings>();
+
+        if (settings.OnDeclineSpike == DeclineSpikeAction.Notify)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(ownerId))
+        {
+            if (!await HasCompletedCheckoutAsync(ownerId, cancellationToken))
+            {
+                context.Refuse(S["Card payments are paused for new accounts for a little while. Please use another way to pay, or try again later."]);
+            }
+
+            return;
+        }
 
         switch (settings.OnDeclineSpike)
         {
@@ -94,4 +118,8 @@ public sealed class PaymentVelocityGate : ICheckoutPaymentGate
                 break;
         }
     }
+
+    private async Task<bool> HasCompletedCheckoutAsync(string ownerId, CancellationToken cancellationToken)
+        => await _session.QueryIndex<CheckoutSessionIndex>(index => index.OwnerId == ownerId && index.Status == CheckoutSessionStatus.Completed)
+            .FirstOrDefaultAsync(cancellationToken) is not null;
 }

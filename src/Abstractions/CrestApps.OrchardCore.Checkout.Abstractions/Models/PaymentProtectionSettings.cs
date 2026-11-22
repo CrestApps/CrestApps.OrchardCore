@@ -23,12 +23,14 @@ public enum DeclineSpikeAction
     Notify,
 
     /// <summary>
-    /// Guests must sign in to pay by card; signed-in customers pay as usual.
+    /// Guests must sign in to pay by card. Signed-in customers who have completed a checkout before pay as usual; newer
+    /// accounts, which cost a card tester nothing, can't pay by card for now.
     /// </summary>
     RequireSignIn,
 
     /// <summary>
-    /// Guests can't pay by card for now and are asked to use another way to pay; signed-in customers pay as usual.
+    /// Guests, and signed-in customers who have never completed a checkout, can't pay by card for now and are asked to use
+    /// another way to pay; customers who have bought before pay as usual.
     /// </summary>
     PauseGuestCards,
 }

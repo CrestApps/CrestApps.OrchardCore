@@ -20,7 +20,12 @@ using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Xunit;
+using YesSql;
+using YesSql.Provider.Sqlite;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
 
@@ -114,13 +119,38 @@ public sealed class PaymentVelocityGateTests
         Assert.False(context.IsRefused);
     }
 
+    /// <summary>
+    /// Review 11 (M-decline-spike-signed-in): the store's action never applied to a signed-in buyer, and an account costs a
+    /// card tester nothing. It now applies to accounts that never completed a checkout; a customer who bought before pays
+    /// as usual. The purchase history is read from a real YesSql store.
+    /// </summary>
     [Theory]
     [InlineData(DeclineSpikeAction.Notify, false, false)]
-    [InlineData(DeclineSpikeAction.RequireSignIn, true, false)]
-    [InlineData(DeclineSpikeAction.PauseGuestCards, true, false)]
-    public async Task AStoreWideRunOfDeclines_AppliesTheStoresAction(DeclineSpikeAction action, bool guestRefused, bool customerRefused)
+    [InlineData(DeclineSpikeAction.RequireSignIn, true, true)]
+    [InlineData(DeclineSpikeAction.PauseGuestCards, true, true)]
+    public async Task AStoreWideRunOfDeclines_AppliesTheStoresAction(DeclineSpikeAction action, bool guestRefused, bool newAccountRefused)
     {
-        var (gate, recorder) = Create(action);
+        var path = Path.Combine(Path.GetTempPath(), $"crestapps-velocity-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(path);
+
+        try
+        {
+            await using var session = store.CreateSession();
+
+            await session.SaveAsync(new CheckoutSession { SessionId = "bought-before", OwnerId = "customer-3", Status = CheckoutSessionStatus.Completed, CreatedUtc = DateTime.UtcNow, ModifiedUtc = DateTime.UtcNow }, cancellationToken: TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            await AssertTheStoresActionAsync(Create(action, session: session), guestRefused, newAccountRefused);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, path);
+        }
+    }
+
+    private async Task AssertTheStoresActionAsync((PaymentVelocityGate Gate, PaymentDeclineRecorder Recorder) created, bool guestRefused, bool newAccountRefused)
+    {
+        var (gate, recorder) = created;
 
         // Thirty declines from thirty networks: no network is blocked, but the store is.
         for (var i = 0; i < 30; i++)
@@ -131,13 +161,31 @@ public sealed class PaymentVelocityGateTests
         Assert.Single(_issues, issue => issue.Kind == PaymentIssueKinds.DeclineSpike);
 
         var guest = Context(Session("guest", network: "198.51.100.1"), CardProvider);
-        var customer = Context(Session("customer", network: "198.51.100.2", ownerId: "customer-2"), CardProvider);
+        var newAccount = Context(Session("customer", network: "198.51.100.2", ownerId: "customer-2"), CardProvider);
+        var returning = Context(Session("returning", network: "198.51.100.3", ownerId: "customer-3"), CardProvider);
 
         await gate.BeginningAsync(guest, TestContext.Current.CancellationToken);
-        await gate.BeginningAsync(customer, TestContext.Current.CancellationToken);
+        await gate.BeginningAsync(newAccount, TestContext.Current.CancellationToken);
+        await gate.BeginningAsync(returning, TestContext.Current.CancellationToken);
 
         Assert.Equal(guestRefused, guest.IsRefused);
-        Assert.Equal(customerRefused, customer.IsRefused);
+        Assert.Equal(newAccountRefused, newAccount.IsRefused);
+        Assert.False(returning.IsRefused);
+    }
+
+    private static async Task<IStore> CreateStoreAsync(string databasePath)
+    {
+        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        store.RegisterIndexes([new CheckoutSessionIndexProvider()]);
+        await store.InitializeAsync(TestContext.Current.CancellationToken);
+
+        await using var session = store.CreateSession();
+        var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+        var migration = new CrestApps.OrchardCore.Checkout.Migrations.CheckoutMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) };
+        await migration.CreateAsync();
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+        return store;
     }
 
     /// <summary>
@@ -266,7 +314,7 @@ public sealed class PaymentVelocityGateTests
         Assert.False(PaymentDeclineRecorder.IsNewDecline(PaymentAttemptState.Pending, PaymentAttemptState.Succeeded));
     }
 
-    private (PaymentVelocityGate Gate, PaymentDeclineRecorder Recorder) Create(DeclineSpikeAction action = DeclineSpikeAction.Notify, IDistributedCache cache = null, IDistributedLock distributedLock = null)
+    private (PaymentVelocityGate Gate, PaymentDeclineRecorder Recorder) Create(DeclineSpikeAction action = DeclineSpikeAction.Notify, IDistributedCache cache = null, IDistributedLock distributedLock = null, global::YesSql.ISession session = null)
     {
         var options = new AttemptLimitOptions();
         options.AddPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, 30, TimeSpan.FromMinutes(10));
@@ -303,7 +351,7 @@ public sealed class PaymentVelocityGateTests
         var localizer = new Mock<IStringLocalizer<PaymentVelocityGate>>();
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
 
-        var gate = new PaymentVelocityGate(limiter, resolver.Object, siteService.Object, localizer.Object);
+        var gate = new PaymentVelocityGate(limiter, resolver.Object, siteService.Object, session ?? Mock.Of<global::YesSql.ISession>(), localizer.Object);
         var services = new ServiceCollection()
             .AddSingleton<IAttemptLimiter>(limiter)
             .AddSingleton(resolver.Object)

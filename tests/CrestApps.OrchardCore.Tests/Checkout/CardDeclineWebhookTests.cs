@@ -322,6 +322,7 @@ public sealed class CardDeclineWebhookTests
             .AddSingleton<ICheckoutSessionStore>(_sessions)
             .AddSingleton(distributedLock)
             .AddSingleton(siteService.Object)
+            .AddSingleton(Mock.Of<global::YesSql.ISession>())
             .AddSingleton<IStringLocalizer<PaymentVelocityGate>>(new PassThroughStringLocalizer<PaymentVelocityGate>())
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
             .AddSingleton<IPaymentDeclineRecorder>(provider => ActivatorUtilities.CreateInstance<PaymentDeclineRecorder>(provider))
