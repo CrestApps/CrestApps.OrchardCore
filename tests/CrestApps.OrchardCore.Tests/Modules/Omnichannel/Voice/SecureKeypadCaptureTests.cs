@@ -22,6 +22,8 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
 
 public sealed class SecureKeypadCaptureTests
 {
+    private const string CardDigits = "4111111111111111";
+
     private static readonly DateTime _start = new(2026, 10, 28, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly MemoryDistributedCache _cache = new(Options.Create(new MemoryDistributedCacheOptions()));
@@ -93,19 +95,170 @@ public sealed class SecureKeypadCaptureTests
         Assert.False(entry.Captured);
     }
 
+    /// <summary>
+    /// C1 (review 11): an entry nobody finished in time used to end as "not capturing", so the rest of a card number
+    /// typed after three minutes became the caller's turn.
+    /// </summary>
     [Fact]
-    public async Task Offer_ForgetsAnEntryNobodyFinished()
+    public async Task C1_AnEntryNotFinishedInTime_TimesOut_AndTheKeysThatFollowAreDropped()
     {
         // Arrange
         var store = CreateNode();
-        await store.StartAsync("act-old", SecureCaptureField.NationalId, TestContext.Current.CancellationToken);
+        await store.StartAsync("act-old", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
+        await store.OfferAsync("act-old", "4111", TestContext.Current.CancellationToken);
+        _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
+
+        // Act: the rest of the card, one key per webhook.
+        var entries = await OfferOneByOneAsync(store, "act-old", "111111111111");
+
+        // Assert
+        Assert.Equal(SecureKeypadEntryState.TimedOut, entries[0].State);
+        Assert.Equal(SecureCaptureField.CreditCardNumber, entries[0].Field);
+        Assert.All(entries, entry => Assert.True(entry.Captured));
+        Assert.All(entries, entry => Assert.Null(entry.Value));
+        Assert.Single(entries, entry => entry.Ended);
+    }
+
+    /// <summary>
+    /// C1 (review 11): the distributed cache dropped the entry (eviction, or the cache's own expiry), and the window on
+    /// the activity is all that is left.
+    /// </summary>
+    [Fact]
+    public async Task C1_AnEvictedEntry_TimesOutThroughTheWindow_AndTheKeysAreDropped()
+    {
+        // Arrange
+        var store = CreateNode();
+        await store.StartAsync("act-evicted", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
+        await _cache.RemoveAsync("Default:SecureKeypadCapture:act-evicted", TestContext.Current.CancellationToken);
+        _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(30);
+
+        // Act
+        var entries = await OfferOneByOneAsync(store, "act-evicted", CardDigits);
+
+        // Assert
+        Assert.Equal(SecureKeypadEntryState.TimedOut, entries[0].State);
+        Assert.All(entries, entry => Assert.True(entry.Captured));
+        Assert.True(ReadActivity("act-evicted").Has<SecureCaptureWindow>());
+    }
+
+    /// <summary>
+    /// C1 (review 11): the window was lost (a stale save wrote over it) while this node still holds the entry.
+    /// </summary>
+    [Fact]
+    public async Task C1_AnExpiredEntryWhoseWindowWasLost_StillTimesOut_AndKeepsTheKeypadPrivate()
+    {
+        // Arrange
+        var store = CreateNode();
+        await store.StartAsync("act-lost", SecureCaptureField.NationalId, TestContext.Current.CancellationToken);
+        _activities.Remove("act-lost");
         _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
 
         // Act
-        var entry = await store.OfferAsync("act-old", "1", TestContext.Current.CancellationToken);
+        var entries = await OfferOneByOneAsync(store, "act-lost", "123456789");
 
         // Assert
+        Assert.Equal(SecureKeypadEntryState.TimedOut, entries[0].State);
+        Assert.All(entries, entry => Assert.True(entry.Captured));
+    }
+
+    [Fact]
+    public async Task C1_KeysTypedAfterATimeOut_KeepTheKeypadPrivate_UntilTheCallerStops()
+    {
+        // Arrange
+        var store = CreateNode();
+        await store.StartAsync("act-slow", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
+        _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
+        await store.OfferAsync("act-slow", "4", TestContext.Current.CancellationToken);
+
+        // Act: a key every 50 seconds, for longer than the grace period.
+        var entries = new List<SecureKeypadEntry>();
+
+        for (var i = 0; i < 6; i++)
+        {
+            _now += TimeSpan.FromSeconds(50);
+            entries.Add(await store.OfferAsync("act-slow", "1", TestContext.Current.CancellationToken));
+        }
+
+        // Assert
+        Assert.All(entries, entry => Assert.Equal(SecureKeypadEntryState.Collecting, entry.State));
+    }
+
+    [Fact]
+    public async Task C1_KeysTypedAfterATimeOut_OnNodesWithTheirOwnCaches_KeepTheKeypadPrivate()
+    {
+        // Arrange: node A held the entry and saw it time out; the keys that follow land on node B, whose cache is its own.
+        var nodeA = CreateNode(cache: NewCache());
+        var nodeB = CreateNode(cache: NewCache());
+        await nodeA.StartAsync("act-split", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
+        _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
+        var timedOut = await nodeA.OfferAsync("act-split", "4", TestContext.Current.CancellationToken);
+        var entries = new List<SecureKeypadEntry>();
+
+        for (var i = 0; i < 3; i++)
+        {
+            _now += TimeSpan.FromSeconds(40);
+            entries.Add(await nodeB.OfferAsync("act-split", "1", TestContext.Current.CancellationToken));
+        }
+
+        // Act: node A's own record of the timeout is older than the grace period, but the caller never stopped.
+        _now += TimeSpan.FromSeconds(10);
+        entries.Add(await nodeA.OfferAsync("act-split", "1", TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(SecureKeypadEntryState.TimedOut, timedOut.State);
+        Assert.All(entries, entry => Assert.Equal(SecureKeypadEntryState.Collecting, entry.State));
+    }
+
+    [Fact]
+    public async Task C1_OnceTheCallerHasStoppedForTheGracePeriod_TheKeypadIsTheirsAgain()
+    {
+        // Arrange
+        var store = CreateNode();
+        await store.StartAsync("act-grace", SecureCaptureField.CardSecurityCode, TestContext.Current.CancellationToken);
+        _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
+        var timedOut = await store.OfferAsync("act-grace", "1", TestContext.Current.CancellationToken);
+        _now += SecureKeypadCaptures.Grace + TimeSpan.FromSeconds(1);
+
+        // Act
+        var entry = await store.OfferAsync("act-grace", "2", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(SecureKeypadEntryState.TimedOut, timedOut.State);
         Assert.False(entry.Captured);
+        Assert.False(ReadActivity("act-grace").Has<SecureCaptureWindow>());
+    }
+
+    [Fact]
+    public async Task C1_ANewEntryAfterATimeOut_CollectsAsUsual()
+    {
+        // Arrange
+        var store = CreateNode();
+        await store.StartAsync("act-again", SecureCaptureField.CardExpiry, TestContext.Current.CancellationToken);
+        _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
+        await store.OfferAsync("act-again", "1", TestContext.Current.CancellationToken);
+        await store.StartAsync("act-again", SecureCaptureField.CardExpiry, TestContext.Current.CancellationToken);
+
+        // Act
+        var entry = await store.OfferAsync("act-again", "1228", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(SecureKeypadEntryState.Completed, entry.State);
+        Assert.Equal("1228", entry.Value);
+        Assert.False(ReadActivity("act-again").Has<SecureCaptureWindow>());
+    }
+
+    [Fact]
+    public async Task C1_CompleteAsync_TellsTheAITheEntryTimedOut()
+    {
+        // Arrange
+        var entry = new SecureKeypadEntry(SecureKeypadEntryState.TimedOut, SecureCaptureField.CreditCardNumber, null);
+
+        // Act
+        var turn = await SecureKeypadEntries.CompleteAsync(new ServiceCollection().BuildServiceProvider(), "act-1", entry, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains("ran out", turn, StringComparison.Ordinal);
+        Assert.Contains("card number", turn, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -280,6 +433,18 @@ public sealed class SecureKeypadCaptureTests
         Assert.True(VoiceAgentConversationLoop.OffersSecureKeypad(withSink));
         Assert.False(VoiceAgentConversationLoop.OffersSecureKeypad(withoutSink));
         Assert.False(VoiceAgentConversationLoop.OffersSecureKeypad(null));
+    }
+
+    private static async Task<List<SecureKeypadEntry>> OfferOneByOneAsync(DistributedSecureKeypadCaptureStore store, string activityId, string keys)
+    {
+        var entries = new List<SecureKeypadEntry>();
+
+        foreach (var key in keys)
+        {
+            entries.Add(await store.OfferAsync(activityId, key.ToString(), TestContext.Current.CancellationToken));
+        }
+
+        return entries;
     }
 
     private static MemoryDistributedCache NewCache()

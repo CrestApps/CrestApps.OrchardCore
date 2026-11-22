@@ -23,7 +23,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 public interface ISecureKeypadCaptureStore
 {
     /// <summary>
-    /// Makes the caller's keypad private on a call until one entry is finished, cancelled or expired.
+    /// Makes the caller's keypad private on a call until one entry is finished, cancelled or timed out.
     /// </summary>
     /// <param name="activityId">The call's activity.</param>
     /// <param name="field">What the caller is asked to type.</param>
@@ -49,7 +49,7 @@ public interface ISecureKeypadCaptureStore
 
 /// <summary>
 /// The default <see cref="ISecureKeypadCaptureStore"/>: the tenant's distributed cache, with the entry encrypted by
-/// data protection, offers serialized by a distributed lock per call, and an expiry of
+/// data protection, offers serialized by a distributed lock per call, and a time limit of
 /// <see cref="SecureKeypadCaptures.Expiry"/>.
 /// </summary>
 /// <remarks>
@@ -58,6 +58,12 @@ public interface ISecureKeypadCaptureStore
 /// <see cref="SecureCaptureWindow"/> is kept on the call's activity, which every node reads, and keys that find no entry
 /// this node can use while the window is open are dropped. A node with its own memory cache, a restart in the middle of
 /// an entry, an evicted entry or one this node cannot decrypt all end there, never in the caller's turn.
+/// <para>
+/// An entry not finished within <see cref="SecureKeypadCaptures.Expiry"/> times out rather than ending quietly: the
+/// first keys after that tell the AI it timed out, nothing typed is kept, and the window stays until the caller has
+/// stopped typing for <see cref="SecureKeypadCaptures.Grace"/>, so the rest of a number typed too late never becomes
+/// the caller's turn either. Keys are handed on as the caller's turn only when no window is on the activity.
+/// </para>
 /// <para>
 /// The window is opened in a scope of its own and committed at once, on a fresh read of the activity, and tried again
 /// when another write wins. On a live call the entry is asked for from the call's scope, which holds the copy of the
@@ -164,8 +170,8 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
             if (unreadable)
             {
                 // An entry this node can't read is still an open capture: the keys stay out of the conversation and the
-                // entry ends as cancelled, so the AI asks again. The window on the activity stays open, so the keys
-                // that follow, which find no entry, are dropped too until the AI asks again or the window expires.
+                // entry ends as cancelled, so the AI asks again. The window on the activity stays, so the keys that
+                // follow, which find no entry, are dropped too until the AI asks again or the entry times out.
                 await _cache.RemoveAsync(key, cancellationToken);
 
                 return new SecureKeypadEntry(SecureKeypadEntryState.Cancelled, SecureCaptureField.Custom, null);
@@ -173,24 +179,31 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
 
             if (capture is null)
             {
-                // No entry here: none was started, or it is in another node's cache, was lost or could not be read.
-                // The window on the activity tells them apart, and while it is open the keys are dropped.
-                if (await IsWindowOpenAsync(activityId, cancellationToken))
-                {
-                    _logger.LogWarning("A keypad event on AI call activity '{ActivityId}' found no secure entry on this node while the keypad is private, so the keys were dropped.", activityId.SanitizeLogValue());
+                // No entry here: none was started, or it is in another node's cache, was lost, evicted or could not be
+                // read. The window on the activity tells them apart, and while it is there the keys are dropped.
+                return await OfferToWindowAsync(activityId, key, cancellationToken);
+            }
 
-                    return new SecureKeypadEntry(SecureKeypadEntryState.Collecting, SecureCaptureField.Custom, null);
+            if (capture.TimedOutUntilUtc is { } quietUntilUtc)
+            {
+                // The entry timed out: the keys are dropped until the caller has stopped typing for the grace period.
+                if (_clock.UtcNow <= quietUntilUtc)
+                {
+                    return await TimeOutAsync(activityId, key, capture.Field, alreadyTold: true, cancellationToken);
                 }
 
-                return SecureKeypadEntry.NotCapturing;
+                // Quiet here, but keys may have landed on a node that doesn't share this cache since: the window, which
+                // every node moves on, decides.
+                await _cache.RemoveAsync(key, cancellationToken);
+
+                return await OfferToWindowAsync(activityId, key, cancellationToken);
             }
 
             if (_clock.UtcNow - capture.StartedUtc > SecureKeypadCaptures.Expiry)
             {
-                await _cache.RemoveAsync(key, cancellationToken);
-                await SetWindowAsync(activityId, window: null, cancellationToken);
-
-                return SecureKeypadEntry.NotCapturing;
+                // Too late for this entry, but the keys are still secure data: the entry times out, the AI is told, and
+                // the rest of the number is dropped too.
+                return await TimeOutAsync(activityId, key, capture.Field, alreadyTold: false, cancellationToken);
             }
 
             var maxLength = SecureKeypadCaptures.MaxLength(capture.Field);
@@ -249,11 +262,68 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
         return new SecureKeypadEntry(SecureKeypadEntryState.Completed, capture.Field, capture.Value);
     }
 
+    // Keys that found no entry this node can use. While a window is on the activity they are dropped: before the entry's
+    // time is up as part of the entry, and after it as the entry timing out, which the AI is told about once.
+    private async Task<SecureKeypadEntry> OfferToWindowAsync(string activityId, string key, CancellationToken cancellationToken)
+    {
+        var window = await FindWindowAsync(activityId, cancellationToken);
+
+        if (window is null)
+        {
+            return SecureKeypadEntry.NotCapturing;
+        }
+
+        if (!window.TimedOut && window.UntilUtc >= _clock.UtcNow)
+        {
+            _logger.LogWarning("A keypad event on AI call activity '{ActivityId}' found no secure entry on this node while the keypad is private, so the keys were dropped.", activityId.SanitizeLogValue());
+
+            return new SecureKeypadEntry(SecureKeypadEntryState.Collecting, window.Field, null);
+        }
+
+        if (window.TimedOut && window.UntilUtc < _clock.UtcNow)
+        {
+            return await CloseAsync(activityId, key, cancellationToken);
+        }
+
+        return await TimeOutAsync(activityId, key, window.Field, alreadyTold: window.TimedOut, cancellationToken);
+    }
+
+    // Ends an entry that was not finished in time without keeping a digit. The keypad stays private for the grace
+    // period from this key, both in the cache, which the next key on a node that shares it finds at once, and in the
+    // window on the activity for the nodes that don't; each key typed in that time starts the grace period again. The
+    // first keys after the entry's time is up are the ones the AI is told about.
+    private async Task<SecureKeypadEntry> TimeOutAsync(string activityId, string key, SecureCaptureField field, bool alreadyTold, CancellationToken cancellationToken)
+    {
+        var quietUntilUtc = _clock.UtcNow + SecureKeypadCaptures.Grace;
+        var marker = new Capture { Field = field, StartedUtc = _clock.UtcNow, TimedOutUntilUtc = quietUntilUtc };
+
+        await _cache.SetAsync(key, _protector.Protect(JsonSerializer.SerializeToUtf8Bytes(marker)), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = SecureKeypadCaptures.Grace }, cancellationToken);
+        await SetWindowAsync(activityId, new SecureCaptureWindow { Field = field, UntilUtc = quietUntilUtc, TimedOut = true }, cancellationToken);
+
+        if (!alreadyTold)
+        {
+            _logger.LogWarning("The secure keypad entry on AI call activity '{ActivityId}' was not finished in time; nothing was kept.", activityId.SanitizeLogValue());
+        }
+
+        return new SecureKeypadEntry(alreadyTold ? SecureKeypadEntryState.Collecting : SecureKeypadEntryState.TimedOut, field, null);
+    }
+
+    // The caller stopped typing for the whole grace period after a timed-out entry: the keypad is theirs again.
+    private async Task<SecureKeypadEntry> CloseAsync(string activityId, string key, CancellationToken cancellationToken)
+    {
+        await _cache.RemoveAsync(key, cancellationToken);
+        await SetWindowAsync(activityId, window: null, cancellationToken);
+
+        return SecureKeypadEntry.NotCapturing;
+    }
+
+    // The entry is kept for the grace period past its own time, so the node that holds it sees it time out even when the
+    // window on the activity was lost.
     private async Task WriteAsync(string activityId, Capture capture, CancellationToken cancellationToken)
     {
-        var remaining = SecureKeypadCaptures.Expiry - (_clock.UtcNow - capture.StartedUtc);
+        var keepFor = SecureKeypadCaptures.Expiry + SecureKeypadCaptures.Grace - (_clock.UtcNow - capture.StartedUtc);
 
-        if (remaining <= TimeSpan.Zero)
+        if (keepFor <= TimeSpan.Zero)
         {
             await _cache.RemoveAsync(GetCacheKey(activityId), cancellationToken);
 
@@ -262,7 +332,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
 
         var payload = _protector.Protect(JsonSerializer.SerializeToUtf8Bytes(capture));
 
-        await _cache.SetAsync(GetCacheKey(activityId), payload, new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = remaining }, cancellationToken);
+        await _cache.SetAsync(GetCacheKey(activityId), payload, new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = keepFor }, cancellationToken);
     }
 
     private async Task<(Capture Capture, bool Unreadable)> ReadAsync(string key, CancellationToken cancellationToken)
@@ -286,13 +356,11 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
         }
     }
 
-    private async Task<bool> IsWindowOpenAsync(string activityId, CancellationToken cancellationToken)
+    private async Task<SecureCaptureWindow> FindWindowAsync(string activityId, CancellationToken cancellationToken)
     {
         var activity = await _activityStore.FindByIdAsync(activityId, cancellationToken);
 
-        return activity is not null &&
-            activity.TryGet<SecureCaptureWindow>(out var window) &&
-            window.UntilUtc > _clock.UtcNow;
+        return activity is not null && activity.TryGet<SecureCaptureWindow>(out var window) ? window : null;
     }
 
     // Opens the window on a fresh read of the activity in a scope of its own, committed before the caller is asked to
@@ -389,5 +457,8 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
         public DateTime StartedUtc { get; set; }
 
         public string Value { get; set; } = string.Empty;
+
+        // Set once the entry timed out: it holds no digits, and keys are dropped until then.
+        public DateTime? TimedOutUntilUtc { get; set; }
     }
 }

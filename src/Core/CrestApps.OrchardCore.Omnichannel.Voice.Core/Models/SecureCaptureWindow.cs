@@ -15,7 +15,14 @@ internal sealed class SecureCaptureWindow
     public SecureCaptureField Field { get; set; }
 
     /// <summary>
-    /// Gets or sets when the window closes on its own, if the entry is never finished.
+    /// Gets or sets when the entry times out, if it is never finished; once it has, until when keys are still dropped.
+    /// The window stays on the activity until the entry is finished or cancelled, the call ends, or the caller has
+    /// stopped typing for <c>SecureKeypadCaptures.Grace</c> after the timeout.
     /// </summary>
     public DateTime UntilUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the entry timed out and the AI was told.
+    /// </summary>
+    public bool TimedOut { get; set; }
 }

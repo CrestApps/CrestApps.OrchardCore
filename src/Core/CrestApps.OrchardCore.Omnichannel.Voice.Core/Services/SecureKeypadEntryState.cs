@@ -24,4 +24,9 @@ public enum SecureKeypadEntryState
     /// The caller cancelled the entry.
     /// </summary>
     Cancelled,
+
+    /// <summary>
+    /// The entry was not finished in time: nothing was kept, and keys typed for a while after are dropped too.
+    /// </summary>
+    TimedOut,
 }

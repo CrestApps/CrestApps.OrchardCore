@@ -11,9 +11,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 internal static class SecureKeypadCaptures
 {
     /// <summary>
-    /// How long a capture waits for the caller before it is forgotten.
+    /// How long a capture waits for the caller before it times out.
     /// </summary>
     public static readonly TimeSpan Expiry = TimeSpan.FromMinutes(3);
+
+    /// <summary>
+    /// How long the keypad stays private after an entry timed out, counted from the last key the caller typed, so the
+    /// rest of a number typed too late is dropped rather than handed on as the caller's turn.
+    /// </summary>
+    public static readonly TimeSpan Grace = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// The most keys an entry of a kind takes, after which it ends without <c>#</c>.

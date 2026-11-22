@@ -34,6 +34,11 @@ internal static class SecureKeypadEntries
             return $"[The caller cancelled typing the {label} on the keypad. Nothing was saved.]";
         }
 
+        if (entry.State == SecureKeypadEntryState.TimedOut)
+        {
+            return $"[The time to type the {label} on the keypad ran out, so nothing was saved and the keys typed since were dropped. Ask the caller whether to try again; if they want to, ask for a secure keypad entry again. Do not ask them to read it aloud.]";
+        }
+
         var sink = services?.GetService<ISecureCaptureTokenSink>();
         var logger = services?.GetService<ILoggerFactory>()?.CreateLogger(typeof(SecureKeypadEntries));
 

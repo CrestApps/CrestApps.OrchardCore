@@ -21,9 +21,9 @@ public sealed record SecureKeypadEntry(SecureKeypadEntryState State, SecureCaptu
     public bool Captured => State != SecureKeypadEntryState.NotCapturing;
 
     /// <summary>
-    /// Gets a value indicating whether the entry is over, finished or cancelled.
+    /// Gets a value indicating whether the entry is over: finished, cancelled or timed out.
     /// </summary>
-    public bool Ended => State is SecureKeypadEntryState.Completed or SecureKeypadEntryState.Cancelled;
+    public bool Ended => State is SecureKeypadEntryState.Completed or SecureKeypadEntryState.Cancelled or SecureKeypadEntryState.TimedOut;
 
     /// <inheritdoc/>
     public override string ToString()

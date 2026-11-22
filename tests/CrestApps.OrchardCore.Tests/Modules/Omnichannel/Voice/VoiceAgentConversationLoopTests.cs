@@ -1677,6 +1677,11 @@ public sealed partial class VoiceAgentConversationLoopTests
         public int PromptCount => _prompts.Count;
 
         /// <summary>
+        /// The turns the transcript holds.
+        /// </summary>
+        public IReadOnlyList<AIChatSessionPrompt> Prompts => _prompts;
+
+        /// <summary>
         /// The completion context the model was given on the last turn.
         /// </summary>
         public AICompletionContext CompletionContext { get; private set; }

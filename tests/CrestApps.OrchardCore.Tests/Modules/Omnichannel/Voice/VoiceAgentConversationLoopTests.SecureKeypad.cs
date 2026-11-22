@@ -64,14 +64,76 @@ public sealed partial class VoiceAgentConversationLoopTests
         Assert.Empty(harness.CallerKeys.Collected);
     }
 
+    /// <summary>
+    /// C1 (review 11): a caller still typing their card after the entry's three minutes had the rest of it handed to
+    /// the model as their turn. This node holds the entry, so it finds it expired.
+    /// </summary>
     [Fact]
-    public async Task SEC_P2_OnceTheWindowHasExpired_KeysAreTheCallersTurnAgain()
+    public async Task C1_OnATurnBasedCall_KeysTypedAfterTheEntryTimedOut_NeverReachTheModel_AndTheAIIsTold()
+    {
+        // Arrange
+        var harness = new LoopHarness(storesCopies: true);
+        harness.Reply = "Sorry, the time ran out. Shall we try again?";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.SecureKeypadCaptures.StartAsync(harness.Activity.ItemId, SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
+        await harness.Loop.HandleAsync(KeyPressed(harness, "4111"), TestContext.Current.CancellationToken);
+        harness.Clock.Advance(SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1));
+
+        // Act: the rest of the card, one key per webhook.
+        foreach (var key in "111111111111#")
+        {
+            await harness.Loop.HandleAsync(KeyPressed(harness, key.ToString()), TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.Empty(harness.CallerKeys.Collected);
+        Assert.DoesNotContain(harness.Transcript, message => message.Text?.Contains("pressed these keys", StringComparison.Ordinal) == true || message.Text?.Contains("4111", StringComparison.Ordinal) == true);
+        Assert.DoesNotContain(harness.Prompts, prompt => prompt.Content?.Contains("pressed these keys", StringComparison.Ordinal) == true || prompt.Content?.Contains("4111", StringComparison.Ordinal) == true);
+        Assert.Contains(harness.Transcript, message => message.Text?.Contains("ran out", StringComparison.Ordinal) == true);
+    }
+
+    /// <summary>
+    /// C1 (review 11): the same, on a node that never had the entry (or whose cache dropped it), so only the window on
+    /// the activity is left to time it out.
+    /// </summary>
+    [Fact]
+    public async Task C1_OnALiveCall_KeysTypedAfterTheEntryTimedOutOnAnotherNode_NeverReachTheSession()
+    {
+        // Arrange
+        var harness = new LoopHarness(storesCopies: true);
+        var heard = new List<AIVoiceCallCommand>();
+        using var session = harness.VoiceCallCommands.Register(harness.Activity.ItemId, command =>
+        {
+            heard.Add(command);
+
+            return Task.FromResult(true);
+        });
+        await harness.CreateSecureKeypadNode().StartAsync(harness.Activity.ItemId, SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
+        harness.Clock.Advance(SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1));
+
+        // Act
+        foreach (var key in CardNumber)
+        {
+            await harness.Loop.HandleAsync(KeyPressed(harness, key.ToString()), TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.DoesNotContain(heard, command => command.Kind == AIVoiceCallCommandKind.KeysPressed);
+        Assert.DoesNotContain(heard, command => command.Text?.Contains('4') == true);
+        Assert.Empty(harness.CallerKeys.Collected);
+        Assert.True(harness.ReadStoredCopy().Has<SecureCaptureWindow>());
+    }
+
+    [Fact]
+    public async Task C1_OnceTheCallerHasStoppedForTheGracePeriod_KeysAreTheCallersTurnAgain()
     {
         // Arrange
         var harness = new LoopHarness(storesCopies: true);
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.CreateSecureKeypadNode().StartAsync(harness.Activity.ItemId, SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
         harness.Clock.Advance(SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1));
+        await harness.Loop.HandleAsync(KeyPressed(harness, "4"), TestContext.Current.CancellationToken);
+        harness.Clock.Advance(SecureKeypadCaptures.Grace + TimeSpan.FromSeconds(1));
 
         // Act
         await harness.Loop.HandleAsync(KeyPressed(harness, "8"), TestContext.Current.CancellationToken);
