@@ -11,51 +11,22 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
 
 /// <summary>
-/// Resume tokens: a resume link's token is traded for a new one once, a personal invitation resumes its own response
-/// from another browser, the start lock never holds a raw token, and resume cookies stop counting after sign-in or out.
+/// Resume tokens: no service call trades a presented token for a new one (there are no resume links), a personal
+/// invitation resumes its own response from another browser, the start lock never holds a raw token, resume cookies stop
+/// counting after sign-in or out, and the generation cookie sits on the tenant root so a page outside /s that writes a
+/// resume cookie keeps the browser's other responses.
 /// </summary>
 public sealed class SurveyResumeTokenTests
 {
     [Fact]
-    public async Task Rotate_WithTheCurrentToken_IssuesANewToken_AndTheOldOneStopsWorking()
+    public void ResponseService_HasNoWayToTradeAPresentedResumeToken()
     {
-        // Arrange
-        await using var harness = await RuntimeTestHarness.CreateAsync();
-        var survey = await harness.PublishAsync(TwoPages());
-        var start = await harness.StartAsync(survey);
+        // Arrange: a resume link traded the token on it for a new one, which let whoever opened a shared link take the
+        // response (and its answers) over. Resume links are gone, and so is the call that traded the token.
+        var methods = typeof(ISurveyResponseService).GetMethods().Select(method => method.Name);
 
-        // Act
-        var rotated = await harness.ResponsesAsync(responses => responses.RotateResumeTokenAsync(start.Response.ItemId, start.ResumeToken));
-        var again = await harness.ResponsesAsync(responses => responses.RotateResumeTokenAsync(start.Response.ItemId, start.ResumeToken));
-        var byOld = await harness.ResponsesAsync(responses => responses.FindForRespondentAsync(start.Response.ItemId, new SurveyRespondentIdentity { ResumeToken = start.ResumeToken }));
-        var byNew = await harness.ResponsesAsync(responses => responses.FindForRespondentAsync(start.Response.ItemId, new SurveyRespondentIdentity { ResumeToken = rotated }));
-
-        // Assert
-        Assert.NotNull(start.ResumeToken);
-        Assert.NotNull(rotated);
-        Assert.NotEqual(start.ResumeToken, rotated);
-        Assert.Null(again);
-        Assert.Null(byOld);
-        Assert.NotNull(byNew);
-    }
-
-    [Fact]
-    public async Task Rotate_WithTheTokenOfAnotherResponse_IsRefused()
-    {
-        // Arrange
-        await using var harness = await RuntimeTestHarness.CreateAsync();
-        var survey = await harness.PublishAsync(TwoPages());
-        var first = await harness.StartAsync(survey);
-        var second = await harness.StartAsync(survey);
-
-        // Act
-        var crossed = await harness.ResponsesAsync(responses => responses.RotateResumeTokenAsync(first.Response.ItemId, second.ResumeToken));
-        var forged = await harness.ResponsesAsync(responses => responses.RotateResumeTokenAsync(first.Response.ItemId, first.Response.ItemId + ".forged"));
-
-        // Assert
-        Assert.NotEqual(first.Response.ItemId, second.Response.ItemId);
-        Assert.Null(crossed);
-        Assert.Null(forged);
+        // Act and Assert
+        Assert.DoesNotContain(methods, name => name.Contains("Rotate", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -140,8 +111,47 @@ public sealed class SurveyResumeTokenTests
         // Assert
         var headers = context.Response.Headers.SetCookie.ToArray();
 
-        Assert.Contains(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal) && header.Contains("path=/tenant1/s", StringComparison.OrdinalIgnoreCase));
+        // The generation sits on the tenant root, so pages outside /s (a course, admin Preview) see it.
+        Assert.Contains(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal) && header.Contains("path=/tenant1;", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal) && header.Contains("path=/tenant1/s", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(headers, header => header.StartsWith("sr_s1=", StringComparison.Ordinal) && header.Contains("httponly", StringComparison.OrdinalIgnoreCase) && header.Contains("path=/tenant1/s", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Cookies_GenerationWithoutPathBase_IsOnTheSiteRoot()
+    {
+        // Arrange
+        var (cookies, context) = Cookies(new DefaultHttpContext());
+
+        // Act
+        cookies.Write("s1", "R1.secret");
+
+        // Assert
+        var generation = Assert.Single(context.Response.Headers.SetCookie.ToArray(), header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal));
+
+        Assert.Contains("path=/;", generation + ";", StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Cookies_WrittenOutsideTheRespondentPath_JoinTheCurrentGeneration_AndKeepTheOtherResponses()
+    {
+        // Arrange: the browser holds survey s1's resume cookie; a course page (outside /s) sees only the generation
+        // cookie, which sits on the tenant root, and writes survey s2's resume cookie.
+        var coursePage = new DefaultHttpContext();
+
+        coursePage.Request.Path = "/learning/surveys/item1/start";
+        coursePage.Request.Headers.Cookie = $"{SurveyResumeCookies.GenerationCookie}=current";
+
+        var (cookies, context) = Cookies(coursePage);
+
+        // Act
+        cookies.Write("s2", "R2.secret");
+
+        // Assert: no new generation, so s1's cookie (generation "current") still counts on the next respondent page.
+        var headers = context.Response.Headers.SetCookie.ToArray();
+
+        Assert.DoesNotContain(headers, header => header.StartsWith(SurveyResumeCookies.GenerationCookie + "=", StringComparison.Ordinal));
+        Assert.Contains(headers, header => header.StartsWith("sr_s2=" + Uri.EscapeDataString(SurveyResumeCookies.Format("R2.secret", "current")), StringComparison.Ordinal));
     }
 
     [Fact]

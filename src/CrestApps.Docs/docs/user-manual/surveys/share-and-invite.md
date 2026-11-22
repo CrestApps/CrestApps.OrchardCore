@@ -32,7 +32,7 @@ Use **Copy** to copy the link and **QR code** to download its QR code.
 
 ## Kiosk
 
-Select **Add kiosk** for a tablet at a front desk. After each response the ending shows for **Show the ending for** seconds, then the kiosk returns to the start for the next person.
+Select **Add kiosk** for a tablet at a front desk. After each response the ending shows for **Show the ending for** seconds, then the kiosk returns to the start for the next person. Kiosk responses are always recorded as guest responses, even when the tablet is signed in, and can't be reviewed or reopened, so the next person never sees the previous person's answers. Give the survey an audience that lets guests answer.
 
 ## Invitations
 

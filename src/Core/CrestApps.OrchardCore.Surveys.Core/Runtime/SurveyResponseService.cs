@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Controls;
@@ -174,17 +175,6 @@ public sealed class SurveyResponseService : ISurveyResponseService
     }
 
     /// <inheritdoc />
-    public Task<string> RotateResumeTokenAsync(string responseId, string presentedToken, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(responseId) || !string.Equals(SurveyResumeTokens.ResponseIdOf(presentedToken), responseId, StringComparison.Ordinal))
-        {
-            return Task.FromResult<string>(null);
-        }
-
-        return IssueResumeTokenAsync(responseId, response => SurveyResumeTokens.Matches(presentedToken, response.ResumeTokenHash), cancellationToken);
-    }
-
-    /// <inheritdoc />
     public async Task<SurveyStartResult> StartAsync(StartResponseRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -281,13 +271,14 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 {
                     // Found by its invitation: the personal link is the invitee's key, so this browser resumes the
                     // response with a new resume token and the token held before stops working. A response that
-                    // belongs to a user account resumes only for that user.
+                    // belongs to a user account resumes only for that user. Nothing else hands a response to another
+                    // browser: there is no resume link, so only the holder of the personal link can take it over.
                     if (string.IsNullOrEmpty(existing.ResumeTokenHash))
                     {
                         return new SurveyStartResult { Error = SurveyErrorCode.SignInRequired };
                     }
 
-                    var reissued = await IssueResumeTokenAsync(existing.ItemId, _ => true, cancellationToken);
+                    var reissued = await IssueResumeTokenAsync(existing.ItemId, cancellationToken);
 
                     return reissued is null
                         ? new SurveyStartResult { Error = SurveyErrorCode.Busy }
@@ -368,12 +359,20 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             response.AttemptNumber = await AttemptNumberAsync(survey, response, respondentKey, request, isTest);
 
-            // Properties come from the caller and can name the person, so an anonymous response keeps none.
-            if (request.Properties is not null && !anonymous)
+            // Properties come from the caller and can name the person, so an anonymous response keeps only the link
+            // back (a course item, say): its path and text name a page, not a person.
+            if (request.Properties is not null)
             {
                 foreach (var property in request.Properties)
                 {
-                    response.Properties[property.Key] = property.Value?.DeepClone();
+                    if (!anonymous)
+                    {
+                        response.Properties[property.Key] = property.Value?.DeepClone();
+                    }
+                    else if (AnonymousReturnProperty(property.Key, property.Value) is { } kept)
+                    {
+                        response.Properties[property.Key] = kept;
+                    }
                 }
             }
 
@@ -908,8 +907,8 @@ public sealed class SurveyResponseService : ISurveyResponseService
     }
 
     // Issues a new resume token for a response under its write lock and stores its hash, so the token held before
-    // stops working. Returns null when the response has no resume token, the check fails or the lock is busy.
-    private async Task<string> IssueResumeTokenAsync(string responseId, Func<SurveyResponse, bool> allowed, CancellationToken cancellationToken)
+    // stops working. Returns null when the response has no resume token or the lock is busy.
+    private async Task<string> IssueResumeTokenAsync(string responseId, CancellationToken cancellationToken)
     {
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(ResponseLockKey(responseId), _lockTimeout, _lockExpiration);
 
@@ -922,7 +921,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
         {
             var response = await FindFreshAsync(responseId, cancellationToken);
 
-            if (response is null || string.IsNullOrEmpty(response.ResumeTokenHash) || !allowed(response))
+            if (response is null || string.IsNullOrEmpty(response.ResumeTokenHash))
             {
                 return null;
             }
@@ -943,6 +942,32 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             return token;
         }
+    }
+
+    // The value an anonymous response keeps of a caller's property: the return link's text, and its local path
+    // without a query string or fragment (which could carry an id of the person); nothing else.
+    private static JsonValue AnonymousReturnProperty(string name, JsonNode value)
+    {
+        if (value is not JsonValue node || !node.TryGetValue<string>(out var text) || string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        if (string.Equals(name, SurveyResponseProperties.ReturnText, StringComparison.Ordinal))
+        {
+            return JsonValue.Create(text);
+        }
+
+        if (!string.Equals(name, SurveyResponseProperties.ReturnUrl, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var end = text.IndexOfAny(['?', '#']);
+        var path = end < 0 ? text : text[..end];
+
+        // Only a local path: one slash, then not a second slash or a backslash (a protocol-relative or odd address).
+        return path.StartsWith('/') && (path.Length == 1 || path[1] is not ('/' or '\\')) ? JsonValue.Create(path) : null;
     }
 
     private SurveyAnonymitySecrets Secrets

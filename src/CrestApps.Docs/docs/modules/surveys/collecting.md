@@ -10,7 +10,7 @@ user_manual:
 
 A collector (`SurveyCollector`) is a way in: a **web link**, a **kiosk**, an **invitation** list, or a kind of a consumer's own. Each has its own token (the public URL `/s/{token}`), opening and closing times, most responses, password (stored as a hash), hidden variable values and culture. The first publish creates the survey's default web link. A collector's QR code is served as SVG at `admin/surveys/collectors/{id}/qr.svg`.
 
-A **kiosk** shows the ending for a few seconds, then returns to the start for the next person; it clears the resume cookie and never resumes a response.
+A **kiosk** shows the ending for a few seconds, then returns to the start for the next person; it clears the resume cookie (before an ending that redirects, too) and never resumes a response. Every kiosk response is a guest response, even when the device stays signed in, so it never belongs to the device's account and the next person can't resume it; give a kiosk's survey an audience that lets guests answer. A kiosk response can't be reviewed or reopened.
 
 ## Respondent routes
 
@@ -18,10 +18,9 @@ A GET never starts a response or uses up an invitation, so link previews (chat a
 
 | Route | Does |
 | --- | --- |
-| `GET /s/{token}` | The start page (password or CAPTCHA when needed). When the survey skips it, the page posts its start form at once |
+| `GET /s/{token}` | The start page (password or CAPTCHA when needed). When the survey skips it, or the address asks for it with `?autostart=1` (the Start button of an embedded survey), the page posts its start form at once |
 | `POST /s/{token}/start` | Starts a response, or resumes the browser's response in progress |
-| `GET`/`POST /s/r/{responseId}` | The current page; posts Next, Back or Finish. `?t=` is a resume link (see below) |
-| `POST /s/r/{responseId}/resume` | Resumes from a resume link once a signed-in visitor confirmed it |
+| `GET`/`POST /s/r/{responseId}` | The current page; posts Next, Back or Finish |
 | `POST /s/r/{responseId}/save` | Autosave without checks |
 | `POST /s/r/{responseId}/evaluate` | Visibility and piping for answers not yet posted |
 | `POST /s/r/{responseId}/check/{questionId}` | Immediate feedback |
@@ -38,20 +37,19 @@ A GET never starts a response or uses up an invitation, so link previews (chat a
 
 Posts check the antiforgery token. When the Orchard Core **Rate Limits** feature is on, every route in the table is in the rate-limit group `Surveys.Respond`: **120 requests a minute per IP address** (a fixed one-minute window, `RespondRateLimitsStartup.RequestsPerMinute`). Admin **Preview** works the same way: opening its link shows a page that posts the start of the test response.
 
-Every response under `/s` carries `Referrer-Policy: no-referrer`, so the tokens in collector and invitation links never reach another site in a `Referer` header.
+Every response under `/s` carries `Referrer-Policy: no-referrer`, so the tokens in collector and invitation links never reach another site in a `Referer` header. Every response under `/s`, and `/surveys/my`, also carries `Cache-Control: no-store`, because the ending, the review and the totals show answers, piped texts and scores: no browser cache, back-forward cache or shared proxy keeps them for the next person at a kiosk or a shared computer.
+
+:::warning[Tokens in addresses]
+Collector tokens (`/s/{token}`), personal invitation tokens (`/s/i/{token}` and `/s/i/{token}/unsubscribe`) and response ids (`/s/r/{responseId}`) are in the URL path, so they are written to web server and proxy access logs and to OpenTelemetry's `url.path` attribute, next to the client IP address. A response id alone opens nothing (a response opens only for its signed-in user or the browser holding its resume cookie), but an invitation token is the invitee's key, and on an anonymous survey a log line links a response id to an IP address. Surveys doesn't wrap the host's request logging or ASP.NET Core instrumentation, so treat these logs as personal data: keep them short, limit who can read them, and filter or redact `/s/` paths in your log pipeline or OpenTelemetry collector (for example a collector processor that replaces the path segment after `/s/i/` and `/s/r/`).
+:::
 
 ### Resume tokens and cookies
 
 A response is owned by the signed-in user who started it, or by whoever holds its resume token. A response started by a signed-in user on an identified survey has no resume token. The token is `{responseId}.{secret}` with a 256-bit secret, and only its SHA-256 hash is stored (the start lock key holds the hash too, never the token).
 
-The browser holds the token in an HttpOnly, SameSite Lax cookie `sr_{surveyId}` on the tenant's `/s` path (`{PathBase}/s`), for 30 days. Each resume cookie is bound to a generation cookie `sr_g`. Signing in or out (Orchard Core `ILoginFormEvent` and `ILogoutFormEvent`) writes a new generation, so every resume cookie written before stops counting and is removed on the next respondent page. On a shared computer, the next person never resumes the previous person's response. Code that starts a response for someone (a course, for example) calls `SurveyResumeCookies.Write(surveyId, token)` from `CrestApps.OrchardCore.Surveys.Core`, and never puts the token in a URL.
+The browser holds the token in an HttpOnly, SameSite Lax cookie `sr_{surveyId}` on the tenant's `/s` path (`{PathBase}/s`), for 30 days. Each resume cookie is bound to a generation cookie `sr_g` on the tenant's root path (`{PathBase}`, or `/`), so a page outside `/s` that writes a resume cookie (a course item, admin Preview) joins the browser's current generation and leaves its other open responses alone. Signing in or out (Orchard Core `ILoginFormEvent` and `ILogoutFormEvent`) writes a new generation, so every resume cookie written before stops counting and is removed on the next respondent page. On a shared computer, the next person never resumes the previous person's response. Code that starts a response for someone (a course, for example) calls `SurveyResumeCookies.Write(surveyId, token)` from `CrestApps.OrchardCore.Surveys.Core`, and never puts the token in a URL.
 
-A **resume link** `/s/r/{responseId}?t={token}` (for consumers that cannot set the cookie) works like this:
-
-1. The token must be the current token of that same response. A forged token, a token of another response or a token already used gives 404.
-2. When the browser already holds a different response of the survey that is in progress, the link does not replace that cookie: the page says to finish that response first (409).
-3. When the visitor is signed in and the response belongs to no user account, a page asks before resuming, and resuming posts to `/s/r/{responseId}/resume`.
-4. The runner issues a new token (`ISurveyResponseService.RotateResumeTokenAsync`), stores its hash, writes the cookie, and redirects to the same address without `?t=`. The link's token stops working, so a link resumes once, and whoever shared their own link loses access to the response.
+There are no resume links: no address carries a resume token, so a response can't be handed to another browser by sharing a link, and a guest never lands in someone else's response with their answers filled in. A response resumes only for its signed-in user, or in the browser holding its resume cookie.
 
 A personal invitation link is the invitee's key: on an identified survey, posting it resumes the invitation's response in progress from any browser (with a new resume token there), so a scanner that opened the link first does not lock the invitee out. A response that belongs to a user account resumes only for that user. An anonymous response does not name its invitation, so it resumes only in the browser that started it.
 
@@ -78,7 +76,7 @@ Limits count completed or started responses per respondent, recognized by the us
 
 **Identified** responses store the user and party (and the IP address when the survey collects it). **Anonymous** responses store none of these, no invitation, and nothing else the caller sends that could name the person:
 
-- No properties (`StartResponseRequest.Properties` are dropped).
+- No properties (`StartResponseRequest.Properties` are dropped), except the link back that the ending and review show: `SurveyResponseProperties.ReturnText`, and the local path of `SurveyResponseProperties.ReturnUrl` without its query string or fragment. They name a page (a course item), not a person.
 - A context keeps its id only when its kind is registered as shared (`AddSurveyContextKind(kind, name, identifiesRespondent: false)`, such as a Learning course); any other context keeps its kind with the id `anonymous`. Hidden variables are the author's choice and are kept, so don't collect identifying values in them on an anonymous survey.
 - Limits use an HMAC of the respondent under the survey's **anonymity secret**, in a participation record (`SurveyParticipation`, per day) that holds no response id, no time finer than the day (the cooldown of an anonymous survey counts from the end of the day of the last completion) and only a hash of the context.
 
@@ -110,8 +108,8 @@ Invitations to users of the site go to their notification inbox and are not chec
 
 With **Survey Embedding** on:
 
-- `SurveyPart` (attachable) picks an open survey and one of its links, and shows the survey in the page, as a button or as a link. The `SurveyWidget` content type holds the part.
-- The shortcode `[survey name="customer-satisfaction" collector="..." display="link"]` renders a button (or a link) that opens the survey (with Shortcodes on).
+- `SurveyPart` (attachable) picks an open survey and one of its links, and shows the survey in the page, as a button or as a link. The `SurveyWidget` content type holds the part. The card holds no form or form token, so a page or zone that Orchard Core caches for every visitor stays safe: its **Start** button opens `/s/{token}?autostart=1`, whose page posts the start form at once with a token of its own.
+- The shortcode `[survey name="customer-satisfaction" collector="..." display="link"]` renders a button (or a link) that opens the survey (with Shortcodes on). Its link starts with the tenant's path base, so it works on a tenant served under a prefix.
 
 ## Quotas
 
