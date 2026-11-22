@@ -41,6 +41,7 @@ public sealed class PackageRuntimeService
     private readonly EnrollmentWriteGate _writeGate;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly PackageArchiveCache _archiveCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PackageRuntimeService"/> class.
@@ -57,7 +58,8 @@ public sealed class PackageRuntimeService
         PackageLaunchTokens tokens,
         EnrollmentWriteGate writeGate,
         IClock clock,
-        ILogger<PackageRuntimeService> logger)
+        ILogger<PackageRuntimeService> logger,
+        PackageArchiveCache archiveCache = null)
     {
         _store = store;
         _contentSource = contentSource;
@@ -71,6 +73,7 @@ public sealed class PackageRuntimeService
         _writeGate = writeGate;
         _clock = clock;
         _logger = logger;
+        _archiveCache = archiveCache;
     }
 
     /// <summary>
@@ -488,7 +491,11 @@ public sealed class PackageRuntimeService
             return null;
         }
 
-        var stream = await _files.OpenAsync(launch.PackageFileId, cancellationToken);
+        // A store that can't seek (Azure Blob Storage) is read through a local copy, so each file of a launch doesn't
+        // download the whole archive again.
+        var stream = _archiveCache is null
+            ? await _files.OpenAsync(launch.PackageFileId, cancellationToken)
+            : await _archiveCache.OpenAsync(launch.PackageFileId, token => _files.OpenAsync(launch.PackageFileId, token), cancellationToken);
 
         if (stream is null)
         {
