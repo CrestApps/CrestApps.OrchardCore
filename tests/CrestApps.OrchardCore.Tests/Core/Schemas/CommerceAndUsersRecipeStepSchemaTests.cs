@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Stripe.Models;
 using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Core;
 using Json.Schema;
+using CrestApps.OrchardCore.Tests.Agent;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -212,7 +213,8 @@ public sealed class CommerceAndUsersRecipeStepSchemaTests
         var services = new ServiceCollection()
             .AddMemoryCache()
             .AddScoped<RecipeSchemaService>()
-            .AddSingleton<ILogger<GetRecipeJsonSchemaTool>>(NullLogger<GetRecipeJsonSchemaTool>.Instance);
+            .AddSingleton<ILogger<GetRecipeJsonSchemaTool>>(NullLogger<GetRecipeJsonSchemaTool>.Instance)
+            .AddAuthorizedCaller();
 
         foreach (var startup in startups)
         {
