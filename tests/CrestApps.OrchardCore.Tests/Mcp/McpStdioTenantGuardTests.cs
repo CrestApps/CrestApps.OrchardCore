@@ -113,7 +113,8 @@ public sealed class McpStdioTenantGuardTests
             new ShellSettings { Name = ShellSettings.DefaultShellName },
             authorization.Object,
             new Microsoft.AspNetCore.Http.HttpContextAccessor { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = CreateUser() } },
-            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.AI.Mcp.Recipes.McpConnectionStep>());
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.AI.Mcp.Recipes.McpConnectionStep>(),
+            Mock.Of<CrestApps.OrchardCore.AI.Core.IAIEndpointPolicy>(policy => policy.IsAllowed(It.IsAny<string>())));
 
         var context = new global::OrchardCore.Recipes.Models.RecipeExecutionContext
         {

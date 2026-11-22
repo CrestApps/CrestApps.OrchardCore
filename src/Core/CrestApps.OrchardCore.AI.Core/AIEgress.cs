@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http;
+using CrestApps.Core.AI.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
@@ -80,7 +83,8 @@ public static class AIEgress
     /// connects to, redirects included, and follows redirects through <see cref="CrossOriginRedirectHandler"/>, so no
     /// credential reaches another origin. The handler is set after every other configuration of the client, so a package
     /// that sets its own primary handler (the documentation sources do) cannot replace it, whatever order the features
-    /// register in. Calling it more than once registers the guard once.
+    /// register in. The package's OAuth2 token service is replaced with one that sends the mTLS grant, which the package
+    /// sends through a bare handler of its own, through the guard too. Calling it more than once registers the guard once.
     /// </summary>
     /// <param name="services">The service collection.</param>
     public static IServiceCollection AddAIEgressGuards(this IServiceCollection services)
@@ -93,6 +97,11 @@ public static class AIEgress
         }
 
         services.AddSingleton<AIEgressGuardMarker>();
+
+        // The package registers its token service with TryAdd, so this wins whichever registers first (review 11, C13).
+        services.RemoveAll<IOAuth2TokenService>();
+        services.AddScoped<IOAuth2TokenService, EgressGuardedOAuth2TokenService>();
+        services.TryAddScoped<DefaultOAuth2TokenService>();
 
         foreach (var name in GuardedClientNames)
         {

@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.Core.Recipes;
@@ -27,6 +28,7 @@ internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
     private readonly ShellSettings _shellSettings;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -39,13 +41,15 @@ internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, to find who runs the recipe.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="endpointPolicy">The policy the editor holds the endpoint and token endpoint to.</param>
     public McpConnectionStep(
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         ShellSettings shellSettings,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        IStringLocalizer<McpConnectionStep> stringLocalizer)
+        IStringLocalizer<McpConnectionStep> stringLocalizer,
+        IAIEndpointPolicy endpointPolicy)
         : base(StepKey, "Connections")
     {
         _manager = manager;
@@ -53,6 +57,7 @@ internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
         _shellSettings = shellSettings;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -116,8 +121,19 @@ internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
         return await _manager.NewAsync(source, token);
     }
 
-    protected override ValueTask<ValidationResultDetails> ValidateAsync(McpConnection entry)
-        => _manager.ValidateAsync(entry);
+    protected override async ValueTask<ValidationResultDetails> ValidateAsync(McpConnection entry)
+    {
+        var result = await _manager.ValidateAsync(entry);
+
+        // The editor refuses an endpoint or OAuth2 token endpoint on the site's own network; a recipe is held to the
+        // same rule (review 11, C13).
+        if (AIRecipeEndpoints.FindRefused(entry, _endpointPolicy) is { } refused)
+        {
+            result.Fail(new System.ComponentModel.DataAnnotations.ValidationResult(S["The endpoint '{0}' is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.", refused]));
+        }
+
+        return result;
+    }
 
     protected override ValueTask CreateAsync(McpConnection entry)
         => _manager.CreateAsync(entry);

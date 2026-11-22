@@ -535,15 +535,16 @@ public sealed class NamedRecipeStepHandlerTests
 
         var options = Options.Create(new McpClientAIOptions());
 
-        // No one is signed in (a startup recipe) on the default tenant: the host may change a local connection.
+        // The default tenant is being set up, which runs as the host: it may change a local connection.
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Mcp.Recipes.McpConnectionStep, CrestApps.OrchardCore.AI.Mcp",
             manager.Object,
             options,
-            new global::OrchardCore.Environment.Shell.ShellSettings { Name = global::OrchardCore.Environment.Shell.ShellSettings.DefaultShellName },
+            new global::OrchardCore.Environment.Shell.ShellSettings { Name = global::OrchardCore.Environment.Shell.ShellSettings.DefaultShellName, State = global::OrchardCore.Environment.Shell.Models.TenantState.Initializing },
             Mock.Of<Microsoft.AspNetCore.Authorization.IAuthorizationService>(),
             new Microsoft.AspNetCore.Http.HttpContextAccessor(),
-            null);
+            null,
+            AllowAnyEndpoint());
 
         var context = CreateContext("McpConnection", new JsonObject
         {

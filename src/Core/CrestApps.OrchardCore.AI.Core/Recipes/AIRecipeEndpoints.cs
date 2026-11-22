@@ -1,8 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
 
-namespace CrestApps.OrchardCore.AI.Recipes;
+namespace CrestApps.OrchardCore.AI.Core.Recipes;
 
 /// <summary>
 /// The endpoints a recipe's AI connection or deployment would have the site call: every string property, at any depth,
@@ -10,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 /// <c>Url</c> (an HTTP API Request base URL, a documentation site, sitemap or index address). A recipe step checks them with
 /// <see cref="IAIEndpointPolicy"/>, as the editor does, so a recipe cannot point a connection at the site's own network.
 /// </summary>
-internal static class AIRecipeEndpoints
+public static class AIRecipeEndpoints
 {
     /// <summary>
     /// Returns the first endpoint the policy refuses, or <see langword="null"/>.
