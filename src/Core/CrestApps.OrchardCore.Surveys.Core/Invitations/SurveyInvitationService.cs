@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Net.Mail;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Records;
@@ -7,6 +9,7 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
 
@@ -22,6 +25,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         SurveyInvitationStatus.Started,
     ];
 
+    // Characters that never belong in one plain address: list separators, white space, display-name syntax.
+    private static readonly SearchValues<char> _notInAddress = SearchValues.Create(",; \t\r\n<>\"");
+
     private readonly SurveyStore _surveyStore;
     private readonly SurveyCollectorStore _collectorStore;
     private readonly SurveyInvitationStore _invitationStore;
@@ -31,6 +37,11 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private readonly IEnumerable<ISurveyInvitationRecipientPolicy> _recipientPolicies;
     private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
+    private readonly ISiteService _siteService;
+
+    // The e-mails sent today, counted once per scope and then kept up to date as this service sends more.
+    private int? _emailedToday;
+    private DateTime _emailedDay;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationService"/> class.
@@ -44,6 +55,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <param name="recipientPolicies">The opt-out and consent checks asked before an e-mail invitation is sent.</param>
     /// <param name="secrets">The anonymity secrets, which sign the invitation links.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="siteService">The site service, for the daily e-mail limit; without it the default limit applies.</param>
     public SurveyInvitationService(
         SurveyStore surveyStore,
         SurveyCollectorStore collectorStore,
@@ -53,8 +65,10 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         IEnumerable<ISurveyInvitationSender> senders,
         IEnumerable<ISurveyInvitationRecipientPolicy> recipientPolicies,
         SurveyAnonymitySecrets secrets,
-        IClock clock)
+        IClock clock,
+        ISiteService siteService = null)
     {
+        _siteService = siteService;
         _surveyStore = surveyStore;
         _collectorStore = collectorStore;
         _invitationStore = invitationStore;
@@ -113,6 +127,13 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
 
+        // One personal link goes to one address: a list (a@x;b@y) or a malformed value is refused here, below every
+        // caller (the admin page, workflows, the API).
+        if (email is not null && !IsSingleEmailAddress(email))
+        {
+            return new SurveyInvitationResult { Error = SurveyErrorCode.InvitationInvalid };
+        }
+
         var hasRecipient = !string.IsNullOrEmpty(request.UserId) || request.Recipient is not null || email is not null;
 
         if (requireRecipient && !hasRecipient)
@@ -154,8 +175,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             invitation.Put(new SurveyInvitationContext { Context = context.ToString() });
         }
 
-        var token = await _secrets.InvitationTokenAsync(survey, invitation.ItemId, cancellationToken);
-        invitation.TokenHash = SurveyInvitationTokens.Hash(token);
+        var token = await IssueTokenAsync(survey, invitation, cancellationToken);
 
         if (existing is null)
         {
@@ -189,7 +209,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         foreach (var invitation in await _invitationStore.ListByCollectorAsync(collector.ItemId, [SurveyInvitationStatus.Pending], SurveysConstants.PageSize, cancellationToken))
         {
-            var link = await _links.BuildAsync(await _secrets.InvitationTokenAsync(survey, invitation.ItemId, cancellationToken));
+            var link = await _links.BuildAsync(await ReissueTokenAsync(survey, invitation, cancellationToken));
 
             if (await DeliverAsync(survey, collector, invitation, link, isReminder: false, cancellationToken))
             {
@@ -253,7 +273,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 continue;
             }
 
-            var link = await _links.BuildAsync(await _secrets.InvitationTokenAsync(survey, invitation.ItemId, cancellationToken));
+            var link = await _links.BuildAsync(await ReissueTokenAsync(survey, invitation, cancellationToken));
 
             if (await DeliverAsync(survey, collector, invitation, link, isReminder: true, cancellationToken))
             {
@@ -336,6 +356,81 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         return collector;
     }
 
+    /// <summary>
+    /// Re-issues the stored token hash and seal lookup value of every invitation of a survey, after its anonymity secret
+    /// was reset. The links sent before stop working; sending the invitations again sends the new links.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many invitations changed.</returns>
+    public async Task<int> ReissueTokensAsync(Survey survey, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+
+        var changed = 0;
+
+        foreach (var invitation in await _invitationStore.ListBySurveyAsync(survey.ItemId, cancellationToken))
+        {
+            var tokenHash = invitation.TokenHash;
+            var sealLookup = invitation.SealLookup;
+
+            await IssueTokenAsync(survey, invitation, cancellationToken);
+
+            if (!string.Equals(tokenHash, invitation.TokenHash, StringComparison.Ordinal) || !string.Equals(sealLookup, invitation.SealLookup, StringComparison.Ordinal))
+            {
+                await _invitationStore.UpdateAsync(invitation, cancellationToken);
+                changed++;
+            }
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// Gets whether a value is exactly one e-mail address: no list, no display name, no spaces.
+    /// </summary>
+    /// <param name="email">The value.</param>
+    /// <returns><see langword="true"/> for a single address.</returns>
+    public static bool IsSingleEmailAddress(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || email.Length > 254 || email.AsSpan().IndexOfAny(_notInAddress) >= 0)
+        {
+            return false;
+        }
+
+        return MailAddress.TryCreate(email, out var parsed)
+            && string.Equals(parsed.Address, email, StringComparison.Ordinal)
+            && string.IsNullOrEmpty(parsed.DisplayName);
+    }
+
+    // Makes an invitation's token and keeps its hash and seal lookup value on the invitation. The caller saves it.
+    private async Task<string> IssueTokenAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken)
+    {
+        var secret = await _secrets.RevealAsync(survey, cancellationToken);
+        var token = SurveyInvitationTokens.Create(secret, invitation.ItemId);
+
+        invitation.TokenHash = SurveyInvitationTokens.Hash(token);
+        invitation.SealLookup = SurveyRespondentKeys.InvitationSealLookup(secret, SurveyRespondentKeys.InvitationSeal(secret, invitation.ItemId));
+
+        return token;
+    }
+
+    // Makes the token of an invitation being sent again, saving the invitation when its stored hash no longer matches
+    // (the secret was reset, or the invitation predates its seal lookup value), so the link it sends opens it.
+    private async Task<string> ReissueTokenAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken)
+    {
+        var tokenHash = invitation.TokenHash;
+        var sealLookup = invitation.SealLookup;
+        var token = await IssueTokenAsync(survey, invitation, cancellationToken);
+
+        if (!string.Equals(tokenHash, invitation.TokenHash, StringComparison.Ordinal) || !string.Equals(sealLookup, invitation.SealLookup, StringComparison.Ordinal))
+        {
+            await _invitationStore.UpdateAsync(invitation, cancellationToken);
+        }
+
+        return token;
+    }
+
     private async Task<bool> DeliverAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken)
     {
         var sender = _senders.LastOrDefault();
@@ -353,8 +448,22 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return false;
         }
 
+        var isEmail = string.IsNullOrEmpty(invitation.UserId) && !string.IsNullOrWhiteSpace(invitation.Email);
+
+        // The site's daily e-mail limit: an invitation over it is not sent and stays as it is (pending, or due a
+        // reminder), so it goes out on a later day.
+        if (isEmail && await IsDailyEmailLimitReachedAsync(cancellationToken))
+        {
+            return false;
+        }
+
         var delivered = await sender.SendAsync(survey, collector, invitation, link, isReminder, cancellationToken);
         var now = _clock.UtcNow;
+
+        if (delivered && isEmail)
+        {
+            _emailedToday++;
+        }
 
         if (!delivered)
         {
@@ -385,6 +494,22 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         await _invitationStore.UpdateAsync(invitation, cancellationToken);
 
         return true;
+    }
+
+    private async Task<bool> IsDailyEmailLimitReachedAsync(CancellationToken cancellationToken)
+    {
+        var day = _clock.UtcNow.Date;
+
+        if (_emailedToday is null || _emailedDay != day)
+        {
+            _emailedDay = day;
+            _emailedToday = await _invitationStore.CountEmailedSinceAsync(day, cancellationToken);
+        }
+
+        var settings = _siteService is null ? null : await _siteService.GetSettingsAsync<SurveySettings>();
+        var limit = Math.Max(1, settings?.InvitationEmailsPerDay ?? SurveySettings.DefaultInvitationEmailsPerDay);
+
+        return _emailedToday >= limit;
     }
 
     private async Task<bool> HasOptedOutAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken)

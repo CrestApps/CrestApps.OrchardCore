@@ -103,6 +103,24 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
                 response.UserId = userId;
                 response.Respondent ??= new PartyRef(PartyKinds.User, userId);
             }
+            else if (!string.IsNullOrEmpty(response.UserId))
+            {
+                // A raw user id from the file is kept only when it names a user of this site; ids from another site
+                // would point the response at someone else, or at nobody.
+                var names = await _users.GetUserNamesAsync([response.UserId]);
+
+                if (names is null || !names.ContainsKey(response.UserId))
+                {
+                    context.Errors.Add($"The response '{id}' names a user id that is not on the site and no UserName; it was imported without a user.");
+
+                    if (response.Respondent is { } respondent && respondent.Kind == PartyKinds.User && respondent.Id == response.UserId)
+                    {
+                        response.Respondent = null;
+                    }
+
+                    response.UserId = null;
+                }
+            }
 
             response.GradedBy = await _users.FindUserIdAsync(SurveysRecipeJson.String(token, "GradedByUserName"));
             response.SurveyId = survey.ItemId;

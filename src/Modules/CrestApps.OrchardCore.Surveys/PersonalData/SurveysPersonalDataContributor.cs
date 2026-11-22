@@ -14,7 +14,8 @@ using YesSql.Services;
 namespace CrestApps.OrchardCore.Surveys.PersonalData;
 
 /// <summary>
-/// Exports a person's identified survey responses, with their answers, and their invitations; erasure removes who gave
+/// Exports a person's identified survey responses, with their answers, and their invitations (to their user account,
+/// or guest invitations to one of their e-mail addresses, with the responses linked to them); erasure removes who gave
 /// the responses and everything that could point back to them (context, variables and properties; the answers stay for
 /// results), deletes the files they uploaded, their invitations and their participation counts. Participation is found
 /// by the keys it is really stored under: <c>u:{id}</c> (or its hash when long) on identified surveys, the key of each of
@@ -66,56 +67,55 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        foreach (var userId in context.Subject.UserIds)
+        var invitations = await InvitationsAsync(context.Subject, cancellationToken);
+
+        foreach (var response in await ResponsesAsync(context.Subject, invitations, cancellationToken))
         {
-            foreach (var response in await ResponsesAsync(userId, cancellationToken))
+            var version = await _versions.GetAsync(response.SurveyVersionId, cancellationToken);
+            var definition = version?.Definition;
+            var record = context.Add(ResponseKind, response.ItemId, definition?.Title ?? response.SurveyId, response.StartedUtc);
+
+            record.Fields["Number"] = response.Number;
+            record.Fields["Survey"] = response.SurveyId;
+            record.Fields["Status"] = response.Status.ToString();
+            record.Fields["Completed"] = response.CompletedUtc?.ToString("O", CultureInfo.InvariantCulture);
+            record.Fields["Score"] = response.Score?.ToString(CultureInfo.InvariantCulture);
+            record.Fields["Percent"] = response.Percent?.ToString(CultureInfo.InvariantCulture);
+            record.Fields["Feedback"] = response.Feedback;
+            record.Fields["IpAddress"] = response.IpAddress;
+
+            if (definition is null)
             {
-                var version = await _versions.GetAsync(response.SurveyVersionId, cancellationToken);
-                var definition = version?.Definition;
-                var record = context.Add(ResponseKind, response.ItemId, definition?.Title ?? response.SurveyId, response.StartedUtc);
+                continue;
+            }
 
-                record.Fields["Number"] = response.Number;
-                record.Fields["Survey"] = response.SurveyId;
-                record.Fields["Status"] = response.Status.ToString();
-                record.Fields["Completed"] = response.CompletedUtc?.ToString("O", CultureInfo.InvariantCulture);
-                record.Fields["Score"] = response.Score?.ToString(CultureInfo.InvariantCulture);
-                record.Fields["Percent"] = response.Percent?.ToString(CultureInfo.InvariantCulture);
-                record.Fields["Feedback"] = response.Feedback;
-                record.Fields["IpAddress"] = response.IpAddress;
+            var format = new SurveyFormatContext { Culture = CultureInfo.InvariantCulture, Definition = definition };
 
-                if (definition is null)
+            foreach (var question in definition.Pages.SelectMany(page => page.Questions))
+            {
+                if (question?.Id is null
+                    || !response.Answers.TryGetValue(question.Id, out var answer)
+                    || _registry.GetHandler(question.ControlType) is not { } handler)
                 {
                     continue;
                 }
 
-                var format = new SurveyFormatContext { Culture = CultureInfo.InvariantCulture, Definition = definition };
+                var item = context.Add(AnswerKind, response.ItemId + ":" + question.Id, question.Title ?? question.Name, answer.AnsweredUtc == default ? null : answer.AnsweredUtc);
 
-                foreach (var question in definition.Pages.SelectMany(page => page.Questions))
-                {
-                    if (question?.Id is null
-                        || !response.Answers.TryGetValue(question.Id, out var answer)
-                        || _registry.GetHandler(question.ControlType) is not { } handler)
-                    {
-                        continue;
-                    }
-
-                    var item = context.Add(AnswerKind, response.ItemId + ":" + question.Id, question.Title ?? question.Name, answer.AnsweredUtc == default ? null : answer.AnsweredUtc);
-
-                    item.Fields["Question"] = question.Name;
-                    item.Fields["Answer"] = handler.FormatAnswer(question, answer, format);
-                    item.Fields["Score"] = answer.Score?.ToString(CultureInfo.InvariantCulture);
-                    item.Fields["GraderComment"] = answer.GraderComment;
-                }
+                item.Fields["Question"] = question.Name;
+                item.Fields["Answer"] = handler.FormatAnswer(question, answer, format);
+                item.Fields["Score"] = answer.Score?.ToString(CultureInfo.InvariantCulture);
+                item.Fields["GraderComment"] = answer.GraderComment;
             }
+        }
 
-            foreach (var invitation in await InvitationsAsync(userId, cancellationToken))
-            {
-                var record = context.Add(InvitationKind, invitation.ItemId, invitation.SurveyId, invitation.CreatedUtc);
+        foreach (var invitation in invitations)
+        {
+            var record = context.Add(InvitationKind, invitation.ItemId, invitation.SurveyId, invitation.CreatedUtc);
 
-                record.Fields["Email"] = invitation.Email;
-                record.Fields["Status"] = invitation.Status.ToString();
-                record.Fields["Sent"] = invitation.SentUtc?.ToString("O", CultureInfo.InvariantCulture);
-            }
+            record.Fields["Email"] = invitation.Email;
+            record.Fields["Status"] = invitation.Status.ToString();
+            record.Fields["Sent"] = invitation.SentUtc?.ToString("O", CultureInfo.InvariantCulture);
         }
     }
 
@@ -130,74 +130,141 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
 
         foreach (var survey in surveys.Values.Where(SurveyAnonymity.IsAnonymous))
         {
-            anonymousSecrets.Add(await _secrets.RevealAsync(survey, cancellationToken));
+            if (await RevealAsync(survey, cancellationToken) is { } secret)
+            {
+                anonymousSecrets.Add(secret);
+            }
         }
+
+        var invitations = await InvitationsAsync(context.Subject, cancellationToken);
+
+        foreach (var response in await ResponsesAsync(context.Subject, invitations, cancellationToken))
+        {
+            foreach (var attachmentId in response.Answers.Values.SelectMany(answer => answer.AttachmentIds ?? []).Distinct(StringComparer.Ordinal).ToList())
+            {
+                if (attachments is not null && await attachments.DeleteAsync(attachmentId, cancellationToken))
+                {
+                    context.Result.Count(FileKind);
+                }
+            }
+
+            foreach (var answer in response.Answers.Values)
+            {
+                answer.AttachmentIds = [];
+            }
+
+            // The answers stay for results; nothing that names the person, or points back to them, does.
+            response.UserId = null;
+            response.Respondent = null;
+            response.IpAddress = null;
+            response.InvitationId = null;
+            response.InvitationSeal = null;
+            response.ResumeTokenHash = null;
+            response.Context = null;
+            response.Variables.Clear();
+            response.Properties.Clear();
+            await _session.SaveAsync(response, collection: SurveysConstants.ResponsesCollectionName, cancellationToken: cancellationToken);
+            context.Result.Count(ResponseKind);
+        }
+
+        var keys = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var userId in context.Subject.UserIds)
         {
-            foreach (var response in await ResponsesAsync(userId, cancellationToken))
+            keys.UnionWith(SurveyRespondentKeys.ForUser(userId, anonymousSecrets));
+        }
+
+        foreach (var invitation in invitations)
+        {
+            // A participation counted by invitation (a guest who opened the personal link, the i: key, or its HMAC on an
+            // anonymous survey) is the person's too.
+            if (surveys.TryGetValue(invitation.SurveyId ?? string.Empty, out var survey)
+                && (!SurveyAnonymity.IsAnonymous(survey) || _secrets.CanReveal(survey)))
             {
-                foreach (var attachmentId in response.Answers.Values.SelectMany(answer => answer.AttachmentIds ?? []).Distinct(StringComparer.Ordinal).ToList())
-                {
-                    if (attachments is not null && await attachments.DeleteAsync(attachmentId, cancellationToken))
-                    {
-                        context.Result.Count(FileKind);
-                    }
-                }
-
-                foreach (var answer in response.Answers.Values)
-                {
-                    answer.AttachmentIds = [];
-                }
-
-                // The answers stay for results; nothing that names the person, or points back to them, does.
-                response.UserId = null;
-                response.Respondent = null;
-                response.IpAddress = null;
-                response.InvitationId = null;
-                response.InvitationSeal = null;
-                response.ResumeTokenHash = null;
-                response.Context = null;
-                response.Variables.Clear();
-                response.Properties.Clear();
-                await _session.SaveAsync(response, collection: SurveysConstants.ResponsesCollectionName, cancellationToken: cancellationToken);
-                context.Result.Count(ResponseKind);
+                keys.Add(await _secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity(), invitation, cancellationToken));
             }
 
-            var keys = new HashSet<string>(SurveyRespondentKeys.ForUser(userId, anonymousSecrets), StringComparer.Ordinal);
+            _session.Delete(invitation, SurveysConstants.CollectionName);
+            context.Result.Count(InvitationKind);
+        }
 
-            foreach (var invitation in await InvitationsAsync(userId, cancellationToken))
+        foreach (var batch in keys.Where(key => !string.IsNullOrEmpty(key)).Chunk(200))
+        {
+            var participation = await _session.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.RespondentKey.IsIn(batch), collection: SurveysConstants.CollectionName)
+                .ListAsync(cancellationToken);
+
+            foreach (var row in participation)
             {
-                if (surveys.TryGetValue(invitation.SurveyId ?? string.Empty, out var survey))
-                {
-                    // A participation counted by invitation (a guest who opened the personal link) is the person's too.
-                    keys.Add(await _secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity(), invitation, cancellationToken));
-                }
-
-                _session.Delete(invitation, SurveysConstants.CollectionName);
-                context.Result.Count(InvitationKind);
-            }
-
-            foreach (var batch in keys.Where(key => !string.IsNullOrEmpty(key)).Chunk(200))
-            {
-                var participation = await _session.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.RespondentKey.IsIn(batch), collection: SurveysConstants.CollectionName)
-                    .ListAsync(cancellationToken);
-
-                foreach (var row in participation)
-                {
-                    _session.Delete(row, SurveysConstants.CollectionName);
-                    context.Result.Count(ParticipationKind);
-                }
+                _session.Delete(row, SurveysConstants.CollectionName);
+                context.Result.Count(ParticipationKind);
             }
         }
     }
 
-    private async Task<IReadOnlyList<SurveyResponse>> ResponsesAsync(string userId, CancellationToken cancellationToken)
-        => (await _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.UserId == userId, collection: SurveysConstants.ResponsesCollectionName)
-            .OrderBy(index => index.StartedUtc)
-            .ListAsync(cancellationToken)).ToList();
+    // A secret this server can't read (missing Data Protection keys) can't recompute any key, so its survey is skipped
+    // rather than stopping the whole erasure.
+    private async Task<string> RevealAsync(Survey survey, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _secrets.RevealAsync(survey, cancellationToken);
+        }
+        catch (SurveyAnonymitySecretUnreadableException)
+        {
+            return null;
+        }
+    }
 
-    private async Task<IReadOnlyList<SurveyInvitation>> InvitationsAsync(string userId, CancellationToken cancellationToken)
-        => (await _session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.UserId == userId, collection: SurveysConstants.CollectionName)
-            .ListAsync(cancellationToken)).ToList();
+    // The person's responses: those given while signed in, and those linked to one of their invitations (a guest who
+    // answered an e-mail invitation on an identified survey).
+    private async Task<IReadOnlyList<SurveyResponse>> ResponsesAsync(PersonalDataSubject subject, IReadOnlyList<SurveyInvitation> invitations, CancellationToken cancellationToken)
+    {
+        var found = new Dictionary<string, SurveyResponse>(StringComparer.Ordinal);
+        var userIds = subject.UserIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (userIds.Length > 0)
+        {
+            foreach (var response in await _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.UserId.IsIn(userIds), collection: SurveysConstants.ResponsesCollectionName).ListAsync(cancellationToken))
+            {
+                found.TryAdd(response.ItemId, response);
+            }
+        }
+
+        foreach (var batch in invitations.Select(invitation => invitation.ItemId).Where(id => !string.IsNullOrEmpty(id)).Chunk(200))
+        {
+            foreach (var response in await _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.InvitationId.IsIn(batch), collection: SurveysConstants.ResponsesCollectionName).ListAsync(cancellationToken))
+            {
+                found.TryAdd(response.ItemId, response);
+            }
+        }
+
+        return found.Values.OrderBy(response => response.StartedUtc).ToList();
+    }
+
+    // The person's invitations: those sent to their user account, and guest invitations sent to one of their e-mail
+    // addresses.
+    private async Task<IReadOnlyList<SurveyInvitation>> InvitationsAsync(PersonalDataSubject subject, CancellationToken cancellationToken)
+    {
+        var found = new Dictionary<string, SurveyInvitation>(StringComparer.Ordinal);
+        var userIds = subject.UserIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var emails = subject.Emails.Where(email => !string.IsNullOrWhiteSpace(email)).Select(email => email.Trim().ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (userIds.Length > 0)
+        {
+            foreach (var invitation in await _session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.UserId.IsIn(userIds), collection: SurveysConstants.CollectionName).ListAsync(cancellationToken))
+            {
+                found.TryAdd(invitation.ItemId, invitation);
+            }
+        }
+
+        if (emails.Length > 0)
+        {
+            foreach (var invitation in await _session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.Email.IsIn(emails), collection: SurveysConstants.CollectionName).ListAsync(cancellationToken))
+            {
+                found.TryAdd(invitation.ItemId, invitation);
+            }
+        }
+
+        return found.Values.ToList();
+    }
 }

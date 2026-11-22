@@ -69,11 +69,12 @@ Survey site settings travel in Orchard Core's `Settings` step as `SurveySettings
 - A version number the site already has is skipped (versions are immutable); missing ones are created; `PublishedVersionNumber` is set last.
 - Collector tokens and password hashes are exported only when the deployment step's **Include secrets** option is on, which needs Export survey responses with respondent identity; otherwise import makes new tokens.
 - The survey's anonymity secret is never exported; import makes a new one.
+- A survey `Name` must be lowercase letters, digits and dashes, as in the editor, and not used by another survey; otherwise the survey is skipped with a recipe error.
 - The steps write the stores directly, so catalog handlers do not run on import.
 
 ## Responses, accommodations and invitations
 
-The `SurveyResponses` deployment step is opt-in, with options for the surveys, a date range, test responses and responses in progress. It reads pages of 500, needs Export survey responses with respondent identity, and is recorded in the Audit Trail. People travel by user name; a user name the site does not have is a recipe error. Anonymous responses travel without identity.
+The `SurveyResponses` deployment step is opt-in, with options for the surveys, a date range, test responses and responses in progress. It reads pages of 500, needs Export survey responses with respondent identity, and is recorded in the Audit Trail. People travel by user name; a user name the site does not have is a recipe error. A raw `UserId` without a `UserName` is kept only when it names a user of the site; otherwise the response is imported without a user and a recipe error says so. Anonymous responses travel without identity.
 
 ## Sample recipe and schema
 

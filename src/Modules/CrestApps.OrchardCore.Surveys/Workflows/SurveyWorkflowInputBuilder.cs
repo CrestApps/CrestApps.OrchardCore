@@ -57,6 +57,7 @@ internal sealed class SurveyWorkflowInputBuilder
         input["CompletedUtc"] = response.CompletedUtc?.ToString("O", CultureInfo.InvariantCulture);
         input[SurveyWorkflowInput.Actor] = context.CausedByWorkflow ? SurveyWorkflowInput.WorkflowActor : context.ActorId ?? (anonymous ? null : response.UserId);
         input[SurveyWorkflowInput.CausedByWorkflow] = context.CausedByWorkflow;
+        input[SurveyWorkflowInput.Anonymous] = anonymous;
 
         if (!string.IsNullOrEmpty(response.EndingId))
         {

@@ -49,6 +49,43 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RunAsync_AnAnonymousSurveyPaddedByInProgressAndTestResponses_StillShowsNoRow()
+    {
+        // Arrange: 4 real completed responses, below the minimum of 5, padded by unfinished and test responses that the
+        // filters (every status, tests included) would list.
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 4, inProgress: 3);
+        await SaveTestResponsesAsync("anon", 3);
+        await using var session = _store.OpenSession();
+        var context = Context("anon");
+        context.Filter.Set(SurveyReportKeys.Status, SurveyReportKeys.AllStatuses);
+        context.Filter.Set(SurveyReportKeys.IncludeTest, true);
+
+        // Act
+        var document = await Report(session).RunAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Empty(section.Rows);
+        Assert.Contains("anonymous", section.EmptyMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_AnAnonymousSurveyAtItsMinimum_ListsEveryFilteredRow()
+    {
+        // Arrange: 5 real completed responses reach the minimum, so the in-progress rows the filter asks for show too.
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 5, inProgress: 2);
+        await using var session = _store.OpenSession();
+        var context = Context("anon");
+        context.Filter.Set(SurveyReportKeys.Status, SurveyReportKeys.AllStatuses);
+
+        // Act
+        var document = await Report(session).RunAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(7, Assert.Single(document.Sections).Rows.Count);
+    }
+
+    [Fact]
     public async Task RunAsync_AnAnonymousSurveyWithAMinimumOfZero_StillHonorsTheSiteFloor()
     {
         // Arrange
@@ -198,6 +235,23 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
             var status = index < completed ? SurveyResponseStatus.Completed : SurveyResponseStatus.InProgress;
             var response = ResultsSqliteStore.Response($"{id}-r{index}", version, status, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
             response.UserId = userIds is not null && index < userIds.Length ? userIds[index] : null;
+            await session.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+        }
+
+        await session.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SaveTestResponsesAsync(string id, int count)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var version = ResultsSqliteStore.Version(id + "-v1", id, 1, ResultsSqliteStore.ChoiceQuestion("q1", "color", "red", "blue"));
+
+        await using var session = _store.OpenSession();
+
+        for (var index = 0; index < count; index++)
+        {
+            var response = ResultsSqliteStore.Response($"{id}-t{index}", version, SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
+            response.IsTest = true;
             await session.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
         }
 

@@ -13,7 +13,7 @@ user_manual:
 | Tool | Does |
 | --- | --- |
 | `list_surveys` | Lists the surveys the user may manage |
-| `get_survey_results` | Summarizes a survey's results through each question type's analyzer; checks access to the survey and the minimum group size |
+| `get_survey_results` | Summarizes a survey's results through each question type's analyzer; checks access to the survey and the minimum group size (never below the site's floor). Written answers are left out unless the `includeWrittenAnswers` argument is true; then up to 10 per question come back in `untrustedRespondentAnswers`, cleaned of links and markdown, next to a notice (and a tool description) that tells the model they are untrusted respondent text, never instructions |
 | `create_survey_draft` | Builds a survey definition from a prompt or a document, checks it against the definition schema, and saves it as a draft; it never publishes |
 
 See [AI tools](../../ai/tools.md).

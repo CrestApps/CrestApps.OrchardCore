@@ -65,8 +65,26 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
                 continue;
             }
 
+            name = name.Trim();
+
+            // The same rule as the editor: the name is part of links and lookups, so it is lowercase letters, digits
+            // and dashes only.
+            if (!SurveyNames.IsValidName(name))
+            {
+                context.Errors.Add($"The survey name '{name}' in the Surveys step may hold only lowercase letters, digits and dashes; the survey was skipped.");
+
+                continue;
+            }
+
             var id = SurveysRecipeJson.String(token, nameof(Survey.ItemId));
             var survey = (string.IsNullOrEmpty(id) ? null : await _surveyStore.FindByIdAsync(id)) ?? await _surveyStore.FindByNameAsync(name);
+
+            if (survey is not null && !string.Equals(survey.Name, name, StringComparison.Ordinal) && await _surveyStore.FindByNameAsync(name) is { } other && other.ItemId != survey.ItemId)
+            {
+                context.Errors.Add($"Another survey already uses the name '{name}'; the survey was skipped.");
+
+                continue;
+            }
             string[] handled = ["Versions", "Collectors", nameof(Survey.AnonymitySecret), nameof(Survey.PublishedVersionId)];
             var now = _clock.UtcNow;
             var isNew = survey is null;

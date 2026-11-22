@@ -191,6 +191,9 @@ public static class SurveysIndexSchema
             .Column<string>("UserId", column => column.Nullable().WithLength(26))
             .Column<string>("RecipientRef", column => column.Nullable().WithLength(255))
             .Column<string>("TokenHash", column => column.Nullable().WithLength(64))
+            .Column<string>("SealLookup", column => column.Nullable().WithLength(64))
+            .Column<string>("Email", column => column.Nullable().WithLength(254))
+            .Column<DateTime?>("LastReminderUtc", column => column.Nullable())
             .Column<DateTime?>("SentUtc", column => column.Nullable())
             .Column<DateTime?>("ExpiresUtc", column => column.Nullable()),
             collection: collection);
@@ -200,6 +203,8 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyInvitationIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_SurveyInvitationIndex_Status", "SurveyId", "Status");
             table.CreateIndex("IDX_SurveyInvitationIndex_Token", "TokenHash");
+            table.CreateIndex("IDX_SurveyInvitationIndex_Seal", "CollectorId", "SealLookup");
+            table.CreateIndex("IDX_SurveyInvitationIndex_Email", "Email");
         }, collection: collection);
 
         await schemaBuilder.CreateMapIndexTableAsync<SurveyOverrideIndex>(table => table
@@ -216,5 +221,29 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyOverrideIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_SurveyOverrideIndex_User", "SurveyId", "UserId");
         }, collection: collection);
+    }
+
+    /// <summary>
+    /// Adds the seal lookup and e-mail columns of the invitation index to a site whose tables were made before they
+    /// existed. Rows written before stay empty in them until the invitation is saved again.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddInvitationLookupColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
+        {
+            table.AddColumn<string>("SealLookup", column => column.Nullable().WithLength(64));
+            table.AddColumn<string>("Email", column => column.Nullable().WithLength(254));
+            table.AddColumn<DateTime?>("LastReminderUtc", column => column.Nullable());
+        }, collection: SurveysConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
+        {
+            table.CreateIndex("IDX_SurveyInvitationIndex_Seal", "CollectorId", "SealLookup");
+            table.CreateIndex("IDX_SurveyInvitationIndex_Email", "Email");
+        }, collection: SurveysConstants.CollectionName);
     }
 }

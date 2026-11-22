@@ -49,6 +49,13 @@ public sealed class SurveyInvitation : CatalogItem
     public string TokenHash { get; set; }
 
     /// <summary>
+    /// Gets or sets the value an anonymous response's invitation seal is looked up by: an HMAC of the seal keyed by the
+    /// survey's secret, so only the secret links a response to its invitation. Null for invitations made before it
+    /// was kept.
+    /// </summary>
+    public string SealLookup { get; set; }
+
+    /// <summary>
     /// Gets or sets where the invitation stands.
     /// </summary>
     public SurveyInvitationStatus Status { get; set; }

@@ -952,8 +952,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
     private RecordRef? StoredContext(Survey survey, RecordRef? context)
         => SurveyAnonymity.StoredContext(survey, context, _serviceProvider.GetService<IOptions<SurveyContextKindOptions>>()?.Value);
 
-    // Finds the invitation an anonymous response was started from by recomputing the seal of each open invitation of
-    // its collector: nothing stored links the two, so only the survey's protected secret can.
+    // Finds the invitation an anonymous response was started from. The invitation's index keeps an HMAC of its seal keyed
+    // by the survey's protected secret, so one indexed query finds it, and nothing stored links the two without the
+    // secret. Invitations made before that value was kept are still matched by recomputing their seals.
     private async Task<SurveyInvitation> FindSealedInvitationAsync(Survey survey, SurveyResponse response, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(response.CollectorId))
@@ -962,13 +963,22 @@ public sealed class SurveyResponseService : ISurveyResponseService
         }
 
         var secret = await Secrets.RevealAsync(survey, cancellationToken);
-        var open = await _invitationStore.ListByCollectorAsync(
+        var lookup = SurveyRespondentKeys.InvitationSealLookup(secret, response.InvitationSeal);
+        var found = await _invitationStore.FindBySealLookupAsync(response.CollectorId, lookup, cancellationToken);
+
+        if (found is not null)
+        {
+            return found.Status is SurveyInvitationStatus.Pending or SurveyInvitationStatus.Sent or SurveyInvitationStatus.Opened or SurveyInvitationStatus.Started or SurveyInvitationStatus.Completed
+                ? found
+                : null;
+        }
+
+        var legacy = await _invitationStore.ListWithoutSealLookupAsync(
             response.CollectorId,
             [SurveyInvitationStatus.Pending, SurveyInvitationStatus.Sent, SurveyInvitationStatus.Opened, SurveyInvitationStatus.Started, SurveyInvitationStatus.Completed],
-            int.MaxValue,
             cancellationToken);
 
-        return open.FirstOrDefault(candidate => string.Equals(SurveyRespondentKeys.InvitationSeal(secret, candidate.ItemId), response.InvitationSeal, StringComparison.Ordinal));
+        return legacy.FirstOrDefault(candidate => string.Equals(SurveyRespondentKeys.InvitationSeal(secret, candidate.ItemId), response.InvitationSeal, StringComparison.Ordinal));
     }
 
     private async Task<SurveyResponse> FindOpenAsync(Survey survey, StartResponseRequest request, SurveyRespondentIdentity identity, SurveyInvitation invitation, bool anonymous, bool isTest, CancellationToken cancellationToken)

@@ -242,7 +242,13 @@ internal static class SurveysApiEndpoints
 
         var settings = services.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
 
-        if (SurveyAnonymity.IsTooSmall(survey, settings, count))
+        // The threshold counts completed, non-test responses only, so unfinished responses never pad the group.
+        if (anonymous && SurveyAnonymity.IsTooSmall(survey, settings, (await queries.ListAsync(new SurveyResponseQuery
+        {
+            SurveyIds = [survey.ItemId],
+            Statuses = [SurveyResponseStatus.Completed],
+            Take = 1,
+        }, httpContext.RequestAborted)).Count))
         {
             return Results.Ok(new { count = 0, hidden = true, items = Array.Empty<object>() });
         }

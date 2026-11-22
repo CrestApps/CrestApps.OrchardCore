@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Drivers;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -10,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -431,6 +434,58 @@ public sealed class SurveysController : Controller
             SurveyName = survey.Name,
         }, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The settings have been saved."]);
+
+        return RedirectToAction(nameof(Access), new { id });
+    }
+
+    /// <summary>
+    /// Replaces a survey's anonymity secret that this server can't read any more, the explicit administrator action
+    /// that ends the fail-closed state. Per-person limits start over and invitation links already sent stop working; the
+    /// invitations' stored token hashes are re-issued so sending them again sends working links.
+    /// </summary>
+    /// <param name="id">The survey.</param>
+    /// <param name="auditTrail">The audit trail.</param>
+    /// <returns>A redirect to the access and settings page.</returns>
+    [HttpPost]
+    [Admin("surveys/{id}/reset-anonymity-secret", "SurveysResetAnonymitySecret")]
+    public async Task<IActionResult> ResetAnonymitySecret(string id, [FromServices] ISurveyAuditTrail auditTrail)
+    {
+        var survey = await _manager.FindByIdAsync(id);
+
+        if (survey is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _surveyAuthorization.AuthorizeAsync(User, survey, SurveyOperation.Manage, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
+        var services = HttpContext.RequestServices;
+        var secrets = services.GetRequiredService<SurveyAnonymitySecrets>();
+
+        if (secrets.CanReveal(survey))
+        {
+            await _notifier.InformationAsync(H["The anonymity secret can be read, so it was kept."]);
+
+            return RedirectToAction(nameof(Access), new { id });
+        }
+
+        await secrets.ResetAsync(survey, HttpContext.RequestAborted);
+
+        if (services.GetService<SurveyInvitationService>() is { } invitations)
+        {
+            await invitations.ReissueTokensAsync(survey, HttpContext.RequestAborted);
+        }
+
+        await auditTrail.RecordAsync(SurveyAuditEvents.AccessChanged, new SurveyAuditEntry
+        {
+            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            SurveyId = survey.ItemId,
+            SurveyName = survey.Name,
+        }, HttpContext.RequestAborted);
+        await _notifier.WarningAsync(H["The anonymity secret was reset. Per-person limits start over, and invitation links sent before no longer work: send the invitations again."]);
 
         return RedirectToAction(nameof(Access), new { id });
     }

@@ -11,6 +11,11 @@ public sealed class SurveySettings
     public const int DefaultMinimumGroupSizeFloor = 5;
 
     /// <summary>
+    /// The most invitation and reminder e-mails the site sends a day when the site sets none.
+    /// </summary>
+    public const int DefaultInvitationEmailsPerDay = 2000;
+
+    /// <summary>
     /// Gets or sets the retention of new surveys, in days, or null to keep responses.
     /// </summary>
     public int? DefaultRetentionDays { get; set; }
@@ -40,4 +45,10 @@ public sealed class SurveySettings
     /// less, and the floor applies to surveys saved before it was raised. At least 1.
     /// </summary>
     public int MinimumGroupSizeFloor { get; set; } = DefaultMinimumGroupSizeFloor;
+
+    /// <summary>
+    /// Gets or sets the most survey invitation and reminder e-mails the site sends in a day (UTC), across all surveys.
+    /// Invitations over the limit stay pending and go out on a later day. At least 1.
+    /// </summary>
+    public int InvitationEmailsPerDay { get; set; } = DefaultInvitationEmailsPerDay;
 }

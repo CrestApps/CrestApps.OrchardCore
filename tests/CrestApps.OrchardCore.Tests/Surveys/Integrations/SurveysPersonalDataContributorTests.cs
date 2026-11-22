@@ -148,4 +148,77 @@ public sealed class SurveysPersonalDataContributorTests
         Assert.Empty(response.Variables);
         Assert.Empty(response.Properties);
     }
+
+    [Fact]
+    public async Task ExportAndErasure_FindGuestEmailInvitations_TheirParticipationKeysAndLinkedResponses()
+    {
+        // Arrange: a guest (no user account) was invited by e-mail and answered an identified survey through the link.
+        const string email = "Guest@Example.com";
+        var responseId = IdGenerator.GenerateId();
+        var otherInvitationId = IdGenerator.GenerateId();
+        var invitation = new SurveyInvitation { ItemId = IdGenerator.GenerateId(), SurveyId = "open", Email = email, Status = SurveyInvitationStatus.Completed };
+        string invitationKey = null;
+        await using var harness = await IntegrationsTestHarness.CreateAsync(services => services.AddScoped<SurveysPersonalDataContributor>());
+        await harness.RunAsync(async services =>
+        {
+            var survey = IntegrationsTestHarness.NewSurvey("open", "open");
+            await services.GetRequiredService<SurveyStore>().CreateAsync(survey);
+            invitationKey = SurveyRespondentKeys.For(survey, null, new SurveyRespondentIdentity(), invitation);
+
+            var invitations = services.GetRequiredService<SurveyInvitationStore>();
+            await invitations.CreateAsync(invitation);
+            await invitations.CreateAsync(new SurveyInvitation { ItemId = otherInvitationId, SurveyId = "open", Email = "someone@example.com" });
+
+            var participation = services.GetRequiredService<SurveyParticipationStore>();
+            await participation.CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "open", RespondentKey = invitationKey, Day = new DateOnly(2026, 11, 1), CompletedCount = 1 });
+
+            var response = new SurveyResponse
+            {
+                ItemId = responseId,
+                SurveyId = "open",
+                Number = "R1",
+                InvitationId = invitation.ItemId,
+                IpAddress = "10.0.0.2",
+                Status = SurveyResponseStatus.Completed,
+                Answers = { ["q1"] = new SurveyAnswer { Values = ["c1"] } },
+            };
+            response.Variables["email"] = email;
+            await services.GetRequiredService<SurveyResponseStore>().CreateAsync(response);
+        });
+
+        // Act: the person is known by their e-mail address only, typed in another case.
+        var export = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataExport();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().ExportAsync(new PersonalDataExportContext(new PersonalDataSubject(email: "guest@example.com"), result));
+
+            return result;
+        });
+
+        var erased = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataAnonymizeResult();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject(email: "guest@example.com"), "[removed]", result));
+
+            return result;
+        });
+
+        // Assert
+        Assert.Contains(export.Records, record => record.Kind == "SurveyInvitation" && record.Id == invitation.ItemId);
+        Assert.Contains(export.Records, record => record.Kind == "SurveyResponse" && record.Id == responseId);
+        Assert.DoesNotContain(export.Records, record => record.Id == otherInvitationId);
+        Assert.Equal(1, erased.Records["SurveyInvitation"]);
+        Assert.Equal(1, erased.Records["SurveyResponse"]);
+        Assert.Equal(1, erased.Records["SurveyParticipation"]);
+        var (response, invitationsLeft, participationLeft) = await harness.RunAsync(async services => (
+            await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(responseId),
+            await services.GetRequiredService<SurveyInvitationStore>().GetAllAsync(),
+            await services.GetRequiredService<SurveyParticipationStore>().GetAllAsync()));
+        Assert.Null(response.InvitationId);
+        Assert.Null(response.IpAddress);
+        Assert.Empty(response.Variables);
+        Assert.Equal(["c1"], response.Answers["q1"].Values);
+        Assert.Equal(otherInvitationId, Assert.Single(invitationsLeft).ItemId);
+        Assert.Empty(participationLeft);
+    }
 }

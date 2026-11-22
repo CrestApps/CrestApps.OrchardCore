@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -162,6 +163,8 @@ public sealed class SurveyInvitationsController : Controller
             return Forbid();
         }
 
+        ValidateTemplates(model);
+
         if (!ModelState.IsValid)
         {
             model.SurveyId = survey.ItemId;
@@ -238,6 +241,8 @@ public sealed class SurveyInvitationsController : Controller
         {
             return Forbid();
         }
+
+        ValidateTemplates(model);
 
         if (!ModelState.IsValid)
         {
@@ -452,6 +457,21 @@ public sealed class SurveyInvitationsController : Controller
         }
 
         return model;
+    }
+
+    // The subject and message are restricted Liquid: a template that doesn't parse, or uses a filter outside the
+    // restricted set, is refused here rather than silently replaced by the default text when it is sent.
+    private void ValidateTemplates(SurveyInvitationSettingsViewModel model)
+    {
+        if (!RestrictedLiquid.TryValidate(model?.Subject, out var subjectError))
+        {
+            ModelState.AddModelError(nameof(model.Subject), H["The subject's Liquid can't be used: {0}", subjectError].Value);
+        }
+
+        if (!RestrictedLiquid.TryValidate(model?.Message, out var messageError))
+        {
+            ModelState.AddModelError(nameof(model.Message), H["The message's Liquid can't be used: {0}", messageError].Value);
+        }
     }
 
     private static void Apply(SurveyCollector collector, SurveyInvitationSettingsViewModel model)

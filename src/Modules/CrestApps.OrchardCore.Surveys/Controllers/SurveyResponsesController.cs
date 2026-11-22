@@ -174,8 +174,10 @@ public sealed class SurveyResponsesController : Controller
         var count = await query.CountAsync();
         IEnumerable<SurveyResponse> items;
 
-        // An anonymous survey lists nothing until the responses the filters select reach its minimum group size.
-        if (SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), count))
+        // An anonymous survey lists nothing until the completed, non-test responses the narrowing filters (version,
+        // collector, search) select reach its minimum group size. Test and in-progress rows never count, so previews
+        // can't pad the group.
+        if (SurveyAnonymity.IsAnonymous(survey) && SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options)))
         {
             options.HiddenBelow = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
             items = [];
@@ -552,6 +554,31 @@ public sealed class SurveyResponsesController : Controller
 
     private async Task<SurveySettings> SettingsAsync()
         => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
+
+    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options)
+    {
+        var completed = nameof(SurveyResponseStatus.Completed);
+        var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == completed && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
+
+        if (int.TryParse(options.Version, out _))
+        {
+            query = query.Where(index => index.VersionNumber == versionNumber);
+        }
+
+        if (!string.IsNullOrEmpty(options.Collector))
+        {
+            var collectorId = options.Collector;
+            query = query.Where(index => index.CollectorId == collectorId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.Search))
+        {
+            var search = options.Search.Trim();
+            query = query.Where(index => index.Number.Contains(search));
+        }
+
+        return await query.CountAsync(HttpContext.RequestAborted);
+    }
 
     private async Task<bool> IsTooFewAsync(Survey survey)
     {

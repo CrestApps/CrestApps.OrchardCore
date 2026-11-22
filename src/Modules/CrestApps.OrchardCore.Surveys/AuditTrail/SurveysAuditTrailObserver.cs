@@ -1,10 +1,13 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 
 namespace CrestApps.OrchardCore.Surveys.AuditTrail;
 
 /// <summary>
-/// Records what observers hear about surveys and responses in the audit trail. Test responses are left out.
+/// Records what observers hear about surveys and responses in the audit trail. Test responses are left out, and so are
+/// the events a respondent causes on an anonymous survey (a reopen), whose audit record would keep the respondent's IP
+/// address next to the response.
 /// </summary>
 internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurveyObserver
 {
@@ -89,6 +92,13 @@ internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurv
         var response = context?.Response;
 
         if (response is null || response.IsTest)
+        {
+            return Task.CompletedTask;
+        }
+
+        // On an anonymous survey, an event the respondent caused (no actor, no workflow) is not recorded: the audit trail
+        // keeps the request's IP address next to the response id, which would point to the respondent.
+        if (SurveyAnonymity.IsAnonymous(context.Survey) && string.IsNullOrEmpty(context.ActorId) && !context.CausedByWorkflow)
         {
             return Task.CompletedTask;
         }

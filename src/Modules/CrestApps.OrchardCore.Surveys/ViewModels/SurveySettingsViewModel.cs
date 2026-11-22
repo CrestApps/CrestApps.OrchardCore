@@ -34,4 +34,9 @@ public class SurveySettingsViewModel
     /// Gets or sets the smallest minimum group size any anonymous survey may use.
     /// </summary>
     public int MinimumGroupSizeFloor { get; set; } = CrestApps.OrchardCore.Surveys.Models.SurveySettings.DefaultMinimumGroupSizeFloor;
+
+    /// <summary>
+    /// Gets or sets the most invitation and reminder e-mails the site sends a day.
+    /// </summary>
+    public int InvitationEmailsPerDay { get; set; } = CrestApps.OrchardCore.Surveys.Models.SurveySettings.DefaultInvitationEmailsPerDay;
 }

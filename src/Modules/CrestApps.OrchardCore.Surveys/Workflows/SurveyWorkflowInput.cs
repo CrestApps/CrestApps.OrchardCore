@@ -64,4 +64,10 @@ internal static class SurveyWorkflowInput
     /// The values conditions compare, by question id, question name and question.row.
     /// </summary>
     public const string ConditionValues = "ConditionValues";
+
+    /// <summary>
+    /// Whether the respondent of an anonymous survey caused the event, so the workflow runs without the signed-in
+    /// user's identity.
+    /// </summary>
+    public const string Anonymous = "Anonymous";
 }

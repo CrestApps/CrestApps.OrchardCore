@@ -38,6 +38,22 @@ public sealed class SurveyInvitationIndex : CatalogItemIndex
     public string TokenHash { get; set; }
 
     /// <summary>
+    /// Gets or sets the value an anonymous response's invitation seal is looked up by, or null.
+    /// </summary>
+    public string SealLookup { get; set; }
+
+    /// <summary>
+    /// Gets or sets the e-mail address invited, in lowercase, or null; personal data export and erasure find guest
+    /// invitations by it.
+    /// </summary>
+    public string Email { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the last reminder was sent, in UTC, or null; the daily e-mail limit counts it.
+    /// </summary>
+    public DateTime? LastReminderUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was sent, in UTC.
     /// </summary>
     public DateTime? SentUtc { get; set; }

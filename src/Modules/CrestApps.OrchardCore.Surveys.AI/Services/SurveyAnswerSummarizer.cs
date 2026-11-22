@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.AI.Services;
 
@@ -18,6 +19,7 @@ public sealed class SurveyAnswerSummarizer
     private readonly ISurveyAuthorizationService _authorization;
     private readonly ISurveyAnswerAggregates _aggregates;
     private readonly ISurveyControlRegistry _registry;
+    private readonly ISiteService _siteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyAnswerSummarizer"/> class.
@@ -28,13 +30,15 @@ public sealed class SurveyAnswerSummarizer
     /// <param name="authorization">The survey authorization service.</param>
     /// <param name="aggregates">The answer aggregates.</param>
     /// <param name="registry">The question type registry.</param>
+    /// <param name="siteService">The site service, for the site's minimum group size floor.</param>
     public SurveyAnswerSummarizer(
         ISurveysAICompleter completer,
         ISurveyManager surveys,
         ISurveyVersionCache versions,
         ISurveyAuthorizationService authorization,
         ISurveyAnswerAggregates aggregates,
-        ISurveyControlRegistry registry)
+        ISurveyControlRegistry registry,
+        ISiteService siteService)
     {
         _completer = completer;
         _surveys = surveys;
@@ -42,6 +46,7 @@ public sealed class SurveyAnswerSummarizer
         _authorization = authorization;
         _aggregates = aggregates;
         _registry = registry;
+        _siteService = siteService;
     }
 
     /// <summary>
@@ -87,8 +92,9 @@ public sealed class SurveyAnswerSummarizer
 
         var filter = new SurveyAnswerFilter { SurveyId = survey.ItemId };
         var answers = await _aggregates.TextSamplesAsync(filter, question.Id, SurveysAIConstants.MaxSummarizedAnswers, cancellationToken);
-        // The survey's minimum group size, never below the default floor of the site settings.
-        var minimum = Math.Max(1, CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.MinimumGroupSize(survey, null));
+        // The survey's minimum group size, never below the floor of the site settings.
+        var settings = _siteService is null ? null : await _siteService.GetSettingsAsync<SurveySettings>();
+        var minimum = Math.Max(1, CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.MinimumGroupSize(survey, settings));
 
         if (answers.Count < minimum)
         {

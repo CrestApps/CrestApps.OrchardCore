@@ -124,4 +124,10 @@ public enum SurveyErrorCode
     /// The survey has responses and cannot be deleted.
     /// </summary>
     HasResponses,
+
+    /// <summary>
+    /// The survey requires a CAPTCHA, but no CAPTCHA service is turned on, so respondents who are not signed in can't
+    /// start it.
+    /// </summary>
+    CaptchaUnavailable,
 }
