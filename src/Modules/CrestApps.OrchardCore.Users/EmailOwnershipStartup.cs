@@ -70,7 +70,9 @@ public sealed class EmailOwnershipStartup : StartupBase
         services
             .AddAttemptPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddAttemptPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
             .AddAttemptPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), blockDuration: TimeSpan.FromDays(1))
             .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));
     }
 }

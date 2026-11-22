@@ -115,8 +115,15 @@ public sealed class EmailOwnershipController : Controller
             return View(view);
         }
 
+        if (await _codes.IssueAsync(account.UserId, account.Email, HttpContext.RequestAborted) is not { } code)
+        {
+            ModelState.AddModelError(nameof(model.Email), S["Too many codes were asked for today. Try again tomorrow."]);
+
+            return View(view);
+        }
+
         // Mailed to the account's own address, after the response.
-        await _codeSender.QueueAsync(account.UserName, account.Email, await _codes.IssueAsync(account.UserId, account.Email, HttpContext.RequestAborted), HttpContext.RequestAborted);
+        await _codeSender.QueueAsync(account.UserName, account.Email, code, HttpContext.RequestAborted);
 
         return View(nameof(ConfirmCode), view);
     }
@@ -184,6 +191,13 @@ public sealed class EmailOwnershipController : Controller
         }
 
         var check = await _codes.CheckAsync(account.UserId, account.Email, model.Code, HttpContext.RequestAborted);
+
+        if (check == EmailSignInCodeCheck.Blocked)
+        {
+            ModelState.AddModelError(nameof(model.Code), S["Too many wrong codes were tried. Try again tomorrow."]);
+
+            return View(view);
+        }
 
         if (check == EmailSignInCodeCheck.Wrong)
         {

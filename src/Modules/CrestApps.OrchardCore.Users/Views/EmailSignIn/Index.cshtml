@@ -6,7 +6,7 @@
 
 <div class="container my-5" style="max-width: 440px">
     <h1 class="h3 mb-2">@T["Sign in with a code"]</h1>
-    <p class="text-muted">@T["Enter your account's email and we'll send you a six-digit code. No password needed."]</p>
+    <p class="text-muted">@T["Enter your account's email and we'll send you an eight-digit code. No password needed."]</p>
 
     <form action="@Url.RouteUrl("EmailSignIn")" method="post" class="card">
         @Html.AntiForgeryToken()

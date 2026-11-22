@@ -58,7 +58,12 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
 
     public ServiceProvider Services { get; private set; }
 
-    public IDistributedCache Cache { get; } = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+    public IDistributedCache Cache => RecordingCache;
+
+    /// <summary>
+    /// The harness's cache, which records each read, write and removal ("Get", "Set", "Remove") in the order made.
+    /// </summary>
+    public RecordingDistributedCache RecordingCache { get; } = new(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
 
     public DateTime Now { get; set; } = DateTime.UtcNow;
 
@@ -216,7 +221,9 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         var options = new AttemptLimitOptions()
             .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
-            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15));
+            .AddPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
+            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
+            .AddPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), TimeSpan.FromDays(1));
         var limiter = new DistributedAttemptLimiter(Cache, _lock, new ShellSettings { Name = "Default" }, clock, Options.Create(options), NullLogger<DistributedAttemptLimiter>.Instance);
 
         return new EmailSignInCodes(Cache, limiter, new ShellSettings { Name = "Default" }, clock, _lock);
@@ -235,7 +242,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             loginFormEvents ?? [],
             CreateProof(requestServices),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
-            new EmailSignInEligibility(manager, Options.Create(new EmailSignInOptions())),
+            new EmailSignInEligibility(manager, SystemRoles(), Options.Create(new EmailSignInOptions())),
             NullLogger<EmailSignInController>.Instance,
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>(),
             Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailSignInController>>());
@@ -257,7 +264,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             CreateCodes(),
             Sender,
             CreateProof(requestServices),
-            new EmailSignInEligibility(manager, Options.Create(new EmailSignInOptions())),
+            new EmailSignInEligibility(manager, SystemRoles(), Options.Create(new EmailSignInOptions())),
             CreateSiteService(),
             loginFormEvents ?? [],
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
@@ -298,6 +305,15 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
 
         return signInManager.Object;
     }
+
+    /// <summary>
+    /// Orchard Core's system role provider for a tenant whose administrator role is <paramref name="adminRoleName"/>.
+    /// </summary>
+    public static global::OrchardCore.Roles.ISystemRoleProvider SystemRoles(string adminRoleName = "Administrator")
+        => new global::OrchardCore.Roles.DefaultSystemRoleProvider(
+            new ShellSettings { Name = "Default" },
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<global::OrchardCore.Roles.DefaultSystemRoleProvider>(),
+            Options.Create(new global::OrchardCore.Roles.SystemRoleOptions { SystemAdminRoleName = adminRoleName }));
 
     public static ISiteService CreateSiteService()
     {

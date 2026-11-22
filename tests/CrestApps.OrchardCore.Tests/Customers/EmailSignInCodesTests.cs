@@ -29,7 +29,7 @@ public sealed class EmailSignInCodesTests
         var codes = Create();
         var code = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
-        Assert.Matches("^[0-9]{6}$", code);
+        Assert.Matches("^[0-9]{8}$", code);
         Assert.True(await codes.VerifyAsync("user-1", " Jordan@Example.TEST ", code, TestContext.Current.CancellationToken));
         Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
@@ -132,7 +132,7 @@ public sealed class EmailSignInCodesTests
 
     /// <summary>
     /// SEC-P1: the attempt count was read, compared and written with no lock, so parallel guesses all saw fewer than five
-    /// attempts and a six-digit code could be brute-forced. A hundred parallel wrong guesses now use the code up.
+    /// attempts and a code could be brute-forced. A hundred parallel wrong guesses now use the code up.
     /// </summary>
     [Fact]
     public async Task ParallelWrongGuesses_UseTheCodeUp()
@@ -195,7 +195,9 @@ public sealed class EmailSignInCodesTests
         var options = new AttemptLimitOptions()
             .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
-            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15));
+            .AddPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
+            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
+            .AddPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), TimeSpan.FromDays(1));
 
         return new DistributedAttemptLimiter(_cache, _lock, new ShellSettings { Name = "Default" }, clock, Options.Create(options), NullLogger<DistributedAttemptLimiter>.Instance);
     }

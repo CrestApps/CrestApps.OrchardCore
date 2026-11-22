@@ -43,6 +43,7 @@ public sealed class EmailSignInControllerTests
     private readonly List<ILoginFormEvent> _loginFormEvents = [];
     private readonly RecordingLoginFormEvent _recorder = new();
     private readonly LoginSettings _loginSettings = new();
+    private string _adminRoleName = "Administrator";
     // The memory cache expires entries by the machine clock, so the store's clock starts at now.
     private DateTime _now = DateTime.UtcNow;
 
@@ -182,6 +183,21 @@ public sealed class EmailSignInControllerTests
     }
 
     [Fact]
+    public async Task AMemberOfARenamedAdministratorRole_IsRefused_AndNoCodeIsSent()
+    {
+        // Arrange: the tenant renamed its administrator role (Orchard Core's SystemAdminRoleName).
+        _adminRoleName = "Owners";
+        _userManager.Setup(manager => manager.IsInRoleAsync(_user, "Owners")).ReturnsAsync(true);
+        var sender = new Mock<IEmailSignInCodeSender>();
+
+        // Act
+        await CreateController(sender.Object).Index(new EmailSignInViewModel { Email = Email });
+
+        // Assert
+        sender.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task ANetworkOverItsSendLimit_SpendsNoneOfAnAddresssSends()
     {
         // Arrange: one network asks for codes for ten other addresses, reaching its limit.
@@ -239,7 +255,7 @@ public sealed class EmailSignInControllerTests
 
         // Assert
         Assert.Equal(nameof(EmailSignInController.Code), Assert.IsType<ViewResult>(result).ViewName);
-        sender.Verify(s => s.QueueAsync(_user.UserName, Email, It.Is<string>(code => code.Length == 6), It.IsAny<CancellationToken>()), Times.Once);
+        sender.Verify(s => s.QueueAsync(_user.UserName, Email, It.Is<string>(code => code.Length == EmailSignInCodes.CodeLength), It.IsAny<CancellationToken>()), Times.Once);
         sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -328,7 +344,9 @@ public sealed class EmailSignInControllerTests
         var options = new AttemptLimitOptions()
             .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
-            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15));
+            .AddPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
+            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
+            .AddPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), TimeSpan.FromDays(1));
         var limiter = new DistributedAttemptLimiter(_cache, _lock, new ShellSettings { Name = "Default" }, clock.Object, Options.Create(options), NullLogger<DistributedAttemptLimiter>.Instance);
 
         return new EmailSignInCodes(_cache, limiter, new ShellSettings { Name = "Default" }, clock.Object, _lock);
@@ -358,7 +376,7 @@ public sealed class EmailSignInControllerTests
             _loginFormEvents,
             new EmailOwnershipProof(_userManager.Object, Mock.Of<global::YesSql.ISession>(), new UserCredentialsResets(_cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions()), NullLogger<UserCredentialsResets>.Instance), [], new CrestApps.OrchardCore.Tests.Telephony.Doubles.TestOptionsMonitor<global::OrchardCore.Users.Models.RegistrationOptions>(new()), clock.Object, new CrestApps.OrchardCore.Core.Services.SignedTokenService(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(), clock.Object), NullLogger<EmailOwnershipProof>.Instance),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
-            new EmailSignInEligibility(_userManager.Object, Options.Create(new EmailSignInOptions())),
+            new EmailSignInEligibility(_userManager.Object, EmailSignInHarness.SystemRoles(_adminRoleName), Options.Create(new EmailSignInOptions())),
             NullLogger<EmailSignInController>.Instance,
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>(),
             Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailSignInController>>());

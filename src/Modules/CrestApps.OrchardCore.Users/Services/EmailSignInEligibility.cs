@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using OrchardCore;
+using OrchardCore.Roles;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -22,11 +24,13 @@ namespace CrestApps.OrchardCore.Users.Services;
 public sealed class EmailSignInEligibility
 {
     private readonly UserManager<IUser> _userManager;
+    private readonly ISystemRoleProvider _systemRoleProvider;
     private readonly EmailSignInOptions _options;
 
-    public EmailSignInEligibility(UserManager<IUser> userManager, IOptions<EmailSignInOptions> options)
+    public EmailSignInEligibility(UserManager<IUser> userManager, ISystemRoleProvider systemRoleProvider, IOptions<EmailSignInOptions> options)
     {
         _userManager = userManager;
+        _systemRoleProvider = systemRoleProvider;
         _options = options.Value;
     }
 
@@ -52,11 +56,20 @@ public sealed class EmailSignInEligibility
             !await _userManager.GetTwoFactorEnabledAsync(user) &&
             !await IsInExcludedRoleAsync(user);
 
+    // "Administrator", the default, stands for the tenant's administrator role whatever the tenant named it.
     private async Task<bool> IsInExcludedRoleAsync(IUser user)
     {
         foreach (var role in _options.ExcludedRoles ?? [])
         {
-            if (!string.IsNullOrWhiteSpace(role) && await _userManager.IsInRoleAsync(user, role))
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                continue;
+            }
+
+            if (await _userManager.IsInRoleAsync(user, role) ||
+                (string.Equals(role.Trim(), OrchardCoreConstants.Roles.Administrator, StringComparison.OrdinalIgnoreCase) &&
+                _systemRoleProvider.GetAdminRole()?.RoleName is { Length: > 0 } adminRole &&
+                await _userManager.IsInRoleAsync(user, adminRole)))
             {
                 return true;
             }

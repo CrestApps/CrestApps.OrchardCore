@@ -15,7 +15,8 @@ public sealed class EmailSignInOptions
 
     /// <summary>
     /// Gets or sets the roles whose members can't sign in with a code and keep using their password. A code is only as
-    /// strong as the mailbox it goes to, so the most powerful accounts are left out by default.
+    /// strong as the mailbox it goes to, so the most powerful accounts are left out by default. <c>Administrator</c> also
+    /// stands for the tenant's administrator role when the tenant renamed it.
     /// </summary>
     public string[] ExcludedRoles { get; set; } = [OrchardCoreConstants.Roles.Administrator];
 }

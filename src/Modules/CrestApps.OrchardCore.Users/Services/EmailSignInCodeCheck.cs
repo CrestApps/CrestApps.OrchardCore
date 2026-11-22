@@ -19,4 +19,9 @@ public enum EmailSignInCodeCheck
     /// The code matched, and is now used up.
     /// </summary>
     Right,
+
+    /// <summary>
+    /// The account had as many wrong codes as it may have for now, so no code was compared, the right one included.
+    /// </summary>
+    Blocked,
 }

@@ -306,6 +306,35 @@ public sealed class EmailOwnershipProof
         return removed ? EmailProofResult.CredentialsRemoved : EmailProofResult.SignInsEnded;
     }
 
+    /// <summary>
+    /// Ends every sign-in of the account other than the one about to be made (C10): a code signs the owner in to an
+    /// account whose password or logins nobody proved are theirs, and those may be whoever registered with the address.
+    /// The security stamp is rotated, sessions issued before now are refused from the next request
+    /// (<see cref="UserCredentialsResets"/>), and what an OpenID server issued is revoked. Nothing is removed, proved or
+    /// recorded as a reset: the credentials stay until the owner confirms the address is theirs.
+    /// </summary>
+    /// <param name="account">The account a code just signed in to.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="false"/> when the new stamp couldn't be saved, so nothing changed.</returns>
+    public async Task<bool> EndOtherSignInsAsync(User account, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+
+        var now = _clock.UtcNow;
+
+        if (!(await _userManager.UpdateSecurityStampAsync(account)).Succeeded)
+        {
+            await _session.ResetAsync();
+            _logger.LogWarning("The new security stamp of a user signed in with a code could not be saved, so the sign-in was refused.");
+
+            return false;
+        }
+
+        await EndEarlierSignInsAsync(account, now, cancellationToken);
+
+        return true;
+    }
+
     // Keeps the password only when it was shown, and an external login only when the flow signed in through it again at
     // its provider, matched by provider and key: a session's cookie names the provider, not which of its accounts was
     // used, and can be older than the account's logins (G1, K5). The tokens a removed login stored go with it.

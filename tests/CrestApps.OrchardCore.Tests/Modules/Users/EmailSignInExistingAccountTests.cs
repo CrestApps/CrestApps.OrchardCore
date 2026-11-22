@@ -44,13 +44,15 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         // Act
         var result = await SignInWithCodeAsync();
 
-        // Assert: signed in, and nothing was removed, marked or merged.
+        // Assert: signed in, and nothing was removed, marked or merged. Every other sign-in ended (C10, review 11), so the
+        // stamp is new.
         Assert.IsType<LocalRedirectResult>(result);
 
         var account = await FindAsync("user-1");
         Assert.True(await CheckPasswordAsync(account));
         Assert.Single(account.LoginInfos);
-        Assert.Equal(stampBefore, account.SecurityStamp);
+        Assert.NotEqual(stampBefore, account.SecurityStamp);
+        Assert.Equal(["user-1"], _harness.Revoked);
         Assert.False(UserEmailOwnership.IsVerified(account.Properties, account.Email));
         Assert.Empty(_merges);
     }
@@ -96,6 +98,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         // Arrange: signed in with a code, nothing removed.
         var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
         await SignInWithCodeAsync();
+        _harness.Revoked.Clear();
 
         // Act: the owner asks to confirm, and posts the second code, mailed to the account's own address.
         var asked = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").Confirm(new EmailSignInViewModel()));
@@ -159,6 +162,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").Confirm(new EmailSignInViewModel()));
         var code = _harness.Sender.Sent[^1].Code;
         _harness.SignIns.Clear();
+        _harness.Revoked.Clear();
 
         // Act
         var confirmed = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services)).ConfirmCode(new EmailSignInViewModel { Code = code, Password = EmailSignInHarness.Password }));

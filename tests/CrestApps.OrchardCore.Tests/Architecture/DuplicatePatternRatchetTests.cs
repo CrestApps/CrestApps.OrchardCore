@@ -216,7 +216,7 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["secret token made and hashed by hand"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            // A SIP credential's digest, a PKCE challenge and a six-digit one-time code: not secret tokens.
+            // A SIP credential's digest, a PKCE challenge and an eight-digit one-time code: not secret tokens.
             ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskPjsipCredentialIssuer.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TelephonyPkceGenerator.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Users/Services/EmailSignInCodes.cs"] = 1,

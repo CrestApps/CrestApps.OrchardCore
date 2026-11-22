@@ -20,8 +20,9 @@ namespace CrestApps.OrchardCore.Users.Controllers;
 
 /// <summary>
 /// Signing in with a code emailed to the account's address, instead of a password. The pages answer the same way, and
-/// in the same time, whether or not an account has the email, so they never tell who has one. They are not there when
-/// the site turned off local sign-in.
+/// do the same work, whether or not an account a code can reach has the email, so they never tell who has one: an
+/// address without one is counted and checked under a stand-in id (<see cref="EmailSignInCodes.GetStandInId"/>). They
+/// are not there when the site turned off local sign-in.
 /// </summary>
 [AllowAnonymous]
 [Feature(UsersConstants.Feature.EmailCodeSignIn)]
@@ -108,12 +109,16 @@ public sealed class EmailSignInController : Controller
             return View(model);
         }
 
-        if (await FindUserAsync(email) is { } account)
+        // An address no account a code can reach has gets a code too, under a stand-in id, that is never mailed: the
+        // account's daily count and the code's cache entry are the same work either way, so the time taken never tells
+        // a known address from an unknown one.
+        var account = await FindUserAsync(email);
+        var code = await _codes.IssueAsync(account?.UserId ?? _codes.GetStandInId(email), account?.Email ?? email, HttpContext.RequestAborted);
+
+        if (account is not null && code is not null)
         {
             // Sent after the response, so the time the mail server takes never tells a known address from an unknown one.
             // The code is for the account, and goes to the account's own address, never to what was typed.
-            var code = await _codes.IssueAsync(account.UserId, account.Email, HttpContext.RequestAborted);
-
             await _codeSender.QueueAsync(account.User.UserName, account.Email, code, HttpContext.RequestAborted);
         }
 
@@ -150,6 +155,17 @@ public sealed class EmailSignInController : Controller
 
         var found = string.IsNullOrEmpty(email) ? null : await FindUserAsync(email);
 
+        // An address without an account is checked against its stand-in's code, the same work in the same time. Its
+        // check is never a sign-in, whatever it answers.
+        var check = await _codes.CheckAsync(found?.UserId ?? _codes.GetStandInId(email), found?.Email ?? email, model.Code, HttpContext.RequestAborted);
+
+        if (check == EmailSignInCodeCheck.Blocked)
+        {
+            ModelState.AddModelError(nameof(model.Code), S["Too many wrong codes were tried. Sign in with your password, or try again tomorrow."]);
+
+            return View(model);
+        }
+
         // A wrong code and no account read the same.
         if (found is null)
         {
@@ -159,7 +175,6 @@ public sealed class EmailSignInController : Controller
         }
 
         var user = found.User;
-        var check = await _codes.CheckAsync(found.UserId, found.Email, model.Code, HttpContext.RequestAborted);
 
         if (check != EmailSignInCodeCheck.Right)
         {
@@ -330,6 +345,15 @@ public sealed class EmailSignInController : Controller
 
         if (credentialsInDoubt)
         {
+            // C10: the password or logins may be whoever registered with the owner's address, so every other session and
+            // token of the account ends now; theirs too, and the owner's on other devices, who sign in again.
+            if (!await _proof.EndOtherSignInsAsync((User)user, HttpContext.RequestAborted))
+            {
+                ModelState.AddModelError(nameof(EmailSignInViewModel.Email), S["That didn't work. Ask for a new code and try again."]);
+
+                return View(nameof(Index), new EmailSignInViewModel { ReturnUrl = returnUrl });
+            }
+
             // What the account's credentials were at this sign-in goes with the session, so a login linked or removed from
             // it later marks the account (EmailOwnershipUserEventHandler). Its pages warn, so the sign-in notice is skipped.
             EmailOwnershipLoginFormEvent.MarkCodeSignIn(HttpContext);

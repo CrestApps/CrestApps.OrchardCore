@@ -134,7 +134,7 @@ To target a cohort from a feature that uses audiences, such as required learning
 <YouTube video="users-roles" title="Video of the sign-in page that offers an emailed code" start={295} end={320} />
 
 
-With the **Sign in with an email code** feature on, the login page offers **Email me a sign-in code instead**. The user clicks **Email me a code** after entering their email, and gets a six-digit code, which they type on the next page to sign in, without a password.
+With the **Sign in with an email code** feature on, the login page offers **Email me a sign-in code instead**. The user clicks **Email me a code** after entering their email, and gets an eight-digit code, which they type on the next page to sign in, without a password.
 
 - A code works once, for ten minutes and five tries. A new code replaces the last one.
 - A few codes can be sent to an email, and from one visitor, every fifteen minutes.

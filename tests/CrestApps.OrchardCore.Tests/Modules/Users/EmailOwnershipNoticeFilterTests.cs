@@ -349,7 +349,7 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
             var manager = services.GetRequiredService<UserManager<IUser>>();
             var page = new EmailOwnershipConfirmationPage(
                 EmailSignInHarness.CreateSiteService(),
-                new EmailSignInEligibility(manager, Options.Create(new EmailSignInOptions())),
+                new EmailSignInEligibility(manager, EmailSignInHarness.SystemRoles(), Options.Create(new EmailSignInOptions())),
                 links.Object,
                 new HttpContextAccessor { HttpContext = httpContext });
             var filter = new EmailOwnershipNoticeFilter(manager, page, notifier.Object, new PassThroughHtmlLocalizer<EmailOwnershipNoticeFilter>());

@@ -6,7 +6,7 @@
 
 <div class="container my-5" style="max-width: 480px">
     <h1 class="h3 mb-2">@T["Confirm it's you"]</h1>
-    <p class="text-muted">@T["Confirming that {0} is yours links what was placed with it before you had an account, such as guest orders. We'll email a six-digit code to it.", Model.Email]</p>
+    <p class="text-muted">@T["Confirming that {0} is yours links what was placed with it before you had an account, such as guest orders. We'll email an eight-digit code to it.", Model.Email]</p>
     @if (Model.HasCredentials)
     {
         <p class="text-muted">@T["Confirming removes the sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. You keep only what you show here: the password, if you type it with the code, and a sign-in you use again below."]</p>
