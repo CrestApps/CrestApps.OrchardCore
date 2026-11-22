@@ -909,7 +909,7 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Models/PayRun.cs"] = 7,
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Models/PaySchedule.cs"] = 2,
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Models/PayStatement.cs"] = 11,
-        ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Models/PayrollFiling.cs"] = 7,
+        ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Models/PayrollFiling.cs"] = 8, // raised for main's #1356 when PR #1319 merged main; lower as it is paid down
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Models/PayrollJournalSettings.cs"] = 3,
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Models/PayrollPayCodeSettings.cs"] = 7,
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/PayrollConstants.cs"] = 2,
@@ -926,7 +926,7 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Services/IPayrollFilingService.cs"] = 7,
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Services/PayCalculation.cs"] = 9,
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Services/PayrollFormBoxOptions.cs"] = 2,
-        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Models/IncomeTaxModels.cs"] = 4,
+        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Models/IncomeTaxModels.cs"] = 5, // raised for main's #1356 when PR #1319 merged main; lower as it is paid down
         ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Services/IIncomeTaxProvider.cs"] = 7,
         ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Services/IIncomeTaxWithholdingMethod.cs"] = 3,
         ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Services/IncomeTaxCategoryOptions.cs"] = 6,
@@ -1407,5 +1407,10 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Users/Cohorts/CohortsStartup.cs"] = 4,
         ["src/Modules/CrestApps.OrchardCore.Users/Services/UserNotificationPreferencesForm.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Users/ViewModels/UserNotificationPreferencesViewModel.cs"] = 4,
+        // Existing debt from main's #1351 (protected files in Azure Blob Storage) and #1356 (US state and local payroll
+        // taxes), baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Services/IPayHistoryImporter.cs"] = 3,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollHomeJurisdictions.cs"] = 2,
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/UnitedStates/UnitedStatesStateCertificate.cs"] = 3,
     };
 }

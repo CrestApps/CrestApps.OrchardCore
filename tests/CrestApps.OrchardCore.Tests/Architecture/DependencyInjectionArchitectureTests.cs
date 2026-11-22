@@ -370,6 +370,9 @@ public sealed class DependencyInjectionArchitectureTests
         // Existing debt from main's #1335 (MCP file providers), baselined when PR #1319 merged main; the named provider
         // factories take the service provider by design. Remove as it is paid down.
         ["src/Modules/CrestApps.OrchardCore.AI.Mcp/Services/DefaultMcpFileProviderResolver.cs: DefaultMcpFileProviderResolver"] = 1,
+        // Existing debt from main's #1351 (protected files in Azure Blob Storage) and #1356 (US state and local payroll
+        // taxes), baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollHomeJurisdictions.cs: PayrollHomeJurisdictionResolver"] = 1,
 
         // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
         // remove as it is paid down.

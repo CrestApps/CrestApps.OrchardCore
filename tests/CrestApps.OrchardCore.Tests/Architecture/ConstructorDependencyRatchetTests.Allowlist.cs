@@ -116,5 +116,8 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Learning.Credentials/Controllers/CredentialAwardsAdminController.cs: CredentialAwardsAdminController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Learning/Controllers/EnrollmentsController.cs: EnrollmentsController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Learning/Services/LearnerPageService.cs: LearnerPageService"] = 13,
+        // Existing debt from main's #1351 (protected files in Azure Blob Storage) and #1356 (US state and local payroll
+        // taxes), baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Services/PackageRuntimeService.cs: PackageRuntimeService"] = 13,
     };
 }
