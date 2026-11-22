@@ -75,11 +75,11 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
             }
 
             var existing = string.IsNullOrEmpty(id) ? null : await _responseStore.FindByIdAsync(id);
-            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName");
+            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.UpkeepFailures));
 
             if (existing is not null)
             {
-                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.ResumeTokenHash));
+                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.ResumeTokenHash), nameof(SurveyResponse.UpkeepFailures));
             }
 
             var version = await _versionStore.FindByNumberAsync(survey.ItemId, response.VersionNumber);

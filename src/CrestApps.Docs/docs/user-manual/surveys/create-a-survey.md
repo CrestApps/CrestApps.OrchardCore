@@ -61,4 +61,4 @@ Open the survey's menu and select **Access and settings**. These settings apply 
 | **Limits** | How many responses each person may give: **In total**, **A day**, **A week**, **A month**, and **Wait between responses**. **Count** chooses completed or started responses. |
 | **Recognize respondents by** | **Their user account**, **Their invitation**, **A browser cookie (weak)** or **Not at all**. A cookie stops honest repeats only. |
 | **Most responses** | The survey stops once this many are completed. |
-| **Retention** | **Keep responses for** a number of days, **Then** delete them or remove who responded and keep the answers. |
+| **Retention** | **Keep responses for** a number of days, **Then** delete them or remove who responded and keep the answers. Removing who responded also deletes the response's uploaded files and signatures. |

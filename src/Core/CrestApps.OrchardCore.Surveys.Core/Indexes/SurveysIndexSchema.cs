@@ -150,7 +150,9 @@ public static class SurveysIndexSchema
             .Column<DateTime?>("DeadlineUtc", column => column.Nullable())
             .Column<decimal>("Percent", column => column.Nullable())
             .Column<bool?>("Passed", column => column.Nullable())
-            .Column<DateTime>("ModifiedUtc"),
+            .Column<DateTime>("ModifiedUtc")
+            .Column<bool>("Anonymized", column => column.WithDefault(false))
+            .Column<int>("UpkeepFailures", column => column.WithDefault(0)),
             collection: responses);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyResponseIndex>(table =>
@@ -245,5 +247,22 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyInvitationIndex_Seal", "CollectorId", "SealLookup");
             table.CreateIndex("IDX_SurveyInvitationIndex_Email", "Email");
         }, collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Adds the upkeep columns of the response index: whether retention anonymized a response, and how many times in a
+    /// row upkeep failed on it, so upkeep skips both without reading them.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddResponseUpkeepColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyResponseIndex>(table =>
+        {
+            table.AddColumn<bool>("Anonymized", column => column.WithDefault(false));
+            table.AddColumn<int>("UpkeepFailures", column => column.WithDefault(0));
+        }, collection: SurveysConstants.ResponsesCollectionName);
     }
 }

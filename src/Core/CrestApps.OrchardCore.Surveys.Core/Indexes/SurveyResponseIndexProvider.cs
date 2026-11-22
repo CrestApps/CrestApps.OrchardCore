@@ -45,6 +45,8 @@ public sealed class SurveyResponseIndexProvider : IndexProvider<SurveyResponse>
                 Percent = item.Percent,
                 Passed = item.Passed,
                 ModifiedUtc = item.ModifiedUtc,
+                Anonymized = item.AnonymizedUtc != null,
+                UpkeepFailures = item.UpkeepFailures,
             });
 
     private static string Cut(string value, int length)

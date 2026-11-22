@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Controls;
@@ -5,6 +6,8 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.Workflows;
 using CrestApps.OrchardCore.Records;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.DataSources;
@@ -166,6 +169,42 @@ public sealed class SurveysWorkflowTests
         Assert.Equal("Done", done.Outcomes.Single());
         Assert.Equal("NotFound", missing.Outcomes.Single());
         Assert.Equal("Failed", noReason.Outcomes.Single());
+    }
+
+    [Fact]
+    public async Task AnAnonymousSurveysEvent_RunsWithoutTheRespondentsRequest_AndPutsTheRequestBack()
+    {
+        // Arrange: the respondent's request, signed in, with a header, a cookie and a query string.
+        var request = new DefaultHttpContext();
+        request.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "pat")], "test"));
+        request.Request.Headers["X-Forwarded-For"] = "203.0.113.7";
+        request.Request.Headers.Cookie = "sr_g=abc";
+        request.Request.QueryString = new QueryString("?email=pat@example.com");
+
+        var accessor = new HttpContextAccessor { HttpContext = request };
+        HttpContext seen = null;
+        var manager = new Mock<IWorkflowManager>();
+        manager
+            .Setup(candidate => candidate.TriggerEventAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback(() => seen = accessor.HttpContext)
+            .ReturnsAsync([]);
+
+        var services = new ServiceCollection()
+            .AddSingleton<IHttpContextAccessor>(accessor)
+            .AddSingleton(manager.Object)
+            .BuildServiceProvider();
+
+        // Act
+        await DeferredSurveyWorkflowTrigger.RunAsync(services, nameof(SurveyResponseCompletedEvent), new Dictionary<string, object> { [SurveyWorkflowInput.Anonymous] = true }, "r1");
+
+        // Assert
+        Assert.NotNull(seen);
+        Assert.NotSame(request, seen);
+        Assert.False(seen.User.Identity?.IsAuthenticated ?? false);
+        Assert.Empty(seen.Request.Headers);
+        Assert.Empty(seen.Request.Cookies);
+        Assert.False(seen.Request.QueryString.HasValue);
+        Assert.Same(request, accessor.HttpContext);
     }
 
     private static SurveyResponseEventContext CompletedContext(AnonymityMode anonymity, string choiceId)

@@ -161,6 +161,42 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SurveyResponses_AnAnonymousSurveyPaddedWithInProgressAndTestResponses_StillShowsNoRow()
+    {
+        // Arrange: one completed response more, then in-progress, abandoned and test responses well past the minimum of 5.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var anonymous = Version("v2", "survey2");
+
+        await using (var write = _store.OpenSession())
+        {
+            await write.SaveAsync(ResultsSqliteStore.Response("c1", anonymous, SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["red"] })), false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+
+            for (var index = 0; index < 4; index++)
+            {
+                await write.SaveAsync(ResultsSqliteStore.Response($"p{index}", anonymous, SurveyResponseStatus.InProgress, _day, ("q1", new SurveyAnswer { Values = ["red"] })), false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+                await write.SaveAsync(ResultsSqliteStore.Response($"x{index}", anonymous, SurveyResponseStatus.Abandoned, _day, ("q1", new SurveyAnswer { Values = ["red"] })), false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+
+                var test = ResultsSqliteStore.Response($"t{index}", anonymous, SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
+                test.IsTest = true;
+                await write.SaveAsync(test, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+        var wide = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
+
+        // Assert: two completed, non-test responses never reach the group of 5, whatever else is read with them.
+        Assert.Equal(["r1"], rows.Keys);
+        Assert.Empty(wide);
+    }
+
+    [Fact]
     public async Task SurveyResponses_WithOnlyOwnSurveys_ReadsOnlyTheirSurveys()
     {
         // Arrange

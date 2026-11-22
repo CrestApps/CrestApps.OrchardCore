@@ -111,4 +111,14 @@ public sealed class SurveyResponseIndex : CatalogItemIndex
     /// Gets or sets when it last changed, in UTC, for incremental reads.
     /// </summary>
     public DateTime ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether retention anonymized the response.
+    /// </summary>
+    public bool Anonymized { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many times in a row background upkeep failed on the response.
+    /// </summary>
+    public int UpkeepFailures { get; set; }
 }
