@@ -28,7 +28,7 @@ A deposit counted in a filed return can't be deleted; amend the return instead.
 
 1. Open **Filings**, choose the employer and choose **Show**.
 2. Under **Prepare a filing**, choose the form, the year and, for a quarterly form, the quarter, then choose **Prepare**. The totals come from the final pay statements with pay dates in the period and the deposits you recorded.
-3. Check the boxes on the filing's page. For wage statements, each person's statement is listed with a **PDF** to print or check. Correct the pay if needed and choose **Prepare again**.
+3. Check the boxes on the filing's page. For wage statements, each person's statement is listed with a **PDF** to print or check. A W-2 shows the state and local wages and income tax withheld (boxes 15 to 20) of each state and city whose income tax the person paid, with your account id from the employer's registration for that state or city. Correct the pay if needed and choose **Prepare again**.
 4. File the form with the agency, then enter the day and the confirmation number and choose **Mark as filed**. A filed form never changes, and each person with a statement in it is told it is ready under **My pay**.
 
 To correct a filed form, open it and choose **Amend**: a new draft is prepared from the statements as they are now. File it, then mark it as filed; the first one is then marked amended.
