@@ -254,10 +254,14 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         // leaves behind in this process, since setup registers the tenant before it creates anything. Reading
         // that as "taken" made every retry fail for a reason invented by the previous attempt, so a job that
         // failed once could never succeed and burned its attempts until it was abandoned — with the customer
-        // already charged.
-        if (_shellHost.TryGetSettings(job.TenantName, out var existing) && !existing.IsUninitialized())
+        // already charged. Only a tenant this job saved is its own residue: one another buyer's job saved, or one saved
+        // before jobs were recorded on the tenant, is somebody else's, and taking it over would hand this buyer its tenant id.
+        if (_shellHost.TryGetSettings(job.TenantName, out var existing) &&
+            (!existing.IsUninitialized() || !string.Equals(existing[SubscriptionConstants.ProvisioningJobSetting], job.ItemId, StringComparison.Ordinal)))
         {
-            return $"The site name '{job.TenantName}' is already in use.";
+            return existing.IsUninitialized()
+                ? $"The site name '{job.TenantName}' is already in use by a tenant this job didn't create. If it is left over from another purchase, remove it under Tenants, then retry."
+                : $"The site name '{job.TenantName}' is already in use.";
         }
 
         // A sold site without a feature profile lets its buyer enable any feature the host has, including the ones
@@ -315,11 +319,18 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
                 "), so it was not created. Correct the job, or the onboarding settings, then retry.";
         }
 
+        var featureProfile = await ResolvePlanFeatureProfileAsync(job, rules);
+
+        if (featureProfile is null)
+        {
+            return "The site's feature profile isn't the one its plan named, or the plan's can't be read from the checkout, so the site was not created.";
+        }
+
         var adminPassword = UnprotectAdminPassword(job);
 
         var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
 
-        using var shellSettings = CreateShellSettings(job, onboarding, existing);
+        using var shellSettings = CreateShellSettings(job, onboarding, existing, featureProfile);
 
         // Saved before setup runs, with its prefix or host, a secret and the plan's recipe. Orchard's setup reloads the
         // tenant from storage when it fails, and a tenant that was never saved reloads with no prefix and no host: it then
@@ -358,7 +369,19 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             : string.Join("; ", setupContext.Errors.Select(error => $"{error.Key}: {error.Value}"));
     }
 
-    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding, ShellSettings leftOver)
+    // The profile the tenant gets is the plan's, read from the checkout as the recipe is, never the job's alone; and it is
+    // written as the catalog's own key, which is how Orchard Core finds it. Null when the job's and the plan's differ.
+    private async Task<string> ResolvePlanFeatureProfileAsync(TenantProvisioningJob job, TenantPurchaseRules rules)
+    {
+        var planProfile = TenantPurchaseValidator.ResolveFeatureProfile(
+            await _rulesProvider.GetPlanFeatureProfileAsync(job.CheckoutSessionId),
+            rules.KnownFeatureProfiles);
+        var jobProfile = TenantPurchaseValidator.ResolveFeatureProfile(job.FeatureProfile, rules.KnownFeatureProfiles);
+
+        return planProfile is not null && string.Equals(planProfile, jobProfile, StringComparison.Ordinal) ? planProfile : null;
+    }
+
+    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding, ShellSettings leftOver, string featureProfile)
     {
         var settings = _shellSettingsManager
             .CreateDefaultSettings()
@@ -369,21 +392,23 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         settings.RequestUrlPrefix = job.Prefix;
         settings.RequestUrlHost = job.Domains is { Length: > 0 } ? string.Join(',', job.Domains) : null;
 
-        // A retry keeps the identity of the tenant the previous attempt saved.
+        // A retry keeps the identity of the tenant the previous attempt of this job saved; the job is recorded on the tenant,
+        // so no other job takes it over.
+        // The id is kept in the tenant's own settings, not its configuration, which the indexer writes; Orchard fills it from
+        // the first version id it is given, so the leftover's id is given first and the shell host's new version follows.
         if (!string.IsNullOrEmpty(leftOver?.TenantId))
         {
-            settings["TenantId"] = leftOver.TenantId;
+            settings.VersionId = leftOver.TenantId;
         }
+
+        settings[SubscriptionConstants.ProvisioningJobSetting] = job.ItemId;
 
         // Orchard's setup wizard asks for a token signed with this secret, so the tenant left behind by a failed setup can
         // only be finished by the host, and the recipe is the plan's.
         settings["Secret"] = Guid.NewGuid().ToString();
         settings["RecipeName"] = job.RecipeName;
 
-        if (!string.IsNullOrEmpty(job.FeatureProfile))
-        {
-            settings["FeatureProfile"] = job.FeatureProfile;
-        }
+        settings["FeatureProfile"] = featureProfile;
 
         // Setup refuses outright without a database provider, and the host's defaults do not necessarily
         // carry one, so the operator's onboarding settings decide it — falling back to the provider that

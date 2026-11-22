@@ -240,8 +240,7 @@ public static partial class TenantPurchaseValidator
         {
             errors.Add(new TenantPurchaseError(nameof(TenantPurchaseRequest.FeatureProfile), TenantPurchaseErrorCode.FeatureProfileRequired));
         }
-        else if (rules.KnownFeatureProfiles is null ||
-            !rules.KnownFeatureProfiles.Contains(request.FeatureProfile.Trim(), StringComparer.OrdinalIgnoreCase))
+        else if (ResolveFeatureProfile(request.FeatureProfile, rules.KnownFeatureProfiles) is null)
         {
             // Orchard Core treats a profile it can't find as "every feature allowed": a renamed or deleted profile, or a
             // plan that arrived by recipe, import or API naming one that never existed, would sell an unrestricted site.
@@ -249,6 +248,39 @@ public static partial class TenantPurchaseValidator
         }
 
         return errors;
+    }
+
+    /// <summary>
+    /// Resolves a feature profile name to the catalog's own key, the value a tenant must carry. Orchard Core splits a
+    /// tenant's <c>FeatureProfile</c> setting on commas, trims each part and looks it up in its feature profiles document,
+    /// and a part it can't find allows every feature; whether that lookup ignores case depends on how the document was
+    /// read. So a name matches a key exactly, or else the one key it equals ignoring case and surrounding spaces; a name or
+    /// key with a comma, or a key with surrounding spaces, never matches.
+    /// </summary>
+    /// <param name="featureProfile">The name a plan or a job carries.</param>
+    /// <param name="knownProfiles">The keys of the feature profiles that exist.</param>
+    /// <returns>The catalog's key, or <see langword="null"/> when no key matches, or more than one does.</returns>
+    public static string ResolveFeatureProfile(string featureProfile, IEnumerable<string> knownProfiles)
+    {
+        var name = featureProfile?.Trim();
+
+        if (string.IsNullOrEmpty(name) || name.Contains(',') || knownProfiles is null)
+        {
+            return null;
+        }
+
+        var keys = knownProfiles
+            .Where(key => !string.IsNullOrEmpty(key) && !key.Contains(',') && string.Equals(key, key.Trim(), StringComparison.Ordinal))
+            .ToArray();
+
+        if (keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.Ordinal)) is { } exact)
+        {
+            return exact;
+        }
+
+        var matches = keys.Where(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
+
+        return matches.Length == 1 ? matches[0] : null;
     }
 
     private static void ValidateName(string name, List<ShellSettings> tenants, List<TenantPurchaseError> errors)

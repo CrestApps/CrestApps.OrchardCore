@@ -371,6 +371,21 @@ public sealed class TenantPurchaseValidatorTests
     }
 
     /// <summary>
+    /// Review 11 C6: Orchard splits a tenant's profile setting on commas, and a part it can't find allows every feature, so a
+    /// profile whose name holds a comma can never restrict a site.
+    /// </summary>
+    [Fact]
+    public void Validate_AFeatureProfileWithAComma_IsRefused()
+    {
+        var rules = Rules();
+        rules.KnownFeatureProfiles = ["sold,tenant"];
+
+        var errors = TenantPurchaseValidator.Validate(Request(featureProfile: "sold,tenant"), rules, _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.FeatureProfileNotFound);
+    }
+
+    /// <summary>
     /// Selling-sites Mild (fix verification): a tenant answering on <c>*.wild.example.com</c> answers every name under it,
     /// but a buyer could still take <c>a.wild.example.com</c>.
     /// </summary>

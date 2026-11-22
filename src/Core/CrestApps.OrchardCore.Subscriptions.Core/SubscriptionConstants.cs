@@ -136,6 +136,13 @@ public static class SubscriptionConstants
     public const string SuspendedBySubscriptionSetting = "SuspendedBySubscription";
 
     /// <summary>
+    /// The shell setting that names the provisioning job which saved a sold tenant. A failed setup leaves the tenant
+    /// behind uninitialized, and only a retry of the same job may take it over: another buyer's job for the same name would
+    /// otherwise inherit its tenant id.
+    /// </summary>
+    public const string ProvisioningJobSetting = "SubscriptionProvisioningJobId";
+
+    /// <summary>
     /// The source of the expiry of a canceled subscription whose paid period ended long before the sweep found it: the
     /// backlog recorded before the sweep looked for canceled subscriptions. It is expired without its workflow event.
     /// </summary>

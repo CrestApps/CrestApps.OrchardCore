@@ -113,6 +113,7 @@ public sealed class TenantProvisioningServiceTests
     {
         var leftOver = new ShellSettings { Name = "qasite1" };
         leftOver.AsUninitialized();
+        leftOver[SubscriptionConstants.ProvisioningJobSetting] = "job-1";
 
         var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), existing: leftOver);
 
@@ -121,6 +122,89 @@ public sealed class TenantProvisioningServiceTests
         Assert.Equal(TenantProvisioningStatus.Succeeded, status);
         Assert.NotNull(setup.Captured);
         Assert.Equal("/qasite1", store.Jobs.First().SiteUrl);
+    }
+
+    /// <summary>
+    /// Review 11 (leftover shell): an uninitialized tenant another job saved, or one saved before jobs were recorded on the
+    /// tenant, belongs to somebody else. Taking it over would give this buyer that tenant's id.
+    /// </summary>
+    [Theory]
+    [InlineData("job-of-another-buyer")]
+    [InlineData(null)]
+    public async Task ProvisionAsync_WhenAnUninitializedShellOfTheSameNameBelongsToAnotherJob_FailsAndKeepsItsTenantId(string savedBy)
+    {
+        var leftOver = new ShellSettings { Name = "qasite1" };
+        leftOver.AsUninitialized();
+        leftOver.VersionId = "TENANT-OF-BUYER-A";
+        leftOver[SubscriptionConstants.ProvisioningJobSetting] = savedBy;
+
+        var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), existing: leftOver);
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(TenantProvisioningStatus.Failed, status);
+        Assert.Null(setup.Captured);
+        Assert.Contains("already in use", store.Jobs.First().LastError);
+    }
+
+    /// <summary>
+    /// Review 11 C4: a site bought with a promise to pay is built once the payment arrives, never because a job was run.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_AJobWaitingForPayment_IsNotBuilt()
+    {
+        var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), status: TenantProvisioningStatus.AwaitingPayment);
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(TenantProvisioningStatus.AwaitingPayment, status);
+        Assert.Null(setup.Captured);
+        Assert.Equal(TenantProvisioningStatus.AwaitingPayment, store.Jobs.First().Status);
+        Assert.Equal(0, store.Jobs.First().AttemptCount);
+    }
+
+    /// <summary>
+    /// Review 11 C6: the profile the tenant gets is the plan's, as the recipe is; a job naming another profile that exists
+    /// is refused.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WithAFeatureProfileOtherThanThePlans_FailsAndCreatesNothing()
+    {
+        var (service, setup, _) = CreateService(new SubscriptionOnboardingSettings(), knownProfiles: ["sold-tenant", "unrestricted"], featureProfile: "unrestricted", planFeatureProfile: "sold-tenant");
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(TenantProvisioningStatus.Succeeded, status);
+        Assert.Null(setup.Captured);
+    }
+
+    /// <summary>
+    /// Review 11 C6: a checkout whose plan profile can't be read is refused, as one whose plan recipe can't be read is.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WhenThePlansFeatureProfileCannotBeRead_FailsAndCreatesNothing()
+    {
+        var (service, setup, _) = CreateService(new SubscriptionOnboardingSettings(), planFeatureProfile: null);
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(TenantProvisioningStatus.Succeeded, status);
+        Assert.Null(setup.Captured);
+    }
+
+    /// <summary>
+    /// Review 11 C6: a profile named with other case or spaces (a plan from a recipe or an import) is written to the tenant
+    /// as the catalog's own key, so Orchard finds it however its document compares keys.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WritesTheCatalogsExactFeatureProfileKey()
+    {
+        var (service, setup, _) = CreateService(new SubscriptionOnboardingSettings(), featureProfile: " SOLD-Tenant ", planFeatureProfile: "Sold-Tenant");
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(TenantProvisioningStatus.Succeeded, status);
+        Assert.Equal("sold-tenant", setup.Captured.ShellSettings["FeatureProfile"]);
     }
 
     /// <summary>
@@ -258,7 +342,9 @@ public sealed class TenantProvisioningServiceTests
         string prefix = "qasite1",
         Subscription subscription = null,
         string[] knownProfiles = null,
-        string planRecipe = null)
+        string planRecipe = null,
+        TenantProvisioningStatus status = TenantProvisioningStatus.Pending,
+        string planFeatureProfile = "sold-tenant")
     {
         knownProfiles ??= ["sold-tenant"];
         planRecipe ??= recipeName;
@@ -278,7 +364,7 @@ public sealed class TenantProvisioningServiceTests
             FeatureProfile = featureProfile,
             SubscriptionId = subscription?.ItemId,
             CheckoutSessionId = "session-1",
-            Status = TenantProvisioningStatus.Pending,
+            Status = status,
             CreatedUtc = _now,
         });
 
@@ -308,7 +394,7 @@ public sealed class TenantProvisioningServiceTests
             CreateSession(),
             new ProvisioningClock(_now),
             NullLogger<TenantProvisioningService>.Instance,
-            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), new FixedFeatureProfileCatalog(knownProfiles), CreateSessionStore(planRecipe), StoreRoutes.Create(), new CrestApps.OrchardCore.Tests.Subscriptions.Fakes.InMemoryTenantProvisioningJobStore()),
+            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), new FixedFeatureProfileCatalog(knownProfiles), CreateSessionStore(planRecipe, planFeatureProfile),StoreRoutes.Create(), new CrestApps.OrchardCore.Tests.Subscriptions.Fakes.InMemoryTenantProvisioningJobStore()),
             CreateSubscriptionManager(subscription));
 
         return (service, setup, store);
@@ -353,11 +439,12 @@ public sealed class TenantProvisioningServiceTests
         return session.Object;
     }
 
-    private static global::CrestApps.OrchardCore.Checkout.ICheckoutSessionStore CreateSessionStore(string planRecipe)
+    private static global::CrestApps.OrchardCore.Checkout.ICheckoutSessionStore CreateSessionStore(string planRecipe, string planFeatureProfile)
     {
         var session = new global::CrestApps.OrchardCore.Checkout.CheckoutSession { SessionId = "session-1" };
         var step = new global::CrestApps.OrchardCore.Checkout.CheckoutFlowStep { Key = SubscriptionConstants.StepKey.TenantProvisioning };
         step.Data["RecipeName"] = planRecipe;
+        step.Data["FeatureProfile"] = planFeatureProfile;
         session.Steps.Add(step);
 
         var store = new Mock<global::CrestApps.OrchardCore.Checkout.ICheckoutSessionStore>();

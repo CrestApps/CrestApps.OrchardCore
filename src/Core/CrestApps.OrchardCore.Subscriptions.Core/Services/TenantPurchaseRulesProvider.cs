@@ -32,6 +32,15 @@ public interface ITenantPurchaseRulesProvider
     Task<string> GetPlanRecipeNameAsync(string checkoutSessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the feature profile the plan named when it was bought, read from the checkout's new-site step as
+    /// <see cref="GetPlanRecipeNameAsync"/> reads the recipe; <see langword="null"/> when the checkout or its step can't be
+    /// found.
+    /// </summary>
+    /// <param name="checkoutSessionId">The checkout the site was bought with.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<string> GetPlanFeatureProfileAsync(string checkoutSessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns every reason the purchase is refused: <see cref="TenantPurchaseValidator.Validate"/>, and a prefix whose
     /// URLs this store already serves itself (the first segment of one of its routes or of one of its pages' paths, a
     /// module's or theme's id, or a top-level entry of the web root). The sites the request's buyer already owns don't
@@ -187,7 +196,15 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     }
 
     /// <inheritdoc/>
-    public async Task<string> GetPlanRecipeNameAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+    public Task<string> GetPlanRecipeNameAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+        => GetPlanStepValueAsync(checkoutSessionId, "RecipeName", cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<string> GetPlanFeatureProfileAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+        => GetPlanStepValueAsync(checkoutSessionId, "FeatureProfile", cancellationToken);
+
+    // The new-site step's data is written by the server from the plan, never by the buyer.
+    private async Task<string> GetPlanStepValueAsync(string checkoutSessionId, string key, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(checkoutSessionId) ||
             await _sessionStore.GetAsync(checkoutSessionId, cancellationToken) is not { } session)
@@ -197,7 +214,7 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
 
         var step = session.Steps?.FirstOrDefault(candidate => candidate.Key == SubscriptionConstants.StepKey.TenantProvisioning);
 
-        return step is not null && step.Data.TryGetValue("RecipeName", out var value)
+        return step is not null && step.Data.TryGetValue(key, out var value)
             ? value switch
             {
                 string text => text,

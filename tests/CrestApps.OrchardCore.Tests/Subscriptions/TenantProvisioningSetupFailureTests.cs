@@ -96,6 +96,34 @@ public sealed class TenantProvisioningSetupFailureTests
         Assert.Equal(TenantState.Initializing, harness.RegisteredStateDuringSetup);
     }
 
+    /// <summary>
+    /// Review 11 (leftover shell): a failed setup leaves the tenant behind, saved with the job that created it. Another
+    /// buyer's job for the same name is refused instead of taking it over with the first buyer's tenant id, and the first
+    /// buyer's own retry still takes it over.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_AnotherJobForTheSameName_DoesNotTakeOverTheLeftoverTenant()
+    {
+        var harness = await Harness.CreateAsync();
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await harness.Service.ProvisionAsync("job-1", cancellationToken);
+        var tenantId = harness.Settings.Saved["qasite1"].TenantId;
+
+        var status = await harness.Service.ProvisionAsync("job-2", cancellationToken);
+
+        Assert.Equal(TenantProvisioningStatus.Failed, status);
+        Assert.Contains("already in use", (await harness.Jobs.FindByIdAsync("job-2", cancellationToken)).LastError);
+        Assert.False(string.IsNullOrEmpty(tenantId));
+        Assert.Equal(tenantId, harness.Settings.Saved["qasite1"].TenantId);
+        Assert.Equal("job-1", harness.Settings.Saved["qasite1"][SubscriptionConstants.ProvisioningJobSetting]);
+
+        await harness.Service.ProvisionAsync("job-1", cancellationToken);
+
+        Assert.DoesNotContain("already in use", (await harness.Jobs.FindByIdAsync("job-1", cancellationToken)).LastError);
+        Assert.Equal(tenantId, harness.Settings.Saved["qasite1"].TenantId);
+    }
+
     private sealed class Harness
     {
         public TenantProvisioningService Service { get; private set; }
@@ -103,6 +131,8 @@ public sealed class TenantProvisioningSetupFailureTests
         public RunningShellTable Table { get; private init; }
 
         public InMemoryShellSettingsManager Settings { get; private init; }
+
+        public InMemoryTenantProvisioningJobStore Jobs { get; private init; }
 
         /// <summary>
         /// The state of the tenant the shell host holds, read while Orchard's setup checks the database.
@@ -128,25 +158,9 @@ public sealed class TenantProvisioningSetupFailureTests
             await settingsManager.SaveSettingsAsync(store);
             await shellHost.ReloadShellContextAsync(store, eventSource: false);
 
-            var jobs = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
-            {
-                ItemId = "job-1",
-                TenantName = "qasite1",
-                TenantTitle = "QA Customer Site",
-                Prefix = "qasite1",
-                AdminUsername = "siteadmin",
-                AdminEmail = "siteadmin@example.com",
-                ProtectedAdminPassword = _protection
-                    .CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep)
-                    .Protect("Password!1"),
-                RecipeName = "Blog",
-                FeatureProfile = "sold-tenant",
-                CheckoutSessionId = "session-1",
-                Status = TenantProvisioningStatus.Pending,
-                CreatedUtc = _now,
-            });
+            var jobs = new InMemoryTenantProvisioningJobStore(CreateJob("job-1", "buyer-a"), CreateJob("job-2", "buyer-b"));
 
-            var harness = new Harness { Table = table, Settings = settingsManager };
+            var harness = new Harness { Table = table, Settings = settingsManager, Jobs = jobs };
             var siteService = SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowPrefixOnStoreHost = true });
             var httpContextAccessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
 
@@ -170,6 +184,28 @@ public sealed class TenantProvisioningSetupFailureTests
 
             return harness;
         }
+
+        // Two buyers of the same name: the second checkout passed its checks before the first buyer's failed setup left a
+        // tenant behind.
+        private static TenantProvisioningJob CreateJob(string itemId, string ownerId)
+            => new()
+            {
+                ItemId = itemId,
+                OwnerId = ownerId,
+                TenantName = "qasite1",
+                TenantTitle = "QA Customer Site",
+                Prefix = "qasite1",
+                AdminUsername = "siteadmin",
+                AdminEmail = "siteadmin@example.com",
+                ProtectedAdminPassword = _protection
+                    .CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep)
+                    .Protect("Password!1"),
+                RecipeName = "Blog",
+                FeatureProfile = "sold-tenant",
+                CheckoutSessionId = "session-1",
+                Status = TenantProvisioningStatus.Pending,
+                CreatedUtc = _now,
+            };
 
         // Orchard Core's own setup service, failing the way any setup error does: it reports the error and reloads the
         // tenant from storage.
@@ -207,6 +243,7 @@ public sealed class TenantProvisioningSetupFailureTests
             var session = new global::CrestApps.OrchardCore.Checkout.CheckoutSession { SessionId = "session-1" };
             var step = new global::CrestApps.OrchardCore.Checkout.CheckoutFlowStep { Key = SubscriptionConstants.StepKey.TenantProvisioning };
             step.Data["RecipeName"] = "Blog";
+            step.Data["FeatureProfile"] = "sold-tenant";
             session.Steps.Add(step);
 
             var store = new Mock<global::CrestApps.OrchardCore.Checkout.ICheckoutSessionStore>();
