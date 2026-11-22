@@ -47,4 +47,9 @@
         padding-right: 0 !important;
         padding-bottom: 0 !important;
     }
+    /* The page gutter is removed above, so the trail takes the same inset as the chat's container-fluid. */
+    .ta-content > .oc-breadcrumb {
+        padding-left: calc(var(--bs-gutter-x, 1.5rem) * .5);
+        padding-right: calc(var(--bs-gutter-x, 1.5rem) * .5);
+    }
 </style>
