@@ -84,7 +84,7 @@ public static class SurveyAnswerIndexRows
             ChoiceId = Cut(choiceId, SurveyAnswerIndex.KeyLength),
 
             // A number too large for the column is left out of the index rather than failing the whole save.
-            NumberValue = number is { } value && Math.Abs(value) < SurveyAnswerIndex.NumberLimit ? number : null,
+            NumberValue = IndexNumber(number),
             DateValue = date is { } day ? DateTime.SpecifyKind(day, DateTimeKind.Utc) : null,
             TextValue = Cut(text, SurveyAnswerIndex.TextLength),
             Score = scored?.Score,
@@ -94,6 +94,20 @@ public static class SurveyAnswerIndexRows
             ContextKind = Cut(response.Context?.Kind, 100),
             ContextRef = Cut(response.Context?.ToString(), 255),
         };
+
+    // The column keeps 5 decimals, so the value is rounded first, as the database would: a value just under the limit
+    // can round up to it (99,999,999,999,999.999999 becomes 100,000,000,000,000) and overflow the column.
+    internal static decimal? IndexNumber(decimal? number)
+    {
+        if (number is not { } value)
+        {
+            return null;
+        }
+
+        var rounded = Math.Round(value, SurveyAnswerIndex.NumberScale, MidpointRounding.AwayFromZero);
+
+        return Math.Abs(rounded) < SurveyAnswerIndex.NumberLimit ? rounded : null;
+    }
 
     private static string Cut(string value, int length)
         => value is not null && value.Length > length ? value.Substring(0, length) : value;

@@ -204,7 +204,131 @@ public sealed class SurveyResponseFilesTests
         Assert.False(manage);
     }
 
-    private static async Task<(RuntimeTestHarness Harness, SurveyFilesFakeAttachmentService Files)> CreateAsync()
+    [Fact]
+    public async Task Next_OnARefusedPage_KeepsTheFilesSavedEarlier()
+    {
+        // Arrange
+        var (harness, files) = await CreateAsync();
+        await using var _ = harness;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(
+            RuntimeSurveys.Page("p1", FileQuestion("f1"), RuntimeSurveys.Text("t1", required: true)),
+            RuntimeSurveys.Page("p2", RuntimeSurveys.Text("t2"))));
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+        var first = await harness.ResponsesAsync(responses => responses.SubmitPageAsync(new SubmitPageRequest { ResponseId = response.ItemId, Identity = _identity, PageId = "p1", Direction = SurveyPageDirection.Next, Form = Form([("q.t1", "x")], ("q.f1", "a.txt")) }));
+        var fileId = (await harness.FindAsync(response.ItemId)).Answers["f1"].AttachmentIds.Single();
+        var back = await harness.ResponsesAsync(responses => responses.SubmitPageAsync(new SubmitPageRequest { ResponseId = response.ItemId, Identity = _identity, PageId = first.Response.CurrentPageId, Direction = SurveyPageDirection.Back, Form = Form([("q.t1", "x"), ("q.f1.keep", fileId)]) }));
+
+        // Act: the question takes one file, so a second one is refused, with the page.
+        var refused = await harness.ResponsesAsync(responses => responses.SubmitPageAsync(new SubmitPageRequest
+        {
+            ResponseId = response.ItemId,
+            Identity = _identity,
+            PageId = back.Response.CurrentPageId,
+            Direction = SurveyPageDirection.Next,
+            Form = Form([("q.t1", "x"), ("q.f1.keep", fileId)], ("q.f1", "b.txt")),
+        }));
+
+        files.Stored[fileId].UploadedUtc = RuntimeTestHarness.Now.AddDays(-2);
+        var swept = await harness.RunAsync(services => services.GetRequiredService<SurveyResponseOrphanFileSweeper>().SweepAsync(TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal("p1", back.Response.CurrentPageId);
+        Assert.Equal(SurveyErrorCode.InvalidAnswer, refused.Error);
+        Assert.True(refused.Errors.ContainsKey("f1"));
+        Assert.Equal(1, files.AddCalls);
+        Assert.Equal([fileId], (await harness.FindAsync(response.ItemId)).Answers["f1"].AttachmentIds);
+        Assert.Equal(0, swept);
+        Assert.True(files.Stored.ContainsKey(fileId));
+    }
+
+    [Fact]
+    public async Task Finish_FailingAfterTheFilesAreStored_RemovesThem()
+    {
+        // Arrange
+        var scoring = new Mock<ISurveyScoringEngine>();
+        scoring.Setup(engine => engine.Score(It.IsAny<SurveyDefinition>(), It.IsAny<SurveyResponse>())).Throws(new InvalidOperationException("Scoring failed."));
+        var (harness, files) = await CreateAsync(services => services.AddSingleton(scoring.Object));
+        await using var _ = harness;
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", FileQuestion("f1"), RuntimeSurveys.Text("t1")));
+        definition.Scoring = new SurveyScoringSettings { Enabled = true };
+        var survey = await harness.PublishAsync(definition);
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        // Act
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => harness.ResponsesAsync(responses => responses.SubmitPageAsync(new SubmitPageRequest
+        {
+            ResponseId = response.ItemId,
+            Identity = _identity,
+            PageId = "p1",
+            Direction = SurveyPageDirection.Finish,
+            Form = Form([("q.t1", "x")], ("q.f1", "a.txt")),
+        })));
+
+        // Assert
+        Assert.Equal("Scoring failed.", failure.Message);
+        Assert.Equal(1, files.AddCalls);
+        Assert.Empty(files.Stored);
+    }
+
+    [Fact]
+    public async Task OrphanSweep_KeepsACursor_SoItGetsPastMoreKeptFilesThanOneRunLooksAt()
+    {
+        // Arrange: 2,500 old files a response keeps (more than one run looks at), then 3 newer orphans.
+        var (harness, files) = await CreateAsync();
+        await using var _ = harness;
+        var start = RuntimeTestHarness.Now.AddDays(-10);
+        var keptIds = Enumerable.Range(0, 2500).Select(i => files.Seed(SurveyResponseFiles.OwnerOf("kept-response"), start.AddSeconds(i)).ItemId).ToList();
+        var orphans = Enumerable.Range(0, 3).Select(i => files.Seed(SurveyResponseFiles.OwnerOf("deleted-response"), start.AddDays(1).AddSeconds(i)).ItemId).ToList();
+
+        await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyResponseStore>().CreateAsync(new SurveyResponse
+            {
+                ItemId = "kept-response",
+                SurveyId = "survey",
+                Status = SurveyResponseStatus.Completed,
+                Answers = { ["f1"] = new SurveyAnswer { AttachmentIds = keptIds } },
+            });
+
+            return true;
+        });
+
+        // Act
+        var firstRun = await harness.RunAsync(services => services.GetRequiredService<SurveyResponseOrphanFileSweeper>().SweepAsync(TestContext.Current.CancellationToken));
+        var secondRun = await harness.RunAsync(services => services.GetRequiredService<SurveyResponseOrphanFileSweeper>().SweepAsync(TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(0, firstRun);
+        Assert.Equal(3, secondRun);
+        Assert.All(orphans, id => Assert.False(files.Stored.ContainsKey(id)));
+        Assert.All(keptIds, id => Assert.True(files.Stored.ContainsKey(id)));
+    }
+
+    [Fact]
+    public async Task Delete_LeavesTheFilesOfAnotherResponseItsAnswersList()
+    {
+        // Arrange
+        var (harness, files) = await CreateAsync();
+        await using var _ = harness;
+        var others = files.Seed(SurveyResponseFiles.OwnerOf("other-response"), RuntimeTestHarness.Now);
+        var own = files.Seed(SurveyResponseFiles.OwnerOf("imported-response"), RuntimeTestHarness.Now);
+        var imported = new SurveyResponse
+        {
+            ItemId = "imported-response",
+            SurveyId = "survey",
+            Answers = { ["f1"] = new SurveyAnswer { AttachmentIds = [others.ItemId, own.ItemId] } },
+        };
+
+        // Act
+        var removed = await harness.RunAsync(services => services.GetRequiredService<SurveyResponseFiles>().DeleteAllAsync(imported, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(1, removed);
+        Assert.True(files.Stored.ContainsKey(others.ItemId));
+        Assert.False(files.Stored.ContainsKey(own.ItemId));
+    }
+
+    private static async Task<(RuntimeTestHarness Harness, SurveyFilesFakeAttachmentService Files)> CreateAsync(Action<IServiceCollection> configure = null)
     {
         var files = new SurveyFilesFakeAttachmentService { Clock = () => RuntimeTestHarness.Now };
         var harness = await RuntimeTestHarness.CreateAsync(services =>
@@ -212,6 +336,7 @@ public sealed class SurveyResponseFilesTests
             services.AddSingleton<IAttachmentService>(files);
             services.AddSurveysFileUploadControl();
             services.AddSurveyControl<SignatureControlHandler>(SurveyControlNames.Signature, descriptor => descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.StoresFiles);
+            configure?.Invoke(services);
         });
 
         return (harness, files);

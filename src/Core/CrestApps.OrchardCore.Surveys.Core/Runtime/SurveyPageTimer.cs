@@ -4,7 +4,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
 /// <summary>
 /// Works out when the time of a screen runs out, for pages with a time limit of their own. The time is measured from the
-/// respondent's first visit to the screen, so leaving it and coming back never starts the time again.
+/// respondent's first visit to any screen of the page, so leaving it and coming back never starts the time again, and a
+/// page split into several screens gets its time limit once, not once per screen.
 /// </summary>
 public static class SurveyPageTimer
 {
@@ -73,8 +74,12 @@ public static class SurveyPageTimer
             return null;
         }
 
-        // The first visit: going back and forth adds visits but never gives the screen more time.
-        var entered = response.PageVisits?.FirstOrDefault(visit => string.Equals(visit.PageId, screenId, StringComparison.Ordinal))?.EnteredUtc;
+        // The first visit to any screen of the page: a page split into several screens (questions per page) shares one
+        // time limit, and going back and forth adds visits but never gives the page more time.
+        var entered = response.PageVisits?
+            .Where(visit => visit is not null && string.Equals(SurveyPlanNavigator.PageOf(response.Plan, visit.PageId), pageId, StringComparison.Ordinal))
+            .Select(visit => (DateTime?)visit.EnteredUtc)
+            .Min();
 
         return entered is null
             ? null

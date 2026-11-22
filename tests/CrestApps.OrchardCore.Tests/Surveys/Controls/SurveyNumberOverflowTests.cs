@@ -102,6 +102,20 @@ public sealed class SurveyNumberOverflowTests
         Assert.Equal(12.5m, rows[1].NumberValue);
     }
 
+    [Fact]
+    public void IndexRows_ANumberThatRoundsUpToTheLimit_IsLeftOut()
+    {
+        // Act
+        var roundsToTheLimit = SurveyAnswerIndexRows.IndexNumber(99_999_999_999_999.999999m);
+        var justUnder = SurveyAnswerIndexRows.IndexNumber(99_999_999_999_999.99999m);
+        var rounded = SurveyAnswerIndexRows.IndexNumber(-1.234567m);
+
+        // Assert
+        Assert.Null(roundsToTheLimit);
+        Assert.Equal(99_999_999_999_999.99999m, justUnder);
+        Assert.Equal(-1.23457m, rounded);
+    }
+
     private static T Handler<T>()
         where T : ISurveyControlHandler
     {

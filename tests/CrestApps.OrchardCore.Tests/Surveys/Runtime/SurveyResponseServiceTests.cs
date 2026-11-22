@@ -503,6 +503,93 @@ public sealed class SurveyResponseServiceTests
         Assert.Equal(["Started", "Completing", "PageCompleted", "Completed"], observer.Events);
     }
 
+    [Fact]
+    public async Task Limits_LateSaveCompletesTheResponse_AndTheCompletionCountsTowardTheLimit()
+    {
+        // Arrange
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(TimedOneAttempt(), item => item.Access.Limits = new RespondentLimits { Total = 1, Counts = LimitCount.Completed });
+        var start = await harness.StartAsync(survey, configure: request => request.Identity = new SurveyRespondentIdentity { BrowserKey = "browser-1" });
+        var identity = new SurveyRespondentIdentity { BrowserKey = "browser-1", ResumeToken = start.ResumeToken };
+
+        // Act: any save after the deadline submits the response.
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(2);
+        var late = await harness.ResponsesAsync(responses => responses.SaveAsync(new SavePageRequest
+        {
+            ResponseId = start.Response.ItemId,
+            Identity = identity,
+            PageId = "p1",
+            Form = RuntimeTestHarness.Form(("q1", "late")),
+        }));
+        var again = await harness.StartAsync(survey, configure: request => request.Identity = new SurveyRespondentIdentity { BrowserKey = "browser-1" });
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.DeadlinePassed, late.Error);
+        Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(start.Response.ItemId)).Status);
+        Assert.Equal(SurveyErrorCode.LimitReached, again.Error);
+    }
+
+    [Fact]
+    public async Task Limits_DeadlineTaskCompletesTheResponse_AndTheCompletionCountsTowardTheLimit()
+    {
+        // Arrange
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(
+            TimedOneAttempt(),
+            item =>
+            {
+                item.Access.Anonymity = AnonymityMode.Anonymous;
+                item.Access.Limits = new RespondentLimits { Total = 1, Counts = LimitCount.Completed };
+            });
+        var start = await harness.StartAsync(survey, "u1");
+
+        // Act: the deadline task submits with no respondent's request.
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(2);
+        var submitted = await harness.ResponsesAsync(responses => responses.SubmitAtDeadlineAsync(start.Response.ItemId));
+        var again = await harness.StartAsync(survey, "u1");
+        var stored = await harness.FindAsync(start.Response.ItemId);
+
+        // Assert
+        Assert.NotNull(start.Response.RespondentKey);
+        Assert.True(submitted.Succeeded);
+        Assert.Equal(SurveyResponseStatus.Completed, stored.Status);
+        Assert.Null(stored.RespondentKey);
+        Assert.Null(stored.UserId);
+        Assert.Equal(SurveyErrorCode.LimitReached, again.Error);
+    }
+
+    [Fact]
+    public async Task Deadline_TaskWithinTheGracePeriod_DoesNotSubmit()
+    {
+        // Arrange
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var definition = TimedOneAttempt();
+        definition.Timing.GraceSeconds = 30;
+
+        var survey = await harness.PublishAsync(definition);
+        var start = await harness.StartAsync(survey, "u1");
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(1).AddSeconds(10);
+        var early = await harness.ResponsesAsync(responses => responses.SubmitAtDeadlineAsync(start.Response.ItemId));
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(1).AddSeconds(31);
+        var due = await harness.ResponsesAsync(responses => responses.SubmitAtDeadlineAsync(start.Response.ItemId));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.InvalidState, early.Error);
+        Assert.True(due.Succeeded);
+        Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(start.Response.ItemId)).Status);
+    }
+
+    private static SurveyDefinition TimedOneAttempt()
+    {
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+        definition.Timing.TimeLimitMinutes = 1;
+        definition.Timing.GraceSeconds = 0;
+
+        return definition;
+    }
+
     private static SurveyDefinition TwoPages()
         => RuntimeSurveys.Definition(
             RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1", required: true)),

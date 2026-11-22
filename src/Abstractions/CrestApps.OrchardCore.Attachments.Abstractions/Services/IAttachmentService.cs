@@ -74,6 +74,17 @@ public interface IAttachmentService
     Task<bool> DeleteAsync(string attachmentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Removes the file of an attachment added in this request whose record will never be committed, because the request
+    /// failed after <see cref="AddAsync"/>: the record rolls back with the request, but the file was written at once and
+    /// nothing else would find it. Never call it for an attachment whose record may have been committed.
+    /// </summary>
+    /// <param name="attachmentId">The attachment's id.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task DiscardUncommittedAsync(string attachmentId, CancellationToken cancellationToken = default)
+        => DeleteAsync(attachmentId, cancellationToken);
+
+    /// <summary>
     /// Makes a link that downloads an attachment without signing in, for a customer who follows it from an e-mail.
     /// </summary>
     /// <param name="attachmentId">The attachment's id.</param>

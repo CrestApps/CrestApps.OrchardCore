@@ -17,6 +17,9 @@ public sealed class SurveyResponseFiles
     private readonly IAttachmentService _attachments;
     private readonly ILogger _logger;
 
+    // The files stored in this scope whose records aren't committed yet: removed when the request fails.
+    private readonly List<string> _uncommitted = [];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyResponseFiles"/> class.
     /// </summary>
@@ -131,6 +134,8 @@ public sealed class SurveyResponseFiles
 
                 if (result.Succeeded && result.Attachments.Count == kept.Count)
                 {
+                    _uncommitted.AddRange(result.Attachments.Select(attachment => attachment.ItemId));
+
                     for (var i = 0; i < kept.Count; i++)
                     {
                         var index = ids.IndexOf(kept[i].Id);
@@ -159,6 +164,41 @@ public sealed class SurveyResponseFiles
     }
 
     /// <summary>
+    /// Records that the session committed: the files stored in this scope so far are kept by their committed records.
+    /// </summary>
+    public void MarkCommitted()
+        => _uncommitted.Clear();
+
+    /// <summary>
+    /// Removes the files stored in this scope since the last commit, for a request that failed: their records roll back
+    /// with it, so nothing else would ever find the files.
+    /// </summary>
+    /// <returns>A task.</returns>
+    public async Task DiscardUncommittedAsync()
+    {
+        if (_attachments is null || _uncommitted.Count == 0)
+        {
+            return;
+        }
+
+        var ids = _uncommitted.ToList();
+
+        _uncommitted.Clear();
+
+        foreach (var attachmentId in ids)
+        {
+            try
+            {
+                await _attachments.DiscardUncommittedAsync(attachmentId, CancellationToken.None);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "The file {AttachmentId} of a failed survey response save could not be removed.", attachmentId);
+            }
+        }
+    }
+
+    /// <summary>
     /// Removes the files a response referred to before an update that it no longer refers to, such as an unticked file
     /// or a replaced signature. Call it after the update is committed, so a failed update never loses a file.
     /// </summary>
@@ -178,7 +218,7 @@ public sealed class SurveyResponseFiles
         var current = ReferencedIds(after);
         var removed = 0;
 
-        foreach (var attachmentId in before.Where(id => !current.Contains(id)))
+        foreach (var attachmentId in await OwnedAsync(before.Where(id => !current.Contains(id)), after.ItemId, cancellationToken))
         {
             removed += await DeleteAsync(attachmentId, cancellationToken) ? 1 : 0;
         }
@@ -201,7 +241,9 @@ public sealed class SurveyResponseFiles
             return 0;
         }
 
-        var ids = ReferencedIds(response);
+        // Only the files the response owns: an answer can list another record's file (a response imported with another
+        // response's ids, say), and that file is not this response's to remove.
+        var ids = (await OwnedAsync(ReferencedIds(response), response.ItemId, cancellationToken)).ToHashSet(StringComparer.Ordinal);
 
         foreach (var attachment in await _attachments.ListAsync(OwnerOf(response.ItemId), cancellationToken))
         {
@@ -216,6 +258,21 @@ public sealed class SurveyResponseFiles
         }
 
         return removed;
+    }
+
+    // The ids among these of files the response owns.
+    private async Task<IReadOnlyList<string>> OwnedAsync(IEnumerable<string> attachmentIds, string responseId, CancellationToken cancellationToken)
+    {
+        var ids = attachmentIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
+
+        if (ids.Count == 0 || string.IsNullOrEmpty(responseId))
+        {
+            return [];
+        }
+
+        var owner = OwnerOf(responseId);
+
+        return [.. (await _attachments.GetAsync(ids, cancellationToken)).Where(attachment => attachment.Owner == owner).Select(attachment => attachment.ItemId)];
     }
 
     private async Task<bool> DeleteAsync(string attachmentId, CancellationToken cancellationToken)
