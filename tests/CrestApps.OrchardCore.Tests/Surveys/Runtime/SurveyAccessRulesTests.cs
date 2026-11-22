@@ -4,6 +4,9 @@ using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using Moq;
+using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
 
@@ -36,7 +39,11 @@ public sealed class SurveyAccessRulesTests
     {
         // Arrange: 09:30 New York is 14:30 UTC in winter and 13:30 UTC in summer.
         var now = new DateTime(2026, 11, 2, 14, 30, 0, DateTimeKind.Utc);
-        var rule = new WeeklyScheduleRule(new RuntimeTimeZoneLocalClock(TimeZoneId(), () => now));
+        var site = new Mock<ISite>();
+        site.SetupGet(value => value.TimeZoneId).Returns(TimeZoneId());
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+        var rule = new WeeklyScheduleRule(siteService.Object, Mock.Of<IClock>());
         var survey = new Survey
         {
             Access = new SurveyAccessSettings

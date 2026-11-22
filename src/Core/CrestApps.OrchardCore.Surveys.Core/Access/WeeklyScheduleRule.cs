@@ -1,23 +1,29 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Access;
 
 /// <summary>
-/// Refuses responses on days and at hours the weekly schedule does not allow, in the site's time zone.
+/// Refuses responses on days and at hours the weekly schedule does not allow, in the site's time zone (or the
+/// server's when the site has none). The respondent's own time zone is never used, so changing it can't open the survey.
 /// </summary>
 public sealed class WeeklyScheduleRule : ISurveyAccessRule
 {
-    private readonly ILocalClock _localClock;
+    private readonly ISiteService _siteService;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WeeklyScheduleRule"/> class.
     /// </summary>
-    /// <param name="localClock">The local clock.</param>
-    public WeeklyScheduleRule(ILocalClock localClock)
+    /// <param name="siteService">The site service, which gives the site's time zone.</param>
+    /// <param name="clock">The clock, which gives the server's time zone.</param>
+    public WeeklyScheduleRule(ISiteService siteService, IClock clock)
     {
-        _localClock = localClock;
+        _siteService = siteService;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -34,9 +40,11 @@ public sealed class WeeklyScheduleRule : ISurveyAccessRule
             return SurveyAccessDecision.Allow;
         }
 
-        var local = await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(context.UtcNow, DateTimeKind.Utc)));
+        var site = await _siteService.GetSiteSettingsAsync();
+        var zoneId = !string.IsNullOrEmpty(site?.TimeZoneId) ? site.TimeZoneId : _clock.GetSystemTimeZone()?.TimeZoneId ?? string.Empty;
+        var local = CalendarTime.ToLocal(DateTime.SpecifyKind(context.UtcNow, DateTimeKind.Utc), zoneId);
 
-        return IsAllowed(days, local.DateTime)
+        return IsAllowed(days, local)
             ? SurveyAccessDecision.Allow
             : SurveyAccessDecision.Deny(SurveyErrorCode.NotAvailableNow);
     }
