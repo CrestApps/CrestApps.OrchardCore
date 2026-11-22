@@ -540,7 +540,12 @@ public sealed class SurveyResponseService : ISurveyResponseService
             var definition = version.Definition;
             var cacheKey = SurveyRuntimeVersions.CacheKey(version);
             var now = _clock.UtcNow;
-            var readErrors = await ReadScreenAsync(definition, version, response, request, cancellationToken);
+
+            // Only a page posted forward may keep files, and only once it passes validation: they stay pending until then.
+            var readMode = request.Direction == SurveyPageDirection.Back ? SurveyAnswerReadMode.Draft : SurveyAnswerReadMode.Commit;
+            var pendingFiles = new Dictionary<string, List<SurveyPendingFile>>(StringComparer.Ordinal);
+            var referencedFiles = SurveyResponseFiles.ReferencedIds(response);
+            var readErrors = await ReadScreenAsync(definition, version, response, request, readMode, pendingFiles, cancellationToken);
             var state = Settle(definition, response, cacheKey);
 
             response.LastActivityUtc = now;
@@ -581,9 +586,24 @@ public sealed class SurveyResponseService : ISurveyResponseService
                     response.Answers.Remove(questionId);
                 }
 
+                // The page is refused: none of its new files are stored.
+                SurveyResponseFiles.DiscardPending(response);
                 await _responseStore.UpdateAsync(response, cancellationToken);
 
                 return new SurveyPageResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Page = BuildPage(version, response, state), Errors = errors };
+            }
+
+            var fileErrors = await Files.StorePendingAsync(response, pendingFiles, cancellationToken);
+
+            // Once committed, the files the response referred to under this lock and no longer refers to are removed.
+            referencedFiles.UnionWith(SurveyResponseFiles.ReferencedIds(response));
+            notifications.Add(() => Files.DeleteReleasedAsync(referencedFiles, response, CancellationToken.None));
+
+            if (fileErrors.Count > 0)
+            {
+                await _responseStore.UpdateAsync(response, cancellationToken);
+
+                return new SurveyPageResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Page = BuildPage(version, response, state), Errors = fileErrors };
             }
 
             var leftScreen = response.CurrentPageId;
@@ -635,7 +655,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             var now = _clock.UtcNow;
 
-            await ReadScreenAsync(version.Definition, version, response, request, cancellationToken);
+            await ReadScreenAsync(version.Definition, version, response, request, SurveyAnswerReadMode.Draft, pendingFiles: null, cancellationToken);
             Settle(version.Definition, response, SurveyRuntimeVersions.CacheKey(version));
             response.LastActivityUtc = now;
             response.ModifiedUtc = now;
@@ -672,7 +692,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
         var definition = version.Definition;
         var cacheKey = SurveyRuntimeVersions.CacheKey(version);
 
-        await ReadScreenAsync(definition, version, response, request, cancellationToken);
+        await ReadScreenAsync(definition, version, response, request, SurveyAnswerReadMode.Draft, pendingFiles: null, cancellationToken);
         _formulas.ComputeVariables(definition, response, cacheKey);
 
         var state = _logic.Evaluate(definition, response, cacheKey);
@@ -729,7 +749,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
             var before = _logic.Evaluate(definition, response, cacheKey);
             var readErrors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
-            await ReadQuestionAsync(definition, response, before, question, request, readErrors, cancellationToken);
+            await ReadQuestionAsync(definition, response, before, question, request, readErrors, SurveyAnswerReadMode.Draft, pendingFiles: null, cancellationToken);
 
             var state = Settle(definition, response, cacheKey);
             var errors = await ValidateQuestionsAsync(definition, response, state, [question.Id], readErrors);
@@ -864,6 +884,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
         {
             await _responseStore.DeleteAsync(response, cancellationToken);
 
+            // Every file of the response goes with it, once the delete is committed.
+            notifications.Add(() => Files.DeleteAllAsync(response, CancellationToken.None));
+
             var context = new SurveyResponseEventContext { Survey = survey, Version = version, Response = response, ActorId = actorId };
             notifications.Add(() => NotifyAsync(observer => observer.DeletedAsync(context)));
 
@@ -947,6 +970,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
     private SurveyAnonymitySecrets Secrets
         => _serviceProvider.GetRequiredService<SurveyAnonymitySecrets>();
+
+    private SurveyResponseFiles Files
+        => _serviceProvider.GetRequiredService<SurveyResponseFiles>();
 
     // An anonymous response keeps a context only when its kind can't point to one person; otherwise its kind only.
     private RecordRef? StoredContext(Survey survey, RecordRef? context)
@@ -1057,7 +1083,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
         }
     }
 
-    private async Task<Dictionary<string, List<string>>> ReadScreenAsync(SurveyDefinition definition, SurveyVersion version, SurveyResponse response, SubmitPageRequest request, CancellationToken cancellationToken)
+    // Reads the answers of the current screen. In Draft mode no file is kept; in Commit mode the new files are collected
+    // in pendingFiles, by question, for the caller to store once the page passes validation.
+    private async Task<Dictionary<string, List<string>>> ReadScreenAsync(SurveyDefinition definition, SurveyVersion version, SurveyResponse response, SubmitPageRequest request, SurveyAnswerReadMode mode, Dictionary<string, List<SurveyPendingFile>> pendingFiles, CancellationToken cancellationToken)
     {
         var errors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
@@ -1072,14 +1100,14 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             if (question is not null)
             {
-                await ReadQuestionAsync(definition, response, before, question, request, errors, cancellationToken);
+                await ReadQuestionAsync(definition, response, before, question, request, errors, mode, pendingFiles, cancellationToken);
             }
         }
 
         return errors;
     }
 
-    private async Task ReadQuestionAsync(SurveyDefinition definition, SurveyResponse response, SurveyLogicState state, SurveyQuestion question, SubmitPageRequest request, Dictionary<string, List<string>> errors, CancellationToken cancellationToken)
+    private async Task ReadQuestionAsync(SurveyDefinition definition, SurveyResponse response, SurveyLogicState state, SurveyQuestion question, SubmitPageRequest request, Dictionary<string, List<string>> errors, SurveyAnswerReadMode mode, Dictionary<string, List<SurveyPendingFile>> pendingFiles, CancellationToken cancellationToken)
     {
         var handler = _registry.GetHandler(question.ControlType);
         var descriptor = _registry.GetControl(question.ControlType);
@@ -1107,6 +1135,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
             Prefix = SurveysConstants.AnswerPrefix + "." + question.Id,
             Existing = existing,
             AllowedChoiceIds = SurveyPageViewBuilder.AllowedChoices(definition, question, response, state),
+            Mode = pendingFiles is null ? SurveyAnswerReadMode.Draft : mode,
             CancellationToken = cancellationToken,
         };
 
@@ -1121,6 +1150,19 @@ public sealed class SurveyResponseService : ISurveyResponseService
         if (context.Errors.Count > 0)
         {
             errors[question.Id] = [.. context.Errors];
+        }
+
+        if (context.PendingFiles.Count > 0)
+        {
+            if (pendingFiles is null)
+            {
+                // Nothing may be kept: a file a handler read anyway is dropped from the answer.
+                context.Answer?.AttachmentIds?.RemoveAll(SurveyResponseFiles.IsPending);
+            }
+            else
+            {
+                pendingFiles[question.Id] = [.. context.PendingFiles];
+            }
         }
 
         if (context.Answer is null || handler.IsEmpty(question, context.Answer))

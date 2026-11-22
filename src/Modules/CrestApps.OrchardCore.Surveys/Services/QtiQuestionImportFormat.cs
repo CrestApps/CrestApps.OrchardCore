@@ -57,7 +57,15 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
     public IReadOnlyCollection<string> Extensions { get; } = [".zip", ".xml"];
 
     /// <inheritdoc />
-    public async Task<SurveyImportResult> ReadAsync(string fileName, Stream content, CancellationToken cancellationToken = default)
+    public Task<SurveyImportResult> ReadAsync(string fileName, Stream content, CancellationToken cancellationToken = default)
+        => ReadCoreAsync(fileName, content, storeMedia: true, cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>The images are checked as for an import, but nothing is written to the media library.</remarks>
+    public Task<SurveyImportResult> CheckAsync(string fileName, Stream content, CancellationToken cancellationToken = default)
+        => ReadCoreAsync(fileName, content, storeMedia: false, cancellationToken);
+
+    private async Task<SurveyImportResult> ReadCoreAsync(string fileName, Stream content, bool storeMedia, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(content);
 
@@ -96,7 +104,7 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
                 continue;
             }
 
-            var error = await StoreMediaAsync(item, question, folder, cancellationToken);
+            var error = await StoreMediaAsync(item, question, folder, storeMedia, cancellationToken);
 
             if (error is not null)
             {
@@ -111,7 +119,9 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
         return result;
     }
 
-    private async Task<string> StoreMediaAsync(QtiItem item, BankQuestion question, string folder, CancellationToken cancellationToken)
+    // Checks the images an item refers to and, when storeMedia is set, stores them in the media library and points the
+    // question at them. A dry run checks the same images and leaves the question as it was.
+    private async Task<string> StoreMediaAsync(QtiItem item, BankQuestion question, string folder, bool storeMedia, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(question.Question);
 
@@ -142,13 +152,18 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
             }
 
             var path = folder + "/" + SafePath(file.Path);
+            var url = string.Empty;
 
-            using (var stream = new MemoryStream(file.Content, writable: false))
+            if (storeMedia)
             {
-                await _mediaFileStore.CreateFileFromStreamAsync(path, stream, overwrite: true);
+                using (var stream = new MemoryStream(file.Content, writable: false))
+                {
+                    await _mediaFileStore.CreateFileFromStreamAsync(path, stream, overwrite: true);
+                }
+
+                url = _mediaFileStore.MapPathToPublicUrl(path);
             }
 
-            var url = _mediaFileStore.MapPathToPublicUrl(path);
             json = json.Replace(reference, WebUtility.HtmlEncode(url), StringComparison.Ordinal)
                 .Replace(file.Reference, url, StringComparison.Ordinal);
         }
@@ -159,7 +174,11 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        question.Question = JsonSerializer.Deserialize<SurveyQuestion>(json);
+
+        if (storeMedia)
+        {
+            question.Question = JsonSerializer.Deserialize<SurveyQuestion>(json);
+        }
 
         return null;
     }

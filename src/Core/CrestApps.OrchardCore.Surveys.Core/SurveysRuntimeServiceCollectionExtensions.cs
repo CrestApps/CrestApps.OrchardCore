@@ -63,6 +63,8 @@ public static class SurveysRuntimeServiceCollectionExtensions
         services.TryAddScoped<SurveyResponseService>();
         services.TryAddScoped<ISurveyResponseService>(provider => provider.GetRequiredService<SurveyResponseService>());
         services.TryAddScoped<SurveyMaintenanceService>();
+        services.TryAddScoped<SurveyResponseFiles>();
+        services.TryAddScoped<SurveyResponseOrphanFileSweeper>();
         services.AddHttpContextAccessor();
         services.TryAddScoped<SurveyResumeCookies>();
 

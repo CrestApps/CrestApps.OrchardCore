@@ -1,6 +1,4 @@
-using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Attachments.Services;
-using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.Localization;
@@ -10,7 +8,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Controls.Signature;
 
 /// <summary>
 /// A drawn signature, posted as a PNG data URL in <c>q.{questionId}</c>. It is kept as a file of the response when
-/// Attachments is on, else in the answer's extra data (up to 256 KB).
+/// Attachments is on, else in the answer's extra data (up to 256 KB). A drawn signature is only taken in
+/// <see cref="SurveyAnswerReadMode.Commit"/> mode; the runtime stores its file once the page passes validation.
 /// </summary>
 public sealed class SignatureControlHandler : SurveyControlHandlerBase<SignatureSettings>
 {
@@ -22,7 +21,7 @@ public sealed class SignatureControlHandler : SurveyControlHandlerBase<Signature
     private const string Prefix = "data:image/png;base64,";
     private const int MaxBytes = 256 * 1024;
 
-    private readonly IAttachmentService _attachmentService;
+    private readonly bool _hasAttachments;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SignatureControlHandler"/> class.
@@ -34,32 +33,34 @@ public sealed class SignatureControlHandler : SurveyControlHandlerBase<Signature
         IStringLocalizer<SignatureControlHandler> stringLocalizer)
         : base(stringLocalizer)
     {
-        _attachmentService = attachmentServices.FirstOrDefault();
+        _hasAttachments = attachmentServices.Any();
     }
 
     /// <inheritdoc />
     public override string ControlType => SurveyControlNames.Signature;
 
     /// <inheritdoc />
-    public override async Task ReadAnswerAsync(SurveyAnswerReadContext context)
+    public override Task ReadAnswerAsync(SurveyAnswerReadContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var value = ReadValue(context, context.Prefix);
 
-        if (string.IsNullOrEmpty(value))
+        // A drawn signature is only taken when the page is posted forward: an evaluation, an autosave, a check or
+        // going back keeps the one saved before.
+        if (string.IsNullOrEmpty(value) || context.Mode != SurveyAnswerReadMode.Commit)
         {
             // An unchanged signature posts nothing: keep the one saved before.
             context.Answer = context.Existing is not null && !IsEmpty(context.Question, context.Existing) ? context.Existing : null;
 
-            return;
+            return Task.CompletedTask;
         }
 
         if (!value.StartsWith(Prefix, StringComparison.Ordinal))
         {
             context.Errors.Add(S["The signature could not be read."]);
 
-            return;
+            return Task.CompletedTask;
         }
 
         byte[] bytes;
@@ -72,39 +73,37 @@ public sealed class SignatureControlHandler : SurveyControlHandlerBase<Signature
         {
             context.Errors.Add(S["The signature could not be read."]);
 
-            return;
+            return Task.CompletedTask;
         }
 
         if (bytes.Length > MaxBytes)
         {
             context.Errors.Add(S["The signature is too large."]);
 
-            return;
+            return Task.CompletedTask;
         }
 
-        if (_attachmentService is not null && context.Response is not null)
+        if (_hasAttachments && context.Response is not null)
         {
-            var result = await _attachmentService.AddAsync(
-            [
-                new AttachmentUpload
-                {
-                    Owner = new RecordRef(SurveysConstants.ResponseRecordKind, context.Response.ItemId),
-                    FileName = "signature.png",
-                    DeclaredContentType = "image/png",
-                    Content = bytes,
-                    UploadedBy = context.Response.Respondent ?? default,
-                },
-            ], context.CancellationToken);
+            // The runtime stores the file once the page passes validation, and removes the one it replaces.
+            var pending = new SurveyPendingFile
+            {
+                FileName = "signature.png",
+                ContentType = "image/png",
+                Content = bytes,
+            };
 
-            context.Errors.AddRange(result.Errors);
-            context.Answer = result.Attachments.Count > 0 ? new SurveyAnswer { AttachmentIds = [result.Attachments[0].ItemId] } : null;
+            context.PendingFiles.Add(pending);
+            context.Answer = new SurveyAnswer { AttachmentIds = [pending.Id] };
 
-            return;
+            return Task.CompletedTask;
         }
 
         var answer = new SurveyAnswer();
         answer.Extra[DataUrlKey] = value;
         context.Answer = answer;
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />

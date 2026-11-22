@@ -147,6 +147,9 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         distribution.GroupBy(number);
         distribution.OrderBy(number);
 
+        // Only the first values are kept, so only those are read: a free number question can have a value per answer.
+        distribution.Take(SurveyIndexSql.Number(DistributionLimit));
+
         foreach (var item in await _sql.QueryAsync(distribution, distributionParameters, cancellationToken))
         {
             if (statistics.Distribution.Count >= DistributionLimit)

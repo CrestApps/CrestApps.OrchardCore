@@ -31,4 +31,15 @@ public interface ISurveyImportFormat
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The questions read and the problems found.</returns>
     Task<SurveyImportResult> ReadAsync(string fileName, Stream content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads questions from a file for a dry run, without keeping anything. A format that stores something while it
+    /// reads, such as the images of a package, overrides it to check those files without storing them.
+    /// </summary>
+    /// <param name="fileName">The file name.</param>
+    /// <param name="content">The file content.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The questions read and the problems found.</returns>
+    Task<SurveyImportResult> CheckAsync(string fileName, Stream content, CancellationToken cancellationToken = default)
+        => ReadAsync(fileName, content, cancellationToken);
 }

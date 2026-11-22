@@ -362,4 +362,97 @@ public sealed class SurveyControlHandlerTests
 
         Assert.Single(context.Errors);
     }
+
+    [Fact]
+    public async Task Validation_Regex_RunsACatastrophicPatternInLinearTime()
+    {
+        // Arrange
+        var question = Question(SurveyControlNames.ShortText);
+        question.Validation = [new SurveyValidationRule { Kind = SurveyValidationKind.Regex, Value = "^(a+)+$" }];
+        var values = Enumerable.Repeat(new string('a', 400) + "!", 50).ToList();
+        var context = Validate(question, new SurveyAnswer { Values = values });
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        // Act
+        await Handler<CrestApps.OrchardCore.Surveys.Core.Controls.ShortText.ShortTextControlHandler>().ValidateAnswerAsync(context);
+
+        // Assert
+        Assert.Single(context.Errors);
+        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Validation_Regex_WithABackReference_StillMatches()
+    {
+        // Arrange
+        var question = Question(SurveyControlNames.ShortText);
+        question.Validation = [new SurveyValidationRule { Kind = SurveyValidationKind.Regex, Value = @"^(\w)\1$" }];
+        var matching = Validate(question, new SurveyAnswer { Values = ["aa"] });
+        var failing = Validate(question, new SurveyAnswer { Values = ["ab"] });
+        var handler = Handler<CrestApps.OrchardCore.Surveys.Core.Controls.ShortText.ShortTextControlHandler>();
+
+        // Act
+        await handler.ValidateAnswerAsync(matching);
+        await handler.ValidateAnswerAsync(failing);
+
+        // Assert
+        Assert.Empty(matching.Errors);
+        Assert.Single(failing.Errors);
+    }
+
+    [Fact]
+    public async Task FileUpload_ReadAnswer_IgnoresNewFilesInDraftMode_AndHandsThemBackPendingInCommitMode()
+    {
+        // Arrange
+        var question = Question(SurveyControlNames.FileUpload);
+        var bytes = "hello"u8.ToArray();
+        var files = new Microsoft.AspNetCore.Http.FormFileCollection
+        {
+            new Microsoft.AspNetCore.Http.FormFile(new MemoryStream(bytes), 0, bytes.Length, "q.q1", "notes.txt")
+            {
+                Headers = new Microsoft.AspNetCore.Http.HeaderDictionary(),
+                ContentType = "text/plain",
+            },
+        };
+        var form = new Microsoft.AspNetCore.Http.FormCollection([], files);
+        var draft = Read(question, form);
+        var commit = Read(question, form);
+        commit.Mode = SurveyAnswerReadMode.Commit;
+        var handler = Handler<FileUploadControlHandler>();
+
+        // Act
+        await handler.ReadAnswerAsync(draft);
+        await handler.ReadAnswerAsync(commit);
+
+        // Assert
+        Assert.Null(draft.Answer);
+        Assert.Empty(draft.PendingFiles);
+        var pending = Assert.Single(commit.PendingFiles);
+        Assert.Equal("notes.txt", pending.FileName);
+        Assert.Equal(bytes, pending.Content.ToArray());
+        Assert.Equal([pending.Id], commit.Answer.AttachmentIds);
+    }
+
+    [Fact]
+    public async Task Signature_ReadAnswer_KeepsTheSavedSignatureInDraftMode_AndHandsANewOneBackPendingInCommitMode()
+    {
+        // Arrange
+        var question = Question(SurveyControlNames.Signature);
+        var existing = new SurveyAnswer { AttachmentIds = ["saved"] };
+        var form = Form(("q.q1", ["data:image/png;base64," + Convert.ToBase64String([1, 2, 3])]));
+        var draft = Read(question, form, existing: existing);
+        var commit = Read(question, form, existing: existing);
+        commit.Mode = SurveyAnswerReadMode.Commit;
+        var handler = Handler<CrestApps.OrchardCore.Surveys.Core.Controls.Signature.SignatureControlHandler>();
+
+        // Act
+        await handler.ReadAnswerAsync(draft);
+        await handler.ReadAnswerAsync(commit);
+
+        // Assert
+        Assert.Same(existing, draft.Answer);
+        Assert.Empty(draft.PendingFiles);
+        var pending = Assert.Single(commit.PendingFiles);
+        Assert.Equal([pending.Id], commit.Answer.AttachmentIds);
+    }
 }

@@ -60,6 +60,20 @@ public sealed class SurveyAnswerReadContext
     public List<string> Errors { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether the read may keep files. In <see cref="SurveyAnswerReadMode.Draft"/> (the default) a
+    /// handler ignores new files and drawn signatures; in <see cref="SurveyAnswerReadMode.Commit"/> it adds them to
+    /// <see cref="PendingFiles"/> instead of storing them.
+    /// </summary>
+    public SurveyAnswerReadMode Mode { get; set; }
+
+    /// <summary>
+    /// Gets the files read in <see cref="SurveyAnswerReadMode.Commit"/> mode that the answer refers to by their
+    /// temporary id. The runtime stores them only when the page passes validation; handlers never store files
+    /// themselves.
+    /// </summary>
+    public List<SurveyPendingFile> PendingFiles { get; } = [];
+
+    /// <summary>
     /// Gets or sets the cancellation token.
     /// </summary>
     public CancellationToken CancellationToken { get; set; }

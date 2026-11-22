@@ -100,7 +100,7 @@ Other checks:
 - The grading queue opens for users with a grading permission or with a grading scope that gives them a survey (course graders, for one); a survey's queue needs leave to grade that survey.
 - The designer lists and attaches question banks only for users with **View question banks**; without it, a pool keeps the banks it already draws from.
 - A template copies a survey's draft, answer keys included, only from a survey the user may edit.
-- Uploaded files of a response open for staff with View or Void and delete responses, for the respondent, and for anyone the survey authorization service lets view or grade the survey's responses (the owner, course graders); managing them follows Void and delete responses the same way.
+- Uploaded files of a response open for staff with View or Void and delete responses, for the respondent, and for anyone the survey authorization service lets view or grade the survey's responses (the owner, course graders); managing them follows Void and delete responses the same way. Nobody opens the files of a deleted response.
 
 Checks on one survey go through `ISurveyAuthorizationService`: the global permission, then the owner (`Survey.OwnerId`) for the *own* permissions, then every `ISurveyAccessProvider` ([Extending](./extending.md)).
 

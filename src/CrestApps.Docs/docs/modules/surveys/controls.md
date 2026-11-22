@@ -36,6 +36,8 @@ Every question has a **question type** (in code, a *control*), registered by nam
 | `Signature` | Signature | Advanced | No | Drawn on a canvas; saved as a file when Attachments is on |
 | `FileUpload` | File upload | Files | By a grader | Registered only when the Attachments feature is on; files are attachments owned by the response |
 
+Files and drawn signatures are kept only when a page is posted forward and passes validation. A live evaluation, an autosave, an immediate-feedback check and going back read the answers in `SurveyAnswerReadMode.Draft`, where a handler ignores new files; a page posted forward reads them in `SurveyAnswerReadMode.Commit`, where a handler hands each file back in `SurveyAnswerReadContext.PendingFiles` and the runtime stores it once the page passes. After the update is saved, the files the response no longer refers to (an unticked file, a replaced signature) are removed; deleting a response removes all of its files. The **Remove survey files no answer kept** background task removes, every hour, the files of responses that no answer has kept for a day, such as those of a request that failed after storing them.
+
 The constants are in `SurveyControlNames`. A question whose type is not registered (its module is off) shows a placeholder to staff, is left out for respondents, and is reported when publishing.
 
 ## Capabilities
