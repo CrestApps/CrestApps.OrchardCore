@@ -617,7 +617,16 @@ public sealed class ChecksController : Controller
             return NotFound();
         }
 
-        var result = DateOnly.TryParseExact(voidedOn?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+        var hasDate = DateOnly.TryParseExact(voidedOn?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date);
+
+        if (!hasDate && !string.IsNullOrWhiteSpace(voidedOn))
+        {
+            ModelState.AddModelError(nameof(CheckVoidViewModel.VoidedOn), S["Enter the void date."]);
+
+            return View(new CheckVoidViewModel { Check = check, Reason = reason, VoidedOn = voidedOn });
+        }
+
+        var result = hasDate
             ? await _checkService.VoidAsync(check, Reason(reason, S["Voided"]), date)
             : await VoidTodayAsync(check, Reason(reason, S["Voided"]));
 

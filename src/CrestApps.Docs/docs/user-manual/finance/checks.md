@@ -45,14 +45,33 @@ Print a check on plain paper and hold it against the stock. If everything is too
 ## Write a check
 
 1. Open **Banking > Checks** and choose **Write a check**.
-2. Choose the **Bank account**, enter who it is paid to, the amount, the date and a memo, and choose **Issue**.
+2. Choose the **Bank account**: one of the business's checking or savings accounts.
+3. Under **Check number**, choose how the check gets its number:
+   - **The account's next number**: the check gets it now, ready to print.
+   - **Number it when it prints on pre-printed checks**: for checks whose sheets already carry their numbers. The check waits to print without a number, and gets the number of the sheet it prints on. See [Print queued checks](#print-queued-checks).
+   - **Already written by hand**: for a check you wrote from a checkbook. Enter the **Number written on the check**. The check is recorded as printed and is never printed here. A number another check of the account has is refused.
+4. Enter who it is paid to, the amount, the date and a memo, and choose **Issue**.
 
-The check gets the account's next number. Checks that other features write, such as paychecks, appear in the same register.
+Checks that other features write, such as paychecks, appear in the same register.
 
 ## Print checks
 
 1. In **Banking > Checks**, tick the checks to print.
-2. Choose **Print with** and the layout. The checks open as one PDF, and they are marked **Printed**.
+2. Choose **Print with** and the layout, or **Print with the account's default layout** to use the layout set on the bank account. The checks open as one PDF, and they are marked **Printed**.
+
+Pre-printed checks carry one bank account, so checks of two accounts can't print together on them. A check written by hand is never printed. If you tick only checks that wait for a number, the print run of their account opens.
+
+## Print queued checks
+
+Checks numbered when they print wait in the register as **Waiting to print**. Print them in a run on pre-printed checks:
+
+1. In **Banking > Checks**, choose **Print queued checks**, choose the **Bank account** and choose **Show its checks**.
+2. Clear any check you want to leave for another run. They print oldest first.
+3. Check the **Check layout** (the account's default is chosen for you) and enter the **Number on the first sheet**: the number printed on the top sheet in the printer. Choose **Continue**.
+4. Choose **Download the checks** and print them. Nothing is recorded yet.
+5. Look at every sheet. Tick each sheet that misprinted, such as a jam, and choose **Record as printed**.
+
+Each check gets the number of its sheet and is marked **Printed**. A misprinted sheet keeps its number as a **Spoiled** check, voided, so the number is never used again, and its check waits for the next run. The account's next number moves past the last sheet. A run is refused when a check of the account already has one of its numbers.
 
 A check that is already printed can't be printed again from the list. If a sheet jams or prints badly:
 
@@ -63,14 +82,19 @@ A check that is already printed can't be printed again from the list. If a sheet
 
 When you load a new box of pre-printed checks, choose **Next numbers**, pick the bank account and enter the number printed on the first check. A number a check already has is refused.
 
+## Void a check
+
+Choose **Void** in the check's menu. Enter the **Void date** (today by default) and a reason, and choose **Void**. What the check paid is reversed on that date, such as a bill that is owed again. The date can't be before the check's date. The feature the check pays can refuse, such as for a date in a closed accounting period: the page then says why and nothing changes.
+
 ## What happens to a check
 
 | Status | Means |
 | --- | --- |
-| **Issued** | Written, not printed yet. |
-| **Printed** | Printed and given to the payee. |
-| **Cleared** | The bank paid it. Choose **Mark cleared** in its menu. |
-| **Voided** | Cancelled. It keeps its number. |
+| **Waiting to print** | Written to be numbered when it prints on pre-printed checks. It has no number yet. |
+| **Issued** | Written with its number, not printed yet. |
+| **Printed** | Printed and given to the payee, or written by hand and recorded. |
+| **Cleared** | The bank paid it. Choose **Mark cleared** in its menu. If that was a mistake, such as a bank line matched to the wrong check, choose **Mark not cleared**: it goes back to the status it had before. |
+| **Voided** | Cancelled on its void date. It keeps its number. A **Spoiled** check is a sheet that misprinted in a print run. |
 | **Stop payment** | You asked the bank not to pay it. Record it with **Stop payment**, and ask the bank too. |
 | **Reissued** | Replaced by another check. If the bank pays it anyway, choose **Mark cleared**: the register flags it **Paid after reissue**, so you can check whether the replacement was paid too. |
 | **Stale** | Too old for the bank to pay. Your administrator can mark old checks stale every day with the **Mark Stale Checks** workflow task, and start a workflow when a check goes stale. |

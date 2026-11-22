@@ -15,9 +15,10 @@ Projects: `CrestApps.OrchardCore.Banking.Abstractions`, `CrestApps.OrchardCore.B
 
 ### Bank Accounts
 
-
 - One `BankAccount` record per account, owned by a `PartyRef` (a staff member, a user, an account) or by the business itself.
-- The account number is a `ProtectedValue` (Data Protection, purpose `Banking.AccountNumber`); screens show only its last digits.
+- Kinds: Checking, Savings, CreditCard, LineOfCredit, Cash and Other. Only checking and savings (`BankAccountKinds.IsDeposit`) send or receive bank files or have checks drawn on them.
+- The account number is a `ProtectedValue` (Data Protection, purpose `Banking.AccountNumber`); screens show only its last digits. An account known only by its last digits keeps them in `AccountNumberLastFour`; the site never makes up the rest.
+- The business's own accounts can be saved without routing and account numbers until something needs them (the check line on blank stock, a bank file, a disbursement); a payee's account needs both.
 - Routing and account numbers are checked per country through `IBankRoutingValidator`; the United States ABA check is built in.
 - A status table (Unverified, Verification sent, Verified, Failed, Closed); a changed number always takes the account back to unverified, and only a verified account can be paid.
 - `IBankAccountVerifier` for ways to check an account, `IBankAccountObserver` to react to changes.
@@ -62,9 +63,9 @@ public sealed class PayAccounts(IBankAccountManager manager, IBankAccountService
 Check printing for any module that pays by check: paychecks, refunds, vendor and agency payments.
 
 - **Check layouts**: blank or pre-printed stock, three sheet forms, the place of every field, calibration, signature images, a second signature above an amount, and the check line (MICR) in a font the site uploads. Files are kept encrypted in the tenant file store, never in the media library. No MICR font ships with the module.
-- **Check register**: numbered per bank account through `INumberSequence` (starting at 1001; **Next numbers** for new stock), with the status table Issued, Printed, Voided, StopPayment, Cleared, Reissued and Stale. Voided checks keep their numbers; a reissue gets the next number and links both checks.
-- **Printing**: checks with vouchers to one PDF (`ICheckPrinter`, on `CrestApps.OrchardCore.Pdf.Core`), from the register's bulk action **Print with {layout}**.
-- **Extension points**: `ICheckVoucherSource` (the stub of a module's checks), `ICheckObserver`, `ICheckMicrFormat` (United States built in), `IAmountInWords` (English built in).
+- **Check register**: numbered per bank account through `INumberSequence` (starting at 1001; **Next numbers** for new stock), with the status table Queued, Issued, Printed, Voided, StopPayment, Cleared, Reissued and Stale. A check is numbered now (`CheckNumbering.Next`), at print on pre-printed stock (`AtPrint`: queued without a number) or recorded as written by hand with its number (`Handwritten`). Voided checks keep their numbers and their void date (`VoidedOn`); a reissue gets a new check and links both; a cleared check can be un-cleared.
+- **Printing**: checks with vouchers to one PDF (`ICheckPrinter`, on `CrestApps.OrchardCore.Pdf.Core`), from the register's bulk actions **Print with {layout}** and **Print with the account's default layout** (`BankAccountCheckSettings.DefaultLayoutId`), and **Print queued checks**: a print run numbers an account's queued checks from the first sheet's number and keeps each misprinted sheet as a spoiled, voided check.
+- **Extension points**: `ICheckVoucherSource` (the stub of a module's checks, one table or `CheckVoucherSection`s), `ICheckChangeHandler` (asked before a void, reissue, clear or un-clear, may refuse), `ICheckObserver`, `ICheckMicrFormat` (United States built in), `IAmountInWords` (English built in).
 - **Positive pay**: the Check Register data set and the `ChecksPositivePay` recipe's draft pipeline. The module writes no bank file itself.
 - Recipe and deployment steps `CheckLayouts` and (opt-in) `CheckRegister`; workflow events Check Issued, Printed, Voided and Cleared.
 
@@ -86,7 +87,7 @@ var result = await checkService.IssueAsync(new CheckIssueRequest
 });
 ```
 
-Register an `ICheckVoucherSource` for the source kind to print the stub.
+Register an `ICheckVoucherSource` for the source kind to print the stub. For pre-printed stock, set `Numbering = CheckNumbering.AtPrint` and print the queued checks in a run; for a check written by hand, set `Numbering = CheckNumbering.Handwritten` and `Number`. Void on a date with `VoidAsync(check, reason, voidedOn)`, and register an `ICheckChangeHandler` with `AddCheckChangeHandler<T>()` to reverse or refuse a void, reissue, clear or un-clear of the checks your module writes.
 
 ### Documentation
 
