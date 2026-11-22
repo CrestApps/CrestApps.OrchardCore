@@ -25,10 +25,10 @@ internal sealed class DefaultRoleGrantPolicy : IRoleGrantPolicy
         _permissionService = permissionService;
     }
 
-    public ValueTask<bool> IsGrantableAsync(string roleName)
+    public ValueTask<bool> IsGrantableAsync(string roleName, CancellationToken cancellationToken = default)
         => ValueTask.FromResult(RoleGrantRules.IsGrantable(roleName) && !_systemRoleProvider.IsSystemRole(roleName.Trim()));
 
-    public async ValueTask<bool> IsSecurityCriticalAsync(string roleName)
+    public async ValueTask<bool> IsSecurityCriticalAsync(string roleName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(roleName))
         {
@@ -42,7 +42,7 @@ internal sealed class DefaultRoleGrantPolicy : IRoleGrantPolicy
             return true;
         }
 
-        foreach (var claim in await _roleService.GetRoleClaimsAsync(roleName) ?? [])
+        foreach (var claim in await _roleService.GetRoleClaimsAsync(roleName, cancellationToken) ?? [])
         {
             if (claim.Type == Permission.ClaimType && await IsSecurityCriticalPermissionAsync(claim.Value))
             {

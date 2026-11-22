@@ -184,8 +184,8 @@ public sealed class RoleGrantServiceTests
     private static IRoleGrantPolicy Policy()
     {
         var policy = new Mock<IRoleGrantPolicy>();
-        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>())).ReturnsAsync((string role) => RoleGrantRules.IsGrantable(role));
-        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>())).ReturnsAsync(false);
+        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string role, CancellationToken _) => RoleGrantRules.IsGrantable(role));
+        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         return policy.Object;
     }

@@ -110,8 +110,8 @@ public sealed class UserRegistrationCheckoutHandlerTests
     {
         // Arrange: the administrator role is "Owners" on this tenant, and Staff can manage users.
         var policy = new Mock<IRoleGrantPolicy>();
-        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>())).ReturnsAsync((string role) => role != "Owners");
-        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>())).ReturnsAsync((string role) => role is "Owners" or "Staff");
+        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string role, CancellationToken _) => role != "Owners");
+        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string role, CancellationToken _) => role is "Owners" or "Staff");
         var registration = new Registration(new DefaultHttpContext(), new SubscriptionRoleSettings { RoleNames = ["Owners", "Staff", "Member"] }, policy.Object);
         var session = await registration.CreatePendingSessionAsync("session-1");
         IUser created = null;

@@ -11,7 +11,8 @@ public interface IRoleGrantPolicy
     /// administrator role.
     /// </summary>
     /// <param name="roleName">The name of the role.</param>
-    ValueTask<bool> IsGrantableAsync(string roleName);
+    /// <param name="cancellationToken">The cancellation token.</param>
+    ValueTask<bool> IsGrantableAsync(string roleName, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Whether the role holds a permission Orchard Core marks as security critical (managing users, roles or security
@@ -19,5 +20,6 @@ public interface IRoleGrantPolicy
     /// purchase gives such a role only when a store's allowlist names it.
     /// </summary>
     /// <param name="roleName">The name of the role.</param>
-    ValueTask<bool> IsSecurityCriticalAsync(string roleName);
+    /// <param name="cancellationToken">The cancellation token.</param>
+    ValueTask<bool> IsSecurityCriticalAsync(string roleName, CancellationToken cancellationToken = default);
 }
