@@ -382,6 +382,29 @@ public sealed class SurveyControlHandlerTests
     }
 
     [Fact]
+    public async Task Validation_Regex_SharesTheRequestBudgetAcrossAnswers()
+    {
+        // Arrange: the request's pattern budget is used up by the answers checked before.
+        var question = Question(SurveyControlNames.ShortText);
+        question.Validation = [new SurveyValidationRule { Kind = SurveyValidationKind.Regex, Value = "^[0-9]{3}$" }];
+        var spent = new SurveyPatternBudget(TimeSpan.FromMilliseconds(500));
+        spent.Spend(TimeSpan.FromMilliseconds(500));
+        var shared = Validate(question, new SurveyAnswer { Values = ["123"] });
+        shared.PatternBudget = spent;
+        var own = Validate(question, new SurveyAnswer { Values = ["123"] });
+        var handler = Handler<CrestApps.OrchardCore.Surveys.Core.Controls.ShortText.ShortTextControlHandler>();
+
+        // Act
+        await handler.ValidateAnswerAsync(shared);
+        await handler.ValidateAnswerAsync(own);
+
+        // Assert
+        Assert.Single(shared.Errors);
+        Assert.Empty(own.Errors);
+        Assert.Equal(TimeSpan.Zero, spent.Remaining);
+    }
+
+    [Fact]
     public async Task Validation_Regex_WithABackReference_StillMatches()
     {
         // Arrange

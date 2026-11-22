@@ -210,4 +210,12 @@ public sealed class SurveyResponse : CatalogItem
     /// naming it. It is cleared when the response completes.
     /// </summary>
     public string InvitationSeal { get; set; }
+
+    /// <summary>
+    /// Gets or sets, while the response is in progress, the key its start was counted under for the survey's
+    /// per-person limits (on an anonymous survey, an HMAC with the survey's protected secret, as kept in participation
+    /// records). A completion without the respondent's request, such as the deadline task, counts under the same key.
+    /// It is cleared when the response completes or is abandoned.
+    /// </summary>
+    public string RespondentKey { get; set; }
 }

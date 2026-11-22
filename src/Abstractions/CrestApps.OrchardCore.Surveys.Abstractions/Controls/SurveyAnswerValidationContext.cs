@@ -41,4 +41,10 @@ public sealed class SurveyAnswerValidationContext
     /// Gets the errors found.
     /// </summary>
     public List<string> Errors { get; } = [];
+
+    /// <summary>
+    /// Gets or sets the time budget the pattern rules share with the other answers checked in the same request, or
+    /// <see langword="null"/> to give this answer a budget of its own.
+    /// </summary>
+    public SurveyPatternBudget PatternBudget { get; set; }
 }

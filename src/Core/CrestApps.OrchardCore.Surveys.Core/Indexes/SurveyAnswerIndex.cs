@@ -25,6 +25,11 @@ public sealed class SurveyAnswerIndex : MapIndex
     public const decimal NumberLimit = 100_000_000_000_000m;
 
     /// <summary>
+    /// The number of decimals the <see cref="NumberValue"/> column keeps (the default decimal scale).
+    /// </summary>
+    public const int NumberScale = 5;
+
+    /// <summary>
     /// Gets or sets the id of the response.
     /// </summary>
     public string ResponseId { get; set; }

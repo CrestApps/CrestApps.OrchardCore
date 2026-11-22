@@ -34,7 +34,9 @@ With **One at a time, then locked** (`FeedbackMode.Immediate`), the respondent c
 
 ## Time limits
 
-`SurveyDefinition.Timing`: `TimeLimitMinutes`, `GraceSeconds` (default 5) and `AutoSubmitAtDeadline`. The deadline is set when the response starts (plus any accommodation's extra minutes, capped at the close time). A page may also have its own time limit. The server enforces both; the runner shows a timer.
+`SurveyDefinition.Timing`: `TimeLimitMinutes`, `GraceSeconds` (default 5) and `AutoSubmitAtDeadline`. The deadline is set when the response starts (plus any accommodation's extra minutes, capped at the close time). A page may also have its own time limit, counted from the respondent's first visit to the page; a page split into several screens by **Questions per page** gets its limit once, not once per screen. The server enforces both; the runner shows a timer.
+
+A response whose deadline and grace passed is submitted with what was saved in time, by the respondent's next request or by the deadline task. Either way the completion counts toward the survey's per-person limits: the response keeps the key its start was counted under until it completes.
 
 ## Grading
 

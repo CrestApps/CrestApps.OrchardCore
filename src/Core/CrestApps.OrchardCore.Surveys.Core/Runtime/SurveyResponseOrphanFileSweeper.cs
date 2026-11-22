@@ -2,14 +2,17 @@ using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
 /// <summary>
 /// Removes the files of responses that no answer keeps: the files of a response that was deleted (or erased) without
-/// them, the files of a request that failed after storing them (its session never commits), and the files an answer
-/// dropped, such as the answer of a question hidden since. Only files older than a grace period are removed, so the
-/// files of a request still being handled are left alone.
+/// them, and the files an answer dropped, such as the answer of a question hidden since. (A request that fails after
+/// storing files removes them itself: their records roll back with it, so no sweep could find them.) Only files older
+/// than a grace period are removed, so the files of a request still being handled are left alone. Each run goes on from
+/// where the last one stopped (<see cref="SurveyOrphanFileSweepCursor"/>) and starts over from the oldest file once it
+/// reaches the newest, so a site that keeps more files than one run looks at still has every file checked in turn.
 /// </summary>
 public sealed class SurveyResponseOrphanFileSweeper
 {
@@ -61,8 +64,12 @@ public sealed class SurveyResponseOrphanFileSweeper
 
         var before = _clock.UtcNow - GracePeriod;
         var removed = 0;
-        DateTime? from = null;
+        var session = _responses.YesSqlSession;
+        var cursor = await session.Query<SurveyOrphanFileSweepCursor>(SurveysConstants.CollectionName).FirstOrDefaultAsync(cancellationToken)
+            ?? new SurveyOrphanFileSweepCursor();
+        DateTime? from = cursor.NextFromUtc is { } next && next < before ? DateTime.SpecifyKind(next, DateTimeKind.Utc) : null;
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var reachedEnd = false;
 
         while (seen.Count < MaxPerRun && !cancellationToken.IsCancellationRequested)
         {
@@ -72,7 +79,17 @@ public sealed class SurveyResponseOrphanFileSweeper
 
             if (page.Count == 0)
             {
-                break;
+                if (listed.Count < PageSize)
+                {
+                    reachedEnd = true;
+
+                    break;
+                }
+
+                // A whole page of files uploaded at the same moment, all seen: go on past that moment.
+                from = listed[^1].UploadedUtc.AddTicks(1);
+
+                continue;
             }
 
             from = listed[^1].UploadedUtc;
@@ -97,9 +114,16 @@ public sealed class SurveyResponseOrphanFileSweeper
 
             if (listed.Count < PageSize)
             {
+                reachedEnd = true;
+
                 break;
             }
         }
+
+        // The next run goes on from here, or starts over from the oldest file once this one reached the newest.
+        cursor.NextFromUtc = reachedEnd ? null : from;
+        await session.SaveAsync(cursor, false, SurveysConstants.CollectionName, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
 
         return removed;
     }

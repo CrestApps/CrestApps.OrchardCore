@@ -243,7 +243,8 @@ public sealed class SurveyResponseService : ISurveyResponseService
             {
                 if (existing.DeadlineUtc is { } deadline && now >= deadline.AddSeconds(Math.Max(version.Definition.Timing?.GraceSeconds ?? 5, 0)))
                 {
-                    await SubmitAtDeadlineAsync(existing.ItemId, cancellationToken);
+                    // The respondent's own call: the completion counts toward their limits like any other.
+                    await SubmitAtDeadlineCoreAsync(existing.ItemId, identity, cancellationToken);
                 }
                 else if (await _access.CheckResumeAsync(new SurveyAccessContext
                 {
@@ -358,6 +359,10 @@ public sealed class SurveyResponseService : ISurveyResponseService
             }
 
             response.AttemptNumber = await AttemptNumberAsync(survey, response, respondentKey, request, isTest);
+
+            // The key the start counts under, so a completion without the respondent's request (the deadline task)
+            // counts toward the same person's limits. It is cleared when the response completes.
+            response.RespondentKey = respondentKey;
 
             // Properties come from the caller and can name the person, so an anonymous response keeps only the link
             // back (a course item, say): its path and text name a page, not a person.
@@ -523,7 +528,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
     {
         return WriteOwnAsync(request.ResponseId, request.Identity, () => new SurveyPageResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
-            var refusal = await RefuseClosedAsync(survey, version, response, notifications, cancellationToken);
+            var refusal = await RefuseClosedAsync(survey, version, response, request.Identity, notifications, cancellationToken);
 
             if (refusal is not null)
             {
@@ -545,6 +550,10 @@ public sealed class SurveyResponseService : ISurveyResponseService
             var readMode = request.Direction == SurveyPageDirection.Back ? SurveyAnswerReadMode.Draft : SurveyAnswerReadMode.Commit;
             var pendingFiles = new Dictionary<string, List<SurveyPendingFile>>(StringComparer.Ordinal);
             var referencedFiles = SurveyResponseFiles.ReferencedIds(response);
+
+            // The stored answers that keep files (uploads, a signature), as they were before this post: a refused page
+            // puts them back, so a bad new file never takes the files kept earlier with it.
+            var storedFileAnswers = StoredFileAnswers(response);
 
             // Once the page's own time is up, what is posted for it is ignored: only what was saved in time counts.
             var readErrors = pageTimeIsUp
@@ -583,8 +592,11 @@ public sealed class SurveyResponseService : ISurveyResponseService
             {
                 RemoveUnlocked(response, errors.Keys);
 
-                // The page is refused: none of its new files are stored.
+                // The page is refused: none of its new files are stored, and each question of the screen that kept files
+                // before this post gets its stored answer back, so those files stay referenced and the orphan sweep
+                // leaves them alone.
                 SurveyResponseFiles.DiscardPending(response);
+                RestoreFileAnswers(response, SurveyPlanNavigator.QuestionsOf(response.Plan, response.CurrentPageId).Where(id => !state.HiddenQuestionIds.Contains(id)), storedFileAnswers);
                 await _responseStore.UpdateAsync(response, cancellationToken);
 
                 return new SurveyPageResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Page = BuildPage(version, response, state), Errors = errors };
@@ -641,7 +653,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
         var result = await WriteOwnAsync<SurveyResponseResult>(request.ResponseId, request.Identity, () => new SurveySaveResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
             // The same deadline as a page post: a save after the time and its grace submits what was saved before.
-            var refusal = await RefuseClosedAsync(survey, version, response, notifications, cancellationToken);
+            var refusal = await RefuseClosedAsync(survey, version, response, request.Identity, notifications, cancellationToken);
 
             if (refusal is not null)
             {
@@ -735,7 +747,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
             var definition = version.Definition;
 
             // The same deadline as a page post: a check after the time and its grace submits what was saved before.
-            var refusal = await RefuseClosedAsync(survey, version, response, notifications, cancellationToken);
+            var refusal = await RefuseClosedAsync(survey, version, response, request.Identity, notifications, cancellationToken);
 
             if (refusal is not null)
             {
@@ -823,14 +835,22 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
     /// <inheritdoc />
     public Task<SurveyResponseResult> SubmitAtDeadlineAsync(string responseId, CancellationToken cancellationToken = default)
+        => SubmitAtDeadlineCoreAsync(responseId, identity: null, cancellationToken);
+
+    // Submits a response whose deadline and grace passed. With no identity (the deadline task) the completion counts
+    // under the key the response's start was counted under.
+    private Task<SurveyResponseResult> SubmitAtDeadlineCoreAsync(string responseId, SurveyRespondentIdentity identity, CancellationToken cancellationToken)
         => WriteAsync<SurveyResponseResult>(responseId, () => new SurveyResponseResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
-            if (response.Status != SurveyResponseStatus.InProgress || response.DeadlineUtc is null || _clock.UtcNow < response.DeadlineUtc.Value)
+            // The same grace as the respondent's own posts: a last page still in flight inside it is not cut off.
+            var grace = Math.Max(version.Definition.Timing?.GraceSeconds ?? 5, 0);
+
+            if (response.Status != SurveyResponseStatus.InProgress || response.DeadlineUtc is null || _clock.UtcNow < response.DeadlineUtc.Value.AddSeconds(grace))
             {
                 return new SurveyResponseResult { Error = SurveyErrorCode.InvalidState, Response = response };
             }
 
-            await SubmitExpiredAsync(survey, version, response, notifications, cancellationToken);
+            await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken);
 
             return new SurveyResponseResult { Response = response };
         }, cancellationToken);
@@ -942,6 +962,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
             }
 
             response.Status = SurveyResponseStatus.Abandoned;
+            response.RespondentKey = null;
             response.ModifiedUtc = _clock.UtcNow;
             await _responseStore.UpdateAsync(response, cancellationToken);
 
@@ -1283,6 +1304,10 @@ public sealed class SurveyResponseService : ISurveyResponseService
     {
         var errors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
+        // The pattern rules of every answer checked here share one time budget, so many pattern questions can't
+        // multiply the time one request may take.
+        var patternBudget = new SurveyPatternBudget(SurveyPatternBudget.DefaultPerRequest);
+
         foreach (var questionId in questionIds)
         {
             var question = FindQuestion(definition, questionId);
@@ -1306,6 +1331,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 Definition = definition,
                 Response = response,
                 AllowedChoiceIds = SurveyPageViewBuilder.AllowedChoices(definition, question, response, state),
+                PatternBudget = patternBudget,
             };
 
             if (readErrors.TryGetValue(questionId, out var read))
@@ -1427,7 +1453,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 invitation = await FindSealedInvitationAsync(survey, response, cancellationToken);
             }
 
-            var respondentKey = response.IsTest || identity is null ? null : await Secrets.RespondentKeyAsync(survey, identity, invitation, cancellationToken);
+            var respondentKey = await CompletionRespondentKeyAsync(survey, response, identity, invitation, cancellationToken);
 
             if (!autoSubmitted)
             {
@@ -1525,6 +1551,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 response.InvitationSeal = null;
             }
 
+            // The completion is counted: the response no longer keeps who it was counted for.
+            response.RespondentKey = null;
+
             var context = new SurveyResponseEventContext { Survey = survey, Version = version, Response = response };
 
             await NotifyAsync(observer => observer.CompletingAsync(context));
@@ -1532,6 +1561,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             // Commit while the completion lock is held, so a parallel completion counts this one.
             await _session.SaveChangesAsync(cancellationToken);
+            Files.MarkCommitted();
 
             if (response.Status == SurveyResponseStatus.ScreenedOut)
             {
@@ -1555,7 +1585,35 @@ public sealed class SurveyResponseService : ISurveyResponseService
         return SurveyErrorCode.None;
     }
 
-    private async Task SubmitExpiredAsync(Survey survey, SurveyVersion version, SurveyResponse response, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    // The key a completion counts under: the key its start was counted under, kept on the response, so a completion
+    // with no respondent's request (the deadline task) still counts toward the person's limits. A response started
+    // before the key was kept uses the caller's identity, or else rebuilds the key from its user or invitation.
+    private async Task<string> CompletionRespondentKeyAsync(Survey survey, SurveyResponse response, SurveyRespondentIdentity identity, SurveyInvitation invitation, CancellationToken cancellationToken)
+    {
+        if (response.IsTest)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(response.RespondentKey))
+        {
+            return response.RespondentKey;
+        }
+
+        if (identity is not null && await Secrets.RespondentKeyAsync(survey, identity, invitation, cancellationToken) is { Length: > 0 } key)
+        {
+            return key;
+        }
+
+        if (string.IsNullOrEmpty(response.UserId) && invitation is null)
+        {
+            return null;
+        }
+
+        return await Secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity { UserId = response.UserId }, invitation, cancellationToken);
+    }
+
+    private async Task SubmitExpiredAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyRespondentIdentity identity, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
         var definition = version.Definition;
         var cacheKey = SurveyRuntimeVersions.CacheKey(version);
@@ -1574,7 +1632,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
         var ending = _endings.Choose(definition, response, state, cacheKey);
 
-        await CompleteCoreAsync(survey, version, response, ending, autoSubmitted: true, identity: null, notifications, cancellationToken);
+        await CompleteCoreAsync(survey, version, response, ending, autoSubmitted: true, identity, notifications, cancellationToken);
     }
 
     // Takes back what completing a response counted: the respondent's participation and the quotas it matched. Runs
@@ -1588,13 +1646,17 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
         var definition = version.Definition;
 
-        // A response submitted at its deadline counted no participation: it was completed without a respondent.
-        if (!response.AutoSubmitted && identity is not null && response.CompletedUtc is { } completedUtc)
+        // A response submitted at its deadline counts toward the respondent's limits too, so it is taken back the same
+        // way (nothing is taken back when that day counts no completion for the respondent).
+        if (identity is not null && response.CompletedUtc is { } completedUtc)
         {
             var invitation = string.IsNullOrEmpty(response.InvitationId) ? null : await _invitationStore.FindByIdAsync(response.InvitationId, cancellationToken);
             var respondentKey = await Secrets.RespondentKeyAsync(survey, identity, invitation, cancellationToken);
 
             await _participation.RecordReopenedAsync(survey, respondentKey, response.Context, completedUtc);
+
+            // In progress again: a completion at the deadline counts under the same key.
+            response.RespondentKey = respondentKey;
         }
 
         if (definition.Quotas is { Count: > 0 } && _serviceProvider.GetService<ISurveyQuotaService>() is { } quotas)
@@ -1602,6 +1664,34 @@ public sealed class SurveyResponseService : ISurveyResponseService
             var state = _logic.Evaluate(definition, response, SurveyRuntimeVersions.CacheKey(version));
 
             await quotas.ReleaseAsync(survey, version, response, state, cancellationToken);
+        }
+    }
+
+    // Copies of the answers that keep stored files, by question id.
+    private static Dictionary<string, SurveyAnswer> StoredFileAnswers(SurveyResponse response)
+    {
+        var stored = new Dictionary<string, SurveyAnswer>(StringComparer.Ordinal);
+
+        foreach (var (questionId, answer) in response.Answers)
+        {
+            if (answer?.AttachmentIds?.Any(id => !string.IsNullOrEmpty(id) && !SurveyResponseFiles.IsPending(id)) == true)
+            {
+                stored[questionId] = JsonSerializer.Deserialize<SurveyAnswer>(JsonSerializer.Serialize(answer, _cloneOptions), _cloneOptions);
+            }
+        }
+
+        return stored;
+    }
+
+    // Puts back the stored answer of each question that kept files before a refused post.
+    private static void RestoreFileAnswers(SurveyResponse response, IEnumerable<string> questionIds, Dictionary<string, SurveyAnswer> stored)
+    {
+        foreach (var questionId in questionIds)
+        {
+            if (stored.TryGetValue(questionId, out var answer) && response.Answers.GetValueOrDefault(questionId)?.CheckedUtc is null)
+            {
+                response.Answers[questionId] = answer;
+            }
         }
     }
 
@@ -1619,7 +1709,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
         }
     }
 
-    private async Task<SurveyErrorCode?> RefuseClosedAsync(Survey survey, SurveyVersion version, SurveyResponse response, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    // Refuses a write to a response that ended, and submits one whose deadline and grace passed. The identity is the
+    // respondent's own, so a late completion still counts toward their limits.
+    private async Task<SurveyErrorCode?> RefuseClosedAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyRespondentIdentity identity, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
         if (response.Status != SurveyResponseStatus.InProgress)
         {
@@ -1630,7 +1722,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
         if (response.DeadlineUtc is { } deadline && _clock.UtcNow >= deadline.AddSeconds(grace))
         {
-            await SubmitExpiredAsync(survey, version, response, notifications, cancellationToken);
+            await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken);
 
             return SurveyErrorCode.DeadlinePassed;
         }
@@ -1718,16 +1810,35 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 return new T { Error = SurveyErrorCode.NotFound, Response = response };
             }
 
-            result = await work(survey, version, response, notifications);
+            // A file stored during the request and not yet committed is removed when the request fails: its record rolls
+            // back with the session, so neither the response nor the orphan sweep would ever find the file again.
+            try
+            {
+                result = await work(survey, version, response, notifications);
+            }
+            catch
+            {
+                await Files.DiscardUncommittedAsync();
+
+                throw;
+            }
 
             try
             {
                 await _session.SaveChangesAsync(cancellationToken);
+                Files.MarkCommitted();
             }
             catch (ConcurrencyException)
             {
                 notifications.Clear();
                 result = busy();
+                await Files.DiscardUncommittedAsync();
+            }
+            catch
+            {
+                await Files.DiscardUncommittedAsync();
+
+                throw;
             }
         }
 

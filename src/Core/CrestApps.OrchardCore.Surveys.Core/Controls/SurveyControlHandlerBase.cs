@@ -22,7 +22,8 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
 {
     private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
 
-    // The most time the pattern rules of one answer may take together, whatever the number of values it has.
+    // The most time the pattern rules of one answer may take together, whatever the number of values it has, when the
+    // caller gives no budget shared by the request.
     private static readonly TimeSpan _regexBudget = TimeSpan.FromMilliseconds(250);
 
     /// <summary>
@@ -332,7 +333,7 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
 
         var answer = context.Answer;
         var texts = (answer?.Values ?? []).Where(value => !string.IsNullOrWhiteSpace(value)).ToList();
-        var regexStarted = Stopwatch.GetTimestamp();
+        var patternBudget = context.PatternBudget ?? new SurveyPatternBudget(_regexBudget);
 
         foreach (var rule in context.Question?.Validation ?? [])
         {
@@ -343,7 +344,7 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
 
             var failed = rule.Kind switch
             {
-                SurveyValidationKind.Regex => texts.Any(text => !Matches(text, rule.Value, regexStarted)),
+                SurveyValidationKind.Regex => texts.Any(text => !Matches(text, rule.Value, patternBudget)),
                 SurveyValidationKind.MinLength => int.TryParse(rule.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var min) && texts.Any(text => text.Length < min),
                 SurveyValidationKind.MaxLength => int.TryParse(rule.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var max) && texts.Any(text => text.Length > max),
                 SurveyValidationKind.Min => TryParseNumber(rule.Value, out var low) && NumbersOf(answer).Any(number => number < low),
@@ -411,15 +412,15 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
 
     // A pattern runs without backtracking, in time linear in the text, when it can; a pattern that needs backtracking
     // (back references, lookarounds, atomic groups) runs with a timeout per match and within a budget for the whole
-    // answer, and fails when the time is up.
-    private static bool Matches(string text, string pattern, long started)
+    // request (or the answer, without a shared budget), and fails when the time is up.
+    private static bool Matches(string text, string pattern, SurveyPatternBudget budget)
     {
         if (string.IsNullOrEmpty(pattern))
         {
             return true;
         }
 
-        var remaining = _regexBudget - Stopwatch.GetElapsedTime(started);
+        var remaining = budget.Remaining;
 
         if (remaining <= TimeSpan.Zero)
         {
@@ -427,6 +428,7 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
         }
 
         var timeout = remaining < _regexTimeout ? remaining : _regexTimeout;
+        var started = Stopwatch.GetTimestamp();
 
         try
         {
@@ -446,6 +448,10 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
         catch (RegexMatchTimeoutException)
         {
             return false;
+        }
+        finally
+        {
+            budget.SpendSince(started);
         }
     }
 
