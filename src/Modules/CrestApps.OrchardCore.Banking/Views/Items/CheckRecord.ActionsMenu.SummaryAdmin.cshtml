@@ -4,13 +4,18 @@
 
 @{
     var check = Model.Value;
-    var canManage = !CheckStatuses.Transitions.IsTerminal(check.Status) && await AuthorizationService.AuthorizeAsync(User, ChecksPermissions.ManageChecks);
+    var canManage = (!CheckStatuses.Transitions.IsTerminal(check.Status) || check.Status == CheckStatus.Cleared) && await AuthorizationService.AuthorizeAsync(User, ChecksPermissions.ManageChecks);
+    var name = check.Number > 0 ? T["check {0}", check.Number] : T["the check to {0}", check.PayeeName];
 }
 
 @if (canManage)
 {
     @* History records what happened at the bank: it can still clear or be voided, but never prints or is replaced. *@
-    @if (!check.IsHistorical && check.Status == CheckStatus.Printed)
+    @if (check.Status == CheckStatus.Queued)
+    {
+        <a asp-action="PrintRun" asp-route-bankAccountId="@check.BankAccountId" class="dropdown-item">@T["Print queued checks"]</a>
+    }
+    @if (!check.IsHistorical && check.Status == CheckStatus.Printed && check.Numbering != CheckNumbering.Handwritten)
     {
         <a asp-action="Reprint" asp-route-id="@check.ItemId" class="dropdown-item">@T["Reprint"]</a>
     }
@@ -26,9 +31,13 @@
     {
         <a asp-action="Stop" asp-route-id="@check.ItemId" class="dropdown-item text-danger" data-title="@T["Stop payment"]" data-message="@T["Record a stop payment on check {0}? Ask the bank to stop it too.", check.Number]" data-url-af="RemoveUrl UnsafeUrl">@T["Stop payment"]</a>
     }
+    @if (check.Status == CheckStatus.Cleared)
+    {
+        <a asp-action="Unclear" asp-route-id="@check.ItemId" class="dropdown-item" data-title="@T["Mark not cleared"]" data-message="@T["Record that the bank did not pay {0} after all? It goes back to the status it had before it cleared.", name]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark not cleared"]</a>
+    }
     @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.Voided))
     {
-        <a asp-action="Void" asp-route-id="@check.ItemId" class="dropdown-item text-danger" data-title="@T["Void"]" data-message="@T["Void check {0}? It keeps its number and can't be paid or printed again.", check.Number]" data-url-af="RemoveUrl UnsafeUrl">@T["Void"]</a>
+        <a asp-action="Void" asp-route-id="@check.ItemId" class="dropdown-item text-danger">@T["Void"]</a>
     }
 }
 else

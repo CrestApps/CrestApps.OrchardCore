@@ -48,7 +48,7 @@ public sealed class BankAccountsReportDataSet : IndexedReportDataSet<BankAccount
         AddField("BankName", S["Bank"], DataFieldType.Text, record => record.BankName, group);
         AddField("Country", S["Country"], DataFieldType.Text, record => record.Country, group);
         AddField("Currency", S["Currency"], DataFieldType.Text, record => record.Currency, group);
-        AddField("AccountNumberLastDigits", S["Account number (last digits)"], DataFieldType.Text, record => record.AccountNumber?.Hint, group);
+        AddField("AccountNumberLastDigits", S["Account number (last digits)"], DataFieldType.Text, record => BankAccountNumbers.LastDigits(record), group);
         AddField("Status", S["Status"], DataFieldType.Text, record => record.Status.ToString(), group).Description = S["Unverified, VerificationSent, Verified, Failed or Closed."].Value;
         AddField("VerificationMethod", S["Verified by"], DataFieldType.Text, record => record.VerificationMethod, group);
         AddField("CreatedUtc", S["Added"], DataFieldType.DateTime, record => record.CreatedUtc, dates);

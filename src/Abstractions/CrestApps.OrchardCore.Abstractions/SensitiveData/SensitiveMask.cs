@@ -24,6 +24,15 @@ public static class SensitiveMask
     }
 
     /// <summary>
+    /// Returns the fixed mask followed by a hint that is already safe to show, such as the last digits of a number the
+    /// site only knows by them: <c>••••6789</c>.
+    /// </summary>
+    /// <param name="hint">The hint.</param>
+    /// <returns>The masked value, or an empty string when <paramref name="hint"/> is empty.</returns>
+    public static string MaskHint(string hint)
+        => string.IsNullOrEmpty(hint) ? string.Empty : Hidden + hint;
+
+    /// <summary>
     /// Returns a clear-text value for display with all but its last characters hidden.
     /// </summary>
     /// <param name="value">The value in clear text.</param>

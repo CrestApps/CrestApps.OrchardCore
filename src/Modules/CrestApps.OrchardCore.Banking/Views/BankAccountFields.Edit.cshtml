@@ -95,15 +95,19 @@
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="RoutingNumber">
-            <label asp-for="RoutingNumber" class="ocat-label ocat-label-required">@T["Routing number"]</label>
+            <label asp-for="RoutingNumber" class="ocat-label @(Model.IsOwnAccount ? "ocat-label-required" : null)">@T["Routing number"]</label>
             <div class="ocat-end">
                 <input asp-for="RoutingNumber" class="form-control" maxlength="40" inputmode="numeric" />
                 <span asp-validation-for="RoutingNumber" class="text-danger"></span>
                 <span class="hint">@T["The bank's number, printed at the bottom left of a check. In the United States it has nine digits."]</span>
+                @if (!Model.IsOwnAccount)
+                {
+                    <span class="hint">@T["A payee's account needs both numbers. One of the business's own accounts can be saved without them until something needs them: printing the check line on blank stock, a bank file or a disbursement."]</span>
+                }
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="AccountNumber">
-            <label asp-for="AccountNumber" class="ocat-label @(Model.IsNew ? "ocat-label-required" : null)">@T["Account number"]</label>
+            <label asp-for="AccountNumber" class="ocat-label @(Model.IsOwnAccount && Model.IsNew ? "ocat-label-required" : null)">@T["Account number"]</label>
             <div class="ocat-end">
                 <input asp-for="AccountNumber" class="form-control" type="password" value="" maxlength="40" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
                 <span asp-validation-for="AccountNumber" class="text-danger"></span>
@@ -117,6 +121,17 @@
                 }
             </div>
         </div>
+        @if (!Model.IsOwnAccount && string.IsNullOrEmpty(Model.MaskedAccountNumber))
+        {
+            <div class="ocat-wrapper" asp-validation-class-for="AccountNumberLastFour">
+                <label asp-for="AccountNumberLastFour" class="ocat-label">@T["Last four digits"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AccountNumberLastFour" class="form-control" maxlength="4" autocomplete="off" />
+                    <span asp-validation-for="AccountNumberLastFour" class="text-danger"></span>
+                    <span class="hint">@T["When you don't have the full account number, such as for an account brought over from another system, enter its last digits so people can tell which account it is. Nothing is paid or printed from them, and the full number replaces them."]</span>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
