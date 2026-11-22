@@ -7,9 +7,11 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
 /// <summary>
 /// Decides who may create or change a local (stdio) MCP connection: only on the default tenant, and only a user who
-/// holds <see cref="McpPermissions.ManageMcpStdioConnections"/>. A recipe run by the host itself is allowed on the default
-/// tenant: a startup recipe, which runs with no principal at all, and setup, which runs under an anonymous principal while
-/// the tenant is being set up. An anonymous caller of a running tenant is not.
+/// holds <see cref="McpPermissions.ManageMcpStdioConnections"/>. Setup, which runs its recipe while the default tenant is
+/// being set up, is the host itself and is allowed. Anyone else without the permission is not: an anonymous caller of a
+/// running tenant, and a recipe run with no principal at all (review 11), since Orchard Core gives a background task or a
+/// deferred recipe its own context with an anonymous principal or the user who queued it, so no principal is not a sign of
+/// the host.
 /// </summary>
 internal static class McpStdioAccess
 {
@@ -31,7 +33,7 @@ internal static class McpStdioAccess
 
         if (user?.Identity?.IsAuthenticated != true)
         {
-            return user is null || shellSettings.IsInitializing();
+            return shellSettings.IsInitializing();
         }
 
         return await authorizationService.AuthorizeAsync(user, McpPermissions.ManageMcpStdioConnections);
