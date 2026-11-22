@@ -1987,8 +1987,19 @@ On a host whose only way out is an HTTP proxy, set `UseSystemProxy` to `true` (d
 go through the system proxy (`HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, or the system's settings on Windows), connect
 to the proxy whatever its address, and check each destination's own DNS answer before the proxy is asked to reach it,
 on every request and every redirect. For an https destination that is the host the client asks the proxy to tunnel to
-(the `Host` of its `CONNECT` request). The proxy resolves the name again, so keep egress rules on the proxy too: a name
-that answers differently each time can still reach what the proxy lets it reach.
+(the `Host` of its `CONNECT` request).
+
+:::warning[Known limit: the proxy resolves the name again]
+
+Through the proxy, the guard checks the destination's DNS answer on this machine, but the proxy looks the name up
+itself. A name made to answer with a public address the first time and an internal one the second (DNS rebinding) can
+reach whatever the proxy lets it reach. The guard does not send the checked address to the proxy instead of the name:
+egress proxies usually filter by host name, and `NO_PROXY` rules match names, so a tunnel asked for by address would be
+refused or would skip the proxy's rules. Keep egress rules on the proxy: refuse private, loopback, link-local and cloud
+metadata addresses there too. Without `UseSystemProxy`, the guard connects to the address it checked, so this limit
+does not apply.
+
+:::
 
 ```json
 {

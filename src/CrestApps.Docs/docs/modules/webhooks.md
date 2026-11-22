@@ -162,7 +162,9 @@ proxy that would be the proxy's. On a host whose only way out is an HTTP proxy, 
 `true` in the host's or the tenant's configuration (described in this module's `ConfigurationSchema.json`). The guarded
 clients then go through the system proxy (`HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY`), connect to the proxy whatever its
 address, and check each destination's DNS answer before the proxy is asked to reach it, on every request and redirect.
-The proxy resolves the name itself, so keep egress rules on the proxy as well. A client built with
+The proxy resolves the name itself, so a name that answers differently the second time (DNS rebinding) reaches whatever
+the proxy allows: keep egress rules on the proxy as well, refusing private, loopback, link-local and cloud metadata
+addresses. The guard sends the proxy the name, not the address it checked, because egress proxies filter by name. A client built with
 `EgressNetwork.CreateHandler` passes `EgressNetwork.GetProxy(serviceProvider)` to get the same behavior.
 
 ```json

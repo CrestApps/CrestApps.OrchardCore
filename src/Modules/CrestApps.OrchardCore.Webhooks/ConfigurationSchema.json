@@ -17,7 +17,7 @@
                 "UseSystemProxy": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Whether the guarded clients go through the system proxy (HTTPS_PROXY, HTTP_PROXY and NO_PROXY, or the system's settings on Windows). The proxy is connected to whatever its address, and each destination's own DNS answer is checked before the proxy is asked to reach it. Off by default: the clients connect directly and check the address they connect to."
+                  "description": "Whether the guarded clients go through the system proxy (HTTPS_PROXY, HTTP_PROXY and NO_PROXY, or the system's settings on Windows). The proxy is connected to whatever its address, and each destination's own DNS answer is checked before the proxy is asked to reach it. The proxy resolves the name again, so a name that answers differently the second time (DNS rebinding) reaches whatever the proxy allows: keep egress rules on the proxy too. Off by default: the clients connect directly and check the address they connect to."
                 }
               }
             }

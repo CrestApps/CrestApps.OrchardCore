@@ -35,6 +35,10 @@ public static class EgressNetwork
     /// The configuration key (<c>true</c> or <c>false</c>, read from the tenant's configuration) that lets the guarded
     /// clients go through the system proxy (<see cref="HttpClient.DefaultProxy"/>: the <c>HTTPS_PROXY</c>,
     /// <c>HTTP_PROXY</c> and <c>NO_PROXY</c> environment variables, or the system's settings on Windows). Off by default.
+    /// Through the proxy, each destination's name is checked here and resolved again by the proxy, so a name that answers
+    /// differently the second time (DNS rebinding) reaches whatever the proxy allows; the proxy must keep its own egress
+    /// rules. The checked address is not sent in place of the name, since egress proxies filter by name and
+    /// <c>NO_PROXY</c> matches names (review 11).
     /// </summary>
     public const string UseSystemProxyKey = "CrestApps:Egress:UseSystemProxy";
 
