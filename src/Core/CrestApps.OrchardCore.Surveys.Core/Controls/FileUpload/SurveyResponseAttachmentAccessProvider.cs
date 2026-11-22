@@ -12,7 +12,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Controls.FileUpload;
 /// <summary>
 /// Decides who may see and manage the files of a response: staff who may view or delete responses, the survey's
 /// owner and anyone the survey authorization service lets view, grade or delete the survey's responses (such as course
-/// graders), and the signed-in respondent of an identified response (managing only while it is in progress).
+/// graders), and the signed-in respondent of an identified response (managing only while it is in progress). Nobody
+/// may see or manage the files of a response that was deleted.
 /// </summary>
 public sealed class SurveyResponseAttachmentAccessProvider : IAttachmentAccessProvider
 {
@@ -51,12 +52,18 @@ public sealed class SurveyResponseAttachmentAccessProvider : IAttachmentAccessPr
             return false;
         }
 
+        var response = await _responses.FindByIdAsync(owner.Id, cancellationToken);
+
+        // The files of a response that is gone are nobody's: they wait for the orphan sweep.
+        if (response is null)
+        {
+            return false;
+        }
+
         if (await _authorizationService.AuthorizeAsync(user, SurveysPermissions.ViewSurveyResponses))
         {
             return true;
         }
-
-        var response = await _responses.FindByIdAsync(owner.Id, cancellationToken);
 
         if (IsRespondent(user, response))
         {
@@ -74,12 +81,18 @@ public sealed class SurveyResponseAttachmentAccessProvider : IAttachmentAccessPr
             return false;
         }
 
+        var response = await _responses.FindByIdAsync(owner.Id, cancellationToken);
+
+        // The files of a response that is gone are nobody's: they wait for the orphan sweep.
+        if (response is null)
+        {
+            return false;
+        }
+
         if (await _authorizationService.AuthorizeAsync(user, SurveysPermissions.DeleteSurveyResponses))
         {
             return true;
         }
-
-        var response = await _responses.FindByIdAsync(owner.Id, cancellationToken);
 
         if (IsRespondent(user, response) && response.Status == SurveyResponseStatus.InProgress)
         {

@@ -14,6 +14,11 @@ public sealed class ExcelQuestionImportFormat : ISurveyImportFormat
     /// </summary>
     public const string FormatName = "Excel";
 
+    /// <summary>
+    /// The largest workbook read, in bytes.
+    /// </summary>
+    public const long MaxBytes = 10 * 1024 * 1024;
+
     private readonly SpreadsheetQuestionReader _reader;
 
     internal readonly IStringLocalizer S;
@@ -45,19 +50,48 @@ public sealed class ExcelQuestionImportFormat : ISurveyImportFormat
     {
         ArgumentNullException.ThrowIfNull(content);
 
-        // OpenXml needs a seekable stream; an upload stream may not be one.
+        // OpenXml needs a seekable stream; an upload stream may not be one. The copy stops at the size limit.
         using var buffer = new MemoryStream();
-        await content.CopyToAsync(buffer, cancellationToken);
+
+        if (!await CopyAtMostAsync(content, buffer, MaxBytes, cancellationToken))
+        {
+            var refused = new SurveyImportResult();
+            refused.Errors.Add(S["The file is larger than {0} MB.", MaxBytes / 1024 / 1024]);
+
+            return refused;
+        }
+
         buffer.Position = 0;
 
-        if (!ExcelSheetReader.TryRead(buffer, SpreadsheetQuestionReader.MaxRows + 1, out var headers, out var rows))
+        if (!ExcelSheetReader.TryRead(buffer, SpreadsheetQuestionReader.MaxRows + 1, out var headers, out var rows, out var tooLarge))
         {
             var result = new SurveyImportResult();
-            result.Errors.Add(S["The file is not an Excel workbook."]);
+            result.Errors.Add(tooLarge ? S["The workbook has more cells than can be imported."] : S["The file is not an Excel workbook."]);
 
             return result;
         }
 
         return _reader.Read(headers, rows);
+    }
+
+    private static async Task<bool> CopyAtMostAsync(Stream source, MemoryStream destination, long maxBytes, CancellationToken cancellationToken)
+    {
+        var chunk = new byte[81920];
+        long total = 0;
+        int read;
+
+        while ((read = await source.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            total += read;
+
+            if (total > maxBytes)
+            {
+                return false;
+            }
+
+            await destination.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
+        }
+
+        return true;
     }
 }

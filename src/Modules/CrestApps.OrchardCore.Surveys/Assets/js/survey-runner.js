@@ -27,11 +27,16 @@ async function post(form, url) {
     const body = new FormData(form);
     body.delete('direction');
 
-    // Files are sent only with the page post, not with every autosave or evaluation.
+    // Files and drawn signatures are sent only with the page post, not with every autosave or evaluation: the server
+    // keeps them only when the page is posted forward.
     for (const [name, value] of Array.from(body.entries())) {
         if (value instanceof File) {
             body.delete(name);
         }
+    }
+
+    for (const input of form.querySelectorAll('[data-survey-signature] input[type="hidden"]')) {
+        body.delete(/** @type {HTMLInputElement} */ (input).name);
     }
 
     const response = await fetch(url, {

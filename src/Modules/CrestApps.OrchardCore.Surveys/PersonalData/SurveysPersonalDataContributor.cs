@@ -1,9 +1,9 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -44,7 +44,7 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
     /// <param name="registry">The question type registry.</param>
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="secrets">The anonymity secrets, to recompute the participation keys of anonymous surveys.</param>
-    /// <param name="serviceProvider">The services, for the optional attachment service.</param>
+    /// <param name="serviceProvider">The services, for the response files.</param>
     public SurveysPersonalDataContributor(
         ISession session,
         ISurveyVersionCache versions,
@@ -124,7 +124,7 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var attachments = _serviceProvider.GetService<IAttachmentService>();
+        var files = ActivatorUtilities.GetServiceOrCreateInstance<SurveyResponseFiles>(_serviceProvider);
         var surveys = (await _surveyStore.GetAllAsync(cancellationToken)).ToDictionary(survey => survey.ItemId, StringComparer.Ordinal);
         var anonymousSecrets = new List<string>();
 
@@ -137,12 +137,12 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         {
             foreach (var response in await ResponsesAsync(userId, cancellationToken))
             {
-                foreach (var attachmentId in response.Answers.Values.SelectMany(answer => answer.AttachmentIds ?? []).Distinct(StringComparer.Ordinal).ToList())
+                // Every file the response owns goes, not only those its answers still refer to.
+                var removedFiles = await files.DeleteAllAsync(response, cancellationToken);
+
+                if (removedFiles > 0)
                 {
-                    if (attachments is not null && await attachments.DeleteAsync(attachmentId, cancellationToken))
-                    {
-                        context.Result.Count(FileKind);
-                    }
+                    context.Result.Count(FileKind, removedFiles);
                 }
 
                 foreach (var answer in response.Answers.Values)

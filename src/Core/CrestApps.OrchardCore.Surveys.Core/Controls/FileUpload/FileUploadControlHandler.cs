@@ -1,6 +1,3 @@
-using CrestApps.OrchardCore.Attachments.Models;
-using CrestApps.OrchardCore.Attachments.Services;
-using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.Localization;
@@ -10,26 +7,22 @@ namespace CrestApps.OrchardCore.Surveys.Core.Controls.FileUpload;
 
 /// <summary>
 /// File uploads, kept by Attachments with the response as owner. The input is <c>q.{questionId}</c> (files); files
-/// uploaded before are kept when their ids are posted back as <c>q.{questionId}.keep</c>.
+/// uploaded before are kept when their ids are posted back as <c>q.{questionId}.keep</c>. New files are read only in
+/// <see cref="SurveyAnswerReadMode.Commit"/> mode and handed to the runtime as pending files, which it stores once the
+/// page passes validation.
 /// </summary>
 public sealed class FileUploadControlHandler : SurveyControlHandlerBase<FileUploadSettings>
 {
     private const int DefaultMaxMegabytes = 10;
     private const int MaxFilesLimit = 20;
 
-    private readonly IAttachmentService _attachmentService;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="FileUploadControlHandler"/> class.
     /// </summary>
-    /// <param name="attachmentService">The attachment service.</param>
     /// <param name="stringLocalizer">The localizer.</param>
-    public FileUploadControlHandler(
-        IAttachmentService attachmentService,
-        IStringLocalizer<FileUploadControlHandler> stringLocalizer)
+    public FileUploadControlHandler(IStringLocalizer<FileUploadControlHandler> stringLocalizer)
         : base(stringLocalizer)
     {
-        _attachmentService = attachmentService;
     }
 
     /// <inheritdoc />
@@ -46,14 +39,16 @@ public sealed class FileUploadControlHandler : SurveyControlHandlerBase<FileUplo
         var kept = ReadValues(context, context.Prefix + ".keep").Where(existing.Contains).Distinct(StringComparer.Ordinal).ToList();
         var ids = new List<string>(kept);
 
-        if (context.Form?.Files is { Count: > 0 } files && context.Response is not null)
+        // New files are only read when the page is posted forward, and are stored by the runtime once the page passes
+        // validation: an evaluation, an autosave, a check or going back never keeps a file.
+        if (context.Mode == SurveyAnswerReadMode.Commit && context.Form?.Files is { Count: > 0 } files && context.Response is not null)
         {
             var maxBytes = (long)(settings.MaxMegabytes is > 0 ? settings.MaxMegabytes.Value : DefaultMaxMegabytes) * 1024 * 1024;
-            var uploads = new List<AttachmentUpload>();
+            var added = 0;
 
             foreach (var file in files.Where(file => string.Equals(file.Name, context.Prefix, StringComparison.Ordinal) && file.Length > 0))
             {
-                if (ids.Count + uploads.Count >= maxFiles)
+                if (ids.Count + added >= maxFiles)
                 {
                     context.Errors.Add(S["Upload at most {0} files.", maxFiles]);
 
@@ -77,22 +72,16 @@ public sealed class FileUploadControlHandler : SurveyControlHandlerBase<FileUplo
                 using var stream = new MemoryStream();
                 await file.CopyToAsync(stream, context.CancellationToken);
 
-                uploads.Add(new AttachmentUpload
+                var pending = new SurveyPendingFile
                 {
-                    Owner = new RecordRef(SurveysConstants.ResponseRecordKind, context.Response.ItemId),
                     FileName = Path.GetFileName(file.FileName),
-                    DeclaredContentType = file.ContentType,
+                    ContentType = file.ContentType,
                     Content = stream.ToArray(),
-                    UploadedBy = context.Response.Respondent ?? default,
-                });
-            }
+                };
 
-            if (uploads.Count > 0)
-            {
-                var result = await _attachmentService.AddAsync(uploads, context.CancellationToken);
-
-                context.Errors.AddRange(result.Errors);
-                ids.AddRange(result.Attachments.Select(attachment => attachment.ItemId));
+                context.PendingFiles.Add(pending);
+                ids.Add(pending.Id);
+                added++;
             }
         }
 

@@ -376,6 +376,10 @@
 		const body = new FormData(form);
 		body.delete("direction");
 		for (const [name, value] of Array.from(body.entries())) if (value instanceof File) body.delete(name);
+		for (const input of form.querySelectorAll("[data-survey-signature] input[type=\"hidden\"]")) body.delete(
+			/** @type {HTMLInputElement} */
+			input.name
+		);
 		const response = await fetch(url, {
 			method: "POST",
 			body,

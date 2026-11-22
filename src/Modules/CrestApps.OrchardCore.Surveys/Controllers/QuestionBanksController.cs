@@ -617,15 +617,20 @@ public sealed class QuestionBanksController : Controller
 
         SurveyImportResult read;
 
+        // A check is a dry run: the file is read without keeping anything, such as the images of a package.
+        var check = Request.Form.ContainsKey("submit.Check");
+
         await using (var stream = model.File.OpenReadStream())
         {
-            read = await format.ReadAsync(model.File.FileName, stream, HttpContext.RequestAborted);
+            read = check
+                ? await format.CheckAsync(model.File.FileName, stream, HttpContext.RequestAborted)
+                : await format.ReadAsync(model.File.FileName, stream, HttpContext.RequestAborted);
         }
 
         model.ReadCount = read.Questions.Count;
         model.Errors.AddRange(read.Errors);
 
-        if (Request.Form.ContainsKey("submit.Check"))
+        if (check)
         {
             model.Checked = true;
 

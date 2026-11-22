@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Mail;
 using System.Text.Json.Nodes;
@@ -20,6 +21,9 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
     where TSettings : class, new()
 {
     private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
+
+    // The most time the pattern rules of one answer may take together, whatever the number of values it has.
+    private static readonly TimeSpan _regexBudget = TimeSpan.FromMilliseconds(250);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyControlHandlerBase{TSettings}"/> class.
@@ -328,6 +332,7 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
 
         var answer = context.Answer;
         var texts = (answer?.Values ?? []).Where(value => !string.IsNullOrWhiteSpace(value)).ToList();
+        var regexStarted = Stopwatch.GetTimestamp();
 
         foreach (var rule in context.Question?.Validation ?? [])
         {
@@ -338,7 +343,7 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
 
             var failed = rule.Kind switch
             {
-                SurveyValidationKind.Regex => texts.Any(text => !Matches(text, rule.Value)),
+                SurveyValidationKind.Regex => texts.Any(text => !Matches(text, rule.Value, regexStarted)),
                 SurveyValidationKind.MinLength => int.TryParse(rule.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var min) && texts.Any(text => text.Length < min),
                 SurveyValidationKind.MaxLength => int.TryParse(rule.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var max) && texts.Any(text => text.Length > max),
                 SurveyValidationKind.Min => TryParseNumber(rule.Value, out var low) && NumbersOf(answer).Any(number => number < low),
@@ -404,16 +409,35 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
             _ => S["The answer is not in the expected format."],
         };
 
-    private static bool Matches(string text, string pattern)
+    // A pattern runs without backtracking, in time linear in the text, when it can; a pattern that needs backtracking
+    // (back references, lookarounds, atomic groups) runs with a timeout per match and within a budget for the whole
+    // answer, and fails when the time is up.
+    private static bool Matches(string text, string pattern, long started)
     {
         if (string.IsNullOrEmpty(pattern))
         {
             return true;
         }
 
+        var remaining = _regexBudget - Stopwatch.GetElapsedTime(started);
+
+        if (remaining <= TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        var timeout = remaining < _regexTimeout ? remaining : _regexTimeout;
+
         try
         {
-            return Regex.IsMatch(text, pattern, RegexOptions.None, _regexTimeout);
+            try
+            {
+                return Regex.IsMatch(text, pattern, RegexOptions.NonBacktracking, timeout);
+            }
+            catch (NotSupportedException)
+            {
+                return Regex.IsMatch(text, pattern, RegexOptions.None, timeout);
+            }
         }
         catch (ArgumentException)
         {
