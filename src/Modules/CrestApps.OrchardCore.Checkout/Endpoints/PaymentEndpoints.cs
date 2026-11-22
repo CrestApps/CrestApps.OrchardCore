@@ -141,9 +141,7 @@ public static class PaymentEndpoints
         // of their own.
         if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatusNetwork, GetBeginPaymentKey(httpContext), cancellationToken) is { Allowed: false } fromNetwork)
         {
-            SetRetryAfter(httpContext, fromNetwork.RetryAfter);
-
-            return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
+            return TooManyStatusChecks(httpContext, fromNetwork.RetryAfter);
         }
 
         // The store only returns a live checkout that belongs to this caller. Completing is idempotent, but
@@ -162,9 +160,7 @@ public static class PaymentEndpoints
         // through the verification path for as long as the tab stayed open.
         if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, sessionId), cancellationToken) is { Allowed: false } polled)
         {
-            SetRetryAfter(httpContext, polled.RetryAfter);
-
-            return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
+            return TooManyStatusChecks(httpContext, polled.RetryAfter);
         }
 
         var result = await engine.TryCompleteAsync(sessionId, cancellationToken);
@@ -231,6 +227,13 @@ public static class PaymentEndpoints
         => ClientNetworkKey.NetworkOnly(httpContext);
 
     // Tells the buyer's page when to try again.
+    private static JsonHttpResult<CheckoutErrorResponse> TooManyStatusChecks(HttpContext httpContext, TimeSpan retryAfter)
+    {
+        SetRetryAfter(httpContext, retryAfter);
+
+        return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
+    }
+
     internal static void SetRetryAfter(HttpContext httpContext, TimeSpan retryAfter)
         => httpContext.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
