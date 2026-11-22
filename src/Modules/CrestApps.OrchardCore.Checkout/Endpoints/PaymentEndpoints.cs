@@ -137,11 +137,11 @@ public static class PaymentEndpoints
             return Error("The payment request was incomplete.", StatusCodes.Status400BadRequest);
         }
 
-        // Polling is throttled too. Without a limit a stuck page could hammer the provider's API through the
-        // verification path for as long as the tab stayed open.
-        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, sessionId), cancellationToken) is { Allowed: false } polled)
+        // Every poll counts against the caller's network first, whatever checkout it names, so made-up ids get no budget
+        // of their own.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatusNetwork, GetBeginPaymentKey(httpContext), cancellationToken) is { Allowed: false } fromNetwork)
         {
-            SetRetryAfter(httpContext, polled.RetryAfter);
+            SetRetryAfter(httpContext, fromNetwork.RetryAfter);
 
             return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
         }
@@ -156,6 +156,15 @@ public static class PaymentEndpoints
         if (owned is null)
         {
             return TypedResults.NotFound();
+        }
+
+        // Polling one's own checkout is throttled too. Without a limit a stuck page could hammer the provider's API
+        // through the verification path for as long as the tab stayed open.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, sessionId), cancellationToken) is { Allowed: false } polled)
+        {
+            SetRetryAfter(httpContext, polled.RetryAfter);
+
+            return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
         }
 
         var result = await engine.TryCompleteAsync(sessionId, cancellationToken);
@@ -225,7 +234,8 @@ public static class PaymentEndpoints
     internal static void SetRetryAfter(HttpContext httpContext, TimeSpan retryAfter)
         => httpContext.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-    // Status polling is counted per caller per checkout, so a buyer polling one checkout is never throttled by another.
+    // Polling a checkout the caller owns is counted per caller per checkout, so a buyer polling one checkout is never
+    // throttled by another; every poll also counts toward the network's own, larger budget.
     internal static string GetStatusKey(HttpContext httpContext, string sessionId)
         => $"{GetBeginPaymentKey(httpContext)}:{sessionId}";
 

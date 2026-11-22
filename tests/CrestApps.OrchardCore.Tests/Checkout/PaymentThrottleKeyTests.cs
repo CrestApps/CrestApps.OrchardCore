@@ -77,6 +77,45 @@ public sealed class PaymentThrottleKeyTests
         Assert.Equal(StatusCodes.Status429TooManyRequests, statuses[^1]);
     }
 
+    /// <summary>
+    /// Review 11 (M-payment-status-throttle): the status poll was counted per network and checkout id, before the id
+    /// was checked, so each made-up id had a budget of its own. Every poll now counts against the network's budget
+    /// ("payment-status-network") whatever id it names, and the per-checkout one counts only the caller's own checkout.
+    /// </summary>
+    [Fact]
+    public async Task PollingTheStatusOfManyMadeUpCheckouts_IsRefusedOnceTheNetworksBudgetIsSpent()
+    {
+        var options = new AttemptLimitOptions();
+        options.AddPolicy(CheckoutConstants.AttemptPolicies.PaymentStatus, 120, TimeSpan.FromMinutes(5));
+        options.AddPolicy("payment-status-network", 600, TimeSpan.FromMinutes(5));
+
+        var limiter = new DistributedAttemptLimiter(
+            new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
+            new LocalLock(NullLogger<LocalLock>.Instance),
+            new ShellSettings { Name = "Default" },
+            Mock.Of<IClock>(clock => clock.UtcNow == DateTime.UtcNow),
+            Options.Create(options),
+            NullLogger<DistributedAttemptLimiter>.Instance);
+
+        // No checkout is found, so a poll that gets past the limit answers 404.
+        var sessions = Mock.Of<ICheckoutSessionStore>();
+        var status = typeof(PaymentEndpoints).GetMethod("StatusAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var statuses = new List<int>();
+
+        for (var i = 0; i < 601; i++)
+        {
+            var httpContext = CreateContext("203.0.113.7");
+            httpContext.RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider();
+
+            var result = await (Task<IResult>)status.Invoke(null, ["made-up-" + i, httpContext, Mock.Of<ICheckoutEngine>(), sessions, limiter, CancellationToken.None]);
+
+            statuses.Add(((IStatusCodeHttpResult)result).StatusCode ?? 0);
+        }
+
+        Assert.All(statuses.Take(600), code => Assert.Equal(StatusCodes.Status404NotFound, code));
+        Assert.Equal(StatusCodes.Status429TooManyRequests, statuses[^1]);
+    }
+
     [Fact]
     public void StatusKey_StillSeparatesCheckouts()
     {

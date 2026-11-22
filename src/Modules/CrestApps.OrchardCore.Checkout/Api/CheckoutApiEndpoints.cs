@@ -243,10 +243,11 @@ internal static class CheckoutApiEndpoints
         ICheckoutEngine engine,
         IAttemptLimiter limiter)
     {
-        // Polled while a provider settles, so it's throttled: a stuck client mustn't hammer the provider through it.
-        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, id), httpContext.RequestAborted) is { Allowed: false } polled)
+        // Every call counts against the caller's network first, whatever checkout it names, so made-up ids get no budget
+        // of their own.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatusNetwork, GetClientAddress(httpContext), httpContext.RequestAborted) is { Allowed: false } fromNetwork)
         {
-            PaymentEndpoints.SetRetryAfter(httpContext, polled.RetryAfter);
+            PaymentEndpoints.SetRetryAfter(httpContext, fromNetwork.RetryAfter);
 
             return ApiProblems.TooManyRequests("Too many status checks. Wait a moment and try again.");
         }
@@ -254,6 +255,14 @@ internal static class CheckoutApiEndpoints
         if (await CheckoutApi.FindAnyAsync(store, id, httpContext.RequestAborted) is not { } session)
         {
             return ApiProblems.NotFound();
+        }
+
+        // Polled while a provider settles, so it's throttled: a stuck client mustn't hammer the provider through it.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, id), httpContext.RequestAborted) is { Allowed: false } polled)
+        {
+            PaymentEndpoints.SetRetryAfter(httpContext, polled.RetryAfter);
+
+            return ApiProblems.TooManyRequests("Too many status checks. Wait a moment and try again.");
         }
 
         var result = await engine.TryCompleteAsync(id, httpContext.RequestAborted);

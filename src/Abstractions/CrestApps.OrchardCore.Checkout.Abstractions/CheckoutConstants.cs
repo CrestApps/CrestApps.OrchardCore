@@ -51,9 +51,15 @@ public static class CheckoutConstants
         public const string PaymentDeclineEvent = "payment-decline-event";
 
         /// <summary>
-        /// Status polls per network and checkout: 120 per 5 minutes.
+        /// Status polls per network and checkout: 120 per 5 minutes. Counted only for a checkout the caller owns.
         /// </summary>
         public const string PaymentStatus = "payment-status";
+
+        /// <summary>
+        /// Status polls per network, whatever checkout they name: 600 per 5 minutes. Counted before the checkout is looked
+        /// up, so made-up checkout ids don't each get a budget of their own.
+        /// </summary>
+        public const string PaymentStatusNetwork = "payment-status-network";
 
         /// <summary>
         /// Checkouts started per network: 60 per hour.
