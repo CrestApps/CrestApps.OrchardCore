@@ -135,6 +135,14 @@ public sealed class CheckPrinter : ICheckPrinter
             foreach (var group in checks.GroupBy(check => check.BankAccountId, StringComparer.Ordinal))
             {
                 var account = accounts[group.Key];
+
+                if (!BankAccountNumbers.HasNumbers(account))
+                {
+                    errors.Add(S["{0} has no routing or account number, which the check line needs. Enter them on the bank account, or print on pre-printed stock without the check line.", account.Name]);
+
+                    continue;
+                }
+
                 var numbers = group.Select(check => check.Number).ToList();
                 var accountNumber = await _bankAccountService.RevealAccountNumberAsync(
                     account,

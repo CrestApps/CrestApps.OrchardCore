@@ -88,9 +88,10 @@ public sealed class CheckService : ICheckService
                 errors.Add(S["The bank account is closed or failed: checks can't be drawn on it."]);
             }
 
-            if (!BankAccountNumbers.HasNumbers(account))
+            // The numbers are needed only where they print: the check line on blank stock, which the printer checks.
+            if (!BankAccountKinds.CanDrawChecks(account.Kind))
             {
-                errors.Add(S["The bank account has no routing or account number."]);
+                errors.Add(S["Checks are drawn only on a checking or savings account."]);
             }
 
             if (!string.IsNullOrEmpty(request.Currency) && !string.Equals(request.Currency, account.Currency, StringComparison.OrdinalIgnoreCase))
