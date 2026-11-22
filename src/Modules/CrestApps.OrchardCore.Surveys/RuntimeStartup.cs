@@ -23,6 +23,9 @@ namespace CrestApps.OrchardCore.Surveys;
 /// </summary>
 public sealed class RuntimeStartup : StartupBase
 {
+    // The signed-in respondent's own responses (SurveyRunnerController.My).
+    private const string MyResponsesPath = "/surveys/my";
+
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -45,14 +48,22 @@ public sealed class RuntimeStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         // The respondent pages carry tokens in their addresses (collector and invitation links), so no page under /s
-        // tells another site where the visitor came from. Set as the response starts, so it wins over site defaults.
+        // tells another site where the visitor came from. They also show answers, piped texts and scores (the ending,
+        // the review, the totals), so no browser cache, back-forward cache or shared proxy keeps them for the next
+        // person at a kiosk or shared computer; the same goes for the signed-in user's own list. Set as the response
+        // starts, so it wins over site defaults.
         app.Use(next => context =>
         {
-            if (context.Request.Path.StartsWithSegments(SurveyResumeCookies.RespondentPath, StringComparison.OrdinalIgnoreCase))
+            var path = context.Request.Path;
+
+            if (path.StartsWithSegments(SurveyResumeCookies.RespondentPath, StringComparison.OrdinalIgnoreCase)
+                || path.StartsWithSegments(MyResponsesPath, StringComparison.OrdinalIgnoreCase))
             {
                 context.Response.OnStarting(() =>
                 {
                     context.Response.Headers["Referrer-Policy"] = "no-referrer";
+                    context.Response.Headers.CacheControl = "no-store";
+                    context.Response.Headers.Pragma = "no-cache";
 
                     return Task.CompletedTask;
                 });

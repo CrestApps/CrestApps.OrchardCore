@@ -227,6 +227,34 @@ public sealed class SurveyResponseServiceTests
     }
 
     [Fact]
+    public async Task Anonymous_KeepsTheReturnLink_WithoutItsQueryString_AndDropsEveryOtherProperty()
+    {
+        // Arrange: a course item starts an anonymous survey with a link back to itself.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(
+            RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))),
+            item => item.Access.Anonymity = AnonymityMode.Anonymous);
+
+        // Act
+        var start = await harness.StartAsync(survey, "u1", request => request.Properties = new System.Text.Json.Nodes.JsonObject
+        {
+            [SurveyResponseProperties.ReturnUrl] = "/learning/course-1/item-2?enrollment=e-42#top",
+            [SurveyResponseProperties.ReturnText] = "Week 1 feedback",
+            ["email"] = "person@example.com",
+        });
+        var external = await harness.StartAsync(survey, "u2", request => request.Properties = new System.Text.Json.Nodes.JsonObject
+        {
+            [SurveyResponseProperties.ReturnUrl] = "//evil.example/path",
+        });
+
+        // Assert
+        Assert.Equal("/learning/course-1/item-2", SurveyResponseProperties.ReadString(start.Response, SurveyResponseProperties.ReturnUrl));
+        Assert.Equal("Week 1 feedback", SurveyResponseProperties.ReadString(start.Response, SurveyResponseProperties.ReturnText));
+        Assert.False(start.Response.Properties.ContainsKey("email"));
+        Assert.Empty(external.Response.Properties);
+    }
+
+    [Fact]
     public async Task Limits_PerDay_AreCheckedAtStartAndAgainAtCompletion()
     {
         // Arrange

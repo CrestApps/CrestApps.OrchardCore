@@ -11,8 +11,7 @@ namespace CrestApps.OrchardCore.Surveys.Services;
 /// browser key cookie and the IP address; and writes the resume cookie.
 /// </summary>
 /// <remarks>
-/// The resume token comes from the cookie only. A token on a resume link (<c>?t=</c>) is never read here: the runner
-/// trades it for a new token and a cookie, then redirects to the address without it.
+/// The resume token comes from the cookie only: there are no resume links, so no address carries a resume token.
 /// </remarks>
 public sealed class SurveyRespondentIdentityFactory
 {
@@ -20,11 +19,6 @@ public sealed class SurveyRespondentIdentityFactory
     /// The name of the browser key cookie used for weak uniqueness on public links.
     /// </summary>
     public const string BrowserKeyCookie = "sb";
-
-    /// <summary>
-    /// The query string key of a resume token on a resume link.
-    /// </summary>
-    public const string ResumeQueryKey = "t";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly SurveyResumeCookies _resumeCookies;

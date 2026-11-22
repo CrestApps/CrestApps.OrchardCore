@@ -10,9 +10,11 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 /// someone (a course, for example) calls <see cref="Write"/> instead of putting the token in a URL.
 /// </summary>
 /// <remarks>
-/// Every resume cookie is bound to a generation cookie (<c>sr_g</c>, also on <c>/s</c>). Signing in or out writes a new
-/// generation, so every resume cookie written before stops counting and is removed on the next respondent page, even
-/// though the sign-in page cannot see cookies of the <c>/s</c> path.
+/// Every resume cookie is bound to a generation cookie (<c>sr_g</c>, on the tenant's root path so every page of the
+/// tenant sees it). Signing in or out writes a new generation, so every resume cookie written before stops counting and
+/// is removed on the next respondent page, even though the sign-in page cannot see cookies of the <c>/s</c> path. A
+/// resume cookie written from a page outside <c>/s</c> (a course, admin Preview) joins the browser's current
+/// generation, so it never makes the browser's other resume cookies stop counting.
 /// </remarks>
 public sealed class SurveyResumeCookies
 {
@@ -201,6 +203,22 @@ public sealed class SurveyResumeCookies
         };
     }
 
+    /// <summary>
+    /// Gets the cookie options of the generation cookie for a request: like <see cref="Options"/>, but on the tenant's
+    /// root path (its path base, or <c>/</c>), so a page outside <c>/s</c> that writes a resume cookie reads the
+    /// browser's current generation instead of starting a new one.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <returns>The options.</returns>
+    public static CookieOptions GenerationOptions(HttpContext httpContext)
+    {
+        var options = Options(httpContext, _generationMaxAge);
+
+        options.Path = httpContext.Request.PathBase.HasValue ? httpContext.Request.PathBase.Value : "/";
+
+        return options;
+    }
+
     private static string CurrentGeneration(HttpContext httpContext)
     {
         if (httpContext.Items.TryGetValue(GenerationItemKey, out var written) && written is string issued)
@@ -216,7 +234,7 @@ public sealed class SurveyResumeCookies
         var generation = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
 
         httpContext.Items[GenerationItemKey] = generation;
-        httpContext.Response.Cookies.Append(GenerationCookie, generation, Options(httpContext, _generationMaxAge));
+        httpContext.Response.Cookies.Append(GenerationCookie, generation, GenerationOptions(httpContext));
 
         return generation;
     }

@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Surveys.Controllers
 @using CrestApps.OrchardCore.Surveys.ViewModels
 @model SurveyPartViewModel
 
@@ -23,10 +24,9 @@
             <div class="card-body">
                 <h2 class="h4">@Model.Title</h2>
                 <div class="mb-3">@Model.Introduction</div>
-                <form method="post" action="@Url.Content("~/s/" + Uri.EscapeDataString(Model.Token) + "/start")">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-primary">@T["Start"]</button>
-                </form>
+                @* The page around the embed may be cached for every visitor, so the card holds no form token: Start opens
+                   the survey's own page, which posts its start form at once with a token of its own. *@
+                <a href="@(url + "?" + SurveyRunnerController.AutoStartQueryKey + "=1")" class="btn btn-primary" role="button">@T["Start"]</a>
             </div>
         </section>
         break;

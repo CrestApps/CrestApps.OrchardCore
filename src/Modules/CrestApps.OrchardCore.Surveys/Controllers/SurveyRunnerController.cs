@@ -36,7 +36,13 @@ public sealed class SurveyRunnerController : Controller
 
     private const string CultureQueryKey = "culture";
 
-    private static readonly HashSet<string> _reservedQueryKeys = new(StringComparer.OrdinalIgnoreCase) { SurveyRespondentIdentityFactory.ResumeQueryKey, "preview", "hidden", CultureQueryKey };
+    /// <summary>
+    /// The query string key that asks the landing page to start at once, as the Start button of an embedded survey
+    /// does (the embed may be cached, so it links here instead of posting a form with a form token).
+    /// </summary>
+    public const string AutoStartQueryKey = "autostart";
+
+    private static readonly HashSet<string> _reservedQueryKeys = new(StringComparer.OrdinalIgnoreCase) { "preview", "hidden", CultureQueryKey, AutoStartQueryKey };
 
     private readonly ISurveyResponseService _responses;
     private readonly SurveyStore _surveyStore;
@@ -125,7 +131,8 @@ public sealed class SurveyRunnerController : Controller
         {
             _identities.ClearResumeCookie(survey.ItemId);
         }
-        else if (model.CanStart && !model.NeedsPassword && !model.NeedsCaptcha && model.SkipLanding)
+        else if (model.CanStart && !model.NeedsPassword && !model.NeedsCaptcha
+            && (model.SkipLanding || string.Equals(Request.Query[AutoStartQueryKey], "1", StringComparison.Ordinal)))
         {
             model.AutoStart = true;
         }
@@ -172,15 +179,8 @@ public sealed class SurveyRunnerController : Controller
     [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
     public async Task<IActionResult> Respond(string responseId, bool preview = false, bool hidden = false)
     {
-        // A resume link carries its token once: it is traded for a new token in the cookie, and the page redirects to
-        // the address without it, so the token never stays in the address bar, the history or a Referer header.
-        var linkToken = Request.Query[SurveyRespondentIdentityFactory.ResumeQueryKey].ToString();
-
-        if (!string.IsNullOrEmpty(linkToken))
-        {
-            return await ClaimResumeLinkAsync(responseId, linkToken, confirmed: false);
-        }
-
+        // There is no resume link: a response resumes only for its signed-in user or the browser holding its resume
+        // cookie, so no address can hand a response (and the answers in it) to another browser.
         var response = await FindOwnAsync(responseId);
 
         if (response is null)
@@ -197,21 +197,6 @@ public sealed class SurveyRunnerController : Controller
 
         return await RenderPageAsync(result, message: null, preview && response.IsTest, hidden && response.IsTest);
     }
-
-    /// <summary>
-    /// Resumes a response from a resume link once a signed-in visitor confirmed it: the response does not belong to
-    /// their account, so they are asked first.
-    /// </summary>
-    /// <param name="responseId">The response.</param>
-    /// <param name="token">The resume token of the link.</param>
-    /// <returns>A redirect to the response, or a page that says why it cannot resume.</returns>
-    [HttpPost("s/r/{responseId}/resume")]
-    [ValidateAntiForgeryToken]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
-    public Task<IActionResult> Resume(string responseId, string token)
-        => string.IsNullOrEmpty(token)
-            ? Task.FromResult<IActionResult>(NotFoundPage())
-            : ClaimResumeLinkAsync(responseId, token, confirmed: true);
 
     /// <summary>
     /// Posts the current page: next, back or finish.
@@ -391,6 +376,15 @@ public sealed class SurveyRunnerController : Controller
             return NotFoundPage();
         }
 
+        var collector = string.IsNullOrEmpty(response.CollectorId) ? null : await _collectorStore.FindByIdAsync(response.CollectorId);
+
+        // A kiosk forgets the response before anything else, a redirecting ending included, so the next person at the
+        // device never reaches it.
+        if (collector?.Kind == SurveyCollectorKinds.Kiosk)
+        {
+            _identities.ClearResumeCookie(survey.ItemId);
+        }
+
         var ending = await _endings.RenderAsync(survey, version.Definition, response, Request.Host.Host);
 
         if (!string.IsNullOrEmpty(ending.RedirectUrl) && !response.IsTest)
@@ -398,7 +392,6 @@ public sealed class SurveyRunnerController : Controller
             return Redirect(ending.RedirectUrl);
         }
 
-        var collector = string.IsNullOrEmpty(response.CollectorId) ? null : await _collectorStore.FindByIdAsync(response.CollectorId);
         var definition = version.Definition;
         var shows = ReviewMoment(survey, definition, response, _clock.UtcNow);
         var model = new SurveyEndingViewModel
@@ -428,7 +421,6 @@ public sealed class SurveyRunnerController : Controller
 
         if (collector?.Kind == SurveyCollectorKinds.Kiosk)
         {
-            _identities.ClearResumeCookie(survey.ItemId);
             model.KioskToken = collector.Token;
             model.KioskResetSeconds = Math.Max(collector.KioskResetSeconds, 3);
             model.CanReview = false;
@@ -450,7 +442,8 @@ public sealed class SurveyRunnerController : Controller
     {
         var response = await FindOwnAsync(responseId);
 
-        if (response is null)
+        // A kiosk response belongs to whoever stood at the device, so the next person can't reopen it.
+        if (response is null || await IsKioskAsync(response))
         {
             return NotFoundPage();
         }
@@ -471,7 +464,8 @@ public sealed class SurveyRunnerController : Controller
     {
         var response = await FindOwnAsync(responseId);
 
-        if (response is null || response.Status != SurveyResponseStatus.Completed)
+        // A kiosk response belongs to whoever stood at the device, so the next person can't review it.
+        if (response is null || response.Status != SurveyResponseStatus.Completed || await IsKioskAsync(response))
         {
             return NotFoundPage();
         }
@@ -634,10 +628,14 @@ public sealed class SurveyRunnerController : Controller
 
         identity.CaptchaPassed = captchaPassed;
 
+        // A kiosk is a shared device: each start is a new guest, even when the device stays signed in, so a response
+        // never belongs to the device's account (which would resume it for the next person).
         if (collector.Kind == SurveyCollectorKinds.Kiosk)
         {
             identity.ResumeToken = null;
             identity.BrowserKey = null;
+            identity.UserId = null;
+            identity.Party = null;
         }
 
         var query = Request.Query
@@ -775,81 +773,6 @@ public sealed class SurveyRunnerController : Controller
             && (await _counter.ListForUserAsync(identity.UserId, SurveysConstants.PageSize)).Any(response => response.SurveyId == survey.ItemId && response.Status == SurveyResponseStatus.Completed);
     }
 
-    // Trades the token of a resume link for a new one in this browser's cookie. The link resumes only its own response,
-    // only while its token is the response's current one (so once), never replaces the cookie of another response this
-    // browser has open, and asks a signed-in visitor before resuming a response that is not their account's.
-    private async Task<IActionResult> ClaimResumeLinkAsync(string responseId, string linkToken, bool confirmed)
-    {
-        if (string.IsNullOrEmpty(responseId)
-            || responseId.Length > 64
-            || !string.Equals(SurveyResumeTokens.ResponseIdOf(linkToken), responseId, StringComparison.Ordinal))
-        {
-            return NotFoundPage();
-        }
-
-        var response = await _responseStore.FindByIdAsync(responseId);
-
-        if (response is null)
-        {
-            return NotFoundPage();
-        }
-
-        var identity = _identities.Build(response.SurveyId);
-        var cleanUrl = Url.Content("~/s/r/" + Uri.EscapeDataString(responseId)) + QueryWithoutResumeToken();
-
-        // This browser holds the response already (the same link opened twice): nothing to trade.
-        if (SurveyResponseService.IsOwner(response, identity))
-        {
-            return LocalRedirect(cleanUrl);
-        }
-
-        if (string.IsNullOrEmpty(response.ResumeTokenHash) || !SurveyResumeTokens.Matches(linkToken, response.ResumeTokenHash))
-        {
-            return NotFoundPage();
-        }
-
-        var heldId = SurveyResumeTokens.ResponseIdOf(identity.ResumeToken);
-
-        if (!string.IsNullOrEmpty(heldId)
-            && !string.Equals(heldId, responseId, StringComparison.Ordinal)
-            && await _responses.FindForRespondentAsync(heldId, identity) is { Status: SurveyResponseStatus.InProgress })
-        {
-            Response.StatusCode = StatusCodes.Status409Conflict;
-
-            return MessagePage(S["Survey"], S["This browser already has a response in progress for this survey. Finish it before you open another one."]);
-        }
-
-        if (!confirmed && !string.IsNullOrEmpty(identity.UserId) && string.IsNullOrEmpty(response.UserId))
-        {
-            var survey = await _surveyStore.FindByIdAsync(response.SurveyId);
-
-            return View("Resume", new SurveyResumeViewModel
-            {
-                ResponseId = responseId,
-                Token = linkToken,
-                Title = survey?.Title ?? S["Survey"].Value,
-                QueryString = QueryWithoutResumeToken(),
-            });
-        }
-
-        var token = await _responses.RotateResumeTokenAsync(responseId, linkToken, HttpContext.RequestAborted);
-
-        if (string.IsNullOrEmpty(token))
-        {
-            return NotFoundPage();
-        }
-
-        _identities.WriteResumeCookie(response.SurveyId, token);
-
-        return LocalRedirect(cleanUrl);
-    }
-
-    private string QueryWithoutResumeToken()
-        => QueryString.Create(Request.Query
-            .Where(pair => !string.Equals(pair.Key, SurveyRespondentIdentityFactory.ResumeQueryKey, StringComparison.OrdinalIgnoreCase))
-            .SelectMany(pair => pair.Value.Select(value => new KeyValuePair<string, string>(pair.Key, value))))
-            .ToUriComponent();
-
     private async Task<(Survey Survey, SurveyCollector Collector)> FindByTokenAsync(string token)
     {
         var collector = await _collectorStore.FindByTokenAsync(token);
@@ -857,6 +780,10 @@ public sealed class SurveyRunnerController : Controller
 
         return (survey, collector);
     }
+
+    private async Task<bool> IsKioskAsync(SurveyResponse response)
+        => !string.IsNullOrEmpty(response.CollectorId)
+            && await _collectorStore.FindByIdAsync(response.CollectorId) is { Kind: SurveyCollectorKinds.Kiosk };
 
     private async Task<SurveyResponse> FindOwnAsync(string responseId)
     {
