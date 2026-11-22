@@ -3,6 +3,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Scoring;
 
@@ -17,6 +18,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     private readonly IEnumerable<ISurveyAuthorizationService> _surveyAuthorization;
     private readonly ICatalog<Survey> _surveys;
     private readonly ISurveyResponseQueries _queries;
+    private readonly SurveyContextKindOptions _contextKinds;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyGradingQueue"/> class.
@@ -26,18 +28,21 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     /// <param name="surveyAuthorization">The survey authorization service, when registered.</param>
     /// <param name="surveys">The survey store.</param>
     /// <param name="queries">The response queries.</param>
+    /// <param name="contextKinds">The registered context kinds; responses of a kind graded on its owner's page are left out.</param>
     public SurveyGradingQueue(
         IAuthorizationService authorizationService,
         IEnumerable<ISurveyGradingScope> scopes,
         IEnumerable<ISurveyAuthorizationService> surveyAuthorization,
         ICatalog<Survey> surveys,
-        ISurveyResponseQueries queries)
+        ISurveyResponseQueries queries,
+        IOptions<SurveyContextKindOptions> contextKinds)
     {
         _authorizationService = authorizationService;
         _scopes = scopes;
         _surveyAuthorization = surveyAuthorization;
         _surveys = surveys;
         _queries = queries;
+        _contextKinds = contextKinds.Value;
     }
 
     /// <inheritdoc />
@@ -86,6 +91,13 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
             SurveyIds = surveyIds,
             Statuses = [SurveyResponseStatus.Completed],
             Grading = GradingStatus.Pending,
+            // The whole queue leaves out the kinds graded on their owner's page; one survey's queue shows all of its responses.
+            ExcludedContextKinds = string.IsNullOrEmpty(surveyId)
+                ? _contextKinds.Kinds.Values
+                    .Where(descriptor => descriptor.HasOwnGradingQueue)
+                    .Select(descriptor => descriptor.Kind)
+                    .ToList()
+                : [],
             Skip = Math.Max(0, skip),
             Take = Math.Clamp(take, 1, SurveysConstants.PageSize),
         }, cancellationToken);

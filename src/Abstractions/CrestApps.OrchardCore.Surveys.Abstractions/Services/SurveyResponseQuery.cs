@@ -23,6 +23,16 @@ public sealed class SurveyResponseQuery
     public string ContextRef { get; set; }
 
     /// <summary>
+    /// Gets or sets the context kinds to keep, or empty for any context and responses without one.
+    /// </summary>
+    public List<string> ContextKinds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the context kinds to leave out. Responses without a context are kept.
+    /// </summary>
+    public List<string> ExcludedContextKinds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the statuses, or empty for all.
     /// </summary>
     public List<SurveyResponseStatus> Statuses { get; set; } = [];

@@ -8,7 +8,7 @@
 
 <admin-list name="SurveyGradingQueue" context="Model.List"
             show-select-all="false"
-            empty-message="@T["<strong>Nothing to grade!</strong> No response is waiting for a grader."]">
+            empty-message="@T["<strong>Nothing to grade.</strong> Completed responses with questions a person must score, such as essays or uploaded files, appear here and leave once they are graded. Responses another module grades on its own page, such as course quiz attempts, are not listed here."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
         <admin-list-column name="Name" position="20" title="@T["Response"]" />

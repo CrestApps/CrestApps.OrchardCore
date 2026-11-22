@@ -48,6 +48,7 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
         {
             Statuses = [SurveyResponseStatus.Completed],
             Grading = GradingStatus.Pending,
+            ContextKinds = [LearningSurveyContexts.EnrollmentKind],
             Take = SurveysConstants.PageSize,
         }, cancellationToken);
 

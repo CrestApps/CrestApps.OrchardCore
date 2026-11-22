@@ -241,6 +241,29 @@ public static class SurveysServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Says that the module owning a registered context kind grades its responses on its own page, so the Surveys
+    /// grading queue leaves them out. Call it after <c>AddSurveyContextKind</c>.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="kind">The record kind.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddSurveyContextKindGradingQueue(this IServiceCollection services, string kind)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrEmpty(kind);
+
+        services.Configure<SurveyContextKindOptions>(options =>
+        {
+            if (options.Kinds.TryGetValue(kind, out var descriptor))
+            {
+                descriptor.HasOwnGradingQueue = true;
+            }
+        });
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers a check of who owns the records of a context kind. The Surveys API accepts a context only when its kind
     /// is registered and a check says the caller owns the record.
     /// </summary>

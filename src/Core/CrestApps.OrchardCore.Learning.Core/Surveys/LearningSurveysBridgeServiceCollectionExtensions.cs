@@ -28,6 +28,7 @@ public static class LearningSurveysBridgeServiceCollectionExtensions
         services.AddSurveyOwnerLinkProvider<LearningSurveyOwnerLinkProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IContentHandler, LearningOwnedSurveyContentHandler>());
         services.AddSurveyContextKind(LearningSurveyContexts.EnrollmentKind, LocalizationSource.Create<LearningSurveyService>("Learning enrollment"));
+        services.AddSurveyContextKindGradingQueue(LearningSurveyContexts.EnrollmentKind);
         services.AddSurveyContextKind(LearningSurveyContexts.CourseKind, LocalizationSource.Create<LearningSurveyService>("Learning course (anonymous)"), identifiesRespondent: false);
         services.AddSurveyContextOwnershipCheck<LearningSurveyContextOwnershipCheck>();
 

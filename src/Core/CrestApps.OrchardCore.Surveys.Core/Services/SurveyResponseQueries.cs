@@ -61,6 +61,18 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
             q = q.Where(index => index.ContextRef == contextRef);
         }
 
+        if (query.ContextKinds.Count > 0)
+        {
+            var kinds = query.ContextKinds.ToArray();
+            q = q.Where(index => index.ContextKind.IsIn(kinds));
+        }
+
+        if (query.ExcludedContextKinds.Count > 0)
+        {
+            var excluded = query.ExcludedContextKinds.ToArray();
+            q = q.Where(index => index.ContextKind == null || index.ContextKind.IsNotIn(excluded));
+        }
+
         if (query.Statuses.Count > 0)
         {
             var statuses = query.Statuses.Select(status => status.ToString()).ToArray();

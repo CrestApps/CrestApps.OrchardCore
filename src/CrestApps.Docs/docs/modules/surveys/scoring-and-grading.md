@@ -52,6 +52,8 @@ Every change adds an entry to the response's score history (who, when, from, to,
 
 The grading queue (`admin/surveys/grading`) lists responses waiting for a grader in the surveys the user may grade: the global permission, `ISurveyGradingScope` implementations (Learning adds course staff) and `ISurveyAuthorizationService`.
 
+Nothing is added to the queue by hand: a completed response appears when it has questions a person must score, such as essays or uploaded files, and leaves once it is graded. Each response waits in one queue only. A module that grades its own responses on its own page registers its context kind with `AddSurveyContextKindGradingQueue(kind)`, and the Surveys queue then leaves those responses out. Learning does this for enrollments, so course quiz attempts wait under **Learning > Grading** with coursework. A single survey's queue (`admin/surveys/grading?surveyId=...`) still lists all of its responses.
+
 ## Accommodations
 
 An accommodation (`SurveyOverride`) gives a user or a user audience, optionally in one context (such as an enrollment), extra minutes, extra attempts, or another opening and closing time, with a required reason. `ISurveyOverrideService.FindEffectiveAsync` combines the ones that apply into the most generous. They are managed at `admin/surveys/{id}/overrides`.

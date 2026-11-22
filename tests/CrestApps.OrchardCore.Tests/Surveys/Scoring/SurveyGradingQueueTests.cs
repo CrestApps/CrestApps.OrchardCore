@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.DataConnectors;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Scoring;
 
@@ -51,13 +52,43 @@ public sealed class SurveyGradingQueueTests : IAsyncLifetime
         Assert.Null(query);
     }
 
-    private async Task<SurveyResponseQuery> ListAsync(ClaimsPrincipal user, string[] scoped)
+    [Fact]
+    public async Task ListAsync_WholeQueue_LeavesOutKindsGradedOnTheirOwnersPage()
+    {
+        // Act
+        var query = await ListAsync(PermissionClaimsAuthorizationService.UserWith(SurveysPermissions.GradeSurveyResponses.Name), [], OwnQueueKinds());
+
+        // Assert
+        Assert.Equal(["Enrollment"], query.ExcludedContextKinds);
+    }
+
+    [Fact]
+    public async Task ListAsync_OneSurvey_KeepsEveryContextKind()
+    {
+        // Act
+        var query = await ListAsync(PermissionClaimsAuthorizationService.UserWith(SurveysPermissions.GradeSurveyResponses.Name), [], OwnQueueKinds(), "quiz");
+
+        // Assert
+        Assert.Empty(query.ExcludedContextKinds);
+        Assert.Equal(["quiz"], query.SurveyIds);
+    }
+
+    private static SurveyContextKindOptions OwnQueueKinds()
+    {
+        var options = new SurveyContextKindOptions();
+        options.Kinds["Enrollment"] = new SurveyContextKindDescriptor { Kind = "Enrollment", HasOwnGradingQueue = true };
+        options.Kinds["Course"] = new SurveyContextKindDescriptor { Kind = "Course" };
+
+        return options;
+    }
+
+    private async Task<SurveyResponseQuery> ListAsync(ClaimsPrincipal user, string[] scoped, SurveyContextKindOptions kinds = null, string surveyId = null)
     {
         await using var session = _store.Store.CreateSession();
         var queries = new ScoringResponseQueries(session);
-        var queue = new SurveyGradingQueue(new PermissionClaimsAuthorizationService(), [new Scope(scoped)], [], new SurveyStore(session), queries);
+        var queue = new SurveyGradingQueue(new PermissionClaimsAuthorizationService(), [new Scope(scoped)], [], new SurveyStore(session), queries, Options.Create(kinds ?? new SurveyContextKindOptions()));
 
-        await queue.ListAsync(user, null, 0, 20, TestContext.Current.CancellationToken);
+        await queue.ListAsync(user, surveyId, 0, 20, TestContext.Current.CancellationToken);
 
         return queries.LastQuery;
     }

@@ -25,4 +25,11 @@ public sealed class SurveyContextKindDescriptor
     /// to <see langword="false"/> and keeps its id. Unregistered kinds count as identifying.
     /// </summary>
     public bool IdentifiesRespondent { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the module that owns this kind grades its responses on its own page, such as Learning's
+    /// grading page for quiz attempts. The Surveys grading queue then leaves these responses out, so each one waits in a
+    /// single place. A grader can still open a response's grading page from the owner's page.
+    /// </summary>
+    public bool HasOwnGradingQueue { get; set; }
 }
