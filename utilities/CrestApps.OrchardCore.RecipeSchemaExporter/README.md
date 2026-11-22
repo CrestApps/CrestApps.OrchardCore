@@ -31,7 +31,7 @@ From the `CrestApps.OrchardCore` repository root:
 
 ```powershell
 dotnet build .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --no-restore -warnaserror -v minimal
-dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
+dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net11.0 --no-build
 ```
 
 ## Custom output path
@@ -39,7 +39,7 @@ dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\Cres
 You can also pass an explicit output directory as the first argument:
 
 ```powershell
-dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build -- "C:\Some\Other\Path"
+dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net11.0 --no-build -- "C:\Some\Other\Path"
 ```
 
 ## If the default path cannot be resolved

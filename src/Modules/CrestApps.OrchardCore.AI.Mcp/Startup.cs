@@ -25,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.AspNetCore;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.Environment.Shell;
@@ -250,6 +251,9 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithHttpTransport()
         .WithCrestAppsHandlers();
+
+        // Keep sessions for initialize-handshake clients so GET and DELETE /mcp are mapped.
+        services.AddTransient<IConfigureOptions<HttpServerTransportOptions>, McpHttpTransportOptionsConfiguration>();
 
         // Configure authorization policy.
         // The actual authorization logic is handled by McpServerAuthorizationHandler which reads the options at runtime.

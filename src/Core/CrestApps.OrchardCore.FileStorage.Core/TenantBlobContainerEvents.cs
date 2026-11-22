@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Removing;
-using OrchardCore.FileStorage.AzureBlob;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.FileStorage;
