@@ -1,10 +1,12 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
+using OrchardCore.Contents;
 using OrchardCore.Contents.Services;
 using OrchardCore.Contents.ViewModels;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -61,6 +63,11 @@ public sealed class SearchForContentsTool : AIFunction
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         var logger = arguments.Services.GetRequiredService<ILogger<SearchForContentsTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
@@ -96,9 +103,20 @@ public sealed class SearchForContentsTool : AIFunction
 
         var contentItemsCount = await query.CountAsync(cancellationToken);
 
-        var contentItems = await query.Skip(startingIndex)
+        var found = await query.Skip(startingIndex)
             .Take(pagerOptions.PageSize)
             .ListAsync(contentManager);
+
+        // Only the items the caller may view are returned, as Orchard Core decides for each one.
+        var contentItems = new List<ContentItem>();
+
+        foreach (var contentItem in found)
+        {
+            if (await AIToolCallerAuthorization.IsAuthorizedAsync(arguments.Services, CommonPermissions.ViewContent, contentItem))
+            {
+                contentItems.Add(contentItem);
+            }
+        }
 
         if (logger.IsEnabled(LogLevel.Debug))
         {

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,11 @@ public sealed class GetContentItemSchemaTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetContentItemSchemaTool>>();
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Http;
@@ -34,6 +35,11 @@ public sealed class SummarizeAIQualityTool : AICopilotTool
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var now = arguments.Services.GetRequiredService<IClock>().UtcNow;
         var from = ReadDate(arguments, "fromUtc") ?? now.AddDays(-7);
@@ -69,6 +75,11 @@ public sealed class ListAITestCasesTool : AICopilotTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         arguments.TryGetFirstString("profileId", out var profileId);
         var testCases = await arguments.Services.GetRequiredService<IAITestCaseStore>().GetAllAsync(cancellationToken);
 
@@ -100,6 +111,11 @@ public sealed class RunAITestsTool : AICopilotTool
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var ids = arguments.TryGetValue("testCaseIds", out var value) ? ReadIds(value) : [];
 
@@ -161,6 +177,11 @@ public sealed class ListAIAlertsTool : AICopilotTool
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var rules = await arguments.Services.GetRequiredService<IAIAlertRuleStore>().GetAllAsync(cancellationToken);
 

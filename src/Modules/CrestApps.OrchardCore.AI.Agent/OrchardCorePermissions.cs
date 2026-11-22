@@ -39,4 +39,14 @@ internal static class OrchardCorePermissions
     /// Gets the security-critical permission to manage workflows.
     /// </summary>
     public static readonly Permission ManageWorkflows = new("ManageWorkflows", LocalizationSource.Create("Manage workflows", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the security-critical permission to manage roles.
+    /// </summary>
+    public static readonly Permission ManageRoles = new("ManageRoles", LocalizationSource.Create("Manage Roles", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the permission to view roles, which managing roles implies.
+    /// </summary>
+    public static readonly Permission ViewRoles = new("ViewRoles", LocalizationSource.Create("View Roles", typeof(OrchardCorePermissions)), [ManageRoles]);
 }

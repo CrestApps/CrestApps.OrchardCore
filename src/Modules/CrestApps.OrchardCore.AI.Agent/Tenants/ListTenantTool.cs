@@ -1,5 +1,5 @@
-﻿using CrestApps.OrchardCore.AI.Core;
-using System.Text.Json;
+﻿using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -39,8 +39,7 @@ public sealed class ListTenantTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        // Tenants are the host's to manage. The tool runs for whoever drives the chat, so it checks their own permission.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(arguments.Services, OrchardCorePermissions.ManageTenants))
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

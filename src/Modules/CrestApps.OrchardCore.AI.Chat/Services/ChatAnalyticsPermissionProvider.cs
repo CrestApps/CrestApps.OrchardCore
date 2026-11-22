@@ -1,4 +1,5 @@
-﻿using OrchardCore;
+﻿using CrestApps.OrchardCore.AI.Core;
+using OrchardCore;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -9,7 +10,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 /// </summary>
 public sealed class ChatAnalyticsPermissionProvider : IPermissionProvider
 {
-    public static readonly Permission ViewChatAnalytics = new("ViewChatAnalytics", LocalizationSource.Create<ChatAnalyticsPermissionProvider>("View AI Chat Analytics"), isSecurityCritical: false);
+    public static readonly Permission ViewChatAnalytics = AIPermissions.ViewChatAnalytics;
 
     public static readonly Permission ExportChatAnalytics = new("ExportChatAnalytics", LocalizationSource.Create<ChatAnalyticsPermissionProvider>("Export AI Chat Analytics"), isSecurityCritical: false);
 

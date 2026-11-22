@@ -1,6 +1,7 @@
 using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Agent.Quality;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -33,23 +34,27 @@ public sealed class QualityToolsStartup : StartupBase
             .WithDescription(S["Sums up QA scores, issues and common questions of AI conversations over a period."])
             .WithCategory(S["AI Quality"])
             .Selectable();
+        services.RequireAIToolPermission(SummarizeAIQualityTool.TheName, AIPermissions.ManageAIQuality);
 
         services.AddCoreAITool<ListAITestCasesTool>(ListAITestCasesTool.TheName)
             .WithTitle(S["List AI Test Cases"])
             .WithDescription(S["Lists the AI simulation test cases."])
             .WithCategory(S["AI Quality"])
             .Selectable();
+        services.RequireAIToolPermission(ListAITestCasesTool.TheName, AIPermissions.ManageAIQuality);
 
         services.AddCoreAITool<RunAITestsTool>(RunAITestsTool.TheName)
             .WithTitle(S["Run AI Tests"])
             .WithDescription(S["Queues AI simulation test cases to run."])
             .WithCategory(S["AI Quality"])
             .Selectable();
+        services.RequireAIToolPermission(RunAITestsTool.TheName, AIPermissions.ManageAIQuality);
 
         services.AddCoreAITool<ListAIAlertsTool>(ListAIAlertsTool.TheName)
             .WithTitle(S["List AI Alerts"])
             .WithDescription(S["Lists the AI alert rules and which are open."])
             .WithCategory(S["AI Quality"])
             .Selectable();
+        services.RequireAIToolPermission(ListAIAlertsTool.TheName, AIPermissions.ManageAIQuality);
     }
 }

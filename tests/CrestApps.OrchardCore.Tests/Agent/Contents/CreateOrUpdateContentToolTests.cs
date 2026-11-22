@@ -44,6 +44,7 @@ public sealed class CreateOrUpdateContentToolTests
             .Setup(x => x.GetTypeDefinitionAsync("LandingPage"))
             .ReturnsAsync(new ContentTypeDefinition("LandingPage", "LandingPage"));
         var services = new ServiceCollection()
+            .AddAuthorizedCaller()
             .AddSingleton<ILogger<CreateOrUpdateContentTool>>(NullLogger<CreateOrUpdateContentTool>.Instance)
             .AddSingleton<IContentItemPayloadAssistanceService>(payloadAssistanceService)
             .AddSingleton(contentManager.Object)

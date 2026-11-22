@@ -48,6 +48,7 @@ public sealed class GetContentItemSchemaToolTests
                 .Properties(("ContentType", new JsonSchemaBuilder().Const("HeroWidget"))));
 
         var services = new ServiceCollection()
+            .AddAuthorizedCaller()
             .AddSingleton<ILogger<GetContentItemSchemaTool>>(NullLogger<GetContentItemSchemaTool>.Instance)
             .AddSingleton(contentDefinitionManager.Object)
             .AddSingleton(contentItemSchemaService.Object)

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
@@ -323,12 +324,23 @@ internal static class AIProfilesApiEndpoints
         refused.AddRange(await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(PostSessionInstances(profile), existing is null ? null : PostSessionInstances(existing), isInstanceAuthorized));
         refused = refused.Distinct(StringComparer.Ordinal).ToList();
 
-        return refused.Count == 0
+        var errors = new List<string>();
+
+        if (refused.Count > 0)
+        {
+            errors.Add($"You may not give a profile these tools: {string.Join(", ", refused)}.");
+        }
+
+        // SEC-A3: as in the editor, a profile doesn't save with a tool that people who can use it may not use.
+        if (httpContext.RequestServices?.GetService<AIProfileToolExposureValidator>() is { } exposureValidator)
+        {
+            errors.AddRange((await exposureValidator.ValidateAsync(profile, SessionTools(profile)))
+                .Select(issue => $"The '{issue.Role}' role can use this profile but doesn't have the '{issue.Permission}' permission the '{issue.ToolName}' tool needs."));
+        }
+
+        return errors.Count == 0
             ? null
-            : TypedResults.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["tools"] = [$"You may not give a profile these tools: {string.Join(", ", refused)}."],
-            });
+            : TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["tools"] = [.. errors] });
     }
 
     private static IEnumerable<string> SessionTools(AIProfile profile)

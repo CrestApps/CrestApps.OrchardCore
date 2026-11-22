@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +47,11 @@ internal sealed class GetRoleTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetRoleTool>>();
 

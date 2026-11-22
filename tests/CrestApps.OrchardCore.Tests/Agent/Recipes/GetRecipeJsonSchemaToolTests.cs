@@ -147,6 +147,7 @@ public sealed class GetRecipeJsonSchemaToolTests
         var recipeSchemaService = new RecipeSchemaService(recipeSteps);
 
         return new ServiceCollection()
+            .AddAuthorizedCaller()
             .AddSingleton<RecipeSchemaService>(recipeSchemaService)
             .AddSingleton<ILogger<GetRecipeJsonSchemaTool>>(NullLogger<GetRecipeJsonSchemaTool>.Instance)
             .BuildServiceProvider();

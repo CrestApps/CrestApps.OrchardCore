@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Tests.Agent.Communications;
 public sealed class SendEmailToolTests
 {
     [Fact]
-    public async Task InvokeAsync_WithNullHttpContext_ShouldSendEmailWithoutSender()
+    public async Task InvokeAsync_ForASignedInCaller_ShouldSendEmailWithoutSender()
     {
         // Arrange
         var emailService = new Mock<IEmailService>();
@@ -25,7 +25,7 @@ public sealed class SendEmailToolTests
             .ReturnsAsync(Result.Success());
 
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
-        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(new DefaultHttpContext { User = AuthorizedCallerServiceCollectionExtensions.SignedInUser() });
 
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
 
@@ -119,7 +119,7 @@ public sealed class SendEmailToolTests
         // Arrange
         var emailService = new Mock<IEmailService>();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
-        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(new DefaultHttpContext { User = AuthorizedCallerServiceCollectionExtensions.SignedInUser() });
 
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
 
@@ -146,7 +146,7 @@ public sealed class SendEmailToolTests
         // Arrange
         var emailService = new Mock<IEmailService>();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
-        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(new DefaultHttpContext { User = AuthorizedCallerServiceCollectionExtensions.SignedInUser() });
 
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
 
@@ -173,7 +173,7 @@ public sealed class SendEmailToolTests
         // Arrange
         var emailService = new Mock<IEmailService>();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
-        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(new DefaultHttpContext { User = AuthorizedCallerServiceCollectionExtensions.SignedInUser() });
 
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
 
@@ -204,7 +204,7 @@ public sealed class SendEmailToolTests
             .ReturnsAsync(Result.Success());
 
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
-        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(new DefaultHttpContext { User = AuthorizedCallerServiceCollectionExtensions.SignedInUser() });
 
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
 
@@ -243,6 +243,7 @@ public sealed class SendEmailToolTests
         var services = new ServiceCollection();
         services.AddSingleton(emailService);
         services.AddSingleton(httpContextAccessor);
+        services.AddAllowingAuthorization();
         services.AddSingleton<ILogger<SendEmailTool>>(NullLogger<SendEmailTool>.Instance);
 
         if (userManager is not null)

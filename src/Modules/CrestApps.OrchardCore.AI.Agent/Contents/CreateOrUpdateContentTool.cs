@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
@@ -11,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Contents;
 using Usr = OrchardCore.Users;
 using YSession = YesSql.ISession;
 
@@ -86,6 +89,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
         var payloadAssistanceService = arguments.Services.GetRequiredService<IContentItemPayloadAssistanceService>();
 
@@ -146,6 +154,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             : await contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired);
         var resolvedContentType = contentItem?.ContentType ?? requestedContentType;
 
+        if (contentItem is not null && !await MayWriteAsync(arguments.Services, contentItem, isDraft))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         if (contentItem is null)
         {
             if (string.IsNullOrEmpty(resolvedContentType))
@@ -200,6 +213,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             // When no user is authenticated, try to resolve an owner from optional parameters
             // so that contentItem.Owner is set correctly.
             await TrySetOwnerAsync(arguments, contentItem);
+
+            if (!await MayWriteAsync(arguments.Services, contentItem, isDraft))
+            {
+                return AIToolCallerAuthorization.NotAllowedMessage;
+            }
 
             var result = await contentManager.ValidateAsync(contentItem);
 
@@ -264,39 +282,54 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var session = arguments.Services.GetRequiredService<YSession>();
         await session.FlushAsync(cancellationToken);
 
-        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var httpContext = httpContextAccessor.HttpContext;
-
-        if (httpContext is not null)
-        {
-            var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
-            var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
-
-            if (metadata.AdminRouteValues is not null)
-            {
-                response = $"""
-                {response}
-                The edit URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues)}
-                """;
-            }
-
-            if (metadata.DisplayRouteValues is not null)
-            {
-                response = $"""
-                {response}
-                The view URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues)}
-                """;
-            }
-        }
-        else if (logger.IsEnabled(LogLevel.Debug))
-        {
-            logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Skipping URI generation.", TheName);
-        }
+        response = await AppendLinksAsync(arguments.Services, contentManager, contentItem, response, logger);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return response;
+    }
+
+    // The caller edits the item, and publishes it unless it stays a draft. Orchard Core decides by the item, so an
+    // author edits only their own content and a content type with its own permissions is honored.
+    private static async Task<bool> MayWriteAsync(IServiceProvider services, ContentItem contentItem, bool isDraft)
+        => await AIToolCallerAuthorization.IsAuthorizedAsync(services, CommonPermissions.EditContent, contentItem) &&
+            (isDraft || await AIToolCallerAuthorization.IsAuthorizedAsync(services, CommonPermissions.PublishContent, contentItem));
+
+    private static async Task<string> AppendLinksAsync(IServiceProvider services, IContentManager contentManager, ContentItem contentItem, string response, ILogger logger)
+    {
+        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
+        var httpContext = services.GetRequiredService<IHttpContextAccessor>().HttpContext;
+
+        if (httpContext is null)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Skipping URI generation.", TheName);
+            }
+
+            return response;
+        }
+
+        var linkGenerator = services.GetRequiredService<LinkGenerator>();
+        var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+
+        if (metadata.AdminRouteValues is not null)
+        {
+            response = $"""
+            {response}
+            The edit URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues)}
+            """;
+        }
+
+        if (metadata.DisplayRouteValues is not null)
+        {
+            response = $"""
+            {response}
+            The view URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues)}
+            """;
         }
 
         return response;
@@ -326,9 +359,15 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var principal = httpContextAccessor.HttpContext?.User;
 
-        // If a user is already authenticated, the content handlers will set the owner automatically.
+        // A signed-in caller owns what they create, as in Orchard Core's editor, which sets the owner before it checks
+        // that the caller may edit the new item.
         if (principal?.Identity?.IsAuthenticated == true)
         {
+            if (string.IsNullOrEmpty(contentItem.Owner))
+            {
+                contentItem.Owner = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            }
+
             return;
         }
 

@@ -303,7 +303,7 @@ The tool permissions are checked in two places:
 - **When tools are selected.** The tools editors of AI profiles, AI profile templates, chat interactions and the MCP server settings list only the tools the editing user holds `AccessAnyAITool` or `AccessAITool_{toolName}` for.
 - **When a chat interaction sends a message.** The tools selected on the interaction are checked again against the person chatting. A tool they are not authorized for is excluded from the request instead of failing it. The model then answers without that capability, which usually looks like an incomplete or degraded answer. Each excluded tool is reported in the logs with a `Warning` entry that lists the tool names and the permissions to grant, so check the application log first when an interaction behaves correctly for an administrator but not for another user.
 
-AI profile chats run the profile exactly as it is configured. This covers the admin chat, the frontend chat widget, and API or OpenID clients that query a profile. Anyone allowed to query the profile can use all of its tools, without holding any tool permission. That includes anonymous visitors when the `Anonymous` role has `QueryAIProfile_{profileName}`.
+AI profile chats run the profile exactly as it is configured. This covers the admin chat, the frontend chat widget, and API or OpenID clients that query a profile. Anyone allowed to query the profile can use all of its tools, without holding any tool permission. That includes anonymous visitors when the `Anonymous` role has `QueryAIProfile_{profileName}`. The AI agent tools are the exception: each checks its own permission against the caller, as described in [AI agent tools check the caller](#ai-agent-tools-check-the-caller).
 
 :::warning[Choose a profile's tools for its least-privileged user]
 Do not attach tools that change data or site configuration, such as tools that create or edit content, enable features, manage tenants, run recipes, change settings, or send email or SMS, to a profile that less-privileged or anonymous users can query. Remember that text the model reads, such as uploaded documents, crawled pages and content items, can steer it toward calling those tools.
@@ -312,6 +312,37 @@ Do not attach tools that change data or site configuration, such as tools that c
 :::tip
 Custom roles and OpenID applications that query a profile need only the profile query permission to use its tools. To use the tools of a chat interaction, a user needs `AccessAnyAITool`, or the matching `AccessAITool_{toolName}` permission for every tool the interaction uses.
 :::
+
+### AI agent tools check the caller
+
+The tools of the **AI Agent** feature act on the site, so each one has a permission that the person driving the conversation must hold before it acts, whatever the profile allows. A caller who isn't signed in is refused, and so is a tool run with no caller at all, such as from post-session processing, a background task or a scheduled workflow. A refused tool answers the model with "You are not allowed to use this function." Only `listTimeZones` runs for anyone.
+
+| Tools | Permission the caller needs |
+| --- | --- |
+| `listAIProfiles`, `viewAIProfile` | `ManageAIProfiles` |
+| `listAIConversations`, `viewAIConversation`, `getAIContactMemory`, `summarizeAIQuality`, `listAITestCases`, `runAITests`, `listAIAlerts` | `ManageAIQuality` |
+| `queryChatSessionMetrics` | `ViewChatAnalytics` |
+| `applySiteSettings`, `getOrchardCoreRecipeJsonSchema`, `listOrchardCoreRecipeStepsAndSchemas`, `importOrchardCoreRecipe`, `listNonStartupRecipes`, `executeNonStartupRecipe` | `ManageRecipes` |
+| The tenant tools, and `listStartupRecipes` | `ManageTenants` |
+| `searchForContentItems` | `ListContent`, and only the items the caller may view are returned |
+| `getContentItemById`, `getLinkForContentItem` | `ViewContent` on the item |
+| `createOrUpdateContentItem` | `EditOwnContent`, then `EditContent` on the item, and `PublishContent` on it unless it stays a draft |
+| `publishContentItem`, `unpublishContentItem` | `PublishOwnContent`, then `PublishContent` on the item |
+| `deleteContentItem` | `DeleteOwnContent`, then `DeleteContent` on the item |
+| `cloneContentItem` | `CloneOwnContent`, then `CloneContent` on the item |
+| `getSampleContentItemForContentType`, `getContentItemSchema` and the content definition read tools | `ViewContentTypes` |
+| `applyContentTypeDefinitionFromRecipe`, `removeContentTypeDefinition`, `removeContentPartDefinition` | `EditContentTypes` |
+| The feature tools | `ManageFeatures` |
+| `sendEmail`, `sendSmsMessage`, `sendNotification` | `AccessAITool_sendEmail`, `AccessAITool_sendSmsMessage` or `AccessAITool_sendNotification` (or `AccessAnyAITool`) |
+| `getUserInfo`, `searchForUsers` | `ViewUsers` |
+| `getRoleInfo` | `ViewRoles` |
+| The workflow tools | `ManageWorkflows` |
+
+A check "on the item" is Orchard Core's own content check, so an author with only the "own" permissions acts on their own items, and content types with their own permissions are honored.
+
+An AI profile doesn't save, in the editor or through the profiles API, with an AI agent tool that someone who can query the profile may not use: visitors who aren't signed in when the `Anonymous` role can query it, or any role that can query it without the tool's permission. Grant the role the permission, remove the tool, or stop the role from querying the profile. Granting a role access to a profile later doesn't run this check, but the tool still refuses a caller without its permission.
+
+A module registers the permission for its own tool with `services.RequireAIToolPermission(toolName, permission)` from `CrestApps.OrchardCore.AI.Core.Extensions`, and checks it at the start of the tool with `AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name)`.
 
 ### How the caller is resolved
 

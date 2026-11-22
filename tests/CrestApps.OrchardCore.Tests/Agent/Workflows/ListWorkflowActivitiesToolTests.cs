@@ -128,6 +128,7 @@ public sealed class ListWorkflowActivitiesToolTests
         var services = new ServiceCollection();
         services.AddSingleton<ILogger<ListWorkflowActivitiesTool>>(NullLogger<ListWorkflowActivitiesTool>.Instance);
         services.AddSingleton(activityLibrary.Object);
+        services.AddAuthorizedCaller();
 
         return services.BuildServiceProvider();
     }

@@ -14,11 +14,14 @@ using CrestApps.OrchardCore.AI.Agent.Tenants;
 using CrestApps.OrchardCore.AI.Agent.Users;
 using CrestApps.OrchardCore.AI.Agent.Workflows;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Contents;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent;
 
@@ -45,36 +48,42 @@ public sealed class Startup : StartupBase
             .WithDescription(S["Retrieves a list of the available time zones in the system."])
             .WithCategory(S["System"])
             .Selectable();
+        services.MarkAIToolAnonymousSafe(ListTimeZoneTool.TheName);
 
         services.AddCoreAITool<ListAIProfilesTool>(ListAIProfilesTool.TheName)
             .WithTitle(S["List AI Profiles"])
             .WithDescription(S["Lists AI profiles with optional filters for type, analytics, data extraction, and post-session processing."])
             .WithCategory(S["AI Profiles"])
             .Selectable();
+        services.RequireAIToolPermission(ListAIProfilesTool.TheName, AIPermissions.ManageAIProfiles);
 
         services.AddCoreAITool<ViewAIProfileTool>(ViewAIProfileTool.TheName)
             .WithTitle(S["View AI Profile"])
             .WithDescription(S["Retrieves detailed configuration for a specific AI profile by ID or name."])
             .WithCategory(S["AI Profiles"])
             .Selectable();
+        services.RequireAIToolPermission(ViewAIProfileTool.TheName, AIPermissions.ManageAIProfiles);
 
         services.AddCoreAITool<ListAIConversationsTool>(ListAIConversationsTool.TheName)
             .WithTitle(S["List AI Conversations"])
             .WithDescription(S["Lists AI conversations on every channel, newest first, with optional filters."])
             .WithCategory(S["AI Conversations"])
             .Selectable();
+        services.RequireAIToolPermission(ListAIConversationsTool.TheName, AIPermissions.ManageAIQuality);
 
         services.AddCoreAITool<ViewAIConversationTool>(ViewAIConversationTool.TheName)
             .WithTitle(S["View AI Conversation"])
             .WithDescription(S["Reads an AI conversation's transcript, variables, extracted fields, analysis, evaluations and flow."])
             .WithCategory(S["AI Conversations"])
             .Selectable();
+        services.RequireAIToolPermission(ViewAIConversationTool.TheName, AIPermissions.ManageAIQuality);
 
         services.AddCoreAITool<GetAIContactMemoryTool>(GetAIContactMemoryTool.TheName)
             .WithTitle(S["Get AI Contact Memory"])
             .WithDescription(S["Reads what the AI remembers about a contact."])
             .WithCategory(S["AI Conversations"])
             .Selectable();
+        services.RequireAIToolPermission(GetAIContactMemoryTool.TheName, AIPermissions.ManageAIQuality);
     }
 }
 
@@ -102,18 +111,21 @@ public sealed class RecipesStartup : StartupBase
             .WithDescription(S["Applies predefined system configurations and settings using AI assistance."])
             .WithCategory(S["Recipes"])
             .Selectable();
+        services.RequireAIToolPermission(ApplySystemSettingsTool.TheName, OrchardCorePermissions.ManageRecipes);
 
         services.AddCoreAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName)
             .WithTitle(S["Get Orchard Core Recipe JSON Schema"])
             .WithDescription(S["Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. Call this immediately before importOrchardCoreRecipe whenever that tool is available, then build the recipe JSON to match the schema."])
             .WithCategory(S["Recipes"])
             .Selectable();
+        services.RequireAIToolPermission(GetRecipeJsonSchemaTool.TheName, OrchardCorePermissions.ManageRecipes);
 
         services.AddCoreAITool<ListRecipeStepsAndSchemasTool>(ListRecipeStepsAndSchemasTool.TheName)
             .WithTitle(S["List Orchard Core Recipe Steps and Schemas"])
             .WithDescription(S["Lists all available Orchard Core recipe steps and returns their JSON schema definitions."])
             .WithCategory(S["Recipes"])
             .Selectable();
+        services.RequireAIToolPermission(ListRecipeStepsAndSchemasTool.TheName, OrchardCorePermissions.ManageRecipes);
 
         services.AddCoreAITool<ImportOrchardTool>(ImportOrchardTool.TheName)
             .WithTitle(S["Import Orchard Core Recipe"])
@@ -122,12 +134,14 @@ public sealed class RecipesStartup : StartupBase
             .WithDependency(GetRecipeJsonSchemaTool.TheName)
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(ImportOrchardTool.TheName, OrchardCorePermissions.ManageRecipes);
 
         services.AddCoreAITool<ListNonStartupRecipesTool>(ListNonStartupRecipesTool.TheName)
             .WithTitle(S["List Non-Startup Recipes"])
             .WithDescription(S["Retrieves all available Orchard Core recipes that are not executed during startup."])
             .WithCategory(S["Recipes"])
             .Selectable();
+        services.RequireAIToolPermission(ListNonStartupRecipesTool.TheName, OrchardCorePermissions.ManageRecipes);
 
         services.AddCoreAITool<ExecuteStartupRecipesTool>(ExecuteStartupRecipesTool.TheName)
             .WithTitle(S["Run Non-Startup Recipes"])
@@ -135,6 +149,7 @@ public sealed class RecipesStartup : StartupBase
             .WithCategory(S["Recipes"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(ExecuteStartupRecipesTool.TheName, OrchardCorePermissions.ManageRecipes);
     }
 }
 
@@ -162,30 +177,35 @@ public sealed class TenantsStartup : StartupBase
             .WithDescription(S["Retrieves a list of Orchard Core recipes configured to run at application startup."])
             .WithCategory(S["Tenants Management"])
             .Selectable();
+        services.RequireAIToolPermission(ListStartupRecipesTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<CreateTenantTool>(CreateTenantTool.TheName)
             .WithTitle(S["Create Tenant"])
             .WithDescription(S["Creates a new tenant in the Orchard Core application."])
             .WithCategory(S["Tenants Management"])
             .Selectable();
+        services.RequireAIToolPermission(CreateTenantTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<GetTenantTool>(GetTenantTool.TheName)
             .WithTitle(S["Get Tenant Information"])
             .WithDescription(S["Retrieves detailed information about a specific tenant."])
             .WithCategory(S["Tenants Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetTenantTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<ListTenantTool>(ListTenantTool.TheName)
             .WithTitle(S["List All Tenants"])
             .WithDescription(S["Returns information about all tenants in the system."])
             .WithCategory(S["Tenants Management"])
             .Selectable();
+        services.RequireAIToolPermission(ListTenantTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<EnableTenantTool>(EnableTenantTool.TheName)
             .WithTitle(S["Enable Tenant"])
             .WithDescription(S["Enables a tenant that is currently disabled."])
             .WithCategory(S["Tenants Management"])
             .Selectable();
+        services.RequireAIToolPermission(EnableTenantTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<DisableTenantTool>(DisableTenantTool.TheName)
             .WithTitle(S["Disable Tenant"])
@@ -193,6 +213,7 @@ public sealed class TenantsStartup : StartupBase
             .WithCategory(S["Tenants Management"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(DisableTenantTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<RemoveTenantTool>(RemoveTenantTool.TheName)
             .WithTitle(S["Remove Tenant"])
@@ -200,12 +221,14 @@ public sealed class TenantsStartup : StartupBase
             .WithCategory(S["Tenants Management"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(RemoveTenantTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<ReloadTenantTool>(ReloadTenantTool.TheName)
             .WithTitle(S["Reload Tenant"])
             .WithDescription(S["Reloads the configuration and state of an existing tenant."])
             .WithCategory(S["Tenants Management"])
             .Selectable();
+        services.RequireAIToolPermission(ReloadTenantTool.TheName, OrchardCorePermissions.ManageTenants);
 
         services.AddCoreAITool<SetupTenantTool>(SetupTenantTool.TheName)
             .WithTitle(S["Setup Tenant"])
@@ -213,6 +236,7 @@ public sealed class TenantsStartup : StartupBase
             .WithCategory(S["Tenants Management"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(SetupTenantTool.TheName, OrchardCorePermissions.ManageTenants);
     }
 }
 
@@ -243,30 +267,35 @@ public sealed class ContentsStartup : StartupBase
             .WithDescription(S["Provides a way to search for content items."])
             .WithCategory(S["Content Management"])
             .Selectable();
+        services.RequireAIToolPermission(SearchForContentsTool.TheName, CommonPermissions.ListContent);
 
         services.AddCoreAITool<GetSampleContentItemForContentTypeTool>(GetSampleContentItemForContentTypeTool.TheName)
             .WithTitle(S["Generate Content Item Sample"])
             .WithDescription(S["Generates a structured sample content item for a specified content type. Before calling createOrUpdateContentItem, call getContentItemSchema first whenever it is available to inspect the exact schema contract. If the sample contains nested or contained content items, include them in the parent payload when calling createOrUpdateContentItem instead of creating them separately."])
             .WithCategory(S["Content Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetSampleContentItemForContentTypeTool.TheName, ContentTypesPermissions.ViewContentTypes);
 
         services.AddCoreAITool<PublishContentTool>(PublishContentTool.TheName)
             .WithTitle(S["Publish Content Item"])
             .WithDescription(S["Publishes a draft or previously unpublished content item."])
             .WithCategory(S["Content Management"])
             .Selectable();
+        services.RequireAIToolPermission(PublishContentTool.TheName, CommonPermissions.PublishOwnContent);
 
         services.AddCoreAITool<UnpublishContentTool>(UnpublishContentTool.TheName)
             .WithTitle(S["Unpublish Content Item"])
             .WithDescription(S["Unpublishes a currently published content item."])
             .WithCategory(S["Content Management"])
             .Selectable();
+        services.RequireAIToolPermission(UnpublishContentTool.TheName, CommonPermissions.PublishOwnContent);
 
         services.AddCoreAITool<GetContentTool>(GetContentTool.TheName)
             .WithTitle(S["Retrieve Content Item"])
             .WithDescription(S["Retrieves a specific content item by its ID or type."])
             .WithCategory(S["Content Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetContentTool.TheName, CommonPermissions.ViewContent);
 
         services.AddCoreAITool<DeleteContentTool>(DeleteContentTool.TheName)
             .WithTitle(S["Delete Content Item"])
@@ -274,12 +303,14 @@ public sealed class ContentsStartup : StartupBase
             .WithCategory(S["Content Management"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(DeleteContentTool.TheName, CommonPermissions.DeleteOwnContent);
 
         services.AddCoreAITool<CloneContentTool>(CloneContentTool.TheName)
             .WithTitle(S["Clone Content Item"])
             .WithDescription(S["Creates a duplicate of an existing content item."])
             .WithCategory(S["Content Management"])
             .Selectable();
+        services.RequireAIToolPermission(CloneContentTool.TheName, CommonPermissions.CloneOwnContent);
 
         services.AddCoreAITool<CreateOrUpdateContentTool>(CreateOrUpdateContentTool.TheName)
             .WithTitle(S["Create or Update Content Item"])
@@ -287,12 +318,14 @@ public sealed class ContentsStartup : StartupBase
             .WithCategory(S["Content Management"])
             .WithDependency(GetContentItemSchemaTool.TheName)
             .Selectable();
+        services.RequireAIToolPermission(CreateOrUpdateContentTool.TheName, CommonPermissions.EditOwnContent);
 
         services.AddCoreAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName)
             .WithTitle(S["Retrieve a Link for a Content Item"])
             .WithDescription(S["Retrieves a link for a content item."])
             .WithCategory(S["Content Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetContentItemLinkTool.TheName, CommonPermissions.ViewContent);
     }
 }
 
@@ -321,6 +354,7 @@ public sealed class ContentRecipesStartup : StartupBase
             .WithTitle(S["Get Content Item Schema"])
             .WithDescription(S["Returns the current content-item JSON schema for one or more Orchard Core content types. Call this immediately before createOrUpdateContentItem whenever that tool is available so the payload follows the exact schema contract for the parent content type and any nested content types."])
             .WithCategory(S["Content Management"]);
+        services.RequireAIToolPermission(GetContentItemSchemaTool.TheName, ContentTypesPermissions.ViewContentTypes);
     }
 }
 
@@ -350,30 +384,35 @@ public sealed class ContentDefinitionsStartup : StartupBase
             .WithDescription(S["Retrieves the definitions of all available content types."])
             .WithCategory(S["Content Definitions"])
             .Selectable();
+        services.RequireAIToolPermission(GetContentTypeDefinitionsTool.TheName, ContentTypesPermissions.ViewContentTypes);
 
         services.AddCoreAITool<GetContentPartDefinitionsTool>(GetContentPartDefinitionsTool.TheName)
             .WithTitle(S["Get Content Part Definitions"])
             .WithDescription(S["Retrieves the definitions of all available content parts."])
             .WithCategory(S["Content Definitions"])
             .Selectable();
+        services.RequireAIToolPermission(GetContentPartDefinitionsTool.TheName, ContentTypesPermissions.ViewContentTypes);
 
         services.AddCoreAITool<ListContentTypesDefinitionsTool>(ListContentTypesDefinitionsTool.TheName)
             .WithTitle(S["List Available Content Types Definitions"])
             .WithDescription(S["Provides a list of available content types definitions."])
             .WithCategory(S["Content Definitions"])
             .Selectable();
+        services.RequireAIToolPermission(ListContentTypesDefinitionsTool.TheName, ContentTypesPermissions.ViewContentTypes);
 
         services.AddCoreAITool<ListContentPartsDefinitionsTool>(ListContentPartsDefinitionsTool.TheName)
             .WithTitle(S["List Available Content Parts Definitions"])
             .WithDescription(S["Provides a list of available content parts definitions."])
             .WithCategory(S["Content Definitions"])
             .Selectable();
+        services.RequireAIToolPermission(ListContentPartsDefinitionsTool.TheName, ContentTypesPermissions.ViewContentTypes);
 
         services.AddCoreAITool<ListContentFieldsTool>(ListContentFieldsTool.TheName)
             .WithTitle(S["List Available Content Fields"])
             .WithDescription(S["Provides a list of available content fields."])
             .WithCategory(S["Content Definitions"])
             .Selectable();
+        services.RequireAIToolPermission(ListContentFieldsTool.TheName, ContentTypesPermissions.ViewContentTypes);
     }
 }
 
@@ -402,6 +441,7 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
             .WithCategory(S["Content Definitions"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(RemoveContentTypeDefinitionsTool.TheName, ContentTypesPermissions.EditContentTypes);
 
         services.AddCoreAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName)
             .WithTitle(S["Remove Content Part Definitions"])
@@ -409,12 +449,14 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
             .WithCategory(S["Content Definitions"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(RemoveContentPartDefinitionsTool.TheName, ContentTypesPermissions.EditContentTypes);
 
         services.AddCoreAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName)
             .WithTitle(S["Create or Update Content Type Definition"])
             .WithDescription(S["Creates a new content type definition or updates an existing one."])
             .WithCategory(S["Content Definitions"])
             .Selectable();
+        services.RequireAIToolPermission(CreateOrUpdateContentTypeDefinitionsTool.TheName, ContentTypesPermissions.EditContentTypes);
     }
 }
 
@@ -443,30 +485,35 @@ public sealed class FeaturesStartup : StartupBase
             .WithCategory(S["Features Management"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(DisableFeatureTool.TheName, OrchardCorePermissions.ManageFeatures);
 
         services.AddCoreAITool<EnableFeatureTool>(EnableFeatureTool.TheName)
             .WithTitle(S["Enable Site Feature"])
             .WithDescription(S["Enable site features."])
             .WithCategory(S["Features Management"])
             .Selectable();
+        services.RequireAIToolPermission(EnableFeatureTool.TheName, OrchardCorePermissions.ManageFeatures);
 
         services.AddCoreAITool<FeaturesSearchTool>(FeaturesSearchTool.TheName)
             .WithTitle(S["Search for Site Feature"])
             .WithDescription(S["Search available features for a match."])
             .WithCategory(S["Features Management"])
             .Selectable();
+        services.RequireAIToolPermission(FeaturesSearchTool.TheName, OrchardCorePermissions.ManageFeatures);
 
         services.AddCoreAITool<ListFeaturesTool>(ListFeaturesTool.TheName)
             .WithTitle(S["List Site Features"])
             .WithDescription(S["Retrieves available site features."])
             .WithCategory(S["Features Management"])
             .Selectable();
+        services.RequireAIToolPermission(ListFeaturesTool.TheName, OrchardCorePermissions.ManageFeatures);
 
         services.AddCoreAITool<GetFeatureTool>(GetFeatureTool.TheName)
             .WithTitle(S["Get Site Features"])
             .WithDescription(S["Retrieves info about a feature."])
             .WithCategory(S["Features Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetFeatureTool.TheName, OrchardCorePermissions.ManageFeatures);
     }
 }
 
@@ -494,6 +541,7 @@ public sealed class NotificationsStartup : StartupBase
             .WithDescription(S["Sends a notification message to a user."])
             .WithCategory(S["Communications"])
             .Selectable();
+        services.RequireAIToolPermission(SendNotificationTool.TheName, AIPermissions.CreateAIToolPermission(SendNotificationTool.TheName));
     }
 }
 
@@ -522,6 +570,7 @@ public sealed class EmailStartup : StartupBase
             .WithCategory(S["Communications"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(SendEmailTool.TheName, AIPermissions.CreateAIToolPermission(SendEmailTool.TheName));
     }
 }
 
@@ -550,6 +599,7 @@ public sealed class SmsStartup : StartupBase
             .WithCategory(S["Communications"])
             .RequireApproval()
             .Selectable();
+        services.RequireAIToolPermission(SendSmsTool.TheName, AIPermissions.CreateAIToolPermission(SendSmsTool.TheName));
     }
 }
 
@@ -577,12 +627,14 @@ public sealed class UsersStartup : StartupBase
             .WithDescription(S["Gets information about a user."])
             .WithCategory(S["Users Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetUserInfoTool.TheName, UsersPermissions.ViewUsers);
 
         services.AddCoreAITool<SearchForUsersTool>(SearchForUsersTool.TheName)
             .WithTitle(S["Search Users"])
             .WithDescription(S["Search the system for users."])
             .WithCategory(S["Users Management"])
             .Selectable();
+        services.RequireAIToolPermission(SearchForUsersTool.TheName, UsersPermissions.ViewUsers);
     }
 }
 
@@ -610,6 +662,7 @@ public sealed class RolesStartup : StartupBase
             .WithDescription(S["Gets information about a role."])
             .WithCategory(S["Roles Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetRoleTool.TheName, OrchardCorePermissions.ViewRoles);
     }
 }
 
@@ -637,12 +690,14 @@ public sealed class WorkflowsStartup : StartupBase
             .WithDescription(S["Gets information about a workflow type."])
             .WithCategory(S["Workflow Management"])
             .Selectable();
+        services.RequireAIToolPermission(GetWorkflowTypesTool.TheName, OrchardCorePermissions.ManageWorkflows);
 
         services.AddCoreAITool<ListWorkflowTypesTool>(ListWorkflowTypesTool.TheName)
             .WithTitle(S["List Workflow Type"])
             .WithDescription(S["List information about a workflow types."])
             .WithCategory(S["Workflow Management"])
             .Selectable();
+        services.RequireAIToolPermission(ListWorkflowTypesTool.TheName, OrchardCorePermissions.ManageWorkflows);
     }
 }
 
@@ -670,12 +725,14 @@ public sealed class WorkflowsRecipesStartup : StartupBase
             .WithDescription(S["Create or update information a workflow."])
             .WithCategory(S["Workflow Management"])
             .Selectable();
+        services.RequireAIToolPermission(CreateOrUpdateWorkflowTool.TheName, OrchardCorePermissions.ManageWorkflows);
 
         services.AddCoreAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName)
             .WithTitle(S["List Workflow Activities"])
             .WithDescription(S["List all available tasks and activities a workflow."])
             .WithCategory(S["Workflow Management"])
             .Selectable();
+        services.RequireAIToolPermission(ListWorkflowActivitiesTool.TheName, OrchardCorePermissions.ManageWorkflows);
     }
 }
 
@@ -703,5 +760,6 @@ public sealed class ChatAnalyticsToolsStartup : StartupBase
             .WithDescription(S["Queries aggregated chat session analytics metrics with optional date range and profile filters. Returns statistics for generating charts and reports."])
             .WithCategory(S["AI Analytics"])
             .Selectable();
+        services.RequireAIToolPermission(QueryChatSessionMetricsTool.TheName, AIPermissions.ViewChatAnalytics);
     }
 }

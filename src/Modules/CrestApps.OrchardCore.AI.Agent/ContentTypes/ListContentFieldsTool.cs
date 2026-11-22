@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Services;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,6 +38,11 @@ public sealed class ListContentFieldsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListContentFieldsTool>>();
 

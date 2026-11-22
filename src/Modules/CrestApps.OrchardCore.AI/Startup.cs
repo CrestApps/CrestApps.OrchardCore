@@ -171,6 +171,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileAgentsDisplayDriver>()
             .AddScoped<IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
+            .AddScoped<AIProfileToolExposureValidator>()
             .AddPermissionProvider<AIToolPermissionProvider>();
 
         // Conversations: the system message rendered with the conversation's values, and tool parameters filled

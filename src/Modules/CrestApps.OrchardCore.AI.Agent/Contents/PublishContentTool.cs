@@ -1,9 +1,11 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -48,6 +50,11 @@ public sealed class PublishContentTool : AIFunction
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         var logger = arguments.Services.GetRequiredService<ILogger<PublishContentTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
@@ -71,6 +78,13 @@ public sealed class PublishContentTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to find a content item with ContentItemId '{ContentItemId}'.", TheName, contentItemId);
 
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
+        }
+
+        // The registered permission lets the caller try; the item decides, as Orchard Core does for its own
+        // and other people's content and for content types with their own permissions.
+        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(arguments.Services, CommonPermissions.PublishContent, contentItem))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
         await contentManager.PublishAsync(contentItem);

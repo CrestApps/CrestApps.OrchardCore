@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Extensions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.AI;
@@ -88,6 +89,11 @@ public sealed class ListAIConversationsTool : AICopilotTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         var session = arguments.Services.GetRequiredService<ISession>();
         var options = arguments.Services.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
         var query = session.Query<AIChatSession, AIChatSessionIndex>(options.AICollectionName);
@@ -149,6 +155,11 @@ public sealed class ViewAIConversationTool : AICopilotTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         if (!arguments.TryGetFirstString("sessionId", out var sessionId) || string.IsNullOrWhiteSpace(sessionId))
         {
             return "Give the conversation's sessionId.";
@@ -206,6 +217,11 @@ public sealed class GetAIContactMemoryTool : AICopilotTool
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         if (!arguments.TryGetFirstString("contactId", out var contactId) || string.IsNullOrWhiteSpace(contactId))
         {

@@ -55,7 +55,7 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
         // The tool runs a recipe of the site and restarts the tenant, for whoever drives the chat, a public visitor
         // included, so the caller must be allowed to run recipes.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(arguments.Services, OrchardCorePermissions.ManageRecipes))
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

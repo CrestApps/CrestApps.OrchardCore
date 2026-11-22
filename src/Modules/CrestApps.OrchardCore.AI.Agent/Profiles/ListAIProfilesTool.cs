@@ -4,6 +4,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Extensions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,6 +66,11 @@ public sealed class ListAIProfilesTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListAIProfilesTool>>();
 

@@ -1,11 +1,13 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -64,6 +66,11 @@ public sealed class GetContentItemLinkTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         var logger = arguments.Services.GetRequiredService<ILogger<GetContentItemLinkTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
@@ -101,6 +108,11 @@ public sealed class GetContentItemLinkTool : AIFunction
 
         if (contentItem is not null)
         {
+            if (!await AIToolCallerAuthorization.IsAuthorizedAsync(arguments.Services, CommonPermissions.ViewContent, contentItem))
+            {
+                return AIToolCallerAuthorization.NotAllowedMessage;
+            }
+
             var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
             if (type == "edit" && metadata.AdminRouteValues is not null)

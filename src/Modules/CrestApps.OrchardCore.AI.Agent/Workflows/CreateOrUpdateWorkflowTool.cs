@@ -1,9 +1,9 @@
-﻿using OrchardCore.Security.Permissions;
-using CrestApps.Core.AI.Extensions;
+﻿using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
@@ -28,6 +28,11 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         if (!await IsCallerAuthorizedAsync(arguments.Services))
         {

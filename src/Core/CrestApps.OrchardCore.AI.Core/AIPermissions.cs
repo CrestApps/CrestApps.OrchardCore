@@ -128,6 +128,11 @@ public static class AIPermissions
     public static readonly Permission ClearAIMemory = new("ClearAIMemory", LocalizationSource.Create("Clear AI memory", typeof(AIPermissions)), [ClearAIMemoryForOthers]);
 
     /// <summary>
+    /// Gets the permission to view AI chat analytics. Kept here so the AI agent's metrics tool can require it.
+    /// </summary>
+    public static readonly Permission ViewChatAnalytics = new("ViewChatAnalytics", LocalizationSource.Create("View AI Chat Analytics", typeof(AIPermissions)));
+
+    /// <summary>
     /// Gets the security-critical permission to access any AI tool.
     /// </summary>
     public static readonly Permission AccessAnyAITool = new("AccessAnyAITool", LocalizationSource.Create("Access any AI tool", typeof(AIPermissions)), [], isSecurityCritical: true);

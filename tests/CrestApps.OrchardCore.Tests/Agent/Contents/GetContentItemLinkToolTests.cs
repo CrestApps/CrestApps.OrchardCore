@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Agent.Contents;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
@@ -13,7 +14,7 @@ namespace CrestApps.OrchardCore.Tests.Agent.Contents;
 public sealed class GetContentItemLinkToolTests
 {
     [Fact]
-    public async Task InvokeAsync_WithNullHttpContext_ShouldReturnFallbackMessage()
+    public async Task InvokeAsync_WithNullHttpContext_IsRefused()
     {
         // Arrange
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -34,12 +35,8 @@ public sealed class GetContentItemLinkToolTests
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-
-        var text = result.ToString();
-
-        Assert.Contains("test-content-id", text);
-        Assert.Contains("background", text, StringComparison.OrdinalIgnoreCase);
+        // SEC-A3: with no request there is no caller, and a tool never acts with the system's authority alone.
+        Assert.Equal(AIToolCallerAuthorization.NotAllowedMessage, result?.ToString());
     }
 
     [Fact]
@@ -47,7 +44,7 @@ public sealed class GetContentItemLinkToolTests
     {
         // Arrange
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
-        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(new DefaultHttpContext { User = AuthorizedCallerServiceCollectionExtensions.SignedInUser() });
 
         var services = CreateServiceProvider(httpContextAccessor.Object);
 
@@ -69,7 +66,7 @@ public sealed class GetContentItemLinkToolTests
     public async Task InvokeAsync_WithHttpContext_ShouldAttemptLinkGeneration()
     {
         // Arrange
-        var httpContext = new DefaultHttpContext();
+        var httpContext = new DefaultHttpContext { User = AuthorizedCallerServiceCollectionExtensions.SignedInUser() };
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
@@ -105,6 +102,7 @@ public sealed class GetContentItemLinkToolTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(httpContextAccessor);
+        services.AddAllowingAuthorization();
         services.AddSingleton<ILogger<GetContentItemLinkTool>>(NullLogger<GetContentItemLinkTool>.Instance);
 
         if (contentManager is not null)

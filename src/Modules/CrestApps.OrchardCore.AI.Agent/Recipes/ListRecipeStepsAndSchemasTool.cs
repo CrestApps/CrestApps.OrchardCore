@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
@@ -39,6 +40,11 @@ public sealed class ListRecipeStepsAndSchemasTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await AIToolCallerAuthorization.IsAuthorizedForToolAsync(arguments.Services, Name))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListRecipeStepsAndSchemasTool>>();
 
