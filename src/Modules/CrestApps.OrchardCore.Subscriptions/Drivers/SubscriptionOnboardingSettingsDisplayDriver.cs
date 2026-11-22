@@ -82,6 +82,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
             model.ReservedPrefixes = string.Join(", ", settings.ReservedPrefixes ?? SubscriptionOnboardingSettings.DefaultReservedPrefixes);
             model.ReservedHosts = string.Join(", ", settings.ReservedHosts ?? []);
             model.BaseDomain = settings.BaseDomain;
+            model.GivesSoldSitesAnAddress = settings.GivesSoldSitesAnAddress();
             model.DatabaseProviders = _databaseProviders
                 .Where(provider => !string.Equals(provider.Value, SubscriptionOnboardingSettings.DefaultDatabaseProvider, StringComparison.OrdinalIgnoreCase))
                 .Select(provider => new SelectListItem(provider.Name, provider.Value));

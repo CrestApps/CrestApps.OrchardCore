@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -16,6 +17,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
@@ -146,17 +148,26 @@ public sealed class TenantProvisioningAdminController : Controller
     /// <param name="pagerOptions">The site's pager options.</param>
     /// <param name="shapeFactory">The shape factory the pager is built with.</param>
     /// <param name="displayText">The labels for stored statuses.</param>
+    /// <param name="siteService">The site service, which holds the onboarding settings.</param>
     [Admin("provisioning", "TenantProvisioningIndex")]
     public async Task<IActionResult> Index(
         TenantProvisioningStatus? status,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory,
-        [FromServices] SubscriptionDisplayText displayText)
+        [FromServices] SubscriptionDisplayText displayText,
+        [FromServices] ISiteService siteService)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
         {
             return Forbid();
+        }
+
+        // An upgraded store that never sold a site on a prefix of its own address keeps that off, and so may have nowhere
+        // for a sold site to answer; the operator is told here, where they watch sales.
+        if (!(await siteService.GetSettingsAsync<SubscriptionOnboardingSettings>()).GivesSoldSitesAnAddress())
+        {
+            await _notifier.WarningAsync(H["A sold site has nowhere to answer unless its buyer enters a domain of their own, so other purchases are refused. Set a base domain, or turn on selling sites on a prefix of this site's own address, under Settings, Subscriptions, Tenant onboarding."]);
         }
 
         var jobs = (await _jobStore.GetAllAsync())

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -47,4 +48,11 @@ public class SubscriptionOnboardingSettingsViewModel
     public string ReservedHosts { get; set; }
 
     public string BaseDomain { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the stored settings give a sold site whose buyer names no domain somewhere
+    /// to answer. The editor warns when they don't. Shown only, never bound.
+    /// </summary>
+    [BindNever]
+    public bool GivesSoldSitesAnAddress { get; set; }
 }

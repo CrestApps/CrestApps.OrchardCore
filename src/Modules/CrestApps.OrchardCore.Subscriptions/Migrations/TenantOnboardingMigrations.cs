@@ -76,24 +76,15 @@ internal sealed class TenantOnboardingMigrations : DataMigration
     }
 
     /// <summary>
-    /// A store that could sell sites on a prefix of its own address keeps doing so, now that new stores don't (M10 of the
-    /// final security review); the operator reviews the choice under Tenant onboarding.
+    /// A store whose completed sites show it sold sites on a prefix of its own address keeps doing so, now that new stores
+    /// don't (M10 of the final security review); any other store keeps the setting off and is told how to sell sites.
     /// </summary>
     /// <returns>The migration version.</returns>
     public static int UpdateFrom2()
     {
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
-            var site = await siteService.LoadSiteSettingsAsync();
-            var settings = site.GetOrCreate<SubscriptionOnboardingSettings>();
-
-            if (SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(settings))
-            {
-                site.Put(settings);
-                await siteService.UpdateSiteSettingsAsync(site);
-            }
-        });
+        ShellScope.AddDeferredTask(scope => SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHostAsync(
+            scope.ServiceProvider.GetRequiredService<ISession>(),
+            scope.ServiceProvider.GetRequiredService<ISiteService>()));
 
         return 3;
     }

@@ -1,5 +1,10 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using OrchardCore.Entities;
+using OrchardCore.Settings;
+using YesSql;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
@@ -46,17 +51,20 @@ public static class SubscriptionOnboardingUpgrade
     }
 
     /// <summary>
-    /// Keeps an existing store selling sites on a prefix of its own address where it could before, now that new stores
-    /// don't: without a base domain, or with buyers' own domains (a buyer who names none gets a prefix). Upgrading leaves
-    /// the choice made and visible in the settings, and the upgrade notes ask the operator to review it.
+    /// Keeps an existing store selling sites on a prefix of its own address where its completed sites show it did, now
+    /// that new stores don't: a site that succeeded on a prefix with no domain of its own. A store that never sold one keeps
+    /// the setting off, and the onboarding settings and the Site provisioning page tell the operator how to sell sites.
     /// </summary>
     /// <param name="settings">The onboarding settings to change.</param>
+    /// <param name="jobs">The store's provisioning jobs.</param>
     /// <returns><see langword="true"/> when the settings changed.</returns>
-    public static bool KeepPrefixSitesOnStoreHost(SubscriptionOnboardingSettings settings)
+    public static bool KeepPrefixSitesOnStoreHost(SubscriptionOnboardingSettings settings, IEnumerable<TenantProvisioningJob> jobs)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (settings.AllowPrefixOnStoreHost || (!string.IsNullOrWhiteSpace(settings.BaseDomain) && !settings.AllowCustomDomains))
+        if (settings.AllowPrefixOnStoreHost ||
+            (!string.IsNullOrWhiteSpace(settings.BaseDomain) && !settings.AllowCustomDomains) ||
+            !(jobs ?? []).Any(SoldOnStoreHost))
         {
             return false;
         }
@@ -65,4 +73,38 @@ public static class SubscriptionOnboardingUpgrade
 
         return true;
     }
+
+    /// <summary>
+    /// Runs <see cref="KeepPrefixSitesOnStoreHost"/> against the store: reads its provisioning jobs once and saves the
+    /// onboarding settings when they change. The upgrade step runs it once the shell is ready.
+    /// </summary>
+    /// <param name="session">The session the provisioning jobs are read with.</param>
+    /// <param name="siteService">The site service holding the onboarding settings.</param>
+    public static async Task KeepPrefixSitesOnStoreHostAsync(ISession session, ISiteService siteService)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(siteService);
+
+        var site = await siteService.LoadSiteSettingsAsync();
+        var settings = site.GetOrCreate<SubscriptionOnboardingSettings>();
+
+        // Only completed sites count, read once at upgrade.
+        var succeeded = await session
+            .Query<TenantProvisioningJob, TenantProvisioningJobIndex>(
+                index => index.Status == TenantProvisioningStatus.Succeeded,
+                collection: SubscriptionConstants.TenantProvisioningCollectionName)
+            .ListAsync();
+
+        if (KeepPrefixSitesOnStoreHost(settings, succeeded))
+        {
+            site.Put(settings);
+            await siteService.UpdateSiteSettingsAsync(site);
+        }
+    }
+
+    // A site on a prefix with no host of its own answers on the store's address.
+    private static bool SoldOnStoreHost(TenantProvisioningJob job)
+        => job.Status == TenantProvisioningStatus.Succeeded &&
+            !string.IsNullOrEmpty(job.Prefix?.Trim('/')) &&
+            job.Domains is not { Length: > 0 };
 }

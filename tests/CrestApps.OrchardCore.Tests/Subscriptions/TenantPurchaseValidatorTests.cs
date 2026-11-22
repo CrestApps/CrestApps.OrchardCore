@@ -538,21 +538,25 @@ public sealed class SubscriptionOnboardingUpgradeTests
     }
 
     /// <summary>
-    /// M10: a store that could sell sites on a prefix of its own address keeps doing so after the upgrade, as a choice
-    /// visible in its settings; one that sells only on its base domain is left as it is.
+    /// M10 and review 11 C5: a store that sold sites on a prefix of its own address keeps doing so after the upgrade, as a
+    /// choice visible in its settings; one that sells only on its base domain, or never sold such a site, is left as it is.
     /// </summary>
     [Fact]
-    public void KeepPrefixSitesOnStoreHost_KeepsWhatTheStoreCouldSell()
+    public void KeepPrefixSitesOnStoreHost_KeepsWhatTheStoreSold()
     {
+        TenantProvisioningJob[] prefixSold = [new() { TenantName = "Shop1", Prefix = "shop1", Status = TenantProvisioningStatus.Succeeded }];
         var prefixStore = new SubscriptionOnboardingSettings();
         var customDomainStore = new SubscriptionOnboardingSettings { BaseDomain = "sites.operator.com", AllowCustomDomains = true };
         var baseDomainStore = new SubscriptionOnboardingSettings { BaseDomain = "sites.operator.com" };
+        var neverSoldStore = new SubscriptionOnboardingSettings();
 
-        Assert.True(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(prefixStore));
+        Assert.True(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(prefixStore, prefixSold));
         Assert.True(prefixStore.AllowPrefixOnStoreHost);
-        Assert.True(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(customDomainStore));
-        Assert.False(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(baseDomainStore));
+        Assert.True(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(customDomainStore, prefixSold));
+        Assert.False(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(baseDomainStore, prefixSold));
         Assert.False(baseDomainStore.AllowPrefixOnStoreHost);
+        Assert.False(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(neverSoldStore, []));
+        Assert.False(neverSoldStore.AllowPrefixOnStoreHost);
     }
 
     [Fact]
