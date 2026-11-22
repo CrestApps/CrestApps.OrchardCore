@@ -670,7 +670,7 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         transaction.AmountPaid = 108m;
         transaction.Status = TransactionStatus.Paid;
 
-        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var gate = CreateGate(store);
         var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(second), "test");
 
         // Act
@@ -691,7 +691,7 @@ public sealed class TransactionSettlementCheckoutHandlerTests
 
         await handler.ActivatingAsync(new CheckoutFlowActivatingContext(session));
 
-        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var gate = CreateGate(store);
         var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), "test");
 
         // Act
@@ -717,7 +717,7 @@ public sealed class TransactionSettlementCheckoutHandlerTests
 
         await CreateHandler(store).ActivatingAsync(new CheckoutFlowActivatingContext(session));
 
-        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var gate = CreateGate(store);
         var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), "test");
 
         // Act
@@ -745,7 +745,7 @@ public sealed class TransactionSettlementCheckoutHandlerTests
 
         transaction.AmountPaid = 78m;
 
-        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var gate = CreateGate(store);
         var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), "test");
 
         // Act
@@ -914,6 +914,16 @@ public sealed class TransactionSettlementCheckoutHandlerTests
             NullLogger<TransactionSettlementCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<TransactionSettlementCheckoutHandler>());
     }
+
+    private static TransactionSettlementPaymentGate CreateGate(FakeTransactionStore store)
+        => new(
+            TransactionManagerFactory.Create(store),
+            new InMemoryPaymentAttemptStore(),
+            new CrestApps.OrchardCore.Tests.Checkout.Fakes.InMemoryCheckoutSessionStore(),
+            new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance),
+            Mock.Of<global::YesSql.ISession>(),
+            new TestClock(_now),
+            new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
 
     private static PayLaterCheckoutPaymentProvider CreatePayLaterProvider()
     {
