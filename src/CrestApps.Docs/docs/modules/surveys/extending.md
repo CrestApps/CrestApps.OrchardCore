@@ -37,7 +37,7 @@ These helpers live in `Surveys.Core`, next to the contracts they register:
 
 ## Owned surveys and endings
 
-An `ISurveyOwnerLinkProvider` answers `GetLinkAsync(owner)` with a `SurveyOwnerLink` (`Text` and a local `Url`) for the owner kinds it knows, and `null` for the others; the first link found is shown as **Back to {Text}** on the survey's admin pages. Learning registers one for courses. An `ISurveyEndingRenderer` turns an ending's message into HTML in `RenderAsync(survey, definition, response, ending)`; the built-in renderer runs the author's Liquid and pipes answers afterwards, and its output is sanitized.
+An `ISurveyOwnerLinkProvider` answers `GetLinkAsync(owner)` with a `SurveyOwnerLink` (`Text` and a local `Url`) for the owner kinds it knows, and `null` for the others; the first link found is shown as **Back to `{Text}`** on the survey's admin pages. Learning registers one for courses. An `ISurveyEndingRenderer` turns an ending's message into HTML in `RenderAsync(survey, definition, response, ending)`; the built-in renderer runs the author's Liquid and pipes answers afterwards, and its output is sanitized.
 
 ## Starting responses for your records
 
