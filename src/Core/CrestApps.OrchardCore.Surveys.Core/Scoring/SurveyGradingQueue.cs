@@ -136,7 +136,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     /// (a grader can't open their answers one at a time before there is a crowd to hide in), and whether the queue
     /// lists any other anonymous survey.
     /// </summary>
-    private async Task<(HashSet<string> Hidden, bool ListsAnonymous)> AnonymousSurveysAsync(IReadOnlyCollection<string> surveyIds, CancellationToken cancellationToken)
+    private async Task<(HashSet<string> Hidden, bool ListsAnonymous)> AnonymousSurveysAsync(List<string> surveyIds, CancellationToken cancellationToken)
     {
         var hidden = new HashSet<string>(StringComparer.Ordinal);
         var listsAnonymous = false;

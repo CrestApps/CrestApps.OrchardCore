@@ -57,6 +57,69 @@ public sealed class SurveysMigrationsSqlTests
     }
 
     [Fact]
+    public async Task UpdateFrom5_OnSqlite_AddsTheSurveyListColumnsAndTagIndex_AndAsksForTheReindexStep()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var database = SqliteDatabase.Create();
+        var store = database.Store;
+        var pending = new ResumableStepsDocument();
+        var documents = new Mock<IDocumentManager<ResumableStepsDocument>>();
+        documents.Setup(manager => manager.GetOrCreateMutableAsync(It.IsAny<Func<Task<ResumableStepsDocument>>>())).ReturnsAsync(pending);
+
+        await store.InitializeAsync(cancellationToken);
+        await store.InitializeCollectionAsync(SurveysConstants.CollectionName, cancellationToken);
+
+        // The survey index as version 5 made it, with a row in it.
+        await InTransactionAsync(store, builder => builder.CreateMapIndexTableAsync<SurveyIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.Nullable().WithLength(100))
+            .Column<string>("Title", column => column.Nullable().WithLength(255))
+            .Column<string>("Kind", column => column.Nullable().WithLength(50))
+            .Column<string>("Status", column => column.Nullable().WithLength(20))
+            .Column<string>("OwnerRef", column => column.Nullable().WithLength(255))
+            .Column<int>("PublishedVersionNumber")
+            .Column<DateTime?>("ModifiedUtc", column => column.Nullable()),
+            collection: SurveysConstants.CollectionName));
+
+        await InTransactionAsync(store, builder => builder.Connection.ExecuteAsync(
+            $"INSERT INTO {SurveyIndexTable(builder)} ({builder.Dialect.QuoteForColumnName("DocumentId")}, {builder.Dialect.QuoteForColumnName("ItemId")}, {builder.Dialect.QuoteForColumnName("PublishedVersionNumber")}) VALUES (1, 's1', 0)",
+            transaction: builder.Transaction));
+
+        // Act
+        var version = 0;
+
+        await InTransactionAsync(store, async builder =>
+        {
+            version = await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(documents.Object), store) { SchemaBuilder = builder }.UpdateFrom5Async();
+        });
+
+        // Assert
+        Assert.Equal(6, version);
+        Assert.True(pending.Pending.ContainsKey(SurveysReindexStep.StepName));
+
+        await InTransactionAsync(store, async builder =>
+        {
+            var dialect = builder.Dialect;
+            var row = (IDictionary<string, object>)await builder.Connection.QuerySingleAsync(
+                $"SELECT {dialect.QuoteForColumnName("OwnerId")} AS OwnerId, {dialect.QuoteForColumnName("Anonymity")} AS Anonymity, {dialect.QuoteForColumnName("MinimumGroupSize")} AS MinimumGroupSize FROM {SurveyIndexTable(builder)}",
+                transaction: builder.Transaction);
+            var tags = await builder.Connection.ExecuteScalarAsync<long>(
+                $"SELECT COUNT(*) FROM {dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetIndexTable(typeof(SurveyTagIndex), SurveysConstants.CollectionName), null)}",
+                transaction: builder.Transaction);
+
+            // The existing row reads no anonymity, so readers take it from the survey until the step indexes it again.
+            Assert.Null(row["OwnerId"]);
+            Assert.Null(row["Anonymity"]);
+            Assert.Null(row["MinimumGroupSize"]);
+            Assert.Equal(0, tags);
+        });
+    }
+
+    private static string SurveyIndexTable(ISchemaBuilder builder)
+        => builder.Dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetIndexTable(typeof(SurveyIndex), SurveysConstants.CollectionName), null);
+
+    [Fact]
     public async Task UpdateFrom2_OnSqlite_ExistingRowsReadZero()
     {
         await using var database = SqliteDatabase.Create();

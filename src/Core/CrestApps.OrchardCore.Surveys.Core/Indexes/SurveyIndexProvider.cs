@@ -30,7 +30,10 @@ public sealed class SurveyIndexProvider : IndexProvider<Survey>
                 Status = item.Status.ToString(),
                 OwnerRef = Cut(item.Owner?.ToString(), 255),
                 PublishedVersionNumber = item.PublishedVersionNumber,
-                ModifiedUtc = item.ModifiedUtc,
+                ModifiedUtc = item.ModifiedUtc ?? item.CreatedUtc,
+                OwnerId = Cut(item.OwnerId, 26),
+                Anonymity = (item.Access?.Anonymity ?? AnonymityMode.Identified).ToString(),
+                MinimumGroupSize = item.Access?.MinimumGroupSize,
             });
 
     private static string Cut(string value, int length)

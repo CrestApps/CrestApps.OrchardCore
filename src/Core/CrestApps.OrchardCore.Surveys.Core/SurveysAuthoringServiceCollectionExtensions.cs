@@ -36,6 +36,8 @@ public static class SurveysAuthoringServiceCollectionExtensions
         services.TryAddScoped<ISurveyPublisher, SurveyPublisher>();
         services.TryAddScoped<SurveyDraftEditor>();
         services.TryAddScoped<SurveyListService>();
+        services.TryAddScoped<SurveyIndexReader>();
+        services.TryAddScoped<SurveyAccessScopes>();
         services.TryAddScoped<SurveyCollectorManager>();
         services.TryAddScoped<ISurveyAuthorizationService, SurveyAuthorizationService>();
         services.TryAddScoped<ISurveyPersonalLinkFactory, NullSurveyPersonalLinkFactory>();

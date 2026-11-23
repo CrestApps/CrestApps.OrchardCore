@@ -80,7 +80,9 @@ public abstract class SurveyResponseChildDataSet : SurveysDataSetBase<SurveyResp
     {
         var completed = nameof(SurveyResponseStatus.Completed);
 
-        return rows.Where(index => index.SurveyId.IsIn(surveyIds) && index.Status == completed && !index.IsTest);
+        return surveyIds is null
+            ? rows.Where(index => index.Status == completed && !index.IsTest)
+            : rows.Where(index => index.SurveyId.IsIn(surveyIds) && index.Status == completed && !index.IsTest);
     }
 
     /// <summary>

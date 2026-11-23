@@ -37,7 +37,7 @@ internal static class SurveysApiEndpoints
             .AddEndpointFilter(NoStoreAndUnreadableSecretFilterAsync)
             .WithTags("Surveys");
 
-        group.MapGet(string.Empty, ListSurveysAsync).WithName("SurveysApiList").WithSummary("Lists the surveys the caller may manage.");
+        group.MapGet(string.Empty, ListSurveysAsync).WithName("SurveysApiList").WithSummary("Lists a page of the surveys the caller may manage (skip, take): every survey with Manage surveys, otherwise the caller's own surveys.");
         group.MapGet("{id}/definition", GetDefinitionAsync).WithName("SurveysApiDefinition").WithSummary("Gets what a respondent sees of a survey: the published version after the access rules, or the version of the caller's started response (responseId). No answer keys, no pooled questions without a response, and choices whose order is a key are shuffled.");
         group.MapGet("{id}/responses", ListResponsesAsync).WithName("SurveysApiResponses").WithSummary("Lists a page of a survey's responses.");
         group.MapPost("responses", StartAsync).WithName("SurveysApiStart").WithSummary("Starts, or resumes, the caller's response to a survey.");
@@ -77,7 +77,7 @@ internal static class SurveysApiEndpoints
         }
     }
 
-    internal static async Task<IResult> ListSurveysAsync(HttpContext httpContext, IAuthorizationService authorizationService, ISurveyAuthorizationService surveyAuthorization, ISession session, SurveyStore surveyStore)
+    internal static async Task<IResult> ListSurveysAsync(int? skip, int? take, HttpContext httpContext, IAuthorizationService authorizationService, ISession session)
     {
         var user = httpContext.User;
 
@@ -86,31 +86,44 @@ internal static class SurveysApiEndpoints
             return Results.Forbid();
         }
 
-        var rows = await session.QueryIndex<SurveyIndex>(index => index.Status != nameof(SurveyStatus.Archived), collection: SurveysConstants.CollectionName)
-            .OrderBy(index => index.Title)
-            .Take(SurveysConstants.PageSize)
-            .ListAsync(httpContext.RequestAborted);
+        // A caller without Manage surveys lists the surveys they own, as on the admin list. The owner, the paging and the
+        // fields all come from the survey index, so no survey document is loaded.
+        var archived = nameof(SurveyStatus.Archived);
+        var query = session.QueryIndex<SurveyIndex>(index => index.Status != archived, collection: SurveysConstants.CollectionName);
 
-        var surveys = await surveyStore.GetAsync(rows.Select(row => row.ItemId), httpContext.RequestAborted);
-        var result = new List<object>();
-
-        foreach (var survey in surveys)
+        if (!await authorizationService.AuthorizeAsync(user, SurveysPermissions.ManageSurveys))
         {
-            if (await surveyAuthorization.AuthorizeAsync(user, survey, SurveyOperation.Manage, httpContext.RequestAborted))
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
             {
-                result.Add(new
-                {
-                    id = survey.ItemId,
-                    name = survey.Name,
-                    title = survey.Title,
-                    kind = survey.Kind,
-                    status = survey.Status.ToString(),
-                    publishedVersion = survey.PublishedVersionNumber,
-                });
+                return Results.Ok(new { count = 0, items = Array.Empty<object>() });
             }
+
+            query = query.Where(index => index.OwnerId == userId);
         }
 
-        return Results.Ok(result);
+        var count = await query.CountAsync(httpContext.RequestAborted);
+        var rows = await query
+            .OrderBy(index => index.Title)
+            .ThenBy(index => index.Id)
+            .Skip(Math.Max(skip ?? 0, 0))
+            .Take(Math.Clamp(take ?? 50, 1, SurveysConstants.PageSize))
+            .ListAsync(httpContext.RequestAborted);
+
+        return Results.Ok(new
+        {
+            count,
+            items = rows.Select(row => new
+            {
+                id = row.ItemId,
+                name = row.Name,
+                title = row.Title,
+                kind = row.Kind,
+                status = row.Status,
+                publishedVersion = row.PublishedVersionNumber,
+            }).ToList(),
+        });
     }
 
     internal static async Task<IResult> GetDefinitionAsync(

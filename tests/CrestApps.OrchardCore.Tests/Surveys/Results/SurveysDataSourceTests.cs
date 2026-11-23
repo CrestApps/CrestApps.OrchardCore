@@ -314,7 +314,8 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
     {
         var authorization = TestSecurity.Granting(grants);
         var services = new ServiceCollection().BuildServiceProvider();
-        var access = new SurveyDataSetAccess(new SurveyStore(session), authorization, services);
+        var reader = new SurveyIndexReader(session, new SurveyStore(session));
+        var access = new SurveyDataSetAccess(new SurveyAccessScopes(authorization, [], reader), reader, services);
         var registry = Registry();
         var versions = new SurveyVersionStore(session);
         var names = new SurveyRespondentNames(services, RecipeRoundTrip.Localizer<SurveyRespondentNames>());

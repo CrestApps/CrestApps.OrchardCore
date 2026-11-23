@@ -1,8 +1,6 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DataSources;
 using OrchardCore.Modules;
@@ -11,60 +9,79 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Surveys.DataSources;
 
 /// <summary>
-/// Decides which surveys' rows a principal may read in the Surveys data sets, and reads what anonymous surveys need:
-/// the site's minimum group size settings and the time zone their days are read in.
+/// Decides which surveys' rows a principal may read in the Surveys data sets (by <see cref="SurveyAccessScopes"/>, from
+/// the survey index), and reads what anonymous surveys need: the site's minimum group size settings and the time zone
+/// their days are read in.
 /// </summary>
 internal sealed class SurveyDataSetAccess
 {
-    private readonly SurveyStore _surveys;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly SurveyAccessScopes _scopes;
+    private readonly SurveyIndexReader _reader;
     private readonly IServiceProvider _serviceProvider;
 
     public SurveyDataSetAccess(
-        SurveyStore surveys,
-        IAuthorizationService authorizationService,
+        SurveyAccessScopes scopes,
+        SurveyIndexReader reader,
         IServiceProvider serviceProvider)
     {
-        _surveys = surveys;
-        _authorizationService = authorizationService;
+        _scopes = scopes;
+        _reader = reader;
         _serviceProvider = serviceProvider;
     }
 
     /// <summary>
-    /// Lists the surveys whose responses the principal of a run may read.
+    /// Lists the surveys whose responses the principal of a run may read, as summaries read from the survey index (no
+    /// survey document is loaded), and whether that is every survey, so the read needs no survey filter.
     /// </summary>
     /// <param name="context">The context of the run.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The surveys, by id.</returns>
-    public async Task<IReadOnlyDictionary<string, Survey>> ReadableAsync(DataSourceContext context, CancellationToken cancellationToken)
+    /// <returns>Whether every survey is readable, and the readable surveys, by id.</returns>
+    public async Task<(bool All, IReadOnlyDictionary<string, Survey> Surveys)> ReadableAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var user = context?.User;
         var readable = new Dictionary<string, Survey>(StringComparer.Ordinal);
+        var scope = await ScopeAsync(context, cancellationToken);
 
-        if (user is null)
+        if (scope.IsEmpty)
         {
-            return readable;
+            return (false, readable);
         }
 
-        var all = await _authorizationService.AuthorizeAsync(user, SurveysPermissions.ViewSurveyResponses);
-        var authorization = _serviceProvider.GetService<ISurveyAuthorizationService>();
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        var own = !all && await _authorizationService.AuthorizeAsync(user, SurveysPermissions.ViewOwnSurveyResponses);
-
-        foreach (var survey in await _surveys.GetAllAsync(cancellationToken))
+        foreach (var survey in await _reader.ListAsync(scope.All ? null : scope.SurveyIds, publishedOnly: false, cancellationToken))
         {
-            var allowed = all
-                || (authorization is not null && await authorization.AuthorizeAsync(user, survey, SurveyOperation.ViewResponses, cancellationToken))
-                || (own && !string.IsNullOrEmpty(userId) && string.Equals(survey.OwnerId, userId, StringComparison.Ordinal));
-
-            if (allowed)
-            {
-                readable[survey.ItemId] = survey;
-            }
+            readable[survey.ItemId] = survey;
         }
 
-        return readable;
+        return (scope.All, readable);
     }
+
+    /// <summary>
+    /// Lists the published surveys whose responses the principal of a run may read, as summaries read from the survey
+    /// index.
+    /// </summary>
+    /// <param name="context">The context of the run.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The surveys.</returns>
+    public async Task<IReadOnlyList<Survey>> ReadablePublishedAsync(DataSourceContext context, CancellationToken cancellationToken)
+    {
+        var scope = await ScopeAsync(context, cancellationToken);
+
+        return scope.IsEmpty ? [] : await _reader.ListAsync(scope.All ? null : scope.SurveyIds, publishedOnly: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Decides whether the principal of a run may read the responses of one survey.
+    /// </summary>
+    /// <param name="context">The context of the run.</param>
+    /// <param name="surveyId">The survey id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when it may.</returns>
+    public async Task<bool> CanReadAsync(DataSourceContext context, string surveyId, CancellationToken cancellationToken)
+        => (await ScopeAsync(context, cancellationToken)).Contains(surveyId);
+
+    private Task<SurveyAccessScope> ScopeAsync(DataSourceContext context, CancellationToken cancellationToken)
+        => context?.User is { } user
+            ? _scopes.ResolveAsync(user, SurveyOperation.ViewResponses, cancellationToken)
+            : Task.FromResult(SurveyAccessScope.None);
 
     /// <summary>
     /// Reads the site settings of Surveys and the site's time zone, each optional.

@@ -30,7 +30,10 @@ public static class SurveysIndexSchema
             .Column<string>("Status", column => column.Nullable().WithLength(20))
             .Column<string>("OwnerRef", column => column.Nullable().WithLength(255))
             .Column<int>("PublishedVersionNumber")
-            .Column<DateTime?>("ModifiedUtc", column => column.Nullable()),
+            .Column<DateTime?>("ModifiedUtc", column => column.Nullable())
+            .Column<string>("OwnerId", column => column.Nullable().WithLength(26))
+            .Column<string>("Anonymity", column => column.Nullable().WithLength(20))
+            .Column<int?>("MinimumGroupSize", column => column.Nullable()),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
@@ -40,7 +43,10 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyIndex_Status", "Status", "Kind");
             table.CreateIndex("IDX_SurveyIndex_Owner", "OwnerRef");
             table.CreateIndex("IDX_SurveyIndex_Modified", "ModifiedUtc", "Id");
+            table.CreateIndex("IDX_SurveyIndex_OwnerId", "OwnerId");
         }, collection: collection);
+
+        await CreateSurveyTagTableAsync(schemaBuilder);
 
         await schemaBuilder.CreateMapIndexTableAsync<SurveyTemplateIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
@@ -271,6 +277,46 @@ public static class SurveysIndexSchema
         await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
             table.CreateIndex("IDX_SurveyInvitationIndex_Held", "CollectorId", "Held"),
             collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Adds what the survey list and the access checks read without loading surveys: the user owner and the anonymity
+    /// columns of the survey index, and the survey tag index. Rows indexed before have an empty anonymity, so readers
+    /// fall back to the survey until the step that indexes the surveys again reaches them.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddSurveyListColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
+        {
+            table.AddColumn<string>("OwnerId", column => column.Nullable().WithLength(26));
+            table.AddColumn<string>("Anonymity", column => column.Nullable().WithLength(20));
+            table.AddColumn<int?>("MinimumGroupSize", column => column.Nullable());
+        }, collection: SurveysConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
+            table.CreateIndex("IDX_SurveyIndex_OwnerId", "OwnerId"),
+            collection: SurveysConstants.CollectionName);
+
+        await CreateSurveyTagTableAsync(schemaBuilder);
+    }
+
+    private static async Task CreateSurveyTagTableAsync(ISchemaBuilder schemaBuilder)
+    {
+        await schemaBuilder.CreateMapIndexTableAsync<SurveyTagIndex>(table => table
+            .Column<string>("SurveyId", column => column.WithLength(26))
+            .Column<string>("Tag", column => column.WithLength(SurveyTagIndexProvider.MaxTagLength))
+            .Column<string>("OwnerId", column => column.Nullable().WithLength(26)),
+            collection: SurveysConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyTagIndex>(table =>
+        {
+            table.CreateIndex("IDX_SurveyTagIndex_Tag", "Tag", "DocumentId");
+            table.CreateIndex("IDX_SurveyTagIndex_Owner", "OwnerId", "Tag");
+        }, collection: SurveysConstants.CollectionName);
     }
 
     /// <summary>

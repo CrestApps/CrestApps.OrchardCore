@@ -145,7 +145,7 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
     }
 
     protected override IQueryIndex<SurveyResponseIndex> OfSurveys(IQueryIndex<SurveyResponseIndex> rows, string[] surveyIds)
-        => rows.Where(index => index.SurveyId.IsIn(surveyIds));
+        => surveyIds is null ? rows : rows.Where(index => index.SurveyId.IsIn(surveyIds));
 
     protected override SurveyResponse ResponseOf(SurveyResponseDataRow row)
         => row?.Response;

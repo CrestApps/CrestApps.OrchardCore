@@ -41,12 +41,65 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
 
         var take = Math.Clamp(query.Take, 1, SurveysConstants.PageSize);
         var skip = Math.Max(0, query.Skip);
+        var chunks = SurveyIdChunks.Of(query.SurveyIds).ToArray();
+
+        if (query.SurveyIds.Count == 0 || chunks.Length <= 1)
+        {
+            var q = Filter(query, query.SurveyIds.Count == 0 ? null : chunks.FirstOrDefault() ?? []);
+            var count = await q.CountAsync(cancellationToken);
+            var items = await Order(q, query).Skip(skip).Take(take).ListAsync(cancellationToken);
+
+            return (count, items.ToList());
+        }
+
+        // More surveys than one IN list holds (SQL Server refuses more than 2,100 parameters): each chunk is counted and
+        // its first skip + take responses read in the page's order; the page is cut from those, merged.
+        var total = 0;
+        var merged = new List<SurveyResponse>();
+
+        foreach (var chunk in chunks)
+        {
+            var q = Filter(query, chunk);
+            total += await q.CountAsync(cancellationToken);
+            merged.AddRange(await Order(q, query).Take(skip + take).ListAsync(cancellationToken));
+        }
+
+        IEnumerable<SurveyResponse> ordered = query.OrderById
+            ? merged.OrderBy(response => response.ItemId, StringComparer.Ordinal)
+            : query.OldestFirst
+            ? merged.OrderBy(response => response.CompletedUtc ?? DateTime.MinValue).ThenBy(response => response.StartedUtc).ThenBy(response => response.ItemId, StringComparer.Ordinal)
+            : merged.OrderByDescending(response => response.StartedUtc).ThenByDescending(response => response.ItemId, StringComparer.Ordinal);
+
+        return (total, ordered.Skip(skip).Take(take).ToList());
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountForSurveyAsync(string surveyId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(surveyId))
+        {
+            return 0;
+        }
+
+        return await _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    private static IQuery<SurveyResponse, SurveyResponseIndex> Order(IQuery<SurveyResponse, SurveyResponseIndex> query, SurveyResponseQuery options)
+        => options.OrderById
+            ? query.OrderBy(index => index.ItemId)
+            : options.OldestFirst
+            ? query.OrderBy(index => index.CompletedUtc).ThenBy(index => index.StartedUtc).ThenBy(index => index.Id)
+            : query.OrderByDescending(index => index.StartedUtc).ThenByDescending(index => index.Id);
+
+    // Applies the query's filters; surveyIds is one chunk of its surveys, or null for every survey.
+    private IQuery<SurveyResponse, SurveyResponseIndex> Filter(SurveyResponseQuery query, string[] surveyIds)
+    {
         var q = _session.Query<SurveyResponse, SurveyResponseIndex>(collection: SurveysConstants.ResponsesCollectionName);
 
-        if (query.SurveyIds.Count > 0)
+        if (surveyIds is not null)
         {
-            var ids = query.SurveyIds.ToArray();
-            q = q.Where(index => index.SurveyId.IsIn(ids));
+            q = q.Where(index => index.SurveyId.IsIn(surveyIds));
         }
 
         if (!string.IsNullOrEmpty(query.UserId))
@@ -96,7 +149,6 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
             var excludedUser = query.ExcludedUserId;
             q = q.Where(index => index.UserId == null || index.UserId != excludedUser);
         }
-
         if (query.Grading is { } grading)
         {
             var value = grading.ToString();
@@ -135,26 +187,6 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
             q = q.Where(index => index.Number.Contains(search));
         }
 
-        var count = await q.CountAsync(cancellationToken);
-        var ordered = query.OrderById
-            ? q.OrderBy(index => index.ItemId)
-            : query.OldestFirst
-            ? q.OrderBy(index => index.CompletedUtc).ThenBy(index => index.StartedUtc).ThenBy(index => index.Id)
-            : q.OrderByDescending(index => index.StartedUtc).ThenByDescending(index => index.Id);
-        var items = await ordered.Skip(skip).Take(take).ListAsync(cancellationToken);
-
-        return (count, items.ToList());
-    }
-
-    /// <inheritdoc />
-    public async Task<int> CountForSurveyAsync(string surveyId, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(surveyId))
-        {
-            return 0;
-        }
-
-        return await _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName)
-            .CountAsync(cancellationToken);
+        return q;
     }
 }

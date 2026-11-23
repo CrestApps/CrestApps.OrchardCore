@@ -18,7 +18,7 @@ Surveys never names its consumers. A module plugs in with these registrations fr
 | `AddSurveyResponseObserver<T>()` | `ISurveyResponseObserver` | Hearing response events |
 | `AddSurveyObserver<T>()` | `ISurveyObserver` | Hearing survey events (published, closed, status changed, deleted) |
 | `AddSurveyGradingScope<T>()` | `ISurveyGradingScope` | Letting users grade some surveys without the global permission |
-| `AddSurveyAccessProvider<T>()` | `ISurveyAccessProvider` | Granting operations on some surveys without global permissions |
+| `AddSurveyAccessProvider<T>()` | `ISurveyAccessProvider` | Granting operations on some surveys without global permissions; implement `ListGrantsAsync` to list the owners and surveys you grant at once, or pages that list surveys ask `GrantsAsync` about every survey |
 | `AddSurveyImportFormat<T>()` | `ISurveyImportFormat` | Reading question bank files |
 | `AddSurveyConditionSourceProvider<T>()` | `ISurveyConditionSourceProvider` | Values for `context:{key}` condition sources |
 | `AddSurveyResponseFieldProvider<T>()` | `ISurveyResponseFieldProvider` | Fields of the `SurveyResponses` data set |

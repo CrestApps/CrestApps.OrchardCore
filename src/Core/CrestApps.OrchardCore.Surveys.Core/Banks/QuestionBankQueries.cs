@@ -72,6 +72,13 @@ public sealed class QuestionBankQueries : IQuestionBankQueries
             root = root.NoIndexOptimizations();
         }
 
+        if (!string.IsNullOrWhiteSpace(query.Tag))
+        {
+            // The tag is joined in the database, so a tag on thousands of questions never becomes an IN list of their ids.
+            var tag = query.Tag.Trim();
+            root = root.With<BankQuestionTagIndex>(index => index.BankId == bankId && index.Tag == tag);
+        }
+
         var questions = root.With<BankQuestionIndex>(index => index.BankId == bankId);
 
         if (!string.IsNullOrEmpty(query.ControlType))
@@ -88,21 +95,6 @@ public sealed class QuestionBankQueries : IQuestionBankQueries
         if (query.Retired is { } retired)
         {
             questions = questions.Where(index => index.Retired == retired);
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.Tag))
-        {
-            var tag = query.Tag.Trim();
-            var rows = await _session.QueryIndex<BankQuestionTagIndex>(index => index.BankId == bankId && index.Tag == tag, collection: Collection)
-                .ListAsync(cancellationToken);
-            var ids = rows.Select(row => row.BankQuestionId).Distinct(StringComparer.Ordinal).ToArray();
-
-            if (ids.Length == 0)
-            {
-                return (0, []);
-            }
-
-            questions = questions.Where(index => index.ItemId.IsIn(ids));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))

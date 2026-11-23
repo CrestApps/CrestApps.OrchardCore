@@ -24,15 +24,43 @@ internal sealed class ResultsSqliteStore : IAsyncDisposable
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"surveys-results-{Guid.NewGuid():N}.db");
     private readonly MemoryCache _memoryCache = new(new MemoryCacheOptions());
 
+    private ParameterLimitedSqliteConnectionFactory _connections;
+
     public IStore Store { get; private set; }
+
+    /// <summary>
+    /// Gets or sets the most parameters one statement may bind, or <see langword="null"/> for SQLite's own limit. Set it to
+    /// <see cref="ParameterLimitedSqliteConnectionFactory.SqlServerLimit"/> once seeding is done, so a statement SQL Server
+    /// would refuse fails here too.
+    /// </summary>
+    public int? ParameterLimit
+    {
+        get => _connections.ParameterLimit;
+        set => _connections.ParameterLimit = value;
+    }
 
     public static async Task<ResultsSqliteStore> CreateAsync()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var result = new ResultsSqliteStore();
+        var connectionString = $"Data Source={result._databasePath};Pooling=False";
 
-        result.Store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={result._databasePath};Pooling=False"));
-        result.Store.RegisterIndexes([new SurveyIndexProvider(), new SurveyVersionIndexProvider(), new SurveyCollectorIndexProvider()], SurveysConstants.CollectionName);
+        result._connections = new ParameterLimitedSqliteConnectionFactory(connectionString);
+        result.Store = StoreFactory.Create(configuration =>
+        {
+            configuration.UseSqLite(connectionString);
+            configuration.ConnectionFactory = result._connections;
+        });
+        result.Store.RegisterIndexes(
+            [
+                new SurveyIndexProvider(),
+                new SurveyTagIndexProvider(),
+                new SurveyVersionIndexProvider(),
+                new SurveyCollectorIndexProvider(),
+                new BankQuestionIndexProvider(),
+                new BankQuestionTagIndexProvider(),
+            ],
+            SurveysConstants.CollectionName);
         result.Store.RegisterIndexes([new SurveyResponseIndexProvider()], SurveysConstants.ResponsesCollectionName);
 
         await result.Store.InitializeAsync(cancellationToken);

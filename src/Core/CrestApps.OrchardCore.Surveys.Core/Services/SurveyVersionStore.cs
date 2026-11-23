@@ -53,6 +53,26 @@ public sealed class SurveyVersionStore : DocumentCatalog<SurveyVersion, SurveyVe
     }
 
     /// <summary>
+    /// Lists the numbers of the versions of a survey, newest first, from the version index (no version is loaded).
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The version numbers.</returns>
+    public async Task<IReadOnlyList<int>> ListNumbersAsync(string surveyId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(surveyId))
+        {
+            return [];
+        }
+
+        var rows = await Session.QueryIndex<SurveyVersionIndex>(index => index.SurveyId == surveyId, collection: SurveysConstants.CollectionName)
+            .OrderByDescending(index => index.Number)
+            .ListAsync(cancellationToken);
+
+        return rows.Select(row => row.Number).Distinct().ToList();
+    }
+
+    /// <summary>
     /// Finds a version of a survey by number.
     /// </summary>
     /// <param name="surveyId">The survey.</param>

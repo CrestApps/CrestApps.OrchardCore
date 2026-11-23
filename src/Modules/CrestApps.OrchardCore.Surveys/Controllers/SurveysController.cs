@@ -151,7 +151,7 @@ public sealed class SurveysController : Controller
             ], S["Show"], S["Show"]),
         };
 
-        var tags = await _listService.ListTagsAsync(HttpContext.RequestAborted);
+        var tags = await _listService.ListTagsAsync(manageAll ? null : CurrentUserId(), HttpContext.RequestAborted);
 
         if (tags.Count > 0)
         {

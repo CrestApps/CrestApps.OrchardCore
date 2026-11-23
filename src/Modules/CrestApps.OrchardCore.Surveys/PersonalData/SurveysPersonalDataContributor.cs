@@ -126,7 +126,12 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         ArgumentNullException.ThrowIfNull(context);
 
         var files = ActivatorUtilities.GetServiceOrCreateInstance<SurveyResponseFiles>(_serviceProvider);
-        var surveys = (await _surveyStore.GetAllAsync(cancellationToken)).ToDictionary(survey => survey.ItemId, StringComparer.Ordinal);
+        // Only the anonymous surveys (whose secrets derive the respondent keys) and the surveys of the person's invitations
+        // are loaded, a chunk at a time, not every survey.
+        var anonymous = nameof(AnonymityMode.Anonymous);
+        var anonymousIds = (await _session.QueryIndex<SurveyIndex>(index => index.Anonymity == anonymous || index.Anonymity == null, collection: SurveysConstants.CollectionName)
+            .ListAsync(cancellationToken)).Select(row => row.ItemId);
+        var surveys = await LoadSurveysAsync(anonymousIds, cancellationToken);
         var anonymousSecrets = new List<string>();
 
         foreach (var survey in surveys.Values.Where(SurveyAnonymity.IsAnonymous))
@@ -138,6 +143,11 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         }
 
         var invitations = await InvitationsAsync(context.Subject, cancellationToken);
+
+        foreach (var (id, survey) in await LoadSurveysAsync(invitations.Select(invitation => invitation.SurveyId).Where(id => !string.IsNullOrEmpty(id) && !surveys.ContainsKey(id)), cancellationToken))
+        {
+            surveys[id] = survey;
+        }
 
         foreach (var response in await ResponsesAsync(context.Subject, invitations, cancellationToken))
         {
@@ -271,5 +281,20 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         }
 
         return found.Values.ToList();
+    }
+
+    private async Task<Dictionary<string, Survey>> LoadSurveysAsync(IEnumerable<string> surveyIds, CancellationToken cancellationToken)
+    {
+        var surveys = new Dictionary<string, Survey>(StringComparer.Ordinal);
+
+        foreach (var chunk in SurveyIdChunks.Of(surveyIds))
+        {
+            foreach (var survey in await _surveyStore.GetAsync(chunk, cancellationToken))
+            {
+                surveys[survey.ItemId] = survey;
+            }
+        }
+
+        return surveys;
     }
 }

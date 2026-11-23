@@ -16,19 +16,16 @@ internal sealed class SurveyActivityReport : IReport
 {
     private readonly SurveyReportData _data;
     private readonly SurveyResultsQueries _queries;
-    private readonly ISurveyAnswerAggregates _aggregates;
 
     internal readonly IStringLocalizer S;
 
     public SurveyActivityReport(
         SurveyReportData data,
         SurveyResultsQueries queries,
-        ISurveyAnswerAggregates aggregates,
         IStringLocalizer<SurveyActivityReport> stringLocalizer)
     {
         _data = data;
         _queries = queries;
-        _aggregates = aggregates;
         S = stringLocalizer;
     }
 
@@ -50,21 +47,21 @@ internal sealed class SurveyActivityReport : IReport
 
         var range = context.Filter.GetDateRange();
         var to = range.ToUtc is { } end && end.Ticks < DateTime.MaxValue.Ticks ? end.AddTicks(1) : (DateTime?)null;
-        var rows = new List<(string Title, long Completed, int Pending)>();
+        var rows = new List<(string Title, long Completed, long Pending)>();
+        var readable = await _data.ListReadableAsync(context.User, cancellationToken);
 
-        foreach (var survey in await _data.ListReadableAsync(context.User, cancellationToken))
+        if (readable.Count > 0)
         {
-            var completed = await _aggregates.CountResponsesAsync(new SurveyAnswerFilter
-            {
-                SurveyId = survey.ItemId,
-                CompletedFromUtc = range.FromUtc,
-                CompletedToUtc = to,
-            }, cancellationToken);
-            var pending = await _queries.CountPendingGradingAsync(survey.ItemId, cancellationToken);
+            // Two grouped counts for every readable survey at once (by chunks of survey ids), not two queries per survey.
+            var all = await _data.CanReadEverySurveyAsync(context.User, cancellationToken);
+            var counts = await _queries.CountActivityAsync(all ? null : readable.Select(survey => survey.ItemId), range.FromUtc, to, cancellationToken);
 
-            if (completed > 0 || pending > 0)
+            foreach (var survey in readable)
             {
-                rows.Add((survey.Title ?? survey.Name, completed, pending));
+                if (counts.TryGetValue(survey.ItemId, out var count) && (count.Completed > 0 || count.Pending > 0))
+                {
+                    rows.Add((survey.Title ?? survey.Name, count.Completed, count.Pending));
+                }
             }
         }
 

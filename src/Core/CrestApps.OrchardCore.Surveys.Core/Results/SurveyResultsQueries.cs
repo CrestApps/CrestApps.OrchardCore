@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Dapper;
@@ -269,6 +270,81 @@ public sealed class SurveyResultsQueries
             .Select(item => SurveyIndexSql.Text(item["SurveyId"]))
             .Where(id => !string.IsNullOrEmpty(id))
             .ToList();
+    }
+
+    /// <summary>
+    /// Counts, per survey, the completed non-test responses completed in a period and the non-test responses that wait
+    /// for a grader: two grouped statements per chunk of surveys, whatever the number of surveys.
+    /// </summary>
+    /// <param name="surveyIds">The surveys, or <see langword="null"/> for every survey.</param>
+    /// <param name="fromUtc">The start of the period, or <see langword="null"/>.</param>
+    /// <param name="toUtc">The end of the period (excluded), or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The counts of the surveys that have any, by survey id.</returns>
+    public async Task<IReadOnlyDictionary<string, (long Completed, long Pending)>> CountActivityAsync(IEnumerable<string> surveyIds, DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default)
+    {
+        var counts = new Dictionary<string, (long Completed, long Pending)>(StringComparer.Ordinal);
+        IEnumerable<string[]> chunks = surveyIds is null ? [null] : SurveyIdChunks.Of(surveyIds);
+        var surveyId = _sql.Column(nameof(SurveyResponseIndex.SurveyId));
+
+        foreach (var chunk in chunks)
+        {
+            foreach (var pending in new[] { false, true })
+            {
+                var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
+                var parameters = new DynamicParameters();
+                builder.Selector($"{surveyId} AS SurveyId, COUNT(*) AS Total");
+                builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.IsTest))} = @IsTest");
+                parameters.Add("IsTest", false);
+
+                if (pending)
+                {
+                    builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Grading))} = @Grading");
+                    parameters.Add("Grading", nameof(GradingStatus.Pending));
+                }
+                else
+                {
+                    builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Status))} = @Status");
+                    parameters.Add("Status", nameof(SurveyResponseStatus.Completed));
+
+                    if (fromUtc is { } from)
+                    {
+                        builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.CompletedUtc))} >= @FromUtc");
+                        parameters.Add("FromUtc", from);
+                    }
+
+                    if (toUtc is { } to)
+                    {
+                        builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.CompletedUtc))} < @ToUtc");
+                        parameters.Add("ToUtc", to);
+                    }
+                }
+
+                if (chunk is not null)
+                {
+                    builder.WhereAnd($"{surveyId} IN @SurveyIds");
+                    parameters.Add("SurveyIds", chunk);
+                }
+
+                builder.GroupBy(surveyId);
+
+                foreach (var row in await _sql.QueryAsync(builder, parameters, cancellationToken))
+                {
+                    var id = SurveyIndexSql.Text(row["SurveyId"]);
+
+                    if (string.IsNullOrEmpty(id))
+                    {
+                        continue;
+                    }
+
+                    var total = SurveyIndexSql.Long(row["Total"]);
+                    var current = counts.GetValueOrDefault(id);
+                    counts[id] = pending ? (current.Completed, current.Pending + total) : (current.Completed + total, current.Pending);
+                }
+            }
+        }
+
+        return counts;
     }
 
     private IQuery<SurveyResponse, SurveyResponseIndex> Filter(SurveyResultsScope scope)

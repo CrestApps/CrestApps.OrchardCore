@@ -25,6 +25,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
     private readonly IReadOnlyDictionary<string, SurveyVersion> _versions;
     private readonly SurveyResponseColumns _columns;
     private readonly SurveyRespondentNames _names;
+    private readonly SurveyDataSetAccess _access;
 
     public SurveyWideDataSet(
         Survey survey,
@@ -36,10 +37,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
         SurveyDataSetAccess access,
         IStringLocalizer S)
         : base(
-            new DataSetDescriptor(SurveyWideDataSetFactory.DataSetName(survey), S["{0} responses", survey.Title ?? survey.Name], S["One row per response to {0}, with a field per question.", survey.Title ?? survey.Name])
-            {
-                Group = S["Survey responses"],
-            },
+            Describe(survey, S),
             session,
             authorizationService,
             access,
@@ -49,6 +47,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
         _versions = versions.ToDictionary(version => version.ItemId, StringComparer.Ordinal);
         _columns = columns;
         _names = names;
+        _access = access;
 
         var group = S["Response"].Value;
         var answers = S["Answers"].Value;
@@ -76,6 +75,28 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
         }
 
         CompleteDescription();
+    }
+
+    /// <summary>
+    /// Describes the data set of a survey, without reading its versions, for the list of data sets.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="S">The localizer.</param>
+    /// <returns>The descriptor.</returns>
+    public static DataSetDescriptor Describe(Survey survey, IStringLocalizer S)
+        => new(SurveyWideDataSetFactory.DataSetName(survey), S["{0} responses", survey.Title ?? survey.Name], S["One row per response to {0}, with a field per question.", survey.Title ?? survey.Name])
+        {
+            Group = S["Survey responses"],
+        };
+
+    private protected override async Task<(bool All, IReadOnlyDictionary<string, Survey> Surveys)> ReadableAsync(DataSourceContext context, CancellationToken cancellationToken)
+    {
+        // The data set reads one survey's responses, so only that survey is checked and read.
+        IReadOnlyDictionary<string, Survey> surveys = await _access.CanReadAsync(context, _survey.ItemId, cancellationToken)
+            ? new Dictionary<string, Survey>(StringComparer.Ordinal) { [_survey.ItemId] = _survey }
+            : new Dictionary<string, Survey>(StringComparer.Ordinal);
+
+        return (false, surveys);
     }
 
     protected override IEnumerable<SurveyResponseChildRow> GetRows(SurveyResponse document)
@@ -124,7 +145,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
     {
         var surveyId = _survey.ItemId;
 
-        return surveyIds.Contains(surveyId, StringComparer.Ordinal)
+        return surveyIds is null || surveyIds.Contains(surveyId, StringComparer.Ordinal)
             ? rows.Where(index => index.SurveyId == surveyId && !index.IsTest)
             : rows.Where(index => index.SurveyId == null && index.SurveyId != null);
     }

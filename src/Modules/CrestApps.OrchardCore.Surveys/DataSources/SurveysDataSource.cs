@@ -55,10 +55,7 @@ public sealed class SurveysDataSource : IDataSource
             }
         }
 
-        foreach (var dataSet in await _wide.ListAsync(context, cancellationToken))
-        {
-            descriptors.Add(dataSet.Descriptor);
-        }
+        descriptors.AddRange(await _wide.DescribeAsync(context, cancellationToken));
 
         return descriptors;
     }

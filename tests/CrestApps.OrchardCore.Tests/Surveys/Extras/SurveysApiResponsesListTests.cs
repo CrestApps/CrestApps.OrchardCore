@@ -65,7 +65,7 @@ public sealed class SurveysApiResponsesListTests : IAsyncLifetime
         Assert.Empty(json.GetProperty("items").EnumerateArray());
     }
 
-    private async Task<JsonElement> ListAsync(ISession session)
+    private static async Task<JsonElement> ListAsync(ISession session)
     {
         var services = new ServiceCollection().BuildServiceProvider();
         var requestServices = new ServiceCollection()

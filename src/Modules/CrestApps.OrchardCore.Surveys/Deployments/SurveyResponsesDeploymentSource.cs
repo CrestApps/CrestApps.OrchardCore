@@ -95,50 +95,57 @@ internal sealed class SurveyResponsesDeploymentSource : DeploymentSourceBase<Sur
         var from = step.FromDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var to = step.ToDate?.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var inProgress = nameof(SurveyResponseStatus.InProgress);
-        var skip = 0;
 
-        while (true)
+        // The surveys are named a chunk at a time, so many chosen surveys never pass SQL Server's 2,100 parameters.
+        IEnumerable<string[]> chunks = surveyIds is null ? [null] : SurveyIdChunks.Of(surveyIds);
+
+        foreach (var chunk in chunks)
         {
-            var query = _session.Query<SurveyResponse, SurveyResponseIndex>(collection: SurveysConstants.ResponsesCollectionName);
+            var skip = 0;
 
-            if (surveyIds is not null)
+            while (true)
             {
-                query = query.Where(index => index.SurveyId.IsIn(surveyIds));
+                var query = _session.Query<SurveyResponse, SurveyResponseIndex>(collection: SurveysConstants.ResponsesCollectionName);
+
+                if (chunk is not null)
+                {
+                    query = query.Where(index => index.SurveyId.IsIn(chunk));
+                }
+
+                if (!step.IncludeTest)
+                {
+                    query = query.Where(index => !index.IsTest);
+                }
+
+                if (!step.IncludeInProgress)
+                {
+                    query = query.Where(index => index.Status != inProgress);
+                }
+
+                if (from is { } start)
+                {
+                    query = query.Where(index => index.StartedUtc >= start);
+                }
+
+                if (to is { } end)
+                {
+                    query = query.Where(index => index.StartedUtc < end);
+                }
+
+                var page = (await query.OrderBy(index => index.Id).Skip(skip).Take(SurveysConstants.PageSize).ListAsync()).ToList();
+
+                foreach (var node in await _exporter.ExportResponsesAsync(page))
+                {
+                    responses.Add(node.DeepClone());
+                }
+
+                if (page.Count < SurveysConstants.PageSize)
+                {
+                    break;
+                }
+
+                skip += page.Count;
             }
-
-            if (!step.IncludeTest)
-            {
-                query = query.Where(index => !index.IsTest);
-            }
-
-            if (!step.IncludeInProgress)
-            {
-                query = query.Where(index => index.Status != inProgress);
-            }
-
-            if (from is { } start)
-            {
-                query = query.Where(index => index.StartedUtc >= start);
-            }
-
-            if (to is { } end)
-            {
-                query = query.Where(index => index.StartedUtc < end);
-            }
-
-            var page = (await query.OrderBy(index => index.Id).Skip(skip).Take(SurveysConstants.PageSize).ListAsync()).ToList();
-
-            foreach (var node in await _exporter.ExportResponsesAsync(page))
-            {
-                responses.Add(node.DeepClone());
-            }
-
-            if (page.Count < SurveysConstants.PageSize)
-            {
-                break;
-            }
-
-            skip += page.Count;
         }
     }
 }

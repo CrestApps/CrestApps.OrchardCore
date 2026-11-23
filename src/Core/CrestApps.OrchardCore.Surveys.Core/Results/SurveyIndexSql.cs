@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Services;
 using Dapper;
 using YesSql;
@@ -15,7 +16,7 @@ internal sealed class SurveyIndexSql
     /// <summary>
     /// The most ids an IN list holds; longer lists run in chunks.
     /// </summary>
-    public const int ChunkSize = 500;
+    public const int ChunkSize = SurveyIdChunks.Size;
 
     private readonly ISession _session;
     private readonly IConfiguration _configuration;
@@ -113,7 +114,7 @@ internal sealed class SurveyIndexSql
             yield break;
         }
 
-        foreach (var chunk in filter.ResponseIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Chunk(ChunkSize))
+        foreach (var chunk in SurveyIdChunks.Of(filter.ResponseIds))
         {
             yield return chunk;
         }

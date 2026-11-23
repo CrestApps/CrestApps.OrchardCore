@@ -26,6 +26,8 @@ internal sealed class SurveyReportData
     private readonly IServiceProvider _serviceProvider;
     private readonly ILocalClock _localClock;
     private readonly SurveyRespondentNames _names;
+    private readonly SurveyAccessScopes _scopes;
+    private readonly SurveyIndexReader _reader;
 
     internal readonly IStringLocalizer S;
 
@@ -36,7 +38,9 @@ internal sealed class SurveyReportData
         IServiceProvider serviceProvider,
         ILocalClock localClock,
         SurveyRespondentNames names,
-        IStringLocalizer<SurveyReportData> stringLocalizer)
+        IStringLocalizer<SurveyReportData> stringLocalizer,
+        SurveyAccessScopes scopes,
+        SurveyIndexReader reader)
     {
         _surveys = surveys;
         _versions = versions;
@@ -44,15 +48,19 @@ internal sealed class SurveyReportData
         _serviceProvider = serviceProvider;
         _localClock = localClock;
         _names = names;
+        _scopes = scopes;
+        _reader = reader;
         S = stringLocalizer;
     }
 
     /// <summary>
-    /// Lists the published surveys whose responses a person may read, by title.
+    /// Lists the published surveys whose responses a person may read, by title. The surveys are summaries read from the
+    /// survey index (<see cref="SurveyIndexReader"/>), and who may read which is worked out at once
+    /// (<see cref="SurveyAccessScopes"/>), so no survey document is loaded.
     /// </summary>
     /// <param name="user">The person.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The surveys.</returns>
+    /// <returns>The survey summaries.</returns>
     public async Task<IReadOnlyList<Survey>> ListReadableAsync(ClaimsPrincipal user, CancellationToken cancellationToken)
     {
         if (user is null)
@@ -60,18 +68,26 @@ internal sealed class SurveyReportData
             return [];
         }
 
-        var readable = new List<Survey>();
+        var scope = await _scopes.ResolveAsync(user, SurveyOperation.ViewResponses, cancellationToken);
 
-        foreach (var survey in await _surveys.GetAllAsync(cancellationToken))
+        if (scope.IsEmpty)
         {
-            if (survey.PublishedVersionNumber > 0 && await CanViewResponsesAsync(user, survey, cancellationToken))
-            {
-                readable.Add(survey);
-            }
+            return [];
         }
 
-        return readable.OrderBy(survey => survey.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+        return (await _reader.ListAsync(scope.All ? null : scope.SurveyIds, publishedOnly: true, cancellationToken))
+            .OrderBy(survey => survey.Title, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
+
+    /// <summary>
+    /// Gets whether a person may read the responses of every survey, so a statement over them needs no survey filter.
+    /// </summary>
+    /// <param name="user">The person.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when they may.</returns>
+    public async Task<bool> CanReadEverySurveyAsync(ClaimsPrincipal user, CancellationToken cancellationToken)
+        => user is not null && (await _scopes.ResolveAsync(user, SurveyOperation.ViewResponses, cancellationToken)).All;
 
     /// <summary>
     /// Decides whether a person may read the responses of a survey: the survey authorization service when there is one,

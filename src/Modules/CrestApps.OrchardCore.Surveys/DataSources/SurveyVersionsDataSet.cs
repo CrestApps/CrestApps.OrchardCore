@@ -42,5 +42,8 @@ internal sealed class SurveyVersionsDataSet : SurveysDataSetBase<SurveyVersion, 
     }
 
     protected override IQueryIndex<SurveyVersionIndex> OfSurveys(IQueryIndex<SurveyVersionIndex> rows, string[] surveyIds)
-        => rows.Where(index => index.SurveyId.IsIn(surveyIds));
+        => surveyIds is null ? rows : rows.Where(index => index.SurveyId.IsIn(surveyIds));
+
+    protected override string SurveyIdOf(SurveyVersion row)
+        => row?.SurveyId;
 }

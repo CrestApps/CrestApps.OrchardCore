@@ -109,22 +109,24 @@ internal sealed class SurveyReportFilterDisplayDriver : DisplayDriver<ReportFilt
 
             if (survey is not null)
             {
-                var versions = await _versions.ListBySurveyAsync(survey.ItemId, cancellationToken);
+                // The version numbers come from the version index; only the version whose questions the filters offer is loaded.
+                var numbers = await _versions.ListNumbersAsync(survey.ItemId, cancellationToken);
 
                 model.Versions =
                 [
                     new SelectListItem(S["Published version"], SurveyReportKeys.PublishedVersion, model.Version == SurveyReportKeys.PublishedVersion),
                     new SelectListItem(S["All versions"], SurveyReportKeys.AllVersions, model.Version == SurveyReportKeys.AllVersions),
-                    .. versions.Select(version =>
+                    .. numbers.Select(versionNumber =>
                     {
-                        var number = version.Number.ToString(CultureInfo.InvariantCulture);
+                        var number = versionNumber.ToString(CultureInfo.InvariantCulture);
 
-                        return new SelectListItem(S["Version {0}", version.Number], number, model.Version == number);
+                        return new SelectListItem(S["Version {0}", versionNumber], number, model.Version == number);
                     }),
                 ];
                 model.Collectors = [.. (await _collectors.ListBySurveyAsync(survey.ItemId, cancellationToken)).Select(collector => new SelectListItem(collector.Name, collector.ItemId, collector.ItemId == model.CollectorId))];
 
-                var definition = versions.FirstOrDefault(version => version.Number == survey.PublishedVersionNumber)?.Definition ?? (versions.Count > 0 ? versions[0].Definition : null);
+                var shown = numbers.Contains(survey.PublishedVersionNumber) || numbers.Count == 0 ? survey.PublishedVersionNumber : numbers[0];
+                var definition = numbers.Count > 0 ? (await _versions.FindByNumberAsync(survey.ItemId, shown, cancellationToken))?.Definition : null;
 
                 foreach (var (_, question) in SurveyDefinitionQuestions.All(definition))
                 {
