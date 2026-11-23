@@ -59,7 +59,13 @@ internal sealed class SurveyDetailsDisplayDriver : DisplayDriver<Survey>
 
         var name = model.Name?.Trim();
 
-        if (!SurveyNames.IsValidName(name))
+        if (survey.PublishedVersionNumber > 0 && !string.IsNullOrEmpty(survey.Name) && !string.Equals(name, survey.Name, StringComparison.Ordinal))
+        {
+            // Reports and data pipelines read a published survey's responses through the data set named after it
+            // (SurveyResponses_{name}): a new name would leave every design on it without its data.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The technical name can't change once the survey is published: reports and data pipelines use it. Copy the survey to use another name."]);
+        }
+        else if (!SurveyNames.IsValidName(name))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The technical name may hold only lowercase letters, digits and dashes."]);
         }

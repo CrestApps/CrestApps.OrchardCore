@@ -29,4 +29,6 @@ Under **Translation file**, select **Export** to download every original text, t
 
 When someone changes a text after it was translated, its translation shows **Out of date** and no longer counts as translated. Change the translation to mark it current. Respondents see the old translation until you do.
 
+Translations made before the site tracked changes to the original text show **Check**: the site can't tell whether the original changed since. Read them against the original, fix any that are wrong, and select **Save**. Saving marks them current.
+
 With Surveys AI, **Translate with AI** in the survey's menu translates the texts for you to review.

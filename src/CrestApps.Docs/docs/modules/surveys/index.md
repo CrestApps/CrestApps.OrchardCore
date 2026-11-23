@@ -136,5 +136,5 @@ Checks on one survey go through `ISurveyAuthorizationService`: the global permis
 - The **Survey Response Matches Condition** workflow event takes its rule as JSON, and its optional formula is not evaluated yet.
 - The accommodation grant form takes a user name rather than the user picker, because Surveys does not depend on the CrestApps Users module.
 - Invitations are sent by Surveys and its reminder task rather than as Outreach runs, so they don't show in Outreach's run history; they honor the same opt-outs ([collecting](./collecting.md#opt-outs-and-unsubscribes)).
-- QTI import copies every image of an item, feedback images included, into the public media library (`surveys/qti/{import}`), so anyone with an image's address can open it.
+- QTI import copies every image of an item, feedback images included, into the public media library (`surveys/qti/{content hash}/{file name}`, so importing the same image again reuses the file), so anyone with an image's address can open it.
 - The Excel reader of bank spreadsheet imports is a private copy of the one in ContentTransfer.OpenXml; a shared reader is still to be extracted.

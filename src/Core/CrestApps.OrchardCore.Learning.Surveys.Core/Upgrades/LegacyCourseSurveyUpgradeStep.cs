@@ -131,6 +131,18 @@ public sealed class LegacyCourseSurveyUpgradeStep : IResumableStep
                 await _session.SaveAsync(item);
             }
 
+            // A survey course staff built since (by a save in between) keeps its draft: the older questions only go.
+            if (LegacySurveyContent.IsNewerThanLegacy(survey))
+            {
+                foreach (var item in items)
+                {
+                    LegacyCourseSurveyUpgrade.TakeLegacyPart(item);
+                    await _session.SaveAsync(item);
+                }
+
+                return;
+            }
+
             var definition = LegacyCourseSurveyUpgrade.ToDefinition(legacy, survey.Title);
 
             LegacyCourseSurveyUpgrade.ApplySettings(legacy, survey);

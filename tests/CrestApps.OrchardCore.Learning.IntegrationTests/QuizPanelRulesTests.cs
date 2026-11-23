@@ -171,6 +171,70 @@ public sealed class QuizPanelRulesTests
     }
 
     [Fact]
+    public async Task VL13_AnAnonymousCourseSurveyCompletedWithoutTheLearner_IsRecordedOnTheirNextVisit_ByTheDayOnly()
+    {
+        // Arrange: an anonymous course survey the learner completed, whose completion never reached their progress (as
+        // when the deadline task or the survey's close submits it, with no learner to ask).
+        var setup = await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var course = await NewCourseAsync(contentManager, "Anonymous background");
+            var item = await NewItemAsync(contentManager, course, LearningSurveysConstants.ContentTypes.FeedbackSurvey, "Course feedback", CompletionModes.Submitted);
+
+            item.Alter<CourseSurveyPart>(_ => { });
+            await contentManager.CreateAsync(item, VersionOptions.Published);
+
+            await LearningSurveyTestSupport.PublishAsync(
+                services,
+                LearningSurveyTestSupport.SurveyIdOf(item),
+                LearningSurveyTestSupport.Definition("Course feedback", LearningSurveyTestSupport.SingleChoice("again", "Would you take it again?", ("yes", "Yes"), ("no", "No"))),
+                survey =>
+                {
+                    survey.Access ??= new SurveyAccessSettings();
+                    survey.Access.Anonymity = AnonymityMode.Anonymous;
+                });
+
+            var lesson = await NewItemAsync(contentManager, course, LearningSurveysConstants.ContentTypes.Choice, "Next step", CompletionModes.Submitted);
+
+            lesson.Alter<CourseSurveyPart>(_ => { });
+            await contentManager.CreateAsync(lesson, VersionOptions.Published);
+
+            var enrollmentId = await PublishAndEnrollAsync(services, contentManager, course, [item.ContentItemId, lesson.ContentItemId]);
+
+            return (CourseId: course.ContentItemId, ItemId: item.ContentItemId, EnrollmentId: enrollmentId);
+        });
+        using var learner = await _fixture.CreateClientAsync("learner1");
+        var path = $"learning/courses/{setup.CourseId}/play/{setup.ItemId}";
+        var player = await learner.GetStringAsync(path, TestContext.Current.CancellationToken);
+
+        await LearningSurveyTestSupport.AnswerOverHttpAsync(learner, $"learning/surveys/{setup.ItemId}/start", player, new Dictionary<string, string>
+        {
+            ["q.again"] = "yes",
+        });
+
+        var reopened = await _fixture.InTenantAsync(async services =>
+        {
+            var enrollment = await services.GetRequiredService<IEnrollmentStore>().FindByIdAsync(setup.EnrollmentId);
+            await services.GetRequiredService<ILearnerProgressService>().ReopenItemAsync(enrollment, setup.ItemId);
+
+            return (await services.GetRequiredService<ILearnerProgressService>().GetAsync(setup.EnrollmentId))?.Find(setup.ItemId)?.State;
+        });
+
+        // Act: the learner's next visit.
+        await learner.GetStringAsync(path, TestContext.Current.CancellationToken);
+
+        var progress = await _fixture.InTenantAsync(async services =>
+            (await services.GetRequiredService<ILearnerProgressService>().GetAsync(setup.EnrollmentId))?.Find(setup.ItemId));
+        var siteZone = await _fixture.InTenantAsync(async services =>
+            (await services.GetRequiredService<global::OrchardCore.Settings.ISiteService>().GetSiteSettingsAsync()).TimeZoneId);
+
+        // Assert
+        Assert.NotEqual(CourseItemState.Completed, reopened);
+        Assert.Equal(CourseItemState.Completed, progress?.State);
+        Assert.Equal(LearningSurveyResultObserver.StartOfDayUtc(progress.CompletedUtc.Value, siteZone), progress.CompletedUtc);
+    }
+
+    [Fact]
     public async Task TheCourseSurveyPanel_OffersToChangeAnswers_OnlyWhenThePublishedVersionAllowsIt()
     {
         // Arrange: the published version doesn't allow changing a finished response; the unpublished draft does.

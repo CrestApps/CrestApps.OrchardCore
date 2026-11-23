@@ -1,3 +1,5 @@
+using System.Globalization;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using YesSql;
@@ -9,12 +11,20 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// columns and the survey tag index are filled from each survey. Until a survey is reached, readers take what they need
 /// from the survey itself. <see cref="SurveysMigrations"/> asks for it when it adds the columns.
 /// </summary>
+/// <remarks>
+/// Each survey is saved as it was loaded, with YesSql's concurrency check (<see cref="SurveyStore.SaveUnchangedAsync"/>):
+/// when an author saves a survey of the page while the run holds it, the run's commit fails and writes nothing, rather
+/// than overwrite the edit with the copy it loaded. The next run reads the page again; the survey the author saved was
+/// reindexed by that save, so it is no longer listed.
+/// </remarks>
 internal sealed class SurveysReindexStep : IResumableStep
 {
     /// <summary>
     /// The step's name.
     /// </summary>
     public const string StepName = "Surveys.SurveysReindex";
+
+    private const char RangeSeparator = ':';
 
     private readonly ISession _session;
     private readonly SurveyStore _surveyStore;
@@ -34,8 +44,68 @@ internal sealed class SurveysReindexStep : IResumableStep
     public string Name => StepName;
 
     /// <inheritdoc />
-    public Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
-        => SurveyUpgradePages.RunAsync(
-            context,
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _ => true, index => index.Anonymity == null, cancellationToken: cancellationToken));
+    public async Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var (afterId, upToId) = ReadRange(context.Cursor);
+
+        if (upToId == 0)
+        {
+            // A saved survey's index row is written again under a new id (and no longer waits), so the walk stops at the
+            // last row that waited when it began.
+            var last = await _session.QueryIndex<SurveyIndex>(index => index.Anonymity == null, collection: SurveysConstants.CollectionName)
+                .OrderByDescending(index => index.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (last is null)
+            {
+                return true;
+            }
+
+            upToId = last.Id;
+        }
+
+        var rows = (await _session.QueryIndex<SurveyIndex>(index => index.Anonymity == null && index.Id > afterId && index.Id <= upToId, collection: SurveysConstants.CollectionName)
+            .OrderBy(index => index.Id)
+            .Take(SurveyUpgradePages.PageSize)
+            .ListAsync(cancellationToken)).ToList();
+
+        if (rows.Count == 0)
+        {
+            return true;
+        }
+
+        var ids = rows.Select(row => row.ItemId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+        foreach (var survey in await _surveyStore.GetAsync(ids, cancellationToken))
+        {
+            await _surveyStore.SaveUnchangedAsync(survey, cancellationToken);
+        }
+
+        afterId = rows[^1].Id;
+
+        if (rows.Count < SurveyUpgradePages.PageSize || afterId >= upToId)
+        {
+            return true;
+        }
+
+        context.Cursor = afterId.ToString(CultureInfo.InvariantCulture) + RangeSeparator + upToId.ToString(CultureInfo.InvariantCulture);
+
+        return false;
+    }
+
+    private static (long AfterId, long UpToId) ReadRange(string cursor)
+    {
+        var separator = string.IsNullOrEmpty(cursor) ? -1 : cursor.IndexOf(RangeSeparator, StringComparison.Ordinal);
+
+        if (separator <= 0
+            || !long.TryParse(cursor.AsSpan(0, separator), NumberStyles.None, CultureInfo.InvariantCulture, out var afterId)
+            || !long.TryParse(cursor.AsSpan(separator + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var upToId))
+        {
+            return (0, 0);
+        }
+
+        return (afterId, upToId);
+    }
 }

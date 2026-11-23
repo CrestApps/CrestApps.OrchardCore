@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Learning.Surveys.Core;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Learning.Surveys.ViewModels;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -22,6 +23,7 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
     private readonly ISurveyVersionCache _versionCache;
     private readonly ICourseAccessService _courseAccess;
     private readonly ILearningSurveyService _learningSurveys;
+    private readonly AnonymousCourseSurveyCompletions _anonymousCompletions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CourseSurveyPartLearnerDisplayDriver"/> class.
@@ -31,18 +33,21 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
     /// <param name="versionCache">The survey version cache.</param>
     /// <param name="courseAccess">The course access service.</param>
     /// <param name="learningSurveys">The Learning survey service.</param>
+    /// <param name="anonymousCompletions">Records anonymous responses submitted without the learner's request.</param>
     public CourseSurveyPartLearnerDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         ISurveyManager surveyManager,
         ISurveyVersionCache versionCache,
         ICourseAccessService courseAccess,
-        ILearningSurveyService learningSurveys)
+        ILearningSurveyService learningSurveys,
+        AnonymousCourseSurveyCompletions anonymousCompletions)
     {
         _httpContextAccessor = httpContextAccessor;
         _surveyManager = surveyManager;
         _versionCache = versionCache;
         _courseAccess = courseAccess;
         _learningSurveys = learningSurveys;
+        _anonymousCompletions = anonymousCompletions;
     }
 
     /// <inheritdoc />
@@ -56,6 +61,17 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
             model.SignedIn = !string.IsNullOrEmpty(user?.FindFirstValue(ClaimTypes.NameIdentifier));
             model.Anonymous = model.Survey?.Access?.Anonymity == AnonymityMode.Anonymous;
 
+            var access = model.Survey is not null && model.SignedIn
+                ? await _courseAccess.GetItemAccessAsync(user, part.ContentItem)
+                : null;
+
+            if (model.Anonymous && access is { Reason: CourseItemAccessReason.Enrolled, Enrollment: { } enrollment })
+            {
+                // A response submitted without the learner's request (at its deadline or the survey's close) names
+                // nobody; the learner's own visit records it, by the day only, open survey or not.
+                await _anonymousCompletions.CatchUpAsync(model.Survey, enrollment, part.ContentItem.ContentItemId);
+            }
+
             if (model.Survey is null || model.Survey.Status != SurveyStatus.Open)
             {
                 model.CannotAnswerReason = "NotOpen";
@@ -67,8 +83,6 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
             {
                 return;
             }
-
-            var access = await _courseAccess.GetItemAccessAsync(user, part.ContentItem);
 
             if (access.Reason != CourseItemAccessReason.Enrolled || access.Enrollment is null)
             {

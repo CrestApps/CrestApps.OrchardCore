@@ -257,6 +257,10 @@ public sealed class SurveyGradingService : ISurveyGradingService
                     SurveyIds = [surveyId],
                     VersionNumber = version.Number,
                     Statuses = [SurveyResponseStatus.Completed],
+
+                    // By response id, which a save never changes (each page's saves write the index rows again under new
+                    // ids, and start times can tie), so the pages neither skip nor repeat a response.
+                    OrderById = true,
                     Skip = skip,
                     Take = SurveysConstants.PageSize,
                 }, cancellationToken);

@@ -50,7 +50,7 @@ Open the survey's menu and select **Access and settings**. These settings apply 
 
 | Field | What it does |
 | --- | --- |
-| **Title**, **Technical name**, **Notes**, **Tags** | What staff see. Tags filter the survey list. |
+| **Title**, **Technical name**, **Notes**, **Tags** | What staff see. Tags filter the survey list. The technical name can't change once the survey is published: reports use it. |
 | **Audience** | **Anyone with the link**, **Signed-in users**, **Members of chosen audiences** or **Only invited people**. |
 | **Audiences** | Tick the audiences whose members may respond, when the audience is **Members of chosen audiences**. Audiences are kept in **Content > User Audiences**. |
 | **CAPTCHA** | Ask respondents who are not signed in to pass a CAPTCHA. People you invited by name, user, e-mail or phone skip it; a personal link made for nobody in particular still asks. |

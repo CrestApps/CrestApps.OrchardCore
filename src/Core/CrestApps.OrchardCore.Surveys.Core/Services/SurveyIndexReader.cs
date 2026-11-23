@@ -19,6 +19,7 @@ public sealed class SurveyIndexReader
 {
     private readonly ISession _session;
     private readonly SurveyStore _surveyStore;
+    private IReadOnlyCollection<Survey> _notReindexed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyIndexReader"/> class.
@@ -163,8 +164,68 @@ public sealed class SurveyIndexReader
         return surveys;
     }
 
+    /// <summary>
+    /// Lists, ordered by title, at most some surveys whose status is one given, of the given surveys or of every survey,
+    /// from their index rows: a picker that offers the open surveys an editor may manage reads only the rows it shows.
+    /// </summary>
+    /// <param name="surveyIds">The ids of the surveys, or <see langword="null"/> for every survey.</param>
+    /// <param name="status">The status.</param>
+    /// <param name="take">The most surveys listed.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The summaries, by title.</returns>
+    public async Task<IReadOnlyList<Survey>> ListByTitleAsync(IEnumerable<string> surveyIds, SurveyStatus status, int take, CancellationToken cancellationToken = default)
+    {
+        var name = status.ToString();
+        take = Math.Max(1, take);
+        var rows = new List<SurveyIndex>();
+
+        if (surveyIds is null)
+        {
+            rows.AddRange(await TitledAsync(index => index.Status == name, take, cancellationToken));
+        }
+        else
+        {
+            // Each chunk's first rows by title; the first of all of them are among those.
+            foreach (var chunk in SurveyIdChunks.Of(surveyIds))
+            {
+                rows.AddRange(await TitledAsync(index => index.Status == name && index.ItemId.IsIn(chunk), take, cancellationToken));
+            }
+        }
+
+        var first = rows
+            .OrderBy(row => row.Title, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(row => row.ItemId, StringComparer.Ordinal)
+            .Take(take)
+            .ToList();
+
+        return await ToSurveysAsync(first, cancellationToken);
+    }
+
+    /// <summary>
+    /// Lists the surveys whose index rows were written before the index held the owner, the anonymity and the tags, read
+    /// from their documents, until the reindex step reaches them. Lists that filter on the owner or a tag add them, so a
+    /// survey never drops out of its owner's list in the meantime. Read once per scope.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The surveys; empty once every row is reindexed.</returns>
+    public async Task<IReadOnlyCollection<Survey>> ListNotReindexedAsync(CancellationToken cancellationToken = default)
+        => _notReindexed ??= await NotReindexedAsync(cancellationToken);
+
+    private async Task<IEnumerable<SurveyIndex>> TitledAsync(Expression<Func<SurveyIndex, bool>> filter, int take, CancellationToken cancellationToken)
+        => await _session.QueryIndex<SurveyIndex>(collection: SurveysConstants.CollectionName)
+            .Where(filter)
+            .OrderBy(index => index.Title)
+            .ThenBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
     private async Task<IReadOnlyCollection<Survey>> NotReindexedAsync(CancellationToken cancellationToken)
     {
+        if (_notReindexed is not null)
+        {
+            return _notReindexed;
+        }
+
         var stale = (await RowsAsync(index => index.Anonymity == null, cancellationToken)).Select(row => row.ItemId).ToList();
         var surveys = new List<Survey>();
 
@@ -173,7 +234,7 @@ public sealed class SurveyIndexReader
             surveys.AddRange(await _surveyStore.GetAsync(chunk, cancellationToken));
         }
 
-        return surveys;
+        return _notReindexed = surveys;
     }
 
     private async Task<IEnumerable<SurveyIndex>> RowsAsync(Expression<Func<SurveyIndex, bool>> filter, CancellationToken cancellationToken)

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.Surveys.Core.Imports;
 using CrestApps.OrchardCore.Surveys.Core.Qti;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.Localization;
@@ -11,8 +12,8 @@ using OrchardCore.Media;
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
-/// Reads bank questions from IMS QTI 2.1 and 3.0 items and packages. Images of a package go to the media library, in a
-/// folder of the import's own.
+/// Reads bank questions from IMS QTI 2.1 and 3.0 items and packages, up to <see cref="QuestionImportUploads.MaxPackageBytes"/>.
+/// Images of a package go to the media library, in a folder named after each image's content, so a re-import adds no copy.
 /// </summary>
 public sealed class QtiQuestionImportFormat : ISurveyImportFormat
 {
@@ -71,9 +72,16 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
 
         var result = new SurveyImportResult();
 
-        using var buffer = new MemoryStream();
-        await content.CopyToAsync(buffer, cancellationToken);
-        buffer.Position = 0;
+        // The archive reader needs the whole package; the copy stops at the size limit, so an upload of any size is never
+        // read whole.
+        using var buffer = await QuestionImportUploads.ReadAtMostAsync(content, QuestionImportUploads.MaxPackageBytes, cancellationToken);
+
+        if (buffer is null)
+        {
+            result.Errors.Add(S["The file is larger than {0} MB.", QuestionImportUploads.MaxPackageBytes / 1024 / 1024]);
+
+            return result;
+        }
 
         var read = QtiReader.Read(buffer, fileName);
 
@@ -83,8 +91,6 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
 
             return result;
         }
-
-        var folder = MediaFolder + "/" + IdGenerator.GenerateId().ToLowerInvariant();
 
         foreach (var item in read.Items)
         {
@@ -104,7 +110,7 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
                 continue;
             }
 
-            var error = await StoreMediaAsync(item, question, folder, storeMedia, cancellationToken);
+            var error = await StoreMediaAsync(item, question, storeMedia, cancellationToken);
 
             if (error is not null)
             {
@@ -121,7 +127,7 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
 
     // Checks the images an item refers to and, when storeMedia is set, stores them in the media library and points the
     // question at them. A dry run checks the same images and leaves the question as it was.
-    private async Task<string> StoreMediaAsync(QtiItem item, BankQuestion question, string folder, bool storeMedia, CancellationToken cancellationToken)
+    private async Task<string> StoreMediaAsync(QtiItem item, BankQuestion question, bool storeMedia, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(question.Question);
 
@@ -151,13 +157,15 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
                 return S["the image {0} is larger than the media library accepts.", file.Path];
             }
 
-            var path = folder + "/" + SafePath(file.Path);
+            var path = MediaPath(file);
             var url = string.Empty;
 
             if (storeMedia)
             {
-                using (var stream = new MemoryStream(file.Content, writable: false))
+                // The same image, imported again, is already there under the same path: it is stored once.
+                if (await _mediaFileStore.GetFileInfoAsync(path) is null)
                 {
+                    using var stream = new MemoryStream(file.Content, writable: false);
                     await _mediaFileStore.CreateFileFromStreamAsync(path, stream, overwrite: true);
                 }
 
@@ -181,6 +189,22 @@ public sealed class QtiQuestionImportFormat : ISurveyImportFormat
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Gets where an image of a package is stored: in a folder named after its content, so importing the same package
+    /// (or another holding the same image) again reuses the file instead of adding a copy.
+    /// </summary>
+    /// <param name="file">The image.</param>
+    /// <returns>The media path.</returns>
+    internal static string MediaPath(QtiMediaFile file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(file.Content ?? []), 0, 12).ToLowerInvariant();
+        var name = SafePath(file.Path).Split('/')[^1];
+
+        return MediaFolder + "/" + hash + "/" + name;
     }
 
     private static string SafePath(string packagePath)

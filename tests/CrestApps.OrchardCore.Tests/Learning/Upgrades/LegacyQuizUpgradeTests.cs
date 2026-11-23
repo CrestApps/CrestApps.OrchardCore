@@ -56,6 +56,26 @@ public sealed class LegacyQuizUpgradeTests
     }
 
     [Fact]
+    public void P4L6_PointAt_KeepsTheOldSettings_UntilTheSurveyHasSavedThem()
+    {
+        // Arrange
+        var item = new ContentItem();
+        ((JsonObject)item.Content)["QuizPart"] = new JsonObject { ["PassMark"] = 50m, ["TimeLimitMinutes"] = 20 };
+
+        // Act: the step points the quiz at its survey first; a failed save of the survey leaves it here.
+        LegacyQuizUpgrade.PointAt(item, "survey1");
+
+        // Assert: the quiz has its survey and still holds the settings, so the next run can carry them.
+        Assert.False(LegacyQuizUpgrade.NeedsSurvey(item));
+        Assert.True(LegacyQuizUpgrade.HoldsLegacySettings(item));
+        Assert.Equal(50m, LegacyQuizUpgrade.PartOf(item)["PassMark"]!.GetValue<decimal>());
+
+        LegacyQuizUpgrade.SetSurveyId(item, "survey1");
+
+        Assert.False(LegacyQuizUpgrade.HoldsLegacySettings(item));
+    }
+
+    [Fact]
     public void SetSurveyId_PointsTheQuizAtItsSurvey_AndDropsTheOldSettings()
     {
         // Arrange

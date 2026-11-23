@@ -60,4 +60,25 @@ public sealed class LearningManagerSurveyAccessProvider : ISurveyAccessProvider
         return await _authorizationService.AuthorizeAsync(user, permission)
             && await _learningSurveys.IsOwnedByCourseItemAsync(survey);
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Lists every course item as an owner, from the content index, so a scope check never asks about each survey.
+    /// </remarks>
+    public async Task<SurveyAccessGrants> ListGrantsAsync(ClaimsPrincipal user, SurveyOperation operation, CancellationToken cancellationToken = default)
+    {
+        var permission = PermissionOf(operation);
+
+        if (permission is null
+            || string.IsNullOrEmpty(LearningSurveyUsers.GetUserId(user))
+            || !await _authorizationService.AuthorizeAsync(user, permission))
+        {
+            return SurveyAccessGrants.None;
+        }
+
+        return new SurveyAccessGrants
+        {
+            Owners = await _learningSurveys.ListCourseItemOwnersAsync(cancellationToken) ?? [],
+        };
+    }
 }

@@ -115,6 +115,64 @@ public sealed class LearningSurveyAccessProvidersTests
         Assert.Equal(expected, allowed);
     }
 
+    [Theory]
+    [InlineData(SurveyOperation.Manage, true)]
+    [InlineData(SurveyOperation.ViewResponses, true)]
+    [InlineData(SurveyOperation.Grade, false)]
+    public async Task VM2_TheManagerProvider_ListsEveryCourseItemAsAnOwner_WithoutAskingAboutEachSurvey(SurveyOperation operation, bool expected)
+    {
+        // Arrange
+        var learningSurveys = Owned(true);
+        learningSurveys.Setup(service => service.ListCourseItemOwnersAsync(It.IsAny<CancellationToken>())).ReturnsAsync([LearningSurveyContexts.Owner("quiz1"), LearningSurveyContexts.Owner("quiz2")]);
+        var provider = new LearningManagerSurveyAccessProvider(learningSurveys.Object, Authorization(LearningPermissions.ManageCourses, LearningPermissions.ViewLearnerRecords));
+
+        // Act
+        var grants = await provider.ListGrantsAsync(User(), operation, TestContext.Current.CancellationToken);
+
+        // Assert: a list, never null (null makes the scope ask about every survey), and no survey asked about.
+        Assert.NotNull(grants);
+        Assert.Equal(expected ? 2 : 0, grants.Owners.Count);
+        learningSurveys.Verify(service => service.IsOwnedByCourseItemAsync(It.IsAny<Survey>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(SurveyOperation.Grade, true)]
+    [InlineData(SurveyOperation.DeleteResponses, false)]
+    [InlineData(SurveyOperation.Manage, false)]
+    public async Task VM2_TheAssessmentsProvider_ListsEveryCourseItemAsAnOwner_WithoutAskingAboutEachSurvey(SurveyOperation operation, bool expected)
+    {
+        // Arrange: the grader holds Grade assessments but not Override grades.
+        var learningSurveys = Owned(true);
+        learningSurveys.Setup(service => service.ListCourseItemOwnersAsync(It.IsAny<CancellationToken>())).ReturnsAsync([LearningSurveyContexts.Owner("quiz1")]);
+        var provider = new AssessmentsSurveyAccessProvider(learningSurveys.Object, Authorization(AssessmentPermissions.GradeAssessments));
+
+        // Act
+        var grants = await provider.ListGrantsAsync(User(), operation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(grants);
+        Assert.Equal(expected ? 1 : 0, grants.Owners.Count);
+        learningSurveys.Verify(service => service.IsOwnedByCourseItemAsync(It.IsAny<Survey>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task VM2_TheLearningProviders_ListNothingForAnonymousUsers()
+    {
+        // Arrange
+        var learningSurveys = Owned(true);
+        var everything = Authorization(LearningPermissions.ManageCourses, AssessmentPermissions.GradeAssessments);
+        var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
+
+        // Act
+        var manager = await new LearningManagerSurveyAccessProvider(learningSurveys.Object, everything).ListGrantsAsync(anonymous, SurveyOperation.Manage, TestContext.Current.CancellationToken);
+        var assessments = await new AssessmentsSurveyAccessProvider(learningSurveys.Object, everything).ListGrantsAsync(anonymous, SurveyOperation.Grade, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(manager.Owners);
+        Assert.Empty(assessments.Owners);
+        learningSurveys.Verify(service => service.ListCourseItemOwnersAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public void P4L2_TheLearningRolesRecipe_GrantsNoSiteWideSurveysPermission()
     {

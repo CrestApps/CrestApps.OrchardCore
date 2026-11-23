@@ -247,11 +247,186 @@ public sealed class SurveyScaleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task P2L5_AnExport_ReadsEachResponseOnce_WhileResponsesAreSavedAgain()
+    {
+        // Arrange: more responses of one identified survey than one page.
+        const int total = SurveysConstants.PageSize * 2 + 30;
+
+        await using (var write = _store.OpenSession())
+        {
+            for (var index = 0; index < total; index++)
+            {
+                var response = ResultsSqliteStore.Response("export-" + index.ToString("D4", System.Globalization.CultureInfo.InvariantCulture), Version("v-export", SurveyId(1)), SurveyResponseStatus.Completed, _day.AddMinutes(index), ("q1", new SurveyAnswer { Values = ["red"] }));
+                await write.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, TestContext.Current.CancellationToken);
+            }
+
+            await write.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var queries = new SurveyResultsQueries(session);
+        var read = new List<string>();
+
+        // Act: after the first page, the responses already read are saved again (graded, upkept), which writes their
+        // index rows again under new ids.
+        await foreach (var response in queries.ReadAsync(new SurveyResultsScope { SurveyId = SurveyId(1) }, TestContext.Current.CancellationToken))
+        {
+            read.Add(response.ItemId);
+
+            if (read.Count == SurveysConstants.PageSize)
+            {
+                foreach (var id in read.Take(50))
+                {
+                    var again = await session.Query<SurveyResponse, SurveyResponseIndex>(index => index.ItemId == id, collection: SurveysConstants.ResponsesCollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+                    again.ModifiedUtc = _day.AddDays(1);
+                    await session.SaveAsync(again, false, SurveysConstants.ResponsesCollectionName, TestContext.Current.CancellationToken);
+                }
+
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+        }
+
+        // Assert
+        Assert.Equal(total, read.Count);
+        Assert.Equal(total, read.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public async Task VL9_TheGradingQueue_ReadsMoreSurveysWithPendingGradingThanOneInListHolds()
+    {
+        // Arrange: a response to grade on every survey pat owns, more surveys than SQL Server takes parameters.
+        _store.ParameterLimit = null;
+
+        await using (var write = _store.OpenSession())
+        {
+            for (var index = 0; index < OwnedSurveys; index++)
+            {
+                var response = ResultsSqliteStore.Response("pending-" + index, Version("v-p" + index, SurveyId(index)), SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
+                response.Grading = GradingStatus.Pending;
+                await write.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, TestContext.Current.CancellationToken);
+            }
+
+            await write.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        _store.ParameterLimit = ParameterLimitedSqliteConnectionFactory.SqlServerLimit;
+        await using var session = _store.OpenSession();
+        var results = new SurveyResultsQueries(session);
+        var queue = new CrestApps.OrchardCore.Surveys.Core.Scoring.SurveyGradingQueue(
+            TestSecurity.Granting(SurveysPermissions.GradeSurveyResponses),
+            [],
+            [],
+            new SurveyStore(session),
+            new SurveyResponseQueries(session),
+            Options.Create(new SurveyContextKindOptions()),
+            results,
+            new CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousGroups(results, new ServiceCollection().BuildServiceProvider()),
+            new SurveyIndexReader(session, new SurveyStore(session)));
+
+        // Act
+        var (count, items) = await queue.ListAsync(TestSecurity.User("grader"), null, 0, 10, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(OwnedSurveys + 1, count);
+        Assert.Equal(10, items.Count);
+    }
+
+    [Fact]
+    public async Task VL11_TheReindexStep_IndexesALegacyRow_AndNeverOverwritesASurveyChangedMeanwhile()
+    {
+        // Arrange: two legacy rows.
+        await using (var write = _store.OpenSession())
+        {
+            await write.SaveAsync(Survey("legacy-a", "kim-id"), false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            await write.SaveAsync(Survey("legacy-b", "kim-id"), false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            await write.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await ClearAnonymityColumnAsync("legacy-a");
+        await ClearAnonymityColumnAsync("legacy-b");
+
+        // Act 1: a run whose surveys another save changed after it loaded them (their stored version moved on).
+        await using (var racing = _store.OpenSession())
+        {
+            Assert.True(await new CrestApps.OrchardCore.Surveys.Migrations.SurveysReindexStep(racing, new SurveyStore(racing)).RunAsync(new CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext(), TestContext.Current.CancellationToken));
+
+            var transaction = await racing.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var configuration = _store.Store.Configuration;
+            var documents = configuration.TableNameConvention.GetDocumentTable(SurveysConstants.CollectionName);
+            await transaction.Connection.ExecuteAsync($"UPDATE \"{configuration.TablePrefix}{documents}\" SET \"Version\" = \"Version\" + 1", transaction: transaction);
+
+            // Assert 1: the run's commit fails rather than overwrite them.
+            await Assert.ThrowsAsync<ConcurrencyException>(() => racing.SaveChangesAsync(TestContext.Current.CancellationToken));
+        }
+
+        // Act 2: the next run, with nothing changed meanwhile.
+        await using (var run = _store.OpenSession())
+        {
+            await new CrestApps.OrchardCore.Surveys.Migrations.SurveysReindexStep(run, new SurveyStore(run)).RunAsync(new CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext(), TestContext.Current.CancellationToken);
+            await run.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Assert 2: both rows are indexed.
+        await using var session = _store.OpenSession();
+        var owned = await session.QueryIndex<SurveyIndex>(index => index.OwnerId == "kim-id", collection: SurveysConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["legacy-a", "legacy-b"], owned.Select(row => row.ItemId).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task VL10_OwnAndTagLists_IncludeSurveysTheReindexStepHasNotReached()
+    {
+        // Arrange: a legacy row with no owner (and no tag rows) in the index.
+        await using (var write = _store.OpenSession())
+        {
+            await write.SaveAsync(Survey("legacy-own", "kim-id", tags: ["legacy"]), false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            await write.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await ClearAnonymityColumnAsync("legacy-own");
+        await ClearTagRowsAsync("legacy-own");
+        await using var session = _store.OpenSession();
+        var reader = new SurveyIndexReader(session, new SurveyStore(session));
+        var list = new SurveyListService(session, reader);
+        var http = new DefaultHttpContext { User = TestSecurity.User("kim") };
+
+        // Act
+        var (ownCount, own) = await list.ListAsync(new SurveyListQuery { OwnerId = "kim-id" }, 0, 10, TestContext.Current.CancellationToken);
+        var (taggedCount, _) = await list.ListAsync(new SurveyListQuery { Tag = "legacy" }, 0, 10, TestContext.Current.CancellationToken);
+        var tags = await list.ListTagsAsync("kim-id", TestContext.Current.CancellationToken);
+        var api = Body(await SurveysApiEndpoints.ListSurveysAsync(0, 10, http, TestSecurity.Granting(SurveysPermissions.ManageOwnSurveys), session, reader));
+
+        // Assert
+        Assert.Equal(1, ownCount);
+        Assert.Equal("legacy-own", Assert.Single(own).ItemId);
+        Assert.Equal(1, taggedCount);
+        Assert.Equal(["legacy"], tags);
+        Assert.Equal(1, api.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task VL5_TheEmbedPicker_ReadsTheFirstOpenSurveysByTitle_OfAScopeLargerThanOneInList()
+    {
+        // Arrange: a scope of every survey pat owns, more than one IN list holds.
+        await using var session = _store.OpenSession();
+        var reader = new SurveyIndexReader(session, new SurveyStore(session));
+        var ids = Enumerable.Range(0, OwnedSurveys).Select(SurveyId).ToList();
+
+        // Act
+        var first = await reader.ListByTitleAsync(ids, SurveyStatus.Open, 5, TestContext.Current.CancellationToken);
+        var closed = await reader.ListByTitleAsync(ids, SurveyStatus.Closed, 5, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ids.Take(5), first.Select(survey => survey.ItemId));
+        Assert.Empty(closed);
+    }
+
+    [Fact]
     public async Task ListService_FiltersByOwnerAndTagAndPagesInTheDatabase()
     {
         // Arrange
         await using var session = _store.OpenSession();
-        var list = new SurveyListService(session);
+        var list = new SurveyListService(session, new SurveyIndexReader(session, new SurveyStore(session)));
 
         // Act
         var (ownCount, ownPage) = await list.ListAsync(new SurveyListQuery { OwnerId = "pat-id" }, 10, 5, TestContext.Current.CancellationToken);
@@ -271,7 +446,7 @@ public sealed class SurveyScaleTests : IAsyncLifetime
     {
         // Arrange
         await using var session = _store.OpenSession();
-        var list = new SurveyListService(session);
+        var list = new SurveyListService(session, new SurveyIndexReader(session, new SurveyStore(session)));
 
         // Act
         var own = await list.ListTagsAsync("pat-id", TestContext.Current.CancellationToken);
@@ -290,7 +465,7 @@ public sealed class SurveyScaleTests : IAsyncLifetime
         var http = new DefaultHttpContext { User = TestSecurity.User("lee") };
 
         // Act
-        var result = await SurveysApiEndpoints.ListSurveysAsync(0, 10, http, TestSecurity.Granting(SurveysPermissions.ManageOwnSurveys), session);
+        var result = await SurveysApiEndpoints.ListSurveysAsync(0, 10, http, TestSecurity.Granting(SurveysPermissions.ManageOwnSurveys), session, new SurveyIndexReader(session, new SurveyStore(session)));
 
         // Assert
         var page = Body(result);
@@ -307,7 +482,7 @@ public sealed class SurveyScaleTests : IAsyncLifetime
         var authorization = TestSecurity.Granting(SurveysPermissions.ManageSurveys, SurveysPermissions.ManageOwnSurveys);
 
         // Act
-        var last = Body(await SurveysApiEndpoints.ListSurveysAsync(OwnedSurveys, 50, http, authorization, session));
+        var last = Body(await SurveysApiEndpoints.ListSurveysAsync(OwnedSurveys, 50, http, authorization, session, new SurveyIndexReader(session, new SurveyStore(session))));
 
         // Assert
         Assert.Equal(OwnedSurveys + 1, last.GetProperty("count").GetInt32());
@@ -379,6 +554,15 @@ public sealed class SurveyScaleTests : IAsyncLifetime
         await using var connection = configuration.ConnectionFactory.CreateConnection();
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         await connection.ExecuteAsync($"UPDATE \"{configuration.TablePrefix}{table}\" SET \"Anonymity\" = NULL, \"OwnerId\" = NULL WHERE \"ItemId\" = @Id", new { Id = surveyId });
+    }
+
+    private async Task ClearTagRowsAsync(string surveyId)
+    {
+        var configuration = _store.Store.Configuration;
+        var table = configuration.TableNameConvention.GetIndexTable(typeof(SurveyTagIndex), SurveysConstants.CollectionName);
+        await using var connection = configuration.ConnectionFactory.CreateConnection();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await connection.ExecuteAsync($"DELETE FROM \"{configuration.TablePrefix}{table}\" WHERE \"SurveyId\" = @Id", new { Id = surveyId });
     }
 
     private static JsonElement Body(IResult result)

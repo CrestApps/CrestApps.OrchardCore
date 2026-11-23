@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -11,8 +10,6 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
-using YesSql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Surveys.Drivers;
 
@@ -29,7 +26,8 @@ internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyP
     private readonly SurveyStore _surveyStore;
     private readonly ISurveyAuthorizationService _surveyAuthorization;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ISession _session;
+    private readonly SurveyAccessScopes _scopes;
+    private readonly SurveyIndexReader _reader;
 
     internal readonly IStringLocalizer S;
 
@@ -42,7 +40,8 @@ internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyP
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="surveyAuthorization">The survey authorization service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
-    /// <param name="session">The YesSql session.</param>
+    /// <param name="scopes">Works out the surveys the editor may manage.</param>
+    /// <param name="reader">Reads surveys from the survey index.</param>
     /// <param name="stringLocalizer">The localizer.</param>
     public SurveyPartDisplayDriver(
         SurveyEmbedResolver resolver,
@@ -51,7 +50,8 @@ internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyP
         SurveyStore surveyStore,
         ISurveyAuthorizationService surveyAuthorization,
         IHttpContextAccessor httpContextAccessor,
-        ISession session,
+        SurveyAccessScopes scopes,
+        SurveyIndexReader reader,
         IStringLocalizer<SurveyPartDisplayDriver> stringLocalizer)
     {
         _resolver = resolver;
@@ -60,7 +60,8 @@ internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyP
         _surveyStore = surveyStore;
         _surveyAuthorization = surveyAuthorization;
         _httpContextAccessor = httpContextAccessor;
-        _session = session;
+        _scopes = scopes;
+        _reader = reader;
         S = stringLocalizer;
     }
 
@@ -88,18 +89,22 @@ internal sealed class SurveyPartDisplayDriver : ContentPartDisplayDriver<SurveyP
             model.Text = part.Text;
             model.Surveys = [new SelectListItem(S["Choose a survey"], string.Empty)];
 
-            var surveys = await _session.Query<Survey, SurveyIndex>(index => index.Status == nameof(SurveyStatus.Open), collection: SurveysConstants.CollectionName)
-                .OrderBy(index => index.Title)
-                .Take(SurveysConstants.PageSize)
-                .ListAsync();
+            // Only the open surveys the editor may manage, read from the survey index (the scope is worked out at once, and
+            // the picker reads only the rows it shows), and the one the part already embeds so the choice stays visible.
+            var user = _httpContextAccessor.HttpContext?.User;
+            var scope = user is null ? SurveyAccessScope.None : await _scopes.ResolveAsync(user, SurveyOperation.Manage);
+            var surveys = scope.IsEmpty
+                ? []
+                : await _reader.ListByTitleAsync(scope.All ? null : scope.SurveyIds, SurveyStatus.Open, SurveysConstants.PageSize);
+
+            if (!string.IsNullOrEmpty(part.SurveyId) && !surveys.Any(survey => survey.ItemId == part.SurveyId))
+            {
+                surveys = [.. (await _reader.ListAsync([part.SurveyId], publishedOnly: false)), .. surveys];
+            }
 
             foreach (var survey in surveys)
             {
-                // Only surveys the editor may manage, and the one the part already embeds so the choice stays visible.
-                if (survey.ItemId == part.SurveyId || await CanManageAsync(survey))
-                {
-                    model.Surveys.Add(new SelectListItem(survey.Title ?? survey.Name, survey.ItemId, survey.ItemId == part.SurveyId));
-                }
+                model.Surveys.Add(new SelectListItem(survey.Title ?? survey.Name, survey.ItemId, survey.ItemId == part.SurveyId));
             }
 
             model.Collectors = [new SelectListItem(S["The default link"], string.Empty)];

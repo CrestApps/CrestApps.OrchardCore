@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Results;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +27,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     private readonly SurveyContextKindOptions _contextKinds;
     private readonly SurveyResultsQueries _results;
     private readonly SurveyAnonymousGroups _groups;
+    private readonly SurveyIndexReader _reader;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyGradingQueue"/> class.
@@ -38,6 +40,8 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     /// <param name="contextKinds">The registered context kinds; responses of a kind graded on its owner's page are left out.</param>
     /// <param name="results">The results queries, for the surveys with responses to grade.</param>
     /// <param name="groups">The small-group rule of anonymous surveys.</param>
+    /// <param name="reader">Reads the summaries of the surveys with responses to grade from the survey index; without it,
+    /// the surveys are loaded a chunk at a time.</param>
     public SurveyGradingQueue(
         IAuthorizationService authorizationService,
         IEnumerable<ISurveyGradingScope> scopes,
@@ -46,8 +50,10 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
         ISurveyResponseQueries queries,
         IOptions<SurveyContextKindOptions> contextKinds,
         SurveyResultsQueries results,
-        SurveyAnonymousGroups groups)
+        SurveyAnonymousGroups groups,
+        SurveyIndexReader reader = null)
     {
+        _reader = reader;
         _results = results;
         _groups = groups;
         _authorizationService = authorizationService;
@@ -149,7 +155,23 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
             return (hidden, false);
         }
 
-        foreach (var survey in await _surveys.GetAsync(pending, cancellationToken))
+        // Summaries from the survey index (the anonymity and the minimum are all that is read), a chunk of ids at a time
+        // under SQL Server's parameter limit.
+        var surveys = new List<Survey>();
+
+        if (_reader is not null)
+        {
+            surveys.AddRange(await _reader.ListAsync(pending, publishedOnly: false, cancellationToken));
+        }
+        else
+        {
+            foreach (var chunk in SurveyIdChunks.Of(pending))
+            {
+                surveys.AddRange(await _surveys.GetAsync(chunk, cancellationToken));
+            }
+        }
+
+        foreach (var survey in surveys)
         {
             if (!SurveyAnonymity.IsAnonymous(survey))
             {

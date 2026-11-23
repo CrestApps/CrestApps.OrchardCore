@@ -114,7 +114,7 @@ public sealed class LegacyQuizUpgradeStep : IResumableStep
 
     private async Task UpgradeAsync(List<ContentItem> items)
     {
-        if (!items.Any(LegacyQuizUpgrade.NeedsSurvey))
+        if (!items.Any(item => LegacyQuizUpgrade.NeedsSurvey(item) || LegacyQuizUpgrade.HoldsLegacySettings(item)))
         {
             return;
         }
@@ -128,7 +128,6 @@ public sealed class LegacyQuizUpgradeStep : IResumableStep
                 .Select(item => (item.TryGet<QuizPart>(out var part) ? part.SurveyId : null))
                 .FirstOrDefault(id => !string.IsNullOrEmpty(id));
             var survey = string.IsNullOrEmpty(existingId) ? null : await _surveyManager.FindByIdAsync(existingId);
-            var created = survey is null;
 
             survey ??= await _learningSurveys.CreateOwnedSurveyAsync(latest, SurveyKinds.Quiz, SurveyTemplateNames.Quiz);
 
@@ -137,20 +136,36 @@ public sealed class LegacyQuizUpgradeStep : IResumableStep
                 return;
             }
 
-            // The settings come from the first-release part, so they are read before the part is pointed at the survey,
-            // which drops them; the quiz points at its survey before anything else can fail.
+            // The quiz points at its survey before anything else can fail, so it never gets a second one; its
+            // first-release settings stay on the item until the survey has saved them.
             var legacy = LegacyQuizUpgrade.PartOf(latest)?.DeepClone() as JsonObject;
+
+            foreach (var item in items)
+            {
+                LegacyQuizUpgrade.PointAt(item, survey.ItemId);
+                await _session.SaveAsync(item);
+            }
+
+            // A survey course staff built since (by a save in between) keeps its settings; otherwise it takes the pass
+            // mark, time limit, attempts and window, and only a saved draft lets the item drop them.
+            if (items.Any(LegacyQuizUpgrade.HoldsLegacySettings) && !LegacySurveyContent.IsNewerThanLegacy(survey))
+            {
+                LegacyQuizUpgrade.ApplySettings(legacy, survey);
+
+                var saved = await _surveyManager.SaveDraftAsync(survey, survey.Draft);
+
+                if (saved != SurveyErrorCode.None)
+                {
+                    _logger.LogWarning("The settings of the quiz '{QuizId}' could not be saved to its survey ({Error}); the quiz item keeps them, so nothing is lost.", latest.ContentItemId, saved);
+
+                    return;
+                }
+            }
 
             foreach (var item in items)
             {
                 LegacyQuizUpgrade.SetSurveyId(item, survey.ItemId);
                 await _session.SaveAsync(item);
-            }
-
-            if (created)
-            {
-                LegacyQuizUpgrade.ApplySettings(legacy, survey);
-                await _surveyManager.SaveDraftAsync(survey, survey.Draft);
             }
         }
         catch (Exception ex) when (!ex.IsFatal())

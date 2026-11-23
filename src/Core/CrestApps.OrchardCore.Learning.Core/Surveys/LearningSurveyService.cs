@@ -5,11 +5,16 @@ using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Records;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 
@@ -24,6 +29,8 @@ public sealed class LearningSurveyService : ILearningSurveyService
     private readonly ICourseAccessService _courseAccess;
     private readonly ICourseStructureService _courseStructure;
     private readonly IContentManager _contentManager;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningSurveyService"/> class.
@@ -35,13 +42,17 @@ public sealed class LearningSurveyService : ILearningSurveyService
     /// <param name="courseAccess">The course access service.</param>
     /// <param name="courseStructure">The course structure service.</param>
     /// <param name="contentManager">The content manager.</param>
+    /// <param name="contentDefinitionManager">The content definition manager, for the course item types.</param>
+    /// <param name="session">The YesSql session, for the content index.</param>
     public LearningSurveyService(
         ISurveyManager surveyManager,
         IServiceProvider serviceProvider,
         ISurveyResponseQueries responseQueries,
         ICourseAccessService courseAccess,
         ICourseStructureService courseStructure,
-        IContentManager contentManager)
+        IContentManager contentManager,
+        IContentDefinitionManager contentDefinitionManager,
+        ISession session)
     {
         _surveyManager = surveyManager;
         _serviceProvider = serviceProvider;
@@ -49,6 +60,8 @@ public sealed class LearningSurveyService : ILearningSurveyService
         _courseAccess = courseAccess;
         _courseStructure = courseStructure;
         _contentManager = contentManager;
+        _contentDefinitionManager = contentDefinitionManager;
+        _session = session;
     }
 
     /// <inheritdoc />
@@ -287,6 +300,30 @@ public sealed class LearningSurveyService : ILearningSurveyService
         var item = await _contentManager.GetAsync(survey.Owner.Value.Id, VersionOptions.Latest);
 
         return item is null || item.Has<CourseItemPart>();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyCollection<RecordRef>> ListCourseItemOwnersAsync(CancellationToken cancellationToken = default)
+    {
+        var types = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            .Where(type => type.Parts.Any(part => part.PartDefinition?.Name == nameof(CourseItemPart)))
+            .Select(type => type.Name)
+            .ToArray();
+
+        if (types.Length == 0)
+        {
+            return [];
+        }
+
+        // Index rows only: the latest version of each item, as IsOwnedByCourseItemAsync reads it.
+        var rows = await _session.QueryIndex<ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Latest).ListAsync(cancellationToken);
+
+        return rows
+            .Select(row => row.ContentItemId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .Select(LearningSurveyContexts.Owner)
+            .ToList();
     }
 
     private static void ApplyCourseDefaults(Survey survey)

@@ -54,6 +54,22 @@ public sealed class SurveyStore : DocumentCatalog<Survey, SurveyIndex>, INamedCa
         return base.SavingAsync(record);
     }
 
+    /// <summary>
+    /// Saves a survey again as loaded, with the checks of every save, and with YesSql's concurrency check: when another
+    /// save changed the survey after it was loaded, the commit fails with a <see cref="ConcurrencyException"/> and writes
+    /// nothing, so a background rewrite (such as a reindex) never overwrites an author's edit.
+    /// </summary>
+    /// <param name="record">The survey, loaded in this session.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async ValueTask SaveUnchangedAsync(Survey record, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        await SavingAsync(record);
+        await Session.SaveAsync(record, checkConcurrency: true, collection: CollectionName, cancellationToken: cancellationToken);
+    }
+
     /// <inheritdoc />
     public async ValueTask<Survey> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {

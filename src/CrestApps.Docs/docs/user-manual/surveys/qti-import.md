@@ -57,11 +57,11 @@ An item is left out when the bank couldn't keep it as it was written. The page l
 
 Fix those items in the tool they came from, or add them by hand in the bank.
 
-A package can list up to 5,000 questions, and each image can be up to 10 MB.
+A file can be up to 50 MB. A package can list up to 5,000 questions, and each image can be up to 10 MB.
 
 ## Images
 
-The images a question uses are copied into the site's **media library**, in a folder of their own under `surveys/qti`.
+The images a question uses are copied into the site's **media library**, under `surveys/qti`. Importing the same image again, in the same package or another, uses the copy already there.
 
 :::warning[Images are public]
 Files in the media library can be opened by anyone who has their address. This includes images used only in feedback, which can show the right answer. Leave such images out of the package, or replace them after the import, for a graded quiz.

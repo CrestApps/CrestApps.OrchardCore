@@ -50,6 +50,13 @@ public sealed class SurveyTranslationValidationContributor : ISurveyDefinitionVa
             {
                 context.AddWarning("outdated-translation", S["The {0} translation has {1} texts whose original text changed after they were translated. Respondents still see the old translation.", culture, outdated]);
             }
+
+            var toCheck = SurveyTranslations.UncheckedKeys(context.Definition, culture).Count;
+
+            if (toCheck > 0)
+            {
+                context.AddWarning("unchecked-translation", S["The {0} translation has {1} texts saved before changes to the original text were tracked; they may be out of date. Check and save them on the Translations page.", culture, toCheck]);
+            }
         }
 
         return Task.CompletedTask;

@@ -35,6 +35,10 @@
                     {
                         <span class="hint text-warning">@T["{0} translations are out of date: their original text changed after they were translated. Change each one to mark it current.", Model.Outdated]</span>
                     }
+                    @if (Model.Unchecked > 0)
+                    {
+                        <span class="hint text-warning">@T["{0} translations were saved before changes to the original text were tracked, so they may be out of date. Check them, then save to mark them current.", Model.Unchecked]</span>
+                    }
                 </div>
             </div>
         </form>
@@ -87,6 +91,10 @@
                                     @if (entry.Outdated)
                                     {
                                         <span class="badge text-bg-warning mb-1">@T["Out of date"]</span>
+                                    }
+                                    else if (entry.Unchecked)
+                                    {
+                                        <span class="badge text-bg-light border mb-1">@T["Check"]</span>
                                     }
                                     @if (entry.IsHtml || entry.Original?.Length > 80)
                                     {
