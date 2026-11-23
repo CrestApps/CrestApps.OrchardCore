@@ -41,8 +41,8 @@ public sealed class SurveyAuthoringAccessTests : IAsyncLifetime
         var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "u-owner")], "Test"));
 
         // Act
-        var ownOnly = await new OwnSurveysGradingScope(Authorization(gradeAll: false, gradeOwn: true), store).GetGradableSurveyIdsAsync(user, cancellationToken);
-        var none = await new OwnSurveysGradingScope(Authorization(gradeAll: false, gradeOwn: false), store).GetGradableSurveyIdsAsync(user, cancellationToken);
+        var ownOnly = await new OwnSurveysGradingScope(Authorization(gradeAll: false, gradeOwn: true), new SurveyIndexReader(session, store)).GetGradableSurveyIdsAsync(user, cancellationToken);
+        var none = await new OwnSurveysGradingScope(Authorization(gradeAll: false, gradeOwn: false), new SurveyIndexReader(session, store)).GetGradableSurveyIdsAsync(user, cancellationToken);
 
         // Assert
         Assert.Equal(["mine"], ownOnly);

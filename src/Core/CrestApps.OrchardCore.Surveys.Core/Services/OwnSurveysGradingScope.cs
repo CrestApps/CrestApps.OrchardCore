@@ -12,17 +12,17 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 public sealed class OwnSurveysGradingScope : ISurveyGradingScope
 {
     private readonly IAuthorizationService _authorizationService;
-    private readonly SurveyStore _surveyStore;
+    private readonly SurveyIndexReader _surveyIndex;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OwnSurveysGradingScope"/> class.
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="surveyStore">The survey store.</param>
-    public OwnSurveysGradingScope(IAuthorizationService authorizationService, SurveyStore surveyStore)
+    /// <param name="surveyIndex">The survey index reader.</param>
+    public OwnSurveysGradingScope(IAuthorizationService authorizationService, SurveyIndexReader surveyIndex)
     {
         _authorizationService = authorizationService;
-        _surveyStore = surveyStore;
+        _surveyIndex = surveyIndex;
     }
 
     /// <inheritdoc />
@@ -37,11 +37,6 @@ public sealed class OwnSurveysGradingScope : ISurveyGradingScope
             return [];
         }
 
-        // The survey index has no owner column yet, so this reads the surveys; switch to an indexed owner query once one
-        // exists.
-        return (await _surveyStore.GetAllAsync(cancellationToken))
-            .Where(survey => string.Equals(survey.OwnerId, userId, StringComparison.Ordinal))
-            .Select(survey => survey.ItemId)
-            .ToList();
+        return await _surveyIndex.ListIdsOwnedByAsync(userId, cancellationToken);
     }
 }
