@@ -47,6 +47,9 @@ public sealed partial class SurveyRespondingTests
             {
                 definition.Navigation.AllowEditAfterSubmit = editAfterSubmit;
                 definition.Review.LaterWhileOpen = reviewLater ? ReviewShows.Responses : ReviewShows.None;
+
+                // The review after close shows the answers by default, which keeps the cookie too while the survey is open.
+                definition.Review.AfterClose = ReviewShows.None;
             });
 
         using var http = await _fixture.CreateClientAsync();

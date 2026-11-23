@@ -33,9 +33,10 @@ public sealed class SurveyAnswerValidationContext
     public SurveyResponse Response { get; set; }
 
     /// <summary>
-    /// Gets or sets the choice ids the respondent may pick, in plan order.
+    /// Gets or sets the choice ids the respondent may pick, in plan order. <see langword="null"/> allows every choice
+    /// that is not retired; an empty list allows none (a carried-forward question with nothing carried).
     /// </summary>
-    public IReadOnlyList<string> AllowedChoiceIds { get; set; } = [];
+    public IReadOnlyList<string> AllowedChoiceIds { get; set; }
 
     /// <summary>
     /// Gets the errors found.

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -16,6 +17,7 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
     private readonly ILearningSurveyService _learningSurveys;
     private readonly ICourseAccessService _courseAccess;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningEnrollmentAccessRule"/> class.
@@ -23,14 +25,17 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
     /// <param name="learningSurveys">The Learning survey service.</param>
     /// <param name="courseAccess">The course access service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="serviceProvider">The services, to build the learner's principal when a response is submitted for them without their request.</param>
     public LearningEnrollmentAccessRule(
         ILearningSurveyService learningSurveys,
         ICourseAccessService courseAccess,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IServiceProvider serviceProvider = null)
     {
         _learningSurveys = learningSurveys;
         _courseAccess = courseAccess;
         _httpContextAccessor = httpContextAccessor;
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc />
@@ -78,6 +83,19 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
 
         var user = _httpContextAccessor.HttpContext?.User;
         var userId = LearningSurveyUsers.GetUserId(user);
+
+        if (string.IsNullOrEmpty(userId) && context.AutoSubmitted && _serviceProvider is not null)
+        {
+            // Submitted at its deadline without the learner's request (the deadline task): the enrollment of the
+            // response's own learner decides. An anonymous response names no learner, so nothing more can be checked.
+            if (string.IsNullOrEmpty(context.Identity?.UserId))
+            {
+                return SurveyAccessDecision.Allow;
+            }
+
+            user = await LearningUserPrincipals.CreateAsync(_serviceProvider, context.Identity.UserId);
+            userId = LearningSurveyUsers.GetUserId(user);
+        }
 
         if (string.IsNullOrEmpty(userId) || !string.Equals(userId, context.Identity?.UserId, StringComparison.Ordinal))
         {

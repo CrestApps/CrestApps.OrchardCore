@@ -12,6 +12,6 @@
 
 <partial name="_SurveyRunnerStyles" />
 
-<div class="container survey-runner my-4">
+<div class="container survey-runner my-4" data-survey-kiosk-idle-url="@ViewData["SurveyKioskIdleUrl"]" data-survey-kiosk-idle-seconds="@ViewData["SurveyKioskIdleSeconds"]">
     @await DisplayAsync((OrchardCore.DisplayManagement.IShape)Model)
 </div>

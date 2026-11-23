@@ -224,8 +224,10 @@ public abstract class SurveyChoiceControlHandlerBase<TSettings> : SurveyControlH
     protected static SurveyChoice FindChoice(SurveyQuestion question, string choiceId)
         => question?.Choices?.FirstOrDefault(choice => string.Equals(choice?.Id, choiceId, StringComparison.Ordinal));
 
+    // The choices that may be picked: the list given, even an empty one (a carried-forward question with nothing carried
+    // forward allows nothing, it never falls back to every choice); every choice not retired when none is given.
     private static HashSet<string> AllowedIds(IReadOnlyList<string> allowed, IEnumerable<SurveyChoice> choices)
-        => allowed is { Count: > 0 }
+        => allowed is not null
             ? allowed.ToHashSet(StringComparer.Ordinal)
             : choices.Where(choice => choice is not null && !choice.Retired).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);
 }

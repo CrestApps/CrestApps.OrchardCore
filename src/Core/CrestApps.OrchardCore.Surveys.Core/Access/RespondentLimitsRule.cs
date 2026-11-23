@@ -67,12 +67,19 @@ public sealed class RespondentLimitsRule : ISurveyAccessRule
         var counts = await _participation.CountAsync(context.Survey, context.RespondentKey, context.Context, context.UtcNow);
         var used = countStarted ? counts.Started : counts.Completed;
 
+        // The total never expires: participation records of a survey with a total limit are kept (upkeep deletes only
+        // the others), so "once per person" holds for as long as the survey runs.
         var usedTotal = used.Total;
 
-        // Attempt limits of identified respondents count every response kept, not only the participation window.
-        if (countStarted && context.Survey.Access?.Anonymity != AnonymityMode.Anonymous && !string.IsNullOrEmpty(context.Identity?.UserId))
+        // The total of an identified respondent counts the responses kept (started ones, or completed ones), so a
+        // response staff delete gives the attempt back, as it does for the attempt number.
+        var userId = context.Response?.UserId ?? context.Identity?.UserId;
+
+        if (limits.Total is not null && context.Survey.Access?.Anonymity != AnonymityMode.Anonymous && !string.IsNullOrEmpty(userId))
         {
-            usedTotal = await _counter.CountForUserAsync(context.Survey.ItemId, context.Identity.UserId, context.Context?.ToString());
+            usedTotal = countStarted
+                ? await _counter.CountForUserAsync(context.Survey.ItemId, userId, context.Context?.ToString())
+                : await _counter.CountCompletedForUserAsync(context.Survey.ItemId, userId, context.Context?.ToString());
         }
 
         if (limits.Total is { } total && usedTotal >= total + (context.Override?.ExtraAttempts ?? 0))

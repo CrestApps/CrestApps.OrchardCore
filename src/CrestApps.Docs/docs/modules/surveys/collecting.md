@@ -35,7 +35,12 @@ A GET never starts a response or uses up an invitation, so link previews (chat a
 | `GET /s/r/{responseId}/results` | The same totals for the respondent of that response, for a survey reached without a public link (a course item's survey) |
 | `GET /surveys/my` | The signed-in user's own responses |
 
-Posts check the antiforgery token. When the Orchard Core **Rate Limits** feature is on, every route in the table is in the rate-limit group `Surveys.Respond`: **120 requests a minute per IP address** (a fixed one-minute window, `RespondRateLimitsStartup.RequestsPerMinute`). Admin **Preview** works the same way: opening its link shows a page that posts the start of the test response.
+Posts check the antiforgery token. When the Orchard Core **Rate Limits** feature is on, the routes are limited in two ways (fixed one-minute windows, `RespondRateLimitsStartup`):
+
+- The routes that start or reach a response (`/s/{token}`, its start and results, `/s/i/...`, `/surveys/my`, and the API) are in the group `Surveys.Respond`: **120 requests a minute per client**, the signed-in user or else the IP address (`RequestsPerMinute`). Guessing a password or a link is held back here.
+- The routes of a response already started (`/s/r/{responseId}/...`: its pages, autosave, live evaluation, answer checks, the ending, the review and reopen), which only its owner can use, are counted **per response**: 120 requests a minute each (`ResponseRequestsPerMinute`, group `Surveys.Respond.Response`), with a ceiling of 2,000 a minute per client (`ClientCeilingPerMinute`, group `Surveys.Respond.Client`). A class answering from one school or office address, or a site whose reverse proxy doesn't forward the client address, doesn't share one small budget.
+
+The runner script posts each page itself: when the server answers 429 (too many requests) or 503, it keeps the answers on the page, says so, and sends the page again after the `Retry-After` time (up to five tries); autosave tries again with the next change. Behind a reverse proxy, turn on Orchard Core's **Reverse Proxy Configuration** feature so the visitor's address is counted rather than the proxy's. Admin **Preview** works the same way: opening its link shows a page that posts the start of the test response.
 
 Every response under `/s` carries `Referrer-Policy: no-referrer`, so the tokens in collector and invitation links never reach another site in a `Referer` header. Every response under `/s`, and `/surveys/my`, also carries `Cache-Control: no-store`, because the ending, the review and the totals show answers, piped texts and scores: no browser cache, back-forward cache or shared proxy keeps them for the next person at a kiosk or a shared computer. Every response under `/s`, and `/surveys/my`, carries `X-Robots-Tag: noindex, nofollow` too, and the links of `SurveyPart` and the `[survey]` shortcode carry `rel="nofollow"`, so search engines don't index respondent pages.
 
@@ -49,9 +54,11 @@ A response is owned by the signed-in user who started it, or by whoever holds it
 
 The browser holds the token in an HttpOnly, SameSite Lax cookie `sr_{surveyId}` on the tenant's `/s` path (`{PathBase}/s`), for 30 days. When the ending of the response shows, the cookie keeps (and renews) its 30 days while the guest may still come back to the response: the survey allows changes after finishing (`Navigation.AllowEditAfterSubmit`) and is open, or the review shown later includes the respondent's answers: `Review.LaterWhileOpen` while the survey is open, or `Review.AfterClose`, which counts while the survey is still open too, because an open survey closes on its close date or whenever staff close it. Otherwise it is kept one more day, for the review shown right after the ending, so cookies don't pile up; a reopen gives it its 30 days back. A guest's only proof that a response is theirs is this cookie, so once it ends the response can't be reviewed or reopened from that browser. Writing a resume cookie also removes the browser's resume cookies of an older generation, so they don't pile up. Each resume cookie is bound to a generation cookie `sr_g_{hash}` on the tenant's root path (`{PathBase}`, or `/`), where `{hash}` is the first eight hexadecimal digits of the SHA-256 of the tenant name (`SurveyResumeCookies.GenerationCookieName`): a tenant without a prefix writes it on `/`, which requests to prefixed tenants on the same host carry too, so each tenant has its own. A page outside `/s` that writes a resume cookie (a course item, admin Preview) joins the browser's current generation and leaves its other open responses alone. Signing in or out (Orchard Core `ILoginFormEvent` and `ILogoutFormEvent`) writes a new generation, so every resume cookie written before stops counting and is removed on the next respondent page. On a shared computer, the next person never resumes the previous person's response. Code that starts a response for someone (a course, for example) calls `SurveyResumeCookies.Write(surveyId, token)` from `CrestApps.OrchardCore.Surveys.Core`, and never puts the token in a URL.
 
+A kiosk response page left without input for three minutes (`SurveyRunnerController.KioskIdleSeconds`) goes back to the start page, which forgets the response. This needs the runner script; without it, the page stays until someone goes back to the start. An abandoned or voided response shows that it was not submitted, never the ending.
+
 There are no resume links: no address carries a resume token, so a response can't be handed to another browser by sharing a link, and a guest never lands in someone else's response with their answers filled in. A response resumes only for its signed-in user, or in the browser holding its resume cookie.
 
-A personal invitation link is the invitee's key: on an identified survey, posting it resumes the invitation's response in progress from any browser (with a new resume token there), so a scanner that opened the link first does not lock the invitee out. A response that belongs to a user account resumes only for that user. An anonymous response does not name its invitation, so it resumes only in the browser that started it.
+A personal invitation link resumes only a response of that invitation: a response the same browser or user started through a public link stays apart, so the invitation completes with its own response. A personal invitation link is the invitee's key: on an identified survey, posting it resumes the invitation's response in progress from any browser (with a new resume token there), so a scanner that opened the link first does not lock the invitee out. A response that belongs to a user account resumes only for that user. An anonymous response does not name its invitation, so it resumes only in the browser that started it.
 
 ## Access rules
 
@@ -59,8 +66,8 @@ A personal invitation link is the invitee's key: on an identified survey, postin
 
 | Order | Rule | Checks |
 | --- | --- | --- |
-| 100 | `Status` | The survey is open |
-| 200 | `AvailabilityWindow` | The survey's and the collector's opening and closing times, and accommodations' windows |
+| 100 | `Status` | The survey and the collector are open, to start and to complete |
+| 200 | `AvailabilityWindow` | The survey's and the collector's opening and closing times, and accommodations' windows, to start and to complete |
 | 300 | `WeeklySchedule` | The days and hours of the weekly schedule, in the site time zone |
 | 400 | `Audience` | Anyone, signed-in users with Respond to surveys, members of user audiences, or invited people only |
 | 500 | `Password` | The collector's password |
@@ -70,7 +77,28 @@ A personal invitation link is the invitee's key: on an identified survey, postin
 | 900 | `MaxResponses` | The survey's and the collector's most completed responses |
 | 1000 | `Quota` | Full quotas (on completion) |
 
-Limits count completed or started responses per respondent, recognized by the user account, the invitation, a browser cookie (weak: it can be cleared) or not at all. Test responses (preview) skip limits and windows.
+Limits count completed or started responses per respondent. `RespondentLimits.Uniqueness` says how a respondent is recognized (a signed-in user always is, by their account):
+
+| Uniqueness | Recognized by |
+| --- | --- |
+| `SignedInUser` (default) | The user account, else the invitation; other guests are not limited |
+| `Invitation` | The invitation first (a signed-in invitee counts by the invitation), else the user account |
+| `Cookie` | The user account, else the invitation, else a browser cookie `sb` (weak: it can be cleared) |
+| `None` | The user account only; guests are not limited |
+
+The **Total** limit never forgets. On an identified survey it counts the signed-in respondent's responses kept (started or completed, as `Counts` says; a response staff delete gives the attempt back). The participation records of a survey with a total limit are kept for as long as it has one (upkeep deletes only the other surveys' records after 45 days, `SurveyParticipationService.RetentionDays`), so guests, invitees and anonymous respondents are counted for the survey's whole life too. Those records keep no more than any other: a day, the respondent key (a pseudonym on an anonymous survey) and no response id. Records deleted before a total limit was added aren't counted. Test responses (preview) skip limits and windows.
+
+### When a survey closes
+
+A survey is closed to a respondent once staff close or archive it, once its closing date passes (an accommodation's closing date replaces the survey's), or once the link it is answered through is closed or past its closing date (`SurveyAvailability`). The same test runs everywhere:
+
+- Nothing starts, and a finished response can't be reopened to change (`ReopenAsync` answers `Closed`, and the ending no longer offers **Change your answers**). So the review after close, which may show the right answers, never shows while a response can still change.
+- A response in progress takes no new answers. Its next page post, autosave or answer check, or a start that finds it, submits it with the answers saved before the close (as at a deadline) and answers `Closed`. The hourly upkeep submits the responses left in progress on a closed survey the same way, before it abandons idle ones; a respondent whose accommodation closes later keeps answering until then. Responses of a closed link are submitted when their respondent comes back, or abandoned when idle.
+- The `Status` and `AvailabilityWindow` rules refuse a respondent's own submit after the close.
+
+### Submitting for the respondent
+
+A response submitted for its respondent, at its deadline or after the close, runs the same completion rules as a submit (`SurveyAccessContext.AutoSubmitted` is set; only `Status` and `AvailabilityWindow` let it through, since it takes no new answers). Without the respondent's request (the deadline task, upkeep), the identity is the response's own user, and the Learning enrollment rule checks that learner's enrollment. A submission a rule refuses (a limit reached, the most responses taken, an invitation already used, a full quota that closes the survey, a learner withdrawn from the course) can't stay in progress and isn't completed: the response ends **Abandoned**, neither scored nor counted, with its answers kept for staff, and its respondent sees that it was not submitted.
 
 ## Anonymity
 

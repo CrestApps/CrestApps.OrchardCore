@@ -3,8 +3,10 @@ import {
     evaluateRules,
     formatTimeLeft,
     isQuestionHidden,
+    isRetryable,
     lockAttribute,
     readAnswers,
+    retryDelay,
 } from '../../../src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner-logic.js';
 
 const showWhen = (source, value) => ({ Match: 'All', Conditions: [{ Source: source, Operator: 'Is', Values: [value] }] });
@@ -93,5 +95,30 @@ describe('formatTimeLeft', () => {
         expect(formatTimeLeft(65_000)).toBe('1:05');
         expect(formatTimeLeft(3_725_000)).toBe('1:02:05');
         expect(formatTimeLeft(-5)).toBe('0:00');
+    });
+});
+
+describe('retryDelay', () => {
+    it('waits the Retry-After seconds of the server, within one and thirty seconds', () => {
+        expect(retryDelay('4', 1)).toBe(4000);
+        expect(retryDelay('0', 1)).toBe(1000);
+        expect(retryDelay('120', 1)).toBe(30000);
+    });
+
+    it('doubles the wait with each attempt when the server sends no Retry-After', () => {
+        expect(retryDelay(null, 1)).toBe(2000);
+        expect(retryDelay(null, 2)).toBe(4000);
+        expect(retryDelay('soon', 3)).toBe(8000);
+        expect(retryDelay(null, 10)).toBe(30000);
+    });
+});
+
+describe('isRetryable', () => {
+    it('retries only a request the server did not handle', () => {
+        expect(isRetryable(429)).toBe(true);
+        expect(isRetryable(503)).toBe(true);
+        expect(isRetryable(200)).toBe(false);
+        expect(isRetryable(400)).toBe(false);
+        expect(isRetryable(500)).toBe(false);
     });
 });

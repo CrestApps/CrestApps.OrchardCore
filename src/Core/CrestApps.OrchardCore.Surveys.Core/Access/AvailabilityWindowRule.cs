@@ -4,7 +4,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Access;
 
 /// <summary>
 /// Refuses responses before the survey or collector opens and after it closes. An accommodation's window replaces the
-/// survey's.
+/// survey's. A response in progress can't be submitted with new answers after the close either: it is submitted for the
+/// respondent with what it had saved (<see cref="SurveyAccessContext.AutoSubmitted"/>).
 /// </summary>
 public sealed class AvailabilityWindowRule : ISurveyAccessRule
 {
@@ -24,18 +25,23 @@ public sealed class AvailabilityWindowRule : ISurveyAccessRule
 
         var now = context.UtcNow;
         var opens = context.Override?.OpensUtc ?? context.Survey.Access?.OpensUtc;
-        var closes = context.Override?.ClosesUtc ?? context.Survey.Access?.ClosesUtc;
 
         if ((opens is not null && now < opens) || (context.Collector?.OpensUtc is { } collectorOpens && now < collectorOpens))
         {
             return Task.FromResult(SurveyAccessDecision.Deny(SurveyErrorCode.NotOpen));
         }
 
-        if ((closes is not null && now >= closes) || (context.Collector?.ClosesUtc is { } collectorCloses && now >= collectorCloses))
-        {
-            return Task.FromResult(SurveyAccessDecision.Deny(SurveyErrorCode.Closed));
-        }
-
-        return Task.FromResult(SurveyAccessDecision.Allow);
+        return Task.FromResult(IsPastClose(context)
+            ? SurveyAccessDecision.Deny(SurveyErrorCode.Closed)
+            : SurveyAccessDecision.Allow);
     }
+
+    /// <inheritdoc />
+    public Task<SurveyAccessDecision> CheckCompleteAsync(SurveyAccessContext context)
+        => Task.FromResult(!context.IsTest && !context.AutoSubmitted && IsPastClose(context)
+            ? SurveyAccessDecision.Deny(SurveyErrorCode.Closed)
+            : SurveyAccessDecision.Allow);
+
+    private static bool IsPastClose(SurveyAccessContext context)
+        => SurveyAvailability.ClosesUtc(context.Survey, context.Override, context.Collector) is { } closes && context.UtcNow >= closes;
 }

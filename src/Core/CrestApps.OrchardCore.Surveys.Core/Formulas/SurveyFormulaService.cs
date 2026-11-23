@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -10,6 +11,7 @@ using OrchardCore.DataSources;
 using OrchardCore.DataSources.Expressions;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Formulas;
 
@@ -29,6 +31,9 @@ public sealed class SurveyFormulaService
     private readonly IStringLocalizer S;
     private readonly ILogger _logger;
     private readonly string _tenant;
+    private readonly ISiteService _siteService;
+
+    private string _timeZoneId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyFormulaService"/> class.
@@ -38,6 +43,7 @@ public sealed class SurveyFormulaService
     /// <param name="memoryCache">The memory cache.</param>
     /// <param name="shellSettings">The tenant settings.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="siteService">The site service, for the site's time zone.</param>
     /// <param name="stringLocalizer">The localizer of compile errors.</param>
     /// <param name="logger">The logger.</param>
     public SurveyFormulaService(
@@ -46,6 +52,7 @@ public sealed class SurveyFormulaService
         IMemoryCache memoryCache,
         ShellSettings shellSettings,
         IClock clock,
+        ISiteService siteService,
         IStringLocalizer<SurveyFormulaService> stringLocalizer,
         ILogger<SurveyFormulaService> logger)
     {
@@ -53,9 +60,35 @@ public sealed class SurveyFormulaService
         _catalog = catalog;
         _memoryCache = memoryCache;
         _clock = clock;
+        _siteService = siteService;
         S = stringLocalizer;
         _logger = logger;
         _tenant = shellSettings?.Name ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Reads the site's time zone, which formulas read the date and time in. The runtime calls it before it evaluates
+    /// anything; until it runs, formulas use the server's time zone, as Orchard Core does for a site without one.
+    /// </summary>
+    /// <returns>A task.</returns>
+    public async Task PrepareAsync()
+    {
+        if (_timeZoneId is not null || _siteService is null)
+        {
+            return;
+        }
+
+        var site = await _siteService.GetSiteSettingsAsync();
+
+        _timeZoneId = !string.IsNullOrEmpty(site?.TimeZoneId) ? site.TimeZoneId : _clock.GetSystemTimeZone()?.TimeZoneId ?? string.Empty;
+    }
+
+    // The current date and time in the site's time zone (wall clock, unspecified kind), as the formula language expects.
+    private DateTime LocalNow()
+    {
+        var zone = _timeZoneId ?? _clock.GetSystemTimeZone()?.TimeZoneId ?? string.Empty;
+
+        return DateTime.SpecifyKind(CalendarTime.ToLocal(DateTime.SpecifyKind(_clock.UtcNow, DateTimeKind.Utc), zone), DateTimeKind.Unspecified);
     }
 
     /// <summary>
@@ -109,7 +142,10 @@ public sealed class SurveyFormulaService
         {
             var expression = compiled.Expressions.GetOrAdd(formula, text => ExpressionCompiler.Compile(text, compiled.Scope, _catalog, S));
             var row = BuildRow(compiled.Scope, definition, response);
-            var now = DateTime.SpecifyKind(_clock.UtcNow, DateTimeKind.Utc);
+
+            // NOW(), TODAY() and AGE() read the site's date and time, never UTC: someone born on the 23rd turns a year
+            // older on the 23rd of the site's calendar, not hours earlier because UTC is already there.
+            var now = LocalNow();
 
             using (SurveyFormulaContext.Use(new SurveyFormulaContext { Definition = definition, Response = response, Today = DateOnly.FromDateTime(now) }))
             {

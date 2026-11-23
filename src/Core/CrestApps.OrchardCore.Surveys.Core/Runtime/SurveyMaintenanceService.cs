@@ -15,8 +15,9 @@ using YesSql.Services;
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
 /// <summary>
-/// Upkeep of responses, a batch at a time: abandons responses idle past their survey's expiry, applies retention
-/// (delete or anonymize), deletes old participation records, and submits responses whose deadline was missed.
+/// Upkeep of responses, a batch at a time: submits the responses left in progress on a closed survey as they were saved,
+/// abandons responses idle past their survey's expiry, applies retention (delete or anonymize), deletes old
+/// participation records (except those of surveys with a total limit), and submits responses whose deadline was missed.
 /// Each response is handled in its own child shell scope, with a session of its own that commits on its own: a
 /// response that fails, even when its save fails, is logged and skipped, and never takes the other responses' changes
 /// with it. After <see cref="MaxUpkeepFailures"/> failures in a row it is no longer tried, so failing responses can't
@@ -102,10 +103,19 @@ public sealed class SurveyMaintenanceService
         var now = _clock.UtcNow;
         var surveys = new Dictionary<string, Survey>(StringComparer.Ordinal);
 
+        // Every survey is read once for the run: retention, the close and the participation cleanup need them.
+        foreach (var survey in await _session.Query<Survey, SurveyIndex>(collection: SurveysConstants.CollectionName).ListAsync(cancellationToken))
+        {
+            surveys[survey.ItemId] = survey;
+        }
+
+        // Responses of a closed survey are submitted before idle ones are abandoned, so a response left in progress at
+        // the close is submitted as it was saved rather than dropped.
+        await SubmitClosedAsync(now, batchSize, surveys, cancellationToken);
         await AbandonIdleAsync(now, batchSize, surveys, cancellationToken);
         await ApplyRetentionAsync(now, batchSize, surveys, cancellationToken);
         await SubmitOverdueAsync(now, batchSize, cancellationToken);
-        await DeleteExpiredParticipationAsync(now, batchSize, cancellationToken);
+        await DeleteExpiredParticipationAsync(now, batchSize, surveys, cancellationToken);
     }
 
     /// <summary>
@@ -217,14 +227,11 @@ public sealed class SurveyMaintenanceService
 
     private async Task ApplyRetentionAsync(DateTime now, int batchSize, Dictionary<string, Survey> surveys, CancellationToken cancellationToken)
     {
-        var withRetention = await _session.Query<Survey, SurveyIndex>(collection: SurveysConstants.CollectionName).ListAsync(cancellationToken);
         var inProgress = nameof(SurveyResponseStatus.InProgress);
         var handled = 0;
 
-        foreach (var survey in withRetention)
+        foreach (var survey in surveys.Values.Where(survey => survey is not null).ToList())
         {
-            surveys[survey.ItemId] = survey;
-
             if (survey.Retention?.Days is not { } days || days <= 0 || handled >= batchSize)
             {
                 continue;
@@ -273,6 +280,49 @@ public sealed class SurveyMaintenanceService
         }
     }
 
+    // Submits the responses left in progress on a survey that closed (staff closed or archived it, or its closing date
+    // passed), as they were saved before the close: a closed survey takes no new answers. A respondent whose
+    // accommodation closes later keeps answering; their response is skipped until then. Test responses are left alone.
+    private async Task SubmitClosedAsync(DateTime now, int batchSize, Dictionary<string, Survey> surveys, CancellationToken cancellationToken)
+    {
+        var inProgress = nameof(SurveyResponseStatus.InProgress);
+        var handled = 0;
+
+        foreach (var survey in surveys.Values.Where(survey => survey is not null && SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, now)).ToList())
+        {
+            if (handled >= batchSize)
+            {
+                return;
+            }
+
+            var surveyId = survey.ItemId;
+
+            handled += await WalkAsync(
+                batchSize - handled,
+                batchSize,
+                async (after, leftOut) =>
+                {
+                    var query = _responseStore.YesSqlSession.QueryIndex<SurveyResponseIndex>(
+                        index => index.SurveyId == surveyId && index.Status == inProgress && !index.IsTest && index.UpkeepFailures < MaxUpkeepFailures,
+                        collection: SurveysConstants.ResponsesCollectionName);
+
+                    if (after is not null)
+                    {
+                        var lastId = after.Id;
+
+                        query = query.Where(index => index.Id > lastId);
+                    }
+
+                    return (await query
+                        .OrderBy(index => index.Id)
+                        .Take(batchSize)
+                        .ListAsync(cancellationToken)).ToList();
+                },
+                row => TryAsync("submit after its survey closed", row, async services => Done(await services.GetRequiredService<SurveyResponseService>().SubmitAtCloseAsync(row.ItemId, cancellationToken)), cancellationToken),
+                cancellationToken);
+        }
+    }
+
     private Task<int> SubmitOverdueAsync(DateTime now, int batchSize, CancellationToken cancellationToken)
     {
         var inProgress = nameof(SurveyResponseStatus.InProgress);
@@ -312,10 +362,15 @@ public sealed class SurveyMaintenanceService
     // fails is deleted again one record at a time, so one record that can't be deleted (a document that can't be read,
     // say) never stops the cleanup: it is logged and read past. The cleanup stops until the next run only when nothing
     // of a batch could be deleted.
-    private async Task DeleteExpiredParticipationAsync(DateTime now, int batchSize, CancellationToken cancellationToken)
+    // The records of a survey with a total limit are kept, so its total counts every response for as long as it runs.
+    private async Task DeleteExpiredParticipationAsync(DateTime now, int batchSize, Dictionary<string, Survey> surveys, CancellationToken cancellationToken)
     {
         var started = Stopwatch.GetTimestamp();
         long afterId = 0;
+        var kept = surveys.Values
+            .Where(SurveyParticipationService.KeepsRecords)
+            .Select(survey => survey.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
 
         for (var batch = 0; batch < MaxParticipationBatches; batch++)
         {
@@ -324,7 +379,7 @@ public sealed class SurveyMaintenanceService
             try
             {
                 await ShellScope.UsingChildScopeAsync(async scope =>
-                    rows = await scope.ServiceProvider.GetRequiredService<SurveyParticipationService>().ListExpiredAsync(now, afterId, batchSize, cancellationToken));
+                    rows = await scope.ServiceProvider.GetRequiredService<SurveyParticipationService>().ListExpiredAsync(now, afterId, batchSize, kept, cancellationToken));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -338,9 +393,14 @@ public sealed class SurveyMaintenanceService
                 return;
             }
 
-            var ids = rows.Select(row => row.ItemId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+            var ids = rows
+                .Where(row => row.SurveyId is null || !kept.Contains(row.SurveyId))
+                .Select(row => row.ItemId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
 
-            if (await DeleteParticipationAsync(ids, cancellationToken) is { } batchFailure)
+            if (ids.Length > 0 && await DeleteParticipationAsync(ids, cancellationToken) is { } batchFailure)
             {
                 var deletedAny = false;
 

@@ -45,6 +45,18 @@ public sealed class SurveyRunnerController : Controller
     /// </summary>
     public const string AutoStartQueryKey = "autostart";
 
+    /// <summary>
+    /// How long a kiosk response page may be left without input before it goes back to the landing page.
+    /// </summary>
+    public const int KioskIdleSeconds = 180;
+
+    /// <summary>
+    /// The header the runner script sends with a page it posts itself; the answer is then JSON naming where to go.
+    /// </summary>
+    public const string FetchHeader = "X-Survey-Fetch";
+
+    private const string ErrorsTempDataKey = "SurveyErrors";
+
     private static readonly HashSet<string> _reservedQueryKeys = new(StringComparer.OrdinalIgnoreCase) { "preview", "hidden", CultureQueryKey, AutoStartQueryKey };
 
     private readonly ISurveyResponseService _responses;
@@ -200,7 +212,7 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="hidden">Whether a preview shows hidden questions.</param>
     /// <returns>The page.</returns>
     [HttpGet("s/r/{responseId}")]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Respond(string responseId, bool preview = false, bool hidden = false)
     {
         // There is no resume link: a response resumes only for its signed-in user or the browser holding its resume
@@ -219,6 +231,12 @@ public sealed class SurveyRunnerController : Controller
 
         var result = await _responses.GetPageAsync(response);
 
+        // The errors of a page the runner script posted, carried over its redirect.
+        if (TempData[ErrorsTempDataKey] is string errors && result.Page is not null)
+        {
+            result.Errors = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(errors) ?? [];
+        }
+
         return await RenderPageAsync(result, message: null, preview && response.IsTest, hidden && response.IsTest);
     }
 
@@ -231,7 +249,7 @@ public sealed class SurveyRunnerController : Controller
     /// <returns>The next page, the errors, or the ending.</returns>
     [HttpPost("s/r/{responseId}")]
     [ValidateAntiForgeryToken]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Post(string responseId, string direction, string pageId)
     {
         var response = await FindOwnAsync(responseId);
@@ -252,22 +270,37 @@ public sealed class SurveyRunnerController : Controller
 
         var preview = response.IsTest && string.Equals(Request.Query["preview"], "true", StringComparison.OrdinalIgnoreCase);
 
-        if (result.Ended || result.Error == SurveyErrorCode.DeadlinePassed || result.Response?.Status is SurveyResponseStatus.Completed or SurveyResponseStatus.ScreenedOut)
+        // The runner script posts the page itself, so it can keep the answers and send them again when the server is
+        // busy (429): it is told where to go, and the errors of a refused page go there with it.
+        var fromScript = string.Equals(Request.Headers[FetchHeader], "1", StringComparison.Ordinal);
+
+        IActionResult Go(string action, object values)
+            => fromScript ? Json(new { redirect = Url.Action(action, values) }, _jsonOptions) : RedirectToAction(action, values);
+
+        if (result.Ended || result.Error is SurveyErrorCode.DeadlinePassed or SurveyErrorCode.Closed || result.Response?.Status is SurveyResponseStatus.Completed or SurveyResponseStatus.ScreenedOut)
         {
-            return RedirectToAction(nameof(Done), new { responseId });
+            return Go(nameof(Done), new { responseId });
         }
 
         if (result.Error == SurveyErrorCode.Busy)
         {
             TempData["SurveyMessage"] = _messages.For(SurveyErrorCode.Busy);
 
-            return RedirectToAction(nameof(Respond), new { responseId, preview });
+            return Go(nameof(Respond), new { responseId, preview });
         }
 
         if (result.Error == SurveyErrorCode.None)
         {
             // Post, redirect, get: refreshing the next page never posts the previous one again.
-            return RedirectToAction(nameof(Respond), new { responseId, preview });
+            return Go(nameof(Respond), new { responseId, preview });
+        }
+
+        if (fromScript && result.Page is not null)
+        {
+            TempData["SurveyMessage"] = _messages.For(result.Error);
+            TempData[ErrorsTempDataKey] = JsonSerializer.Serialize(result.Errors ?? []);
+
+            return Go(nameof(Respond), new { responseId, preview });
         }
 
         return await RenderPageAsync(result, _messages.For(result.Error), preview, showHidden: false);
@@ -281,7 +314,7 @@ public sealed class SurveyRunnerController : Controller
     /// <returns>The result as JSON.</returns>
     [HttpPost("s/r/{responseId}/save")]
     [ValidateAntiForgeryToken]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Save(string responseId, string pageId)
     {
         var response = await FindOwnAsync(responseId);
@@ -310,7 +343,7 @@ public sealed class SurveyRunnerController : Controller
     /// <returns>The result as JSON.</returns>
     [HttpPost("s/r/{responseId}/evaluate")]
     [ValidateAntiForgeryToken]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Evaluate(string responseId)
     {
         var response = await FindOwnAsync(responseId);
@@ -332,7 +365,9 @@ public sealed class SurveyRunnerController : Controller
             ok = result.Succeeded,
             hiddenQuestionIds = result.HiddenQuestionIds,
             hiddenChoiceIds = result.HiddenChoiceIds,
-            texts = result.Texts,
+
+            // A title and a description are HTML: they go out sanitized, as the page shows them. The other texts are plain.
+            texts = result.Texts.ToDictionary(pair => pair.Key, pair => SurveyPageViewBuilder.IsHtmlText(pair.Key) ? Sanitize(pair.Value) : pair.Value, StringComparer.Ordinal),
             errors = result.Errors,
         }, _jsonOptions);
     }
@@ -345,7 +380,7 @@ public sealed class SurveyRunnerController : Controller
     /// <returns>The feedback as JSON.</returns>
     [HttpPost("s/r/{responseId}/check/{questionId}")]
     [ValidateAntiForgeryToken]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Check(string responseId, string questionId)
     {
         var response = await FindOwnAsync(responseId);
@@ -363,6 +398,13 @@ public sealed class SurveyRunnerController : Controller
             Form = Request.Form,
         });
 
+        // Feedback is the author's HTML: it goes out sanitized, and the page shows it as markup, not as text.
+        if (result.Feedback is { } feedback)
+        {
+            feedback.Feedback = Sanitize(feedback.Feedback);
+            feedback.GeneralFeedback = Sanitize(feedback.GeneralFeedback);
+        }
+
         return Json(new
         {
             ok = result.Succeeded,
@@ -379,7 +421,7 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="responseId">The response.</param>
     /// <returns>The page or a redirect.</returns>
     [HttpGet("s/r/{responseId}/done")]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Done(string responseId)
     {
         var response = await FindOwnAsync(responseId);
@@ -404,13 +446,33 @@ public sealed class SurveyRunnerController : Controller
 
         var collector = string.IsNullOrEmpty(response.CollectorId) ? null : await _collectorStore.FindByIdAsync(response.CollectorId);
 
+        // An abandoned or voided response was never received: it doesn't show an ending that thanks the respondent.
+        if (response.Status is SurveyResponseStatus.Abandoned or SurveyResponseStatus.Voided)
+        {
+            if (collector?.Kind == SurveyCollectorKinds.Kiosk)
+            {
+                _identities.ClearResumeCookie(survey.ItemId);
+            }
+            else
+            {
+                _identities.ShortenResumeCookie(survey.ItemId);
+            }
+
+            return MessagePage(survey.Title, response.Status == SurveyResponseStatus.Abandoned
+                ? S["This response was not submitted: it was left unfinished, or it could no longer be submitted. Your answers were not received as a response."]
+                : S["This response was withdrawn and doesn't count."]);
+        }
+
+        // The same test of a closed survey as reopening: staff closed it or its link, or its closing date passed.
+        var closed = await IsClosedForAsync(survey, collector, response);
+
         // A kiosk forgets the response before anything else, a redirecting ending included, so the next person at the
         // device never reaches it.
         if (collector?.Kind == SurveyCollectorKinds.Kiosk)
         {
             _identities.ClearResumeCookie(survey.ItemId);
         }
-        else if (CanReturnLater(survey, version.Definition, response))
+        else if (CanReturnLater(survey, version.Definition, response, closed))
         {
             // A guest's only proof that the response is theirs is this cookie, so while they may still reopen or review
             // it later it keeps (and renews) its full life.
@@ -443,7 +505,7 @@ public sealed class SurveyRunnerController : Controller
             Response = response,
             Ending = ending,
             CanReview = response.Status == SurveyResponseStatus.Completed && (shows & ReviewShows.Responses) != 0,
-            CanReopen = response.Status == SurveyResponseStatus.Completed && definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open,
+            CanReopen = response.Status == SurveyResponseStatus.Completed && definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open && !closed,
             ShowScore = definition.Scoring?.Enabled == true && definition.Scoring.ShowScoreToRespondent && (shows & ReviewShows.Score) != 0 && response.Grading == GradingStatus.Graded,
             // A response started without a collector (a course item's survey) reaches the totals through the response itself.
             ResultsUrl = definition.Review?.ResultsVisibility is not (ResultsVisibility.AfterAnswer or ResultsVisibility.Always)
@@ -480,7 +542,7 @@ public sealed class SurveyRunnerController : Controller
     /// <returns>A redirect to the response.</returns>
     [HttpPost("s/r/{responseId}/reopen")]
     [ValidateAntiForgeryToken]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Reopen(string responseId)
     {
         var response = await FindOwnAsync(responseId);
@@ -510,7 +572,7 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="responseId">The response.</param>
     /// <returns>The page.</returns>
     [HttpGet("s/r/{responseId}/review")]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> Review(string responseId)
     {
         var response = await FindOwnAsync(responseId);
@@ -572,7 +634,7 @@ public sealed class SurveyRunnerController : Controller
     /// <param name="responseId">The respondent's own response.</param>
     /// <returns>The page.</returns>
     [HttpGet("s/r/{responseId}/results")]
-    [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
+    [RateLimitGroup(RespondRateLimitsStartup.ResponseRateLimitGroup, RespondRateLimitsStartup.ClientCeilingGroup)]
     public async Task<IActionResult> ResponseResults(string responseId)
     {
         var response = await FindOwnAsync(responseId);
@@ -590,7 +652,9 @@ public sealed class SurveyRunnerController : Controller
     {
         var version = await _versionCache.GetPublishedAsync(survey);
         var visibility = version?.Definition?.Review?.ResultsVisibility ?? ResultsVisibility.Never;
-        var closed = survey.Status is SurveyStatus.Closed or SurveyStatus.Archived;
+
+        // The survey closes when staff close it or when its closing date passes.
+        var closed = Core.Access.SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, _clock.UtcNow);
         var allowed = visibility == ResultsVisibility.Always
             || (visibility == ResultsVisibility.AfterClose && closed)
             || (visibility == ResultsVisibility.AfterAnswer && await hasAnswered());
@@ -809,6 +873,15 @@ public sealed class SurveyRunnerController : Controller
 
         ViewData["SurveyClientRules"] = JsonSerializer.Serialize(result.Page.ClientRules, _ruleOptions);
 
+        // A kiosk is a shared device: a response page left alone goes back to the landing page (which forgets the
+        // response), so the next person never sees the previous person's answers.
+        if (!string.IsNullOrEmpty(result.Response.CollectorId)
+            && await _collectorStore.FindByIdAsync(result.Response.CollectorId) is { Kind: SurveyCollectorKinds.Kiosk } kiosk)
+        {
+            ViewData["SurveyKioskIdleUrl"] = Url.Content("~/s/" + kiosk.Token);
+            ViewData["SurveyKioskIdleSeconds"] = KioskIdleSeconds;
+        }
+
         return View("Respond", shape);
     }
 
@@ -816,7 +889,7 @@ public sealed class SurveyRunnerController : Controller
     // (edit after submit while the survey is open) or review its answers (the review shown later while the survey is
     // open, or the one after it closes). An open survey closes on its close date or whenever staff close it, so a review
     // after close that shows the answers keeps the cookie too; a closed one already uses that review.
-    internal static bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response, ReviewShows later)
+    internal static bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response, ReviewShows later, bool closed = false)
     {
         ArgumentNullException.ThrowIfNull(survey);
         ArgumentNullException.ThrowIfNull(definition);
@@ -827,7 +900,7 @@ public sealed class SurveyRunnerController : Controller
             return false;
         }
 
-        if (definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open)
+        if (definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open && !closed)
         {
             return true;
         }
@@ -839,12 +912,37 @@ public sealed class SurveyRunnerController : Controller
 
         // A completed response is never voided or abandoned by its respondent, so what the review after close shows of
         // its answers is the setting itself.
-        return survey.Status == SurveyStatus.Open
-            &&((definition.Review ?? new SurveyReviewSettings()).AfterClose & ReviewShows.Responses) != 0;
+        return survey.Status == SurveyStatus.Open && !closed
+            && ((definition.Review ?? new SurveyReviewSettings()).AfterClose & ReviewShows.Responses) != 0;
     }
 
-    private bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response)
-        => CanReturnLater(survey, definition, response, ReviewMoment(survey, definition, response, _clock.UtcNow + SurveyResumeCookies.CompletedMaxAge));
+    private bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response, bool closed)
+        => CanReturnLater(survey, definition, response, ReviewMoment(survey, definition, response, _clock.UtcNow + SurveyResumeCookies.CompletedMaxAge), closed);
+
+    // Whether the survey is closed to the respondent of a response, as the response service decides it.
+    private async Task<bool> IsClosedForAsync(Survey survey, SurveyCollector collector, SurveyResponse response)
+    {
+        if (response.IsTest)
+        {
+            return false;
+        }
+
+        // The survey's own closing date counts for reopening even with an accommodation that closes later: the review
+        // after close follows the survey's date.
+        if (Core.Access.SurveyAvailability.IsClosed(survey, surveyOverride: null, collector, _clock.UtcNow))
+        {
+            return true;
+        }
+
+        SurveyOverride surveyOverride = null;
+
+        if (survey.Access?.ClosesUtc is not null && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides)
+        {
+            surveyOverride = await overrides.FindEffectiveAsync(survey.ItemId, response.UserId ?? _identities.Build(survey.ItemId).UserId, response.Context);
+        }
+
+        return Core.Access.SurveyAvailability.IsClosed(survey, surveyOverride, collector, _clock.UtcNow);
+    }
 
     private ReviewShows ReviewMoment(Survey survey, SurveyDefinition definition, SurveyResponse response, DateTime utcNow)
     {
@@ -854,7 +952,7 @@ public sealed class SurveyRunnerController : Controller
         }
 
         var review = definition.Review ?? new SurveyReviewSettings();
-        var closed = survey.Status is SurveyStatus.Closed or SurveyStatus.Archived;
+        var closed = Core.Access.SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, utcNow);
 
         if (closed)
         {
@@ -903,6 +1001,9 @@ public sealed class SurveyRunnerController : Controller
 
         return response is not null && SurveyResponseService.IsOwner(response, _identities.Build(response.SurveyId)) ? response : null;
     }
+
+    private string Sanitize(string html)
+        => string.IsNullOrEmpty(html) || _serviceProvider.GetService<SurveyContentSanitizer>() is not { } sanitizer ? html : sanitizer.Sanitize(html);
 
     private bool IsSignedIn()
         => User?.Identity?.IsAuthenticated == true;

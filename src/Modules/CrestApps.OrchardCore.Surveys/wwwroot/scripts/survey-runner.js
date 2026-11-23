@@ -367,6 +367,28 @@
 		return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
 	}
 	/**
+	* Works out how long the runner waits before it sends a request again after the server refused it as too many
+	* (status 429) or unavailable (503): the server's Retry-After seconds when it sends them, else a delay that doubles
+	* with each attempt, never under one second nor over thirty.
+	* @param {string | null} retryAfter the Retry-After header, or null
+	* @param {number} attempt the attempt that was refused, from 1
+	* @returns {number} the delay in milliseconds
+	*/
+	function retryDelay(retryAfter, attempt) {
+		const seconds = Number.parseInt(retryAfter ?? "", 10);
+		const delay = Number.isFinite(seconds) && seconds >= 0 ? seconds : 2 ** Math.max(attempt, 1);
+		return Math.min(Math.max(delay, 1), 30) * 1e3;
+	}
+	/**
+	* Gets whether a response status means the request was not handled and may be sent again as it is: too many requests
+	* (429) or the server is unavailable (503).
+	* @param {number} status the status
+	* @returns {boolean} whether to retry
+	*/
+	function isRetryable(status) {
+		return status === 429 || status === 503;
+	}
+	/**
 	* Returns a debounced function that runs the last call after a quiet time.
 	* @template {(...args: any[]) => void} T
 	* @param {T} work the function
@@ -384,6 +406,39 @@
 	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner.js
 	var autosaveDelay = 1e4;
 	var evaluateDelay = 300;
+	var maxAttempts = 5;
+	/**
+	* @param {number} milliseconds
+	* @returns {Promise<void>}
+	*/
+	function sleep(milliseconds) {
+		return new Promise((resolve) => setTimeout(resolve, milliseconds));
+	}
+	/**
+	* Sends a request, and sends it again while the server answers that it is too busy (429) or unavailable (503): such a
+	* request was not handled, so sending it again is safe. Returns the last response, or null when the network failed.
+	* @param {string} url
+	* @param {RequestInit} init
+	* @param {(waiting: boolean) => void} [onRetry] told when a retry is waiting and when it is over
+	* @returns {Promise<Response | null>}
+	*/
+	async function send(url, init, onRetry) {
+		for (let attempt = 1;; attempt++) {
+			/** @type {Response} */
+			let response;
+			try {
+				response = await fetch(url, init);
+			} catch {
+				return null;
+			}
+			if (!isRetryable(response.status) || attempt >= maxAttempts) {
+				onRetry?.(false);
+				return response;
+			}
+			onRetry?.(true);
+			await sleep(retryDelay(response.headers.get("Retry-After"), attempt));
+		}
+	}
 	/**
 	* @param {HTMLFormElement} form
 	* @returns {string}
@@ -404,13 +459,33 @@
 			/** @type {HTMLInputElement} */
 			input.name
 		);
-		const response = await fetch(url, {
+		const response = await send(url, {
 			method: "POST",
 			body,
 			credentials: "same-origin",
 			headers: { RequestVerificationToken: antiforgery(form) }
 		});
-		return response.ok ? response.json() : null;
+		return response?.ok ? response.json() : null;
+	}
+	/**
+	* Puts markup the server sanitized into an element: parsed as an inert document (no script runs), then moved in.
+	* @param {Element} target
+	* @param {string} html
+	*/
+	function setMarkup(target, html) {
+		const parsed = new DOMParser().parseFromString(html, "text/html");
+		target.replaceChildren(...Array.from(parsed.body.childNodes));
+	}
+	/**
+	* Updates a piped text of the page: a title and a description are sanitized HTML, as the page first showed them; other
+	* texts are plain.
+	* @param {Element} target
+	* @param {string} key
+	* @param {string} text
+	*/
+	function setText(target, key, text) {
+		if (key.startsWith("title:") || key.startsWith("description:")) setMarkup(target, text);
+		else target.textContent = text;
 	}
 	/**
 	* @param {HTMLFormElement} form
@@ -473,14 +548,18 @@
 			});
 			for (const [key, text] of Object.entries(result.texts ?? {})) {
 				const target = form.querySelector(`[data-survey-text="${CSS.escape(key)}"]`);
-				if (target) target.textContent = text;
+				if (target) setText(target, key, text ?? "");
 			}
 		}, evaluateDelay);
 		const save = async () => {
 			if (!dirty || submitting || !form.dataset.saveUrl) return;
 			dirty = false;
 			const result = await post(form, form.dataset.saveUrl);
-			if (result && !result.ok && result.errors && Object.keys(result.errors).length > 0) showLockErrors(result.errors);
+			if (!result) {
+				dirty = true;
+				return;
+			}
+			if (!result.ok && result.errors && Object.keys(result.errors).length > 0) showLockErrors(result.errors);
 		};
 		const autosave = debounce(save, autosaveDelay);
 		const changed = () => {
@@ -508,7 +587,38 @@
 			}
 			submitting = true;
 			form.querySelectorAll("button[type=\"submit\"]").forEach((button) => button.setAttribute("aria-disabled", "true"));
+			event.preventDefault();
+			submitPage(submitter);
 		});
+		const retryStatus = form.querySelector("[data-survey-retry]");
+		const showRetry = (text) => {
+			if (retryStatus) {
+				retryStatus.textContent = text;
+				retryStatus.hidden = !text;
+			}
+			if (text) announce(text);
+		};
+		const submitPage = async (submitter) => {
+			const body = new FormData(form);
+			if (submitter?.name) body.set(submitter.name, submitter.value);
+			const response = await send(form.action, {
+				method: "POST",
+				body,
+				credentials: "same-origin",
+				headers: {
+					RequestVerificationToken: antiforgery(form),
+					"X-Survey-Fetch": "1"
+				}
+			}, (waiting) => showRetry(waiting ? form.dataset.retryMessage ?? "" : ""));
+			if (response && !isRetryable(response.status)) {
+				const result = response.ok && (response.headers.get("Content-Type") ?? "").includes("json") ? await response.json().catch(() => null) : null;
+				window.location.assign(result?.redirect ?? form.action);
+				return;
+			}
+			submitting = false;
+			form.querySelectorAll("button[type=\"submit\"]").forEach((button) => button.removeAttribute("aria-disabled"));
+			showRetry(form.dataset.retryFailed ?? "");
+		};
 		for (const button of form.querySelectorAll("[data-survey-check]")) button.addEventListener("click", async () => {
 			const questionId = button.dataset.surveyCheck ?? "";
 			const result = await post(form, (form.dataset.checkUrl ?? "") + encodeURIComponent(questionId));
@@ -520,7 +630,6 @@
 				if (result.feedback?.correct === true) parts.push("✓");
 				else if (result.feedback?.correct === false) parts.push("✗");
 				if (result.feedback?.rightAnswer) parts.push(result.feedback.rightAnswer);
-				if (result.feedback?.feedback) parts.push(result.feedback.feedback);
 				button.remove();
 				const question = form.querySelector(`[data-question-id="${CSS.escape(questionId)}"]`);
 				question?.setAttribute("data-survey-locked", "true");
@@ -530,6 +639,11 @@
 				});
 			}
 			output.textContent = parts.filter((part) => part).join(" ");
+			for (const html of result.ok ? [result.feedback?.feedback, result.feedback?.generalFeedback] : []) if (html) {
+				const block = document.createElement("div");
+				setMarkup(block, html);
+				output.append(block);
+			}
 			announce(output.textContent ?? "");
 		});
 		const message = document.querySelector("[data-survey-message]");
@@ -571,5 +685,33 @@
 		};
 		tick();
 	}
+	/**
+	* A kiosk response page left without input goes back to the landing page, which forgets the response, so the next
+	* person at the device never sees the previous person's answers.
+	* @param {HTMLElement} container
+	*/
+	function initKioskIdle(container) {
+		const url = container.dataset.surveyKioskIdleUrl;
+		const seconds = Number.parseInt(container.dataset.surveyKioskIdleSeconds ?? "", 10);
+		if (!url || !Number.isFinite(seconds) || seconds <= 0) return;
+		/** @type {ReturnType<typeof setTimeout> | undefined} */
+		let timer;
+		const reset = () => {
+			clearTimeout(timer);
+			timer = setTimeout(() => window.location.assign(url), seconds * 1e3);
+		};
+		for (const type of [
+			"input",
+			"change",
+			"keydown",
+			"pointerdown",
+			"scroll"
+		]) document.addEventListener(type, reset, {
+			passive: true,
+			capture: true
+		});
+		reset();
+	}
 	document.querySelectorAll("form[data-survey-form]").forEach((form) => initForm(form));
+	document.querySelectorAll("[data-survey-kiosk-idle-url]").forEach((container) => initKioskIdle(container));
 })();

@@ -53,6 +53,23 @@ public sealed class SurveyResponseCounter
     }
 
     /// <summary>
+    /// Counts the completed responses of a user in a context (screened-out, abandoned, voided and test responses left
+    /// out, and a reopened response until it completes again).
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="userId">The user.</param>
+    /// <param name="contextRef">The context as Kind:Id, or <see langword="null"/>.</param>
+    /// <returns>The count.</returns>
+    public Task<int> CountCompletedForUserAsync(string surveyId, string userId, string contextRef)
+    {
+        var completed = nameof(SurveyResponseStatus.Completed);
+
+        return contextRef is null
+            ? _store.YesSqlSession.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && index.Status == completed && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).CountAsync()
+            : _store.YesSqlSession.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && index.ContextRef == contextRef && index.Status == completed && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).CountAsync();
+    }
+
+    /// <summary>
     /// Finds the response in progress of a user for a survey and context.
     /// </summary>
     /// <param name="surveyId">The survey.</param>

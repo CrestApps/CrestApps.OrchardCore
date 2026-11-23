@@ -55,7 +55,10 @@ public sealed class SurveyPlanBuilder
         var random = new SurveyRandom(seed);
         var pages = (definition.Pages ?? []).Where(page => !string.IsNullOrEmpty(page?.Id)).ToList();
 
-        if (definition.Presentation?.PageOrder == QuestionOrder.Shuffle && pages.Count > 3)
+        // A branch to a page skips the pages between it and its target in the designed order, so pages are never
+        // shuffled when one branches to another page: a shuffle would put the target behind the branch (ignored) or
+        // skip, and drop the answers of, pages the author never meant to skip.
+        if (definition.Presentation?.PageOrder == QuestionOrder.Shuffle && pages.Count > 3 && !BranchesToPages(pages))
         {
             // The first and the last page keep their place (an introduction and a closing page).
             var middle = pages.GetRange(1, pages.Count - 2);
@@ -100,6 +103,18 @@ public sealed class SurveyPlanBuilder
 
         return plan;
     }
+
+    /// <summary>
+    /// Gets whether a survey keeps its pages in the designed order whatever its page order setting: a page branches to
+    /// another page.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <returns><see langword="true"/> when page shuffle doesn't apply.</returns>
+    public static bool KeepsPageOrder(SurveyDefinition definition)
+        => BranchesToPages((definition?.Pages ?? []).Where(page => page is not null).ToList());
+
+    private static bool BranchesToPages(List<SurveyPage> pages)
+        => pages.Any(page => page.Branches?.Any(branch => branch is not null && branch.TargetKind != BranchTargetKind.Ending) == true);
 
     /// <summary>
     /// Gets the questions drawn from pools that present evenly, to record them.

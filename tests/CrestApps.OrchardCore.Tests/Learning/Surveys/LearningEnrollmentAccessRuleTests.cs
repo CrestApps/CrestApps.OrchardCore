@@ -183,6 +183,46 @@ public sealed class LearningEnrollmentAccessRuleTests
         Assert.True(decision.IsAllowed);
     }
 
+    [Theory]
+    [InlineData(CourseItemAccessReason.Enrolled, true)]
+    [InlineData(CourseItemAccessReason.NotEnrolled, false)]
+    public async Task CheckComplete_ADeadlineSubmissionWithoutTheLearnersRequest_ChecksTheResponsesLearner(CourseItemAccessReason reason, bool allowed)
+    {
+        // Arrange: the deadline task has no signed-in user; the learner was withdrawn meanwhile in the second case.
+        var access = reason == CourseItemAccessReason.Enrolled ? Enrolled() : new CourseItemAccess { Reason = reason };
+        var learner = new Mock<global::OrchardCore.Users.IUser>().Object;
+        var users = new Mock<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>(Mock.Of<Microsoft.AspNetCore.Identity.IUserStore<global::OrchardCore.Users.IUser>>(), null, null, null, null, null, null, null, null);
+        users.Setup(manager => manager.FindByIdAsync(UserId)).ReturnsAsync(learner);
+        var principals = new Mock<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<global::OrchardCore.Users.IUser>>();
+        principals.Setup(factory => factory.CreateAsync(learner)).ReturnsAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "Identity.Application")));
+        var services = new Mock<IServiceProvider>();
+        services.Setup(provider => provider.GetService(typeof(Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>))).Returns(users.Object);
+        services.Setup(provider => provider.GetService(typeof(Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<global::OrchardCore.Users.IUser>))).Returns(principals.Object);
+        var rule = Rule(access, signedIn: false, services: services.Object);
+        var context = Context(LearningSurveyContexts.Enrollment("e1"));
+        context.AutoSubmitted = true;
+
+        // Act
+        var decision = await rule.CheckCompleteAsync(context);
+
+        // Assert
+        Assert.Equal(allowed, decision.IsAllowed);
+        Assert.Equal(allowed ? SurveyErrorCode.None : SurveyErrorCode.NotInAudience, decision.Error);
+    }
+
+    [Fact]
+    public async Task CheckComplete_ARespondentsOwnSubmitWithoutSignIn_IsStillRefused()
+    {
+        // Arrange
+        var rule = Rule(Enrolled(), signedIn: false, services: new Mock<IServiceProvider>().Object);
+
+        // Act
+        var decision = await rule.CheckCompleteAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.SignInRequired, decision.Error);
+    }
+
     private static CourseItemAccess Enrolled()
         => new()
         {
@@ -191,7 +231,7 @@ public sealed class LearningEnrollmentAccessRuleTests
             CourseId = "course1",
         };
 
-    private static LearningEnrollmentAccessRule Rule(CourseItemAccess access, bool signedIn = true, bool published = true, bool courseOwned = true, ClaimsPrincipal user = null)
+    private static LearningEnrollmentAccessRule Rule(CourseItemAccess access, bool signedIn = true, bool published = true, bool courseOwned = true, ClaimsPrincipal user = null, IServiceProvider services = null)
     {
         var item = new ContentItem { ContentItemId = "item1" };
         var learningSurveys = new Mock<ILearningSurveyService>();
@@ -206,7 +246,7 @@ public sealed class LearningEnrollmentAccessRuleTests
             : new ClaimsPrincipal(new ClaimsIdentity());
         var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } };
 
-        return new LearningEnrollmentAccessRule(learningSurveys.Object, courseAccess.Object, accessor);
+        return new LearningEnrollmentAccessRule(learningSurveys.Object, courseAccess.Object, accessor, services);
     }
 
     private static SurveyAccessContext Context(RecordRef? context)

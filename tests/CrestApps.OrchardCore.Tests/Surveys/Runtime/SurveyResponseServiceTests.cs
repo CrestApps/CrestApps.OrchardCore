@@ -508,7 +508,7 @@ public sealed class SurveyResponseServiceTests
     {
         // Arrange
         await using var harness = await RuntimeTestHarness.CreateAsync();
-        var survey = await harness.PublishAsync(TimedOneAttempt(), item => item.Access.Limits = new RespondentLimits { Total = 1, Counts = LimitCount.Completed });
+        var survey = await harness.PublishAsync(TimedOneAttempt(), item => item.Access.Limits = new RespondentLimits { Total = 1, Counts = LimitCount.Completed, Uniqueness = UniquenessMode.Cookie });
         var start = await harness.StartAsync(survey, configure: request => request.Identity = new SurveyRespondentIdentity { BrowserKey = "browser-1" });
         var identity = new SurveyRespondentIdentity { BrowserKey = "browser-1", ResumeToken = start.ResumeToken };
 
