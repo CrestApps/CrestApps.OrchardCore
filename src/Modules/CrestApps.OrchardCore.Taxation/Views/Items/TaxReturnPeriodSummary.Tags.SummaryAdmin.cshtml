@@ -1,0 +1,34 @@
+@model TaxReturnPeriodRowViewModel
+@using System.Globalization
+
+@{
+    var summary = Model.Summary;
+    var taxReturn = summary.Return;
+    var status = taxReturn?.Status switch
+    {
+        TaxReturnStatus.Draft => T["Draft"],
+        TaxReturnStatus.Ready => T["Ready to file"],
+        TaxReturnStatus.Filed => T["Filed"],
+        TaxReturnStatus.Amended => T["Amended"],
+        _ => T["Not prepared"],
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-info text-secondary" aria-hidden="true"></i> @status</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Due date"]"><i class="fa-solid fa-calendar-day text-secondary" aria-hidden="true"></i> @summary.DueDate.ToString("d", CultureInfo.CurrentCulture)</span>
+@if (summary.IsAnnualReconciliation)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The yearly return filed besides the periodic ones"]"><i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i> @T["Annual return"]</span>
+}
+@if (taxReturn is not null)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Amount due"]"><i class="fa-solid fa-coins text-secondary" aria-hidden="true"></i> @taxReturn.AmountDue.ToString("N2", CultureInfo.CurrentCulture)</span>
+    @if (taxReturn.Status == TaxReturnStatus.Filed && taxReturn.Balance != 0)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Left to pay"]"><i class="fa-solid fa-scale-unbalanced text-secondary" aria-hidden="true"></i> @taxReturn.Balance.ToString("N2", CultureInfo.CurrentCulture)</span>
+    }
+    @if (taxReturn.Amendment > 0)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Amendment"]"><i class="fa-solid fa-pen text-secondary" aria-hidden="true"></i> @T["Amendment {0}", taxReturn.Amendment]</span>
+    }
+}

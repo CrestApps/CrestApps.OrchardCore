@@ -1,0 +1,46 @@
+@model TaxReturnDetailViewModel
+@using System.Globalization
+
+<div class="card mb-3">
+    <div class="card-header">@T["Figures of the period"]</div>
+    <div class="card-body">
+        @if (Model.Return.Lines.Count == 0)
+        {
+            <p class="hint mb-0">@T["No module gave figures for the period."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>@T["Figure"]</th>
+                            <th>@T["Tax type"]</th>
+                            <th>@T["Line"]</th>
+                            <th class="text-end">@T["Amount"]</th>
+                            <th class="text-end">@T["Tax"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in Model.Return.Lines)
+                        {
+                            <tr>
+                                <td>
+                                    @(string.IsNullOrEmpty(line.Description) ? line.Kind : line.Description)
+                                    @if (!string.IsNullOrEmpty(line.Category))
+                                    {
+                                        <span class="text-muted small">· @line.Category</span>
+                                    }
+                                </td>
+                                <td>@line.TaxType</td>
+                                <td>@line.FormLine</td>
+                                <td class="text-end">@line.Amount.ToString("N2", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@line.TaxAmount.ToString("N2", CultureInfo.CurrentCulture)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

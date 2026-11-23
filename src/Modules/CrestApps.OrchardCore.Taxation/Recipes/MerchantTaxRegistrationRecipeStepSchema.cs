@@ -32,5 +32,17 @@ internal sealed class MerchantTaxRegistrationRecipeStepSchema : RecordsRecipeSte
             ("RegistrationDateUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the tax authority granted the registration.")),
             ("EffectiveFromUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the registration takes effect.")),
             ("EffectiveToUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("When the registration ends.")),
+            ("Filing", new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object | SchemaValueType.Null)
+                .Description("How often the registration files its returns and when they are due (Tax Returns), or none.")
+                .Properties(
+                    ("Frequency", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Monthly", "Quarterly", "Annual").Description("How often a return is filed.")),
+                    ("DueMonthsAfterPeriod", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(0).Maximum(12).Description("How many months after the period's last month a return is due. Default 1.")),
+                    ("DueDay", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(31).Description("The day of that month a return is due; a day past the month's end is its last day. Default 20.")),
+                    ("MoveToNextBusinessDay", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a due date on a weekend moves to the Monday after. Default true.")),
+                    ("Form", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The return form of the periodic returns, or none for the generic form.")),
+                    ("AnnualForm", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The form of a yearly reconciliation return filed besides the periodic ones, or none.")),
+                    ("AnnualDueMonthsAfterYear", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(0).Maximum(12).Description("The month after the year the annual return is due in. Default 1.")),
+                    ("AnnualDueDay", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(31).Description("The day of that month the annual return is due. Default 31.")))),
         ];
 }

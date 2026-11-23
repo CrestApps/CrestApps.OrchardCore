@@ -1,0 +1,89 @@
+@model TaxReturnDetailViewModel
+@using System.Globalization
+
+@{
+    var taxReturn = Model.Return;
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Payments"]</div>
+    <div class="card-body">
+        @if (taxReturn.PaidWithEarlier != 0)
+        {
+            <p class="mb-2">@T["Paid with the return this one corrects: {0}", taxReturn.PaidWithEarlier.ToString("N2", CultureInfo.CurrentCulture)]</p>
+        }
+        @if (taxReturn.Payments.Count == 0)
+        {
+            <p class="hint">@T["No payment is recorded. Recording a payment moves no money: it records what the business paid."]</p>
+        }
+        else
+        {
+            <form method="post" class="no-multisubmit">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>@T["Paid on"]</th>
+                            <th>@T["Reference"]</th>
+                            <th>@T["Method"]</th>
+                            <th class="text-end">@T["Amount"]</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in taxReturn.Payments)
+                        {
+                            <tr>
+                                <td>@payment.PaidOn.ToString("d", CultureInfo.CurrentCulture)</td>
+                                <td>@payment.Reference</td>
+                                <td>@payment.Method</td>
+                                <td class="text-end">@payment.Amount.ToString("N2", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">
+                                    @if (Model.CanFile)
+                                    {
+                                        <button type="submit" class="btn btn-sm btn-danger" formaction="@Url.Action("RemovePayment", "TaxReturns", new { id = taxReturn.ItemId, paymentId = payment.Id })" data-url-af="UnsafeUrl" data-title="@T["Remove"]" data-message="@T["Remove the payment recorded by mistake?"]">@T["Remove"]</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </form>
+        }
+
+        @if (Model.CanFile && taxReturn.Status != TaxReturnStatus.Amended)
+        {
+            <form asp-action="RecordPayment" asp-controller="TaxReturns" asp-route-id="@taxReturn.ItemId" method="post" class="no-multisubmit">
+                <div class="ocat-wrapper">
+                    <label for="paymentAmount" class="ocat-label">@T["Amount"]</label>
+                    <div class="ocat-end">
+                        <input id="paymentAmount" name="amount" class="form-control" inputmode="decimal" style="max-width: 12rem" value="@(taxReturn.Balance > 0 ? taxReturn.Balance.ToString(CultureInfo.InvariantCulture) : string.Empty)" />
+                        <span class="hint">@T["Amounts take a dot for decimals."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label for="paymentPaidOn" class="ocat-label">@T["Paid on"]</label>
+                    <div class="ocat-end">
+                        <input id="paymentPaidOn" name="paidOn" type="date" class="form-control" style="max-width: 12rem" value="@Model.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label for="paymentReference" class="ocat-label">@T["Reference"]</label>
+                    <div class="ocat-end">
+                        <input id="paymentReference" name="reference" class="form-control" style="max-width: 20rem" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label for="paymentMethod" class="ocat-label">@T["Method"]</label>
+                    <div class="ocat-end">
+                        <input id="paymentMethod" name="method" class="form-control" style="max-width: 20rem" placeholder="@T["Such as ACH debit or check"]" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-secondary">@T["Record payment"]</button>
+                    </div>
+                </div>
+            </form>
+        }
+    </div>
+</div>

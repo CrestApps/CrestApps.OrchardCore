@@ -1,0 +1,22 @@
+@model MerchantTaxRegistrationRowViewModel
+
+@{
+    var registration = Model.Registration;
+}
+
+@if (!string.IsNullOrEmpty(Model.JurisdictionName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Jurisdiction"]"><i class="fa-solid fa-location-dot text-secondary" aria-hidden="true"></i> @Model.JurisdictionName</span>
+}
+@if (!string.IsNullOrEmpty(registration.TaxType))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Tax type"]"><i class="fa-solid fa-tag text-secondary" aria-hidden="true"></i> @registration.TaxType</span>
+}
+@if (!string.IsNullOrEmpty(registration.RegistrationNumber))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Registration number"]"><i class="fa-solid fa-hashtag text-secondary" aria-hidden="true"></i> @registration.RegistrationNumber</span>
+}
+@if (!registration.IsActive)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The business does not collect the tax under it."]"><i class="fa-solid fa-ban text-secondary" aria-hidden="true"></i> @T["Inactive"]</span>
+}
