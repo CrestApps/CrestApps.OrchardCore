@@ -22,6 +22,48 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
+    /// Lists a collector's invitations of one user, one recipient or one e-mail address, oldest first, by the index,
+    /// so inviting someone doesn't read the whole collector. Give exactly one of the three.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="userId">The user, or <see langword="null"/>.</param>
+    /// <param name="recipientRef">The recipient as Kind:Id, or <see langword="null"/>.</param>
+    /// <param name="email">The e-mail address, or <see langword="null"/>; compared without case.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The invitations, at most 10.</returns>
+    public async Task<IReadOnlyList<SurveyInvitation>> ListForRecipientAsync(string collectorId, string userId, string recipientRef, string email, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(collectorId))
+        {
+            return [];
+        }
+
+        IQuery<SurveyInvitation, SurveyInvitationIndex> query;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.UserId == userId, collection: SurveysConstants.CollectionName);
+        }
+        else if (!string.IsNullOrEmpty(recipientRef))
+        {
+            var key = recipientRef.Length > 255 ? recipientRef[..255] : recipientRef;
+            query = Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.RecipientRef == key, collection: SurveysConstants.CollectionName);
+        }
+        else if (!string.IsNullOrWhiteSpace(email))
+        {
+            var key = email.Trim().ToLowerInvariant();
+            key = key.Length > 254 ? key[..254] : key;
+            query = Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Email == key, collection: SurveysConstants.CollectionName);
+        }
+        else
+        {
+            return [];
+        }
+
+        return (await query.OrderBy(index => index.Id).Take(10).ListAsync(cancellationToken)).ToList();
+    }
+
+    /// <summary>
     /// Finds an invitation by the hash of its token.
     /// </summary>
     /// <param name="tokenHash">The hash.</param>
@@ -164,6 +206,67 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
         }
 
         return saved;
+    }
+
+    /// <summary>
+    /// Visits every invitation of a collector in some statuses, oldest first, a page at a time: each page's changes are
+    /// written and let go of before the next is read, so a large list is never held in memory at once and no invitation
+    /// hides the ones after it. The walk stops at the last row there when it began, so a saved invitation (whose index
+    /// row is written again under a new id) is never visited twice.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="statuses">The statuses visited.</param>
+    /// <param name="visit">The visit, which saves what it changes through this store.</param>
+    /// <param name="pageSize">The number of invitations read at a time.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task VisitByCollectorAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, Func<SurveyInvitation, Task> visit, int pageSize = 500, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+        ArgumentNullException.ThrowIfNull(visit);
+
+        if (string.IsNullOrEmpty(collectorId) || statuses.Count == 0)
+        {
+            return;
+        }
+
+        var names = statuses.Select(status => status.ToString()).ToArray();
+        var last = await Session.QueryIndex<SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Status.IsIn(names), collection: CollectionName)
+            .OrderByDescending(index => index.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        var upToId = last?.Id ?? 0;
+        var afterId = 0L;
+
+        while (afterId < upToId)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var rows = (await Session.QueryIndex<SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Status.IsIn(names) && index.Id > afterId && index.Id <= upToId, collection: CollectionName)
+                .OrderBy(index => index.Id)
+                .Take(Math.Max(1, pageSize))
+                .ListAsync(cancellationToken)).ToList();
+
+            if (rows.Count == 0)
+            {
+                break;
+            }
+
+            afterId = rows[^1].Id;
+
+            var invitations = await GetAsync(rows.Select(row => row.ItemId).ToArray(), cancellationToken);
+
+            foreach (var invitation in invitations)
+            {
+                await visit(invitation);
+            }
+
+            await Session.FlushAsync(cancellationToken);
+
+            foreach (var invitation in invitations)
+            {
+                Session.Detach(invitation, CollectionName);
+            }
+        }
     }
 
     /// <summary>

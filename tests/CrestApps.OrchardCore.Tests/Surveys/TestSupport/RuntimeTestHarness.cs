@@ -175,6 +175,53 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
         return result;
     }
 
+    /// <summary>
+    /// Runs work in a shell scope and leaves the save to the scope, as Orchard Core does for a request: with
+    /// <see cref="UseOrchardSession"/>, the session is saved in the scope's before-dispose callbacks, ahead of the ones
+    /// registered last (such as a lock release).
+    /// </summary>
+    public async Task<T> RunInShellScopeAsync<T>(Func<IServiceProvider, Task<T>> work)
+    {
+        var result = default(T);
+
+        await new ShellScope(_shellContext).UsingAsync(async scope => result = await work(scope.ServiceProvider));
+
+        return result;
+    }
+
+    /// <summary>
+    /// Registers the session as Orchard Core's YesSql feature does: a session made for a shell scope's own services is
+    /// saved when the scope ends, in a before-dispose callback that isn't registered last, and cancelled when the scope
+    /// fails. Pass it to <see cref="CreateAsync"/> (inside the configure callback).
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="beforeSave">Work to run just before the save, such as a delay that makes a slow save.</param>
+    public static void UseOrchardSession(IServiceCollection services, Func<Task> beforeSave = null)
+    {
+        services.RemoveAll<ISession>();
+        services.AddScoped(provider =>
+        {
+            var session = provider.GetRequiredService<IStore>().CreateSession();
+            var shellScope = ShellScope.Current;
+
+            if (shellScope is not null && provider == shellScope.ServiceProvider)
+            {
+                ShellScope.RegisterBeforeDispose(async _ =>
+                {
+                    if (beforeSave is not null)
+                    {
+                        await beforeSave();
+                    }
+
+                    await session.SaveChangesAsync();
+                });
+                ShellScope.AddExceptionHandler((_, _) => session.CancelAsync());
+            }
+
+            return session;
+        });
+    }
+
     public Task<T> ResponsesAsync<T>(Func<ISurveyResponseService, Task<T>> work)
         => RunAsync(services => work(services.GetRequiredService<ISurveyResponseService>()));
 

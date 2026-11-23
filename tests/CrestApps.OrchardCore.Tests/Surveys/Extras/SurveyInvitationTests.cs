@@ -165,11 +165,13 @@ public sealed class SurveyInvitationTests
     {
         public List<string> Sent { get; } = [];
 
-        public Task<bool> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default)
+        public bool CanSendEmail => true;
+
+        public Task<SurveyInvitationDelivery> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default)
         {
             Sent.Add(link);
 
-            return Task.FromResult(true);
+            return Task.FromResult(SurveyInvitationDelivery.Delivered);
         }
     }
 }

@@ -9,13 +9,15 @@ using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Entities;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Settings;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Extras;
 
 /// <summary>
-/// The hourly invitation reminder task: a list whose save fails never takes the other lists' updates with it (R4-H1).
+/// The hourly invitation reminder task: a list whose save fails never takes the other lists' updates with it (R4-H1),
+/// and a busy daily e-mail lock is waited for once a run, not once a list (R5-M3).
 /// </summary>
 public sealed class SurveyInvitationReminderTaskTests
 {
@@ -50,7 +52,44 @@ public sealed class SurveyInvitationReminderTaskTests
         Assert.Equal(4, sender.Sent.Count);
     }
 
-    private static async Task<RuntimeTestHarness> CreateAsync(RecordingSender sender, SaveFailureIndexProvider<SurveyInvitation> failure)
+    [Fact]
+    public async Task WhileAnotherSenderHoldsTheEmailLock_TheRunWaitsForItOnce_NotOncePerList()
+    {
+        // Arrange: three invitation lists with a reminder due each, and another sender holding the day's e-mail lock.
+        var sender = new RecordingSender();
+        var locks = new InvitationEmailLockDouble(TimeSpan.FromMilliseconds(200));
+        await using var harness = await CreateAsync(sender, failure: null, locks);
+        var invited = new List<SurveyInvitationResult>();
+
+        for (var i = 0; i < 3; i++)
+        {
+            invited.Add(await InviteWithRemindersAsync(harness, $"list{i}@example.com"));
+        }
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(2);
+        var attemptsBefore = locks.Attempts;
+        await using var otherSender = await locks.AcquireLockAsync("Surveys:InvitationEmails:" + harness.Clock.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+
+        // Act
+        await harness.RunInShellAsync(async services =>
+        {
+            await new SurveyInvitationReminderBackgroundTask().DoWorkAsync(services, TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+        // Assert: the first list waited for the lock and the other two held their reminders without asking; every
+        // reminder stays due for the next run.
+        Assert.Equal(1, locks.Attempts - attemptsBefore);
+        Assert.Equal(3, sender.Sent.Count);
+
+        foreach (var result in invited)
+        {
+            Assert.Equal(0, (await FindAsync(harness, result.Invitation.ItemId)).RemindersSent);
+        }
+    }
+
+    private static async Task<RuntimeTestHarness> CreateAsync(RecordingSender sender, SaveFailureIndexProvider<SurveyInvitation> failure, InvitationEmailLockDouble locks = null)
     {
         var site = new SiteSettings();
         site.Put(new SurveySettings { InvitationEmailsPerDay = 100 });
@@ -64,11 +103,23 @@ public sealed class SurveyInvitationReminderTaskTests
             services.AddSurveysInvitations();
             services.AddSingleton<ISurveyInvitationSender>(sender);
             services.AddSingleton(siteService.Object);
-            SaveFailureIndexProvider<SurveyInvitation>.Register(services, failure);
+
+            if (locks is not null)
+            {
+                services.AddSingleton<IDistributedLock>(locks);
+            }
+
+            if (failure is not null)
+            {
+                SaveFailureIndexProvider<SurveyInvitation>.Register(services, failure);
+            }
         });
 
-        var store = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<IStore>()));
-        await SaveFailureIndexProvider<SurveyInvitation>.CreateTableAsync(store, SurveysConstants.CollectionName);
+        if (failure is not null)
+        {
+            var store = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<IStore>()));
+            await SaveFailureIndexProvider<SurveyInvitation>.CreateTableAsync(store, SurveysConstants.CollectionName);
+        }
 
         return harness;
     }
@@ -104,11 +155,13 @@ public sealed class SurveyInvitationReminderTaskTests
     {
         public List<string> Sent { get; } = [];
 
-        public Task<bool> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default)
+        public bool CanSendEmail => true;
+
+        public Task<SurveyInvitationDelivery> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default)
         {
             Sent.Add(link);
 
-            return Task.FromResult(true);
+            return Task.FromResult(SurveyInvitationDelivery.Delivered);
         }
     }
 }

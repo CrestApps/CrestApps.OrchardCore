@@ -15,7 +15,7 @@ Every Surveys record has a recipe step and a deployment step with schemas (when 
 | `SurveyQuestionBanks` | Question banks (`QuestionBanks`) with their `Questions` | Bank id, then `Name`; questions by id, then `SourceIdentifier` |
 | `SurveyResponses` | Responses (opt-in) | Id |
 | `SurveyOverrides` | Accommodations, people by user name | Id |
-| `SurveyInvitations` | Invitations, token hashes only | Id |
+| `SurveyInvitations` | Invitations, token hashes only; the invitation list travels by name (`CollectorName`) and is matched by name on import, then by id among the survey's invitation lists, then the survey's first invitation list, else a new personal links list | Id |
 
 Survey site settings travel in Orchard Core's `Settings` step as `SurveySettings`.
 

@@ -38,6 +38,7 @@ public sealed class SurveyInvitationsController : Controller
     private readonly UserManager<IUser> _userManager;
     private readonly IEnumerable<IUserAudienceService> _audiences;
     private readonly IEnumerable<ICohortService> _cohorts;
+    private readonly IEnumerable<ISurveyInvitationSender> _senders;
     private readonly IShapeFactory _shapeFactory;
     private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
@@ -56,6 +57,7 @@ public sealed class SurveyInvitationsController : Controller
     /// <param name="userManager">The user manager.</param>
     /// <param name="audiences">The user audience service, when audiences are on.</param>
     /// <param name="cohorts">The cohort service, when cohorts are on.</param>
+    /// <param name="senders">The invitation sender, which tells whether e-mail can be sent.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="notifier">The notifier.</param>
@@ -70,6 +72,7 @@ public sealed class SurveyInvitationsController : Controller
         UserManager<IUser> userManager,
         IEnumerable<IUserAudienceService> audiences,
         IEnumerable<ICohortService> cohorts,
+        IEnumerable<ISurveyInvitationSender> senders,
         IShapeFactory shapeFactory,
         ISiteService siteService,
         INotifier notifier,
@@ -84,6 +87,7 @@ public sealed class SurveyInvitationsController : Controller
         _userManager = userManager;
         _audiences = audiences;
         _cohorts = cohorts;
+        _senders = senders;
         _shapeFactory = shapeFactory;
         _siteService = siteService;
         _notifier = notifier;
@@ -356,6 +360,12 @@ public sealed class SurveyInvitationsController : Controller
             requests.Add(new SurveyInvitationRequest { Email = email, DisplayName = name });
         }
 
+        // E-mail invitations sent with no e-mail service would only wait; the administrator is told instead.
+        if (model.SendNow && requests.Any(request => request.UserId is null) && _senders.LastOrDefault() is not { CanSendEmail: true })
+        {
+            ModelState.AddModelError(nameof(model.Emails), H["E-mail isn't set up on this site, so e-mail invitations can't be sent. Turn on the Email feature, or clear Send the invitations now to only create them."].Value);
+        }
+
         if (!ModelState.IsValid || requests.Count == 0)
         {
             if (requests.Count == 0 && ModelState.IsValid)
@@ -366,31 +376,36 @@ public sealed class SurveyInvitationsController : Controller
             return View(await BuildInviteAsync(survey, collector, model));
         }
 
-        var created = 0;
+        IReadOnlyList<SurveyInvitationResult> results;
 
         try
         {
-            foreach (var request in requests.Take(MaxRecipients))
-            {
-                request.SurveyId = survey.ItemId;
-                request.CollectorId = collector.ItemId;
-
-                var result = model.SendNow
-                    ? await _invitations.InviteAsync(request, HttpContext.RequestAborted)
-                    : await _invitations.CreateAsync(request, requireRecipient: true, HttpContext.RequestAborted);
-
-                if (result.Succeeded)
-                {
-                    created++;
-                }
-            }
+            // One send for the whole batch: the invitations are created, then sent under one batch of the daily e-mail
+            // limit, which waits for its lock at most once and holds what it can't send for the hourly reminder task.
+            results = await _invitations.InviteManyAsync(survey.ItemId, collector.ItemId, requests.Take(MaxRecipients).ToList(), model.SendNow, HttpContext.RequestAborted);
         }
         catch (SurveyAnonymitySecretUnreadableException)
         {
             await NotifySecretUnreadableAsync();
+
+            return RedirectToAction(nameof(Index), new { collectorId });
         }
 
-        await _notifier.SuccessAsync(H["{0} people were invited.", created]);
+        await _notifier.SuccessAsync(H["{0} people were invited.", results.Count(result => result.Succeeded)]);
+
+        if (model.SendNow)
+        {
+            var waiting = results
+                .Where(result => result.Succeeded && result.Invitation.TryGet<SurveyInvitationHold>(out var hold) && hold is not null)
+                .Select(result => result.Invitation.ItemId)
+                .Distinct(StringComparer.Ordinal)
+                .Count();
+
+            if (waiting > 0)
+            {
+                await _notifier.WarningAsync(H["{0} invitations will be sent later: today's e-mail limit was reached, or another send was still going out. They go out by themselves with the hourly reminder run.", waiting]);
+            }
+        }
 
         return RedirectToAction(nameof(Index), new { collectorId });
     }
