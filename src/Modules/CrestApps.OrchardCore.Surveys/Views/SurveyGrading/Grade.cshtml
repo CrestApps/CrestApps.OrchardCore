@@ -3,7 +3,7 @@
 @model GradeResponseViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SurveyGradingGrade" title="@T["Grade {0}", Model.Response.Number]">
+    <breadcrumb name="SurveyGradingGrade" title="@T["Grade {0}", Model.Label]">
         <breadcrumb-item id="SurveyGrading" action="Index" controller="SurveyGrading" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.GradeOwnSurveyResponses.Name">@T["Grading"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -26,7 +26,7 @@
             {
                 <div class="ocat-wrapper">
                     <span class="ocat-label">@T["Completed"]</span>
-                    <div class="ocat-end">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g"))</div>
+                    <div class="ocat-end">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: Model.IsAnonymous ? "d" : "g"))</div>
                 </div>
             }
             <div class="ocat-wrapper">
@@ -153,7 +153,7 @@
             @foreach (var change in Model.Response.ScoreHistory.AsEnumerable().Reverse())
             {
                 <li class="list-group-item">
-                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g")):
+                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: Model.IsAnonymous ? "d" : "g")):
                     @change.Kind, @(change.From?.ToString() ?? "-") &rarr; @(change.To?.ToString() ?? "-")
                     @if (!string.IsNullOrEmpty(change.Reason))
                     {

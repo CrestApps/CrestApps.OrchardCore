@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -45,7 +46,8 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
         var respondent = S["Respondent"].Value;
 
         AddField("Id", S["Response ID"], DataFieldType.Text, row => row.Response.ItemId, group).IsIdentifier = true;
-        AddField("Number", S["Number"], DataFieldType.Text, row => row.Response.Number, group);
+        // Response numbers are one sequence for the whole site, so an anonymous survey shows the start of the random id.
+        AddField("Number", S["Number"], DataFieldType.Text, row => SurveyAnonymity.ResponseLabel(row.Survey, row.Response), group);
         AddField("SurveyId", S["Survey ID"], DataFieldType.Text, row => row.Response.SurveyId, group).IsIdentifier = true;
         AddField("SurveyName", S["Survey"], DataFieldType.Text, row => row.Survey?.Name, group);
         AddField("VersionNumber", S["Version"], DataFieldType.Integer, row => (long)row.Response.VersionNumber, group);

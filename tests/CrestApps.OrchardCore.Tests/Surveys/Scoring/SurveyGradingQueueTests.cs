@@ -1,11 +1,14 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.DataConnectors;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Scoring;
@@ -73,6 +76,78 @@ public sealed class SurveyGradingQueueTests : IAsyncLifetime
         Assert.Equal(["quiz"], query.SurveyIds);
     }
 
+    [Fact]
+    public async Task ListAsync_LeavesOutTheGradersOwnResponses()
+    {
+        // Arrange
+        var user = PermissionClaimsAuthorizationService.UserWith(SurveysPermissions.GradeSurveyResponses.Name);
+        user.AddIdentity(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "grader-id")]));
+
+        // Act
+        var query = await ListAsync(user, []);
+
+        // Assert
+        Assert.Equal("grader-id", query.ExcludedUserId);
+    }
+
+    [Fact]
+    public async Task ListAsync_LeavesOutAnAnonymousSurveyBelowItsMinimum_AndReadsTheRestInRandomIdOrder()
+    {
+        // Arrange: an anonymous survey with one response to grade, another with five, and an identified one.
+        await SavePendingAsync("few", AnonymityMode.Anonymous, 1);
+        await SavePendingAsync("many", AnonymityMode.Anonymous, 5);
+        await SavePendingAsync("named", AnonymityMode.Identified, 1);
+
+        // Act
+        var query = await ListAsync(PermissionClaimsAuthorizationService.UserWith(SurveysPermissions.GradeSurveyResponses.Name), []);
+
+        // Assert
+        Assert.Equal(["few"], query.ExcludedSurveyIds);
+        Assert.True(query.OrderById);
+    }
+
+    [Fact]
+    public void IsOwn_MatchesTheSignedInUsersResponseOnly()
+    {
+        // Arrange
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "u1")], "test"));
+
+        // Act and assert
+        Assert.True(SurveyOwnWork.IsOwn(user, new SurveyResponse { UserId = "u1" }));
+        Assert.False(SurveyOwnWork.IsOwn(user, new SurveyResponse { UserId = "u2" }));
+        Assert.False(SurveyOwnWork.IsOwn(user, new SurveyResponse()));
+        Assert.False(SurveyOwnWork.IsOwn(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "u1")])), new SurveyResponse { UserId = "u1" }));
+    }
+
+    private async Task SavePendingAsync(string surveyId, AnonymityMode anonymity, int count)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _store.Store.CreateSession();
+        await session.SaveAsync(new Survey
+        {
+            ItemId = surveyId,
+            Name = surveyId,
+            Title = surveyId,
+            Status = SurveyStatus.Open,
+            Access = new SurveyAccessSettings { Anonymity = anonymity, MinimumGroupSize = 5 },
+        }, false, SurveysConstants.CollectionName, cancellationToken);
+
+        for (var index = 0; index < count; index++)
+        {
+            await session.SaveAsync(new SurveyResponse
+            {
+                ItemId = $"{surveyId}-{index}",
+                SurveyId = surveyId,
+                Status = SurveyResponseStatus.Completed,
+                Grading = GradingStatus.Pending,
+                StartedUtc = DateTime.UtcNow,
+                CompletedUtc = DateTime.UtcNow,
+            }, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+        }
+
+        await session.SaveChangesAsync(cancellationToken);
+    }
+
     private static SurveyContextKindOptions OwnQueueKinds()
     {
         var options = new SurveyContextKindOptions();
@@ -86,7 +161,8 @@ public sealed class SurveyGradingQueueTests : IAsyncLifetime
     {
         await using var session = _store.Store.CreateSession();
         var queries = new ScoringResponseQueries(session);
-        var queue = new SurveyGradingQueue(new PermissionClaimsAuthorizationService(), [new Scope(scoped)], [], new SurveyStore(session), queries, Options.Create(kinds ?? new SurveyContextKindOptions()));
+        var results = new SurveyResultsQueries(session);
+        var queue = new SurveyGradingQueue(new PermissionClaimsAuthorizationService(), [new Scope(scoped)], [], new SurveyStore(session), queries, Options.Create(kinds ?? new SurveyContextKindOptions()), results, new SurveyAnonymousGroups(results, new ServiceCollection().BuildServiceProvider()));
 
         await queue.ListAsync(user, surveyId, 0, 20, TestContext.Current.CancellationToken);
 

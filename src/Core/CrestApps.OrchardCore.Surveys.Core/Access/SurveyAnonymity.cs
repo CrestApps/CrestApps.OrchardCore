@@ -77,6 +77,34 @@ public static class SurveyAnonymity
     }
 
     /// <summary>
+    /// The characters of a response id an anonymous response is labeled with.
+    /// </summary>
+    public const int AnonymousLabelLength = 10;
+
+    /// <summary>
+    /// Gets the label staff see for a response: its number on an identified survey. Response numbers come from one
+    /// sequence for the whole site, in the order responses start, so on an anonymous survey a number next to a named
+    /// response's number would name the person; an anonymous response is labeled with the start of its random id
+    /// instead (the id its links already carry), which orders nothing and matches nothing on another survey.
+    /// </summary>
+    /// <param name="survey">The survey, or <see langword="null"/> when unknown (treated as anonymous).</param>
+    /// <param name="response">The response.</param>
+    /// <returns>The label.</returns>
+    public static string ResponseLabel(Survey survey, SurveyResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        var id = response.ItemId ?? string.Empty;
+
+        if (survey is not null && !IsAnonymous(survey))
+        {
+            return string.IsNullOrEmpty(response.Number) ? id : response.Number;
+        }
+
+        return id[..Math.Min(AnonymousLabelLength, id.Length)];
+    }
+
+    /// <summary>
     /// Gets a time of an anonymous response shown by the day only: the start of its day in a time zone, as UTC.
     /// </summary>
     /// <param name="utc">The time, in UTC.</param>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -70,9 +71,10 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RunAsync_AnAnonymousSurveyAtItsMinimum_ListsEveryFilteredRow()
+    public async Task RunAsync_AnAnonymousSurveyAtItsMinimum_LeavesOutAStatusTooFewResponsesShare()
     {
-        // Arrange: 5 real completed responses reach the minimum, so the in-progress rows the filter asks for show too.
+        // Arrange: 5 real completed responses reach the minimum, but only 2 are in progress: listing them next to the
+        // completed rows could single out those 2 people (the responses list's rule).
         await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 5, inProgress: 2);
         await using var session = _store.OpenSession();
         var context = Context("anon");
@@ -82,7 +84,63 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
         var document = await Report(session).RunAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(7, Assert.Single(document.Sections).Rows.Count);
+        var section = Assert.Single(document.Sections);
+        var status = section.Columns.Select(column => column.Label).ToList().IndexOf("Status");
+        Assert.Equal(5, section.Rows.Count);
+        Assert.All(section.Rows, row => Assert.Equal("Completed", row.Cells[status]));
+        Assert.Contains("left out", section.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_AnAnonymousSurveyFilteredToAStatusTooFewShare_ShowsNoRow()
+    {
+        // Arrange
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 5, inProgress: 1);
+        await using var session = _store.OpenSession();
+        var context = Context("anon");
+        context.Filter.Set(SurveyReportKeys.Status, nameof(SurveyResponseStatus.InProgress));
+
+        // Act
+        var document = await Report(session).RunAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        var section = Assert.Single(document.Sections);
+        Assert.Empty(section.Rows);
+        Assert.Contains("anonymous", section.EmptyMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_AnAnonymousSurveyWithEnoughOfAStatus_ListsIt()
+    {
+        // Arrange
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 5, inProgress: 5);
+        await using var session = _store.OpenSession();
+        var context = Context("anon");
+        context.Filter.Set(SurveyReportKeys.Status, SurveyReportKeys.AllStatuses);
+
+        // Act
+        var document = await Report(session).RunAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(10, Assert.Single(document.Sections).Rows.Count);
+    }
+
+    [Fact]
+    public async Task RunAsync_AnAnonymousSurvey_ShowsNoSiteWideResponseNumber()
+    {
+        // Arrange: response numbers come from one sequence for the whole site, so they would sit next to named ones.
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 5);
+        await SaveSurveyAsync("open", AnonymityMode.Identified, completed: 1);
+        await using var session = _store.OpenSession();
+
+        // Act
+        var anonymous = Assert.Single((await Report(session).RunAsync(Context("anon"), TestContext.Current.CancellationToken)).Sections);
+        var identified = Assert.Single((await Report(session).RunAsync(Context("open"), TestContext.Current.CancellationToken)).Sections);
+
+        // Assert
+        Assert.All(anonymous.Rows, row => Assert.DoesNotContain("R-", row.Cells[0], StringComparison.Ordinal));
+        Assert.Equal(["anon-r0", "anon-r1", "anon-r2", "anon-r3", "anon-r4"], anonymous.Rows.Select(row => row.Cells[0]).Order(StringComparer.Ordinal));
+        Assert.Equal("R-open-r0", Assert.Single(identified.Rows).Cells[0]);
     }
 
     [Fact]
@@ -200,7 +258,7 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
 
         var registry = new SurveyControlRegistry(Options.Create(options), [new ResultsTestControlHandler()], [], []);
 
-        return new SurveyResponsesReport(data, new SurveyResultsQueries(session), registry, names, RecipeRoundTrip.Localizer<SurveyResponsesReport>());
+        return new SurveyResponsesReport(data, new SurveyResultsQueries(session), registry, names, new SurveyAnonymousGroups(new SurveyResultsQueries(session), services), RecipeRoundTrip.Localizer<SurveyResponsesReport>());
     }
 
     private static ReportContext Context(string surveyId)
@@ -235,6 +293,7 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
             var status = index < completed ? SurveyResponseStatus.Completed : SurveyResponseStatus.InProgress;
             var response = ResultsSqliteStore.Response($"{id}-r{index}", version, status, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
             response.UserId = userIds is not null && index < userIds.Length ? userIds[index] : null;
+            response.Number = "R-" + response.ItemId;
             await session.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
         }
 

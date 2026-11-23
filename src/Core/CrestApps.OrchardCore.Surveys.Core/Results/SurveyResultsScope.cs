@@ -53,4 +53,16 @@ public sealed class SurveyResultsScope
     /// Gets or sets the statuses read, or empty for every status. <see cref="CompletedOnly"/> narrows further.
     /// </summary>
     public List<SurveyResponseStatus> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the statuses whose non-test responses are left out, such as those of an anonymous survey too few
+    /// responses share (see <see cref="Access.SurveyGroupGate"/>). Test responses of these statuses are still read.
+    /// </summary>
+    public List<SurveyResponseStatus> ExcludedStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether documents are read in the order of their random ids rather than the order they were
+    /// stored in, which follows when they started: an anonymous survey's rows must not give away who answered first.
+    /// </summary>
+    public bool OrderById { get; set; }
 }

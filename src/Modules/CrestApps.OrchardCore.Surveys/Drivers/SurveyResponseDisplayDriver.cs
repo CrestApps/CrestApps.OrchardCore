@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
@@ -11,8 +12,19 @@ namespace CrestApps.OrchardCore.Surveys.Drivers;
 /// </summary>
 public sealed class SurveyResponseDisplayDriver : DisplayDriver<SurveyResponse>
 {
+    private readonly SurveyRespondentNames _names;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SurveyResponseDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="names">The respondent names, which also give the label staff see for a response.</param>
+    public SurveyResponseDisplayDriver(SurveyRespondentNames names)
+    {
+        _names = names;
+    }
+
     /// <inheritdoc />
-    public override IDisplayResult Display(SurveyResponse response, BuildDisplayContext context)
+    public override async Task<IDisplayResult> DisplayAsync(SurveyResponse response, BuildDisplayContext context)
     {
         if (context.DisplayType is not OrchardCoreConstants.DisplayType.SummaryAdmin and not OrchardCoreConstants.DisplayType.SummaryAdminGrid)
         {
@@ -22,7 +34,8 @@ public sealed class SurveyResponseDisplayDriver : DisplayDriver<SurveyResponse>
         if (context.Shape is Shape rowShape)
         {
             rowShape.Classes.Add("item");
-            rowShape.Attributes["data-filter-value"] = response.Number?.ToLowerInvariant() ?? string.Empty;
+            // An anonymous response is filtered by the label it shows, never by its site-wide number.
+            rowShape.Attributes["data-filter-value"] = (await _names.GetLabelAsync(response)).ToLowerInvariant();
         }
 
         return Combine(

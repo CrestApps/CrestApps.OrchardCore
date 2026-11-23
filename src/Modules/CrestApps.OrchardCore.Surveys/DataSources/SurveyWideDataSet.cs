@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Services;
@@ -82,7 +83,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
         var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
             ["Id"] = document.ItemId,
-            ["Number"] = document.Number,
+            ["Number"] = SurveyAnonymity.ResponseLabel(_survey, document),
             ["VersionNumber"] = (long)document.VersionNumber,
             ["Status"] = document.Status.ToString(),
             ["StartedUtc"] = TimeOf(document.SurveyId, document.StartedUtc),

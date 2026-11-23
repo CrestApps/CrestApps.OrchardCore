@@ -38,7 +38,8 @@ internal sealed class SurveyWorkflowInputBuilder
         var input = ForSurvey(survey);
 
         input["ResponseId"] = response.ItemId;
-        input["Number"] = response.Number;
+        // No site-wide response number on an anonymous survey: it would sit next to a named response's number.
+        input["Number"] = anonymous ? null : response.Number;
         input["VersionNumber"] = response.VersionNumber;
         input[SurveyWorkflowInput.CollectorId] = response.CollectorId;
         input[SurveyWorkflowInput.ContextKind] = response.Context?.Kind;

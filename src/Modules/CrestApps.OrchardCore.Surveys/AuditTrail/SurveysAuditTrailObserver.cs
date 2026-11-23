@@ -111,7 +111,8 @@ internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurv
             SurveyId = response.SurveyId,
             SurveyName = context.Survey?.Name,
             ResponseId = response.ItemId,
-            ResponseNumber = response.Number,
+            // No site-wide response number on an anonymous survey (see SurveyAnonymity.ResponseLabel).
+            ResponseNumber = SurveyAnonymity.ResponseLabel(context.Survey, response),
             VersionNumber = response.VersionNumber,
             From = context.ScoreChange?.From,
             To = context.ScoreChange?.To ?? response.Score,
