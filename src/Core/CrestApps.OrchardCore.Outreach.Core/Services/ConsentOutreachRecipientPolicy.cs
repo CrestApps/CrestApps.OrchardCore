@@ -9,7 +9,10 @@ namespace CrestApps.OrchardCore.Outreach.Core.Services;
 /// </summary>
 /// <remarks>
 /// A run without a consent channel is not checked here, and nor is any run while no feature registers the consent
-/// service.
+/// service. A consent source that can't tell right now (<see cref="ConsentStatus.IsUnknown"/>, such as a source whose
+/// store can't be read) has no say here: the other sources still decide, so one module's unreadable store neither
+/// fails every campaign on the site nor skips every recipient. A send that must wait while a source can't tell asks
+/// the consent service itself, as survey invitations do.
 /// </remarks>
 public sealed class ConsentOutreachRecipientPolicy : IOutreachRecipientPolicy
 {
@@ -43,6 +46,7 @@ public sealed class ConsentOutreachRecipientPolicy : IOutreachRecipientPolicy
             ContactId = recipient.ContactId,
         }, cancellationToken);
 
+        // An unknown answer (no source says opted out, one couldn't tell) is not an opt-out; see the remarks.
         return status?.HasOptedOut == true
             ? OutreachConstants.SkipReasons.OptedOut
             : null;

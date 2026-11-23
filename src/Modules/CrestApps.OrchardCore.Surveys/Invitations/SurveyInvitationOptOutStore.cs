@@ -14,8 +14,8 @@ namespace CrestApps.OrchardCore.Surveys.Invitations;
 /// later commit fails instead of overwriting the list (the unsubscribe page retries it). Two first-ever unsubscribes
 /// at the same moment can each insert a list; every list is read, changes go to the oldest, and an opt-in removes the
 /// address from all of them, so neither unsubscribe is lost. When a list's key can't be read (missing Data Protection
-/// keys), an address it might hold is <see cref="SurveyInvitationOptOutState.Unknown"/>: nothing is sent to it, but
-/// nothing is recorded as an opt-out either.
+/// keys), an address it might hold is <see cref="SurveyInvitationOptOutState.Unknown"/>: no survey invitation is sent
+/// to it and nothing is recorded as an opt-out, and the consent source answers <c>Unknown</c> to other sends.
 /// </summary>
 internal sealed class SurveyInvitationOptOutStore
 {

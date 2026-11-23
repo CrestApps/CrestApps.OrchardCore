@@ -199,7 +199,8 @@ public static class SurveysIndexSchema
             .Column<string>("Email", column => column.Nullable().WithLength(254))
             .Column<DateTime?>("LastReminderUtc", column => column.Nullable())
             .Column<DateTime?>("SentUtc", column => column.Nullable())
-            .Column<DateTime?>("ExpiresUtc", column => column.Nullable()),
+            .Column<DateTime?>("ExpiresUtc", column => column.Nullable())
+            .Column<bool>("Held", column => column.NotNull().WithDefault(false)),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
@@ -209,6 +210,7 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyInvitationIndex_Token", "TokenHash");
             table.CreateIndex("IDX_SurveyInvitationIndex_Seal", "CollectorId", "SealLookup");
             table.CreateIndex("IDX_SurveyInvitationIndex_Email", "Email");
+            table.CreateIndex("IDX_SurveyInvitationIndex_Held", "CollectorId", "Held");
         }, collection: collection);
 
         await schemaBuilder.CreateMapIndexTableAsync<SurveyOverrideIndex>(table => table
@@ -249,6 +251,26 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyInvitationIndex_Seal", "CollectorId", "SealLookup");
             table.CreateIndex("IDX_SurveyInvitationIndex_Email", "Email");
         }, collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Adds the hold column of the invitation index, so the reminder task reads held first sends directly. It is not
+    /// null and defaults to not held, so every database (SQL Server included) fills the existing rows; an invitation held
+    /// before the column existed is marked when it is saved again.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddInvitationHoldColumnAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
+            table.AddColumn<bool>("Held", column => column.NotNull().WithDefault(false)),
+            collection: SurveysConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
+            table.CreateIndex("IDX_SurveyInvitationIndex_Held", "CollectorId", "Held"),
+            collection: SurveysConstants.CollectionName);
     }
 
     /// <summary>

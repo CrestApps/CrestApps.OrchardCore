@@ -61,4 +61,13 @@ public interface ISurveyManager : INamedCatalogManager<Survey>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The surveys.</returns>
     Task<IReadOnlyList<Survey>> ListByOwnerAsync(RecordRef owner, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the surveys any of several records own, such as the items of a course, in as few queries as the database
+    /// allows (the owners are read a thousand at a time).
+    /// </summary>
+    /// <param name="owners">The owners.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The surveys.</returns>
+    Task<IReadOnlyList<Survey>> ListByOwnersAsync(IReadOnlyCollection<RecordRef> owners, CancellationToken cancellationToken = default);
 }

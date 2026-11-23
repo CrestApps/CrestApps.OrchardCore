@@ -72,7 +72,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         await using var session = harness.Store.CreateSession();
         var transaction = await session.BeginTransactionAsync(cancellationToken);
 
-        Assert.Equal(4, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
+        Assert.Equal(5, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
 
         await transaction.CommitAsync(cancellationToken);
 

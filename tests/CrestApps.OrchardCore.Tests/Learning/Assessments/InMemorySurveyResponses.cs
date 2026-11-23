@@ -15,6 +15,11 @@ internal sealed class InMemorySurveyResponses : ISurveyResponseQueries
     private readonly List<SurveyResponse> _responses = [];
 
     /// <summary>
+    /// Gets every query <see cref="ListAsync"/> was asked, in order.
+    /// </summary>
+    public List<SurveyResponseQuery> Queries { get; } = [];
+
+    /// <summary>
     /// Adds a response as it is.
     /// </summary>
     /// <param name="response">The response.</param>
@@ -26,6 +31,8 @@ internal sealed class InMemorySurveyResponses : ISurveyResponseQueries
 
     public Task<(int Count, IReadOnlyList<SurveyResponse> Items)> ListAsync(SurveyResponseQuery query, CancellationToken cancellationToken = default)
     {
+        Queries.Add(query);
+
         var matches = _responses
             .Where(response => query.SurveyIds.Count == 0 || query.SurveyIds.Contains(response.SurveyId))
             .Where(response => query.UserId is null || response.UserId == query.UserId)

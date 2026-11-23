@@ -62,4 +62,10 @@ public sealed class SurveyInvitationIndex : CatalogItemIndex
     /// Gets or sets when it expires, in UTC.
     /// </summary>
     public DateTime? ExpiresUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether it is a first send held back for a later run (pending, with a
+    /// hold mark), so the reminder task finds held invitations without reading the never-sent ones.
+    /// </summary>
+    public bool Held { get; set; }
 }

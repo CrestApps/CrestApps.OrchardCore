@@ -21,6 +21,17 @@ public interface IConsentSource
     Task<bool> HasOptedOutAsync(ConsentQuery query, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns what the source says about the person: opted out, not opted out, or <see cref="ConsentAnswer.Unknown"/>
+    /// when it can't tell right now (its store can't be read, for one). <see cref="IConsentService"/> asks this. By
+    /// default it is <see cref="HasOptedOutAsync"/>'s answer; a source that can be unable to tell overrides it, and
+    /// answers <see langword="false"/> from <see cref="HasOptedOutAsync"/> when it can't tell, never throws.
+    /// </summary>
+    /// <param name="query">The question.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    async Task<ConsentAnswer> GetAnswerAsync(ConsentQuery query, CancellationToken cancellationToken = default)
+        => await HasOptedOutAsync(query, cancellationToken) ? ConsentAnswer.OptedOut : ConsentAnswer.NotOptedOut;
+
+    /// <summary>
     /// Records the change, when the source keeps that channel and record kind; does nothing otherwise.
     /// </summary>
     /// <param name="channel">The channel.</param>

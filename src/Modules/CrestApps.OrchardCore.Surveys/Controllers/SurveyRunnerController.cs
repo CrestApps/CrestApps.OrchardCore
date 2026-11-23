@@ -408,9 +408,21 @@ public sealed class SurveyRunnerController : Controller
         {
             _identities.ClearResumeCookie(survey.ItemId);
         }
+        else if (CanReturnLater(survey, version.Definition, response))
+        {
+            // A guest's only proof that the response is theirs is this cookie, so while they may still reopen or review
+            // it later it keeps (and renews) its full life.
+            var resumeToken = _identities.Build(survey.ItemId).ResumeToken;
+
+            if (!string.IsNullOrEmpty(resumeToken))
+            {
+                _identities.WriteResumeCookie(survey.ItemId, resumeToken);
+            }
+        }
         else
         {
-            // The ended response keeps its cookie a day for the review, not the full 30 days, so cookies don't pile up.
+            // Otherwise the ended response keeps its cookie a day for the review shown right after it, not the full 30
+            // days, so cookies don't pile up.
             _identities.ShortenResumeCookie(survey.ItemId);
         }
 
@@ -796,6 +808,24 @@ public sealed class SurveyRunnerController : Controller
         ViewData["SurveyClientRules"] = JsonSerializer.Serialize(result.Page.ClientRules, _ruleOptions);
 
         return View("Respond", shape);
+    }
+
+    // Whether the respondent may still come back to an ended response after the short cookie life would end: reopen it
+    // (edit after submit while the survey is open) or review its answers (the review shown later while the survey is
+    // open, or the one after it closed when it already is).
+    private bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response)
+    {
+        if (response.Status != SurveyResponseStatus.Completed)
+        {
+            return false;
+        }
+
+        if (definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open)
+        {
+            return true;
+        }
+
+        return (ReviewMoment(survey, definition, response, _clock.UtcNow + SurveyResumeCookies.CompletedMaxAge) & ReviewShows.Responses) != 0;
     }
 
     private ReviewShows ReviewMoment(Survey survey, SurveyDefinition definition, SurveyResponse response, DateTime utcNow)

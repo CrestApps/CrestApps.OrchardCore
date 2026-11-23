@@ -18,7 +18,8 @@ public interface IConsentService
     Task<ConsentStatus> GetAsync(string channel, string address, string contactId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns whether a person opted out, asking every source the query doesn't exclude until one says so.
+    /// Returns whether a person opted out, asking every source the query doesn't exclude until one says so. A source
+    /// that can't tell is skipped and named in <see cref="ConsentStatus.UnknownSources"/>; it never fails the question.
     /// </summary>
     /// <param name="query">The question.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

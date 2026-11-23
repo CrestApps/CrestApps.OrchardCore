@@ -213,6 +213,33 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
+    /// Lists the first sends of a collector that were held back (see
+    /// <see cref="CrestApps.OrchardCore.Surveys.Core.Invitations.SurveyInvitationHold"/>), oldest first, by the
+    /// index's hold mark, so they are found however many invitations were created and never sent.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="take">The most invitations read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The held invitations.</returns>
+    public async Task<IReadOnlyList<SurveyInvitation>> ListHeldByCollectorAsync(string collectorId, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(collectorId) || take <= 0)
+        {
+            return [];
+        }
+
+        var pending = nameof(SurveyInvitationStatus.Pending);
+        var items = await Session.Query<SurveyInvitation, SurveyInvitationIndex>(
+            index => index.CollectorId == collectorId && index.Held && index.Status == pending,
+            collection: SurveysConstants.CollectionName)
+            .OrderBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return items.ToList();
+    }
+
+    /// <summary>
     /// Pages the invitations of a collector, newest first.
     /// </summary>
     /// <param name="collectorId">The collector.</param>
