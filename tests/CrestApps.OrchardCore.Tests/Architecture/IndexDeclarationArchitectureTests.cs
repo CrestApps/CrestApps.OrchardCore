@@ -49,6 +49,7 @@ public sealed partial class IndexDeclarationArchitectureTests
         "StaffCapabilityIndex",
         "StaffTeamMembershipIndex",
         "SurveyAnswerIndex",
+        "SurveyTagIndex",
         "TelephonyUserConnectionIndex",
         "TicketLinkIndex",
         "TimelineAttachmentIndex",

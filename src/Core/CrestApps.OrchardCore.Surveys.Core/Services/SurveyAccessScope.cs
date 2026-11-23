@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace CrestApps.OrchardCore.Surveys.Core.Services;
 
 /// <summary>
@@ -8,12 +10,12 @@ public sealed class SurveyAccessScope
     /// <summary>
     /// Gets a scope with no survey.
     /// </summary>
-    public static SurveyAccessScope None { get; } = new() { SurveyIds = new HashSet<string>(StringComparer.Ordinal) };
+    public static SurveyAccessScope None { get; } = new() { SurveyIds = FrozenSet<string>.Empty };
 
     /// <summary>
     /// Gets a scope with every survey.
     /// </summary>
-    public static SurveyAccessScope Everything { get; } = new() { All = true, SurveyIds = new HashSet<string>(StringComparer.Ordinal) };
+    public static SurveyAccessScope Everything { get; } = new() { All = true, SurveyIds = FrozenSet<string>.Empty };
 
     /// <summary>
     /// Gets a value indicating whether every survey is in the scope, so no query needs a survey filter.
