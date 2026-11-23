@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Learning.Packages.Services;
 
 /// <summary>
-/// Settings › Learning packages.
+/// Settings › Learning Packages.
 /// </summary>
 public sealed class PackagesAdminMenu : AdminNavigationProvider
 {
@@ -25,7 +25,7 @@ public sealed class PackagesAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Settings"], settings => settings
-                .Add(S["Learning packages"], S["Learning packages"].PrefixPosition(), packages => packages
+                .Add(S["Learning Packages"], S["Learning Packages"].PrefixPosition(), packages => packages
                     .Id("learningPackages")
                     .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", LearningPackageContentHostSettingsDisplayDriver.GroupId } })
                     .Permission(LearningPackagesPermissions.ManageLearningPackageSettings)

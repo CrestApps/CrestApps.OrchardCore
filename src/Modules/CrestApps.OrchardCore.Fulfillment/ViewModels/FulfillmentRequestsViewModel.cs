@@ -4,7 +4,7 @@ using OrchardCore.Admin;
 namespace CrestApps.OrchardCore.Fulfillment.ViewModels;
 
 /// <summary>
-/// The Commerce › Fulfillment requests page.
+/// The Commerce › Fulfillment Requests page.
 /// </summary>
 public class FulfillmentRequestsViewModel
 {

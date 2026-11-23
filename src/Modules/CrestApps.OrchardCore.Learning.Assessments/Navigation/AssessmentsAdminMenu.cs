@@ -40,7 +40,7 @@ public sealed class AssessmentsAdminMenu : AdminNavigationProvider
             : LearningPermissions.ManageOwnCourses;
 
         builder.Add(S["Learning"], learning => learning
-            .Add(S["Question banks"], S["Question banks"].PrefixPosition(), banks => banks
+            .Add(S["Question Banks"], S["Question Banks"].PrefixPosition(), banks => banks
                 .Id("learningQuestionBanks")
                 .Action("List", "Admin", new { area = "OrchardCore.Contents", contentTypeId = AssessmentsConstants.ContentTypes.QuestionBank })
                 .Permission(AssessmentPermissions.ManageQuestionBanks)

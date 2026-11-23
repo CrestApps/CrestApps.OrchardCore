@@ -98,7 +98,7 @@ You need **Void and write off invoices** for these, and you are asked for a reas
 
 | Field | What it does |
 | --- | --- |
-| **Default payment term** | When an invoice is due, for customers who have no term of their own. **Due on issue** means it is due the day it is issued. Terms are kept under **Commerce > Payment terms**. |
+| **Default payment term** | When an invoice is due, for customers who have no term of their own. **Due on issue** means it is due the day it is issued. Terms are kept under **Commerce > Payment Terms**. |
 | **Default currency** | The three-letter code, such as **USD**, of an invoice whose customer has no currency of their own. |
 | **Prices include tax** | Line prices are taken as including tax, and the tax is worked out of them. |
 | **Let customers pay part of an invoice** | Customers can pay any amount up to what is due from the invoice's pay link. |
@@ -175,7 +175,7 @@ To change an invoice you issued that nothing was paid on, click **Draft a revisi
 
 With **Invoicing Billing** enabled:
 
-- **Commerce > Unbilled charges** keeps what you will bill a customer later: click **Add a charge**, choose the customer, describe it, and enter the quantity, your cost and a **Markup (%)** (for example 10 to pass an expense on at cost plus 10%).
+- **Commerce > Unbilled Charges** keeps what you will bill a customer later: click **Add a charge**, choose the customer, describe it, and enter the quantity, your cost and a **Markup (%)** (for example 10 to pass an expense on at cost plus 10%).
 - On a draft invoice's page, the **Unbilled work** card lists the customer's unbilled charges: tick them and click **Add the charges chosen**. With Time Tracker on, choose a person, the days and the **Rate an hour**, click **Find time**, and add the hours you want to bill.
 
 A charge or hours on an invoice are billed: they aren't offered again, and billed time can't be changed in Time Tracker. Taking the line off the draft, deleting the draft or voiding the invoice makes them unbilled again. A recurring plan can bill the customer's charges on each run: tick **Also bill the customer's unbilled charges**.
@@ -188,7 +188,7 @@ With **Exchange Rates** on and a reporting currency set (see [Exchange rates](ex
 
 To bill customers for what they use, such as API calls, seats or storage:
 
-1. Under **Commerce > Usage meters**, click **Add usage meter**. Give it a **Name** (printed on invoices), a **Code** (such as `api-calls`), a **Unit** (such as calls) and choose how **A period's usage is** worked out: added up, the most at once, or the latest reading. Click **Save**.
+1. Under **Commerce > Usage Meters**, click **Add usage meter**. Give it a **Name** (printed on invoices), a **Code** (such as `api-calls`), a **Unit** (such as calls) and choose how **A period's usage is** worked out: added up, the most at once, or the latest reading. Click **Save**.
 2. Record usage. Your systems usually send it through the commerce API; you can also click **Usage** on the meter, choose the customer, enter the quantity and when, and click **Record**. Give an **Event id** to make sure a retry is never counted twice.
 3. On the customer's recurring plan, in the **Usage** card, choose the meter and enter the price tiers: for each, the quantity it goes **Up to** and the **Price of each**, leaving the last tier's limit empty. Choose **Graduated** to price each band at its own price (the first 1,000 at one price, the next at another), or **Volume** to price all of it at the price of the tier it reaches. Click **Update** for another empty tier row or usage charge.
 
@@ -196,7 +196,7 @@ Each run bills the usage of the period that just ended, from the previous run up
 
 ## Late fees
 
-With **Invoicing Collections** enabled, **Commerce > Late fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.
+With **Invoicing Collections** enabled, **Commerce > Late Fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.
 
 1. Click **Add late-fee policy** and give it a name.
 2. Choose whether **Each fee is** a fixed amount or a percent of what is still due, and enter it.
@@ -219,7 +219,7 @@ A statement of a period starts with the balance brought forward, lists every inv
 
 ## Recurring invoices
 
-With **Invoicing Recurring** enabled, **Commerce > Recurring invoices** lists the plans that bill a customer on a schedule, such as monthly hosting or a yearly support contract.
+With **Invoicing Recurring** enabled, **Commerce > Recurring Invoices** lists the plans that bill a customer on a schedule, such as monthly hosting or a yearly support contract.
 
 1. Click **New recurring plan** and give it a name.
 2. Under **Schedule**, choose how often it repeats (every so many weeks, months or years, counted from **Starts**), and, if it should stop, **Ends** or **Number of invoices**. A **Custom schedule** takes a recurrence rule, such as `FREQ=MONTHLY;BYMONTHDAY=-1` for the last day of each month.

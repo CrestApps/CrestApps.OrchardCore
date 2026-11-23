@@ -246,7 +246,7 @@ On the transaction's page, the **Scheduled reminders** card has **Pause reminder
 
 ### A balance charged to a saved card
 
-A balance charged automatically to the customer's saved card, such as an invoice marked **Charge the customer's saved card**, shows a **Charged to a saved card** card with the card and the day it is charged, and how many charges were declined so far. The customer gets no reminder that it is owed while the charge is pending. If the card is declined, it is tried again on the retry schedule above; when no try is left, or the card's bank asks the customer to approve the payment, the customer is asked to pay it themselves (an invoice is e-mailed to them) and a payment issue is recorded under **Commerce > Payment issues**. **Cancel the charge** stops it, and the customer pays themselves.
+A balance charged automatically to the customer's saved card, such as an invoice marked **Charge the customer's saved card**, shows a **Charged to a saved card** card with the card and the day it is charged, and how many charges were declined so far. The customer gets no reminder that it is owed while the charge is pending. If the card is declined, it is tried again on the retry schedule above; when no try is left, or the card's bank asks the customer to approve the payment, the customer is asked to pay it themselves (an invoice is e-mailed to them) and a payment issue is recorded under **Commerce > Payment Issues**. **Cancel the charge** stops it, and the customer pays themselves.
 
 ## My Transactions (for customers)
 

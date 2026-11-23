@@ -150,7 +150,7 @@ Each call can cost the store money, so both endpoints are in the `address-autoco
 - `ResolveAsync` gets `https://places.googleapis.com/v1/places/{id}` with the session token and the field mask `addressComponents`, and maps the components to an `Address`: the street number before the route in countries that write it first (such as the US, Canada, the UK, Ireland, Australia and France) and after it elsewhere, `subpremise` as the second line, `sublocality`, `locality` (else `postal_town`, else `administrative_area_level_2`) as the city, the short `administrative_area_level_1` as the region, the postal code and the country.
 - An error, a timeout or an unexpected answer is logged and gives no suggestions (or `404` from `resolve`); it never breaks the form.
 
-The key is set under **Settings > Address suggestions** (settings group `address-suggestions`, permission `ManageAddressSuggestions`, **Manage address suggestions**, given to Administrator) and kept in `GooglePlacesSettings.ApiKey`, protected with data protection (purpose `CrestApps.OrchardCore.Addresses.GooglePlaces.ApiKey`). The page never shows it again; a blank field keeps it, and **Remove the key** removes it. Restrict the key to the Places API (New) in the Google Cloud console.
+The key is set under **Settings > Address Suggestions** (settings group `address-suggestions`, permission `ManageAddressSuggestions`, **Manage address suggestions**, given to Administrator) and kept in `GooglePlacesSettings.ApiKey`, protected with data protection (purpose `CrestApps.OrchardCore.Addresses.GooglePlaces.ApiKey`). The page never shows it again; a blank field keeps it, and **Remove the key** removes it. Restrict the key to the Places API (New) in the Google Cloud console.
 
 ## Country lists
 

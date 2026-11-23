@@ -40,7 +40,7 @@ public sealed class TaxTestHarness
         services.AddSingleton<IExemptionCertificateStore, InMemoryExemptionCertificateStore>();
         services.AddSingleton<IMerchantTaxRegistrationStore, InMemoryMerchantTaxRegistrationStore>();
 
-        // The site's rounding level (Settings > Commerce > Tax calculation) without site settings.
+        // The site's rounding level (Settings > Commerce > Tax Calculation) without site settings.
         services.AddSingleton(RoundingLevelProvider);
         services.AddSingleton<ITaxRoundingLevelProvider>(RoundingLevelProvider);
 

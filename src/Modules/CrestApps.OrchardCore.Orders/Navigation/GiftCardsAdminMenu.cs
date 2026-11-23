@@ -27,7 +27,7 @@ public sealed class GiftCardsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Gift cards"], S["Gift cards"].PrefixPosition("5.5"), giftCards => giftCards
+                .Add(S["Gift Cards"], S["Gift Cards"].PrefixPosition("5.5"), giftCards => giftCards
                     .Id("giftCards")
                     .Action(_routeValues)
                     .Permission(OrderPermissions.ManageGiftCards)

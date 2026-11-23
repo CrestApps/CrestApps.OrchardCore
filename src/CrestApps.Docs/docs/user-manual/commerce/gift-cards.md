@@ -11,7 +11,7 @@ A **gift card** is a code with money on it. A buyer types the code at checkout a
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Gift cards |
+| **Menu** | Commerce > Gift Cards |
 | **Permission** | **Manage gift cards** |
 | **Feature** | Gift Cards (it needs Orders) |
 
@@ -41,7 +41,7 @@ When an order with gift cards is paid:
 
 - One card is issued for each gift card bought: an order of two $50 cards issues two cards worth $50 each. Each card is worth the item's price, in the order's currency, with a new 16-character code.
 - Each card is emailed to the buyer, at the email on the order. The buyer passes it on to whoever it's for.
-- Each card is listed under **Commerce > Gift cards**, linked to its order, and the order's **Notes** say *Issued gift card ending 4F2K worth $50 and emailed it to …*. When the email couldn't be sent, the note says so: send the card from its page.
+- Each card is listed under **Commerce > Gift Cards**, linked to its order, and the order's **Notes** say *Issued gift card ending 4F2K worth $50 and emailed it to …*. When the email couldn't be sent, the note says so: send the card from its page.
 
 An order paid offline, such as by bank transfer, is placed before the money arrives. Its cards are issued **turned off**, with the note *Turn it on when the order is paid in full, then email it.*, so nobody can spend a card that isn't paid for yet. When the money arrives, open each card, tick **Enabled**, save, and click **Send**.
 
@@ -54,7 +54,7 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 <YouTube video="gift-cards" title="Issuing a gift card by hand" start={130} end={171} />
 <YouTube video="orders" title="Video of issuing a gift card by hand" start={292} end={331} />
 
-1. Open **Commerce > Gift cards** and click **Issue gift card**.
+1. Open **Commerce > Gift Cards** and click **Issue gift card**.
 2. Enter the **Amount**, and check the **Currency** (it starts with your checkout currency).
 3. Fill in the recipient and the other fields you need (below).
 4. Leave **Email the card** ticked to send it to the recipient now.
@@ -78,7 +78,7 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 
 <YouTube video="gift-cards" title="Finding gift cards" start={273} end={311} />
 
-**Commerce > Gift cards** lists the cards, newest first.
+**Commerce > Gift Cards** lists the cards, newest first.
 
 - **Search by code, its last 4 characters, or email** at the top: type the whole code, its last four characters, or part of the recipient's email, and press Enter.
 - The status filter in the list header (**Filter by status**) shows **Any status**, **Active**, **Used up**, **Expired** or **Disabled** cards.

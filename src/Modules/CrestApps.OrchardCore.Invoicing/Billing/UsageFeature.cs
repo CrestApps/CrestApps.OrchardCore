@@ -71,7 +71,7 @@ public sealed class UsageStartup : StartupBase
 }
 
 /// <summary>
-/// Adds Commerce > Usage meters.
+/// Adds Commerce > Usage Meters.
 /// </summary>
 public sealed class UsageMetersAdminMenu : AdminNavigationProvider
 {
@@ -86,7 +86,7 @@ public sealed class UsageMetersAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Usage meters"], S["Usage meters"].PrefixPosition("4.7"), meters => meters
+                .Add(S["Usage Meters"], S["Usage Meters"].PrefixPosition("4.7"), meters => meters
                     .Id("usagemeters")
                     .Action("Index", "UsageMeters", new RouteValueDictionary { { "area", InvoicingConstants.Features.Area } })
                     .Permission(InvoicingPermissions.ManageInvoices)

@@ -111,7 +111,7 @@ Address fields offer only the countries that are published here, so deleting the
 
 When the **Address Suggestions (Google Places)** feature is on, people typing a street in an address get suggestions, and the rest of the address fills in from the one they pick. Suggestions come from Google Places, which bills your site for each session, so they are off until you give the site a key.
 
-1. Open **Settings > Address suggestions**. You need the **Manage address suggestions** permission.
+1. Open **Settings > Address Suggestions**. You need the **Manage address suggestions** permission.
 2. Paste the **Google Places API key** and save. Create the key for the *Places API (New)* in the Google Cloud console, and restrict it to that API.
 
 The site keeps the key on the server and never shows it again: leave the box blank to keep the saved key, tick **Remove the key** to stop suggesting addresses. Without a key, people type their address themselves.

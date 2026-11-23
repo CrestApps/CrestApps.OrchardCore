@@ -60,7 +60,7 @@ The scope of the two staff tools is everyone for a person who holds **View learn
 
 ## Author prompts
 
-**Learning > Authoring assistant** (feature Learning Authoring Assistant, permission `UseLearningAuthoringAssistant`) has four author prompts. Each renders a prompt template, calls the site's utility deployment (or the default one), reads the JSON answer and saves **drafts**: nothing is published, and an author reviews and publishes them as usual. The lesson lists offer only lessons the author may edit (`EditContent`).
+**Learning > Authoring Assistant** (feature Learning Authoring Assistant, permission `UseLearningAuthoringAssistant`) has four author prompts. Each renders a prompt template, calls the site's utility deployment (or the default one), reads the JSON answer and saves **drafts**: nothing is published, and an author reviews and publishes them as usual. The lesson lists offer only lessons the author may edit (`EditContent`).
 
 | Prompt | Template | Needs | Saves |
 | --- | --- | --- | --- |

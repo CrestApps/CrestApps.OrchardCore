@@ -38,7 +38,7 @@ To add many skills at once, such as the competency frameworks of a Moodle site, 
 
 Open the person under **Access Control > Users**, edit them, and find the **Skills** section. Choose a level for each skill they hold, from **1 - Trainee** to **5 - Expert**, or **Doesn't hold it**, and save. Only people who can assign skills see the section.
 
-Contact Center agents' skills are also set on **Interaction Center > Management > Agent entitlements**. Both screens change the same skills.
+Contact Center agents' skills are also set on **Interaction Center > Management > Agent Entitlements**. Both screens change the same skills.
 
 ## Add a certification
 

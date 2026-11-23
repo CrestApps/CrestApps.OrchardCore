@@ -123,7 +123,7 @@ Typing an address is slow, and typos send parcels astray. With address suggestio
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Address suggestions |
+| **Menu** | Settings > Address Suggestions |
 | **Permission** | Manage address suggestions |
 | **Feature** | Address Suggestions (Google Places) |
 
@@ -132,7 +132,7 @@ Typing an address is slow, and typos send parcels astray. With address suggestio
 To set it up:
 
 1. In the Google Cloud console, create an API key for the **Places API (New)**, restricted to that API.
-2. Open **Settings > Address suggestions**, paste it into **Google Places API key**, and save.
+2. Open **Settings > Address Suggestions**, paste it into **Google Places API key**, and save.
 
 The key is kept on your server and never sent to shoppers' browsers. Once saved it's never shown again: leave the field blank to keep it, or enter a new key to replace it. To stop suggesting addresses, tick **Remove the key** and save. Without a key, shoppers type their address themselves.
 

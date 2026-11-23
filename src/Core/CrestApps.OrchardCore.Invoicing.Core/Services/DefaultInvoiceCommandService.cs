@@ -496,7 +496,7 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
             if (number is null)
             {
-                result.Fail(S["The invoice number series keeps giving numbers other invoices already hold. Change its format under Settings > Business documents > Number series."]);
+                result.Fail(S["The invoice number series keeps giving numbers other invoices already hold. Change its format under Settings > Business Documents > Number Series."]);
 
                 return null;
             }

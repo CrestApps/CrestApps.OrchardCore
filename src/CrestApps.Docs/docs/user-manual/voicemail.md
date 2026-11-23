@@ -11,7 +11,7 @@ technical_manual:
 Voicemail goes to one of two places, chosen on the [inbound entry point](entry-points-and-ivr.md#voicemail):
 
 - **your own inbox**, which you play from the soft phone's **Voicemail** tab;
-- a **queue's shared voicemail box**, which the team works from **Interaction Center > Shared voicemail**.
+- a **queue's shared voicemail box**, which the team works from **Interaction Center > Shared Voicemail**.
 
 <YouTube video="contact-center-voicemail" title="Video overview of Voicemail: greetings, inboxes and the shared box" />
 
@@ -23,7 +23,7 @@ Your greeting is what callers hear before they leave you a message.
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > My voicemail greeting |
+| **Menu** | Interaction Center > My Voicemail Greeting |
 | **Permission** | Sign in to Contact Center queues and campaigns (you also need an agent profile, which is created the first time you sign in) |
 | **Features** | Contact Center Agents, Contact Center Real-Time, Contact Center Voice, and Telephony Soft Phone Core (turned on with Telephony Soft Phone Extension) |
 
@@ -31,7 +31,7 @@ Your greeting is what callers hear before they leave you a message.
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the My voicemail greeting page with record, upload and preview controls" start={266} end={285} />
 
-1. Open **Interaction Center > My voicemail greeting**.
+1. Open **Interaction Center > My Voicemail Greeting**.
 2. Choose how to add the greeting:
    - **Record with microphone** (the default): click **Record**, speak, then click **Stop** (the same button). The page says *Recorded. Review it below, then Save.* If your browser cannot record, it says so; upload a file instead.
    - **Upload a file**: pick an audio file (MP3, WAV, OGG or WebM, up to 20 MB).
@@ -74,7 +74,7 @@ A queue's shared voicemail box lets a team share the messages left on a line: an
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Shared voicemail (the menu shows how many are new) |
+| **Menu** | Interaction Center > Shared Voicemail (the menu shows how many are new) |
 | **Permissions** | Access shared queue voicemail for entitled queues (to work the box); Manage shared queue voicemail: delete messages and take over other users' claims. The *Supervisor* role has both. |
 | **Feature** | Contact Center Inbound Voice |
 
@@ -82,7 +82,7 @@ A queue's shared voicemail box lets a team share the messages left on a line: an
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the shared voicemail list with queue and status filters and the claim, call back and mark done actions" start={288} end={322} />
 
-1. Open **Interaction Center > Shared voicemail**.
+1. Open **Interaction Center > Shared Voicemail**.
 2. Filter by queue (*All my queues* by default) and status: **Open (new and claimed)**, **New**, **Claimed**, **Done** or **All**, then click **Filter**.
 3. Play a message, then click **I'll handle this** to claim it so the rest of the team knows it is yours. It then shows *Claimed by you*.
 4. Click **Call back** to call the caller back straight from your own soft phone.

@@ -36,7 +36,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = OrderConstants.Features.GiftCards,
     Name = "Gift Cards",
-    Description = "Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift cards.",
+    Description = "Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift Cards.",
     Category = "Commerce",
     Dependencies =
     [

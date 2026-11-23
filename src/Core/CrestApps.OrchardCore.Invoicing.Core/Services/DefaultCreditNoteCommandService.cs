@@ -275,7 +275,7 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
         {
             await _session.CancelAsync();
 
-            return result.Fail(S["The credit note number series keeps giving numbers other credit notes already hold. Change its format under Settings > Business documents > Number series."]);
+            return result.Fail(S["The credit note number series keeps giving numbers other credit notes already hold. Change its format under Settings > Business Documents > Number Series."]);
         }
 
         creditNote.Number = number.PublicToken;

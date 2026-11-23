@@ -97,7 +97,7 @@ When nobody speaks for 8 seconds, the AI asks whether the person is still there.
 An automatic load is for conversations the AI starts. To have an AI profile **answer** the calls customers make to one of your numbers, set it on the number's **inbound entry point**, not on a queue. A queue only holds callers for people.
 
 1. Make the profile under **Artificial Intelligence > Profiles**. **Add Profile** with the **Answer calls at the front desk** starting point fills in the greeting and the instructions. Every **Chat** profile can be picked.
-2. Open **Interaction Center > Management > Inbound entry points** and edit (or add) the **Voice calls** entry point that picks the number under **Numbers**.
+2. Open **Interaction Center > Management > Inbound Entry Points** and edit (or add) the **Voice calls** entry point that picks the number under **Numbers**.
 3. On the **Routing** card, set **Route to** to **AI voice agent** and choose the profile under **AI agent**. Click **Save**.
 4. Optionally, give the number an inbound **Phone** [subject](subjects.md) whose **Address** is that number. Its subject, campaign and [subject flow](subject-flows.md) are used for the call: the dispositions the AI picks from, and whether it may hand the caller to a person.
 
@@ -112,7 +112,7 @@ This needs the **Telnyx AI Voice Agent** feature, which adds **AI voice agent** 
 Texts work the same way as calls. Set the AI profile on the number's **text entry point**, and the AI takes the customer's first text itself.
 
 1. Make the profile under **Artificial Intelligence > Profiles**. **Add Profile** with the **Customer care by text** starting point fills in the instructions. Every **Chat** profile can be picked. The AI replies to the customer, so its opening message is not used.
-2. Open **Interaction Center > Management > Inbound entry points** and edit (or add) the **Text messages** entry point that picks the number under **Numbers**.
+2. Open **Interaction Center > Management > Inbound Entry Points** and edit (or add) the **Text messages** entry point that picks the number under **Numbers**.
 3. On the **Routing** card, set **Route to** to **AI agent** and choose the profile under **AI agent**. Click **Save**.
 4. Optionally, give the number an inbound **SMS** [subject](subjects.md) whose **Address** is that number. Its subject, campaign and [subject flow](subject-flows.md) are used for the conversation: the dispositions the AI picks from, the no-response timeout, and whether it may hand the customer to a person. Without one, the AI still answers, but it has no dispositions to choose from and cannot hand the conversation over.
 

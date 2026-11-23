@@ -21,7 +21,7 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Taxation.Controllers;
 
 /// <summary>
-/// Commerce &gt; Taxation &gt; Tax returns: the periods each registration files for, by due date, and each return with
+/// Commerce &gt; Taxation &gt; Tax Returns: the periods each registration files for, by due date, and each return with
 /// its figures, boxes, payments and actions. Preparing and marking ready need <c>ManageTaxReturns</c>; filing, amending
 /// and payments need <c>FileTaxReturns</c>.
 /// </summary>

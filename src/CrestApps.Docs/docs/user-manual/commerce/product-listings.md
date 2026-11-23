@@ -186,7 +186,7 @@ With the SEO feature on, add the **SEO** part to the **Product Listing** type an
 With **Product Feeds** on, your products are published as a feed for Google Merchant Center, Meta (Facebook and Instagram shops) and TikTok, so they show in shopping ads and shops.
 
 1. Set your site's base URL under **Settings > General**: the feed's links and photos need it.
-2. Open **Settings > Commerce > Product feeds**. It shows the feed's address, how many products are in it, and why any are left out, such as a product with no photo.
+2. Open **Settings > Commerce > Product Feeds**. It shows the feed's address, how many products are in it, and why any are left out, such as a product with no photo.
 3. Give Google Merchant Center, Meta Commerce Manager or TikTok the feed's address as a scheduled feed. Add a market's currency, such as *?currency=EUR*, for a feed in it.
 
 Each product you sell online is in the feed with its price, sale price, photos and whether it's in stock; a product sold in variants is in it once for each variant. To give a product a brand, a GTIN (the barcode's number) or an MPN, add the **Product Feed** part to its content type, or set the store's **Brand** under the feed's settings. Products whose brand is in a taxonomy named for brands get it from there. Tick **Leave it out of shopping feeds** on a product to keep it out.
@@ -199,16 +199,16 @@ The feed also tells AI agents, such as ChatGPT, which products they may show buy
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Agent feeds |
+| **Menu** | Settings > Commerce > Agent Feeds |
 | **Permission** | Manage agent product feeds |
 | **Feature** | Agent Product Feeds (it turns on Agentic Commerce and Product Feeds) |
 
 <AskYourAdmin />
 
-AI agents read your products from feeds too. **Settings > Commerce > Agent feeds** publishes them in OpenAI's format for ChatGPT, pushes them to the agent platforms you sell through, and shows how the last pushes went. It uses the products, prices, photos and stock of the shopping feed, the store's name, website and policy links from **Settings > Commerce > Store**, the shipping rates and the return settings.
+AI agents read your products from feeds too. **Settings > Commerce > Agent Feeds** publishes them in OpenAI's format for ChatGPT, pushes them to the agent platforms you sell through, and shows how the last pushes went. It uses the products, prices, photos and stock of the shopping feed, the store's name, website and policy links from **Settings > Commerce > Store**, the shipping rates and the return settings.
 
 1. Set your site's base URL under **Settings > General**, and the links to your terms of service and privacy policy under **Settings > Commerce > Store**: agents can only check out products whose feed has both.
-2. Open **Settings > Commerce > Agent feeds**. The **OpenAI product feed** card shows the feed's addresses, how many products are in it, and why any are left out, such as a product with no brand.
+2. Open **Settings > Commerce > Agent Feeds**. The **OpenAI product feed** card shows the feed's addresses, how many products are in it, and why any are left out, such as a product with no brand.
 3. Enter the **Target countries** you sell to through agents, such as *US, CA*, or leave it empty for the store's own country.
 4. Set up the push your agent platform asks for, and choose **Save**.
 

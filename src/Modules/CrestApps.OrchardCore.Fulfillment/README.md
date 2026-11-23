@@ -1,6 +1,6 @@
 # Fulfillment Partners
 
-Connects a store to the outside companies that make and ship its products for it, such as print-on-demand services. This module owns the **Settings > Commerce > Fulfillment partners** page, the **Commerce > Fulfillment requests** list and the `IFulfillmentProvider` contract. Each company is a separate provider module that adds its connection section to the settings page.
+Connects a store to the outside companies that make and ship its products for it, such as print-on-demand services. This module owns the **Settings > Commerce > Fulfillment Partners** page, the **Commerce > Fulfillment Requests** list and the `IFulfillmentProvider` contract. Each company is a separate provider module that adds its connection section to the settings page.
 
 ## Features
 
@@ -16,7 +16,7 @@ Enable **Fulfillment Partners** under **Configuration > Features**, or with the 
 
 ## Configuration
 
-Open **Settings > Commerce > Fulfillment partners**. The page needs the **Manage fulfillment partners and their credentials** permission (`ManageFulfillmentPartners`), which the Administrator role has. Sending orders and the Fulfillment requests list need Shipping's **Ship orders and update their shipments** permission (`FulfillOrders`).
+Open **Settings > Commerce > Fulfillment Partners**. The page needs the **Manage fulfillment partners and their credentials** permission (`ManageFulfillmentPartners`), which the Administrator role has. Sending orders and the Fulfillment requests list need Shipping's **Ship orders and update their shipments** permission (`FulfillOrders`).
 
 ## What it does
 
@@ -24,7 +24,7 @@ Open **Settings > Commerce > Fulfillment partners**. The page needs the **Manage
 - Gives each line of an order to the one partner that makes it, and asks a person when two partners claim the same line.
 - Sends only what is left to ship, and reserves what it sends as a pending Shipping shipment, so typing the tracking number on it fulfills the order.
 - Adds a **Fulfillment partners** card to an order's admin page, with a button that sends a paid order to its partners, and shows what each partner was sent and answered.
-- Lists every request under **Commerce > Fulfillment requests**, with a status filter, a search by order number and **Send again**.
+- Lists every request under **Commerce > Fulfillment Requests**, with a status filter, a search by order number and **Send again**.
 - With **Send paid orders automatically** on, records each paid order for the partners as it is paid; a background task sends it within a few minutes.
 - Sends an order once. When the outcome is not clear (no answer within two minutes, a server error, or a send that was interrupted), the order is marked **Needs attention**, the people who ship orders are notified, and it is never sent again by itself.
 

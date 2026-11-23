@@ -19,7 +19,7 @@ A text entry point decides where the conversations go, how a queue hands them ou
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Inbound entry points |
+| **Menu** | Interaction Center > Management > Inbound Entry Points |
 | **Permission** | Manage Contact Center queues |
 | **Features** | Contact Center Inbound Entry Points, with Contact Center Inbound Voice for call entry points and SMS Messaging Channel for text entry points |
 
@@ -34,7 +34,7 @@ A text entry point decides where the conversations go, how a queue hands them ou
 <YouTube video="contact-center-call-flows" title="Video of the life of an inbound call: the recording notice, welcome, menu, queue, offer and wrap-up" start={27} end={74} />
 
 1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** or **Text messages (SMS)** ticked.
-2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, a dialog asks what the entry point answers: click **Add** on the **Voice calls** or **Text messages** card.
+2. Open **Interaction Center > Management > Inbound Entry Points** and click **Add inbound entry point**. When more than one channel is available, a dialog asks what the entry point answers: click **Add** on the **Voice calls** or **Text messages** card.
 3. Fill in the cards described below. A call entry point has five; the priority, closed-call, phone menu and voicemail settings are for calls only.
 4. Click **Save**. Calls or texts to its numbers follow the new rules straight away.
 

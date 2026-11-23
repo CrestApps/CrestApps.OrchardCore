@@ -10,7 +10,7 @@ A work order is a job done for a customer, such as a repair or an installation. 
 
 | | |
 | --- | --- |
-| **Menu** | Field Service > Work Orders, Work Order Types, Checklists, Service Levels, Sub-statuses |
+| **Menu** | Field Service > Work Orders, Work Order Types, Checklists, Service Levels, Sub-Statuses |
 | **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists and sub-statuses; Manage service level policies for the service levels |
 | **Feature** | Work Orders (it turns on Service Levels and Business Hours); Service Agreements for recurring visits; Inventory for parts, Invoicing (or Transactions) for invoices, Geo for territories, Assets for equipment |
 
@@ -48,7 +48,7 @@ A required question must be answered before the work order is completed.
 6. Tick its checklists, and list the lines every work order starts with, such as an hour of labor or a filter. With Inventory on, choose the stock item a part comes from.
 7. Select **Save**.
 
-Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level timers.
+Sub-statuses, under **Field Service > Sub-Statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level timers.
 
 ## Create a work order
 

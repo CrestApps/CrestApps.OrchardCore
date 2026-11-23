@@ -74,7 +74,7 @@ Grant agents the `ContactCenterSignIntoQueues` permission (or a role that includ
 
 <YouTube video="contact-center-live-dashboard" title="Video overview of the live dashboard and supervisor interventions" />
 
-**Interaction Center → Live dashboard** shows summary metrics, a tile per queue (waiting, signed-in, available, busy/reserved/wrap-up and other not-ready agents, the longest wait and SLA breaches, amber near the SLA and red once breached) and an agent board with filters. It connects to the real-time hub and also re-reads its state every 10 seconds, so it can be left open on a wallboard. Reading the dashboard and every supervisor action, step by step, is in the User Manual's [Live Dashboard](../user-manual/live-dashboard.md).
+**Interaction Center → Live Dashboard** shows summary metrics, a tile per queue (waiting, signed-in, available, busy/reserved/wrap-up and other not-ready agents, the longest wait and SLA breaches, amber near the SLA and red once breached) and an agent board with filters. It connects to the real-time hub and also re-reads its state every 10 seconds, so it can be left open on a wallboard. Reading the dashboard and every supervisor action, step by step, is in the User Manual's [Live Dashboard](../user-manual/live-dashboard.md).
 
 The dashboard shows only the queues the supervisor is authorized for (the queues and campaigns on the supervisor's own agent entitlement record), and every action is limited to agents and calls in those queues. A supervisor without an entitlement record sees an empty dashboard.
 
@@ -169,7 +169,7 @@ The Subject Flow is the primary business workflow for work completion. Use it fo
 
 ## For contact center agents: the Agent Workspace
 
-**Interaction Center → My workspace** is the screen an agent keeps open for the whole shift, next to the [Telephony soft phone](../telephony/index.md), which carries the call audio and device controls. What the agent does there, step by step, is in the User Manual's [Agent Workspace](../user-manual/agent-workspace.md) and [Placing and Handling Calls](../user-manual/calls.md). The sections below describe how the workspace behaves underneath.
+**Interaction Center → My Workspace** is the screen an agent keeps open for the whole shift, next to the [Telephony soft phone](../telephony/index.md), which carries the call audio and device controls. What the agent does there, step by step, is in the User Manual's [Agent Workspace](../user-manual/agent-workspace.md) and [Placing and Handling Calls](../user-manual/calls.md). The sections below describe how the workspace behaves underneath.
 
 ### 1. Sign in and set your presence
 
@@ -298,7 +298,7 @@ The voicemail endpoints answer a refusal with a status code and a problem body (
 
 ### 7. Record your voicemail greeting
 
-**Interaction Center → My voicemail greeting** lets an agent record a greeting with the microphone or upload an audio file (MP3, WAV, OGG or WebM, up to 20 MB); see [Record your voicemail greeting](../user-manual/voicemail.md#record-your-voicemail-greeting).
+**Interaction Center → My Voicemail Greeting** lets an agent record a greeting with the microphone or upload an audio file (MP3, WAV, OGG or WebM, up to 20 MB); see [Record your voicemail greeting](../user-manual/voicemail.md#record-your-voicemail-greeting).
 
 A saved greeting is uploaded to the telephony provider's own media storage (for Telnyx, Media Storage) and played back from there, so no publicly reachable URL of your own is required. When the agent has no recorded greeting, the caller hears the entry point's **Default voicemail greeting** (configured per dialed number), and if that is also empty, a built-in system greeting. See [Voice routing](voice-routing.md#greeting-then-beep-then-record).
 

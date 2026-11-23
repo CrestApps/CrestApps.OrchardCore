@@ -39,7 +39,7 @@ Coursework takes up to 20 files a hand-in unless your administrator changes it.
 
 ## Gradebook and grade scales
 
-**Learning > Grade scales** maps a percentage to a grade, such as A to F or Pass and Fail. The **Gradebook** of a course shows every learner and the result of each graded item.
+**Learning > Grade Scales** maps a percentage to a grade, such as A to F or Pass and Fail. The **Gradebook** of a course shows every learner and the result of each graded item.
 
 The course grade is the weighted mean of the graded items. On the course editor, the **Pass mark (%)** under **Completion and grade** is the course grade a learner needs to pass; leave it empty for a course without a grade. To weigh groups of items, such as homework and exams, add rows to the **Grade categories** card: a **Category**, its **Weight** and how many of its lowest scores to **Drop lowest**. Choose each graded item's **Grade category** on its **Course item** card. A category's score is the mean of its items after the lowest are dropped, and the course grade is the weighted mean of the categories. See [Grade categories](./courses.md#grade-categories).
 

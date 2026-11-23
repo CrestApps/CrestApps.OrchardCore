@@ -10,7 +10,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Inventory; Commerce > Purchase orders; Settings > Commerce > Inventory |
+| **Menu** | Commerce > Inventory; Commerce > Purchase Orders; Settings > Commerce > Inventory |
 | **Permission** | **View inventory** to look, **Manage inventory** to change stock and the settings |
 | **Feature** | Inventory; **Back-in-Stock Alerts** to email shoppers when a product is back; **Purchase Orders** to order stock from suppliers |
 
@@ -90,7 +90,7 @@ The list and the labels shoppers see count every location together.
 <YouTube video="purchase-orders-and-stock-alerts" title="Starting a purchase order from low stock" start={84} end={115} />
 <YouTube video="inventory" title="Video of a purchase order" start={274} end={323} />
 
-With the **Purchase Orders** feature on, **Commerce > Purchase orders** keeps the stock you order from suppliers, and receives it into a location.
+With the **Purchase Orders** feature on, **Commerce > Purchase Orders** keeps the stock you order from suppliers, and receives it into a location.
 
 1. Click **Add purchase order**, and enter the **Supplier** (earlier suppliers are suggested), the **Supplier's email**, where to **Receive at**, what currency the costs are in (**Costs in**), when it's **Expected**, and a **Note**.
 2. Leave **Start with the items that are low on stock where it's received** ticked to fill it with what's running low, each ordered up to twice its low-stock threshold, or untick it to start empty. Click **Start the order**.

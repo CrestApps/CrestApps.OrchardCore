@@ -1,7 +1,7 @@
 ---
 sidebar_label: Set up your store
 title: Set up your store
-description: "Go from a new site to your first sale: start from the Online store setup, then follow Commerce > Set up your store through your store's details, currency, payments, shipping, taxes, a first product and a test order, and add roles for your staff."
+description: "Go from a new site to your first sale: start from the Online store setup, then follow Commerce > Set Up Your Store through your store's details, currency, payments, shipping, taxes, a first product and a test order, and add roles for your staff."
 technical_manual:
   - modules/store-setup
 ---
@@ -10,7 +10,7 @@ A new store takes a few steps before its first sale: its name and contact detail
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Set up your store |
+| **Menu** | Commerce > Set Up Your Store |
 | **Permission** | Set up the store |
 | **Feature** | Commerce, with the features of each step |
 
@@ -35,7 +35,7 @@ On a site you already have, the guide shows the steps for the features you've tu
 
 <YouTube video="set-up-your-store" title="Opening the guide" start={84} end={105} />
 
-Open **Commerce > Set up your store**. The step to do next is open. Each step says what it's for, and either has a short form to fill in or a link to the page where it's done in full. A tick shows a step that's done. The bar at the top shows how many steps are left.
+Open **Commerce > Set Up Your Store**. The step to do next is open. Each step says what it's for, and either has a short form to fill in or a link to the page where it's done in full. A tick shows a step that's done. The bar at the top shows how many steps are left.
 
 1. **Your store's details.** Your store's name, the email customers write to, and optionally your phone and address. They're printed on receipts, invoices and order emails.
 2. **Your currency.** The currency your prices are in and customers pay in. Choose it in the guide and click **Use this currency**: it is the one place the store's currency is set, because **Settings > Commerce > Checkout** only picks the checkout's layout.

@@ -11,7 +11,7 @@ user_manual:
 | **Feature** | `CrestApps.OrchardCore.Fulfillment` (Fulfillment Partners) |
 | **Projects** | `CrestApps.OrchardCore.Fulfillment.Abstractions`, `CrestApps.OrchardCore.Fulfillment.Core`, `CrestApps.OrchardCore.Fulfillment` |
 | **Dependencies** | Commerce, Orders, Shipping |
-| **Menu** | Commerce > Fulfillment requests; Settings > Commerce > Fulfillment partners |
+| **Menu** | Commerce > Fulfillment Requests; Settings > Commerce > Fulfillment Partners |
 | **Permissions** | `ManageFulfillmentPartners` for the settings page and credentials (security critical; the Administrator role has it). Shipping's `FulfillOrders` for the order card, sending and the Fulfillment requests list. |
 
 A **fulfillment partner** is an outside company that makes and ships a store's products for it, such as a print-on-demand service. This module is the engine: the settings page partners are connected on, line assignment, the order card, the requests list, notifications and the sender. It ships no partner. Each company is a provider module that implements `IFulfillmentProvider`, so a site adds the partners it uses, from this repository or from its own solution.
@@ -55,7 +55,7 @@ The engine decides which partner makes which line, so two partners never make th
 
 ## Fulfillment requests list
 
-**Commerce > Fulfillment requests** lists every request, most recently changed first, on the standard admin list (`AdminListContext<FulfillmentRequest>`, rows from `FulfillmentRequestDisplayDriver` in the `SummaryAdmin` and `SummaryAdminGrid` display types). It searches by order number, filters by status in the list toolbar, links each row to its order and shows the partner, the status, the reason, the partner's message, the lines and the last change. A row that is not sent has **Send again**, which uses the same sender and the same confirmation.
+**Commerce > Fulfillment Requests** lists every request, most recently changed first, on the standard admin list (`AdminListContext<FulfillmentRequest>`, rows from `FulfillmentRequestDisplayDriver` in the `SummaryAdmin` and `SummaryAdminGrid` display types). It searches by order number, filters by status in the list toolbar, links each row to its order and shows the partner, the status, the reason, the partner's message, the lines and the last change. A row that is not sent has **Send again**, which uses the same sender and the same confirmation.
 
 ## Notifications
 

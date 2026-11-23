@@ -176,7 +176,7 @@ internal sealed class EFileAcknowledgementBackgroundTask : IBackgroundTask
 }
 
 /// <summary>
-/// Adds Commerce &gt; Taxation &gt; Tax returns.
+/// Adds Commerce &gt; Taxation &gt; Tax Returns.
 /// </summary>
 internal sealed class TaxReturnsAdminMenu : AdminNavigationProvider
 {
@@ -190,7 +190,7 @@ internal sealed class TaxReturnsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder.AddTaxation(S, taxation => taxation
-            .Add(S["Tax returns"], S["Tax returns"].PrefixPosition(), returns => returns
+            .Add(S["Tax Returns"], S["Tax Returns"].PrefixPosition(), returns => returns
                 .Id("taxationReturns")
                 .Action("Index", "TaxReturns", "CrestApps.OrchardCore.Taxation")
                 .Permission(TaxationPermissions.ManageTaxReturns)

@@ -47,7 +47,7 @@ A campaign only groups and reports work. It does not decide the channel, the num
 
 Agents sign in only to the campaigns on their entitlements (when the **Contact Center Agent Entitlements** feature is on).
 
-1. Open **Interaction Center > Management > Agent entitlements** and click **Add agent entitlements**.
+1. Open **Interaction Center > Management > Agent Entitlements** and click **Add agent entitlements**.
 2. Pick the **User**.
 3. Under **Allowed campaigns**, pick the campaigns the agent may sign in to. **Allowed queues** is on the same page, for inbound work.
 4. Click **Save**. The campaign now appears in the **Work** tab of the agent's soft phone. Removing a campaign here also signs the agent out of it.

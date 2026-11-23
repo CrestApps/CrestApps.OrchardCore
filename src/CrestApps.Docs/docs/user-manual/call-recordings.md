@@ -12,7 +12,7 @@ Every recorded call is listed on one page, whatever kind of call it was. You can
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Call recordings |
+| **Menu** | Interaction Center > Call Recordings |
 | **Permissions** | *Listen to own call recordings* (your own calls only) or *Listen to anyone's call recordings* (every user's calls). The *Agent* role has the first, the *Supervisor* role the second. |
 
 <AskYourAdmin />

@@ -11,7 +11,7 @@ Taxes on income are set up in **Taxation**, not in Payroll: income tax withheld 
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > Income tax rules, Commerce > Taxation > Tables, Settings > Payroll, and **Preview the next pay** on a pay profile |
+| **Menu** | Commerce > Taxation > Income Tax Rules, Commerce > Taxation > Tables, Settings > Payroll, and **Preview the next pay** on a pay profile |
 | **Permission** | Manage income tax rules for the rules (only Administrators have it until it is given to another role); See pay profiles for the preview |
 | **Feature** | Income Tax (turns on Tax Tables); a country pack such as United States Income Tax or Canada Income Tax |
 
@@ -19,7 +19,7 @@ Taxes on income are set up in **Taxation**, not in Payroll: income tax withheld 
 
 ## Add an income tax rule
 
-1. Open **Commerce > Taxation > Income tax rules** and choose **Add income tax rule**.
+1. Open **Commerce > Taxation > Income Tax Rules** and choose **Add income tax rule**.
 2. Choose the kind of rule. It can't be changed later, and the form shows only the fields that kind needs:
    - **Flat rate**: a rate on pay, such as Social Security, Medicare, unemployment insurance, CPP or EI.
    - **Share of another tax**: a multiple of another tax of the same pay, such as the employer's EI premium.

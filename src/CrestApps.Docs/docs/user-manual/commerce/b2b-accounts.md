@@ -10,7 +10,7 @@ A business you sell to is an [account](../accounts.md), the same account your sa
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > B2B Accounts, Commerce > Price lists |
+| **Menu** | Commerce > B2B Accounts, Commerce > Price Lists |
 | **Permission** | Manage B2B accounts |
 | **Feature** | Accounts B2B (it needs Accounts and Orders) |
 
@@ -55,7 +55,7 @@ The account's **Locations** are the places it has orders shipped to. At checkout
 
 A **price list** gives the accounts on it their own prices.
 
-1. On **Commerce > Price lists**, click **Add price list**.
+1. On **Commerce > Price Lists**, click **Add price list**.
 2. Name it, such as *Wholesale*. Only staff see the name.
 3. Enter a **Percentage off everything else** if you like, such as 10.
 4. Under **Prices by SKU**, enter a SKU and its price for each unit on each line, apart by a comma, such as *HAT-22069, 24.50*. Paste them from a spreadsheet if you have many. A variant's own SKU prices that variant.

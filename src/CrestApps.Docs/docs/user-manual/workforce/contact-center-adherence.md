@@ -10,7 +10,7 @@ Adherence tells you whether contact center agents are doing what their published
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Contact Center Agents; Workforce > Adherence > Real-time, Exceptions, Rule Sets |
+| **Menu** | Workforce > Contact Center Agents; Workforce > Adherence > Real-Time, Exceptions, Rule Sets |
 | **Permission** | Manage workers; View adherence; Manage adherence rules and exceptions |
 | **Feature** | Workforce for Contact Center, Contact Center Sign-in Punches, Workforce Adherence |
 
@@ -31,7 +31,7 @@ With **Contact Center Sign-in Punches** turned on, an agent who signs in to the 
 
 ## Watch the real-time board
 
-Go to **Workforce > Adherence > Real-time**. Each agent in the teams you manage shows:
+Go to **Workforce > Adherence > Real-Time**. Each agent in the teams you manage shows:
 
 - what their schedule has them doing now, and next;
 - their contact center state, and for how long;

@@ -500,7 +500,7 @@ Both take `?currency=` (a market's currency, converted with `IShopperCurrency`) 
 | `color`, `size` | A variant's options named Color or Size, or a text field named Color. |
 | `shipping_weight`, `shipping_length`, `shipping_width`, `shipping_height` | The Shipping part's weight and size, when they are known (see below). |
 
-`ProductFeedValidator` checks each item against Merchant Center's rules: the lengths, absolute links, a photo, an availability and condition it knows, a price above zero, a sale price below it, and a GTIN's check digit. An item that fails is left out and listed. **Settings > Commerce > Product feeds** (`ManageProductFeeds`) shows the feed addresses, the items in and why the others aren't, and the defaults.
+`ProductFeedValidator` checks each item against Merchant Center's rules: the lengths, absolute links, a photo, an availability and condition it knows, a price above zero, a sale price below it, and a GTIN's check digit. An item that fails is left out and listed. **Settings > Commerce > Product Feeds** (`ManageProductFeeds`) shows the feed addresses, the items in and why the others aren't, and the defaults.
 
 The attachable **Product Feed** part (`ProductFeedPart`: `Brand`, `Gtin`, `VariantGtins`, `Mpn`, `Condition`, `GoogleProductCategory`, `ExcludeFromFeeds`, `ShowToAgents`, `AgentCheckout`) goes on the product types that need them.
 

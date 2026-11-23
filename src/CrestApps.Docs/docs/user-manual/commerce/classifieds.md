@@ -10,7 +10,7 @@ Let visitors post their own listings, such as ads, directory entries or homes fo
 
 | | |
 | --- | --- |
-| **Menu** | Content > Posted listings |
+| **Menu** | Content > Posted Listings |
 | **Permission** | Moderate posted listings; Post listings for the people who post |
 | **Feature** | Classifieds |
 
@@ -37,7 +37,7 @@ Signed-in visitors post from **My listings** in their account, with **Post a Cla
 
 <YouTube video="marketplace-classifieds" title="Video of approving and rejecting listings" start={353} end={389} />
 
-Under **Content > Posted listings**, filter by **Waiting for approval**. **Approve** shows a listing for its term. **Reject** takes down a listing, with a reason if you give one, and the owner is emailed. When an owner edits an approved listing of a kind that needs approval, it waits for you again.
+Under **Content > Posted Listings**, filter by **Waiting for approval**. **Approve** shows a listing for its term. **Reject** takes down a listing, with a reason if you give one, and the owner is emailed. When an owner edits an approved listing of a kind that needs approval, it waits for you again.
 
 ## When a listing ends
 

@@ -21,7 +21,7 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.AgenticCommerce.Controllers;
 
 /// <summary>
-/// Commerce › AI agents: the platforms whose agents may buy from the store, their API keys and webhook secrets.
+/// Commerce › AI Agents: the platforms whose agents may buy from the store, their API keys and webhook secrets.
 /// </summary>
 [Admin]
 [Feature(AgenticCommerceConstants.Features.AgenticCommerce)]

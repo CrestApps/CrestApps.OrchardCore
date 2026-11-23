@@ -152,7 +152,7 @@ For example, a table grouped by **Profile version** with the average **Score** a
 
 ### Alert rules
 
-With the **AI Quality** feature on, **Artificial Intelligence > Alert rules** watches a metric without a workflow. Click **Add alert rule** and choose the **Metric**, the **AI profile** (or every profile), when to alert and the **Threshold**, the **Window** measured, the **Minimum samples** a window needs, and how often to **Check** it. The metrics are the ones the task below measures.
+With the **AI Quality** feature on, **Artificial Intelligence > Alert Rules** watches a metric without a workflow. Click **Add alert rule** and choose the **Metric**, the **AI profile** (or every profile), when to alert and the **Threshold**, the **Window** measured, the **Minimum samples** a window needs, and how often to **Check** it. The metrics are the ones the task below measures.
 
 When the threshold is crossed, the rule opens an incident; when a measured window is back within it, the incident resolves. Each change is told once:
 

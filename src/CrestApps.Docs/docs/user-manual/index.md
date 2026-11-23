@@ -47,11 +47,11 @@ What you see in the app depends on your role. Most people are not administrators
 | --- | --- |
 | **Interaction Center > Activities** | The agent's own list of work to do. |
 | **Interaction Center > Contacts** | Every contact record. |
-| **Interaction Center > My workspace** | The agent's live desk: presence, offers, the active call and recent work. |
-| **Interaction Center > Live dashboard** | The supervisor's real-time view of queues and agents. |
-| **Interaction Center > Shared voicemail** | Voicemail left for a queue rather than one person. |
-| **Interaction Center > My voicemail greeting** | The greeting callers hear when you miss a call. |
-| **Interaction Center > Call recordings** | Recorded calls to search and play back, with the transcript of AI calls. |
+| **Interaction Center > My Workspace** | The agent's live desk: presence, offers, the active call and recent work. |
+| **Interaction Center > Live Dashboard** | The supervisor's real-time view of queues and agents. |
+| **Interaction Center > Shared Voicemail** | Voicemail left for a queue rather than one person. |
+| **Interaction Center > My Voicemail Greeting** | The greeting callers hear when you miss a call. |
+| **Interaction Center > Call Recordings** | Recorded calls to search and play back, with the transcript of AI calls. |
 | **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and omnichannel addresses. |
 | **Messaging** | The shared SMS inbox, broadcasts and message templates. |
 | **Artificial Intelligence** | AI profiles, templates, provider connections, deployments and tool instances. |

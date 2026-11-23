@@ -14,7 +14,7 @@ internal sealed class ProductFeedSettingsSchema : SiteSettingsSchemaBase
     protected override JsonSchemaBuilder BuildSchemaCore()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Description("Settings › Commerce › Product feeds.")
+            .Description("Settings › Commerce › Product Feeds.")
             .Properties(
                 ("DefaultBrand", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The brand of products that name none, such as the store's own.")),
                 ("DefaultCondition", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Default("new").Description("The condition of products that name none: new, refurbished or used.")),

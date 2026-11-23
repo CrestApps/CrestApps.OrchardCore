@@ -10,7 +10,7 @@ The learning assistant brings the site's AI to your courses in three ways: a tut
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > AI Profiles (the tutor); Learning > Authoring assistant; Learning > Grading (scoring help) |
+| **Menu** | Artificial Intelligence > AI Profiles (the tutor); Learning > Authoring Assistant; Learning > Grading (scoring help) |
 | **Permission** | Manage AI profiles for the tutor; Use the learning authoring assistant; Use scoring help while grading |
 | **Feature** | Learning Assistant; Learning Authoring Assistant for the authoring assistant and scoring help |
 
@@ -38,7 +38,7 @@ Any AI profile can also use two staff tools: **Overdue learners** and **Learners
 
 ## Draft with the authoring assistant
 
-Go to **Learning > Authoring assistant**. Each card makes drafts that you review, change and publish yourself:
+Go to **Learning > Authoring Assistant**. Each card makes drafts that you review, change and publish yourself:
 
 - **Draft a course outline**: say what the course is about and who it is for. You get a draft course with sections and a draft page lesson for each item, and the course editor opens.
 - **Draft questions from a lesson**: pick a lesson and a question bank. Draft questions with their right answers are added to the bank, unpublished. Check every answer before you publish a question.

@@ -13,7 +13,7 @@ Creating a site happens after the purchase, in the background, so a slow or fail
 
 | | |
 | --- | --- |
-| **Menu** | Subscriptions > Site provisioning (administrators), Subscriptions > My Sites (customers) |
+| **Menu** | Subscriptions > Site Provisioning (administrators), Subscriptions > My Sites (customers) |
 | **Permission** | Manage subscriptions (Site provisioning), Manage own subscriptions (My Sites) |
 | **Feature** | Subscriptions - Sites, available on the main (default) site only |
 

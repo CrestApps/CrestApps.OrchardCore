@@ -49,7 +49,7 @@ Numbers that were listed once per channel before addresses had capabilities were
 
 ## Buy a Telnyx number
 
-With Telnyx as the phone provider, **Settings → Communication → Telnyx numbers** lists the numbers on the Telnyx account. **Buy a number** searches the numbers for sale by country, area code, city, state or digits, and whether they can text; **Buy** orders one on the voice connection in the Telnyx settings and adds it here as a phone address. On the list, type a **Caller name** and **Set** to change the name the number shows on the phones it calls (up to 15 letters, digits and spaces; carriers take a few days to show it), and **Release** gives a number back to Telnyx. Buying and keeping numbers is billed by Telnyx.
+With Telnyx as the phone provider, **Settings → Communication → Telnyx Numbers** lists the numbers on the Telnyx account. **Buy a number** searches the numbers for sale by country, area code, city, state or digits, and whether they can text; **Buy** orders one on the voice connection in the Telnyx settings and adds it here as a phone address. On the list, type a **Caller name** and **Set** to change the name the number shows on the phones it calls (up to 15 letters, digits and spaces; carriers take a few days to show it), and **Release** gives a number back to Telnyx. Buying and keeping numbers is billed by Telnyx.
 
 The same is in the [AI API](../ai/conversations-api.md) under `api/ai/v1/carrier-numbers`: search (`GET available`), buy (`POST orders`), list, release and set the caller name.
 

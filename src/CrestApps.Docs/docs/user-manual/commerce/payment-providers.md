@@ -34,7 +34,7 @@ This video walks through connecting Stripe, the offline methods, transactions, r
 
 <AskYourAdmin />
 
-You need a Stripe account. Your keys are on the Stripe dashboard under **Developers > API keys**; the **Test mode** switch on that page chooses between test keys and live keys. Each environment (test and production) has its own keys and its own connection, so you can connect the test account first and switch to production when you are ready.
+You need a Stripe account. Your keys are on the Stripe dashboard under **Developers > API Keys**; the **Test mode** switch on that page chooses between test keys and live keys. Each environment (test and production) has its own keys and its own connection, so you can connect the test account first and switch to production when you are ready.
 
 1. Open **Settings > Payments > Stripe**.
 2. Leave **Enable Production** cleared to set up the test environment, or tick it to set up production. The fields below change to match.
@@ -94,13 +94,13 @@ There is nothing to turn on. After a successful **Connect** on a public domain, 
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Offline payments |
+| **Menu** | Settings > Commerce > Offline Payments |
 | **Permission** | Manage transaction settings |
 | **Feature** | Pay Later |
 
 <AskYourAdmin />
 
-The **Pay Later** feature adds three ways to buy now and pay afterwards. None of them takes money at checkout: each records what the buyer owes as a **transaction** with an outstanding balance, which you mark paid when the money arrives. Turn each on or off under **Settings > Commerce > Offline payments**.
+The **Pay Later** feature adds three ways to buy now and pay afterwards. None of them takes money at checkout: each records what the buyer owes as a **transaction** with an outstanding balance, which you mark paid when the money arrives. Turn each on or off under **Settings > Commerce > Offline Payments**.
 
 | Method | Offered | What the buyer is told |
 | --- | --- | --- |
@@ -125,7 +125,7 @@ When the buyer clicks **Place order** with Pay Later selected:
 
 ### Set up the offline methods
 
-Open **Settings > Commerce > Offline payments**, change what you need, and click **Save**.
+Open **Settings > Commerce > Offline Payments**, change what you need, and click **Save**.
 
 | Field | What it does |
 | --- | --- |

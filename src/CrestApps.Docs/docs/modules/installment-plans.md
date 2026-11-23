@@ -560,7 +560,7 @@ Plan payments use the Transactions services. Each can be replaced like any other
 
 | Service | Default | Replace it to |
 | --- | --- | --- |
-| `IFinancialDocumentNumberGenerator` | `SequentialFinancialDocumentNumberGenerator`: an adapter over the shared number series, one series per kind of document with a format the site chooses under **Settings > Business documents > Number series** (`R-{seq}` for receipts, `INV-{seq}` for invoices, from 1001), numbered in the caller's unit of work under the series lock. | Take numbers from somewhere else, such as an accounting system. A yearly series is a format, not a replacement. |
+| `IFinancialDocumentNumberGenerator` | `SequentialFinancialDocumentNumberGenerator`: an adapter over the shared number series, one series per kind of document with a format the site chooses under **Settings > Business Documents > Number Series** (`R-{seq}` for receipts, `INV-{seq}` for invoices, from 1001), numbered in the caller's unit of work under the series lock. | Take numbers from somewhere else, such as an accounting system. A yearly series is a format, not a replacement. |
 | `ITransactionInvoiceService` | Gives a transaction its invoice number the first time its owner is told about it. | Change when invoices are numbered. |
 | `ITransactionPayLinkService` | Signed links to `/transactions/pay/{token}` that expire after 60 days. | Change the link's format or lifetime. |
 
