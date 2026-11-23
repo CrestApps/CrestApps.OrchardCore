@@ -35,7 +35,7 @@ The management experience layers a lightweight Customer Relationship Management 
 
 ## Enable the feature
 
-1. Go to **Tools -> Features** in Orchard Core.
+1. Go to **Tools** → **Features** in Orchard Core.
 2. Enable **Omnichannel**.
 3. Add the related management or channel modules you need.
 

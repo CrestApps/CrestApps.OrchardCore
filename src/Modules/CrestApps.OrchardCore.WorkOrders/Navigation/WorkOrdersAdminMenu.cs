@@ -42,7 +42,7 @@ public sealed class WorkOrdersAdminMenu : AdminNavigationProvider
                 .Action("Index", "WorkOrderSettings", new { area = WorkOrdersConstants.Features.WorkOrders, kind = "checklists" })
                 .Permission(WorkOrdersPermissions.ManageWorkOrderSettings)
                 .LocalNav())
-            .Add(S["Sub-statuses"], S["Sub-statuses"].PrefixPosition("63"), subStatuses => subStatuses
+            .Add(S["Sub-Statuses"], S["Sub-Statuses"].PrefixPosition("63"), subStatuses => subStatuses
                 .Id("workOrderSubStatuses")
                 .Action("Index", "WorkOrderSettings", new { area = WorkOrdersConstants.Features.WorkOrders, kind = "sub-statuses" })
                 .Permission(WorkOrdersPermissions.ManageWorkOrderSettings)

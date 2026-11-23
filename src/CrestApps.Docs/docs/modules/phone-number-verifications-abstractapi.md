@@ -21,7 +21,7 @@ Enabling this feature automatically enables the core **Phone Number Verification
 
 ## Configuration
 
-Configure the provider under **Settings** -> **Phone Number Verifications** on the **AbstractAPI** tab. The tab only appears when this feature is enabled.
+Configure the provider under **Settings** → **Phone Number Verifications** on the **AbstractAPI** tab. The tab only appears when this feature is enabled.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
@@ -80,8 +80,8 @@ When AbstractAPI returns `phone_validation.line_status`, the provider only verif
 The User Manual walks administrators through these screens on [Phone Number Verification](../user-manual/administration/phone-number-verification.md#set-up-a-provider). In short:
 
 1. Create an account at [abstractapi.com](https://www.abstractapi.com/api/phone-validation-api) and copy the Phone Validation API key.
-2. Enable the **AbstractAPI Phone Number Verification** feature under **Tools** -> **Features**.
-3. Open **Settings** -> **Phone Number Verifications**, select the **AbstractAPI** tab, switch on **Enable this provider**, paste the key, and save.
+2. Enable the **AbstractAPI Phone Number Verification** feature under **Tools** → **Features**.
+3. Open **Settings** → **Phone Number Verifications**, select the **AbstractAPI** tab, switch on **Enable this provider**, paste the key, and save.
 4. On the **General** tab, select **AbstractAPI** as the default provider.
 
 ## Troubleshooting

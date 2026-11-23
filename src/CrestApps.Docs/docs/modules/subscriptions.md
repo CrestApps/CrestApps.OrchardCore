@@ -58,8 +58,8 @@ Each content item of that type becomes a purchasable plan, editable and securabl
 
 Plans are listed by the [Product Listing](products#product-listing) feature, like any other product. There is no built-in plans page. To publish one:
 
-1. Enable **Product Listing** under **Tools → Features**.
-2. Create a **Product Listing** content item (**Commerce → Product Listings** or **Content → New → Product Listing**), give it a title and a permalink such as `plans`, choose **Only these product types** and tick your plan content types.
+1. Enable **Product Listing** under **Tools** → **Features**.
+2. Create a **Product Listing** content item (**Commerce** → **Product Listings** or **Content** → **New** → **Product Listing**), give it a title and a permalink such as `plans`, choose **Only these product types** and tick your plan content types.
 3. Choose its default sort. **Recommended** orders the plans by the **Position** on their **Product** part (or their `Sort` value when they have none); *Price: low to high* is the other common choice.
 4. Plans rarely need filters, so untick **Show filters** and **Let visitors change the sort**, then publish it.
 
@@ -150,7 +150,7 @@ Subscription state is edited from four directions at once: a gateway webhook, a 
 | Expire | Ends the agreement when the grace window elapses or the agreed cycles are all billed. |
 | Sync from provider | Adopts the gateway's period, pending cancellation, and status. It will not revive an agreement cancelled locally, because that would start billing a customer who already left. |
 
-The dunning grace period is 7 days by default. It is not a field of **Settings > Subscriptions**, which has only **Allow guest sign-up**, **Currency** and the roles a plan may give. A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
+The dunning grace period is 7 days by default. It is not a field of **Settings** → **Subscriptions**, which has only **Allow guest sign-up**, **Currency** and the roles a plan may give. A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
 
 A background sweep runs every thirty minutes. It expires agreements whose grace window has elapsed, canceled agreements whose paid period has ended, and closes those that have billed every cycle they were sold for. It never charges anyone: a gateway-backed agreement is billed by the gateway, and an offline one is invoiced by its own provider's renewal path.
 
@@ -201,7 +201,7 @@ Grace-period enforcement, cancellation, pausing, and the revocation of whatever 
 
 A subscription that only records money is not much use to a site that wants to sell membership. **Entitlements** are what a subscription grants its owner while it is current.
 
-Attach the **Subscription Entitlements** part to a plan and pick the roles a subscriber holds. Only someone who may assign roles to users (**Assign any role to users**) changes them; anyone else who edits the plan keeps the roles it has, and a save through the content API or an import that adds a role is refused for them (`SubscriptionEntitlementPartRolesHandler`). A subscription never grants the administrator role (whatever the tenant named it), another system role, or a role that holds a security-critical permission such as managing users or roles or assigning roles (`IRoleGrantPolicy`); the editor doesn't offer them, and `RoleSubscriptionEntitlementApplier` skips them if a plan names one. The roles **Settings > Subscriptions** gives every account a subscription checkout creates follow the same rule. The entitlement lives on the plan rather than in a site setting because different tiers grant different things, which a single site-wide list cannot express. What the plan grants is copied onto the subscription when it is created, so editing the plan afterwards does not silently change what an existing subscriber was sold.
+Attach the **Subscription Entitlements** part to a plan and pick the roles a subscriber holds. Only someone who may assign roles to users (**Assign any role to users**) changes them; anyone else who edits the plan keeps the roles it has, and a save through the content API or an import that adds a role is refused for them (`SubscriptionEntitlementPartRolesHandler`). A subscription never grants the administrator role (whatever the tenant named it), another system role, or a role that holds a security-critical permission such as managing users or roles or assigning roles (`IRoleGrantPolicy`); the editor doesn't offer them, and `RoleSubscriptionEntitlementApplier` skips them if a plan names one. The roles **Settings** → **Subscriptions** gives every account a subscription checkout creates follow the same rule. The entitlement lives on the plan rather than in a site setting because different tiers grant different things, which a single site-wide list cannot express. What the plan grants is copied onto the subscription when it is created, so editing the plan afterwards does not silently change what an existing subscriber was sold.
 
 Roles already gate content, features, and permissions across Orchard Core, so putting a subscriber in a role makes every one of those gates subscription-aware without any of them knowing subscriptions exist.
 
@@ -244,7 +244,7 @@ nothing, so a customer is not told their payment failed every time something tou
 
 ## Getting started quickly
 
-The **Commerce starter** recipe (under **Configuration → Recipes**) enables the suite, creates a `Member`
+The **Commerce starter** recipe (under **Configuration** → **Recipes**) enables the suite, creates a `Member`
 role, defines a **Membership Plan** content type carrying a price and an entitlement, publishes a `$10`
 monthly plan that grants the `Member` role, and publishes a **Plans** page at `/plans` that lists it. It is a
 starting point to edit rather than a production configuration: pick your own currency, price, and roles before
@@ -280,7 +280,7 @@ Instead the checkout only records a **provisioning job**, and a sweep builds the
 
 ### Where a sold site answers
 
-**Subscriptions → Tenant onboarding** decides it, and the step checks it before payment, again before payment begins, and again before the site is set up:
+**Subscriptions** → **Tenant onboarding** decides it, and the step checks it before payment, again before payment begins, and again before the site is set up:
 
 - **On a base domain** (`BaseDomain`): each site gets `{name}.{base domain}`. A separate registrable domain (for example `sites-example.net` for a store on `example.com`) keeps the sites out of the store's cookies entirely.
 - **On the buyer's own domains** (**Buyers may use their own domains**): at most five per site. IP addresses and public suffixes (`co.uk`, `github.io`, `azurewebsites.net`, `foo.ck`) are refused, by the whole [Public Suffix List](https://publicsuffix.org) (ICANN and private sections, a copy shipped with the module) with its wildcard and exception rules (`www.ck` can be taken), and so is any name under, or a parent of, a host another buyer's site already has (`www.v.com` next to `v.com`), or under another site's wildcard host (`a.v.com` beside `*.v.com`). The names around the buyer's own sites are theirs to take; the exact host never is. The store's own hosts and the base domain are reserved with every name under them and every name above them, and so is every name under the registrable domain of one of the store's hosts (`mail.operator.com` beside the store's `shop.operator.com`); a shared suffix such as `azurewebsites.net` holds only the store's own name. The platform does not prove that the buyer controls the domain, so only turn this on if you check that yourself.
@@ -292,7 +292,7 @@ A prefix is refused when it is reserved (**Reserved prefixes**, the admin prefix
 
 ### The database new sites are created on
 
-Every site sold is created on the database configured under **Subscriptions → Tenant onboarding**. The buyer
+Every site sold is created on the database configured under **Subscriptions** → **Tenant onboarding**. The buyer
 never chooses it and setup refuses to run without one, so it is a site-wide decision the operator makes once.
 
 Leave it empty and sites are created on **Sqlite**, which needs no server and gives each site its own file
@@ -302,11 +302,11 @@ from its name, so the sites stay apart without anybody inventing a prefix per pu
 
 The providers offered are the ones Orchard Core registers (`IEnumerable<DatabaseProvider>`). The editor needs **Manage subscriptions settings** (`ManageSubscriptionSettings`). The connection string is stored protected with ASP.NET Core data protection (purpose `SubscriptionOnboardingConnectionString`, in `SubscriptionOnboardingSettings.ProtectedConnectionString`) and is never sent back to the browser: leaving the field blank keeps the stored one, as long as the provider doesn't change. Choosing a provider that needs no connection string drops the stored one.
 
-Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site provisioning**, including the abandoned ones. A waiting or failed job can be retried once the cause is fixed. A job waiting for its payment (Pay Later, a bank transfer) can't: it is created once the payment arrives. An abandoned job has already dropped the administrator password, so it can't be retried: the administrator creates the site by hand and closes the job with **Mark as created** (`TenantProvisioningAdminController.MarkCreated`). That sets it to `Succeeded`, optionally with the site's URL. `TenantProvisioningJobActions` holds the rules for both buttons, and the screen and the actions share them.
+Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions** → **Site Provisioning**, including the abandoned ones. A waiting or failed job can be retried once the cause is fixed. A job waiting for its payment (Pay Later, a bank transfer) can't: it is created once the payment arrives. An abandoned job has already dropped the administrator password, so it can't be retried: the administrator creates the site by hand and closes the job with **Mark as created** (`TenantProvisioningAdminController.MarkCreated`). That sets it to `Succeeded`, optionally with the site's URL. `TenantProvisioningJobActions` holds the rules for both buttons, and the screen and the actions share them.
 
 ### What a sold site may enable
 
-A sold site runs in the same process as the store, so its administrator must not be able to turn on features that reach the host, such as the MCP local client, data connectors, or tenant management. Every plan that sells a site names a **feature profile** (Orchard Core's **Tenants › Feature Profiles**, which needs the `OrchardCore.Tenants.FeatureProfiles` feature on the default tenant), and the site is created with it.
+A sold site runs in the same process as the store, so its administrator must not be able to turn on features that reach the host, such as the MCP local client, data connectors, or tenant management. Every plan that sells a site names a **feature profile** (Orchard Core's **Tenants** → **Feature Profiles**, which needs the `OrchardCore.Tenants.FeatureProfiles` feature on the default tenant), and the site is created with it.
 
 - Create one profile for sold sites before selling, for example **Sold site**, that excludes the Tenants features, the MCP clients, data connectors, Subscriptions, and anything else you keep to the host, and choose it on each plan's tenant onboarding.
 - The profile is checked by its id against the profiles that exist, when the buyer fills in the new-site step, again before payment (`TenantProvisioningPaymentGate`) and again before the site is set up. Orchard Core treats a tenant whose profile it can't find as allowed every feature, so a profile that was renamed or deleted, or a plan that arrived by recipe, import or API naming one that doesn't exist, stops the sale instead of creating an unrestricted site. Without the Feature Profiles feature no site is sold (`ITenantFeatureProfileCatalog`).
@@ -355,7 +355,7 @@ Beyond the always-on throttle above, the sensitive front-end routes advertise **
 | `checkout` | Starting a subscription and every checkout step. |
 | `checkout-payment` | The payment endpoints that begin a payment and report its status. |
 
-Both groups are owned by the [Checkout](checkout) module, because that is where a subscription purchase actually runs. To enable it, turn on the **Rate Limiting** feature, then under **Configuration → Rate Limiting** create a policy targeting either group. Requests exceeding the configured limit receive an HTTP `429`.
+Both groups are owned by the [Checkout](checkout) module, because that is where a subscription purchase actually runs. To enable it, turn on the **Rate Limiting** feature, then under **Configuration** → **Rate Limiting** create a policy targeting either group. Requests exceeding the configured limit receive an HTTP `429`.
 
 ## Taxation
 
@@ -476,7 +476,7 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 dotnet add package CrestApps.OrchardCore.Subscriptions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and at least one payment module — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings → Payments → Stripe**.
+Then, in the **Orchard Core Admin Dashboard** under **Tools** → **Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and at least one payment module — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings** → **Payments** → **Stripe**.
 
 ## Related modules
 

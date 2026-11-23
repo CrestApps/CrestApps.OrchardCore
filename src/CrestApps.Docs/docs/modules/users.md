@@ -69,7 +69,7 @@ Grants are kept on the user's account (`UserRoleGrants`), so no table is added. 
 
 ## User Audiences
 
-The **User Audiences** feature (`CrestApps.OrchardCore.Users.Audiences`) lets administrators define audiences, groups of people chosen by rules, that other features target, such as required learning. **Content > User Audiences** lists them beside the audiences modules register in code (`IUserAudienceProvider`, such as `Staff`), shows the people in each one, and edits the ones administrators define. Its permission is `ManageUserAudiences`.
+The **User Audiences** feature (`CrestApps.OrchardCore.Users.Audiences`) lets administrators define audiences, groups of people chosen by rules, that other features target, such as required learning. **Content** → **User Audiences** lists them beside the audiences modules register in code (`IUserAudienceProvider`, such as `Staff`), shows the people in each one, and edits the ones administrators define. Its permission is `ManageUserAudiences`.
 
 An audience has a technical name that never changes, a name, a description, a join (a person matches every rule, or any one) and rules. A rule is a rule source with the values chosen (a person matches any of them) and, for some sources, a number.
 
@@ -114,7 +114,7 @@ The `UserAudiences` recipe step creates or updates defined audiences by name, an
 
 ## Cohorts
 
-The **Cohorts** feature (`CrestApps.OrchardCore.Users.Cohorts`, depends on User Audiences) keeps cohorts: named groups of people an administrator keeps by hand, such as "2026 new hires", beside the audiences, whose rules decide who is in them. **Content > Cohorts** creates, renames and deletes them, lists their people, adds people with the user picker or many at once (user names or e-mail addresses, one per line), and removes them. Its permission is `ManageCohorts`.
+The **Cohorts** feature (`CrestApps.OrchardCore.Users.Cohorts`, depends on User Audiences) keeps cohorts: named groups of people an administrator keeps by hand, such as "2026 new hires", beside the audiences, whose rules decide who is in them. **Content** → **Cohorts** creates, renames and deletes them, lists their people, adds people with the user picker or many at once (user names or e-mail addresses, one per line), and removes them. Its permission is `ManageCohorts`.
 
 Teams are not cohorts: a team is a part of the organization (a tree with a kind, a time zone and an address) whose members other modules supply, while a cohort is a flat list of any users, staff or not.
 
@@ -172,7 +172,7 @@ The **Notification preferences** page (`/notifications/preferences`, route `User
 | **Feature ID** | `CrestApps.OrchardCore.Users.DisplayName` |
 
 Provides a way to display a user's display name, built from a display name, first, middle and last name
-stored on the user (`UserFullNamePart`), according to the site setting under **Settings** -> **User Display Name**
+stored on the user (`UserFullNamePart`), according to the site setting under **Settings** → **User Display Name**
 (`DisplayNameSettings`). The setting page requires the `ManageDisplaySettings` permission (*Manage the user display
 name settings*), which is granted to the **Administrator** role by default. The name boxes on the user editor are
 shown only to users who hold `EditUsers` for that user.
@@ -234,7 +234,7 @@ The `includeDisabledUsers` parameter within the `indexUsers` step is optional an
 
 Provides a way to display a user's avatar.
 
-Avatar settings live under **Settings** -> **User Avatars** (`UserAvatarOptions`: `Required`, `UseDefaultStyle`) and
+Avatar settings live under **Settings** → **User Avatars** (`UserAvatarOptions`: `Required`, `UseDefaultStyle`) and
 require the `ManageAvatarSettings` permission (*Manage the avatar settings*), granted to the **Administrator** role by
 default. The avatar box on the user editor accepts only image extensions allowed by the media options and is shown
 only to users who hold the Orchard Core `ManageMedia` permission. See the

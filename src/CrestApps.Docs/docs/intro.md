@@ -21,7 +21,7 @@ The shared platform underneath these modules is documented at **[core.crestapps.
 
 1. **[Getting Started](getting-started.md)**: add the packages to your Orchard Core solution, or build and run this repository.
 2. **[Configuration](configuration.md)**: every setting the modules read from `appsettings.json` and environment variables, per tenant.
-3. **[Feature ID Reference](feature-reference.md)**: the feature IDs to enable in **Tools > Features**, in recipes, or in a `[Feature]` attribute.
+3. **[Feature ID Reference](feature-reference.md)**: the feature IDs to enable in **Tools** → **Features**, in recipes, or in a `[Feature]` attribute.
 4. **[Release notes](changelog/index.md)**: breaking changes and what is new in each version.
 
 ## What this manual covers

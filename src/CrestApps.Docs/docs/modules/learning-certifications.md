@@ -56,7 +56,7 @@ Skills tells Learning when a certificate expires (`ICertificationExpiryObserver`
 
 ## Reviews and revocation
 
-When a completed enrollment is flagged for review (an attempt voided or regraded lower after completion), its review card in **Learning > Enrollments** offers **Revoke the certificate** for each certificate whose cycle counted that enrollment or an attempt made in it. Revoking is immediate on the verification page; the review stays open until it is cleared with a note. Other modules add actions to the review card with `IEnrollmentReviewActionProvider` (Learning.Abstractions).
+When a completed enrollment is flagged for review (an attempt voided or regraded lower after completion), its review card in **Learning** → **Enrollments** offers **Revoke the certificate** for each certificate whose cycle counted that enrollment or an attempt made in it. Revoking is immediate on the verification page; the review stays open until it is cleared with a note. Other modules add actions to the review card with `IEnrollmentReviewActionProvider` (Learning.Abstractions).
 
 ## Pages
 
@@ -71,11 +71,11 @@ The course completion panel (Learning's `ICourseCompletionLinkProvider`) lists e
 
 ## Education credits
 
-Education credits are kept in the module too. An **education credit type** (`EducationCreditType`), such as CEU, CPD hours or PDU, has a name, a unit and whether people can record external learning of it. **Learning > Education Credits** lists and edits them (`ManageEducationCredits`).
+Education credits are kept in the module too. An **education credit type** (`EducationCreditType`), such as CEU, CPD hours or PDU, has a name, a unit and whether people can record external learning of it. **Learning** → **Education Credits** lists and edits them (`ManageEducationCredits`).
 
 - The **Education Credits** part (`EducationCreditsPart`, attachable, put on the Course type by the migration) lists the credits a content item awards: a type, an amount and how many months they count. A completed course awards them once per enrollment, and only when the completion supports what is issued on it (`CompletionEvidence.SupportsIssuing`): a failed completion, one under review, or one resting on a required item's result reported by the browser (a learning package's own status, unless the item allows it) earns no credits, since credits can meet a credits requirement. With [Learning Programs](./learning-programs) on, a learning path with the part awards them once per path progress, under the same rule for its courses.
 - Credits are posted to the education credit ledger, a quantity ledger (`IQuantityLedger<TLedger>`) of its own collection (`LearningCreditLedger`): the account is the user, the bucket the credit type, and the idempotency key the source, its record and the type.
-- **External learning** (`ExternalLearningSubmission`) is learning done elsewhere that a person records on **My education credits** (`/learning/credits`, an entry of the storefront account menu) with an optional evidence file, kept in the protected file area `ExternalLearningEvidence`. A person with **Accept or reject external learning** reviews it under **Learning > External Learning**; accepting posts the credits.
+- **External learning** (`ExternalLearningSubmission`) is learning done elsewhere that a person records on **My education credits** (`/learning/credits`, an entry of the storefront account menu) with an optional evidence file, kept in the protected file area `ExternalLearningEvidence`. A person with **Accept or reject external learning** reviews it under **Learning** → **External Learning**; accepting posts the credits.
 - The **Education credits earned** requirement (`CreditsEarned`) asks for a number of credits of a type earned in the cycle: its target is the credit type and its minimum the number. Posting credits checks the paths that ask for the type at once, and the hourly upkeep catches up with `ListAccountsSinceAsync`.
 - `IEducationCreditService` reads balances, sums and entries, awards credits and handles external learning; `IEducationCreditObserver` hears awards, submissions and reviews (`services.AddEducationCreditObserver<T>()`).
 - The **Record external learning** data pipeline step records the external learning of each row as accepted and posts its credits; rows that fail go to its Rejected output with the reason.

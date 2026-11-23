@@ -26,7 +26,7 @@ The part's editor uploads each file straight to the store through `POST /Admin/d
 ## Model
 
 - **`DigitalFilesPart`** (attachable): `Files` (`FileId`, `FileName`, `Size`), `DownloadLimit` and `LinkLifetimeDays`, which override the site's settings when set (`0` means no limit, or links that never expire).
-- **`DownloadSettings`** (group `downloads`, **Settings > Commerce > Downloads**): `DownloadLimit` (5) and `LinkLifetimeDays` (30).
+- **`DownloadSettings`** (group `downloads`, **Settings** → **Commerce** → **Downloads**): `DownloadLimit` (5) and `LinkLifetimeDays` (30).
 - **`DownloadEntitlement`** (collection `Downloads`, `DownloadEntitlementIndex`): the order, order line, product and file, `DownloadLimit`, `DownloadCount`, `ExpiresUtc`, `RevokedUtc` and `RevokeReason`, and `LastDownloadedUtc`.
 
 ## Granting and revoking

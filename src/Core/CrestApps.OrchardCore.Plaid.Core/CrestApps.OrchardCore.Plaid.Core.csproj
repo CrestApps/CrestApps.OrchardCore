@@ -6,8 +6,9 @@
     <Description>
       $(CrestAppsDescription)
 
-      Core services for Plaid: a plain HTTP client for the link token, public token exchange, Auth, item removal and
-      webhook verification key endpoints, the webhook signature check (ES256) and the linked item store.
+      Core services for Plaid: a plain HTTP client for the link token, public token exchange, Auth, accounts,
+      transactions sync, institution, item removal and webhook verification key endpoints, the tenant's IPlaidClient,
+      the webhook signature check (ES256), the webhook fan-out to every IPlaidWebhookHandler and the linked item store.
     </Description>
     <PackageTags>$(PackageTags) Plaid Banking BankAccounts ACH Core</PackageTags>
   </PropertyGroup>
@@ -31,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Banking.Abstractions\CrestApps.OrchardCore.Banking.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Plaid.Abstractions\CrestApps.OrchardCore.Plaid.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
   </ItemGroup>

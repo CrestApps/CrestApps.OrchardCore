@@ -12,7 +12,7 @@ It suits profiles that hold a conversation on their own, such as automated text 
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Profile Builder |
+| **Menu** | **Artificial Intelligence** → **Profile Builder** |
 | **Permission** | Manage AI profiles; Edit own chat interactions |
 | **Feature** | AI Profile Builder |
 
@@ -26,10 +26,10 @@ This video shows why the Profile Builder exists, how it works, and how to build,
 
 <YouTube video="ai-profile-builder" title="Video of starting a Profile Builder session from an existing AI profile" start={99} end={146} />
 
-1. Open **Artificial Intelligence > Profile Builder**.
+1. Open **Artificial Intelligence** → **Profile Builder**.
 2. Click **New Session** to start empty. To begin from an AI profile you already have, open the arrow beside **New Session**, choose **Improve an existing AI profile...**, pick the profile and click **Start session**. The session starts with the profile's instructions and settings, and can update that profile when you finish.
 
-The list shows your sessions with when each last changed and how much feedback and how many revisions it has. Use **Search** to find one by title, **Open** to continue it, and **Actions > Delete** to remove it. AI profiles saved from a session are kept.
+The list shows your sessions with when each last changed and how much feedback and how many revisions it has. Use **Search** to find one by title, **Open** to continue it, and **Actions** → **Delete** to remove it. AI profiles saved from a session are kept.
 
 The session page has three parts: the **Settings** on the left, the chat in the middle, and the feedback panel on the right.
 

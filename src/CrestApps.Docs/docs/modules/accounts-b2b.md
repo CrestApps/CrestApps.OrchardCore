@@ -145,8 +145,8 @@ The store's sign-in cookie is `SameSite=Lax`, so open the punchout in a top-leve
 | --- | --- | --- |
 | The **Business buying**, **Buyers** (order limits), **Payment terms** and **Punchout (OCI)** cards on the account editor, and the business buying cards on the account's page | `ManageB2BAccounts` (**Manage B2B accounts**) | Administrator |
 | The **Members** card, which chooses the buyers | `ManageAccountMembers` (Account Members) | Administrator |
-| **Commerce > B2B Accounts**: Orchard Core's content list of the account types with the B2B part, with `b2b:true`. `b2b:false` lists the items that don't buy as a business, accounts saved before the part was added included. | `ListContent` and `ManageB2BAccounts` | Administrator |
-| **Commerce > Price lists** (`PriceListsAdminController`, admin route `b2b/price-lists`), on Orchard Core's `AdminList` | `ManageB2BAccounts` | Administrator |
+| **Commerce** → **B2B Accounts**: Orchard Core's content list of the account types with the B2B part, with `b2b:true`. `b2b:false` lists the items that don't buy as a business, accounts saved before the part was added included. | `ListContent` and `ManageB2BAccounts` | Administrator |
+| **Commerce** → **Price Lists** (`PriceListsAdminController`, admin route `b2b/price-lists`), on Orchard Core's `AdminList` | `ManageB2BAccounts` | Administrator |
 | The storefront **Business account** page (`account/business`) | An account buyer; approvals for its admins | |
 
 The content list's `b2b:` term narrows any content list to the accounts that buy as a business (`b2b:true`) or that have the part turned off (`b2b:false`).

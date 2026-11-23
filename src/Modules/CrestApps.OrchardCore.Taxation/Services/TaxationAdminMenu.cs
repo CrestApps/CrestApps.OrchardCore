@@ -29,19 +29,24 @@ internal sealed class TaxationAdminMenu : AdminNavigationProvider
                     .Action("Index", "TaxTypes", "CrestApps.OrchardCore.Taxation")
                     .Permission(TaxationPermissions.ManageTaxation)
                     .LocalNav())
-                .Add(S["Sales tax rules"], S["Sales tax rules"].PrefixPosition(), rules => rules
+                .Add(S["Sales Tax Rules"], S["Sales Tax Rules"].PrefixPosition(), rules => rules
                     .Id("taxationRules")
                     .Action("Index", "TaxRules", "CrestApps.OrchardCore.Taxation")
+                    .Permission(TaxationPermissions.ManageTaxation)
+                    .LocalNav())
+                .Add(S["Tax Registrations"], S["Tax Registrations"].PrefixPosition(), registrations => registrations
+                    .Id("taxationRegistrations")
+                    .Action("Index", "TaxRegistrations", "CrestApps.OrchardCore.Taxation")
                     .Permission(TaxationPermissions.ManageTaxation)
                     .LocalNav()))
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                    .Add(S["Tax calculation"], S["Tax calculation"].PrefixPosition(), calculation => calculation
+                    .Add(S["Tax Calculation"], S["Tax Calculation"].PrefixPosition(), calculation => calculation
                         .Id("taxationCalculation")
                         .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", TaxCalculationSettingsDisplayDriver.GroupId } })
                         .Permission(TaxationPermissions.ManageTaxation)
                         .LocalNav())
-                    .Add(S["Tax origin"], S["Tax origin"].PrefixPosition(), origin => origin
+                    .Add(S["Tax Origin"], S["Tax Origin"].PrefixPosition(), origin => origin
                         .Id("taxationOrigin")
                         .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", TaxOriginSettingsDisplayDriver.GroupId } })
                         .Permission(TaxationPermissions.ManageTaxation)

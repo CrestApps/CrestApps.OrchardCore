@@ -8,12 +8,21 @@ namespace CrestApps.OrchardCore.Plaid.Services;
 public interface IPlaidItemStore
 {
     /// <summary>
-    /// Finds an item by Plaid's id.
+    /// Finds the first item kept with Plaid's id of an item. An item linked to several bank accounts is kept once per
+    /// bank account; use <see cref="ListByItemIdAsync"/> to get them all.
     /// </summary>
     /// <param name="itemId">Plaid's id of the item.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The item, or <see langword="null"/>.</returns>
     Task<PlaidItem> FindByItemIdAsync(string itemId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the items kept with Plaid's id of an item: one per bank account linked to an account of the item.
+    /// </summary>
+    /// <param name="itemId">Plaid's id of the item.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The items.</returns>
+    Task<IReadOnlyList<PlaidItem>> ListByItemIdAsync(string itemId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the items kept for a bank account.

@@ -15,7 +15,7 @@ Each data set is read in one of two ways:
 
 | Feature | ID | Adds |
 | --- | --- | --- |
-| Data Connectors | `CrestApps.OrchardCore.DataConnectors` | Connections, data sets, the live and imported data sources, the refresh task, and **Tools > Data Connectors**. Depends on `OrchardCore.DataPipelines.Core`. |
+| Data Connectors | `CrestApps.OrchardCore.DataConnectors` | Connections, data sets, the live and imported data sources, the refresh task, and **Tools** → **Data Connectors**. Depends on `OrchardCore.DataPipelines.Core`. |
 | HTTP API Data Connector | `CrestApps.OrchardCore.DataConnectors.Http` | Any HTTP or REST API answering JSON, CSV or JSON Lines. |
 | Elasticsearch Data Connector | `CrestApps.OrchardCore.DataConnectors.Elasticsearch` | Elasticsearch and OpenSearch indices, aliases and patterns. |
 | Media Files Data Connector | `CrestApps.OrchardCore.DataConnectors.Files` | CSV, JSON, JSON Lines and Excel files of the media library. Depends on `OrchardCore.Media`. |

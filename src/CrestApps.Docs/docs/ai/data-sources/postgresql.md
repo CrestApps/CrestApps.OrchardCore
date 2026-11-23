@@ -76,8 +76,8 @@ A connection string stored on a data source always wins over the configured valu
 ## Getting started
 
 1. Enable **AI Data Sources** and **AI Data Sources - PostgreSQL**.
-2. Create an AI knowledge base index under **Search > Indexing**.
-3. Create a new data source under **Artificial Intelligence > Data Sources**.
+2. Create an AI knowledge base index under **Search** → **Indexing**.
+3. Create a new data source under **Artificial Intelligence** → **Data Sources**.
 4. Choose **PostgreSQL** in the **Available Source Types** dialog.
 5. Enter the **Connection string** (or tick **Use the globally configured connection**) and the **Table name**.
 6. Map the **Key field**, **Title field**, and **Content field**, then save the data source.

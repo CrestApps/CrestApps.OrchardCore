@@ -62,6 +62,11 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<TaxRule, TaxRuleMethodDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<TaxRule>, TaxRuleHandler>();
 
+        // The business's tax registrations; Tax Returns adds their filing schedule.
+        services
+            .AddDisplayDriver<MerchantTaxRegistration, MerchantTaxRegistrationDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<MerchantTaxRegistration>, MerchantTaxRegistrationHandler>();
+
         services.AddNavigationProvider<TaxationAdminMenu>();
         services.AddSiteDisplayDriver<TaxOriginSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(TaxOriginSettingsDisplayDriver.GroupId, TaxationPermissions.ManageTaxation);

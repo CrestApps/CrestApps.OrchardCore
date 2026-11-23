@@ -10,7 +10,7 @@ Coursework is a lesson where learners hand in work, as typed text, files or both
 
 | | |
 | --- | --- |
-| **Menu** | A course's outline (add a **Coursework** item); **Submissions** on the coursework's editor; Learning > Grading; Content > Content Items for rubrics |
+| **Menu** | A course's outline (add a **Coursework** item); **Submissions** on the coursework's editor; **Learning** → **Grading**; **Content** → **Content Items for rubrics** |
 | **Permission** | Manage courses, or Manage the courses you teach, to add coursework; Grade assessments, or Manage the courses you teach for a course's graders, instructors and assistants, to grade; Override grades to grade work again or return graded work |
 | **Feature** | Learning Coursework (turns on Learning Gradebook) |
 
@@ -42,7 +42,7 @@ After the close date, learners see that the coursework no longer takes work. Wor
 
 ## Rubrics
 
-A rubric describes what a grader looks for. Create a **Rubric** in **Content > Content Items** and add its criteria with **Add a criterion**. Each criterion has a title, what the grader looks for, and levels, each with a title and points. Rows without a title are left out.
+A rubric describes what a grader looks for. Create a **Rubric** in **Content** → **Content Items** and add its criteria with **Add a criterion**. Each criterion has a title, what the grader looks for, and levels, each with a title and points. Rows without a title are left out.
 
 The grader picks one level of each criterion. The grade is the points of the chosen levels out of the best level of every criterion.
 
@@ -54,7 +54,7 @@ They then see their work with its state: waiting for a grader, graded with the g
 
 ## Grade work
 
-Work that waits for a grader shows in **Learning > Grading** beside quiz attempts, oldest first. The **Submissions** page of a coursework, linked from its editor, lists every hand-in with the learner, the attempt, when it came, whether it was late and its state.
+Work that waits for a grader shows in **Learning** → **Grading** beside quiz attempts, oldest first. The **Submissions** page of a coursework, linked from its editor, lists every hand-in with the learner, the attempt, when it came, whether it was late and its state.
 
 1. Open a hand-in with **Grade**.
 2. Read the text and open the files.

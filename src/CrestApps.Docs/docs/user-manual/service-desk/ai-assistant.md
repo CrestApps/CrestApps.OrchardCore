@@ -10,7 +10,7 @@ With AI turned on, an AI profile can draft replies for your agents and triage ne
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Service Desk; Service Desk > Desks for each desk |
+| **Menu** | **Settings** → **Service Desk**; **Service Desk** → **Desks for each desk** |
 | **Permission** | Manage ticket settings to choose the profile; **Reply to tickets** for **Suggest a reply**; **Edit tickets** for **Triage** |
 | **Feature** | Tickets, with AI |
 
@@ -18,7 +18,7 @@ With AI turned on, an AI profile can draft replies for your agents and triage ne
 
 ## Set it up
 
-1. Go to **Settings > Service Desk** and choose the **AI profile for replies**: a chat AI profile with the instructions and knowledge your agents should answer from. See [AI profiles](../ai/profiles.md).
+1. Go to **Settings** → **Service Desk** and choose the **AI profile for replies**: a chat AI profile with the instructions and knowledge your agents should answer from. See [AI profiles](../ai/profiles.md).
 2. Every desk uses it, unless you edit a desk and choose another profile under **AI assistant**, or **No AI assistant on this desk**.
 3. On the desk, tick **A triage sets the priority it suggests** to have a triage change the priority too.
 

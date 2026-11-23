@@ -10,7 +10,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Search > NLWeb |
+| **Menu** | **Settings** → **Search** → **NLWeb** |
 | **Permission** | Ask the site questions with NLWeb (everyone has it at first); Manage the NLWeb settings (to change the settings) |
 | **Feature** | NLWeb (it turns on Advanced SEO too) |
 
@@ -25,7 +25,7 @@ NLWeb finds content with the site's search, so the site needs at least one of th
 
 ## Choose what NLWeb answers from
 
-1. Open **Settings > Search > NLWeb**.
+1. Open **Settings** → **Search** → **NLWeb**.
 2. Tick the **Search indexes** to answer from. The first one you tick is used unless a question names another one.
 3. Optionally, tick the **Content types** answers can include. Leave them all unticked to include every content type.
 4. Set the other fields.
@@ -59,7 +59,7 @@ AI assistants that connect to the site with MCP can use NLWeb through the **Ask 
 
 ## Who can ask
 
-Everyone can ask questions at first, including visitors who are not signed in, because the answers only hold content they could already see on the site. To limit NLWeb to some people, remove the **Ask the site questions with NLWeb** permission from the **Anonymous** and **Authenticated** roles in **Security > Roles**, and give it to the roles that may ask.
+Everyone can ask questions at first, including visitors who are not signed in, because the answers only hold content they could already see on the site. To limit NLWeb to some people, remove the **Ask the site questions with NLWeb** permission from the **Anonymous** and **Authenticated** roles in **Security** → **Roles**, and give it to the roles that may ask.
 
 ## Tips
 

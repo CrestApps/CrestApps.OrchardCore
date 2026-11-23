@@ -39,7 +39,7 @@ The built-in **Haversine** provider (`HaversineTravelTimeProvider`) is always re
 
 ## Providers
 
-Each provider is its own module and feature, adds its section to **Settings > Maps and Geocoding**, and is then chosen there. Keys are kept encrypted with data protection and never shown again. A provider throws `GeoProviderException` when it has no key or address, when its key is refused, or when it finds no route between two points; `IGeoService` then falls back to the built-in estimate for travel times and routes, and the geocoding queue retries.
+Each provider is its own module and feature, adds its section to **Settings** → **Maps and Geocoding**, and is then chosen there. Keys are kept encrypted with data protection and never shown again. A provider throws `GeoProviderException` when it has no key or address, when its key is refused, or when it finds no route between two points; `IGeoService` then falls back to the built-in estimate for travel times and routes, and the geocoding queue retries.
 
 | Provider | Geocoding | Travel times | Routes | Notes |
 | --- | --- | --- | --- | --- |
@@ -90,7 +90,7 @@ The Geo module's `_GeoMap` partial renders a map element with the site's tile se
 
 ## Settings
 
-**Settings > Maps and Geocoding** (`GeoSettings`, permission **Manage maps and geocoding settings**): the geocoding, travel-time and route providers, the built-in estimate's average speed and road factor, how long travel times are cached, the tile address and attribution, and where maps open. The default tile server is OpenStreetMap's, for trying things out only: a live site must use its own tiles or a commercial tile service, under the OpenStreetMap tile usage policy.
+**Settings** → **Maps and Geocoding** (`GeoSettings`, permission **Manage maps and geocoding settings**): the geocoding, travel-time and route providers, the built-in estimate's average speed and road factor, how long travel times are cached, the tile address and attribution, and where maps open. The default tile server is OpenStreetMap's, for trying things out only: a live site must use its own tiles or a commercial tile service, under the OpenStreetMap tile usage policy.
 
 ## Recipes and deployment
 

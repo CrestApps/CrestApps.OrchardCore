@@ -11,6 +11,10 @@
 @if (canManage)
 {
     @* History records what happened at the bank: it can still clear or be voided, but never prints or is replaced. *@
+    @if (CheckStatuses.CanEdit(check))
+    {
+        <a asp-action="Edit" asp-route-id="@check.ItemId" class="dropdown-item">@T["Edit"]</a>
+    }
     @if (check.Status == CheckStatus.Queued)
     {
         <a asp-action="PrintRun" asp-route-bankAccountId="@check.BankAccountId" class="dropdown-item">@T["Print queued checks"]</a>

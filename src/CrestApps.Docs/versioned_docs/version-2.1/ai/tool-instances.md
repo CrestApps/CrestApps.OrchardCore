@@ -17,11 +17,11 @@ This is the difference between a tool and a tool instance:
 
 ## Enabling the feature
 
-Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstances`). It depends on the **AI Services** feature and adds the **Artificial Intelligence → Tool Instances** admin menu entry.
+Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstances`). It depends on the **AI Services** feature and adds the **Artificial Intelligence** → **Tool Instances** admin menu entry.
 
 ## Managing tool instances
 
-Navigate to **Artificial Intelligence → Tool Instances**.
+Navigate to **Artificial Intelligence** → **Tool Instances**.
 
 1. Select **Add Tool Instance**. A modal lists every registered source.
 2. Pick a source. The editor renders the fields the source contributes.
@@ -102,7 +102,7 @@ Tool instances can be moved between tenants with the standard Orchard Core deplo
 
 ### Deployment plan
 
-Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Configuration → Deployment Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and source-specific settings.
+Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Configuration** → **Deployment Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and source-specific settings.
 
 Secrets are never written to the export. During export, each source can remove its own sensitive data through an `IAIToolInstanceHandler`. The built-in sources use this to strip their credentials: the **HTTP API request** source clears the API key, bearer token, password, client secret, and any cached OAuth tokens, and the **Algolia** source clears the search-only API key. After importing on the target tenant, edit the instance and re-enter the required credentials.
 

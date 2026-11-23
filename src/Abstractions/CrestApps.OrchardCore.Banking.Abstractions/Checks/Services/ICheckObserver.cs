@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Banking.Checks.Models;
 namespace CrestApps.OrchardCore.Banking.Checks.Services;
 
 /// <summary>
-/// Is told when a check is issued, printed, voided, stopped, cleared, reissued or goes stale, after the change is
+/// Is told when a check is issued, edited, printed, voided, stopped, cleared, reissued or goes stale, after the change is
 /// saved in the unit of work. The module that issued the check reacts here, such as Payroll marking a pay statement
 /// unpaid when its check is voided. Register one with
 /// <see cref="ChecksServiceCollectionExtensions.AddCheckObserver{TObserver}"/>.

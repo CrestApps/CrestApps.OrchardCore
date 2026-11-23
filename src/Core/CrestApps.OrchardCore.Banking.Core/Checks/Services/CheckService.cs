@@ -34,6 +34,7 @@ public sealed class CheckService : ICheckService
     private readonly INumberSequence _numbers;
     private readonly IEnumerable<ICheckObserver> _observers;
     private readonly IEnumerable<ICheckChangeHandler> _handlers;
+    private readonly IEnumerable<ICheckWriteHandler> _writeHandlers;
     private readonly IDistributedLock _locks;
     private readonly ICheckCommitter _committer;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -49,7 +50,8 @@ public sealed class CheckService : ICheckService
     /// <param name="bankAccounts">The bank accounts.</param>
     /// <param name="numbers">The number sequences.</param>
     /// <param name="observers">The observers of check changes, told after each change is saved.</param>
-    /// <param name="handlers">The handlers asked before a void, reissue, clear or un-clear is saved.</param>
+    /// <param name="handlers">The handlers asked before a void, reissue, clear, un-clear or edit is saved.</param>
+    /// <param name="writeHandlers">The handlers that take part in writing a check, before and after it is saved.</param>
     /// <param name="locks">The distributed lock, so one print run of a bank account is numbered at a time.</param>
     /// <param name="committer">Commits a print run before its lock is released.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, for who made a change.</param>
@@ -62,6 +64,7 @@ public sealed class CheckService : ICheckService
         INumberSequence numbers,
         IEnumerable<ICheckObserver> observers,
         IEnumerable<ICheckChangeHandler> handlers,
+        IEnumerable<ICheckWriteHandler> writeHandlers,
         IDistributedLock locks,
         ICheckCommitter committer,
         IHttpContextAccessor httpContextAccessor,
@@ -74,6 +77,7 @@ public sealed class CheckService : ICheckService
         _numbers = numbers;
         _observers = observers;
         _handlers = handlers;
+        _writeHandlers = writeHandlers;
         _locks = locks;
         _committer = committer;
         _httpContextAccessor = httpContextAccessor;
@@ -83,11 +87,32 @@ public sealed class CheckService : ICheckService
     }
 
     /// <inheritdoc />
-    public async Task<CheckResult> IssueAsync(CheckIssueRequest request, CancellationToken cancellationToken = default)
+    public Task<CheckResult> IssueAsync(CheckIssueRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var errors = new List<string>();
+        return IssueCoreAsync(request, reissueOf: null, cancellationToken);
+    }
+
+    // Writes a check: the write handlers complete or refuse the request, Banking checks it, the check is saved, and the
+    // write handlers then the observers are told.
+    private async Task<CheckResult> IssueCoreAsync(CheckIssueRequest request, CheckRecord reissueOf, CancellationToken cancellationToken)
+    {
+        // The same request again (a retry, a double click) gets the check already issued, and nobody is asked again.
+        if (!string.IsNullOrEmpty(request.IdempotencyKey) && !string.IsNullOrEmpty(request.SourceKind) && !string.IsNullOrEmpty(request.SourceId)
+            && (await _manager.ListBySourceAsync(request.SourceKind, request.SourceId, cancellationToken)).FirstOrDefault(existing => string.Equals(existing.IdempotencyKey, request.IdempotencyKey, StringComparison.Ordinal)) is { } issuedBefore)
+        {
+            return new CheckResult { Check = issuedBefore };
+        }
+
+        var writing = new CheckWritingContext(request, reissueOf);
+
+        foreach (var handler in _writeHandlers)
+        {
+            await handler.WritingAsync(writing, cancellationToken);
+        }
+
+        var errors = new List<string>(writing.Errors);
         var account = string.IsNullOrEmpty(request.BankAccountId) ? null : await _bankAccounts.FindByIdAsync(request.BankAccountId, cancellationToken);
 
         if (account is null)
@@ -143,13 +168,6 @@ public sealed class CheckService : ICheckService
             return new CheckResult { Errors = errors };
         }
 
-        // The same request again (a retry, a double click) gets the check already issued.
-        if (!string.IsNullOrEmpty(request.IdempotencyKey) && !string.IsNullOrEmpty(request.SourceKind) && !string.IsNullOrEmpty(request.SourceId)
-            && (await _manager.ListBySourceAsync(request.SourceKind, request.SourceId, cancellationToken)).FirstOrDefault(existing => string.Equals(existing.IdempotencyKey, request.IdempotencyKey, StringComparison.Ordinal)) is { } issuedBefore)
-        {
-            return new CheckResult { Check = issuedBefore };
-        }
-
         long number;
         CheckStatus status;
 
@@ -196,6 +214,14 @@ public sealed class CheckService : ICheckService
         check.Status = status;
         check.IssuedUtc = _clock.UtcNow;
 
+        if (request.Properties is not null)
+        {
+            foreach (var (key, value) in request.Properties)
+            {
+                check.Properties[key] = value;
+            }
+        }
+
         // A check written by hand left with the payee already.
         if (status == CheckStatus.Printed)
         {
@@ -203,7 +229,87 @@ public sealed class CheckService : ICheckService
         }
 
         await _manager.CreateAsync(check, cancellationToken);
+
+        var written = new CheckWrittenContext(check, request, reissueOf);
+
+        foreach (var handler in _writeHandlers)
+        {
+            await handler.WrittenAsync(written, cancellationToken);
+        }
+
         await NotifyAsync(new CheckChange { Check = check, Kind = CheckChangeKind.Issued }, cancellationToken);
+
+        return new CheckResult { Check = check };
+    }
+
+    /// <inheritdoc />
+    public async Task<CheckResult> UpdateAsync(CheckRecord check, CheckDetails details, string reason = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(check);
+        ArgumentNullException.ThrowIfNull(details);
+
+        // Once a check is printed, the paper is with the payee: it is voided and written again, never edited.
+        if (!CheckStatuses.CanEdit(check))
+        {
+            return new CheckResult { Errors = [S["{0} is no longer waiting to print: void it and write a new check instead.", Describe(check)]] };
+        }
+
+        var errors = new List<string>();
+
+        if (details.Amount <= 0)
+        {
+            errors.Add(S["The amount must be more than zero."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(details.PayeeName))
+        {
+            errors.Add(S["Enter who the check is paid to."]);
+        }
+
+        if (details.CheckDate == default)
+        {
+            errors.Add(S["Enter the check date."]);
+        }
+
+        if (errors.Count > 0)
+        {
+            return new CheckResult { Errors = errors };
+        }
+
+        var updated = new CheckDetails
+        {
+            Payee = details.Payee,
+            PayeeName = details.PayeeName.Trim(),
+            PayeeAddress = details.PayeeAddress,
+            Amount = CurrencyScale.Round(details.Amount, check.Currency),
+            CheckDate = details.CheckDate,
+            Memo = string.IsNullOrWhiteSpace(details.Memo) ? null : details.Memo.Trim(),
+            Properties = details.Properties,
+        };
+
+        var refusal = await AskHandlersAsync(new CheckChangingContext(check, CheckChangeKind.Updated, check.Status) { Details = updated, Reason = reason }, cancellationToken);
+
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
+        var previous = CheckDetails.From(check);
+
+        check.Payee = updated.Payee;
+        check.PayeeName = updated.PayeeName;
+        check.PayeeAddress = updated.PayeeAddress;
+        check.Amount = updated.Amount;
+        check.CheckDate = updated.CheckDate;
+        check.Memo = updated.Memo;
+
+        if (updated.Properties is not null)
+        {
+            check.Properties = new Dictionary<string, object>(updated.Properties, StringComparer.OrdinalIgnoreCase);
+        }
+
+        await _manager.UpdateAsync(check, cancellationToken: cancellationToken);
+        await NotifyAsync(new CheckChange { Check = check, Kind = CheckChangeKind.Updated, PreviousStatus = check.Status, Reason = reason, PreviousDetails = previous }, cancellationToken);
 
         return new CheckResult { Check = check };
     }
@@ -517,7 +623,7 @@ public sealed class CheckService : ICheckService
             return refusal;
         }
 
-        var result = await IssueAsync(new CheckIssueRequest
+        var result = await IssueCoreAsync(new CheckIssueRequest
         {
             BankAccountId = check.BankAccountId,
             Payee = check.Payee,
@@ -530,10 +636,11 @@ public sealed class CheckService : ICheckService
             SourceKind = check.SourceKind,
             SourceId = check.SourceId,
             AccessScope = check.AccessScope,
+            Properties = new Dictionary<string, object>(check.Properties, StringComparer.OrdinalIgnoreCase),
 
             // A check that was numbered by a print run is replaced on the same stock; any other takes the next number.
             Numbering = check.Numbering == CheckNumbering.AtPrint ? CheckNumbering.AtPrint : CheckNumbering.Next,
-        }, cancellationToken);
+        }, check, cancellationToken);
 
         if (!result.Succeeded)
         {

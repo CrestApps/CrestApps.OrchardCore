@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Indexes;
 /// <summary>
 /// Finds pay schedules by name.
 /// </summary>
-public sealed class PayScheduleIndex : CatalogItemIndex
+public sealed class PayrollPayScheduleIndex : CatalogItemIndex
 {
     /// <summary>
     /// Gets or sets the name.
@@ -21,7 +21,7 @@ public sealed class PayScheduleIndex : CatalogItemIndex
 /// <summary>
 /// Finds pay codes by code, class and kind.
 /// </summary>
-public sealed class PayCodeIndex : CatalogItemIndex
+public sealed class PayrollPayCodeIndex : CatalogItemIndex
 {
     /// <summary>
     /// Gets or sets the code.

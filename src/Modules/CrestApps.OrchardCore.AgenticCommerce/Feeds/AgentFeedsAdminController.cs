@@ -9,7 +9,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.AgenticCommerce.Feeds;
 
 /// <summary>
-/// The Push now button of Settings › Commerce › Agent feeds: pushes the products to agent platforms with the saved
+/// The Push now button of Settings › Commerce › Agent Feeds: pushes the products to agent platforms with the saved
 /// settings, now, instead of waiting for the daily push.
 /// </summary>
 [Feature(AgenticCommerceConstants.Features.Feeds)]

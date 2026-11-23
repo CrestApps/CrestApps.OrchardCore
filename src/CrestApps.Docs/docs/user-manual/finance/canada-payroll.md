@@ -11,7 +11,7 @@ Canadian source deductions come from **Canada Income Tax** in Taxation, which fo
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > Income tax rules, Payroll > Employers, the pay profile's **Tax elections**, Payroll > Liabilities and Filings |
+| **Menu** | **Commerce** → **Taxation** → **Income Tax Rules**, **Payroll** → **Employers**, the pay profile's **Tax elections**, **Payroll** → **Liabilities and Filings** |
 | **Permission** | Manage income tax rules for the rules; Manage employers; Manage pay profiles; Manage payroll filings |
 | **Feature** | Canada Income Tax and Canada Payroll Filings |
 
@@ -20,7 +20,7 @@ Canadian source deductions come from **Canada Income Tax** in Taxation, which fo
 ## Set up the year's rules
 
 1. Turn on **Canada Income Tax** and **Canada Payroll Filings**.
-2. Run **Canada Income Tax: 2026 rules** from **Tools > Recipes**. It adds, for pay dates in 2026:
+2. Run **Canada Income Tax: 2026 rules** from **Tools** → **Recipes**. It adds, for pay dates in 2026:
    - federal tax with the TD1 claim and the federal credits;
    - the tax of every province and territory, with the Ontario surtax, health premium and tax reduction, the British Columbia tax reduction and Alberta's supplemental credit;
    - the July 1 changes for British Columbia, Newfoundland and Labrador and Prince Edward Island;
@@ -30,7 +30,7 @@ Canadian source deductions come from **Canada Income Tax** in Taxation, which fo
 
 ## Register the employer
 
-On each employer under **Payroll > Employers**, set the currency to CAD and add the tax registrations:
+On each employer under **Payroll** → **Employers**, set the currency to CAD and add the tax registrations:
 
 - **CA**, agency CRA, with your business number and payroll program account (such as 123456789RP0001) as the account id. Under **Deposits**, choose your remitter type: **Monthly** for a regular remitter, **Quarterly by the 15th**, **Twice a month** (accelerated threshold 1) or **Four times a month** (accelerated threshold 2).
 - **CA-QC**, agency Revenu Québec, with your identification number (such as 1234567890TQ0001), when you pay people who work in Quebec, with its remittance frequency. Add the **health services fund rate** Revenu Québec gives you for your total payroll as the registration's rate, from January 1; without one, the lowest rate (1.65%) is used.
@@ -62,14 +62,14 @@ Once a maximum is reached, nothing more is taken for that contribution for the r
 
 ## Remit the source deductions
 
-Open **Payroll > Liabilities and Filings > Liabilities**. The CRA's row (CA) holds federal and provincial tax, CPP and EI, both shares. Revenu Québec's row (CA-QC) holds Quebec tax, QPP and QPIP, both shares, and the health services fund. Each row follows the remitter type of the registration, with its due date. After you remit, record the deposit under **Record a deposit** with the jurisdiction CA or CA-QC.
+Open **Payroll** → **Liabilities and Filings** → **Liabilities**. The CRA's row (CA) holds federal and provincial tax, CPP and EI, both shares. Revenu Québec's row (CA-QC) holds Quebec tax, QPP and QPIP, both shares, and the health services fund. Each row follows the remitter type of the registration, with its due date. After you remit, record the deposit under **Record a deposit** with the jurisdiction CA or CA-QC.
 
 ## File the T4 and RL-1 slips
 
 1. Close the year under **Year end**, then open **Filings**.
 2. Prepare **T4 slips and T4 Summary**. Each person paid Canadian source deductions has a T4 with a PDF (a person employed in two provinces has one for each), and the Summary adds the employer's CPP and EI, your remittances and the balance. Box 24 stops at the year's maximum insurable earnings and box 26 at the year's additional maximum pensionable earnings.
 3. For people in Quebec, prepare **RL-1 slips and RL-1 Summary** the same way. The RL-1 Summary includes the health services fund.
-4. To file the T4 by Internet file transfer, run **Canada Payroll: T4 slips as a T4 XML file** from **Tools > Recipes**. Then publish the pipeline it adds, with a delivery step that keeps the file private, such as an SFTP server. Only a user who may see full tax ids gets the social insurance numbers in the file. The T4 slips data set carries them encrypted, so a preview or a CSV never shows them. The file is refused when a slip has no province of employment, a number fails its check digit, or the employer has no dental benefits code or contact.
+4. To file the T4 by Internet file transfer, run **Canada Payroll: T4 slips as a T4 XML file** from **Tools** → **Recipes**. Then publish the pipeline it adds, with a delivery step that keeps the file private, such as an SFTP server. Only a user who may see full tax ids gets the social insurance numbers in the file. The T4 slips data set carries them encrypted, so a preview or a CSV never shows them. The file is refused when a slip has no province of employment, a number fails its check digit, or the employer has no dental benefits code or contact.
 5. Mark each filing as filed. People then see their slips under **Tax forms** in **My pay**.
 
 ## Not covered yet

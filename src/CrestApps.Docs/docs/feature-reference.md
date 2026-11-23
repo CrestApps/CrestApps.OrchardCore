@@ -9,7 +9,7 @@ user_manual:
 # Feature ID Reference
 
 Every feature ID declared by a module under `src/Modules`, grouped by the **Category** the manifest gives it.
-That category is the heading the feature appears under in **Tools → Features**, so this page reads in the same
+That category is the heading the feature appears under in **Tools** → **Features**, so this page reads in the same
 order as that screen.
 
 A module whose manifest declares no explicit `[Feature]` still contributes one feature whose ID is the module
@@ -366,6 +366,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Taxation` | Sales Tax | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Taxation.Tables` | Tax Tables | [Taxation](./modules/taxation#features) |
 | `CrestApps.OrchardCore.Taxation.TaxJar` | TaxJar | [Taxation](./modules/taxation#taxjar) |
+| `CrestApps.OrchardCore.Taxation.Returns` | Tax Returns | [Taxation](./modules/taxation#tax-returns) |
+| `CrestApps.OrchardCore.Taxation.EFiling` | Tax E-Filing | [Taxation](./modules/taxation#e-filing) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |

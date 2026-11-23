@@ -23,7 +23,7 @@ When the **Asterisk** feature is enabled, the telephony settings can expose up t
 
 | Provider | How it is configured | When it appears |
 | --- | --- | --- |
-| **Asterisk** | Site settings under **Settings → Communication → Telephony → Asterisk** | When an administrator enables it for the tenant |
+| **Asterisk** | Site settings under **Settings** → **Communication** → **Telephony** → **Asterisk** | When an administrator enables it for the tenant |
 | **Default Asterisk** | Shell configuration (`appsettings.json`, user secrets, or environment variables) | Automatically, when the required configuration exists |
 
 This mirrors the Orchard Core default-provider pattern used by modules such as SMTP: the tenant-specific provider is managed in the UI, while the configuration-backed provider is automatically available across tenants whenever the host supplies its configuration.
@@ -59,7 +59,7 @@ For Contact Center orchestration, the Asterisk voice provider also advertises **
 
 ## Tenant-configured Asterisk settings
 
-Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab under **Settings → Communication → Telephony**. The Telephony settings UI creates that tab from the site-settings display driver, and the Asterisk editor itself only renders the provider fields inside the tab. You need the `Manage telephony settings` permission. The steps for administrators are in [Connect Asterisk for calls](../user-manual/telephony-settings.md#connect-asterisk-for-calls) in the user manual; this table is the field reference.
+Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab under **Settings** → **Communication** → **Telephony**. The Telephony settings UI creates that tab from the site-settings display driver, and the Asterisk editor itself only renders the provider fields inside the tab. You need the `Manage telephony settings` permission. The steps for administrators are in [Connect Asterisk for calls](../user-manual/telephony-settings.md#connect-asterisk-for-calls) in the user manual; this table is the field reference.
 
 | Setting | Description |
 | --- | --- |

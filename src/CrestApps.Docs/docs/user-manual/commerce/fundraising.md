@@ -10,7 +10,7 @@ Raise money for a cause. Donors give the amount they choose, the campaign's page
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Fundraising |
+| **Menu** | **Settings** → **Commerce** → **Fundraising** |
 | **Permission** | Manage fundraising |
 | **Feature** | Fundraising |
 
@@ -20,13 +20,13 @@ This video shows setting up receipts, starting a campaign, how donors give, and 
 
 <YouTube video="fundraising" title="Narrated video overview of Fundraising" />
 
-To try it, run the **Fundraising sample** recipe under **Configuration > Recipes**. It adds a campaign raising $10,000 for a community library.
+To try it, run the **Fundraising sample** recipe under **Configuration** → **Recipes**. It adds a campaign raising $10,000 for a community library.
 
 ## Set up your receipts
 
 <YouTube video="fundraising" title="Video of setting up receipts" start={93} end={129} />
 
-Under **Settings > Commerce > Fundraising**:
+Under **Settings** → **Commerce** → **Fundraising**:
 
 - **Organization**: who donations go to, as it reads on receipts. Leave it empty to use the site's name.
 - **Tax ID**: your tax or charity registration number.
@@ -61,6 +61,6 @@ They also find their donations under **Donations** in their account, with the da
 
 <YouTube video="fundraising" title="Video of donations in the orders list" start={216} end={244} />
 
-Each donation is an order under **Commerce > Orders**: its line says **Donation** with the amount, and **In honor of** shows the name the donor gave. Only paid donations count toward the progress.
+Each donation is an order under **Commerce** → **Orders**: its line says **Donation** with the amount, and **In honor of** shows the name the donor gave. Only paid donations count toward the progress.
 
 When you refund a donation's order, the refund comes off the campaign's progress and shows on the donor's receipt.

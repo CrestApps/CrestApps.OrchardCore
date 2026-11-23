@@ -104,6 +104,9 @@ internal sealed class FixedPlaidLinkSite : IPlaidLinkSite
             Language = "en",
             WebhookUrl = "https://example.com/plaid/webhook",
         });
+
+    public Task<string> GetWebhookUrlAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult("https://example.com/plaid/webhook");
 }
 
 /// <summary>
@@ -115,6 +118,9 @@ internal sealed class InMemoryPlaidItemStore : IPlaidItemStore
 
     public Task<PlaidItem> FindByItemIdAsync(string itemId, CancellationToken cancellationToken = default)
         => Task.FromResult(Items.FirstOrDefault(item => item.ItemId == itemId));
+
+    public Task<IReadOnlyList<PlaidItem>> ListByItemIdAsync(string itemId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<PlaidItem>>(Items.Where(item => item.ItemId == itemId).ToList());
 
     public Task<IReadOnlyList<PlaidItem>> ListByBankAccountAsync(string bankAccountId, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<PlaidItem>>(Items.Where(item => item.BankAccountId == bankAccountId).ToList());
@@ -134,6 +140,23 @@ internal sealed class InMemoryPlaidItemStore : IPlaidItemStore
         Items.Remove(item);
 
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// Records the webhooks it is handed, and throws when told to.
+/// </summary>
+internal sealed class RecordingPlaidWebhookHandler : IPlaidWebhookHandler
+{
+    public List<PlaidWebhookContext> Received { get; } = [];
+
+    public Exception Failure { get; set; }
+
+    public Task HandleAsync(PlaidWebhookContext context, CancellationToken cancellationToken = default)
+    {
+        Received.Add(context);
+
+        return Failure is null ? Task.CompletedTask : Task.FromException(Failure);
     }
 }
 

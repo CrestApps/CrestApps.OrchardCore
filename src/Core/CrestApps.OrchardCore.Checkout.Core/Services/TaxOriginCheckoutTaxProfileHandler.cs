@@ -6,7 +6,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
 
 /// <summary>
-/// Puts where the store sells from (Settings > Commerce > Tax origin) on the checkout's tax profile.
+/// Puts where the store sells from (Settings > Commerce > Tax Origin) on the checkout's tax profile.
 /// </summary>
 public sealed class TaxOriginCheckoutTaxProfileHandler : ICheckoutTaxProfileHandler
 {

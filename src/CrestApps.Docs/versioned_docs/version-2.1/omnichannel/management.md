@@ -193,7 +193,7 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - imports can normalize national-format phone numbers to E.164 by using the selected lead country before duplicate checks, before DNC registry lookups run, and before contact-method storage runs
 - channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
 - contact publish and update operations now keep the omnichannel contact indexes in sync automatically
-Use **Settings** -> **Content Import** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
+Use **Settings** → **Content Import** to enforce DNC checks globally for imports, and use **Settings** → **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
 
 When the import file is not already using E.164 phone numbers, select the default country represented by that file in the import UI. Files for content types with `OmnichannelContactPart` should contain leads from one country per file unless every phone number is already expressed in E.164. The picker mirrors the Local DNC country list, shows each option as `Country (+calling code)`, and is required before the import can start so phone normalization always has region context.
 
@@ -304,7 +304,7 @@ When an inventory load is started, the `IActivityBatchLoadCoordinator` transitio
 
 ### Scheduled activities list
 
-Navigate to **Interaction Center** -> **Activities** to review scheduled omnichannel work at `Admin/omnichannel/activities`.
+Navigate to **Interaction Center** → **Activities** to review scheduled omnichannel work at `Admin/omnichannel/activities`.
 
 The scheduled activities list now includes a **Time zone** filter alongside the existing urgency, subject, channel, and attempt filters so agents can narrow work to leads in call-safe regions. Activity summary rows also display the contact's current local time when a lead time zone is stored, and the tooltip shows the full local date/time plus the IANA time zone id so agents can confirm whether the lead is ahead of or behind their own day before opening or completing the activity.
 
@@ -339,7 +339,7 @@ The **Manage Activities** page provides a centralized interface for managing act
 
 ### Accessing the page
 
-Navigate to **Interaction Center → Management → Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
+Navigate to **Interaction Center** → **Management** → **Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
 
 Route: `Admin/omnichannel/manage-activities`
 
@@ -421,7 +421,7 @@ Each configurable entity has its own deployment step and a matching recipe step:
 | Campaigns | Omnichannel Campaigns | `OmnichannelCampaign` |
 | Subject actions | Omnichannel Subject Actions | `OmnichannelSubjectAction` |
 
-To export, open **Configuration -> Import/Export -> Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
+To export, open **Configuration** → **Import/Export** → **Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
 
 On import, entries are matched by their identifier: an entry that already exists is updated in place, and a new entry is created with its original identifier preserved. Because identifiers are preserved, cross-references (for example a campaign that points at a campaign group, or a subject action that points at a disposition) keep working after the import.
 

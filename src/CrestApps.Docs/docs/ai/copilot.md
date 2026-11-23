@@ -54,7 +54,7 @@ The video shows the **Copilot** and **Claude** cards, and how a profile chooses 
 
 ## Configuration
 
-Configure the Copilot orchestrator at **Settings → Artificial Intelligence → Copilot**. The main choice is which **authentication type** you want to use.
+Configure the Copilot orchestrator at **Settings** → **Artificial Intelligence** → **Copilot**. The main choice is which **authentication type** you want to use.
 
 | Authentication type | When to use | What you configure |
 |---|---|---|
@@ -79,14 +79,14 @@ Use this mode when you want the orchestrator to authenticate to Copilot via GitH
 
 The **Copilot** card shows these steps, with your site's callback URL ready to copy:
 
-1. In GitHub, go to **Settings → Developer settings → GitHub Apps** and click **New GitHub App**.
+1. In GitHub, go to **Settings** → **Developer settings** → **GitHub Apps** and click **New GitHub App**.
 2. Enter an **App name** and your site's **Homepage URL**.
 3. Under **Callback URL**, enter `https://your-domain.com/copilot/OAuthCallback` (the card shows the exact value).
 4. Webhooks are not required: under **Webhook**, uncheck **Active**.
-5. Under **Permissions**, grant **Copilot Chat → Read-only** under **Account permissions**, to allow model listing.
+5. Under **Permissions**, grant **Copilot Chat** → **Read-only** under **Account permissions**, to allow model listing.
 6. Choose where the app can be installed, and click **Create GitHub App**.
 7. Copy the **Client ID**, then click **Generate a new client secret** and copy the secret.
-8. In Orchard Core, go to **Settings → Artificial Intelligence → Copilot** and enter the client ID and secret.
+8. In Orchard Core, go to **Settings** → **Artificial Intelligence** → **Copilot** and enter the client ID and secret.
 
 The **Client Secret** field only needs a value the first time you configure GitHub OAuth. After that, leave it empty to keep the existing encrypted secret, or enter a new value to replace it.
 
@@ -125,7 +125,7 @@ The **Wire API Format** controls the HTTP format used by the underlying SDK:
 
 #### Setup steps
 
-1. Go to **Settings → Artificial Intelligence → Copilot**.
+1. Go to **Settings** → **Artificial Intelligence** → **Copilot**.
 2. Set **Authentication type** to **API key (BYOK)**.
 3. Choose a **Provider Type**.
 4. Configure the settings listed above.
@@ -133,7 +133,7 @@ The **Wire API Format** controls the HTTP format used by the underlying SDK:
 
 ## Usage
 
-Usage differs slightly depending on the authentication type selected in **Settings → Artificial Intelligence → Copilot**. The fields appear in the **General** card of the AI profile editor and on the **Settings** tab of chat interactions; see [AI profiles](../user-manual/ai/profiles.md#general) and [Chat interactions](../user-manual/ai/chat-interactions.md#settings-tab) in the User Manual.
+Usage differs slightly depending on the authentication type selected in **Settings** → **Artificial Intelligence** → **Copilot**. The fields appear in the **General** card of the AI profile editor and on the **Settings** tab of chat interactions; see [AI profiles](../user-manual/ai/profiles.md#general) and [Chat interactions](../user-manual/ai/chat-interactions.md#settings-tab) in the User Manual.
 
 In all modes, **Allow All** is checked by default (passes `--allow-all` to the Copilot CLI) and settings are saved automatically via SignalR using the extensible `IChatInteractionSettingsHandler` pipeline.
 
@@ -169,7 +169,7 @@ In all modes, **Allow All** is checked by default (passes `--allow-all` to the C
 #### Chat Interactions
 
 - No GitHub sign-in is required.
-- The session uses the **Default Model** configured in **Settings → Artificial Intelligence → Copilot**.
+- The session uses the **Default Model** configured in **Settings** → **Artificial Intelligence** → **Copilot**.
 - AI Profiles, AI Profile templates, and Chat Interactions can still override the model name and **Effort level** for that specific Copilot-backed session.
 
 #### AI Profiles

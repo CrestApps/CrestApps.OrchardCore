@@ -63,6 +63,12 @@ public sealed class MerchantTaxRegistration : CatalogItem, INameAwareModel, IMod
     /// </summary>
     public DateTime? EffectiveToUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets how often the registration files its returns and when they are due, or <see langword="null"/> when
+    /// the registration files no return through Tax Returns.
+    /// </summary>
+    public TaxFilingSchedule Filing { get; set; }
+
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
 
@@ -82,6 +88,7 @@ public sealed class MerchantTaxRegistration : CatalogItem, INameAwareModel, IMod
             RegistrationDateUtc = RegistrationDateUtc,
             EffectiveFromUtc = EffectiveFromUtc,
             EffectiveToUtc = EffectiveToUtc,
+            Filing = Filing?.Clone(),
             ModifiedUtc = ModifiedUtc,
         };
     }

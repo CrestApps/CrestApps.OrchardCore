@@ -18,6 +18,7 @@ public sealed class CheckWorkflowEventsTests
     [InlineData(CheckChangeKind.Stale, new[] { nameof(CheckStaleEvent) })]
     [InlineData(CheckChangeKind.Uncleared, new[] { nameof(CheckUnclearedEvent) })]
     [InlineData(CheckChangeKind.Spoiled, new[] { nameof(CheckVoidedEvent) })]
+    [InlineData(CheckChangeKind.Updated, new[] { nameof(CheckUpdatedEvent) })]
     public void EachCheckChange_StartsItsEvents(CheckChangeKind kind, string[] expected)
         => Assert.Equal(expected, ChecksWorkflowObserver.EventsFor(kind));
 

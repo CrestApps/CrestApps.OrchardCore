@@ -12,7 +12,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Profiles (turn it on per profile); Settings > Artificial Intelligence (site settings) |
+| **Menu** | **Artificial Intelligence** → **Profiles (turn it on per profile)**; **Settings** → **Artificial Intelligence (site settings)** |
 | **Permission** | Manage AI profiles (to turn it on); Clear AI memory (to clear your own memory); Clear AI memory for other users |
 | **Feature** | AI Memory, turned on through one of the AI Memory indexing features |
 
@@ -61,7 +61,7 @@ When you want the AI to forget everything it saved about you:
 
 This permanently removes everything the AI remembered about you. It cannot be undone. When nothing is saved, the section says "No saved AI memory was found for your account."
 
-An administrator with the **Clear AI memory for other users** permission can do the same for another person: open **Access Control > Users**, edit the user, and use **Clear saved AI memory** in the **AI Memory** section.
+An administrator with the **Clear AI memory for other users** permission can do the same for another person: open **Access Control** → **Users**, edit the user, and use **Clear saved AI memory** in the **AI Memory** section.
 
 ## Turn on memory (administrators)
 
@@ -71,7 +71,7 @@ Memory needs a search index to store the memories in. Your technical team sets u
 
 <YouTube video="ai-memory" title="Video of creating the memory index" start={88} end={128} />
 
-1. Open **Search > Indexes** and click **Add index**.
+1. Open **Search** → **Indexes** and click **Add index**.
 2. Click **Add** on **AI Memory (Elasticsearch)**. The **AI Memory (Azure AI Search)** type works the same way, when that feature is on.
 3. Enter an **Index Name** and a **Name**, the name the index has in the list.
 4. Pick the **Embedding deployment**. It turns each memory into numbers that the search compares. It cannot be changed after the index is created, and the index then shows it as read-only.
@@ -81,7 +81,7 @@ Memory needs a search index to store the memories in. Your technical team sets u
 
 <YouTube video="ai-memory" title="Video of choosing the memory index in the site settings" start={128} end={171} />
 
-Open **Settings > Artificial Intelligence** and find the **Memory** section. Until an index exists, it shows a **No index profiles configured** warning.
+Open **Settings** → **Artificial Intelligence** and find the **Memory** section. Until an index exists, it shows a **No index profiles configured** warning.
 
 | Field | What it does |
 | --- | --- |
@@ -95,7 +95,7 @@ In the **General** section, **Enable preemptive memory retrieval** (on by defaul
 
 <YouTube video="ai-memory" title="Video of turning memory on for a profile" start={171} end={209} />
 
-1. Open **Artificial Intelligence > Profiles** and edit the profile.
+1. Open **Artificial Intelligence** → **Profiles** and edit the profile.
 2. On the **Knowledge** tab, tick **Enable user memory**.
 3. Click **Save**.
 
@@ -107,4 +107,4 @@ Profile templates have the same checkbox, so profiles created from a template ca
 
 <YouTube video="ai-memory" title="Video of a chat that remembers" start={209} end={248} />
 
-Open **Artificial Intelligence > Profiles**, open the **Actions** menu of the profile and click **New chat**. Tell the assistant something worth keeping, such as "Call me Sam, and keep your answers short." Then click **New Chat** and ask "What do you remember about me?" The new chat has no history, but the assistant looks up its memories first, and answers with the name it saved.
+Open **Artificial Intelligence** → **Profiles**, open the **Actions** menu of the profile and click **New chat**. Tell the assistant something worth keeping, such as "Call me Sam, and keep your answers short." Then click **New Chat** and ask "What do you remember about me?" The new chat has no history, but the assistant looks up its memories first, and answers with the name it saved.

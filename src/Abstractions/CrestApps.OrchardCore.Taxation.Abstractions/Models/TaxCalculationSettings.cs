@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.Taxation.Models;
 
 /// <summary>
-/// How the site works tax out, under Settings > Commerce > Tax calculation. The checkout and invoices both read it, so a
+/// How the site works tax out, under Settings > Commerce > Tax Calculation. The checkout and invoices both read it, so a
 /// cart and an invoice with the same lines come to the same tax.
 /// </summary>
 public sealed class TaxCalculationSettings

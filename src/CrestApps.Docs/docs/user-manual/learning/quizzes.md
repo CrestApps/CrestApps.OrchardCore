@@ -10,7 +10,7 @@ A quiz is a course item with questions. Questions live in question banks, so the
 
 | | |
 | --- | --- |
-| **Menu** | Learning > Question banks; a course's outline for the quiz |
+| **Menu** | **Learning** → **Question Banks**; a course's outline for the quiz |
 | **Permission** | Manage question banks to write questions; Manage courses or Manage the courses you teach to add the quiz |
 | **Feature** | Learning Assessments |
 
@@ -18,7 +18,7 @@ A quiz is a course item with questions. Questions live in question banks, so the
 
 ## Write questions
 
-1. Go to **Learning > Question banks** and create a bank, such as *Fire safety*.
+1. Go to **Learning** → **Question Banks** and create a bank, such as *Fire safety*.
 2. In the bank, add questions. Choose the type: single choice, multiple choice, true or false, short text, numeric, matching, ordering, fill in the blanks, essay, survey, drag into text, select missing words, or description.
 3. Enter the **Prompt**, the **Points**, a **Difficulty** and **Tags** (random draws can pick by tag), the answer, and any feedback shown on review. An essay has word limits and **Grader guidance**, which learners never see.
 

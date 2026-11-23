@@ -24,9 +24,9 @@ A module that needs a rate asks this service; it never keeps its own rate table.
 
 ## Entering and fetching rates
 
-**Commerce > Exchange rates** lists, adds, edits and deletes rates (**Manage exchange rates**), newest day first, in both admin list layouts. A rate changed by hand is marked `manual`.
+**Commerce** → **Exchange Rates** lists, adds, edits and deletes rates (**Manage exchange rates**), newest day first, in both admin list layouts. A rate changed by hand is marked `manual`.
 
-**Settings > Commerce > Exchange rates** sets the reporting currency, the provider that fetches rates and the currencies it fetches. An `IExchangeRateProvider` (`Name`, `DisplayName`, `GetRatesAsync(baseCurrency, currencies, date)`) is the seam for a feed such as a central bank's; none is built in. The **Exchange Rate Update** background task runs hourly and asks the chosen provider for the site's day (`ExchangeRateUpdater`); a rate of a pair the day already has, entered by hand or fetched before, is never replaced.
+**Settings** → **Commerce** → **Exchange Rates** sets the reporting currency, the provider that fetches rates and the currencies it fetches. An `IExchangeRateProvider` (`Name`, `DisplayName`, `GetRatesAsync(baseCurrency, currencies, date)`) is the seam for a feed such as a central bank's; none is built in. The **Exchange Rate Update** background task runs hourly and asks the chosen provider for the site's day (`ExchangeRateUpdater`); a rate of a pair the day already has, entered by hand or fetched before, is never replaced.
 
 ## Who uses the rates
 

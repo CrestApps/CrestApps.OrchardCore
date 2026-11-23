@@ -3,7 +3,9 @@ sidebar_label: Taxation
 sidebar_position: 15
 title: Taxation Framework
 description: A provider-agnostic, extensible taxation framework for Orchard Core. Sales Tax models tax as a determination rather than a stored rate, with order-wide thresholds for import duty, the EU VAT standard rates recipe, the TaxJar connector and the VAT one-stop-shop report. Income Tax works out taxes on income for any country, with the United States and Canada packs.
-user_manual: user-manual/commerce/taxes
+user_manual:
+  - user-manual/commerce/taxes
+  - user-manual/finance/tax-returns
 ---
 
 | | |
@@ -11,7 +13,7 @@ user_manual: user-manual/commerce/taxes
 | **Feature Name** | Sales Tax |
 | **Feature ID** | `CrestApps.OrchardCore.Taxation` |
 | **Category** | Commerce |
-| **Other features** | Tax Tables, Income Tax, United States Income Tax, Canada Income Tax (see [Income tax](#income-tax)), TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`, see [TaxJar](#taxjar)) |
+| **Other features** | Tax Tables, Income Tax, United States Income Tax, Canada Income Tax (see [Income tax](#income-tax)), TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`, see [TaxJar](#taxjar)), Tax Returns (`CrestApps.OrchardCore.Taxation.Returns`, see [Tax returns](#tax-returns)), Tax E-Filing (`CrestApps.OrchardCore.Taxation.EFiling`, see [E-filing](#e-filing)) |
 
 Provides a provider-agnostic, extensible, international taxation framework that any Orchard Core content type or CrestApps module (Products, Subscriptions, Payments, Commerce, Bookings, Services, and custom content) can plug into.
 
@@ -39,8 +41,10 @@ The framework is split into three assemblies:
 
 | Feature | Contents |
 | --- | --- |
-| **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Commerce > Taxation > Jurisdictions** and **Commerce > Taxation > Tables** (a site with Payroll and no store gets the same Commerce item with only Taxation in it), with their recipe and deployment steps. No Commerce dependency: Sales Tax and Income Tax share it (`AddTaxTablesCore()` registers the services). |
-| **Sales Tax** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables and Commerce: categories, types, rules, the `TaxationPart`, the sales tax engine and tax origin settings. Commerce (orders, checkout, point of sale) uses it. The id is the module's, kept from when the feature was named Taxation. |
+| **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Commerce** → **Taxation** → **Jurisdictions** and **Commerce** → **Taxation** → **Tables** (a site with Payroll and no store gets the same Commerce item with only Taxation in it), with their recipe and deployment steps. No Commerce dependency: Sales Tax and Income Tax share it (`AddTaxTablesCore()` registers the services). |
+| **Sales Tax** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables only: categories, types, rules, the business's tax registrations (**Commerce** → **Taxation** → **Tax Registrations**), the `TaxationPart`, the sales tax engine and tax origin settings. Commerce (orders, checkout, point of sale) uses it, and a site that keeps its own books uses it without a store: it no longer depends on Commerce Foundation, and its admin items build the **Commerce** node themselves. The id is the module's, kept from when the feature was named Taxation. |
+| **Tax Returns** (`CrestApps.OrchardCore.Taxation.Returns`) | Depends on Sales Tax: a filing schedule on each registration, the periods it files for, and a return per period from the figures modules give. See [Tax returns](#tax-returns). |
+| **Tax E-Filing** (`CrestApps.OrchardCore.Taxation.EFiling`) | Depends on Tax Returns: filing channels and file formats, a manual channel that hands over a file, and the task that asks channels for the agency's answers. See [E-filing](#e-filing). |
 | **Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax`) | Depends on Tax Tables only: income tax rules, the built-in income tax provider and its seam, tax categories, election forms and withholding methods. Payroll uses it; any module that pays income can. See [Income tax](#income-tax). |
 | **United States Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates`) | Form W-4 and its withholding method, backup withholding, and the federal rules as dated recipes. |
 | **Canada Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax.Canada`) | The TD1 and TP-1015.3 claims, the CRA's and Revenu Québec's formulas, CPP, QPP, EI and QPIP, and the yearly figures as dated recipes. |
@@ -50,7 +54,7 @@ A module whose records point at tax tables registers an `ITaxTableUsage`, so a t
 
 ## Getting started
 
-Enable the **Taxation** feature under **Tools → Features**, then:
+Enable the **Taxation** feature under **Tools** → **Features**, then:
 
 1. Create your tax **categories**, **types**, **jurisdictions**, optional **tables**, and **rules** from the admin UI (see [Managing taxation from the admin UI](#managing-taxation-from-the-admin-ui)).
 2. Attach the **Taxation** part to a content type and classify it (see [The TaxationPart](#the-taxationpart)).
@@ -58,13 +62,13 @@ Enable the **Taxation** feature under **Tools → Features**, then:
 
 ## Managing taxation from the admin UI
 
-Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce → Taxation** menu with five screens: **Categories**, **Types**, **Jurisdictions**, **Tables**, and **Sales tax rules** (and **Income tax rules** with Income Tax). Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
+Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce** → **Taxation** menu with five screens: **Categories**, **Types**, **Jurisdictions**, **Tables**, and **Sales Tax Rules** (and **Income Tax Rules** with Income Tax). Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
 
 Setting up taxes end to end is a workflow of a few ordered steps. The order matters, because rules reference jurisdictions, types, and categories, and content classification reuses the categories you create.
 
 ### 1. Define what you sell — Categories
 
-Go to **Commerce → Taxation → Categories** and add a category for each kind of thing you tax (for example `Electronics`, or a finer `Television`). A category has:
+Go to **Commerce** → **Taxation** → **Categories** and add a category for each kind of thing you tax (for example `Electronics`, or a finer `Television`). A category has:
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
 - **Code** — the value matched by tax rules and stored on taxable items (for example `Electronics`).
@@ -75,7 +79,7 @@ Create the broad categories you match rules against, plus any finer classificati
 
 ### 2. Name your kinds of tax — Types
 
-Go to **Commerce → Taxation → Types** and manage the list of **tax types** — the labels that group and report the kind of tax a rule produces (for example `SalesTax`, `VAT`, or `GST`). A tax type has:
+Go to **Commerce** → **Taxation** → **Types** and manage the list of **tax types** — the labels that group and report the kind of tax a rule produces (for example `SalesTax`, `VAT`, or `GST`). A tax type has:
 
 - **Name** — the value stored on the resulting tax lines and offered in the rule editor (the unique key, fixed after creation).
 - **Description** — optional notes.
@@ -84,7 +88,7 @@ The catalog is seeded with a set of well-known types on first run so existing be
 
 ### 3. Define where you tax — Jurisdictions
 
-Go to **Taxes → Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
+Go to **Taxes** → **Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
 
 :::tip
 When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdown is populated from your managed `Country` content items instead of the built-in list, so you can curate the countries you operate in. The stored value is still the ISO country code, so switching the Addresses feature on or off never orphans existing jurisdictions or rules.
@@ -92,7 +96,7 @@ When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdow
 
 ### 4. Provide lookup tables — Tables (optional)
 
-Go to **Taxes → Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
+Go to **Taxes** → **Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
 - **Effective from/to** — optional date-only window during which the table is valid. A table is only used for a transaction whose date falls inside this window; a rule that requires a table but has no table in effect on the transaction date is **skipped** (it never silently taxes at zero).
@@ -110,13 +114,13 @@ Each time you save a table its **Version** is incremented, and that version is c
 
 ### 5. Define how tax applies — Rules
 
-Go to **Commerce → Taxation → Sales tax rules** and click **Add Tax Rule**. A dialog lists the available **calculation methods** — Percentage, Fixed amount, Per unit, Per weight, Per volume, Progressive, Threshold, and Tax table lookup. The method you pick becomes the rule's **source** and is fixed for the life of the rule, exactly like the source-aware editors used elsewhere in the platform (for example AI data sources and deployments). The editor then shows the fields shared by every rule — the **Name** (the rule's unique identifier, fixed after creation), the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, an optional **Display name**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, **Reverse charge**, and **Applies to shipping** — plus only the calculation fields the selected method needs: a **Rate** for the percentage method, a **Fixed amount** for the fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`), populated from the tables you created in step 4. A disabled rule is never applied, and rules outside their effective window are ignored.
+Go to **Commerce** → **Taxation** → **Sales Tax Rules** and click **Add Tax Rule**. A dialog lists the available **calculation methods** — Percentage, Fixed amount, Per unit, Per weight, Per volume, Progressive, Threshold, and Tax table lookup. The method you pick becomes the rule's **source** and is fixed for the life of the rule, exactly like the source-aware editors used elsewhere in the platform (for example AI data sources and deployments). The editor then shows the fields shared by every rule — the **Name** (the rule's unique identifier, fixed after creation), the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, an optional **Display name**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, **Reverse charge**, and **Applies to shipping** — plus only the calculation fields the selected method needs: a **Rate** for the percentage method, a **Fixed amount** for the fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`), populated from the tables you created in step 4. A disabled rule is never applied, and rules outside their effective window are ignored.
 
 The **Reverse charge** flag marks a rule whose liability shifts to a registered business buyer (for example the EU B2B reverse charge). When it is set and the customer is a **B2B** customer with a verified tax registration, the engine does not charge the tax; instead it emits a zero-amount line marked *Reverse charge* so the obligation is still visible on the document. For any other customer the rule behaves normally.
 
 A signed-in customer counts as **B2B** for tax, both for the **Customer type** a rule is scoped to and for reverse charge, only when an administrator verified their tax id (**Tax id verified** on the customer, `Customer.TaxIdVerified`). The customer chooses their own kind and types their own number, so a self-declared business is taxed as a consumer until then. A business account the buyer buys for (B2B Accounts) says so through its own handler. After upgrading, existing business customers are taxed as consumers until their numbers are verified.
 
-The **Display name** (`TaxName`) is optional: it is the label shown to customers on invoices and receipts, and when it is left empty the tax line falls back to the rule **Name**. The **Tax type** labels and groups the kind of tax the rule produces (for example `SalesTax`, `VAT`, or `GST`); the dropdown is populated from the **Tax types** you manage under **Commerce → Taxation → Types**, and a rule that already stores a value not present in the catalog keeps it. The tax type never changes how the amount is calculated.
+The **Display name** (`TaxName`) is optional: it is the label shown to customers on invoices and receipts, and when it is left empty the tax line falls back to the rule **Name**. The **Tax type** labels and groups the kind of tax the rule produces (for example `SalesTax`, `VAT`, or `GST`); the dropdown is populated from the **Tax types** you manage under **Commerce** → **Taxation** → **Types**, and a rule that already stores a value not present in the catalog keeps it. The tax type never changes how the amount is calculated.
 
 ### 6. Classify your content
 
@@ -203,7 +207,7 @@ A content editor can then leave the defaults or override the classification per 
 | `DefaultTaxClassificationCode` | The classification applied when the item does not specify one. Selected from the categories catalog. |
 | `AllowClassificationOverride` | Whether editors may override the classification per content item. |
 
-In the content-type editor, **Default tax category** and **Default tax classification** are dropdowns populated from the tax categories you created under **Commerce → Taxation → Categories**, so create your categories first. When `AllowClassificationOverride` is disabled, editors do not see the category/classification fields and the defaults configured here are always used.
+In the content-type editor, **Default tax category** and **Default tax classification** are dropdowns populated from the tax categories you created under **Commerce** → **Taxation** → **Categories**, so create your categories first. When `AllowClassificationOverride` is disabled, editors do not see the category/classification fields and the defaults configured here are always used.
 
 ## Domain model
 
@@ -367,7 +371,7 @@ Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`)
 
 A rule with a `JurisdictionId` applies only when that jurisdiction is among the ones resolved for the item's address (`ITaxJurisdictionResolver`). With no address, or an address outside it, the rule does not apply; rules without a jurisdiction apply everywhere. So the address the checkout supplies decides which jurisdiction rules can apply.
 
-The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Settings > Commerce > Tax origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
+The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Settings** → **Commerce** → **Tax Origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
 
 Do not assume the shipping address is always the tax location. Sourcing is pluggable through `ITaxSourcingStrategy` (resolved by `ITaxSourcingStrategyProvider`), with these built-in strategies: `Origin`, `Destination`, `CustomerResidence`, `CustomerBusiness`, `ServiceLocation`, and `EventLocation`. The engine picks a strategy from the taxable item's `Kind` (for example digital goods use the destination, services and bookings use the service location, and events use the event location) and falls back through destination, item origin, context origin, and customer residence.
 
@@ -398,7 +402,7 @@ A refund at or above the snapshot total returns the full refund; a non-positive 
 
 ## Rounding
 
-Rounding is one site setting, **Settings > Commerce > Tax calculation** (`TaxCalculationSettings.RoundingLevel`, group `tax-calculation`, permission **Manage taxation**), that the checkout and [invoices](invoicing#tax) both read through `ITaxRoundingLevelProvider`, so a cart and an invoice with the same lines come to the same tax. A calculation can still name its own level (`TaxCalculationContext.RoundingLevel`); a host without site settings falls back to `TaxationOptions.RoundingLevel` (`Line`).
+Rounding is one site setting, **Settings** → **Commerce** → **Tax Calculation** (`TaxCalculationSettings.RoundingLevel`, group `tax-calculation`, permission **Manage taxation**), that the checkout and [invoices](invoicing#tax) both read through `ITaxRoundingLevelProvider`, so a cart and an invoice with the same lines come to the same tax. A calculation can still name its own level (`TaxCalculationContext.RoundingLevel`); a host without site settings falls back to `TaxationOptions.RoundingLevel` (`Line`).
 
 | Level (`TaxRoundingLevel`) | Behavior |
 |-------|----------|
@@ -500,9 +504,11 @@ Income Tax works out taxes on income: income tax withholding at every level (fed
 
 Each line has the tax code, name, jurisdiction, the jurisdiction that collects it (`CollectedBy`), the category, the payer (`IncomeTaxPayer`), the taxable income, the part withheld at a flat rate, and the amount. Register a provider with `services.TryAddEnumerable(ServiceDescriptor.Scoped<IIncomeTaxProvider, MyProvider>())`; Payroll's settings choose one when there are several, and with none chosen Payroll uses the only one besides the built-in rules. The built-in provider's stored name is `TaxTables`, kept from before the move so saved settings still name it.
 
+`IIncomeTaxProvider.GetElectionJurisdictionsAsync(date)` says which jurisdictions' elections the provider reads on a day, so Payroll asks people only for those. The default returns `null` (the provider can't tell, and Payroll asks for an election in every jurisdiction a person is registered or works in). The built-in provider returns the jurisdictions of its rules turned on and in effect that use elections or have an exemption allowance, reading the jurisdiction in `ElectionsFrom` when a rule names one (a city tax that takes the state certificate's exemptions asks for the state's election only).
+
 ### Income tax rules
 
-The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Commerce > Taxation > Income tax rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
+The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Commerce** → **Taxation** → **Income Tax Rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
 
 | Field | Use |
 | --- | --- |
@@ -615,13 +621,166 @@ A resident of a taxing city pays only its resident rate; anyone else who works i
 
 Form W-4's election adds **Nonresident alien** (`UnitedStatesIncomeTax.Fields.NonresidentAlien`): for a form from 2020 or later, the rule's `NonresidentAlienAddition` parameter (`UnitedStatesIncomeTax.NonresidentAlienAddition`, 16,100 in the 2026 recipe, from Publication 15-T) is added to the year's wages before withholding.
 
+## Tax returns
+
+The **Tax Returns** feature (`CrestApps.OrchardCore.Taxation.Returns`) files sales and use tax returns, and any tax a jurisdiction's return combines with them (such as a state's withholding). It never reads sales itself: the figures come from the modules that keep them, so a site with its own ledger files from its books. The screens are described in the [User Manual](../user-manual/finance/tax-returns.md).
+
+### Filing schedules
+
+A `MerchantTaxRegistration` has a `Filing` schedule (`TaxFilingSchedule`), or none when it files no return here:
+
+| Property | Meaning |
+| --- | --- |
+| `Frequency` | `Monthly`, `Quarterly` or `Annual` (`TaxFilingFrequencies`) |
+| `DueMonthsAfterPeriod`, `DueDay` | The return is due on `DueDay` of the month `DueMonthsAfterPeriod` after the period's last month (default the 20th of the month after); a day past the month's end is its last day |
+| `MoveToNextBusinessDay` | A due date on a Saturday or a Sunday moves to the Monday after (default on) |
+| `Form` | The `ITaxReturnForm` of the periodic returns; empty for the built-in `Generic` form |
+| `AnnualForm`, `AnnualDueMonthsAfterYear`, `AnnualDueDay` | A yearly reconciliation return filed besides the monthly or quarterly ones, such as a state's annual return |
+
+`TaxReturnPeriod` is a period (`Frequency`, `Start`, `End`) with its key (`2026-10`, `2026-Q3`, `2026`); `TaxReturnPeriod.Parse`, `For` and `Between` work periods out, and `TaxFilingSchedule.DueDateOf(period, annualReconciliation)` the due date. `ITaxReturnService.ListPeriodsAsync(from, to)` lists, for every active registration with a schedule, the periods that end in the span and that the registration is effective in, each with its due date and current return (`TaxReturnPeriodSummary`).
+
+### Returns
+
+A `TaxReturn` (YesSql collection `TaxReturns`) has its registration, jurisdiction, form, period and due date, the `Lines` the providers gave, the form's `Boxes`, the `AmountDue`, its `Payments`, `Notes`, and its status: `Draft`, `Ready`, `Filed` or `Amended`. One return per registration, form and period is current; an amendment is a new return with `AmendsId` and `Amendment` (1, 2...), and counts what was paid with the earlier one (`PaidWithEarlier`). `AmountPaid` and `Balance` are worked out.
+
+`ITaxReturnService`:
+
+| Method | Does |
+| --- | --- |
+| `PrepareAsync(registrationId, periodKey, annualReconciliation, user)` | A new draft, or the draft prepared again; refuses a ready or filed return |
+| `PrepareAgainAsync`, `MarkReadyAsync`, `ReopenAsync` | Draft only; draft to ready; ready back to draft |
+| `MarkFiledAsync(taxReturn, filedOn, confirmationNumber, channel, user)` | Refuses a day before the period ends (a return covers its whole period), works the boxes out again as filed that day, from the same lines, then marks it filed; the return it corrects becomes `Amended` |
+| `AmendAsync` | A new draft correcting a filed return |
+| `RecordPaymentAsync`, `RemovePaymentAsync` | Records or removes a payment (an id from the id generator); no money moves |
+
+A draft past its due date is worked out as filed today (in the site's time zone), so a late return shows its penalty.
+
+### Extension points
+
+| Interface | Registration | Responsibility |
+| --- | --- | --- |
+| `ITaxReturnDataProvider` (`Name`, `ContributeAsync(TaxReturnDataContext)`) | `services.AddTaxReturnDataProvider<T>()` | Adds a period's figures to `context.Lines` (and notes to `context.Notes`); every provider runs for every return. A line has a `Kind` (`TaxReturnLineKinds`: `GrossSales`, `ExemptSales`, `TaxableSales`, `UseTaxPurchases`, `Withholding`, `Credit`, `ExcessCollected`, or a form's own), `JurisdictionId`, `TaxType` (such as `UseTax`), `FormLine`, `Category`, `Amount` and `TaxAmount` |
+| `ITaxReturnForm` (`Name`, `DisplayName`, `ComputeAsync(TaxReturnFormContext)`) | `services.AddTaxReturnForm<T>()` | Works out the return's `Boxes` and `AmountDue` from its lines; `context.FiledOn` is the day it counts as filed (for discounts, penalties and interest). The built-in `Generic` form sums the lines by kind |
+| `ITaxReturnObserver` (`ChangedAsync(TaxReturnChange)`) | `services.AddTaxReturnObserver<T>()` | Hears `Prepared`, `Ready`, `Reopened`, `Filed`, `Amended`, `PaymentRecorded` and `PaymentRemoved`, after the change is saved in the session and before it is committed: post a filed return or a payment to the books, or record a payroll tax deposit for the withholding paid with it |
+
+**The payment form.** The **Payments** card's form is built through `IDisplayManager<TaxReturnPaymentEntry>`, from the return being paid (`Return`) and the `TaxReturnPayment` being recorded (`Payment`). Tax Returns' driver edits the amount, the day, the reference and the method; a pack adds a display driver that edits what its observer needs into `Payment.Properties`, such as the account the payment came from, and checks `entry.Return` (its jurisdiction or form) so its fields show only on its returns. A driver that adds a model error stops the payment.
+
+```csharp
+internal sealed class PaidFromDisplayDriver : DisplayDriver<TaxReturnPaymentEntry>
+{
+    public override IDisplayResult Edit(TaxReturnPaymentEntry entry, BuildEditorContext context)
+        => entry.Return?.JurisdictionId == "us-mi"
+            ? Initialize<PaidFromViewModel>("TaxReturnPaymentEntryPaidFrom_Edit", model => model.AccountId = entry.Payment.Properties.GetValueOrDefault("PaidFrom") as string).Location("Content:5")
+            : null;
+
+    public override async Task<IDisplayResult> UpdateAsync(TaxReturnPaymentEntry entry, UpdateEditorContext context)
+    {
+        if (entry.Return?.JurisdictionId != "us-mi")
+        {
+            return null;
+        }
+
+        var model = new PaidFromViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+        entry.Payment.Properties["PaidFrom"] = model.AccountId;
+
+        return Edit(entry, context);
+    }
+}
+
+// services.AddDisplayDriver<TaxReturnPaymentEntry, PaidFromDisplayDriver>();
+```
+
+**When an observer fails.** An observer runs before the change is committed. When one throws on a return's page (recording or removing a payment, marking filed, amending, recording an e-file answer), the session is cancelled, so nothing of the change is saved, the error is logged, and the person sees *The change was not saved* instead of an error page.
+
+A site that keeps its own ledger implements a data provider that reads its books for the registration's jurisdiction and period, and a form for each jurisdiction's return:
+
+```csharp
+public sealed class LedgerTaxReturnDataProvider : ITaxReturnDataProvider
+{
+    private readonly ILedgerTaxQueries _ledger;
+
+    public LedgerTaxReturnDataProvider(ILedgerTaxQueries ledger)
+    {
+        _ledger = ledger;
+    }
+
+    public string Name => "Ledger";
+
+    public async Task ContributeAsync(TaxReturnDataContext context, CancellationToken cancellationToken = default)
+    {
+        var sales = await _ledger.SalesAsync(context.Registration.JurisdictionId, context.Period.Start, context.Period.End, cancellationToken);
+
+        context.Return.Currency = "USD";
+        context.Lines.Add(new TaxReturnLine { Kind = TaxReturnLineKinds.GrossSales, Amount = sales.Gross });
+        context.Lines.Add(new TaxReturnLine { Kind = TaxReturnLineKinds.TaxableSales, TaxType = TaxTypeNames.SalesTax, Amount = sales.Taxable, TaxAmount = sales.TaxCollected });
+        context.Lines.Add(new TaxReturnLine { Kind = TaxReturnLineKinds.UseTaxPurchases, TaxType = TaxTypeNames.UseTax, Amount = sales.UseTaxPurchases, TaxAmount = sales.UseTax });
+    }
+}
+```
+
+A registration with returns can't be deleted from **Tax registrations**.
+
+**Use tax.** `TaxTypeNames.UseTax` (`UseTax`) is a well-known tax type, seeded on new sites and added to existing ones by a migration, for the tax a business owes on what it bought or took from stock without paying sales tax.
+
+### Permissions
+
+| Permission | Grants |
+| --- | --- |
+| `ManageTaxReturns` | **Commerce** → **Taxation** → **Tax Returns**: see, prepare, prepare again, mark ready, reopen, delete a draft with no payment |
+| `FileTaxReturns` | Mark filed, amend, record and remove payments, file electronically; it grants `ManageTaxReturns` |
+
+Both are given to Administrator by default.
+
+### Recipes and deployment
+
+The `TaxReturns` step (entries `TaxReturns`) and the **Tax returns** deployment step import and export returns, matched by `ItemId`. The registrations' `Filing` schedule travels with the `MerchantTaxRegistration` step:
+
+```json
+{
+  "steps": [
+    {
+      "name": "MerchantTaxRegistration",
+      "MerchantTaxRegistrations": [
+        {
+          "Name": "Michigan sales, use and withholding",
+          "JurisdictionId": "us-mi",
+          "RegistrationNumber": "12-3456789",
+          "IsActive": true,
+          "Filing": { "Frequency": "Monthly", "DueMonthsAfterPeriod": 1, "DueDay": 20, "MoveToNextBusinessDay": true, "AnnualForm": "US-MI-5081", "AnnualDueMonthsAfterYear": 2, "AnnualDueDay": 28 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## E-filing
+
+The **Tax E-Filing** feature (`CrestApps.OrchardCore.Taxation.EFiling`) files documents electronically. An `EFileSubmission` (YesSql collection `TaxReturns`) is one attempt: the target (`TargetType`, `TargetId`), the format, the channel, the file built (base64 `Content`), its status (`Created`, `Submitted`, `Accepted`, `Rejected`, `Failed`), whether it is a test (`IsTest`), the choices made when it was submitted (`Options`), the agency's `ExternalId`, `ConfirmationNumber` and `Messages`.
+
+| Interface | Registration | Responsibility |
+| --- | --- | --- |
+| `IEFileTargetProvider` (`TargetType`, `FindAsync`, `CanFileAsync`, `AcceptedAsync`) | `services.AddEFileTargetProvider<T>()` | Describes a kind of document as an `EFileTarget` (with `NotFileableReason` when it can't be filed now), checks who may file it, and marks it filed once accepted. Tax returns (`TaxReturn`) are built in: a return must be `Ready` and its period over (in the site's time zone), and needs `FileTaxReturns` |
+| `IEFileFormat` (`Name`, `DisplayName`, `CanWrite`, `WriteAsync(target, submission)`) | `services.AddEFileFormat<T>()` | Writes a target into an `EFilePayload`; its `Problems` stop the submission. The submission, not saved yet, carries the `Options` chosen and `IsTest`. `TaxReturnJson` writes any return as JSON and needs the registration number |
+| `IEFileTransport` (`Name`, `DisplayName`, `IsManual`, `SupportsTestSubmissions`, `CanSend`, `SendAsync`, `CheckAsync`) | `services.AddEFileTransport<T>()` | Sends the file and asks for the agency's answer. A channel with `SupportsTestSubmissions` sends a submission marked `IsTest` to the agency's test system. `Manual` hands over the file to download; the person records the answer |
+
+`IEFilingService.SubmitAsync(request, user)` takes an `EFileSubmissionRequest`: the `Target`, the `Format` and `Transport` names, `IsTest`, and the `Options` for the format and the channel, kept on the submission. The `SubmitAsync(target, format, transport, user)` extension sends no options and no test. It refuses a test through a channel that takes none, a target already accepted (a test's acceptance does not count) or with a submission waiting, builds the file, sends it (a channel that throws leaves the submission `Failed`), and records the answer; `CheckAsync` asks a channel that is not manual; `RecordAnswerAsync(submission, accepted, confirmationNumber, filedOn, message, user)` records the answer to a manual submission. An accepted submission marks the document filed through its target provider (for a return, `MarkFiledAsync` with the confirmation number and the channel's name); when that fails, the submission stays `Submitted`. The **Tax e-filing acknowledgements** background task asks the channels for the answers to up to 50 submissions every 15 minutes.
+
+**Test submissions.** An agency's acceptance testing (a state's ATS, for example) answers *accepted* without filing anything. A submission marked `IsTest`, asked for on the submit form or set by a channel whose `EFileTransportResult.IsTest` says it sent the file to a test system, is recorded with the agency's answer and confirmation number, but its acceptance never calls the target provider: the return stays ready to file, and a test the agency accepted does not stop the real submission.
+
+**The submit form.** The **Electronic filing** card's form is built through `IDisplayManager<EFileSubmissionRequest>`. E-Filing's driver edits the format and channel and, when a channel offered takes tests, the **Test submission** box; a pack adds a display driver that edits its own choices into `request.Options` (such as whether the agency debits the payment and on which day), checking `request.Target` so they show only for its documents. The format reads them in `WriteAsync` and the channel in `SendAsync`, from `submission.Options`.
+
+A state's own XML schema and gateway are a format and a transport in a pack; the `EFileSubmissions` step (entries `Submissions`) and the **E-file submissions** deployment step move submissions between sites.
+
 ## TaxJar
 
 The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxation) works out tax with TaxJar for orders to the countries it's set up for, in place of the store's rules. The settings screen is described in the [User Manual](../user-manual/commerce/taxes.md#taxjar).
 
 | | |
 | --- | --- |
-| **Settings** | **Settings > Commerce > TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
+| **Settings** | **Settings** → **Commerce** → **TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
 | **Provider** | `TaxJarTaxDeterminationProvider` (`ITaxDeterminationProvider`, `Order` 100), with the named `HttpClient` `TaxJar` (10-second timeout) |
 | **Options** | `TaxJarOptions`: `ApiKey` (unprotected), `UseSandbox`, `Countries`, and `BaseUrl` (`https://api.taxjar.com/v2/`, or `https://api.sandbox.taxjar.com/v2/` with the sandbox) |
 
@@ -633,7 +792,7 @@ The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxati
 
 | TaxJar field | From |
 | --- | --- |
-| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Settings > Commerce > Tax origin**) |
+| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Settings** → **Commerce** → **Tax Origin**) |
 | `to_country`, `to_zip`, `to_state`, `to_city`, `to_street` | `TaxCalculationContext.Destination` |
 | `amount`, `shipping` | The non-shipping and the shipping items' unit price times quantity, less their discounts |
 | `line_items` | Each non-shipping item: `id`, `quantity`, `unit_price`, `discount`, and `product_tax_code` from `TaxableItem.TaxClassificationCode` |
@@ -767,9 +926,9 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 
 ### EU VAT standard rates
 
-The Taxation module ships the **EU VAT standard rates** recipe (`EuVatStandardRates`, `Recipes/eu-vat.recipe.json`, not a setup recipe), run from **Configuration > Recipes**. It enables Taxation and adds the 27 EU member states as `TaxJurisdiction`s (level `Country`, with the ISO code as code and country, Greece as `GR`), and a `Percentage` `TaxRule` for each (`TaxType` `VAT`, `TaxName` *VAT*, the country's standard rate, `AppliesToShipping`, priority 0). Its entries have fixed `ItemId`s (`4evatj…` for jurisdictions, `4evatr…` for rules), so running it again updates the same entries. Rates change: check them before relying on the recipe, and add reduced-rate rules by category.
+The Taxation module ships the **EU VAT standard rates** recipe (`EuVatStandardRates`, `Recipes/eu-vat.recipe.json`, not a setup recipe), run from **Configuration** → **Recipes**. It enables Taxation and adds the 27 EU member states as `TaxJurisdiction`s (level `Country`, with the ISO code as code and country, Greece as `GR`), and a `Percentage` `TaxRule` for each (`TaxType` `VAT`, `TaxName` *VAT*, the country's standard rate, `AppliesToShipping`, priority 0). Its entries have fixed `ItemId`s (`4evatj…` for jurisdictions, `4evatr…` for rules), so running it again updates the same entries. Rates change: check them before relying on the recipe, and add reduced-rate rules by category.
 
-**Deployment steps** with the same five names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
+**Deployment steps** with the same five names are available under **Configuration** → **Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
 
 ### Tax registrations and exemption certificates
 

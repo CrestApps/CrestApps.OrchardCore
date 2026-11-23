@@ -10,7 +10,7 @@ This page covers what helps you set up Workforce and use what it records: the **
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Workers > Get started; Reports; Workflows; Configuration > Recipes; Configuration > Import/Export |
+| **Menu** | **Workforce** → **Workers** → **Get started**; Reports; Workflows; **Configuration** → **Recipes**; **Configuration** → **Import/Export** |
 | **Permission** | Manage workforce teams for Get Started; the permission of each data set for reports |
 | **Feature** | Workforce, and Reports, Workflows, AI or Workforce API for each part |
 
@@ -18,9 +18,9 @@ This page covers what helps you set up Workforce and use what it records: the **
 
 ## Get started
 
-Open **Workforce > Workers** and choose **Get started**. The page lists the steps of setting up Workforce in order: the team tree, workers, shift planning, time off, labor rules, the time clock and My Work. Each step shows what is there now, is marked **Done** once it is set up, and has a button to its page. A step whose feature is off says so, with a link to the features.
+Open **Workforce** → **Workers** and choose **Get started**. The page lists the steps of setting up Workforce in order: the team tree, workers, shift planning, time off, labor rules, the time clock and My Work. Each step shows what is there now, is marked **Done** once it is set up, and has a button to its page. A step whose feature is off says so, with a link to the features.
 
-To try Workforce with sample data, run **Workforce sample** under **Configuration > Recipes**. It adds a region with a clinic and two teams, six workers, early and late shift templates, vacation and sick time, an example rule set, and a time clock with pay periods every two weeks. Link the sample workers to user accounts under **Workforce > Workers** to try My Work as them.
+To try Workforce with sample data, run **Workforce sample** under **Configuration** → **Recipes**. It adds a region with a clinic and two teams, six workers, early and late shift templates, vacation and sick time, an example rule set, and a time clock with pay periods every two weeks. Link the sample workers to user accounts under **Workforce** → **Workers** to try My Work as them.
 
 :::warning[The sample rule set is an example]
 The sample's labor rules show how rule sets work. Check the rules and numbers that apply where your teams work before you use them.
@@ -75,4 +75,4 @@ With **AI** on, these tools can be chosen for an AI profile, under **Workforce**
 
 ## Moving settings between sites
 
-Under **Configuration > Import/Export > Deployment Plans**, add the **Workforce settings** step to export shift templates, time-off types, policies, allotments and blackout dates, and the time clock's pay periods, pay codes and policies, for the features that are on. Teams, activities and types are written by name, so they match the teams of the site you import into. Add the **Workforce teams and workers** step to bring the teams too.
+Under **Configuration** → **Import/Export** → **Deployment Plans**, add the **Workforce settings** step to export shift templates, time-off types, policies, allotments and blackout dates, and the time clock's pay periods, pay codes and policies, for the features that are on. Teams, activities and types are written by name, so they match the teams of the site you import into. Add the **Workforce teams and workers** step to bring the teams too.

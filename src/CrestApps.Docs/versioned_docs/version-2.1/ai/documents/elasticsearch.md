@@ -22,5 +22,5 @@ This module integrates Elasticsearch as an embedding and search provider for the
 ## Getting Started
 
 1. Enable the `AI Documents indexing using Elasticsearch` feature in Orchard Core admin.
-2. Configure an Elasticsearch connection and create an index via **Search > Indexing**.
-3. Select the index in **Settings > Chat Interaction**.
+2. Configure an Elasticsearch connection and create an index via **Search** → **Indexing**.
+3. Select the index in **Settings** → **Chat Interaction**.

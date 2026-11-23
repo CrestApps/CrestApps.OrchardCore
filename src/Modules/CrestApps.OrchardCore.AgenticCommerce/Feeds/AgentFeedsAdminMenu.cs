@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.AgenticCommerce.Feeds;
 
 /// <summary>
-/// Settings › Commerce › Agent feeds.
+/// Settings › Commerce › Agent Feeds.
 /// </summary>
 internal sealed class AgentFeedsAdminMenu : AdminNavigationProvider
 {
@@ -20,7 +20,7 @@ internal sealed class AgentFeedsAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                    .Add(S["Agent feeds"], S["Agent feeds"].PrefixPosition(), feeds => feeds
+                    .Add(S["Agent Feeds"], S["Agent Feeds"].PrefixPosition(), feeds => feeds
                         .Id("agentFeedsSettings")
                         .Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = AgentFeedSettingsDisplayDriver.GroupId })
                         .Permission(AgentFeedPermissions.ManageAgentFeeds)

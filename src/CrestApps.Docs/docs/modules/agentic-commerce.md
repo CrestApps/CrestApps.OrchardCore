@@ -17,7 +17,7 @@ The admin screens are described in the User Manual: [Sell through AI agents](../
 
 | Feature ID | Name | Depends on | What it adds |
 | --- | --- | --- | --- |
-| `CrestApps.OrchardCore.AgenticCommerce` | Agentic Commerce | Commerce, Store Profile, Checkout, Orders, Products, Webhooks, Secrets | Agent platforms (**Commerce > AI agents**), the settings (**Settings > Commerce > Agentic commerce**), the store's signing keys, the protocol-neutral agent checkout, the hand-off link, order updates, and the payment handlers. |
+| `CrestApps.OrchardCore.AgenticCommerce` | Agentic Commerce | Commerce, Store Profile, Checkout, Orders, Products, Webhooks, Secrets | Agent platforms (**Commerce** → **AI Agents**), the settings (**Settings** → **Commerce** → **Agentic Commerce**), the store's signing keys, the protocol-neutral agent checkout, the hand-off link, order updates, and the payment handlers. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp` | Universal Commerce Protocol | Agentic Commerce | The UCP profile at `/.well-known/ucp`, the REST binding for checkout and orders, the fulfillment, discount and buyer consent extensions, and signed order webhooks. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | UCP Account Linking | UCP, OpenID Server | The `dev.ucp.common.identity_linking` capability: a buyer links their store account to an agent through the tenant's OpenID server. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | UCP Catalog and Cart | UCP, Product Listing | Catalog search and lookup, and the UCP cart. |
@@ -134,7 +134,7 @@ An agent names its platform's profile in the `UCP-Agent` header (`profile="https
 
 ## How a platform signs in
 
-Each business whose agents may buy is an `AgentPlatform`, kept with `IAgentPlatformStore` and edited under **Commerce > AI agents**. A request is signed in by one of these:
+Each business whose agents may buy is an `AgentPlatform`, kept with `IAgentPlatformStore` and edited under **Commerce** → **AI Agents**. A request is signed in by one of these:
 
 | Credential | How it is sent | Protocols |
 | --- | --- | --- |
@@ -239,7 +239,7 @@ The agent's request runs as the platform, and a store checkout would otherwise t
 
 An ACP agent that can run 3-D Secure itself authenticates the buyer and sends the result, instead of handing the buyer to the store's checkout. The store asks for it only when all of these hold:
 
-- **Let agents run 3-D Secure** is on in **Settings › Commerce › Agentic commerce**, with the **Acquirer BIN**, **Acquirer country**, **Acquirer merchant ID** and **Merchant name** (and, when the acquirer gave one, the **3-D Secure requestor ID**). They are `AgenticCommerceSettings.EnableDelegatedAuthentication`, `AcquirerBin`, `AcquirerCountry`, `AcquirerMerchantId`, `AuthenticationMerchantName` and `ThreeDSecureRequestorId`.
+- **Let agents run 3-D Secure** is on in **Settings** → **Commerce** → **Agentic Commerce**, with the **Acquirer BIN**, **Acquirer country**, **Acquirer merchant ID** and **Merchant name** (and, when the acquirer gave one, the **3-D Secure requestor ID**). They are `AgenticCommerceSettings.EnableDelegatedAuthentication`, `AcquirerBin`, `AcquirerCountry`, `AcquirerMerchantId`, `AuthenticationMerchantName` and `ThreeDSecureRequestorId`.
 - The agent's create request says it can: `capabilities.interventions.supported` holds `3ds`. The answer then carries `capabilities.interventions.supported: ["3ds"]`.
 - The payment provider takes an outside 3-D Secure result (`PaymentProviderCapabilities.AcceptsExternalAuthentication`), as Stripe and the test provider do.
 - The card's brand has a directory server (`visa`, `mastercard` or `american_express`). The agent's `instrument.credential.network` gives it, or the provider reports it (`PaymentBeginResult.CardBrand`).
@@ -266,7 +266,7 @@ UCP's Embedded Checkout Protocol (ECP) lets a platform show the store's checkout
 
 It is off until both of these are set:
 
-- **Allow embedded checkout** in **Settings > Commerce > Agentic commerce** (`AgenticCommerceSettings.AllowEmbeddedCheckout`, off at first);
+- **Allow embedded checkout** in **Settings** → **Commerce** → **Agentic Commerce** (`AgenticCommerceSettings.AllowEmbeddedCheckout`, off at first);
 - the platform's **Embedding origins** (`AgentPlatform.EmbeddedCheckoutOrigins`): the `https://host[:port]` origins of its pages that frame the checkout. They are checked and normalized when saved (`EmbeddingPolicy.NormalizeOrigin`), and `http` is only accepted on a loopback host, for development. They aren't secret, so they travel with the platform in deployments and recipes.
 
 Then the store's profile lists the `embedded` transport (`services/shopping/embedded.openrpc.json`), and every checkout answer whose `continue_url` is the hand-off link carries the embedded service binding the checkout binding requires: `ucp.services["dev.ucp.shopping"]` with `{ "transport": "embedded", "config": { "delegate": [] } }`. A `continue_url` that is a bank's 3-D Secure page gets no binding.
@@ -491,11 +491,11 @@ Agent platforms travel with the **AI agent platforms** deployment step and the `
 }
 ```
 
-The module adds two recipes, which you run from **Configuration > Recipes**:
+The module adds two recipes, which you run from **Configuration** → **Recipes**:
 
 | Recipe | What it does |
 | --- | --- |
-| `AgenticCommerceSample` (Agentic commerce: sample) | Turns on Test payments, Agentic Commerce, UCP, UCP Catalog and Cart, UCP over MCP, UCP over A2A, ACP, ACP over MCP and Agent Product Feeds, and adds a *Test agent platform* in test mode for UCP and ACP. Give it an API key under **Commerce > AI agents**. |
+| `AgenticCommerceSample` (Agentic commerce: sample) | Turns on Test payments, Agentic Commerce, UCP, UCP Catalog and Cart, UCP over MCP, UCP over A2A, ACP, ACP over MCP and Agent Product Feeds, and adds a *Test agent platform* in test mode for UCP and ACP. Give it an API key under **Commerce** → **AI Agents**. |
 | `AgenticCommerceAccountLinking` (Agentic commerce: UCP account linking) | Turns on the OpenID server, OpenID token validation and UCP Account Linking, and adds the UCP scopes. See [Account linking](#account-linking-ucp). |
 
 The module has no `appsettings.json` configuration of its own.
@@ -680,7 +680,7 @@ The **Agent Product Feeds** feature (`CrestApps.OrchardCore.AgenticCommerce.Feed
 - A daily push of the full OpenAI feed over SFTP.
 - An Agentic Commerce Protocol (ACP) feed API client that keeps agent platforms that host one up to date.
 
-**Settings > Commerce > Agent feeds** (permission `ManageAgentFeeds`, settings group `agent-feeds`) shows the feed addresses, how many items are in the feed and why the others were left out, the SFTP push and the feed APIs, the result of the last pushes, and a **Push now** button. See [Product listings](../user-manual/commerce/product-listings.md#feeds-for-ai-agents) for the screen.
+**Settings** → **Commerce** → **Agent Feeds** (permission `ManageAgentFeeds`, settings group `agent-feeds`) shows the feed addresses, how many items are in the feed and why the others were left out, the SFTP push and the feed APIs, the result of the last pushes, and a **Push now** button. See [Product listings](../user-manual/commerce/product-listings.md#feeds-for-ai-agents) for the screen.
 
 ### The OpenAI feed
 

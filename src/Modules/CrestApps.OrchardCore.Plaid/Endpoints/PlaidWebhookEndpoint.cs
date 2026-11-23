@@ -29,7 +29,7 @@ internal static class PlaidWebhookEndpoint
 
     public static IEndpointRouteBuilder AddPlaidWebhookEndpoint(this IEndpointRouteBuilder builder)
     {
-        builder.MapPost("plaid/webhook", HandleAsync)
+        builder.MapPost(PlaidConstants.WebhookPath, HandleAsync)
             .AllowAnonymous()
             .WithName(PlaidConstants.WebhookRouteName)
             .DisableAntiforgery();

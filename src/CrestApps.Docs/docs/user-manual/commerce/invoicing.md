@@ -6,11 +6,11 @@ technical_manual:
   - modules/invoicing
 ---
 
-An **invoice** tells a customer what they owe you, line by line, with tax. While it is a **draft** you can change it freely. When you **issue** it, it gets its number, such as **INV-1001**, and what it says is owed is added to the customer's balances under **Commerce > Transactions**, where it is paid, reminded about and reported like any other balance. An issued invoice never changes: it is corrected with a credit note, voided, or written off.
+An **invoice** tells a customer what they owe you, line by line, with tax. While it is a **draft** you can change it freely. When you **issue** it, it gets its number, such as **INV-1001**, and what it says is owed is added to the customer's balances under **Commerce** → **Transactions**, where it is paid, reminded about and reported like any other balance. An issued invoice never changes: it is corrected with a credit note, voided, or written off.
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Invoices; Settings > Commerce > Invoicing |
+| **Menu** | **Commerce** → **Invoices**; **Settings** → **Commerce** → **Invoicing** |
 | **Permission** | View invoices; Create invoices and change drafts; Issue invoices; Void and write off invoices; Issue credit notes; Manage invoicing settings |
 | **Feature** | Invoicing |
 
@@ -18,11 +18,11 @@ An **invoice** tells a customer what they owe you, line by line, with tax. While
 
 ## Find an invoice
 
-Go to **Commerce > Invoices**. The newest invoices come first. Search by number, customer name or your reference, and narrow the list by **Status** (draft, open, written off, void) and **Payment** (unpaid, partly paid, paid). Click an invoice to open its page.
+Go to **Commerce** → **Invoices**. The newest invoices come first. Search by number, customer name or your reference, and narrow the list by **Status** (draft, open, written off, void) and **Payment** (unpaid, partly paid, paid). Click an invoice to open its page.
 
 ## Create an invoice
 
-1. Go to **Commerce > Invoices** and click **New invoice**.
+1. Go to **Commerce** → **Invoices** and click **New invoice**.
 2. Under **Billed to**, click **Find a customer** and pick a user, customer or business account. To bill someone you only know by name, leave it empty and fill in **Name on the invoice** and **E-mail**.
 3. Under **Lines**, fill in the first row: pick its **Kind**, type what it is for (the details button opens a longer description), the **Quantity**, the **Unit**, the **Price**, a **Discount %** if you give one, and its **Tax category**. With **Products** on, the box button next to the description finds a product and fills the name, price and tax category. A **Text** line prints a note and a **Section heading** a heading between lines; neither has an amount.
 4. Click **Add line** for each further line, the cross at the end of a row to remove it, and the arrows to move it up or down. Each line's amount and the totals change as you type; the tax shown is an estimate from each line's last saved rate, and is worked out again when you save.
@@ -41,7 +41,7 @@ On the draft's page, click **Issue** and confirm. You need **Issue invoices**.
 - It keeps the **Issue date** you chose on the draft, or is dated today when you left it empty. It can't be dated after today unless **Allow issue dates after today** is on. Its due date comes from its payment term and that date.
 - Your business details are copied onto it from the store profile, and the customer's details from their billing profile, so later changes to either never change it.
 - What it says is owed is added to the customer's balances. An invoice that totals zero is paid at once.
-- Its page shows what was paid and what is still due, and **Open the transaction** takes you to the balance under **Commerce > Transactions**, where payments are recorded. The balance's page names the invoice and links back to it.
+- Its page shows what was paid and what is still due, and **Open the transaction** takes you to the balance under **Commerce** → **Transactions**, where payments are recorded. The balance's page names the invoice and links back to it.
 - It can't be changed any more: **Edit** opens its page instead.
 
 ## Send, print and share an invoice
@@ -92,13 +92,13 @@ You need **Void and write off invoices** for these, and you are asked for a reas
 
 ## Choose what new invoices start with
 
-1. Go to **Settings > Commerce > Invoicing**.
+1. Go to **Settings** → **Commerce** → **Invoicing**.
 2. Fill in the fields below.
 3. Click **Save**.
 
 | Field | What it does |
 | --- | --- |
-| **Default payment term** | When an invoice is due, for customers who have no term of their own. **Due on issue** means it is due the day it is issued. Terms are kept under **Commerce > Payment terms**. |
+| **Default payment term** | When an invoice is due, for customers who have no term of their own. **Due on issue** means it is due the day it is issued. Terms are kept under **Commerce** → **Payment Terms**. |
 | **Default currency** | The three-letter code, such as **USD**, of an invoice whose customer has no currency of their own. |
 | **Prices include tax** | Line prices are taken as including tax, and the tax is worked out of them. |
 | **Let customers pay part of an invoice** | Customers can pay any amount up to what is due from the invoice's pay link. |
@@ -115,7 +115,7 @@ With **Workflows** enabled, a workflow can start when an invoice is created, iss
 
 For example, to thank customers when they pay, start a workflow with **Invoice Paid** and send an e-mail to `{{ Workflow.Input.BillToEmail }}`.
 
-With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration > Webhooks** (see [Webhooks](webhooks.md)).
+With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration** → **Webhooks** (see [Webhooks](webhooks.md)).
 
 ## Ask for a deposit first
 
@@ -134,11 +134,11 @@ With **Installment Plans** enabled, an invoice can be paid in parts that fall du
 
 ## Charge an invoice to the customer's saved card
 
-Tick **Charge the customer's saved card** in the invoice editor, or choose **Issues the invoice and charges the customer's saved payment method** on a recurring plan. When the invoice is issued, it is charged to the customer's default saved card: at once when it is due, or on the morning of its due date. A declined card is tried again on the retry schedule set under **Settings > Commerce > Transactions**. When the customer has no saved card (customers billed by name and e-mail only never do), or every try is declined, the invoice is e-mailed to them to pay instead. The invoice's transaction shows the scheduled charge; see [Transactions](transactions.md#a-balance-charged-to-a-saved-card).
+Tick **Charge the customer's saved card** in the invoice editor, or choose **Issues the invoice and charges the customer's saved payment method** on a recurring plan. When the invoice is issued, it is charged to the customer's default saved card: at once when it is due, or on the morning of its due date. A declined card is tried again on the retry schedule set under **Settings** → **Commerce** → **Transactions**. When the customer has no saved card (customers billed by name and e-mail only never do), or every try is declined, the invoice is e-mailed to them to pay instead. The invoice's transaction shows the scheduled charge; see [Transactions](transactions.md#a-balance-charged-to-a-saved-card).
 
 ## Estimates
 
-With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes you send before the work.
+With **Invoicing Estimates** enabled, **Commerce** → **Estimates** lists the quotes you send before the work.
 
 1. Click **New estimate**, choose who it is for, add the lines, and set **Valid until**, a **Deposit** if you ask one, and **When accepted** (do nothing, make the invoice, or make a deposit invoice).
 2. Click **Save and send**. The estimate gets its number, such as **EST-1001**, and can no longer be changed. With e-mail set up, **Send to the customer** e-mails it with its PDF; otherwise copy the **Link for the customer** from its page.
@@ -147,7 +147,7 @@ With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes 
 
 To bill a large job as it goes, use **Invoice in part** on the estimate's page: enter the percent of each line done (for example 30), and click **Invoice these percents**. A draft invoice bills that share; the card shows how much of each line is invoiced, and no line can be billed past 100%. Voiding one of these invoices makes its share billable again.
 
-To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings > Commerce > Invoicing**.
+To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings** → **Commerce** → **Invoicing**.
 
 ## Draft orders and quotes
 
@@ -155,7 +155,7 @@ With **Orders** on, **Send invoice** on a draft order issues a numbered invoice 
 
 ## Orders paid on account
 
-When a customer checks out on account terms (or pays later) and the whole order goes on their account, the order gets a numbered invoice automatically, with the order's lines, shipping, discounts and tax, billed to their account. It is the same debt, not a second one: paying the invoice pays the order's balance. If the invoice's total doesn't match the order's (for example because tax came out differently), it is left as a draft under **Commerce > Invoices** for you to check and issue.
+When a customer checks out on account terms (or pays later) and the whole order goes on their account, the order gets a numbered invoice automatically, with the order's lines, shipping, discounts and tax, billed to their account. It is the same debt, not a second one: paying the invoice pays the order's balance. If the invoice's total doesn't match the order's (for example because tax came out differently), it is left as a draft under **Commerce** → **Invoices** for you to check and issue.
 
 A subscription paid with **Pay Later** is invoiced for its first period when the customer checks out, and again at each renewal: when a period ends and the next one's balance is recorded, an invoice for that period is issued automatically for the same balance, so paying the invoice pays the renewal. When the subscription was bought in an order, the first period is on the order's invoice. Anything else bought with Pay Later or on account terms outside an order, such as a membership, gets an invoice the same way.
 
@@ -165,7 +165,7 @@ With AI on, tick the **Invoicing** tools on an AI profile's **Capabilities** tab
 
 ## Approve large invoices
 
-To have large invoices approved before they go out, set **Approve invoices from** under **Settings > Commerce > Invoicing** (for example 1000; 0 means every invoice). Such an invoice is not issued when you click **Issue**: click **Submit for approval** on its page instead. Someone with the **Approve invoices** permission, other than you, then opens it and clicks **Approve and issue**, or enters a reason and clicks **Reject**, which makes it a draft again with the reason shown.
+To have large invoices approved before they go out, set **Approve invoices from** under **Settings** → **Commerce** → **Invoicing** (for example 1000; 0 means every invoice). Such an invoice is not issued when you click **Issue**: click **Submit for approval** on its page instead. Someone with the **Approve invoices** permission, other than you, then opens it and clicks **Approve and issue**, or enters a reason and clicks **Reject**, which makes it a draft again with the reason shown.
 
 ## Revise an invoice
 
@@ -175,7 +175,7 @@ To change an invoice you issued that nothing was paid on, click **Draft a revisi
 
 With **Invoicing Billing** enabled:
 
-- **Commerce > Unbilled charges** keeps what you will bill a customer later: click **Add a charge**, choose the customer, describe it, and enter the quantity, your cost and a **Markup (%)** (for example 10 to pass an expense on at cost plus 10%).
+- **Commerce** → **Unbilled Charges** keeps what you will bill a customer later: click **Add a charge**, choose the customer, describe it, and enter the quantity, your cost and a **Markup (%)** (for example 10 to pass an expense on at cost plus 10%).
 - On a draft invoice's page, the **Unbilled work** card lists the customer's unbilled charges: tick them and click **Add the charges chosen**. With Time Tracker on, choose a person, the days and the **Rate an hour**, click **Find time**, and add the hours you want to bill.
 
 A charge or hours on an invoice are billed: they aren't offered again, and billed time can't be changed in Time Tracker. Taking the line off the draft, deleting the draft or voiding the invoice makes them unbilled again. A recurring plan can bill the customer's charges on each run: tick **Also bill the customer's unbilled charges**.
@@ -188,7 +188,7 @@ With **Exchange Rates** on and a reporting currency set (see [Exchange rates](ex
 
 To bill customers for what they use, such as API calls, seats or storage:
 
-1. Under **Commerce > Usage meters**, click **Add usage meter**. Give it a **Name** (printed on invoices), a **Code** (such as `api-calls`), a **Unit** (such as calls) and choose how **A period's usage is** worked out: added up, the most at once, or the latest reading. Click **Save**.
+1. Under **Commerce** → **Usage Meters**, click **Add usage meter**. Give it a **Name** (printed on invoices), a **Code** (such as `api-calls`), a **Unit** (such as calls) and choose how **A period's usage is** worked out: added up, the most at once, or the latest reading. Click **Save**.
 2. Record usage. Your systems usually send it through the commerce API; you can also click **Usage** on the meter, choose the customer, enter the quantity and when, and click **Record**. Give an **Event id** to make sure a retry is never counted twice.
 3. On the customer's recurring plan, in the **Usage** card, choose the meter and enter the price tiers: for each, the quantity it goes **Up to** and the **Price of each**, leaving the last tier's limit empty. Choose **Graduated** to price each band at its own price (the first 1,000 at one price, the next at another), or **Volume** to price all of it at the price of the tier it reaches. Click **Update** for another empty tier row or usage charge.
 
@@ -196,7 +196,7 @@ Each run bills the usage of the period that just ended, from the previous run up
 
 ## Late fees
 
-With **Invoicing Collections** enabled, **Commerce > Late fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.
+With **Invoicing Collections** enabled, **Commerce** → **Late Fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.
 
 1. Click **Add late-fee policy** and give it a name.
 2. Choose whether **Each fee is** a fixed amount or a percent of what is still due, and enter it.
@@ -208,7 +208,7 @@ Fees are charged automatically every hour. An overdue invoice's page lists its l
 
 ## Send a customer their statement
 
-With **Invoicing Collections** enabled, **Commerce > Statements** prints a customer's statement:
+With **Invoicing Collections** enabled, **Commerce** → **Statements** prints a customer's statement:
 
 1. Choose the customer (a user, customer or business account).
 2. Choose **The invoices still owed, with how late each is**, or **What was charged and paid in a period** and its dates.
@@ -219,7 +219,7 @@ A statement of a period starts with the balance brought forward, lists every inv
 
 ## Recurring invoices
 
-With **Invoicing Recurring** enabled, **Commerce > Recurring invoices** lists the plans that bill a customer on a schedule, such as monthly hosting or a yearly support contract.
+With **Invoicing Recurring** enabled, **Commerce** → **Recurring Invoices** lists the plans that bill a customer on a schedule, such as monthly hosting or a yearly support contract.
 
 1. Click **New recurring plan** and give it a name.
 2. Under **Schedule**, choose how often it repeats (every so many weeks, months or years, counted from **Starts**), and, if it should stop, **Ends** or **Number of invoices**. A **Custom schedule** takes a recurrence rule, such as `FREQ=MONTHLY;BYMONTHDAY=-1` for the last day of each month.
@@ -234,7 +234,7 @@ The plan's page shows its next runs and every run it made, with a link to each i
 
 ## See how invoicing is doing
 
-With **Reports** enabled, **Reports > Commerce** has six invoicing reports. Each shows amounts per currency.
+With **Reports** enabled, **Reports** → **Commerce** has six invoicing reports. Each shows amounts per currency.
 
 - **Receivables aging**: what customers still owe today and how late it is, from not due yet to over 90 days.
 - **Invoice register**: every invoice issued in a period, with what was paid and what is still due.
@@ -246,11 +246,11 @@ Pick the period at the top of a report; it starts on the last 30 days. To build 
 
 ## Privacy requests
 
-When you download or erase a customer's data under **Commerce > Customers**, their invoices and credit notes are included: those billed to them, to their account on the site, or to their e-mail. Invoices billed to a business account stay the business's. Erasing removes the customer's name, e-mail, phone and addresses from their invoices, but keeps the invoice numbers, amounts, dates and tax ids and the PDFs that were issued, because a business must keep its invoices. The invoice then shows **No name kept** as who it was billed to.
+When you download or erase a customer's data under **Commerce** → **Customers**, their invoices and credit notes are included: those billed to them, to their account on the site, or to their e-mail. Invoices billed to a business account stay the business's. Erasing removes the customer's name, e-mail, phone and addresses from their invoices, but keeps the invoice numbers, amounts, dates and tax ids and the PDFs that were issued, because a business must keep its invoices. The invoice then shows **No name kept** as who it was billed to.
 
 ## Move invoices to another site
 
-Under **Tools > Deployments > Plans**, add the **Invoices** and **Credit notes** steps to a plan to take every invoice and credit note to another site. Leave **Also export the transactions the invoices posted** ticked on the Invoices step, so what customers owe comes along and open invoices can be paid on the other site. Issued invoices keep their numbers there. An open invoice that arrives without its transaction says **Payments are not available on this site** on its page, and customers see no way to pay it until the transaction is imported. An invoice the other site already issued is left as it is, and one whose number the other site already uses is not imported. New invoices on the other site skip the numbers that came in.
+Under **Tools** → **Deployments** → **Plans**, add the **Invoices** and **Credit notes** steps to a plan to take every invoice and credit note to another site. Leave **Also export the transactions the invoices posted** ticked on the Invoices step, so what customers owe comes along and open invoices can be paid on the other site. Issued invoices keep their numbers there. An open invoice that arrives without its transaction says **Payments are not available on this site** on its page, and customers see no way to pay it until the transaction is imported. An invoice the other site already issued is left as it is, and one whose number the other site already uses is not imported. New invoices on the other site skip the numbers that came in.
 
 ## Connect another system
 

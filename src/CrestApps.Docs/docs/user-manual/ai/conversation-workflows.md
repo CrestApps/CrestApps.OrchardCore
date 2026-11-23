@@ -14,7 +14,7 @@ An AI conversation can be a website chat, a text thread or a phone call. Workflo
 
 | | |
 | --- | --- |
-| **Menu** | Design > Workflows, and Artificial Intelligence > Tool Instances |
+| **Menu** | **Design** → **Workflows**, and **Artificial Intelligence** → **Tool Instances** |
 | **Permission** | Manage workflows, and Manage AI tools for tool instances |
 | **Feature** | Workflows and AI Services. Calling a workflow as a tool also needs AI Tool Instances. |
 
@@ -44,7 +44,7 @@ A message without any of these is used exactly as written.
 
 ## Run a workflow before the conversation starts
 
-1. Open **Design > Workflows** and click **Create Workflow**.
+1. Open **Design** → **Workflows** and click **Create Workflow**.
 2. Click **Add Event**, find **AI Conversation Starting** under **AI Conversations**, and click **Add**.
 3. Optionally choose a **Channel** and a **Profile**, so the workflow only runs for phone calls, say, or for one AI profile. Click **Save**.
 4. Add the tasks that look the customer up, for example an **HTTP Request** to your system, using `{{ Workflow.Input.CustomerAddress }}` or `{{ Workflow.Input.ContactId }}`.
@@ -68,13 +68,13 @@ A **Workflow** tool instance gives the AI one of your workflows as a tool. The A
 
 First, create the workflow:
 
-1. In **Design > Workflows**, create a workflow that starts with the **AI Tool Called** event (under **AI Conversations**).
+1. In **Design** → **Workflows**, create a workflow that starts with the **AI Tool Called** event (under **AI Conversations**).
 2. Add the steps the tool needs. What the AI sent is in `Workflow.Input.Arguments`, for example `{{ Workflow.Input.Arguments.date }}`, and the conversation is in `Workflow.Input` as above.
 3. End with **Set Output** for each value the AI should get back, for example an output named `slots` with the times you found. If the workflow sets no output, the AI is told the work was done.
 
 Then create the tool:
 
-1. Open **Artificial Intelligence > Tool Instances**, click **Add Tool Instance** and choose **Workflow**.
+1. Open **Artificial Intelligence** → **Tool Instances**, click **Add Tool Instance** and choose **Workflow**.
 2. Give it a **Name** and a **Description**. The description is what the AI reads to decide when to call it, so say what it does and when to use it, for example *Finds free appointment times on a date the customer asks for*.
 3. Choose the **Workflow**.
 4. Optionally, set a **Time limit on calls**. On a phone call the AI waits this many seconds for the workflow, then tells the caller it could not get an answer. Leave it empty for 8 seconds, or set 0 to wait as long as the workflow takes.

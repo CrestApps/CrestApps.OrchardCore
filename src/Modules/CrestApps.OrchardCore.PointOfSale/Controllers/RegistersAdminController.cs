@@ -24,7 +24,7 @@ using OrchardCore.Security.Services;
 namespace CrestApps.OrchardCore.PointOfSale.Controllers;
 
 /// <summary>
-/// Commerce › Point of sale: the registers at each store, and the shifts worked at them with their cash counts.
+/// Commerce › Point of Sale: the registers at each store, and the shifts worked at them with their cash counts.
 /// </summary>
 [Admin("point-of-sale/{action}/{itemId?}", "PointOfSale{action}")]
 public sealed class RegistersAdminController : Controller

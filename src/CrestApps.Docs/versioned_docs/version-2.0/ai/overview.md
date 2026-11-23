@@ -46,11 +46,11 @@ In a typical Orchard setup:
 
 Once enabled, the main AI screens are available under **Artificial Intelligence**:
 
-- **Artificial Intelligence -> Profiles**
-- **Artificial Intelligence -> Provider Connections**
-- **Artificial Intelligence -> Templates**
+- **Artificial Intelligence** → **Profiles**
+- **Artificial Intelligence** → **Provider Connections**
+- **Artificial Intelligence** → **Templates**
 
-Site-wide settings are available under **Settings -> Artificial Intelligence**.
+Site-wide settings are available under **Settings** → **Artificial Intelligence**.
 
 The screencast below tours those admin surfaces in order — provider connections, the deployments they expose, and the AI profiles built on top of them.
 
@@ -71,8 +71,8 @@ The screencast below tours those admin surfaces in order — provider connection
 
 After enabling the relevant features, Orchard Core exposes AI management in the admin UI, including:
 
-- AI settings under **Settings -> Artificial Intelligence**
-- feature enablement under **Tools -> Features**
+- AI settings under **Settings** → **Artificial Intelligence**
+- feature enablement under **Tools** → **Features**
 - AI connection and deployment editors
 - AI profile editors used by chat, agents, and related modules
 - submit-based AI list screens that keep **Enter** support and now expose a visible **Go** button next to the search box on screens such as AI Profiles, AI Templates, AI Provider Connections, and Chat Interactions
@@ -104,7 +104,7 @@ This configuration is useful for default completion parameters. Provider-specifi
 
 ### Site settings
 
-Use **Settings -> Artificial Intelligence** for tenant-managed options such as:
+Use **Settings** → **Artificial Intelligence** for tenant-managed options such as:
 
 - usage tracking
 - preemptive memory retrieval
@@ -113,7 +113,7 @@ Use **Settings -> Artificial Intelligence** for tenant-managed options such as:
 
 ## Creating AI profiles
 
-Once at least one provider is configured, create AI profiles from **Artificial Intelligence -> Profiles** and attach the capabilities you need for that profile, such as:
+Once at least one provider is configured, create AI profiles from **Artificial Intelligence** → **Profiles** and attach the capabilities you need for that profile, such as:
 
 - documents
 - data sources

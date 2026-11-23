@@ -5,7 +5,7 @@ description: "Help articles for everyone, for signed-in people or for the roles 
 user_manual: user-manual/knowledge-base/index
 ---
 
-The **Knowledge Base** holds help articles. It is a feature of its own, in the **Content Management** category of **Tools > Features**: it has no dependency on [Tickets](./tickets), so a site can publish a help center without a service desk, and Tickets suggests articles when both are on.
+The **Knowledge Base** holds help articles. It is a feature of its own, in the **Content Management** category of **Tools** → **Features**: it has no dependency on [Tickets](./tickets), so a site can publish a help center without a service desk, and Tickets suggests articles when both are on.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -40,11 +40,11 @@ Earlier versions kept a `KnowledgeArticlePart.Audience` and a **View staff-only 
 
 ## Categories
 
-An article's category is a term of a taxonomy: the Knowledge Article type has a **Category** taxonomy field (`KnowledgeBaseConstants.CategoryField`, on the type's own part, one term) that uses the **Knowledge Base Categories** taxonomy the feature creates, with **Knowledge category** terms (`KnowledgeCategory`). Categories are managed as any taxonomy, under **Content > Taxonomies**, and can be nested; an administrator may point the field at another taxonomy. `KnowledgeArticleIndex.CategoryId` holds the term, and `KnowledgeBaseCategories` reads the taxonomy's terms (`TaxonomyTermTree`). The permalink comes from the type's Autoroute part (`help/{slug}`). Articles saved before categories were terms kept them as text on the part: on upgrade, each distinct text (without regard to case) becomes a top term, or finds the term of that name, every version of its articles gets it, and the text goes.
+An article's category is a term of a taxonomy: the Knowledge Article type has a **Category** taxonomy field (`KnowledgeBaseConstants.CategoryField`, on the type's own part, one term) that uses the **Knowledge Base Categories** taxonomy the feature creates, with **Knowledge category** terms (`KnowledgeCategory`). Categories are managed as any taxonomy, under **Content** → **Taxonomies**, and can be nested; an administrator may point the field at another taxonomy. `KnowledgeArticleIndex.CategoryId` holds the term, and `KnowledgeBaseCategories` reads the taxonomy's terms (`TaxonomyTermTree`). The permalink comes from the type's Autoroute part (`help/{slug}`). Articles saved before categories were terms kept them as text on the part: on upgrade, each distinct text (without regard to case) becomes a top term, or finds the term of that name, every version of its articles gets it, and the text goes.
 
 ## Admin menu
 
-The module adds no admin menu of its own. Articles and the **Knowledge Base Categories** taxonomy are content items, listed under **Content > Content Items** (the `KnowledgeArticle` type is listable and creatable), and the [feedback report](./knowledge-base/feedback) is under **Reports**, as every coded report is.
+The module adds no admin menu of its own. Articles and the **Knowledge Base Categories** taxonomy are content items, listed under **Content** → **Content Items** (the `KnowledgeArticle` type is listable and creatable), and the [feedback report](./knowledge-base/feedback) is under **Reports**, as every coded report is.
 
 ## Help center
 

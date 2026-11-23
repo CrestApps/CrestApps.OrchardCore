@@ -10,7 +10,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Commerce.Controllers;
 
 /// <summary>
-/// Commerce › Set up your store: the steps from a new site to its first sale, each from the module it's about, with
+/// Commerce › Set Up Your Store: the steps from a new site to its first sale, each from the module it's about, with
 /// what's done, a quick way to do the simple ones, and a link to where each is done in full.
 /// </summary>
 [Admin("commerce/setup/{action}/{name?}", "CommerceSetup{action}")]

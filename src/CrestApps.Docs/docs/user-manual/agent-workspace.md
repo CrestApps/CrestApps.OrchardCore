@@ -16,7 +16,7 @@ An agent works with three things on screen:
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > My workspace |
+| **Menu** | **Interaction Center** → **My Workspace** |
 | **Permission** | Sign in to Contact Center queues and campaigns (the *Agent* role has it), and Use the telephony soft phone for the soft phone (the *Agent* role does not have it by default; an administrator adds it) |
 | **Features** | Contact Center Agents, Contact Center Real-Time, Contact Center Voice, and Telephony Soft Phone Core (turned on with Telephony Soft Phone Extension) |
 
@@ -67,7 +67,7 @@ A break that is waiting for your current work to end shows as **Break pending** 
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of the agent workspace showing presence, queue chips, the active interaction panel and recent activity" start={7} end={33} />
 
-Open **Interaction Center > My workspace**. Keep it open, with the soft phone, for your whole shift. From top to bottom:
+Open **Interaction Center** → **My Workspace**. Keep it open, with the soft phone, for your whole shift. From top to bottom:
 
 | Area | What it shows |
 | --- | --- |

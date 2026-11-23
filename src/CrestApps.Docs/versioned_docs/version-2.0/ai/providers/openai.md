@@ -124,7 +124,7 @@ Use `AIProviderConnections` to create the connection and `AIDeployment` to creat
 
 ## Selecting deployments
 
-Choose deployments explicitly on AI profiles, templates, or chat interactions when you need provider-specific model selection. For tenant-wide fallbacks, configure **Settings -> Artificial Intelligence -> Default Deployments**.
+Choose deployments explicitly on AI profiles, templates, or chat interactions when you need provider-specific model selection. For tenant-wide fallbacks, configure **Settings** → **Artificial Intelligence** → **Default Deployments**.
 
 ## Other OpenAI-compatible providers
 

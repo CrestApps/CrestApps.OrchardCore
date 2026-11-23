@@ -12,7 +12,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Load Activities |
+| **Menu** | **Interaction Center** → **Management** → **Load Activities** |
 | **Permission** | Manage activity batches. Deleting a finished load also needs **Delete loaded activity batches**. |
 | **Feature** | Omnichannel Management. The **Dialer** source needs Contact Center Outbound Dialer. |
 
@@ -36,7 +36,7 @@ The **Load Activities** list shows the newest loads first. A load does nothing w
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating a manual activity load for two agents, loading it, and finding the new activities on Manage Activities" start={1110} end={1178} />
 
-1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Manual**.
+1. Open **Interaction Center** → **Management** → **Load Activities**, click **Add Activity Load** and choose **Manual**.
 2. Fill in the load (fields below). A manual load needs a **Channel** and at least one user in **User(s) to assign activities to**; the activities are shared between the users you pick. Click **Save**.
 3. In the list, open the load's **Actions** menu, choose **Load activities** and confirm with **Ok**. To save and start the load in one step, click **Save & Load activities** on the form instead of **Save**, and confirm. The load runs in the background: the status moves through *Started* and *Loading* to *Loaded*, and the row then shows how many activities it created, how many contacts matched the filters, and why any matching contact was skipped (see [What a load reports](#what-a-load-reports)).
 
@@ -66,7 +66,7 @@ A message tells you how many loads were deleted and how many were skipped.
 
 1. Click **Add Activity Load** and choose **Dialer**.
 2. Pick the **Dialer profile** (it decides preview, power, progressive or predictive; see [Compare the dialing modes](dialer-profiles.md#compare-the-dialing-modes)) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.
-3. Fill in the record filters, save, and choose **Actions > Load activities**.
+3. Fill in the record filters, save, and choose **Actions** → **Load activities**.
 
 Dialer loads always use the phone channel and create manual (agent-handled) activities. The activities are left unassigned, take the dialing mode of the dialer profile, and are queued for the campaign as they are created; the dialer then offers them to the agents signed in to that campaign. The campaign always comes from the load (or the subject's default campaign), never from the dialer profile.
 

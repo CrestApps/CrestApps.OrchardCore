@@ -102,7 +102,7 @@ public sealed class LateFeeBackgroundTask : IBackgroundTask
 }
 
 /// <summary>
-/// Adds Commerce > Late fees.
+/// Adds Commerce > Late Fees.
 /// </summary>
 public sealed class LateFeePoliciesAdminMenu : AdminNavigationProvider
 {
@@ -124,7 +124,7 @@ public sealed class LateFeePoliciesAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Late fees"], S["Late fees"].PrefixPosition("4.4"), fees => fees
+                .Add(S["Late Fees"], S["Late Fees"].PrefixPosition("4.4"), fees => fees
                     .Id("latefees")
                     .Action("Index", "LateFeePolicies", _routeValues)
                     .Permission(InvoicingPermissions.ManageInvoicingSettings)

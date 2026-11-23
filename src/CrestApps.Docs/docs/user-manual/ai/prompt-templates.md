@@ -11,7 +11,7 @@ Templates save you from setting up the same thing twice. A **profile template** 
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Templates |
+| **Menu** | **Artificial Intelligence** → **Templates** |
 | **Permission** | Manage AI profile templates (Manage AI profiles to create a profile from a template) |
 | **Feature** | AI Services; AI Prompt Templates to add prompt templates to profiles and chats |
 
@@ -21,7 +21,7 @@ Templates save you from setting up the same thing twice. A **profile template** 
 
 ## Create a template
 
-1. Open **Artificial Intelligence > Templates** and click **Add Template**.
+1. Open **Artificial Intelligence** → **Templates** and click **Add Template**.
 2. In **Available Sources**, click **Add** on the kind of template:
    - **Profile**: a starting point for new AI profiles.
    - **System Prompt**: a reusable piece of instructions.

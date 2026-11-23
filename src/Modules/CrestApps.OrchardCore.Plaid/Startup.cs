@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -35,7 +36,8 @@ public sealed class Startup : StartupBase
 
         services.AddPlaidCore();
         services.AddHttpContextAccessor();
-        services.AddScoped<IPlaidCredentialsProvider, PlaidCredentialsProvider>();
+        // The site's Plaid settings, unless the host or another module replaced them with AddPlaidCredentialsProvider.
+        services.TryAddScoped<IPlaidCredentialsProvider, PlaidCredentialsProvider>();
         services.AddScoped<IPlaidLinkSite, PlaidLinkSite>();
 
         services.AddSiteDisplayDriver<PlaidSettingsDisplayDriver>();

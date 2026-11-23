@@ -14,7 +14,7 @@ user_manual: user-manual/commerce/webhooks
 
 The **Commerce Webhooks** feature posts commerce events (an order paid, a shipment shipped, stock sold out) as signed JSON to the URLs merchants subscribe. Each event is queued in the same unit of work as the change that raised it, sent once that work is saved, and retried with backoff until the receiver answers with a `2xx` status. Every delivery is logged.
 
-The subscriptions, the signing, the delivery outbox and the admin (**Configuration > Webhooks**) belong to the generic [Webhooks](webhooks.md#outbound-webhooks) building block, which this feature turns on. Commerce Webhooks is the switch the commerce modules gate their events on: Orders, Customers, Inventory and Shipping declare and publish their events in startups behind `[RequireFeatures(CommerceConstants.Features.Webhooks)]`.
+The subscriptions, the signing, the delivery outbox and the admin (**Configuration** → **Webhooks**) belong to the generic [Webhooks](webhooks.md#outbound-webhooks) building block, which this feature turns on. Commerce Webhooks is the switch the commerce modules gate their events on: Orders, Customers, Inventory and Shipping declare and publish their events in startups behind `[RequireFeatures(CommerceConstants.Features.Webhooks)]`.
 
 <YouTube video="webhooks" title="Narrated video overview of webhooks" />
 
@@ -206,7 +206,7 @@ Keep the signing secret in the receiver's settings or secret store, never in a w
 
 ## Admin
 
-- **Commerce > Webhooks** (`commerce/webhooks`, `WebhooksAdminController`) lists the subscriptions through the `AdminList` shape, with **Add webhook**.
+- **Commerce** → **Webhooks** (`commerce/webhooks`, `WebhooksAdminController`) lists the subscriptions through the `AdminList` shape, with **Add webhook**.
 - A subscription's editor sets its name, URL, whether it's on, and its events, grouped by each event's group. `IsAllowedUrl` takes an absolute `https` URL without user info, and refuses a loopback, private or link-local IP address; plain `http` only to a loopback host when the host environment is Development. Deleting a subscription deletes its deliveries. Saved, it shows the **Signing secret**, with **New secret** (`RotateSecret`).
 - **Deliveries** (`commerce/webhooks/Deliveries/{itemId}`) lists a subscription's deliveries, newest first, with a status filter, **Send again** per delivery, and **Send a test event** (`Ping`), which sends `webhook.ping` to that subscription in the request.
 
@@ -214,7 +214,7 @@ Keep the signing secret in the receiver's settings or secret store, never in a w
 
 | Permission | Allows |
 | --- | --- |
-| **Manage commerce webhooks** (`ManageCommerceWebhooks`) | Everything under **Commerce > Webhooks**, including reading the signing secrets. |
+| **Manage commerce webhooks** (`ManageCommerceWebhooks`) | Everything under **Commerce** → **Webhooks**, including reading the signing secrets. |
 
 Administrators have it by default.
 

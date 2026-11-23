@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 
 /// <summary>
-/// How the store sells through AI agents (Settings › Commerce › Agentic commerce).
+/// How the store sells through AI agents (Settings › Commerce › Agentic Commerce).
 /// </summary>
 public sealed class AgenticCommerceSettings
 {

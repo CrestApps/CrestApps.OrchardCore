@@ -13,7 +13,7 @@ internal sealed class AgentFeedSettingsSchema : SiteSettingsSchemaBase
     protected override JsonSchemaBuilder BuildSchemaCore()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Description("Settings › Commerce › Agent feeds. Passwords, keys and bearer keys are stored protected with the tenant's data protection keys, so enter them again on another site.")
+            .Description("Settings › Commerce › Agent Feeds. Passwords, keys and bearer keys are stored protected with the tenant's data protection keys, so enter them again on another site.")
             .Properties(
                 ("TargetCountries", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern("^[A-Z]{2}$")).Description("The two-letter codes of the countries the store sells to through agents; the store's own country when empty.")),
                 ("Sftp", new JsonSchemaBuilder()

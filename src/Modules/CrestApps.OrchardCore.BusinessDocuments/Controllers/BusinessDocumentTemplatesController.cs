@@ -19,7 +19,7 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.BusinessDocuments.Controllers;
 
 /// <summary>
-/// Settings › Business documents › Document templates: the looks business documents are printed with.
+/// Settings › Business Documents › Document Templates: the looks business documents are printed with.
 /// </summary>
 [Admin]
 [Feature(BusinessDocumentsConstants.Features.Area)]

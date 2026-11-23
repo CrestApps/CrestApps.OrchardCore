@@ -30,7 +30,9 @@ public sealed class PlaidClient
     }
 
     /// <summary>
-    /// Makes a link token for Auth, United States checking and savings accounts only.
+    /// Makes a link token. By default it is for Auth, United States checking and savings accounts only; the request's
+    /// products, account filters and countries change that. With an access token, Link opens in update mode for that
+    /// item, and products and filters are not sent.
     /// </summary>
     /// <param name="credentials">The credentials.</param>
     /// <param name="request">Who and where.</param>
@@ -41,18 +43,49 @@ public sealed class PlaidClient
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrEmpty(request.ClientUserId);
 
+        var countryCodes = request.CountryCodes is { Count: > 0 } ? request.CountryCodes : ["US"];
+
         var body = new JsonObject
         {
             ["client_name"] = Truncate(string.IsNullOrWhiteSpace(request.ClientName) ? "Payments" : request.ClientName.Trim(), 30),
             ["language"] = string.IsNullOrWhiteSpace(request.Language) ? "en" : request.Language,
-            ["country_codes"] = new JsonArray("US"),
+            ["country_codes"] = ToJsonArray(countryCodes),
             ["user"] = new JsonObject { ["client_user_id"] = request.ClientUserId },
-            ["products"] = new JsonArray("auth"),
-            ["account_filters"] = new JsonObject
-            {
-                ["depository"] = new JsonObject { ["account_subtypes"] = new JsonArray("checking", "savings") },
-            },
         };
+
+        if (!string.IsNullOrEmpty(request.AccessToken))
+        {
+            body["access_token"] = request.AccessToken;
+        }
+        else
+        {
+            var products = request.Products is { Count: > 0 } ? request.Products : ["auth"];
+
+            body["products"] = ToJsonArray(products);
+
+            if (request.AccountFilters is { Count: > 0 })
+            {
+                var filters = new JsonObject();
+
+                foreach (var (type, subtypes) in request.AccountFilters)
+                {
+                    if (!string.IsNullOrEmpty(type) && subtypes is { Count: > 0 })
+                    {
+                        filters[type] = new JsonObject { ["account_subtypes"] = ToJsonArray(subtypes) };
+                    }
+                }
+
+                if (filters.Count > 0)
+                {
+                    body["account_filters"] = filters;
+                }
+            }
+
+            if (request.TransactionsDaysRequested is { } days && products.Contains("transactions", StringComparer.Ordinal))
+            {
+                body["transactions"] = new JsonObject { ["days_requested"] = Math.Clamp(days, 1, 730) };
+            }
+        }
 
         if (!string.IsNullOrEmpty(request.WebhookUrl))
         {
@@ -96,6 +129,117 @@ public sealed class PlaidClient
         };
 
         return SendAsync<PlaidAuthResponse>(credentials, "auth/get", body, retryable: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Lists every account of an item, with its balances.
+    /// </summary>
+    /// <param name="credentials">The credentials.</param>
+    /// <param name="accessToken">The item's access token.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The accounts and the item.</returns>
+    public Task<PlaidAccountsResponse> GetAccountsAsync(PlaidCredentials credentials, string accessToken, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(accessToken);
+
+        return SendAsync<PlaidAccountsResponse>(credentials, "accounts/get", new JsonObject { ["access_token"] = accessToken }, retryable: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads one page of <c>/transactions/sync</c>. Safe to send again: the same cursor gives the same page.
+    /// </summary>
+    /// <param name="credentials">The credentials.</param>
+    /// <param name="request">The access token, cursor and page size.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The page.</returns>
+    public Task<PlaidTransactionsSyncResponse> SyncTransactionsAsync(PlaidCredentials credentials, PlaidTransactionsSyncRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrEmpty(request.AccessToken);
+
+        var body = new JsonObject
+        {
+            ["access_token"] = request.AccessToken,
+            ["count"] = Math.Clamp(request.Count, 1, 500),
+        };
+
+        if (!string.IsNullOrEmpty(request.Cursor))
+        {
+            body["cursor"] = request.Cursor;
+        }
+
+        var options = new JsonObject();
+
+        if (request.IncludeOriginalDescription)
+        {
+            options["include_original_description"] = true;
+        }
+
+        if (!string.IsNullOrEmpty(request.AccountId))
+        {
+            options["account_id"] = request.AccountId;
+        }
+
+        if (options.Count > 0)
+        {
+            body["options"] = options;
+        }
+
+        return SendAsync<PlaidTransactionsSyncResponse>(credentials, "transactions/sync", body, retryable: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads a bank's name and id.
+    /// </summary>
+    /// <param name="credentials">The credentials.</param>
+    /// <param name="institutionId">Plaid's id of the bank.</param>
+    /// <param name="countryCodes">The two-letter country codes to search, or <see langword="null"/> for the United States.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The bank.</returns>
+    public async Task<PlaidInstitution> GetInstitutionAsync(PlaidCredentials credentials, string institutionId, IEnumerable<string> countryCodes = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(institutionId);
+
+        var codes = countryCodes?.Where(code => !string.IsNullOrWhiteSpace(code)).ToList() is { Count: > 0 } list ? list : ["US"];
+
+        var body = new JsonObject
+        {
+            ["institution_id"] = institutionId,
+            ["country_codes"] = ToJsonArray(codes),
+        };
+
+        var response = await SendAsync<PlaidInstitutionResponse>(credentials, "institutions/get_by_id", body, retryable: true, cancellationToken);
+
+        return response.Institution;
+    }
+
+    /// <summary>
+    /// Changes the webhook URL Plaid sends an item's webhooks to. Safe to send again: the same URL gives the same item.
+    /// </summary>
+    /// <param name="credentials">The credentials.</param>
+    /// <param name="accessToken">The item's access token.</param>
+    /// <param name="webhookUrl">The new webhook URL, an absolute address.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The item, with the webhook URL Plaid now holds.</returns>
+    public async Task<PlaidItemInfo> UpdateItemWebhookAsync(PlaidCredentials credentials, string accessToken, string webhookUrl, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(accessToken);
+        ArgumentException.ThrowIfNullOrEmpty(webhookUrl);
+
+        if (!Uri.TryCreate(webhookUrl, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        {
+            throw new ArgumentException("The webhook URL must be an absolute HTTP or HTTPS address.", nameof(webhookUrl));
+        }
+
+        var body = new JsonObject
+        {
+            ["access_token"] = accessToken,
+            ["webhook"] = uri.AbsoluteUri,
+        };
+
+        var response = await SendAsync<PlaidItemResponse>(credentials, "item/webhook/update", body, retryable: true, cancellationToken);
+
+        return response.Item;
     }
 
     /// <summary>
@@ -152,7 +296,7 @@ public sealed class PlaidClient
 
             try
             {
-                error = await response.Content.ReadFromJsonAsync<PlaidError>(cancellationToken);
+                error = await response.Content.ReadFromJsonAsync<PlaidError>(PlaidJsonSerializerOptions.Default, cancellationToken);
             }
             catch (JsonException)
             {
@@ -162,9 +306,12 @@ public sealed class PlaidClient
             throw new PlaidApiException(response.StatusCode, error);
         }
 
-        return await response.Content.ReadFromJsonAsync<T>(cancellationToken)
+        return await response.Content.ReadFromJsonAsync<T>(PlaidJsonSerializerOptions.Default, cancellationToken)
             ?? throw new PlaidApiException(response.StatusCode, new PlaidError { ErrorType = "API_ERROR", ErrorCode = "EMPTY_RESPONSE" });
     }
+
+    private static JsonArray ToJsonArray(IEnumerable<string> values)
+        => new([.. values.Select(value => (JsonNode)JsonValue.Create(value))]);
 
     private static string Truncate(string value, int length)
         => value.Length <= length ? value : value[..length];

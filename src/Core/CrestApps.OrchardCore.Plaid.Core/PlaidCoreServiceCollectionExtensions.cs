@@ -13,13 +13,16 @@ namespace CrestApps.OrchardCore.Plaid;
 
 /// <summary>
 /// Registers the Plaid services. The host registers <see cref="IPlaidCredentialsProvider"/> and
-/// <see cref="IPlaidLinkSite"/>.
+/// <see cref="IPlaidLinkSite"/>; other modules use <see cref="IPlaidClient"/> and add webhook handlers with
+/// <see cref="PlaidServiceCollectionExtensions.AddPlaidWebhookHandler{THandler}"/>.
 /// </summary>
 public static class PlaidCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the Plaid client, its HTTP client and resilience, the webhook check, the item store, the bank account
-    /// link provider, its observer and its webhook handler.
+    /// Registers the Plaid client (<see cref="PlaidClient"/> and the tenant's <see cref="IPlaidClient"/>), its HTTP
+    /// client and resilience, the webhook check, the item store, the bank account link provider, its observer, the inbox
+    /// handler that hands every webhook to the <see cref="IPlaidWebhookHandler"/> registrations, and the bank account
+    /// webhook handler.
     /// </summary>
     /// <param name="services">The services.</param>
     /// <returns>The services.</returns>
@@ -35,12 +38,14 @@ public static class PlaidCoreServiceCollectionExtensions
         services.AddMemoryCache();
         services.AddSensitiveValueProtector();
         services.TryAddScoped<PlaidClient>();
+        services.TryAddScoped<IPlaidClient, PlaidTenantClient>();
         services.TryAddScoped<PlaidWebhookVerifier>();
         services.TryAddScoped<IPlaidItemStore, PlaidItemStore>();
         services.TryAddScoped<PlaidItemCleaner>();
         services.AddBankAccountLinkProvider<PlaidBankAccountLinkProvider>();
         services.AddBankAccountObserver<PlaidBankAccountObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderWebhookInboxHandler, PlaidWebhookInboxHandler>());
+        services.AddPlaidWebhookHandler<PlaidBankAccountWebhookHandler>();
 
         return services;
     }

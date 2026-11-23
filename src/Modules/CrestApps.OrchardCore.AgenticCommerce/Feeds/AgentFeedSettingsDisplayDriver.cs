@@ -19,7 +19,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.AgenticCommerce.Feeds;
 
 /// <summary>
-/// Settings › Commerce › Agent feeds: the OpenAI feed's addresses and what it leaves out, the daily SFTP push, and the
+/// Settings › Commerce › Agent Feeds: the OpenAI feed's addresses and what it leaves out, the daily SFTP push, and the
 /// ACP feed APIs the products are pushed to, with how the last pushes went.
 /// </summary>
 public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeedSettings>

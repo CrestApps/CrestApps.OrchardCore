@@ -1,0 +1,18 @@
+@model TaxReturnsYearFilterViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="btn-group filter">
+    <select class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Periods ending in"]" data-dropdown-align-right="auto" aria-label="@T["Periods ending in"]" data-tax-returns-year asp-items="Model.Years"></select>
+</div>
+
+<script at="Foot">
+    document.querySelectorAll('[data-tax-returns-year]').forEach(select => {
+        select.addEventListener('change', () => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('year', select.value);
+            window.location.href = url.toString();
+        });
+    });
+</script>

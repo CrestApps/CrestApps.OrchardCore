@@ -96,7 +96,7 @@ public sealed class RecurringInvoiceBackgroundTask : IBackgroundTask
 }
 
 /// <summary>
-/// Adds Commerce > Recurring invoices, beside Invoices.
+/// Adds Commerce > Recurring Invoices, beside Invoices.
 /// </summary>
 public sealed class RecurringPlansAdminMenu : AdminNavigationProvider
 {
@@ -118,7 +118,7 @@ public sealed class RecurringPlansAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Recurring invoices"], S["Recurring invoices"].PrefixPosition("4.2"), plans => plans
+                .Add(S["Recurring Invoices"], S["Recurring Invoices"].PrefixPosition("4.2"), plans => plans
                     .Id("recurringinvoices")
                     .Action("Index", "RecurringPlansAdmin", _routeValues)
                     .Permission(InvoicingPermissions.ViewInvoices)

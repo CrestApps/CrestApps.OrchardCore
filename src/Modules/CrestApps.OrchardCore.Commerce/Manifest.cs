@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "Commerce",
     Id = CommerceConstants.Features.Area,
-    Description = "The store layer: the store's setup guide under Commerce > Set up your store, and the roles it adds for a store's staff.",
+    Description = "The store layer: the store's setup guide under Commerce > Set Up Your Store, and the roles it adds for a store's staff.",
     Category = "Commerce",
     EnabledByDependencyOnly = true,
     Dependencies =

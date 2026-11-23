@@ -12,6 +12,25 @@ namespace CrestApps.OrchardCore.Banking.Checks.ViewModels;
 public class CheckRecordViewModel
 {
     /// <summary>
+    /// Gets or sets whether the check is being written; <see langword="false"/> while a check waiting to print is edited,
+    /// which keeps its bank account and number.
+    /// </summary>
+    [BindNever]
+    public bool IsNew { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the bank account of a check being edited.
+    /// </summary>
+    [BindNever]
+    public string BankAccountName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of a check being edited, or 0 while it waits for a print run to number it.
+    /// </summary>
+    [BindNever]
+    public long CheckNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets the bank account the check is drawn on.
     /// </summary>
     public string BankAccountId { get; set; }

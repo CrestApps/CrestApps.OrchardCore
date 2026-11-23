@@ -10,7 +10,7 @@ A **pay schedule** says how often people are paid and on which day. A **pay code
 
 | | |
 | --- | --- |
-| **Menu** | Payroll > Setup > Pay Schedules, Payroll > Setup > Pay Codes |
+| **Menu** | **Payroll** → **Setup** → **Pay Schedules**, **Payroll** → **Setup** → **Pay Codes** |
 | **Permission** | Manage pay setup |
 | **Feature** | Pay Setup (turned on with the Workforce Time Clock or Payroll) |
 
@@ -18,7 +18,7 @@ A **pay schedule** says how often people are paid and on which day. A **pay code
 
 ## Add a pay schedule
 
-1. Open **Payroll > Setup > Pay Schedules** and choose **Add pay schedule**.
+1. Open **Payroll** → **Setup** → **Pay Schedules** and choose **Add pay schedule**.
 2. Give it a **Name** and choose its **Periods**: every week, every two weeks, every four weeks, twice a month, every month, every quarter or every year.
 3. For weekly, every two weeks and every four weeks, set **A period starts on** to any day a period starts. For twice a month, set the day the **second period starts on** (the 16th unless you change it).
 4. Set the day the **overtime week starts on**.
@@ -59,4 +59,4 @@ A schedule a time clock policy, a timesheet or a pay profile uses, or a code a t
 
 ## Moving from the time clock's pay periods
 
-Sites that used **Workforce > Time Management > Pay Periods** and **Pay Codes** find the same records, with the same settings, under **Payroll > Setup** after the update. Everyone who could manage time clock policies can manage them there.
+Sites that used **Workforce** → **Time Management** → **Pay Periods** and **Pay Codes** find the same records, with the same settings, under **Payroll** → **Setup** after the update. Everyone who could manage time clock policies can manage them there.

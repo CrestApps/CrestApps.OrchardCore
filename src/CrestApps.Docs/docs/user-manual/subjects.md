@@ -18,7 +18,7 @@ Create one subject for each goal of a conversation. You can add more for later s
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Subject Flows |
+| **Menu** | **Interaction Center** → **Management** → **Subject Flows** |
 | **Permission** | Manage subject flows; Edit content types (to create subjects and change their settings) |
 | **Feature** | Omnichannel Management |
 
@@ -36,7 +36,7 @@ Create an **inbound** subject for calls customers make. This one is a manual pho
 
 <YouTube video="omnichannel-subjects" title="Video of creating an outbound subject with the Omnichannel Subject part and its settings" start={51} end={100} />
 
-1. Open **Interaction Center > Management > Subject Flows** and click **Add Subject**. (When there are no subjects yet, the page shows a **Create a new content type** link instead.)
+1. Open **Interaction Center** → **Management** → **Subject Flows** and click **Add Subject**. (When there are no subjects yet, the page shows a **Create a new content type** link instead.)
 2. Enter the subject's **Display Name**, for example *Support Request*, and click **Create**.
 3. On the **Add Parts** page, click **Add & Configure** next to **Omnichannel Subject**. The subject's settings open straight away (described below). Save them.
 4. Add the fields the agent should capture, for example a *Vehicle of interest* text field, from **Edit Content Type**.

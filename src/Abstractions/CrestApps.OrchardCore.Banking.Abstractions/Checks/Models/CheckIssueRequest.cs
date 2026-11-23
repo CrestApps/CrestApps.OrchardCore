@@ -80,4 +80,10 @@ public sealed class CheckIssueRequest
     /// refused when another check of the account has it. Ignored otherwise.
     /// </summary>
     public long? Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets extension data copied onto the new check's <see cref="CrestApps.Core.ExtensibleEntity.Properties"/>,
+    /// such as the lines a module's editor added on <b>Write a check</b>. A reissue carries the replaced check's.
+    /// </summary>
+    public IDictionary<string, object> Properties { get; set; }
 }

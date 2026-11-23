@@ -1,0 +1,22 @@
+@model EFileSubmissionRequestViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Option">
+    <label asp-for="Option" class="ocat-label">@T["File as"]</label>
+    <div class="ocat-end">
+        <select asp-for="Option" asp-items="Model.Options" class="form-select"></select>
+        <span asp-validation-for="Option" class="text-danger"></span>
+        <span class="hint">@T["The file format and the channel it goes through. The manual channel hands over the file to file on the agency's site."]</span>
+    </div>
+</div>
+@if (Model.TestChannels.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="IsTest" type="checkbox" class="form-check-input" />
+                <label asp-for="IsTest" class="form-check-label">@T["Test submission"]</label>
+            </div>
+            <span class="hint">@T["Sends the file to the agency's test system: its acceptance files nothing, so the return can then be filed for real. Only these channels take tests: {0}.", string.Join(", ", Model.TestChannels)]</span>
+        </div>
+    </div>
+}

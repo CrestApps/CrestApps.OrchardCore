@@ -34,7 +34,7 @@ The Aspire AppHost orchestrates several services including **Ollama** (AI model 
 If the A2A Host feature is not enabled, requests to `/.well-known/agent-card.json` will return `404`. Enable the A2A Host feature in the default tenant:
 
 - Feature ID: `CrestApps.OrchardCore.AI.A2A.Host`
-- Admin UI: **Tools → Features**
+- Admin UI: **Tools** → **Features**
 
 After enabling the feature, refresh the sample UI to see available agents.
 

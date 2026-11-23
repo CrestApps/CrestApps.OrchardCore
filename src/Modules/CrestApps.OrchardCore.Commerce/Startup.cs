@@ -42,7 +42,7 @@ public sealed class FoundationStartup : StartupBase
 }
 
 /// <summary>
-/// The Commerce feature, the store layer: the store's setup guide under Commerce › Set up your store, whose steps come
+/// The Commerce feature, the store layer: the store's setup guide under Commerce › Set Up Your Store, whose steps come
 /// from the modules they're about, and its permission and the staff roles it adds.
 /// </summary>
 public sealed class Startup : StartupBase

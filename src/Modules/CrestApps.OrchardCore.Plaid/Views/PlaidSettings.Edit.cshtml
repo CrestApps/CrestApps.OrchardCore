@@ -1,5 +1,20 @@
 @model PlaidSettingsViewModel
 
+@if (Model.HostSuppliesKeys)
+{
+    <div class="alert alert-info">
+        @if (Model.IsConfigured)
+        {
+            @T["This site uses the Plaid keys the host supplies, so there is nothing to set here. Plaid bills the host for each linked account."]
+        }
+        else
+        {
+            @T["This site uses the Plaid keys the host supplies, and the host has not set them yet, so Plaid is off. Ask the host to set them."]
+        }
+    </div>
+}
+else
+{
 <p class="text-muted">@T["Plaid lets a person link their bank: they sign in to it in a Plaid window, choose the account, and the bank account is saved with the bank's own numbers and verified at once. Copy the client id and the secret of the environment from the Plaid dashboard (Developers > Keys). Plaid bills each linked account."]</p>
 
 <div class="ocat-wrapper" asp-validation-class-for="Environment">
@@ -29,6 +44,7 @@
         <span class="hint">@T["The Orchard secret (a text secret) that holds the Plaid secret. The secret is never kept in these settings. Add or change it under"] <a href="@Url.Action("Index", "Admin", new { area = "OrchardCore.Secrets" })">@T["Security > Secrets"]</a>.</span>
     </div>
 </div>
+}
 
 @if (!string.IsNullOrEmpty(Model.WebhookUrl))
 {
@@ -46,7 +62,7 @@
     <div class="ocat-wrapper">
         <div class="ocat-end-offset">
             <button class="btn btn-secondary" type="submit" formaction="@Url.Action("Test", "PlaidSettings", new { area = PlaidConstants.Features.Plaid })">@T["Test the connection"]</button>
-            <span class="hint">@T["Asks Plaid for a link token with the saved settings. Save your changes first."]</span>
+            <span class="hint">@(Model.HostSuppliesKeys ? T["Asks Plaid for a link token with the host's keys."] : T["Asks Plaid for a link token with the saved settings. Save your changes first."])</span>
         </div>
     </div>
 }

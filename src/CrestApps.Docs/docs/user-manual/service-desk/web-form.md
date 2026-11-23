@@ -10,7 +10,7 @@ A **Ticket Form** widget lets anyone send a request from a page of your site, su
 
 | | |
 | --- | --- |
-| **Menu** | Design > Widgets (layers), or a page's flow |
+| **Menu** | **Design** → **Widgets (layers)**, or a page's flow |
 | **Permission** | Manage widgets, or edit the page |
 | **Feature** | Ticket Web Form |
 
@@ -18,7 +18,7 @@ A **Ticket Form** widget lets anyone send a request from a page of your site, su
 
 ## Add the form
 
-1. Turn on **Ticket Web Form** under **Tools > Features**.
+1. Turn on **Ticket Web Form** under **Tools** → **Features**.
 2. Add a **Ticket Form** widget where visitors should find it (a layer, or a page's flow).
 3. Choose the ticket type and the desk its tickets go to, and, if you like, what visitors read after sending.
 4. Publish.
@@ -31,7 +31,7 @@ After sending, the page says the request was received, with its number, or what 
 
 ## Keep robots out
 
-- Turn on **ReCaptcha** and set its keys under **Settings > Security** so guests have to pass a challenge. The widget warns you until you do.
+- Turn on **ReCaptcha** and set its keys under **Settings** → **Security** so guests have to pass a challenge. The widget warns you until you do.
 - Turn on **Rate Limits** too, to cap how many requests one visitor can send.
 
 A guest's e-mail address isn't confirmed, so the e-mails they get only give the request's number, never what they wrote, and their request is never filed under an account by their e-mail's domain. Your agents' replies still reach them.

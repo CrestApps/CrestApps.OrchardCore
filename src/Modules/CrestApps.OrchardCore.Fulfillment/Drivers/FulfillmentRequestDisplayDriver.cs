@@ -7,7 +7,7 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.Fulfillment.Drivers;
 
 /// <summary>
-/// A row of the Commerce › Fulfillment requests list.
+/// A row of the Commerce › Fulfillment Requests list.
 /// </summary>
 internal sealed class FulfillmentRequestDisplayDriver : DisplayDriver<FulfillmentRequest>
 {

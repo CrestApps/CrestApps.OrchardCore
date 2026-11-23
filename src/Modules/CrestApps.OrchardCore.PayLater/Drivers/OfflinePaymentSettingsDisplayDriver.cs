@@ -14,7 +14,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.PayLater.Drivers;
 
 /// <summary>
-/// The Bank transfer section of Settings › Commerce › Offline payments.
+/// The Bank transfer section of Settings › Commerce › Offline Payments.
 /// </summary>
 public sealed class BankTransferSettingsDisplayDriver : SiteDisplayDriver<BankTransferSettings>
 {
@@ -93,7 +93,7 @@ public sealed class BankTransferSettingsDisplayDriver : SiteDisplayDriver<BankTr
 }
 
 /// <summary>
-/// The Cash on delivery section of Settings › Commerce › Offline payments.
+/// The Cash on delivery section of Settings › Commerce › Offline Payments.
 /// </summary>
 public sealed class CashOnDeliverySettingsDisplayDriver : SiteDisplayDriver<CashOnDeliverySettings>
 {

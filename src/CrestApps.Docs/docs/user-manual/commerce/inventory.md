@@ -10,7 +10,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Inventory; Commerce > Purchase orders; Settings > Commerce > Inventory |
+| **Menu** | **Commerce** → **Inventory**; **Commerce** → **Purchase Orders**; **Settings** → **Commerce** → **Inventory** |
 | **Permission** | **View inventory** to look, **Manage inventory** to change stock and the settings |
 | **Feature** | Inventory; **Back-in-Stock Alerts** to email shoppers when a product is back; **Purchase Orders** to order stock from suppliers |
 
@@ -24,8 +24,8 @@ This video walks through counting stock, changing it, importing counts, location
 
 Stock is counted for content types that have the **Inventory** part:
 
-1. Under **Design > Content Definition > Content Types**, edit your product type and add the **Inventory** part.
-2. Go to **Commerce > Inventory** and click **Find products to count**. Every product of that type, and each of its variants, gets a line with nothing on hand.
+1. Under **Design** → **Content Definition** → **Content Types**, edit your product type and add the **Inventory** part.
+2. Go to **Commerce** → **Inventory** and click **Find products to count**. Every product of that type, and each of its variants, gets a line with nothing on hand.
 
 From then on, saving a product keeps its lines up to date: a new variant gets its own line, and a removed variant's line is archived with its history.
 
@@ -38,11 +38,11 @@ On the product's editor, the **Inventory** section sets how its stock is kept:
 | **Low-stock threshold** | Stock counts as low at this many or fewer. Leave it empty to use the store's default. |
 | **Ships from** | Optional, for a product not out yet: the date it ships. With **Allow backorders** ticked, buyers pre-order it while none are in stock. See [Sell before a product is out](#sell-before-a-product-is-out). |
 
-Below the settings, **On hand** lists each variant with how many are available, and a **Change** button that opens it under **Commerce > Inventory**.
+Below the settings, **On hand** lists each variant with how many are available, and a **Change** button that opens it under **Commerce** → **Inventory**.
 
 ## Find stock
 
-**Commerce > Inventory** lists every product and variant counted, with the fewest available first. Search by SKU or product name, and show **Low stock**, **Out of stock** or **Backordered** lines.
+**Commerce** → **Inventory** lists every product and variant counted, with the fewest available first. Search by SKU or product name, and show **Low stock**, **Out of stock** or **Backordered** lines.
 
 Each line shows:
 
@@ -68,7 +68,7 @@ Two people changing the same line at once can't overwrite each other: the second
 
 <YouTube video="inventory" title="Video of the inventory settings and locations" start={232} end={274} />
 
-Keep stock in more than one place, such as a warehouse and a shop, under **Settings > Commerce > Inventory**, **Locations**:
+Keep stock in more than one place, such as a warehouse and a shop, under **Settings** → **Commerce** → **Inventory**, **Locations**:
 
 1. Fill in the blank **Add a location** with its **Name**, such as *Main warehouse*, and, if you like, an **Address**.
 2. Tick **Show to shoppers** for a place buyers can visit or pick up from, such as a shop. Shoppers and storefront apps then see whether products are in stock there, with the location's name and address. Leave it off for a warehouse: its stock and address stay with your staff. It's off for every location until you tick it, including locations you had before this setting existed.
@@ -76,7 +76,7 @@ Keep stock in more than one place, such as a warehouse and a shop, under **Setti
 
 The **Default location** is always there. It holds the stock you counted before there were locations, and stock imported without a location; rename it, but it can't be removed. Tick **Remove this location** to remove another: units still there stay on their items and can be moved to another location.
 
-With more than one location, each item's page under **Commerce > Inventory**:
+With more than one location, each item's page under **Commerce** → **Inventory**:
 
 - lists its stock **By location**, with what's **On hand** and **Available** at each, and what's held for orders;
 - asks where under **Receive or adjust** and **Count**, such as *At Main warehouse*: a count replaces what's on hand at that location;
@@ -91,7 +91,7 @@ The list and the labels shoppers see count every location together.
 <YouTube video="purchase-orders-and-stock-alerts" title="Starting a purchase order from low stock" start={84} end={115} />
 <YouTube video="inventory" title="Video of a purchase order" start={274} end={323} />
 
-With the **Purchase Orders** feature on, **Commerce > Purchase orders** keeps the stock you order from suppliers, and receives it into a location.
+With the **Purchase Orders** feature on, **Commerce** → **Purchase Orders** keeps the stock you order from suppliers, and receives it into a location.
 
 1. Click **Add purchase order**, and enter the **Supplier** (earlier suppliers are suggested), the **Supplier's email**, where to **Receive at**, what currency the costs are in (**Costs in**), when it's **Expected**, and a **Note**.
 2. Leave **Start with the items that are low on stock where it's received** ticked to fill it with what's running low, each ordered up to twice its low-stock threshold, or untick it to start empty. Click **Start the order**.
@@ -123,7 +123,7 @@ If any line has a problem, such as a SKU nothing has, a SKU two variants share, 
 
 <YouTube video="purchase-orders-and-stock-alerts" title="Low stock alerts" start={216} end={237} />
 
-When a product or variant drops to its low-stock threshold or sells out, users in the roles chosen under **Settings > Commerce > Inventory** get a notification, such as *Low stock: Mug* with *Only 4 of Mug left.*, or *Out of stock: Mug*. It's sent when the stock drops to the threshold, and again if it sells out, not on every sale in between. Notifications need Orchard Core's **Notifications** feature.
+When a product or variant drops to its low-stock threshold or sells out, users in the roles chosen under **Settings** → **Commerce** → **Inventory** get a notification, such as *Low stock: Mug* with *Only 4 of Mug left.*, or *Out of stock: Mug*. It's sent when the stock drops to the threshold, and again if it sells out, not on every sale in between. Notifications need Orchard Core's **Notifications** feature.
 
 With **Workflows** enabled, the **Low Stock** event starts a workflow at the same moment, for example to email a supplier. Its input has the product as `ContentItem`, and `Sku`, `Title`, `Available`, `LowStockThreshold` and `SoldOut`.
 
@@ -164,9 +164,9 @@ While none are in stock and the date is still to come, the product shows *Pre-or
 
 With the **Back-in-Stock Alerts** feature on, the page of a sold-out product that doesn't allow backorders shows *Sold out. Get an email when it's back:* under **Add to cart**, with an email box and **Notify me**. For a product with variants, it shows while a sold-out variant is picked, and asks about that one. A signed-in shopper's email is filled in.
 
-When the product or variant comes back in stock, such as when you receive more, everyone waiting is emailed *... is back in stock*, oldest request first, with a link to the product. Each request gets one email. The item's page under **Commerce > Inventory** says how many shoppers are waiting.
+When the product or variant comes back in stock, such as when you receive more, everyone waiting is emailed *... is back in stock*, oldest request first, with a link to the product. Each request gets one email. The item's page under **Commerce** → **Inventory** says how many shoppers are waiting.
 
-- The link to the product needs your site's **Base URL** under **Settings > General**; without it the email names the product only. Your site's email must be set up.
+- The link to the product needs your site's **Base URL** under **Settings** → **General**; without it the email names the product only. Your site's email must be set up.
 - One email address can ask about 10 products a day, and one visitor can send 20 requests an hour.
 - A restock emails up to 500 shoppers; the rest are emailed when the item next comes back.
 - A shopper's requests are part of their data: a customer's **Download data** includes them, and **Erase personal data** deletes them. See [Privacy requests](customers.md#privacy-requests).
@@ -187,7 +187,7 @@ Two buyers can't both get the last unit: the second is told to try again.
 
 ## Settings
 
-Under **Settings > Commerce > Inventory**:
+Under **Settings** → **Commerce** → **Inventory**:
 
 | Setting | What it does | Default |
 | --- | --- | --- |
@@ -204,7 +204,7 @@ To copy counts to another site, add the **Stock** step to a deployment plan (**C
 
 ## Try a sample
 
-The **Product listing: online store sample** recipe (**Configuration > Recipes**) counts every product it adds: most have 25, a few are running low, and the *Adventure Works Everyday Backpack* is sold out, so the shop shows each label.
+The **Product listing: online store sample** recipe (**Configuration** → **Recipes**) counts every product it adds: most have 25, a few are running low, and the *Adventure Works Everyday Backpack* is sold out, so the shop shows each label.
 
 ## Related pages
 

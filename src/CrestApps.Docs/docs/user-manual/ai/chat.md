@@ -12,7 +12,7 @@ Every AI assistant on the site is an [AI profile](profiles.md). The chat page le
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > *the assistant's name* |
+| **Menu** | **Artificial Intelligence** → *the assistant's name* |
 | **Permission** | Query any AI profile, or Query AI profile - *profile name* for one assistant |
 | **Feature** | AI Chat |
 
@@ -28,7 +28,7 @@ The video covers why every assistant needs a chat, how to chat and find past cha
 
 An assistant appears under **Artificial Intelligence** in the admin menu, by its name, when its profile has **Show on admin menu** turned on. Click its name to open a new chat.
 
-If you manage profiles, you can also open **Artificial Intelligence > Profiles**, open the **Actions** menu of a chat profile, and choose:
+If you manage profiles, you can also open **Artificial Intelligence** → **Profiles**, open the **Actions** menu of a chat profile, and choose:
 
 | Action | What it does |
 | --- | --- |
@@ -145,7 +145,7 @@ A numbered list of sources appears under the answer. Click a source to open it i
 
 Profiles of type **Utility** or **Agent** do not have a chat page. To check how one answers:
 
-1. Open **Artificial Intelligence > Profiles**.
+1. Open **Artificial Intelligence** → **Profiles**.
 2. Open the profile's **Actions** menu and choose **Invoke Profile**.
 3. Type a message and send it.
 

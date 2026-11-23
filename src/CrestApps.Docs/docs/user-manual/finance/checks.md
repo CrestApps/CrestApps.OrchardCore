@@ -10,7 +10,7 @@ Checks prints the business's checks and keeps a register of every check it wrote
 
 | | |
 | --- | --- |
-| **Menu** | Banking > Checks, Banking > Check Layouts |
+| **Menu** | **Banking** → **Checks**, **Banking** → **Check Layouts** |
 | **Permission** | View the check register; Issue and print checks; Manage check layouts |
 | **Feature** | Checks (Banking module) |
 
@@ -18,7 +18,7 @@ Checks prints the business's checks and keeps a register of every check it wrote
 
 ## Set up a check layout
 
-1. Open **Banking > Check Layouts** and choose **Add check layout**.
+1. Open **Banking** → **Check Layouts** and choose **Add check layout**.
 2. Choose the **Paper**: blank check paper, or pre-printed checks from your bank or printer.
 3. Choose the **Sheet**: where the check sits on the page, with vouchers above or below it, or three checks a page.
 4. On blank paper, fill in the **Payer** name and address that print on the check. Choose the address's country first: the fields follow its format.
@@ -44,7 +44,7 @@ Print a check on plain paper and hold it against the stock. If everything is too
 
 ## Write a check
 
-1. Open **Banking > Checks** and choose **Write a check**.
+1. Open **Banking** → **Checks** and choose **Write a check**.
 2. Choose the **Bank account**: one of the business's checking or savings accounts.
 3. Under **Check number**, choose how the check gets its number:
    - **The account's next number**: the check gets it now, ready to print.
@@ -52,11 +52,23 @@ Print a check on plain paper and hold it against the stock. If everything is too
    - **Already written by hand**: for a check you wrote from a checkbook. Enter the **Number written on the check**. The check is recorded as printed and is never printed here. A number another check of the account has is refused.
 4. Enter who it is paid to, the amount, the date and a memo, and choose **Issue**.
 
+Other features can add their own fields to this page, such as the expense accounts a check is posted to, and can refuse a check, such as one dated in a closed accounting period: the page then says why and nothing is written.
+
 Checks that other features write, such as paychecks, appear in the same register.
+
+## Edit a check before it prints
+
+A check that is **Waiting to print** or **Issued** can still be corrected, such as a wrong amount or a misspelled name.
+
+1. In **Banking** → **Checks**, choose **Edit** in the check's menu.
+2. Change who it is paid to, the address, the amount, the date or the memo. The bank account and the number can't change.
+3. Optionally enter a **Reason**, and choose **Save**.
+
+The feature the check pays can refuse a change, such as a bill payment of more than the bill: the page then says why and nothing changes. Once a check is printed it can't be edited: void it and write a new one instead. When your administrator has turned on the Audit Trail, each edit is recorded with what changed and who changed it.
 
 ## Print checks
 
-1. In **Banking > Checks**, tick the checks to print.
+1. In **Banking** → **Checks**, tick the checks to print.
 2. Choose **Print with** and the layout, or **Print with the account's default layout** to use the layout set on the bank account. The checks open as one PDF, and they are marked **Printed**.
 
 Pre-printed checks carry one bank account, so checks of two accounts can't print together on them. A check written by hand is never printed. If you tick only checks that wait for a number, the print run of their account opens.
@@ -65,7 +77,7 @@ Pre-printed checks carry one bank account, so checks of two accounts can't print
 
 Checks numbered when they print wait in the register as **Waiting to print**. Print them in a run on pre-printed checks:
 
-1. In **Banking > Checks**, choose **Print queued checks**, choose the **Bank account** and choose **Show its checks**.
+1. In **Banking** → **Checks**, choose **Print queued checks**, choose the **Bank account** and choose **Show its checks**.
 2. Clear any check you want to leave for another run. They print oldest first.
 3. Check the **Check layout** (the account's default is chosen for you) and enter the **Number on the first sheet**: the number printed on the top sheet in the printer. Choose **Continue**.
 4. Choose **Download the checks** and print them. Nothing is recorded yet.
@@ -105,4 +117,4 @@ Checks written by another feature can be limited to the people who look after th
 
 ## Positive pay
 
-Many banks pay only checks the business told them about. The **Checks: positive pay file** recipe adds a data pipeline under **Tools > Data Pipelines** that writes the checks issued, voided or stopped since its last run. Your administrator connects it to your bank and schedules it.
+Many banks pay only checks the business told them about. The **Checks: positive pay file** recipe adds a data pipeline under **Tools** → **Data Pipelines** that writes the checks issued, voided or stopped since its last run. Your administrator connects it to your bank and schedules it.

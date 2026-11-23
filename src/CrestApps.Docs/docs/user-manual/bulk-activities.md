@@ -12,7 +12,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Manage Activities |
+| **Menu** | **Interaction Center** → **Management** → **Manage Activities** |
 | **Permission** | Manage activities (it includes Purge activity, which the **Purge** action needs) |
 | **Feature** | Omnichannel Management |
 

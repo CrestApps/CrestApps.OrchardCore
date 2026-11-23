@@ -17,9 +17,11 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Banking.Checks.Drivers;
 
 /// <summary>
-/// The rows of the check register, and the editor of a check written in the admin. The editor fills an unsaved check,
-/// with how it gets its number (and the number of a check written by hand); the controller issues it through the check
-/// rules.
+/// The rows of the check register, and the editor of a check written in the admin or edited while it waits to print.
+/// A new check's editor fills an unsaved check, with how it gets its number (and the number of a check written by hand);
+/// the controller issues it through the check rules. An edited check keeps its bank account and number: only its payee,
+/// address, amount, date and memo change. Other modules add their own fields with their own drivers on
+/// <see cref="CheckRecord"/>.
 /// </summary>
 internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 {
@@ -73,10 +75,10 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
     }
 
     public override async Task<IDisplayResult> EditAsync(CheckRecord check, BuildEditorContext context)
-        => await EditorAsync(check, await _addressEditor.BuildAsync(check.PayeeAddress, AddressOptions(check.PayeeAddress?.Country)));
+        => await EditorAsync(check, await _addressEditor.BuildAsync(check.PayeeAddress, AddressOptions(check.PayeeAddress?.Country)), context.IsNew);
 
     // The editor, with the payee's address as stored or as posted.
-    private async Task<IDisplayResult> EditorAsync(CheckRecord check, AddressEditorViewModel payeeAddress)
+    private async Task<IDisplayResult> EditorAsync(CheckRecord check, AddressEditorViewModel payeeAddress, bool isNew)
     {
         var accounts = await BusinessAccountsAsync();
         var addressEditor = await _shapeFactory.CreateAddressEditorAsync(payeeAddress, $"{Prefix}.{nameof(CheckRecordViewModel.PayeeAddress)}");
@@ -86,7 +88,10 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 
         return Initialize<CheckRecordViewModel>("CheckRecordFields_Edit", model =>
         {
+            model.IsNew = isNew;
             model.BankAccountId = check.BankAccountId;
+            model.BankAccountName = check.BankAccountName;
+            model.CheckNumber = check.Number;
             model.PayeeName = check.PayeeName;
             model.PayeeAddress = payeeAddress;
             model.PayeeAddressEditor = addressEditor;
@@ -114,9 +119,14 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        check.BankAccountId = model.BankAccountId;
+        // An edited check keeps its bank account, its number and the party it pays; a new one is written to a name.
+        if (context.IsNew)
+        {
+            check.BankAccountId = model.BankAccountId;
+            check.Payee = default(PartyRef);
+        }
+
         check.PayeeName = string.IsNullOrWhiteSpace(model.PayeeName) ? null : model.PayeeName.Trim();
-        check.Payee = default(PartyRef);
         // The payee's address is optional; one that is entered is checked by its country's format.
         model.PayeeAddress ??= new AddressEditorViewModel();
 
@@ -136,10 +146,14 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 
         await _addressEditor.PopulateAsync(model.PayeeAddress, AddressOptions(model.PayeeAddress.Country));
         check.Memo = string.IsNullOrWhiteSpace(model.Memo) ? null : model.Memo.Trim();
-        check.Numbering = model.Numbering;
-        check.Number = 0;
 
-        if (model.Numbering == CheckNumbering.Handwritten)
+        if (context.IsNew)
+        {
+            check.Numbering = model.Numbering;
+            check.Number = 0;
+        }
+
+        if (context.IsNew && model.Numbering == CheckNumbering.Handwritten)
         {
             if (long.TryParse(model.Number?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var number) && number > 0)
             {
@@ -170,7 +184,7 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.CheckDate), S["Enter the check date."]);
         }
 
-        return await EditorAsync(check, model.PayeeAddress);
+        return await EditorAsync(check, model.PayeeAddress, context.IsNew);
     }
 
     private static AddressEditorOptions AddressOptions(string country)

@@ -1,0 +1,16 @@
+@model ShapeViewModel<MerchantTaxRegistration>
+
+@{
+    var frequency = Model.Value.Filing?.Frequency switch
+    {
+        TaxFilingFrequencies.Monthly => T["Files monthly"],
+        TaxFilingFrequencies.Quarterly => T["Files quarterly"],
+        TaxFilingFrequencies.Annual => T["Files annually"],
+        _ => null,
+    };
+}
+
+@if (frequency is not null)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Filing frequency"]"><i class="fa-solid fa-calendar-days text-secondary" aria-hidden="true"></i> @frequency</span>
+}

@@ -10,7 +10,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Addresses.GooglePlaces;
 
 /// <summary>
-/// Settings › Address suggestions: the Google Places key. The key is never shown again once saved; a blank field keeps
+/// Settings › Address Suggestions: the Google Places key. The key is never shown again once saved; a blank field keeps
 /// it.
 /// </summary>
 public sealed class GooglePlacesSettingsDisplayDriver : SiteDisplayDriver<GooglePlacesSettings>
