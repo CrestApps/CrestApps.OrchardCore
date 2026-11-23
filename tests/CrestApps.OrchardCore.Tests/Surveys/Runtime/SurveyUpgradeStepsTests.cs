@@ -1,6 +1,8 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Migrations;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -128,6 +130,41 @@ public sealed class SurveyUpgradeStepsTests
     }
 
     [Fact]
+    public async Task InvitationHoldsStep_MarksInvitationsHeldBeforeTheHoldColumn_InItsFirstRun_AndSavesOnlyThose()
+    {
+        // Arrange: a held first send, a pending one never sent and a sent one, indexed before the hold column existed.
+        await using var harness = await RuntimeTestHarness.CreateAsync(services => services.AddScoped<SurveyInvitationHoldsStep>());
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+            var held = new SurveyInvitation { ItemId = "held", SurveyId = "s1", CollectorId = "c1", Email = "held@example.com", Status = SurveyInvitationStatus.Pending };
+
+            held.Put(new SurveyInvitationHold { HeldUtc = RuntimeTestHarness.Now });
+            await store.CreateAsync(held);
+            await store.CreateAsync(new SurveyInvitation { ItemId = "created", SurveyId = "s1", CollectorId = "c1", Email = "created@example.com", Status = SurveyInvitationStatus.Pending });
+            await store.CreateAsync(new SurveyInvitation { ItemId = "sent", SurveyId = "s1", CollectorId = "c1", Email = "sent@example.com", Status = SurveyInvitationStatus.Sent });
+
+            return true;
+        });
+        await harness.RunAsync(services => ResetHeldColumnAsync(services));
+
+        var heldBefore = await ListHeldAsync(harness);
+        var rowsBefore = await IndexRowIdsAsync(harness);
+
+        // Act
+        var runs = await RunUntilDoneAsync(harness, services => services.GetRequiredService<SurveyInvitationHoldsStep>());
+
+        // Assert: the held invitation is found by the reminder task's query after one run; the others weren't saved.
+        var rowsAfter = await IndexRowIdsAsync(harness);
+
+        Assert.Empty(heldBefore);
+        Assert.Equal(1, runs);
+        Assert.Equal(["held"], await ListHeldAsync(harness));
+        Assert.Equal(rowsBefore["created"], rowsAfter["created"]);
+        Assert.Equal(rowsBefore["sent"], rowsAfter["sent"]);
+    }
+
+    [Fact]
     public async Task ContentSanitizingStep_CleansStoredDraftsAndVersions_AndLeavesCleanRecordsUnsaved()
     {
         // Arrange: a survey whose draft and published version were stored before the stores sanitized on save (the harness
@@ -244,6 +281,30 @@ public sealed class SurveyUpgradeStepsTests
 
         return true;
     }
+
+    private static async Task<bool> ResetHeldColumnAsync(IServiceProvider services)
+    {
+        var session = services.GetRequiredService<ISession>();
+        var configuration = session.Store.Configuration;
+        var dialect = configuration.SqlDialect;
+        var table = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetIndexTable(typeof(SurveyInvitationIndex), SurveysConstants.CollectionName), configuration.Schema);
+        var connection = await session.CreateConnectionAsync();
+
+        await connection.ExecuteAsync($"UPDATE {table} SET {dialect.QuoteForColumnName("Held")} = 0");
+
+        return true;
+    }
+
+    private static Task<string[]> ListHeldAsync(RuntimeTestHarness harness)
+        => harness.RunAsync(async services => (await services.GetRequiredService<SurveyInvitationStore>().ListHeldByCollectorAsync("c1", 10, TestContext.Current.CancellationToken))
+            .Select(invitation => invitation.ItemId)
+            .ToArray());
+
+    private static Task<Dictionary<string, long>> IndexRowIdsAsync(RuntimeTestHarness harness)
+        => harness.RunAsync(async services => (await services.GetRequiredService<ISession>()
+            .QueryIndex<SurveyInvitationIndex>(collection: SurveysConstants.CollectionName)
+            .ListAsync(TestContext.Current.CancellationToken))
+            .ToDictionary(row => row.ItemId, row => row.Id, StringComparer.Ordinal));
 
     private static Task<int> CountByEmailAsync(RuntimeTestHarness harness, string email)
         => harness.RunAsync(services => services.GetRequiredService<ISession>()

@@ -10,13 +10,17 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Invitations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Outreach;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore;
 using OrchardCore.Entities;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Settings;
 using YesSql;
 using OutreachRecordingSender = CrestApps.OrchardCore.Tests.Outreach.RecordingSender;
@@ -24,8 +28,8 @@ using OutreachRecordingSender = CrestApps.OrchardCore.Tests.Outreach.RecordingSe
 namespace CrestApps.OrchardCore.Tests.Surveys.Extras;
 
 /// <summary>
-/// Delivery of survey invitations: the daily e-mail limit (R3-M6, R4-L3), held invitations (R4-L4) and an unreadable
-/// opt-out list (R3-M4, R4-M3).
+/// Delivery of survey invitations: the daily e-mail limit (R3-M6, R4-L3, exact across servers after round 4), held
+/// invitations (R4-L4) and an unreadable opt-out list (R3-M4, R4-M3).
 /// </summary>
 public sealed class SurveyInvitationDeliveryTests
 {
@@ -268,6 +272,107 @@ public sealed class SurveyInvitationDeliveryTests
     }
 
     [Fact]
+    public async Task TwoSendersAtOnceNearTheLimit_NeverPassIt()
+    {
+        // Arrange: three e-mails a day, one already sent today, and two senders (two servers, or two requests) that each
+        // want to send three more at the same moment.
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 3);
+        harness.Clock.UtcNow = _evening;
+        await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(SentInvitation("earlier@example.com"));
+
+            return true;
+        });
+
+        using var bothStarted = new Barrier(2);
+
+        // Each sender asks the limit before every e-mail, takes its time sending it, and saves its e-mails when its scope
+        // ends, as a send does.
+        Task<int> SendAsync(string name) => Task.Run(() => harness.RunAsync(async services =>
+        {
+            var limit = services.GetRequiredService<SurveyInvitationEmailLimit>();
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+            var sent = 0;
+
+            limit.BeginBatch();
+            bothStarted.SignalAndWait(TestContext.Current.CancellationToken);
+
+            for (var i = 0; i < 3; i++)
+            {
+                if (!await limit.CanSendAsync(TestContext.Current.CancellationToken))
+                {
+                    break;
+                }
+
+                await Task.Delay(25, TestContext.Current.CancellationToken);
+                await store.CreateAsync(SentInvitation($"{name}{i}@example.com"));
+                limit.AddSent();
+                sent++;
+            }
+
+            return sent;
+        }));
+
+        // Act
+        var results = await Task.WhenAll(SendAsync("one"), SendAsync("two"));
+
+        // Assert: two more went out between them, and the day's count is exactly the limit.
+        var emailed = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().CountEmailedSinceAsync(SurveyInvitationService.DayStartUtc(_evening, "America/New_York")));
+
+        Assert.Equal(2, results.Sum());
+        Assert.Equal(3, emailed);
+    }
+
+    [Fact]
+    public async Task WhenTheDailyLimitsLockIsBusy_InvitationsAreHeld_NotSent_AndTheBatchWaitsForItOnce()
+    {
+        // Arrange: another sender holds the day's lock past the wait, and two invitations were created, not sent.
+        var sender = new RecordingSender();
+        var busyLock = new BusyDistributedLock();
+        await using var harness = await CreateAsync(sender, SiteService(emailsPerDay: 10), configure: services => services.AddSingleton<IDistributedLock>(busyLock));
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var first = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().CreateAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = "one@example.com" }));
+        var second = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().CreateAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = "two@example.com" }));
+
+        // Act
+        var sent = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().SendPendingAsync(first.Invitation.CollectorId));
+
+        // Assert: nothing went out, the lock was asked for once for the whole batch, and both invitations wait, held,
+        // for the reminder task's next run.
+        var held = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().ListHeldByCollectorAsync(first.Invitation.CollectorId, 10));
+
+        Assert.Equal(0, sent);
+        Assert.Empty(sender.Sent);
+        Assert.Equal(1, busyLock.Attempts);
+        Assert.Equal(new[] { first.Invitation.ItemId, second.Invitation.ItemId }.Order(StringComparer.Ordinal), held.Select(item => item.ItemId).Order(StringComparer.Ordinal));
+        Assert.All(held, invitation => Assert.Equal(SurveyInvitationStatus.Pending, invitation.Status));
+    }
+
+    [Fact]
+    public async Task TheDailyLimitsLock_IsReleasedWhenTheSendingScopeEnds()
+    {
+        // Arrange
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 10);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+
+        // Act: a send in a shell scope (released after its save) and one in a plain service scope (released when the
+        // scope is disposed).
+        await harness.RunInShellAsync(services => services.GetRequiredService<ISurveyInvitationService>().InviteAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = "shell@example.com" }));
+        await InviteAsync(harness, survey, "plain@example.com");
+
+        // Assert
+        var locks = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<IDistributedLock>()));
+
+        Assert.Equal(2, sender.Sent.Count);
+        Assert.False(await locks.IsLockAcquiredAsync("Surveys:InvitationEmails:2026-11-19"));
+    }
+
+    [Fact]
     public async Task TwoFirstUnsubscribesAtOnce_EachKeepTheirAddress()
     {
         // Arrange: two sessions both find no list and each insert one.
@@ -330,7 +435,7 @@ public sealed class SurveyInvitationDeliveryTests
         return siteService;
     }
 
-    private static async Task<RuntimeTestHarness> CreateAsync(RecordingSender sender, Mock<ISiteService> siteService, BreakableDataProtection protection = null)
+    private static async Task<RuntimeTestHarness> CreateAsync(RecordingSender sender, Mock<ISiteService> siteService, BreakableDataProtection protection = null, Action<IServiceCollection> configure = null)
     {
         return await RuntimeTestHarness.CreateAsync(services =>
         {
@@ -347,8 +452,22 @@ public sealed class SurveyInvitationDeliveryTests
             {
                 services.AddSingleton<IDataProtectionProvider>(protection);
             }
+
+            configure?.Invoke(services);
         });
     }
+
+    private static SurveyInvitation SentInvitation(string email)
+        => new()
+        {
+            ItemId = IdGenerator.GenerateId(),
+            SurveyId = "s1",
+            CollectorId = "c1",
+            Email = email,
+            Status = SurveyInvitationStatus.Sent,
+            CreatedUtc = _evening,
+            SentUtc = _evening,
+        };
 
     private static Task<SurveyInvitationResult> InviteAsync(RuntimeTestHarness harness, Survey survey, string email)
         => harness.RunAsync(services => services.GetRequiredService<ISurveyInvitationService>().InviteAsync(new SurveyInvitationRequest
@@ -373,6 +492,38 @@ public sealed class SurveyInvitationDeliveryTests
 
             return Task.FromResult(true);
         }
+    }
+
+    /// <summary>
+    /// Locks whose daily e-mail limit lock another sender always holds: every attempt to take it gives up. Other keys
+    /// (the opt-out list's, for example) behave as usual.
+    /// </summary>
+    private sealed class BusyDistributedLock : IDistributedLock
+    {
+        private const string BusyPrefix = "Surveys:InvitationEmails:";
+
+        private readonly KeyedDistributedLock _others = new();
+        private int _attempts;
+
+        public int Attempts => _attempts;
+
+        public Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+            => key.StartsWith(BusyPrefix, StringComparison.Ordinal) ? throw new InvalidOperationException("The lock is busy.") : _others.AcquireLockAsync(key, expiration);
+
+        public Task<(ILocker locker, bool locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null)
+        {
+            if (!key.StartsWith(BusyPrefix, StringComparison.Ordinal))
+            {
+                return _others.TryAcquireLockAsync(key, timeout, expiration);
+            }
+
+            Interlocked.Increment(ref _attempts);
+
+            return Task.FromResult<(ILocker, bool)>((null, false));
+        }
+
+        public Task<bool> IsLockAcquiredAsync(string key)
+            => key.StartsWith(BusyPrefix, StringComparison.Ordinal) ? Task.FromResult(true) : _others.IsLockAcquiredAsync(key);
     }
 
     /// <summary>

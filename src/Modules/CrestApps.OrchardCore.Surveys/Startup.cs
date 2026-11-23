@@ -40,6 +40,7 @@ public sealed class Startup : StartupBase
 
         // Data the migrations change on existing records is upgraded in the background, a page at a time.
         services.AddResumableStep<SurveyInvitationsReindexStep>();
+        services.AddResumableStep<SurveyInvitationHoldsStep>();
         services.AddResumableStep<SurveyAnonymityUpgradeStep>();
         services.AddResumableStep<SurveyContentSanitizingStep>();
         services.AddIndexProvider<SurveyIndexProvider>()
