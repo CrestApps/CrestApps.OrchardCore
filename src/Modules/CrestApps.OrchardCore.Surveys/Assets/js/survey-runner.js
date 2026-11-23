@@ -125,7 +125,7 @@ function applyVisibility(form, hidden) {
 
         const locked = element.hasAttribute('data-survey-locked');
 
-        element.hidden = isQuestionHidden(id, locked, element.hidden, hidden.questions);
+        element.hidden = isQuestionHidden(id, locked, element.hidden === true, hidden.questions);
 
         // The choices of a locked answer stay as the server showed them too.
         if (locked) {

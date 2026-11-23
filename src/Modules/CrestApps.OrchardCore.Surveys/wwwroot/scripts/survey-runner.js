@@ -496,7 +496,7 @@
 			const element = question;
 			const id = element.dataset.questionId ?? "";
 			const locked = element.hasAttribute("data-survey-locked");
-			element.hidden = isQuestionHidden(id, locked, element.hidden, hidden.questions);
+			element.hidden = isQuestionHidden(id, locked, element.hidden === true, hidden.questions);
 			if (locked) continue;
 			const hiddenChoices = hidden.choices.get(id) ?? /* @__PURE__ */ new Set();
 			for (const input of element.querySelectorAll("input[type=\"radio\"], input[type=\"checkbox\"], option")) {
