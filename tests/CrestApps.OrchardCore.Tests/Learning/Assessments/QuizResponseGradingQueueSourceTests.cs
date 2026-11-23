@@ -211,6 +211,36 @@ public sealed class QuizResponseGradingQueueSourceTests
         Assert.InRange(submitted - item.SubmittedUtc, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
     }
 
+    [Fact]
+    public void VM5_AListThatShowsAnAnonymousSurveysAttempts_IsReadInRandomIdOrder()
+    {
+        // Arrange
+        var named = new Survey { ItemId = "named", Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Identified } };
+        var anonymous = new Survey { ItemId = "anonymous", Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous } };
+
+        // Act + Assert: only named surveys, or an anonymous one hidden by the small-group rule, keep oldest first.
+        Assert.False(QuizResponseGradingQueueSource.ListsAnonymous([named], []));
+        Assert.False(QuizResponseGradingQueueSource.ListsAnonymous([named, anonymous], ["anonymous"]));
+        Assert.True(QuizResponseGradingQueueSource.ListsAnonymous([named, anonymous], []));
+    }
+
+    [Fact]
+    public async Task VM5_ANamedOnlyList_StaysOldestFirst()
+    {
+        // Arrange
+        await using var h = await CreateAsync();
+        await AddAsync(h, "b-older", "survey1", "course1", LearningTestHarness.Now.AddMinutes(-10));
+        await AddAsync(h, "a-newer", "survey1", "course1", LearningTestHarness.Now.AddMinutes(-5));
+
+        // Act
+        var page = await h.RunAsync(services => Source(services).ListWaitingAsync(new GradingQueueQuery { CourseIds = ["course1"], Take = 10 }, TestContext.Current.CancellationToken));
+        var queries = await h.RunAsync(services => Task.FromResult(services.GetRequiredService<InMemorySurveyResponses>().Queries));
+
+        // Assert
+        Assert.Equal(["b-older", "a-newer"], page.Items.Select(item => item.Id));
+        Assert.All(queries, query => Assert.False(query.OrderById));
+    }
+
     private static QuizResponseGradingQueueSource Source(IServiceProvider services)
         => services.GetServices<IGradingQueueSource>().OfType<QuizResponseGradingQueueSource>().Single();
 

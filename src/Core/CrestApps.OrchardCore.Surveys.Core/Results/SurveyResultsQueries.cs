@@ -99,12 +99,74 @@ public sealed class SurveyResultsQueries
 
         var read = 0;
 
+        if (!scope.OrderById)
+        {
+            // Oldest first by document: a save writes a response's index row again under a new id, but its document keeps
+            // its id. So the pages after the first follow on from the last document read (keyset), and a response saved
+            // while the read runs (answered, graded, upkept) is neither skipped nor read twice.
+            var afterDocumentId = 0L;
+            var toSkip = Math.Max(0, skip);
+            var documentId = _sql.Column("DocumentId");
+
+            while (read < take)
+            {
+                var size = (int)Math.Min(SurveysConstants.PageSize, (long)take - read);
+                var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
+                var parameters = new DynamicParameters();
+
+                builder.Selector($"{documentId} AS DocumentId, {_sql.Column(nameof(SurveyResponseIndex.ItemId))} AS ResponseId");
+                Where(builder, parameters, scope);
+                builder.WhereAnd($"{documentId} > @AfterDocumentId");
+                parameters.Add("AfterDocumentId", afterDocumentId);
+                builder.OrderBy(documentId);
+
+                if (toSkip > 0)
+                {
+                    builder.Skip(SurveyIndexSql.Number(toSkip));
+                    toSkip = 0;
+                }
+
+                builder.Take(SurveyIndexSql.Number(size));
+
+                var rows = await _sql.QueryAsync(builder, parameters, cancellationToken);
+
+                if (rows.Count == 0)
+                {
+                    yield break;
+                }
+
+                afterDocumentId = SurveyIndexSql.Long(rows[^1]["DocumentId"]);
+
+                var ids = rows.Select(row => SurveyIndexSql.Text(row["ResponseId"])).Where(id => !string.IsNullOrEmpty(id)).ToArray();
+                var documents = (await _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.ItemId.IsIn(ids), collection: SurveysConstants.ResponsesCollectionName)
+                    .ListAsync(cancellationToken))
+                    .GroupBy(response => response.ItemId, StringComparer.Ordinal)
+                    .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+                foreach (var id in ids)
+                {
+                    if (documents.TryGetValue(id, out var response))
+                    {
+                        read++;
+
+                        yield return response;
+                    }
+                }
+
+                if (rows.Count < size)
+                {
+                    yield break;
+                }
+            }
+
+            yield break;
+        }
+
+        // Anonymous reads are in random-id order, which no save changes.
         for (var offset = Math.Max(0, skip); read < take; offset += SurveysConstants.PageSize)
         {
             var size = (int)Math.Min(SurveysConstants.PageSize, (long)take - read);
-            var filtered = Filter(scope);
-            var ordered = scope.OrderById ? filtered.OrderBy(index => index.ItemId) : filtered.OrderBy(index => index.Id);
-            var page = (await ordered.Skip(offset).Take(size).ListAsync(cancellationToken)).ToList();
+            var page = (await Filter(scope).OrderBy(index => index.ItemId).Skip(offset).Take(size).ListAsync(cancellationToken)).ToList();
 
             foreach (var response in page)
             {

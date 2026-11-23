@@ -104,6 +104,75 @@ public sealed class SurveyImportLimitsTests
         store.Verify(item => item.CreateFileFromStreamAsync(It.IsAny<string>(), It.IsAny<Stream>(), true), Times.Once());
     }
 
+    [Fact]
+    public async Task P2L7_AQtiReimport_ReusesItsImages_InsteadOfAddingCopies()
+    {
+        // Arrange: the image of the package is already in the media library from a first import.
+        var store = new Mock<IMediaFileStore>();
+        store.Setup(item => item.MapPathToPublicUrl(It.IsAny<string>())).Returns<string>(path => "/media/" + path);
+        store.Setup(item => item.GetFileInfoAsync(It.IsAny<string>())).ReturnsAsync(Mock.Of<global::OrchardCore.FileStorage.IFileStoreEntry>());
+        var format = new QtiQuestionImportFormat(store.Object, Options.Create(new MediaOptions { AllowedFileExtensions = [".png"] }), RecipeRoundTrip.Localizer<QtiQuestionImportFormat>());
+
+        // Act
+        using var package = Package();
+        var imported = await format.ReadAsync("package.zip", package, TestContext.Current.CancellationToken);
+        var path = QtiQuestionImportFormat.MediaPath(new CrestApps.OrchardCore.Surveys.Core.Qti.QtiMediaFile { Path = "items/images/sign.png", Content = BanksQtiSamples.Png });
+
+        // Assert: nothing written, and the question points at the image already there, in a folder named after it.
+        Assert.Single(imported.Questions);
+        store.Verify(item => item.CreateFileFromStreamAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<bool>()), Times.Never());
+        Assert.StartsWith(QtiQuestionImportFormat.MediaFolder + "/", path, StringComparison.Ordinal);
+        Assert.EndsWith("/sign.png", path, StringComparison.Ordinal);
+        Assert.Equal(path, QtiQuestionImportFormat.MediaPath(new CrestApps.OrchardCore.Surveys.Core.Qti.QtiMediaFile { Path = "other/sign.png", Content = BanksQtiSamples.Png }));
+    }
+
+    [Fact]
+    public async Task P2L7_UploadsLargerThanTheLimit_AreRefusedWithoutBeingReadWhole()
+    {
+        // Arrange: a stream that would never end.
+        var csv = new CsvQuestionImportFormat(new SpreadsheetQuestionReader(new BanksControlRegistry(), RecipeRoundTrip.Localizer<SpreadsheetQuestionReader>()), RecipeRoundTrip.Localizer<CsvQuestionImportFormat>());
+
+        // Act
+        var result = await csv.ReadAsync("big.csv", new EndlessStream(), TestContext.Current.CancellationToken);
+        var small = await QuestionImportUploads.ReadAtMostAsync(new MemoryStream([1, 2, 3]), 3, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(result.Errors);
+        Assert.Empty(result.Questions);
+        Assert.Equal(3, small.Length);
+        Assert.Equal(0, small.Position);
+    }
+
+    // Reads zeros forever.
+    private sealed class EndlessStream : Stream
+    {
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+            => count;
+
+        public override long Seek(long offset, SeekOrigin origin)
+            => throw new NotSupportedException();
+
+        public override void SetLength(long value)
+            => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+            => throw new NotSupportedException();
+    }
+
     private static MemoryStream Package()
         => BanksQtiSamples.Package(
             BanksQtiSamples.Manifest30(("choice", "items/choice.xml")),

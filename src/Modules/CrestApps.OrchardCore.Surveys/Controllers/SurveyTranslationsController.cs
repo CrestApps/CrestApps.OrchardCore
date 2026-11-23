@@ -238,6 +238,7 @@ public sealed class SurveyTranslationsController : Controller
     {
         var texts = SurveyTranslations.Texts(survey.Draft, culture);
         var outdated = SurveyTranslations.OutdatedKeys(survey.Draft, culture);
+        var toCheck = SurveyTranslations.UncheckedKeys(survey.Draft, culture);
         var model = new SurveyTranslationsViewModel
         {
             Survey = survey,
@@ -259,6 +260,7 @@ public sealed class SurveyTranslationsController : Controller
                 Translation = translation,
                 IsHtml = entry.IsHtml,
                 Outdated = outdated.Contains(entry.Key),
+                Unchecked = toCheck.Contains(entry.Key),
             });
 
             if (outdated.Contains(entry.Key))
@@ -268,6 +270,12 @@ public sealed class SurveyTranslationsController : Controller
             else if (!string.IsNullOrWhiteSpace(translation))
             {
                 model.Translated++;
+
+                // Translated, but nothing tells whether the original changed since: shown to be checked once.
+                if (toCheck.Contains(entry.Key))
+                {
+                    model.Unchecked++;
+                }
             }
         }
 

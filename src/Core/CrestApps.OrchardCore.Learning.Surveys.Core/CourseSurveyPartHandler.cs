@@ -80,8 +80,13 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
         }
 
         // An item of the first Learning release that the upgrade could not finish still holds its questions in the
-        // legacy part: its survey takes them, and the legacy part goes only once they are saved.
-        if (survey is not null && legacy is not null)
+        // legacy part: its survey takes them, and the legacy part goes only once they are saved. A survey that course
+        // staff have built (or published) since is never overwritten by the older questions: the legacy part just goes.
+        if (survey is not null && legacy is not null && LegacySurveyContent.IsNewerThanLegacy(survey))
+        {
+            LegacyCourseSurveyUpgrade.TakeLegacyPart(part.ContentItem);
+        }
+        else if (survey is not null && legacy is not null)
         {
             var definition = LegacyCourseSurveyUpgrade.ToDefinition(legacy, survey.Title);
 

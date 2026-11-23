@@ -104,6 +104,40 @@ public static class SurveyTranslations
     }
 
     /// <summary>
+    /// Gets the keys of a culture whose translation has no fingerprint of its original text (saved before fingerprints
+    /// were kept), so nothing tells whether the original changed since. They are shown to be checked once: saving the
+    /// translation again, changed or not, records the original it now stands for.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="culture">The culture.</param>
+    /// <returns>The keys.</returns>
+    public static IReadOnlySet<string> UncheckedKeys(SurveyDefinition definition, string culture)
+    {
+        var toCheck = new HashSet<string>(StringComparer.Ordinal);
+        var texts = Texts(definition, culture);
+
+        if (texts.Count == 0)
+        {
+            return toCheck;
+        }
+
+        var sources = Sources(definition, culture);
+
+        foreach (var entry in SurveyTextCatalog.Describe(definition))
+        {
+            if (texts.TryGetValue(entry.Key, out var text)
+                && !string.IsNullOrWhiteSpace(text)
+                && !string.IsNullOrWhiteSpace(entry.Text)
+                && (sources is null || !sources.TryGetValue(entry.Key, out var fingerprint) || string.IsNullOrEmpty(fingerprint)))
+            {
+                toCheck.Add(entry.Key);
+            }
+        }
+
+        return toCheck;
+    }
+
+    /// <summary>
     /// Splits the texts of a translation file into those made from the current original texts and those whose original
     /// text in the file differs from the survey's now (the file was translated before an author reworded the item). An
     /// entry without an original is taken as current.
@@ -204,6 +238,14 @@ public static class SurveyTranslations
             // date until someone really translates the new original.
             if (target.TryGetValue(key, out var previous) && string.Equals(previous, trimmed, StringComparison.Ordinal))
             {
+                // One saved before fingerprints were kept is checked by being saved again: it now stands for the
+                // current original.
+                if (!sources.ContainsKey(key) && Fingerprint(originals.GetValueOrDefault(key)) is { } checkedFingerprint)
+                {
+                    sources[key] = checkedFingerprint;
+                    written++;
+                }
+
                 continue;
             }
 

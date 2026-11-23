@@ -68,6 +68,35 @@ public static class LegacyQuizUpgrade
         => item is null ? null : ((JsonObject)item.Content)?[nameof(QuizPart)] as JsonObject;
 
     /// <summary>
+    /// Gets whether a quiz item version still holds first-release settings that its survey hasn't taken yet.
+    /// </summary>
+    /// <param name="item">The content item version.</param>
+    /// <returns><see langword="true"/> when it holds any.</returns>
+    public static bool HoldsLegacySettings(ContentItem item)
+        => PartOf(item) is { } part && _legacyKeys.Any(part.ContainsKey);
+
+    /// <summary>
+    /// Points a quiz item version at its survey and leaves its first-release settings in place, so a survey that fails
+    /// to take them can take them on the next run.
+    /// </summary>
+    /// <param name="item">The content item version.</param>
+    /// <param name="surveyId">The survey.</param>
+    public static void PointAt(ContentItem item, string surveyId)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        var content = (JsonObject)item.Content;
+
+        if (content[nameof(QuizPart)] is not JsonObject part)
+        {
+            part = [];
+            content[nameof(QuizPart)] = part;
+        }
+
+        part[nameof(QuizPart.SurveyId)] = surveyId;
+    }
+
+    /// <summary>
     /// Gets whether a quiz item version still needs a survey.
     /// </summary>
     /// <param name="item">The content item version.</param>

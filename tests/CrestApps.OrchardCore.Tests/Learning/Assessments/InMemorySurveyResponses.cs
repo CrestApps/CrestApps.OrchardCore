@@ -44,7 +44,9 @@ internal sealed class InMemorySurveyResponses : ISurveyResponseQueries
             .Where(response => query.ContextKinds.Count == 0 || (response.Context is { } context && query.ContextKinds.Contains(context.Kind)))
             .ToList();
 
-        matches = query.OldestFirst
+        matches = query.OrderById
+            ? [.. matches.OrderBy(response => response.ItemId, StringComparer.Ordinal)]
+            : query.OldestFirst
             ? [.. matches.OrderBy(response => response.CompletedUtc).ThenBy(response => response.StartedUtc).ThenBy(response => response.ItemId, StringComparer.Ordinal)]
             : [.. matches.OrderByDescending(response => response.StartedUtc)];
 

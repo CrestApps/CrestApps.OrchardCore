@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer;
 using OrchardCore.DataSources;
 using OrchardCore.Localization;
 
@@ -9,9 +10,11 @@ namespace CrestApps.OrchardCore.Surveys.DataSources;
 /// The Surveys data source for reports and data pipelines: surveys, versions, questions, responses, answers, category
 /// scores, page visits and invitations, plus one wide data set per published survey, named
 /// <c>SurveyResponses_{surveyName}</c>, with a field per question. The per-survey data sets are listed at run time, so it
-/// implements <see cref="IDataSource"/> itself rather than deriving from <see cref="RecordDataSource"/>.
+/// implements <see cref="IDataSource"/> itself rather than deriving from <see cref="RecordDataSource"/>. Its data sets hold
+/// back the rows of anonymous surveys until enough responses pass the read's own conditions, so a Report Builder run
+/// shares a read of them only between queries with the same conditions (<see cref="IReportSharedReadPolicy"/>).
 /// </summary>
-public sealed class SurveysDataSource : IDataSource
+public sealed class SurveysDataSource : IDataSource, IReportSharedReadPolicy
 {
     private readonly ISurveysDataSet[] _dataSets;
     private readonly SurveyWideDataSetFactory _wide;
@@ -91,6 +94,14 @@ public sealed class SurveysDataSource : IDataSource
             yield return batch;
         }
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Never: a read that passed the small-group rule of <see cref="Core.Services.SurveyGroupGate"/> on its conditions
+    /// would otherwise serve a query with more conditions, such as a dashboard click, filtered after the gate.
+    /// </remarks>
+    public bool ServesNarrowerReads(string dataSet)
+        => false;
 
     private async Task<IRecordDataSet> FindReadableAsync(string name, DataSourceContext context, CancellationToken cancellationToken)
     {

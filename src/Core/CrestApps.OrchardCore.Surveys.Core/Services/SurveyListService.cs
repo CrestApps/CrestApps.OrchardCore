@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
 using Dapper;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Services;
 
@@ -12,14 +13,17 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 public sealed class SurveyListService
 {
     private readonly ISession _session;
+    private readonly SurveyIndexReader _reader;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyListService"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
-    public SurveyListService(ISession session)
+    /// <param name="reader">Reads the surveys whose index rows wait for the reindex step.</param>
+    public SurveyListService(ISession session, SurveyIndexReader reader)
     {
         _session = session;
+        _reader = reader;
     }
 
     /// <summary>
@@ -41,13 +45,42 @@ public sealed class SurveyListService
 
         IQuery<Survey> root = _session.Query<Survey>(collection: SurveysConstants.CollectionName);
 
+        // Rows indexed before the index held the owner and the tags are read from their surveys until the reindex step
+        // reaches them, so a filter on either never drops a survey in the meantime.
+        var stale = !string.IsNullOrWhiteSpace(query.Tag) || !string.IsNullOrEmpty(query.OwnerId)
+            ? await _reader.ListNotReindexedAsync(cancellationToken)
+            : [];
+        string[] tagged = null;
+
         if (!string.IsNullOrWhiteSpace(query.Tag))
         {
             var tag = SurveyTagIndexProvider.Normalize(query.Tag);
-            root = root.With<SurveyTagIndex>(index => index.Tag == tag);
+            var staleTagged = stale
+                .Where(survey => (survey.Tags ?? []).Any(candidate => !string.IsNullOrWhiteSpace(candidate) && SurveyTagIndexProvider.Normalize(candidate) == tag))
+                .Select(survey => survey.ItemId)
+                .ToList();
+
+            if (staleTagged.Count == 0)
+            {
+                root = root.With<SurveyTagIndex>(index => index.Tag == tag);
+            }
+            else
+            {
+                var indexed = (await _session.QueryIndex<SurveyTagIndex>(index => index.Tag == tag, collection: SurveysConstants.CollectionName).ListAsync(cancellationToken))
+                    .Select(row => row.SurveyId);
+
+                tagged = [.. indexed.Concat(staleTagged).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal)];
+            }
         }
 
         var q = root.With<SurveyIndex>();
+
+        if (tagged is not null)
+        {
+            // Only while some surveys wait for the reindex step: one IN list holds at most SurveyIdChunks.Size ids.
+            var ids = tagged.Take(SurveyIdChunks.Size).ToArray();
+            q = q.Where(index => index.ItemId.IsIn(ids));
+        }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -80,7 +113,15 @@ public sealed class SurveyListService
         if (!string.IsNullOrEmpty(query.OwnerId))
         {
             var ownerId = query.OwnerId;
-            q = q.Where(index => index.OwnerId == ownerId);
+            var staleOwned = stale
+                .Where(survey => string.Equals(survey.OwnerId, ownerId, StringComparison.Ordinal))
+                .Select(survey => survey.ItemId)
+                .Take(SurveyIdChunks.Size)
+                .ToArray();
+
+            q = staleOwned.Length == 0
+                ? q.Where(index => index.OwnerId == ownerId)
+                : q.Where(index => index.OwnerId == ownerId || index.ItemId.IsIn(staleOwned));
         }
 
         var count = await q.CountAsync(cancellationToken);
@@ -119,8 +160,16 @@ public sealed class SurveyListService
         builder.OrderBy(tag);
         builder.Take(SurveyIndexSql.Number(MaxTags));
 
+        // The tags of surveys whose rows wait for the reindex step are read from the surveys.
+        var stale = (await _reader.ListNotReindexedAsync(cancellationToken))
+            .Where(survey => string.IsNullOrEmpty(ownerId) || string.Equals(survey.OwnerId, ownerId, StringComparison.Ordinal))
+            .SelectMany(survey => survey.Tags ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(SurveyTagIndexProvider.Normalize);
+
         return (await sql.QueryAsync(builder, parameters, cancellationToken))
             .Select(row => row.Values.FirstOrDefault() as string)
+            .Concat(stale)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)

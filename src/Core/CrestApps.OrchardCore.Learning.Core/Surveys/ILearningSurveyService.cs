@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore.ContentManagement;
@@ -89,4 +90,14 @@ public interface ILearningSurveyService
     /// <param name="survey">The survey.</param>
     /// <returns><see langword="true"/> when Learning owns the survey.</returns>
     Task<bool> IsOwnedByCourseItemAsync(Survey survey);
+
+    /// <summary>
+    /// Lists, from the content index and without loading any item, the owners of the surveys course items own: the latest
+    /// version of every content item whose type has the course item part. Access providers that grant every course
+    /// item's survey list their grants with it (<see cref="ISurveyAccessProvider.ListGrantsAsync"/>). A survey whose item
+    /// was removed is not listed, though <see cref="IsOwnedByCourseItemAsync"/> still counts it as Learning's.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The owners.</returns>
+    Task<IReadOnlyCollection<RecordRef>> ListCourseItemOwnersAsync(CancellationToken cancellationToken = default);
 }

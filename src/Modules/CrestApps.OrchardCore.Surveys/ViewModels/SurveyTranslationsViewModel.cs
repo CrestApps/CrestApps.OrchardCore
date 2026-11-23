@@ -42,4 +42,9 @@ public class SurveyTranslationsViewModel
     /// Gets or sets how many translations were made from an original text that has changed since.
     /// </summary>
     public int Outdated { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many translations were saved before Surveys kept their original text, to be checked once.
+    /// </summary>
+    public int Unchecked { get; set; }
 }

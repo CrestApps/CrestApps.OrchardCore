@@ -15,6 +15,7 @@ using OrchardCore;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
 using YesSql;
+using YesSql.Services;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Surveys.Api;
@@ -84,7 +85,7 @@ internal static class SurveysApiEndpoints
         }
     }
 
-    internal static async Task<IResult> ListSurveysAsync(int? skip, int? take, HttpContext httpContext, IAuthorizationService authorizationService, ISession session)
+    internal static async Task<IResult> ListSurveysAsync(int? skip, int? take, HttpContext httpContext, IAuthorizationService authorizationService, ISession session, SurveyIndexReader reader)
     {
         var user = httpContext.User;
 
@@ -107,7 +108,16 @@ internal static class SurveysApiEndpoints
                 return Results.Ok(new { count = 0, items = Array.Empty<object>() });
             }
 
-            query = query.Where(index => index.OwnerId == userId);
+            // Rows indexed before the index held the owner are read from their surveys until the reindex step reaches them.
+            var staleOwned = (await reader.ListNotReindexedAsync(httpContext.RequestAborted))
+                .Where(survey => string.Equals(survey.OwnerId, userId, StringComparison.Ordinal))
+                .Select(survey => survey.ItemId)
+                .Take(SurveyIdChunks.Size)
+                .ToArray();
+
+            query = staleOwned.Length == 0
+                ? query.Where(index => index.OwnerId == userId)
+                : query.Where(index => index.OwnerId == userId || index.ItemId.IsIn(staleOwned));
         }
 
         var count = await query.CountAsync(httpContext.RequestAborted);

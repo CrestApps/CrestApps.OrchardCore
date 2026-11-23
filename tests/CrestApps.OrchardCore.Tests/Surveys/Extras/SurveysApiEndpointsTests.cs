@@ -17,7 +17,7 @@ public sealed class SurveysApiEndpointsTests
         var http = Context();
 
         // Act
-        var result = await SurveysApiEndpoints.ListSurveysAsync(null, null, http, Deny(), null);
+        var result = await SurveysApiEndpoints.ListSurveysAsync(null, null, http, Deny(), null, null);
 
         // Assert
         Assert.IsType<ForbidHttpResult>(result);

@@ -3,6 +3,22 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/designer/draft-stamp.js
+	/**
+	* Gives a link that replaces the draft (Discard draft) the draft version the page now knows. The link carries the
+	* version the page was shown with, and the server refuses a discard over a draft that changed since; after the page's
+	* own panel saves, the old version would read as another author's change.
+	* @param {string} href The link's address.
+	* @param {string} version The draft version the last save returned.
+	* @param {string} base The page's address, to resolve a relative link.
+	* @returns {string} The address with its `draft` value replaced.
+	*/
+	function withDraftStamp(href, version, base) {
+		if (!href || !version) return href;
+		const url = new URL(href, base);
+		url.searchParams.set("draft", version);
+		return url.toString();
+	}
 	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/designer/repeater.js
 	/**
 	* @param {string} value The text to escape.
@@ -467,6 +483,10 @@
 			if (version) {
 				knownVersion = version;
 				if (versionInput) versionInput.value = version;
+				document.querySelectorAll("a[data-survey-discard]").forEach((link) => {
+					const anchor = link;
+					anchor.href = withDraftStamp(anchor.href, version, window.location.href);
+				});
 			}
 		};
 		/**

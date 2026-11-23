@@ -17,7 +17,7 @@ public sealed class ExcelQuestionImportFormat : ISurveyImportFormat
     /// <summary>
     /// The largest workbook read, in bytes.
     /// </summary>
-    public const long MaxBytes = 10 * 1024 * 1024;
+    public const long MaxBytes = QuestionImportUploads.MaxSpreadsheetBytes;
 
     private readonly SpreadsheetQuestionReader _reader;
 
@@ -51,17 +51,15 @@ public sealed class ExcelQuestionImportFormat : ISurveyImportFormat
         ArgumentNullException.ThrowIfNull(content);
 
         // OpenXml needs a seekable stream; an upload stream may not be one. The copy stops at the size limit.
-        using var buffer = new MemoryStream();
+        using var buffer = await QuestionImportUploads.ReadAtMostAsync(content, MaxBytes, cancellationToken);
 
-        if (!await CopyAtMostAsync(content, buffer, MaxBytes, cancellationToken))
+        if (buffer is null)
         {
             var refused = new SurveyImportResult();
             refused.Errors.Add(S["The file is larger than {0} MB.", MaxBytes / 1024 / 1024]);
 
             return refused;
         }
-
-        buffer.Position = 0;
 
         if (!ExcelSheetReader.TryRead(buffer, SpreadsheetQuestionReader.MaxRows + 1, out var headers, out var rows, out var tooLarge))
         {
@@ -72,26 +70,5 @@ public sealed class ExcelQuestionImportFormat : ISurveyImportFormat
         }
 
         return _reader.Read(headers, rows);
-    }
-
-    private static async Task<bool> CopyAtMostAsync(Stream source, MemoryStream destination, long maxBytes, CancellationToken cancellationToken)
-    {
-        var chunk = new byte[81920];
-        long total = 0;
-        int read;
-
-        while ((read = await source.ReadAsync(chunk, cancellationToken)) > 0)
-        {
-            total += read;
-
-            if (total > maxBytes)
-            {
-                return false;
-            }
-
-            await destination.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
-        }
-
-        return true;
     }
 }

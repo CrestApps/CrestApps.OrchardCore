@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -30,6 +31,7 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningSurveyResultObserver"/> class.
@@ -43,6 +45,7 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
     /// <param name="siteService">The site service.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="serviceProvider">The services, for the survey versions of earlier attempts.</param>
     public LearningSurveyResultObserver(
         ILearningSurveyService learningSurveys,
         ICourseStructureService courseStructure,
@@ -52,7 +55,8 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
         IHttpContextAccessor httpContextAccessor,
         ISiteService siteService,
         IClock clock,
-        ILogger<LearningSurveyResultObserver> logger)
+        ILogger<LearningSurveyResultObserver> logger,
+        IServiceProvider serviceProvider)
     {
         _learningSurveys = learningSurveys;
         _courseStructure = courseStructure;
@@ -63,6 +67,7 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
         _siteService = siteService;
         _clock = clock;
         _logger = logger;
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc />
@@ -129,7 +134,7 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
             .Where(candidate => candidate.Status != SurveyResponseStatus.Voided && (candidate.ItemId != response.ItemId || !deleted))
             .ToList();
 
-        var result = provider.Build(entry.Item ?? item, enrollment, context.Version?.Definition, responses);
+        var result = provider.Build(entry.Item ?? item, enrollment, await DefinitionOfLatestGradedAsync(context, responses), responses);
 
         if (result is null)
         {
@@ -149,6 +154,30 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
         {
             _logger.LogInformation("The result of item {ItemId} was not recorded on enrollment {EnrollmentId}: {Reason}.", item.ContentItemId, enrollment.ItemId, update.RefusedReason);
         }
+    }
+
+    // The definition of the version the latest graded attempt ran on: a combined score that belongs to no one attempt
+    // (an average) is judged against it, never against the version of whichever attempt changed. Each attempt also
+    // carries the pass Surveys decided against its own version, which a method that picks one attempt takes.
+    private async Task<SurveyDefinition> DefinitionOfLatestGradedAsync(SurveyResponseEventContext context, IReadOnlyList<SurveyResponse> responses)
+    {
+        var latest = responses
+            .Where(candidate => candidate.Status == SurveyResponseStatus.Completed && candidate.Grading == GradingStatus.Graded && candidate.Percent is not null)
+            .OrderByDescending(candidate => candidate.CompletedUtc ?? candidate.StartedUtc)
+            .FirstOrDefault();
+
+        if (latest is null
+            || string.IsNullOrEmpty(latest.SurveyVersionId)
+            || string.Equals(latest.SurveyVersionId, context.Version?.ItemId, StringComparison.Ordinal))
+        {
+            return context.Version?.Definition;
+        }
+
+        var version = _serviceProvider.GetService<ISurveyVersionCache>() is { } versions
+            ? await versions.GetAsync(latest.SurveyVersionId)
+            : null;
+
+        return version?.Definition ?? context.Version?.Definition;
     }
 
     private async Task<DateTime> StartOfTodayUtcAsync()

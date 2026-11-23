@@ -8,6 +8,7 @@
  * Unsaved edits are never lost silently: Save draft (and Save and publish) first saves the open question or page,
  * opening another item asks before it replaces unsaved edits, and leaving the page asks too.
  */
+import { withDraftStamp } from './designer/draft-stamp.js';
 import { initRepeaters } from './designer/repeater.js';
 import { initRuleBuilders } from './designer/rule-builder.js';
 
@@ -78,6 +79,12 @@ if (designer) {
             if (versionInput) {
                 versionInput.value = version;
             }
+
+            // Discard draft carries the version too, so it doesn't read the page's own saves as another author's.
+            document.querySelectorAll('a[data-survey-discard]').forEach(link => {
+                const anchor = /** @type {HTMLAnchorElement} */ (link);
+                anchor.href = withDraftStamp(anchor.href, version, window.location.href);
+            });
         }
     };
 

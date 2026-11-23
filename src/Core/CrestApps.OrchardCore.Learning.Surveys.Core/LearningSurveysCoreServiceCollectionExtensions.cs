@@ -26,6 +26,7 @@ public static class LearningSurveysCoreServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILearningSurveyItemResultProvider, CourseSurveyResultProvider>());
+        services.TryAddScoped<AnonymousCourseSurveyCompletions>();
         services.AddResumableStep<LegacyCourseSurveyUpgradeStep>();
         services.AddCourseItemKind<CourseSurveyPart>(LearningSurveysConstants.SurveyKind, kind =>
         {

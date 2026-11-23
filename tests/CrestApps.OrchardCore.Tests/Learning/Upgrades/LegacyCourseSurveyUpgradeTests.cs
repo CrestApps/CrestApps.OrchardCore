@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Surveys.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
+using Moq;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Upgrades;
@@ -46,6 +47,43 @@ public sealed class LegacyCourseSurveyUpgradeTests
         Assert.NotNull(legacy);
         Assert.NotNull(((JsonObject)item.Content)["SurveyPart"]);
         Assert.False(item.TryGet<CourseSurveyPart>(out _));
+    }
+
+    [Theory]
+    [InlineData(true, 0, true)]
+    [InlineData(false, 0, false)]
+    [InlineData(true, 1, false)]
+    public async Task VL15_ASaveOfAnItemStillHoldingLegacyQuestions_NeverOverwritesADraftBuiltSince(bool freshSurvey, int publishedVersion, bool expectSave)
+    {
+        // Arrange: the item points at its survey and still holds its legacy questions (the upgrade could not save them).
+        var created = new DateTime(2026, 11, 1, 9, 0, 0, DateTimeKind.Utc);
+        var survey = new Survey
+        {
+            ItemId = "survey1",
+            Title = "Feedback",
+            CreatedUtc = created,
+            DraftModifiedUtc = freshSurvey ? created : created.AddDays(3),
+            PublishedVersionNumber = publishedVersion,
+            Draft = new SurveyDefinition(),
+        };
+        var item = new ContentItem { ContentItemId = "item1", ContentType = "CourseSurvey" };
+        ((JsonObject)item.Content)["SurveyPart"] = new JsonObject { ["Questions"] = new JsonArray(new JsonObject { ["Text"] = "Pace?", ["Type"] = 3 }) };
+        LegacyCourseSurveyUpgrade.SetSurveyId(item, "survey1");
+
+        var manager = new Moq.Mock<CrestApps.OrchardCore.Surveys.Services.ISurveyManager>();
+        manager.Setup(service => service.FindByIdAsync("survey1", Moq.It.IsAny<CancellationToken>())).ReturnsAsync(survey);
+        manager.Setup(service => service.SaveDraftAsync(survey, Moq.It.IsAny<SurveyDefinition>(), Moq.It.IsAny<DateTime?>(), Moq.It.IsAny<CancellationToken>())).ReturnsAsync(SurveyErrorCode.None);
+        var handler = new CrestApps.OrchardCore.Learning.Surveys.Core.CourseSurveyPartHandler(
+            Moq.Mock.Of<CrestApps.OrchardCore.Learning.Core.Surveys.ILearningSurveyService>(),
+            Moq.Mock.Of<global::OrchardCore.ContentManagement.Metadata.IContentDefinitionManager>(),
+            manager.Object);
+
+        // Act
+        await handler.UpdatingAsync(new global::OrchardCore.ContentManagement.Handlers.UpdateContentContext(item), item.As<CourseSurveyPart>());
+
+        // Assert: the legacy part goes either way; only a survey made for the questions takes them.
+        manager.Verify(service => service.SaveDraftAsync(survey, Moq.It.IsAny<SurveyDefinition>(), Moq.It.IsAny<DateTime?>(), Moq.It.IsAny<CancellationToken>()), expectSave ? Moq.Times.Once() : Moq.Times.Never());
+        Assert.Null(((JsonObject)item.Content)["SurveyPart"]);
     }
 
     [Fact]

@@ -39,4 +39,9 @@ public class SurveyTranslationEntryViewModel
     /// Gets or sets whether the original text changed after the translation was made.
     /// </summary>
     public bool Outdated { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the translation was saved before Surveys kept its original text, so it needs checking once.
+    /// </summary>
+    public bool Unchecked { get; set; }
 }
