@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/collapsible-panel.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/collapsible-panel.js
 	window.collapsiblePanel = (function() {
 		"use strict";
 		const storagePrefix = "crestapps.collapsible-panel.";
@@ -74,5 +74,4 @@
 			initializeAll
 		};
 	})();
-	//#endregion
 })();

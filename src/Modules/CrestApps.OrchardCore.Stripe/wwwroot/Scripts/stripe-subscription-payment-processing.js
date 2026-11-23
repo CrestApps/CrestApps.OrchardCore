@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Stripe/Assets/js/stripe-subscription-payment-processing.js
+	// src/Modules/CrestApps.OrchardCore.Stripe/Assets/js/stripe-subscription-payment-processing.js
 	window.stripePaymentProcessing = function() {
 		const initialize = (options) => {
 			const config = {
@@ -170,5 +170,4 @@
 		};
 		return { initialize };
 	}();
-	//#endregion
 })();

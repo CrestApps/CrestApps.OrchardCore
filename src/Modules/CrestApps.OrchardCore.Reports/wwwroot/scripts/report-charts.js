@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-charts.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-charts.js
 	(function(root) {
 		"use strict";
 		var palette = [
@@ -305,5 +305,4 @@
 			}, { once: true });
 		}
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
 })();

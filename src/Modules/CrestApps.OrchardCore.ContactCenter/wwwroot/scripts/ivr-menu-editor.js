@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-flow-model.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-flow-model.js
 	var ACTION_KINDS = [
 		"RouteToQueue",
 		"RouteToAgent",
@@ -524,8 +524,7 @@
 			return value;
 		}
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-menu-editor.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-menu-editor.js
 	(function(window, document) {
 		"use strict";
 		var NEW_MENU = "__new__";
@@ -1328,5 +1327,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
 		else boot();
 	})(window, document);
-	//#endregion
 })();

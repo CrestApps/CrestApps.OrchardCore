@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Tickets/Assets/js/ticket-board-editor.js
+	// src/Modules/CrestApps.OrchardCore.Tickets/Assets/js/ticket-board-editor.js
 	(function() {
 		"use strict";
 		function renumber(value, prefixName, prefixId, index) {
@@ -141,5 +141,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})();
-	//#endregion
 })();

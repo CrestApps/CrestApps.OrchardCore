@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Assets/js/activity-calendar.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Assets/js/activity-calendar.js
 	(function() {
 		document.addEventListener("omnichannel:followup-card", (event) => {
 			const settings = document.querySelector("[data-activity-calendar]");
@@ -56,5 +56,4 @@
 			detail.cardBody.append(check, choose);
 		});
 	})();
-	//#endregion
 })();
