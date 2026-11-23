@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Localization;
@@ -311,6 +312,15 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
                     context.AddError("branch-ending", S["A branch of the page {0} goes to an ending that does not exist.", PageLabel(page, pageIndex)], pageId: page.Id);
                 }
             }
+        }
+
+        // The runner keeps the designed page order when a page branches to another page (a shuffle would skip pages the
+        // author never meant to skip), so the setting would silently do nothing.
+        if (definition.Presentation?.PageOrder == QuestionOrder.Shuffle
+            && definition.Pages.Count(page => !string.IsNullOrEmpty(page?.Id)) > 3
+            && SurveyPlanBuilder.KeepsPageOrder(definition))
+        {
+            context.AddWarning("shuffle-with-branches", S["The pages are set to shuffle, but a page branches to another page, so respondents see the pages in the designed order."]);
         }
 
         var defaults = definition.Endings.Count(ending => ending.IsDefault);
