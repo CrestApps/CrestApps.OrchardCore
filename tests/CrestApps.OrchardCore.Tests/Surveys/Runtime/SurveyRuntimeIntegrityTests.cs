@@ -201,6 +201,57 @@ public sealed class SurveyRuntimeIntegrityTests
     }
 
     [Fact]
+    public async Task LockedAnswer_WhoseQuestionIsHiddenLater_StillCountsTowardTheScore_AndAnUnlockedOneDoesNot()
+    {
+        // Arrange: q2 and q3 show only when q1 is "yes"; q4 always shows.
+        await using var harness = await RuntimeTestHarness.CreateAsync(services =>
+        {
+            services.AddScoped<ISurveyScoringEngine, SurveyScoringEngine>();
+            services.AddSurveyControlScorer<KeyedChoiceScorer>();
+        });
+
+        var q1 = RuntimeSurveys.Choice("q1", "yes", "no");
+        q1.Scoring = new SurveyQuestionScoring { Points = 0 };
+        var q2 = RuntimeSurveys.Choice("q2", "a", "b");
+        q2.Scoring = new SurveyQuestionScoring { Points = 2, CorrectChoiceIds = ["a"] };
+        q2.Visibility = RuntimeSurveys.ShowWhen("q1", ConditionOperator.Is, "yes");
+        var q3 = RuntimeSurveys.Choice("q3", "a", "b");
+        q3.Scoring = new SurveyQuestionScoring { Points = 3, CorrectChoiceIds = ["a"] };
+        q3.Visibility = RuntimeSurveys.ShowWhen("q1", ConditionOperator.Is, "yes");
+        var q4 = RuntimeSurveys.Choice("q4", "a", "b");
+        q4.Scoring = new SurveyQuestionScoring { Points = 1, CorrectChoiceIds = ["a"] };
+
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", q1, q2, q3, q4));
+        definition.Scoring.Enabled = true;
+        definition.Scoring.FeedbackMode = FeedbackMode.Immediate;
+
+        var survey = await harness.PublishAsync(definition);
+        var identity = new SurveyRespondentIdentity { UserId = "u1" };
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        // The respondent checks q2 (locked, right) and answers q3 without checking it.
+        await SaveAsync(harness, response, identity, ("q1", "yes"));
+        var check = await CheckAsync(harness, response, identity, "q2", ("q1", "yes"), ("q2", "a"));
+        await SaveAsync(harness, response, identity, ("q1", "yes"), ("q2", "a"), ("q3", "a"));
+
+        // Act: q1 changes to "no", hiding q2 and q3, and the respondent finishes.
+        var finish = await harness.PostAsync(response, identity, SurveyPageDirection.Finish, ("q1", "no"), ("q4", "a"));
+
+        // Assert: q2 counts with its 2 points out of 2; q3 counts neither its points nor its most points.
+        Assert.True(check.Succeeded, check.Error + " " + string.Join(", ", check.Errors));
+        Assert.True(finish.Ended, finish.Error + " " + string.Join(", ", finish.Errors.SelectMany(pair => pair.Value)));
+
+        var stored = await harness.FindAsync(response.ItemId);
+
+        Assert.Equal(SurveyResponseStatus.Completed, stored.Status);
+        Assert.True(stored.Answers["q2"].IsLocked);
+        Assert.Equal(3m, stored.Score);
+        Assert.Equal(3m, stored.MaxScore);
+        Assert.Equal(100m, stored.Percent);
+        Assert.Equal(2m, stored.Answers["q2"].MaxPoints);
+    }
+
+    [Fact]
     public async Task LockedAnswer_KeepsAChoiceThatIsHiddenLater()
     {
         // Arrange

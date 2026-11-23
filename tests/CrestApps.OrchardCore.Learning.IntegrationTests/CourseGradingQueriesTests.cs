@@ -4,11 +4,13 @@ using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.Html.Models;
 using OrchardCore.Lists.Models;
 using OrchardCore.Title.Models;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
@@ -62,6 +64,37 @@ public sealed class CourseGradingQueriesTests
         Assert.Equal(result.Expected, result.ItemIds);
         Assert.False(string.IsNullOrEmpty(result.QuizSurveyId));
         Assert.Contains(result.QuizSurveyId, result.SurveyIds);
+    }
+
+    [Fact]
+    public async Task GradingScope_LetsTheCoursesStaffGradeADraftQuiz()
+    {
+        var result = await _fixture.InTenantAsync(async services =>
+        {
+            // Arrange: a published course the instructor teaches, with a quiz saved only as a draft.
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var suffix = Guid.NewGuid().ToString("n")[..6];
+            var course = await NewCourseAsync(contentManager, "Taught course " + suffix);
+
+            course.Alter<CoursePart>(part => part.Staff = [new CourseStaffMember { UserId = _fixture.InstructorId, Role = LearningConstants.CourseStaffRoles.Instructor }]);
+            await contentManager.UpdateAsync(course);
+            await contentManager.PublishAsync(course);
+
+            var quiz = await NewItemAsync(contentManager, course, AssessmentsConstants.ContentTypes.Quiz, "Draft quiz " + suffix, VersionOptions.Draft);
+
+            var user = await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(_fixture.InstructorId);
+            var principal = await services.GetRequiredService<IUserClaimsPrincipalFactory<IUser>>().CreateAsync(user);
+
+            // Act
+            var scope = services.GetServices<ISurveyGradingScope>().OfType<LearningSurveyGradingScope>().Single();
+            var gradable = await scope.GetGradableSurveyIdsAsync(principal);
+
+            return (Gradable: gradable, QuizSurveyId: LearningSurveyTestSupport.SurveyIdOf(quiz));
+        });
+
+        // Assert
+        Assert.False(string.IsNullOrEmpty(result.QuizSurveyId));
+        Assert.Contains(result.QuizSurveyId, result.Gradable);
     }
 
     private static async Task<ContentItem> NewCourseAsync(IContentManager contentManager, string title)

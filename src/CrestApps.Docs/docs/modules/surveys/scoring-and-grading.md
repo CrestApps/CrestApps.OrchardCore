@@ -19,7 +19,7 @@ A question's key (`SurveyQuestion.Scoring`) holds `Points` (empty uses the defau
 
 `ISurveyScoringEngine` scores every question the respondent was shown with its type's scorer when the response is completed:
 
-- an unanswered question scores 0; a question that was hidden does not count toward the maximum;
+- an unanswered question scores 0; a question that logic hid, or that sits on a page a branch skipped, does not count toward the maximum, unless its answer is locked (see below);
 - a scorer that returns no points (a long text, a file upload) leaves the response **Pending** a grader;
 - category totals, the score (or the score formula), the percent, the pass mark and the score band are set;
 - a grader's score always wins over the automatic one.
@@ -33,6 +33,8 @@ A response that still waits for a grader never passes, and its score, right answ
 A scored survey that lets respondents change a finished response (`Navigation.AllowEditAfterSubmit`) can't show the score (when `ShowScoreToRespondent` is on), the right answers or answer feedback right after finishing or later while the survey is open: reopens are unlimited, so the respondent could read the key, or change one answer at a time and watch the score, and resubmit. The validator refuses that combination (`edit-after-review`). Show them after the survey closes, when nothing can be reopened, or turn off changes after finishing.
 
 With **One at a time, then locked** (`FeedbackMode.Immediate`), the respondent checks an answer (`/s/r/{responseId}/check/{questionId}`); it is scored and locked, and the feedback the review allows during the response is shown.
+
+A locked answer (`SurveyAnswer.CheckedUtc` is set; `SurveyAnswer.IsLocked`) is never removed, even when a later visibility rule hides its question or the respondent goes back and takes a branch that skips its page. The respondent already saw it graded, so it keeps counting: the engine scores it with its points and adds its points to the maximum, so the percent stays consistent. `SurveyScoringEngine.CountedQuestions` lists the questions that count (the questions on the respondent's path that logic did not hide, then the locked ones that were hidden or skipped), and the review page shows the same questions. The grading page lists the questions with a maximum (`SurveyAnswer.MaxPoints`), which the engine sets for a locked hidden answer too, and the AI explanation of a quiz result reads each question's points from it. An answer that was not checked and is hidden later is dropped or left out, as before.
 
 ## Time limits
 

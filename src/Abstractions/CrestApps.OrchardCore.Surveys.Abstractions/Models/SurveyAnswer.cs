@@ -79,6 +79,13 @@ public sealed class SurveyAnswer
     public DateTime? CheckedUtc { get; set; }
 
     /// <summary>
+    /// Gets whether the answer is locked: the respondent checked it with immediate feedback and saw it graded, so it is
+    /// kept, and it counts toward the score, even when logic or a branch later hides its question.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsLocked => CheckedUtc is not null;
+
+    /// <summary>
     /// Gets the score that counts: the grader's when there is one, else the automatic one.
     /// </summary>
     [JsonIgnore]

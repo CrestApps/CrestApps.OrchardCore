@@ -7,7 +7,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Scoring;
 
 /// <summary>
 /// Scores a response with a definition's key: every question the respondent was shown, through its type's scorer.
-/// Unanswered questions score 0, hidden ones are left out of the most points, and grader scores are kept.
+/// Unanswered questions score 0, hidden ones are left out of the most points (except a locked answer the respondent
+/// already saw graded, which still counts), and grader scores are kept.
 /// </summary>
 public sealed class SurveyScoringEngine : ISurveyScoringEngine
 {
@@ -60,9 +61,9 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
         var max = 0m;
         var pending = false;
 
-        foreach (var question in ShownQuestions(definition, response))
+        foreach (var question in CountedQuestions(definition, response, hidden))
         {
-            if (hidden.Contains(question.Id) || _registry.GetScorer(question.ControlType) is not { } scorer)
+            if (_registry.GetScorer(question.ControlType) is not { } scorer)
             {
                 continue;
             }
@@ -187,8 +188,22 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
         response.Passed = band?.Passing ?? (settings.PassMarkPercent is { } mark ? response.Percent >= mark : null);
     }
 
-    private static IEnumerable<SurveyQuestion> ShownQuestions(SurveyDefinition definition, SurveyResponse response)
+    /// <summary>
+    /// Lists the questions that count toward a response's score, in the order the respondent saw them: the questions of
+    /// the pages on the respondent's path that logic did not hide, then every question whose answer is locked (checked
+    /// with immediate feedback) that a later branch or visibility rule took off the path or hid. The respondent saw a
+    /// locked answer graded and it is kept, so it counts with its points and its most points alike. The review and the
+    /// grading page show the same questions.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="response">The response.</param>
+    /// <param name="hidden">The ids of the questions logic hid.</param>
+    /// <returns>The questions.</returns>
+    public static IEnumerable<SurveyQuestion> CountedQuestions(SurveyDefinition definition, SurveyResponse response, IReadOnlySet<string> hidden)
     {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(response);
+
         var byId = new Dictionary<string, SurveyQuestion>(StringComparer.Ordinal);
 
         foreach (var question in (definition.Pages ?? []).SelectMany(page => page?.Questions ?? []))
@@ -199,6 +214,34 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
             }
         }
 
+        var counted = new List<SurveyQuestion>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var question in ShownQuestions(byId, response))
+        {
+            if (seen.Add(question.Id) && (hidden is null || !hidden.Contains(question.Id) || IsLocked(response, question.Id)))
+            {
+                counted.Add(question);
+            }
+        }
+
+        foreach (var question in byId.Values)
+        {
+            if (!seen.Contains(question.Id) && IsLocked(response, question.Id))
+            {
+                seen.Add(question.Id);
+                counted.Add(question);
+            }
+        }
+
+        return counted;
+    }
+
+    private static bool IsLocked(SurveyResponse response, string questionId)
+        => response.Answers is not null && response.Answers.TryGetValue(questionId, out var answer) && answer?.IsLocked == true;
+
+    private static IEnumerable<SurveyQuestion> ShownQuestions(Dictionary<string, SurveyQuestion> byId, SurveyResponse response)
+    {
         var order = response.Plan?.QuestionOrder;
 
         if (order is null || order.Count == 0)

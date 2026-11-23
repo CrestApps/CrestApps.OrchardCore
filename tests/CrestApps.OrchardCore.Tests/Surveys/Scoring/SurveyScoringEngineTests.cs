@@ -130,6 +130,64 @@ public sealed class SurveyScoringEngineTests
         Assert.Equal(2m, response.MaxScore);
     }
 
+    [Fact]
+    public void Score_CountsALockedAnswerWhoseQuestionLogicHidLater_InThePointsAndTheMostPoints()
+    {
+        // Arrange: q2 was checked with immediate feedback (locked), then logic hid it.
+        var definition = ScoringDefinitions.Quiz(("q1", 2m), ("q2", 8m));
+        var response = ScoringDefinitions.Response(("q1", 2m), ("q2", 6m));
+        response.Answers["q2"].CheckedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        _hidden.Hidden.Add("q2");
+
+        // Act
+        Engine().Score(definition, response);
+
+        // Assert
+        Assert.Equal(8m, response.Score);
+        Assert.Equal(10m, response.MaxScore);
+        Assert.Equal(80m, response.Percent);
+        Assert.Equal(8m, response.Answers["q2"].MaxPoints);
+    }
+
+    [Fact]
+    public void Score_LeavesAnUnlockedAnswerWhoseQuestionLogicHid_Out()
+    {
+        // Arrange: q2 kept a value but was never checked, and logic hid it.
+        var definition = ScoringDefinitions.Quiz(("q1", 2m), ("q2", 8m));
+        var response = ScoringDefinitions.Response(("q1", 2m), ("q2", 6m));
+        _hidden.Hidden.Add("q2");
+
+        // Act
+        Engine().Score(definition, response);
+
+        // Assert
+        Assert.Equal(2m, response.Score);
+        Assert.Equal(2m, response.MaxScore);
+        Assert.Equal(100m, response.Percent);
+    }
+
+    [Fact]
+    public void Score_CountsALockedAnswerOnAPageABranchSkippedLater()
+    {
+        // Arrange: the respondent checked q2 on s2, went back and took a branch that skips s2.
+        var definition = ScoringDefinitions.Quiz(("q1", 2m), ("q2", 2m), ("q3", 4m));
+        var response = ScoringDefinitions.Response(("q1", 2m), ("q2", 0m), ("q3", 4m));
+        response.Answers["q2"].CheckedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        response.Plan.QuestionOrder["s1"] = ["q1"];
+        response.Plan.QuestionOrder["s2"] = ["q2"];
+        response.Plan.QuestionOrder["s3"] = ["q3"];
+        response.PagePath = ["s1"];
+
+        // Act
+        var counted = SurveyScoringEngine.CountedQuestions(definition, response, new HashSet<string>(StringComparer.Ordinal)).Select(question => question.Id);
+        Engine().Score(definition, response);
+
+        // Assert: q3 (unlocked, on a skipped page) stays out.
+        Assert.Equal(["q1", "q2"], counted);
+        Assert.Equal(2m, response.Score);
+        Assert.Equal(4m, response.MaxScore);
+    }
+
     [Theory]
     [InlineData(60, true)]
     [InlineData(61, false)]

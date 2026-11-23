@@ -23,6 +23,8 @@ A quiz is a survey whose answers earn points.
 3. Choose when **Answers are checked**: **At the end**, or **One at a time, then locked**.
 4. Save the draft.
 
+With **One at a time, then locked**, a respondent can't change an answer once they check it. That answer keeps counting toward the score even if a later answer hides its question or skips its page, because the respondent already saw it graded. Its points count toward the most points too, so the percent stays right, and the review and the grading page show it. An answer that was not checked and is hidden later does not count.
+
 ## Set the right answers
 
 In each question's **Scoring** card, set the **Points** (empty for the default; 0 for none), and the right answer: tick the right choices or give each choice its own points, list the **Accepted answers** of a text question, or set the **Right number** and **Tolerance**. **Give part of the points for partly right answers** gives partial credit. Add feedback **When right**, **When wrong** and **For any answer**.
