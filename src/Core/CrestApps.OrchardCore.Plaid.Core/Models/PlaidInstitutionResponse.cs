@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 
 namespace CrestApps.OrchardCore.Plaid.Models;
 
@@ -10,6 +9,5 @@ internal sealed class PlaidInstitutionResponse
     /// <summary>
     /// Gets or sets the bank.
     /// </summary>
-    [JsonPropertyName("institution")]
     public PlaidInstitution Institution { get; set; }
 }
