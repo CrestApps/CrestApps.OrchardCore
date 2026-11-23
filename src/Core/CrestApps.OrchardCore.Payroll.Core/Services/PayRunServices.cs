@@ -32,7 +32,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Services;
 /// <summary>
 /// Indexes pay runs.
 /// </summary>
-public sealed class PayRunIndex : CatalogItemIndex
+public sealed class PayrollPayRunIndex : CatalogItemIndex
 {
     /// <summary>Gets or sets the number.</summary>
     public string Number { get; set; }
@@ -56,7 +56,7 @@ public sealed class PayRunIndex : CatalogItemIndex
 /// <summary>
 /// Indexes the inputs of pay runs.
 /// </summary>
-public sealed class PayRunInputIndex : CatalogItemIndex
+public sealed class PayrollPayRunInputIndex : CatalogItemIndex
 {
     /// <summary>Gets or sets the pay run.</summary>
     public string RunId { get; set; }
@@ -69,7 +69,7 @@ public sealed class PayRunInputIndex : CatalogItemIndex
 }
 
 /// <summary>
-/// Maps pay runs to <see cref="PayRunIndex"/> rows.
+/// Maps pay runs to <see cref="PayrollPayRunIndex"/> rows.
 /// </summary>
 public sealed class PayRunIndexProvider : IndexProvider<PayRun>
 {
@@ -84,10 +84,10 @@ public sealed class PayRunIndexProvider : IndexProvider<PayRun>
     /// <inheritdoc />
     public override void Describe(DescribeContext<PayRun> context)
         => context
-            .For<PayRunIndex>()
+            .For<PayrollPayRunIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(run => new PayRunIndex
+            .Map(run => new PayrollPayRunIndex
             {
                 ItemId = run.ItemId,
                 Number = run.Number,
@@ -95,12 +95,12 @@ public sealed class PayRunIndexProvider : IndexProvider<PayRun>
                 PayScheduleId = run.PayScheduleId,
                 Type = run.Type.ToString(),
                 Status = run.Status.ToString(),
-                PayDay = PayStatementLineIndex.DayNumber(run.PayDate),
+                PayDay = PayrollPayStatementLineIndex.DayNumber(run.PayDate),
             });
 }
 
 /// <summary>
-/// Maps pay run inputs to <see cref="PayRunInputIndex"/> rows.
+/// Maps pay run inputs to <see cref="PayrollPayRunInputIndex"/> rows.
 /// </summary>
 public sealed class PayRunInputIndexProvider : IndexProvider<PayRunInput>
 {
@@ -115,10 +115,10 @@ public sealed class PayRunInputIndexProvider : IndexProvider<PayRunInput>
     /// <inheritdoc />
     public override void Describe(DescribeContext<PayRunInput> context)
         => context
-            .For<PayRunInputIndex>()
+            .For<PayrollPayRunInputIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(input => new PayRunInputIndex
+            .Map(input => new PayrollPayRunInputIndex
             {
                 ItemId = input.ItemId,
                 RunId = input.RunId,
@@ -143,7 +143,7 @@ public static class PayRunIndexSchema
 
         const string collection = PayrollConstants.CollectionName;
 
-        await schemaBuilder.CreateMapIndexTableAsync<PayRunIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollPayRunIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Number", column => column.Nullable().WithLength(40))
             .Column<string>("EmployerId", column => column.Nullable().WithLength(26))
@@ -153,24 +153,24 @@ public static class PayRunIndexSchema
             .Column<int>("PayDay"),
             collection: collection);
 
-        await schemaBuilder.AlterIndexTableAsync<PayRunIndex>(table =>
+        await schemaBuilder.AlterIndexTableAsync<PayrollPayRunIndex>(table =>
         {
-            table.CreateIndex("IDX_PayRunIndex_ItemId", "ItemId", "DocumentId");
-            table.CreateIndex("IDX_PayRunIndex_Employer", "EmployerId", "PayDay", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayRunIndex_ItemId", "ItemId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayRunIndex_Employer", "EmployerId", "PayDay", "DocumentId");
         }, collection: collection);
 
-        await schemaBuilder.CreateMapIndexTableAsync<PayRunInputIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollPayRunInputIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("RunId", column => column.Nullable().WithLength(26))
             .Column<string>("StaffMemberId", column => column.Nullable().WithLength(26))
             .Column<string>("PayCodeId", column => column.Nullable().WithLength(26)),
             collection: collection);
 
-        await schemaBuilder.AlterIndexTableAsync<PayRunInputIndex>(table =>
+        await schemaBuilder.AlterIndexTableAsync<PayrollPayRunInputIndex>(table =>
         {
-            table.CreateIndex("IDX_PayRunInputIndex_ItemId", "ItemId", "DocumentId");
-            table.CreateIndex("IDX_PayRunInputIndex_Run", "RunId", "DocumentId");
-            table.CreateIndex("IDX_PayRunInputIndex_PayCode", "PayCodeId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayRunInputIndex_ItemId", "ItemId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayRunInputIndex_Run", "RunId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayRunInputIndex_PayCode", "PayCodeId", "DocumentId");
         }, collection: collection);
     }
 }
@@ -178,7 +178,7 @@ public static class PayRunIndexSchema
 /// <summary>
 /// Stores pay runs. A run that was processed is never deleted; an open run is cancelled, not deleted.
 /// </summary>
-public sealed class PayRunStore : DocumentCatalog<PayRun, PayRunIndex>
+public sealed class PayRunStore : DocumentCatalog<PayRun, PayrollPayRunIndex>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PayRunStore"/> class.
@@ -199,8 +199,8 @@ public sealed class PayRunStore : DocumentCatalog<PayRun, PayRunIndex>
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The runs.</returns>
-    public async Task<IReadOnlyList<PayRun>> ListAsync(System.Linq.Expressions.Expression<Func<PayRunIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => (await Session.Query<PayRun, PayRunIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
+    public async Task<IReadOnlyList<PayRun>> ListAsync(System.Linq.Expressions.Expression<Func<PayrollPayRunIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => (await Session.Query<PayRun, PayrollPayRunIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
 
     /// <inheritdoc />
     protected override ValueTask DeletingAsync(PayRun entry)
@@ -217,7 +217,7 @@ public sealed class PayRunStore : DocumentCatalog<PayRun, PayRunIndex>
 /// <summary>
 /// Stores the inputs of pay runs.
 /// </summary>
-public sealed class PayRunInputStore : DocumentCatalog<PayRunInput, PayRunInputIndex>
+public sealed class PayRunInputStore : DocumentCatalog<PayRunInput, PayrollPayRunInputIndex>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PayRunInputStore"/> class.
@@ -235,8 +235,8 @@ public sealed class PayRunInputStore : DocumentCatalog<PayRunInput, PayRunInputI
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The inputs.</returns>
-    public async Task<IReadOnlyList<PayRunInput>> ListAsync(System.Linq.Expressions.Expression<Func<PayRunInputIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => (await Session.Query<PayRunInput, PayRunInputIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
+    public async Task<IReadOnlyList<PayRunInput>> ListAsync(System.Linq.Expressions.Expression<Func<PayrollPayRunInputIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => (await Session.Query<PayRunInput, PayrollPayRunInputIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
 
     /// <summary>
     /// Counts the inputs matching a filter on the index.
@@ -244,8 +244,8 @@ public sealed class PayRunInputStore : DocumentCatalog<PayRunInput, PayRunInputI
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count.</returns>
-    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<PayRunInputIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => Session.QueryIndex<PayRunInputIndex>(filter, collection: CollectionName).CountAsync(cancellationToken);
+    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<PayrollPayRunInputIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => Session.QueryIndex<PayrollPayRunInputIndex>(filter, collection: CollectionName).CountAsync(cancellationToken);
 }
 
 /// <summary>
@@ -1117,7 +1117,12 @@ public sealed class PayRunApprovalTypeHandler : ApprovalTypeHandlerBase
     }
 
     /// <inheritdoc />
-    public override Task RequestingAsync(ApprovalRequestingContext context, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// A request of Payroll's own pay run policy takes its separation of duties from
+    /// <see cref="PayrollSettings.AllowPreparerToApprove"/> as the settings are when the run is submitted, however the
+    /// setting was written: on its page, by a recipe or a deployment, or by code.
+    /// </remarks>
+    public override async Task RequestingAsync(ApprovalRequestingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -1131,7 +1136,14 @@ public sealed class PayRunApprovalTypeHandler : ApprovalTypeHandlerBase
             });
         }
 
-        return Task.CompletedTask;
+        if (string.Equals(context.Submission?.Policy, PayrollConstants.PayRunApprovalPolicy, StringComparison.Ordinal))
+        {
+            var allow = _services.GetService<ISiteService>() is { } site
+                && (await site.GetSettingsAsync<PayrollSettings>())?.AllowPreparerToApprove == true;
+
+            context.Request.AllowRequesterToApprove = allow;
+            context.Request.AllowSubjectToDecide = allow;
+        }
     }
 
     /// <inheritdoc />

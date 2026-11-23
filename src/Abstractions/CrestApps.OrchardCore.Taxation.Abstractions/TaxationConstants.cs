@@ -44,7 +44,29 @@ public static class TaxationConstants
         /// figures as dated recipes.
         /// </summary>
         public const string IncomeTaxCanada = "CrestApps.OrchardCore.Taxation.IncomeTax.Canada";
+
+        /// <summary>
+        /// Tax returns: the periods each registration files for, worked out from its filing schedule, and a return per
+        /// period with the figures the data providers give, its status, payments and amendments.
+        /// </summary>
+        public const string Returns = "CrestApps.OrchardCore.Taxation.Returns";
+
+        /// <summary>
+        /// Electronic filing of tax returns: submissions through filing channels (transports) in file formats, with a
+        /// built-in manual channel that hands over a file to file on the agency's site.
+        /// </summary>
+        public const string EFiling = "CrestApps.OrchardCore.Taxation.EFiling";
     }
+
+    /// <summary>
+    /// The YesSql collection of tax returns and e-file submissions.
+    /// </summary>
+    public const string TaxReturnsCollectionName = "TaxReturns";
+
+    /// <summary>
+    /// The kind of e-file target a tax return is.
+    /// </summary>
+    public const string TaxReturnEFileTargetType = "TaxReturn";
 
     /// <summary>
     /// The YesSql collection of income tax rules.

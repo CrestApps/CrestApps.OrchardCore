@@ -3,7 +3,9 @@ sidebar_label: Taxation
 sidebar_position: 15
 title: Taxation Framework
 description: A provider-agnostic, extensible taxation framework for Orchard Core. Sales Tax models tax as a determination rather than a stored rate, with order-wide thresholds for import duty, the EU VAT standard rates recipe, the TaxJar connector and the VAT one-stop-shop report. Income Tax works out taxes on income for any country, with the United States and Canada packs.
-user_manual: user-manual/commerce/taxes
+user_manual:
+  - user-manual/commerce/taxes
+  - user-manual/finance/tax-returns
 ---
 
 | | |
@@ -11,7 +13,7 @@ user_manual: user-manual/commerce/taxes
 | **Feature Name** | Sales Tax |
 | **Feature ID** | `CrestApps.OrchardCore.Taxation` |
 | **Category** | Commerce |
-| **Other features** | Tax Tables, Income Tax, United States Income Tax, Canada Income Tax (see [Income tax](#income-tax)), TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`, see [TaxJar](#taxjar)) |
+| **Other features** | Tax Tables, Income Tax, United States Income Tax, Canada Income Tax (see [Income tax](#income-tax)), TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`, see [TaxJar](#taxjar)), Tax Returns (`CrestApps.OrchardCore.Taxation.Returns`, see [Tax returns](#tax-returns)), Tax E-Filing (`CrestApps.OrchardCore.Taxation.EFiling`, see [E-filing](#e-filing)) |
 
 Provides a provider-agnostic, extensible, international taxation framework that any Orchard Core content type or CrestApps module (Products, Subscriptions, Payments, Commerce, Bookings, Services, and custom content) can plug into.
 
@@ -40,7 +42,9 @@ The framework is split into three assemblies:
 | Feature | Contents |
 | --- | --- |
 | **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Commerce > Taxation > Jurisdictions** and **Commerce > Taxation > Tables** (a site with Payroll and no store gets the same Commerce item with only Taxation in it), with their recipe and deployment steps. No Commerce dependency: Sales Tax and Income Tax share it (`AddTaxTablesCore()` registers the services). |
-| **Sales Tax** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables and Commerce: categories, types, rules, the `TaxationPart`, the sales tax engine and tax origin settings. Commerce (orders, checkout, point of sale) uses it. The id is the module's, kept from when the feature was named Taxation. |
+| **Sales Tax** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables only: categories, types, rules, the business's tax registrations (**Commerce > Taxation > Tax registrations**), the `TaxationPart`, the sales tax engine and tax origin settings. Commerce (orders, checkout, point of sale) uses it, and a site that keeps its own books uses it without a store: it no longer depends on Commerce Foundation, and its admin items build the **Commerce** node themselves. The id is the module's, kept from when the feature was named Taxation. |
+| **Tax Returns** (`CrestApps.OrchardCore.Taxation.Returns`) | Depends on Sales Tax: a filing schedule on each registration, the periods it files for, and a return per period from the figures modules give. See [Tax returns](#tax-returns). |
+| **Tax E-Filing** (`CrestApps.OrchardCore.Taxation.EFiling`) | Depends on Tax Returns: filing channels and file formats, a manual channel that hands over a file, and the task that asks channels for the agency's answers. See [E-filing](#e-filing). |
 | **Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax`) | Depends on Tax Tables only: income tax rules, the built-in income tax provider and its seam, tax categories, election forms and withholding methods. Payroll uses it; any module that pays income can. See [Income tax](#income-tax). |
 | **United States Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates`) | Form W-4 and its withholding method, backup withholding, and the federal rules as dated recipes. |
 | **Canada Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax.Canada`) | The TD1 and TP-1015.3 claims, the CRA's and Revenu Québec's formulas, CPP, QPP, EI and QPIP, and the yearly figures as dated recipes. |
@@ -498,6 +502,8 @@ Income Tax works out taxes on income: income tax withholding at every level (fed
 
 Each line has the tax code, name, jurisdiction, the jurisdiction that collects it (`CollectedBy`), the category, the payer (`IncomeTaxPayer`), the taxable income, the part withheld at a flat rate, and the amount. Register a provider with `services.TryAddEnumerable(ServiceDescriptor.Scoped<IIncomeTaxProvider, MyProvider>())`; Payroll's settings choose one when there are several, and with none chosen Payroll uses the only one besides the built-in rules. The built-in provider's stored name is `TaxTables`, kept from before the move so saved settings still name it.
 
+`IIncomeTaxProvider.GetElectionJurisdictionsAsync(date)` says which jurisdictions' elections the provider reads on a day, so Payroll asks people only for those. The default returns `null` (the provider can't tell, and Payroll asks for an election in every jurisdiction a person is registered or works in). The built-in provider returns the jurisdictions of its rules turned on and in effect that use elections or have an exemption allowance, reading the jurisdiction in `ElectionsFrom` when a rule names one (a city tax that takes the state certificate's exemptions asks for the state's election only).
+
 ### Income tax rules
 
 The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Commerce > Taxation > Income tax rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
@@ -612,6 +618,124 @@ A city or other local tax is a flat rate rule of its own jurisdiction. Michigan'
 A resident of a taxing city pays only its resident rate; anyone else who works in a taxing city pays its nonresident rate; with neither, no city tax. The payer must be registered in the city's jurisdiction (or the rule names `CollectedBy`). A contribution such as Massachusetts' paid family and medical leave is a flat rate rule of category `SocialInsurance` with its wage base. Payroll resolves the home jurisdictions from the home address (`US-MI-DETROIT` for a Detroit address) and the work jurisdictions from the work site team or the employer.
 
 Form W-4's election adds **Nonresident alien** (`UnitedStatesIncomeTax.Fields.NonresidentAlien`): for a form from 2020 or later, the rule's `NonresidentAlienAddition` parameter (`UnitedStatesIncomeTax.NonresidentAlienAddition`, 16,100 in the 2026 recipe, from Publication 15-T) is added to the year's wages before withholding.
+
+## Tax returns
+
+The **Tax Returns** feature (`CrestApps.OrchardCore.Taxation.Returns`) files sales and use tax returns, and any tax a jurisdiction's return combines with them (such as a state's withholding). It never reads sales itself: the figures come from the modules that keep them, so a site with its own ledger files from its books. The screens are described in the [User Manual](../user-manual/finance/tax-returns.md).
+
+### Filing schedules
+
+A `MerchantTaxRegistration` has a `Filing` schedule (`TaxFilingSchedule`), or none when it files no return here:
+
+| Property | Meaning |
+| --- | --- |
+| `Frequency` | `Monthly`, `Quarterly` or `Annual` (`TaxFilingFrequencies`) |
+| `DueMonthsAfterPeriod`, `DueDay` | The return is due on `DueDay` of the month `DueMonthsAfterPeriod` after the period's last month (default the 20th of the month after); a day past the month's end is its last day |
+| `MoveToNextBusinessDay` | A due date on a Saturday or a Sunday moves to the Monday after (default on) |
+| `Form` | The `ITaxReturnForm` of the periodic returns; empty for the built-in `Generic` form |
+| `AnnualForm`, `AnnualDueMonthsAfterYear`, `AnnualDueDay` | A yearly reconciliation return filed besides the monthly or quarterly ones, such as a state's annual return |
+
+`TaxReturnPeriod` is a period (`Frequency`, `Start`, `End`) with its key (`2026-10`, `2026-Q3`, `2026`); `TaxReturnPeriod.Parse`, `For` and `Between` work periods out, and `TaxFilingSchedule.DueDateOf(period, annualReconciliation)` the due date. `ITaxReturnService.ListPeriodsAsync(from, to)` lists, for every active registration with a schedule, the periods that end in the span and that the registration is effective in, each with its due date and current return (`TaxReturnPeriodSummary`).
+
+### Returns
+
+A `TaxReturn` (YesSql collection `TaxReturns`) has its registration, jurisdiction, form, period and due date, the `Lines` the providers gave, the form's `Boxes`, the `AmountDue`, its `Payments`, `Notes`, and its status: `Draft`, `Ready`, `Filed` or `Amended`. One return per registration, form and period is current; an amendment is a new return with `AmendsId` and `Amendment` (1, 2...), and counts what was paid with the earlier one (`PaidWithEarlier`). `AmountPaid` and `Balance` are worked out.
+
+`ITaxReturnService`:
+
+| Method | Does |
+| --- | --- |
+| `PrepareAsync(registrationId, periodKey, annualReconciliation, user)` | A new draft, or the draft prepared again; refuses a ready or filed return |
+| `PrepareAgainAsync`, `MarkReadyAsync`, `ReopenAsync` | Draft only; draft to ready; ready back to draft |
+| `MarkFiledAsync(taxReturn, filedOn, confirmationNumber, channel, user)` | Works the boxes out again as filed that day, from the same lines, then marks it filed; the return it corrects becomes `Amended` |
+| `AmendAsync` | A new draft correcting a filed return |
+| `RecordPaymentAsync`, `RemovePaymentAsync` | Records or removes a payment (an id from the id generator); no money moves |
+
+A draft past its due date is worked out as filed today (in the site's time zone), so a late return shows its penalty.
+
+### Extension points
+
+| Interface | Registration | Responsibility |
+| --- | --- | --- |
+| `ITaxReturnDataProvider` (`Name`, `ContributeAsync(TaxReturnDataContext)`) | `services.AddTaxReturnDataProvider<T>()` | Adds a period's figures to `context.Lines` (and notes to `context.Notes`); every provider runs for every return. A line has a `Kind` (`TaxReturnLineKinds`: `GrossSales`, `ExemptSales`, `TaxableSales`, `UseTaxPurchases`, `Withholding`, `Credit`, `ExcessCollected`, or a form's own), `JurisdictionId`, `TaxType` (such as `UseTax`), `FormLine`, `Category`, `Amount` and `TaxAmount` |
+| `ITaxReturnForm` (`Name`, `DisplayName`, `ComputeAsync(TaxReturnFormContext)`) | `services.AddTaxReturnForm<T>()` | Works out the return's `Boxes` and `AmountDue` from its lines; `context.FiledOn` is the day it counts as filed (for discounts, penalties and interest). The built-in `Generic` form sums the lines by kind |
+| `ITaxReturnObserver` (`ChangedAsync(TaxReturnChange)`) | `services.AddTaxReturnObserver<T>()` | Hears `Prepared`, `Ready`, `Reopened`, `Filed`, `Amended`, `PaymentRecorded` and `PaymentRemoved`, after the change is saved in the session and before it is committed: post a filed return or a payment to the books, or record a payroll tax deposit for the withholding paid with it |
+
+A site that keeps its own ledger implements a data provider that reads its books for the registration's jurisdiction and period, and a form for each jurisdiction's return:
+
+```csharp
+public sealed class LedgerTaxReturnDataProvider : ITaxReturnDataProvider
+{
+    private readonly ILedgerTaxQueries _ledger;
+
+    public LedgerTaxReturnDataProvider(ILedgerTaxQueries ledger)
+    {
+        _ledger = ledger;
+    }
+
+    public string Name => "Ledger";
+
+    public async Task ContributeAsync(TaxReturnDataContext context, CancellationToken cancellationToken = default)
+    {
+        var sales = await _ledger.SalesAsync(context.Registration.JurisdictionId, context.Period.Start, context.Period.End, cancellationToken);
+
+        context.Return.Currency = "USD";
+        context.Lines.Add(new TaxReturnLine { Kind = TaxReturnLineKinds.GrossSales, Amount = sales.Gross });
+        context.Lines.Add(new TaxReturnLine { Kind = TaxReturnLineKinds.TaxableSales, TaxType = TaxTypeNames.SalesTax, Amount = sales.Taxable, TaxAmount = sales.TaxCollected });
+        context.Lines.Add(new TaxReturnLine { Kind = TaxReturnLineKinds.UseTaxPurchases, TaxType = TaxTypeNames.UseTax, Amount = sales.UseTaxPurchases, TaxAmount = sales.UseTax });
+    }
+}
+```
+
+A registration with returns can't be deleted from **Tax registrations**.
+
+**Use tax.** `TaxTypeNames.UseTax` (`UseTax`) is a well-known tax type, seeded on new sites and added to existing ones by a migration, for the tax a business owes on what it bought or took from stock without paying sales tax.
+
+### Permissions
+
+| Permission | Grants |
+| --- | --- |
+| `ManageTaxReturns` | **Commerce > Taxation > Tax returns**: see, prepare, prepare again, mark ready, reopen, delete a draft with no payment |
+| `FileTaxReturns` | Mark filed, amend, record and remove payments, file electronically; it grants `ManageTaxReturns` |
+
+Both are given to Administrator by default.
+
+### Recipes and deployment
+
+The `TaxReturns` step (entries `TaxReturns`) and the **Tax returns** deployment step import and export returns, matched by `ItemId`. The registrations' `Filing` schedule travels with the `MerchantTaxRegistration` step:
+
+```json
+{
+  "steps": [
+    {
+      "name": "MerchantTaxRegistration",
+      "MerchantTaxRegistrations": [
+        {
+          "Name": "Michigan sales, use and withholding",
+          "JurisdictionId": "us-mi",
+          "RegistrationNumber": "12-3456789",
+          "IsActive": true,
+          "Filing": { "Frequency": "Monthly", "DueMonthsAfterPeriod": 1, "DueDay": 20, "MoveToNextBusinessDay": true, "AnnualForm": "US-MI-5081", "AnnualDueMonthsAfterYear": 2, "AnnualDueDay": 28 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## E-filing
+
+The **Tax E-Filing** feature (`CrestApps.OrchardCore.Taxation.EFiling`) files documents electronically. An `EFileSubmission` (YesSql collection `TaxReturns`) is one attempt: the target (`TargetType`, `TargetId`), the format, the channel, the file built (base64 `Content`), its status (`Created`, `Submitted`, `Accepted`, `Rejected`, `Failed`), the agency's `ExternalId`, `ConfirmationNumber` and `Messages`.
+
+| Interface | Registration | Responsibility |
+| --- | --- | --- |
+| `IEFileTargetProvider` (`TargetType`, `FindAsync`, `CanFileAsync`, `AcceptedAsync`) | `services.AddEFileTargetProvider<T>()` | Describes a kind of document as an `EFileTarget` (with `NotFileableReason` when it can't be filed now), checks who may file it, and marks it filed once accepted. Tax returns (`TaxReturn`) are built in: a return must be `Ready`, and needs `FileTaxReturns` |
+| `IEFileFormat` (`Name`, `DisplayName`, `CanWrite`, `WriteAsync`) | `services.AddEFileFormat<T>()` | Writes a target into an `EFilePayload`; its `Problems` stop the submission. `TaxReturnJson` writes any return as JSON and needs the registration number |
+| `IEFileTransport` (`Name`, `DisplayName`, `IsManual`, `CanSend`, `SendAsync`, `CheckAsync`) | `services.AddEFileTransport<T>()` | Sends the file and asks for the agency's answer. `Manual` hands over the file to download; the person records the answer |
+
+`IEFilingService.SubmitAsync(target, format, transport, user)` refuses a target already accepted or with a submission waiting, builds the file, sends it (a channel that throws leaves the submission `Failed`), and records the answer; `CheckAsync` asks a channel that is not manual; `RecordAnswerAsync(submission, accepted, confirmationNumber, filedOn, message, user)` records the answer to a manual submission. An accepted submission marks the document filed through its target provider (for a return, `MarkFiledAsync` with the confirmation number and the channel's name); when that fails, the submission stays `Submitted`. The **Tax e-filing acknowledgements** background task asks the channels for the answers to up to 50 submissions every 15 minutes.
+
+A state's own XML schema and gateway are a format and a transport in a pack; the `EFileSubmissions` step (entries `Submissions`) and the **E-file submissions** deployment step move submissions between sites.
 
 ## TaxJar
 

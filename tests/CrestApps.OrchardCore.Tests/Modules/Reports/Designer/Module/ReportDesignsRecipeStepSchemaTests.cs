@@ -75,6 +75,25 @@ public sealed class ReportDesignsRecipeStepSchemaTests
         Assert.False(Evaluate(schema, step));
     }
 
+    [Fact]
+    public async Task Schema_AcceptsTheDefaultOwnerOfTheStep()
+    {
+        // Arrange
+        var step = new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            [ReportDesignsRecipeStep.DefaultOwnerUserNameProperty] = "admin",
+            [ReportDesignsRecipeStep.OwnedBySuperUserProperty] = true,
+            ["Reports"] = new JsonArray(new JsonObject { ["itemId"] = "starter", ["displayText"] = "Starter" }),
+        };
+
+        // Act
+        var schema = await new ReportDesignsRecipeStepSchema().GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(Evaluate(schema, step));
+    }
+
     private static ReportDesign Design()
         => new()
         {

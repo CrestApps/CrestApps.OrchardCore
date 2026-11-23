@@ -3,8 +3,11 @@ using CrestApps.OrchardCore.Plaid.Models;
 namespace CrestApps.OrchardCore.Plaid.Services;
 
 /// <summary>
-/// Reads the site's Plaid credentials: the environment and client id from the settings, the secret from the Orchard
-/// secret the settings name.
+/// Gives the tenant's Plaid credentials, the one Plaid setup every module of the tenant shares. By default the Plaid
+/// feature reads them from the site's Plaid settings (the environment and client id) and the Orchard secret the settings
+/// name. A host that holds the keys itself, such as one set of platform keys for every tenant, registers its own
+/// provider with <see cref="PlaidServiceCollectionExtensions.AddPlaidCredentialsProvider{TProvider}"/>, which replaces
+/// the settings-based one.
 /// </summary>
 public interface IPlaidCredentialsProvider
 {

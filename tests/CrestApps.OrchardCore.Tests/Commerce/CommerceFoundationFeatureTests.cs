@@ -40,7 +40,6 @@ public sealed class CommerceFoundationFeatureTests
         TransactionsConstants.Features.Notification,
         TransactionsConstants.Features.PaymentTerms,
         TransactionsConstants.Features.Receipts,
-        TaxationConstants.Feature.Taxation,
         ExchangeRatesConstants.Features.Area,
         CustomersConstants.Features.Customers,
     };
@@ -54,6 +53,20 @@ public sealed class CommerceFoundationFeatureTests
 
         // Assert
         Assert.Contains(CommerceConstants.Features.Foundation, closure);
+        Assert.DoesNotContain(CommerceConstants.Features.Area, closure);
+    }
+
+    [Theory]
+    [InlineData(TaxationConstants.Feature.Taxation)]
+    [InlineData(TaxationConstants.Feature.Returns)]
+    [InlineData(TaxationConstants.Feature.EFiling)]
+    public void SalesTaxAndTaxReturns_NeedNoCommerceFeature(string featureId)
+    {
+        // Act: a site that keeps its own books files its sales tax returns without a store or the Commerce menu.
+        var closure = DependencyClosure(featureId);
+
+        // Assert
+        Assert.DoesNotContain(CommerceConstants.Features.Foundation, closure);
         Assert.DoesNotContain(CommerceConstants.Features.Area, closure);
     }
 

@@ -43,6 +43,145 @@ public sealed class PlaidClientTests
     }
 
     [Fact]
+    public async Task CreateLinkToken_ForTransactions_SendsTheProductsHistoryAndNoDefaultFilter()
+    {
+        // Arrange
+        var context = new PlaidTestContext();
+        context.Handler.Answer("link/token/create", """{"link_token":"link-sandbox-2","request_id":"r"}""");
+
+        // Act
+        await context.Client.CreateLinkTokenAsync(FixedPlaidCredentials.Sandbox, new PlaidLinkTokenRequest
+        {
+            ClientUserId = "opaque",
+            Products = ["transactions"],
+            AccountFilters = new Dictionary<string, IList<string>>(),
+            CountryCodes = ["US", "CA"],
+            TransactionsDaysRequested = 5000,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var (_, _, body) = Assert.Single(context.Handler.Calls);
+        Assert.Equal("transactions", Assert.Single(body["products"]!.AsArray())!.GetValue<string>());
+        Assert.Equal(["US", "CA"], body["country_codes"]!.AsArray().Select(node => node!.GetValue<string>()));
+        Assert.Equal(730, body["transactions"]!["days_requested"]!.GetValue<int>());
+        Assert.Null(body["account_filters"]);
+        Assert.Null(body["access_token"]);
+    }
+
+    [Fact]
+    public async Task CreateLinkToken_InUpdateMode_SendsTheAccessTokenWithoutProductsOrFilters()
+    {
+        // Arrange
+        var context = new PlaidTestContext();
+        context.Handler.Answer("link/token/create", """{"link_token":"link-sandbox-3","request_id":"r"}""");
+
+        // Act
+        await context.Client.CreateLinkTokenAsync(FixedPlaidCredentials.Sandbox, new PlaidLinkTokenRequest
+        {
+            ClientUserId = "opaque",
+            AccessToken = "access-1",
+            Products = ["transactions"],
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var (_, _, body) = Assert.Single(context.Handler.Calls);
+        Assert.Equal("access-1", body["access_token"]!.GetValue<string>());
+        Assert.Null(body["products"]);
+        Assert.Null(body["account_filters"]);
+    }
+
+    [Fact]
+    public async Task GetAccounts_ReadsEveryAccountOfTheItem_WithBalances()
+    {
+        // Arrange
+        var context = new PlaidTestContext();
+        context.Handler.Answer("accounts/get", """
+            {
+              "accounts": [
+                { "account_id": "acc-1", "mask": "0000", "name": "Checking", "official_name": "Plaid Gold Checking", "type": "depository", "subtype": "checking", "balances": { "available": 100.5, "current": 110, "limit": null, "iso_currency_code": "USD" } },
+                { "account_id": "acc-2", "mask": "1111", "name": "Card", "type": "credit", "subtype": "credit card", "balances": { "current": 410.25, "limit": 2000, "iso_currency_code": "USD" } }
+              ],
+              "item": { "item_id": "item-1", "institution_id": "ins_109508", "webhook": "https://example.com/plaid/webhook" },
+              "request_id": "r"
+            }
+            """);
+
+        // Act
+        var accounts = await context.Client.GetAccountsAsync(FixedPlaidCredentials.Sandbox, "access-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["acc-1", "acc-2"], accounts.Accounts.Select(account => account.AccountId));
+        Assert.Equal(100.5m, accounts.Accounts[0].Balances.Available);
+        Assert.Equal("Plaid Gold Checking", accounts.Accounts[0].OfficialName);
+        Assert.Equal(2000m, accounts.Accounts[1].Balances.Limit);
+        Assert.Equal("ins_109508", accounts.Item.InstitutionId);
+        var (_, request, body) = Assert.Single(context.Handler.Calls);
+        Assert.Equal("access-1", body["access_token"]!.GetValue<string>());
+        Assert.True(request.Options.TryGetValue(PlaidClient.RetryableKey, out var retryable) && retryable);
+    }
+
+    [Fact]
+    public async Task SyncTransactions_SendsTheCursorAndOptions_AndReadsThePage()
+    {
+        // Arrange
+        var context = new PlaidTestContext();
+        context.Handler.Answer("transactions/sync", """
+            {
+              "added": [ { "transaction_id": "t-1", "account_id": "acc-1", "amount": 12.34, "iso_currency_code": "USD", "date": "2026-11-20", "authorized_date": "2026-11-19", "name": "Coffee", "merchant_name": "Cafe", "original_description": "CAFE 123", "pending": false, "payment_channel": "in store" } ],
+              "modified": [],
+              "removed": [ { "transaction_id": "t-0", "account_id": "acc-1" } ],
+              "accounts": [],
+              "next_cursor": "cursor-2",
+              "has_more": true,
+              "transactions_update_status": "HISTORICAL_UPDATE_COMPLETE",
+              "request_id": "r"
+            }
+            """);
+
+        // Act
+        var page = await context.Client.SyncTransactionsAsync(FixedPlaidCredentials.Sandbox, new PlaidTransactionsSyncRequest
+        {
+            AccessToken = "access-1",
+            Cursor = "cursor-1",
+            Count = 1000,
+            AccountId = "acc-1",
+            IncludeOriginalDescription = true,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var added = Assert.Single(page.Added);
+        Assert.Equal(12.34m, added.Amount);
+        Assert.Equal(new DateOnly(2026, 11, 20), added.Date);
+        Assert.Equal(new DateOnly(2026, 11, 19), added.AuthorizedDate);
+        Assert.Equal("CAFE 123", added.OriginalDescription);
+        Assert.Equal("t-0", Assert.Single(page.Removed).TransactionId);
+        Assert.Equal("cursor-2", page.NextCursor);
+        Assert.True(page.HasMore);
+        var (_, request, body) = Assert.Single(context.Handler.Calls);
+        Assert.Equal("cursor-1", body["cursor"]!.GetValue<string>());
+        Assert.Equal(500, body["count"]!.GetValue<int>());
+        Assert.Equal("acc-1", body["options"]!["account_id"]!.GetValue<string>());
+        Assert.True(body["options"]!["include_original_description"]!.GetValue<bool>());
+        Assert.True(request.Options.TryGetValue(PlaidClient.RetryableKey, out var retryable) && retryable);
+    }
+
+    [Fact]
+    public async Task GetInstitution_ReadsTheBanksName()
+    {
+        // Arrange
+        var context = new PlaidTestContext();
+        context.Handler.Answer("institutions/get_by_id", """{"institution":{"institution_id":"ins_1","name":"First Platypus Bank"},"request_id":"r"}""");
+
+        // Act
+        var institution = await context.Client.GetInstitutionAsync(FixedPlaidCredentials.Sandbox, "ins_1", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("First Platypus Bank", institution.Name);
+        var (_, _, body) = Assert.Single(context.Handler.Calls);
+        Assert.Equal("US", Assert.Single(body["country_codes"]!.AsArray())!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task ExchangePublicToken_IsNeverMarkedRetryable()
     {
         // Arrange

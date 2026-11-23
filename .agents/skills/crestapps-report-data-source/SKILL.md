@@ -200,6 +200,10 @@ restricts records beyond its permission (the statement reads the whole index). A
 measures per row (date buckets as zero-based `long` indexes over `Boundaries`), and return `null` for anything it
 cannot answer exactly or for more than `query.MaxGroups` groups.
 
+Sums of `decimal` columns must be exact. `ReportIndexAggregator` makes them exact on SQLite (which keeps decimals as
+floating-point numbers) by rounding to the values' decimal places, or declines when it cannot tell (`TryExactSum`), so
+do not turn off `CanAggregate` only to keep money exact.
+
 ## Dynamic sources: implement `IDataSource`
 
 For an external system whose data sets or fields are discovered at run time, implement `IDataSource` directly:

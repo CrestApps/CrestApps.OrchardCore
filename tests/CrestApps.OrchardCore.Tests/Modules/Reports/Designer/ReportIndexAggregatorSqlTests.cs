@@ -52,8 +52,37 @@ public sealed class ReportIndexAggregatorSqlTests
 
         // Assert
         Assert.NotNull(statement);
-        Assert.Equal(widened, statement.Sql.Contains("CAST(", StringComparison.Ordinal));
-        Assert.DoesNotContain("CAST(" + configuration.SqlDialect.QuoteForColumnName(nameof(UsageIndex.Cost)), statement.Sql, StringComparison.Ordinal);
+        Assert.Equal(widened, statement.Sql.Contains("AS BIGINT)", StringComparison.Ordinal));
+        Assert.DoesNotContain("CAST(" + configuration.SqlDialect.QuoteForColumnName(nameof(UsageIndex.Cost)) + " AS BIGINT)", statement.Sql, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(nameof(SqliteDialect), true)]
+    [InlineData(nameof(SqlServerDialect), false)]
+    [InlineData(nameof(PostgreSqlDialect), false)]
+    [InlineData(nameof(MySqlDialect), false)]
+    public void Build_SumOfADecimalColumn_ReadsWhatMakesItExactOnlyOnSqlite(string dialectName, bool madeExact)
+    {
+        // Arrange: SQLite keeps decimals as floating-point numbers; the other databases add up exact decimals.
+        var configuration = new YesSqlConfiguration
+        {
+            SqlDialect = CreateDialect(dialectName),
+        };
+        var query = new DataAggregateQuery
+        {
+            DataSet = "Usage",
+            Groups = [new DataAggregateGroup { Field = "Region" }],
+            Measures = [new DataAggregateMeasure { Function = DataAggregate.Sum, Field = "Cost" }],
+        };
+
+        // Act
+        var statement = ReportIndexAggregator.Build<UsageIndex>(configuration, null, query, Columns());
+
+        // Assert
+        Assert.NotNull(statement);
+        Assert.Equal(madeExact ? 1 : 0, statement.DecimalSums.Count);
+        Assert.Equal(madeExact, statement.Sql.Contains("SUM(ABS(", StringComparison.Ordinal));
+        Assert.Equal(2, statement.Columns.Count);
     }
 
     [Theory]

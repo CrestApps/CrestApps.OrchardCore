@@ -28,6 +28,21 @@ public interface IIncomeTaxProvider
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The tax lines.</returns>
     Task<IncomeTaxResult> CalculateAsync(IncomeTaxRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the jurisdictions whose election (the values of a withholding form, such as Form W-4) the provider reads on a
+    /// day, so a payroll asks people only for the elections a tax in effect takes: a city with no income tax, or one
+    /// whose tax reads the state's certificate, needs none of its own.
+    /// </summary>
+    /// <param name="date">The day.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>
+    /// The jurisdictions, compared without regard to case, or <see langword="null"/> when the provider can't tell, and an
+    /// election is then asked for every jurisdiction a person is registered or works in. The default is
+    /// <see langword="null"/>.
+    /// </returns>
+    Task<IReadOnlySet<string>> GetElectionJurisdictionsAsync(DateOnly date, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlySet<string>>(null);
 }
 
 /// <summary>
