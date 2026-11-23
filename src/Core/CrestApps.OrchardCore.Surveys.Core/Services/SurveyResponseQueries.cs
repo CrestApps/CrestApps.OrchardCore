@@ -79,6 +79,24 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
             q = q.Where(index => index.Status.IsIn(statuses));
         }
 
+        if (query.ExcludedStatuses.Count > 0)
+        {
+            var excludedStatuses = query.ExcludedStatuses.Select(status => status.ToString()).ToArray();
+            q = q.Where(index => index.Status.IsNotIn(excludedStatuses));
+        }
+
+        if (query.ExcludedSurveyIds.Count > 0)
+        {
+            var excludedSurveys = query.ExcludedSurveyIds.ToArray();
+            q = q.Where(index => index.SurveyId.IsNotIn(excludedSurveys));
+        }
+
+        if (!string.IsNullOrEmpty(query.ExcludedUserId))
+        {
+            var excludedUser = query.ExcludedUserId;
+            q = q.Where(index => index.UserId == null || index.UserId != excludedUser);
+        }
+
         if (query.Grading is { } grading)
         {
             var value = grading.ToString();
@@ -118,7 +136,9 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
         }
 
         var count = await q.CountAsync(cancellationToken);
-        var ordered = query.OldestFirst
+        var ordered = query.OrderById
+            ? q.OrderBy(index => index.ItemId)
+            : query.OldestFirst
             ? q.OrderBy(index => index.CompletedUtc).ThenBy(index => index.StartedUtc).ThenBy(index => index.Id)
             : q.OrderByDescending(index => index.StartedUtc).ThenByDescending(index => index.Id);
         var items = await ordered.Skip(skip).Take(take).ListAsync(cancellationToken);

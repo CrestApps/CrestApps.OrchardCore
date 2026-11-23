@@ -24,6 +24,10 @@ Some answers, such as long texts and file uploads, need a person to score them.
 
 With Surveys AI, **Suggest a score with AI** fills in a suggestion; you decide and save. Tick **I used AI help to grade this answer** when you used it.
 
+Nobody grades their own work: your own responses are left out of your list, and you can't grade, change the score of or score again a response you gave. If you answered one of the versions you pick in **Regrade versions**, someone else must run it. You also can't void or delete your own response.
+
+On an anonymous survey, responses wait in the list until the survey has enough completed responses (its minimum group size), so no one can be recognized from the first answers. They show a code instead of a number, in no particular order, and the day only. The survey's owner gets no notice per response on an anonymous survey, since its time would show when that person handed in; check the list instead.
+
 ## Change or recompute a score
 
 - **Change the total score**: enter the **New score** and a **Reason**, then **Change score**. The reason is kept in the score history.

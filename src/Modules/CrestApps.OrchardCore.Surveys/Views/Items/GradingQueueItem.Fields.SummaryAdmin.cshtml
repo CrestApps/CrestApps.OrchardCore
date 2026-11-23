@@ -2,4 +2,4 @@
 
 @model ShapeViewModel<GradingQueueItem>
 
-<a asp-action="Grade" asp-controller="SurveyGrading" asp-route-responseId="@Model.Value.Response.ItemId"><span class="fw-semibold">@Model.Value.Response.Number</span> @(Model.Value.RespondentName ?? T["Anonymous"].Value)</a>
+<a asp-action="Grade" asp-controller="SurveyGrading" asp-route-responseId="@Model.Value.Response.ItemId"><span class="fw-semibold">@Model.Value.Label</span> @(Model.Value.RespondentName ?? T["Anonymous"].Value)</a>

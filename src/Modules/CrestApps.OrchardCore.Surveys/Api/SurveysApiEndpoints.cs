@@ -14,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
-using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -262,29 +261,27 @@ internal static class SurveysApiEndpoints
         }
 
         // The one identity rule: who responded shows on an identified survey to whoever may read its responses. An
-        // anonymous survey lists nothing below its minimum group size, and shows days only and context kinds only.
+        // anonymous survey follows the shared small-group rule of the responses list (SurveyGroupGate): nothing below its
+        // minimum group size, no status too few responses share, days only, context kinds only, no response number (it
+        // comes from one sequence for the whole site), and the order of the random ids instead of the start order.
         var services = httpContext.RequestServices;
         var withIdentity = await services.GetRequiredService<SurveyRespondentNames>().CanSeeIdentityAsync(httpContext.User, survey, httpContext.RequestAborted);
         var anonymous = SurveyAnonymity.IsAnonymous(survey);
-        var (count, items) = await queries.ListAsync(new SurveyResponseQuery
-        {
-            SurveyIds = [survey.ItemId],
-            Skip = Math.Max(skip ?? 0, 0),
-            Take = Math.Clamp(take ?? 50, 1, SurveysConstants.PageSize),
-        }, httpContext.RequestAborted);
+        var decision = await services.GetRequiredService<SurveyAnonymousGroups>().DecideAsync(survey, null, [], httpContext.RequestAborted);
 
-        var settings = services.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
-
-        // The threshold counts completed, non-test responses only, so unfinished responses never pad the group.
-        if (anonymous && SurveyAnonymity.IsTooSmall(survey, settings, (await queries.ListAsync(new SurveyResponseQuery
-        {
-            SurveyIds = [survey.ItemId],
-            Statuses = [SurveyResponseStatus.Completed],
-            Take = 1,
-        }, httpContext.RequestAborted)).Count))
+        if (decision.HidesAll)
         {
             return Results.Ok(new { count = 0, hidden = true, items = Array.Empty<object>() });
         }
+
+        var (count, items) = await queries.ListAsync(new SurveyResponseQuery
+        {
+            SurveyIds = [survey.ItemId],
+            ExcludedStatuses = decision.HiddenStatuses.ToList(),
+            OrderById = anonymous,
+            Skip = Math.Max(skip ?? 0, 0),
+            Take = Math.Clamp(take ?? 50, 1, SurveysConstants.PageSize),
+        }, httpContext.RequestAborted);
 
         var timeZone = anonymous && services.GetService<ILocalClock>() is { } localClock
             && TimeZoneInfo.TryFindSystemTimeZoneById((await localClock.GetLocalTimeZoneAsync())?.TimeZoneId ?? string.Empty, out var found)
@@ -300,7 +297,7 @@ internal static class SurveysApiEndpoints
             items = items.Select(response => new
             {
                 id = response.ItemId,
-                number = response.Number,
+                number = SurveyAnonymity.ResponseLabel(survey, response),
                 version = response.VersionNumber,
                 status = response.Status.ToString(),
                 grading = response.Grading.ToString(),

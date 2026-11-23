@@ -43,7 +43,9 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
 
         var first = ResultsSqliteStore.Response("r1", identified, SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
         first.UserId = "u1";
+        first.Number = "R-r1";
         var second = ResultsSqliteStore.Response("r2", anonymous, SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["blue"] }));
+        second.Number = "R-r2";
 
         // Even a user id left on an anonymous response is never shown.
         second.UserId = "u2";
@@ -197,6 +199,72 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task WideDataSet_AnAnonymousSurveyFilteredToOnePersonsAnswer_ShowsNoRow()
+    {
+        // Arrange: 6 completed responses pass the minimum of 5, but only one answered blue.
+        await AddAnonymousResponsesAsync(5);
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+        var blue = new DataCondition { Field = "color", Operator = DataFilterOperator.In, Values = ["blue"] };
+
+        // Act
+        var all = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
+        var filtered = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"), conditions: [blue]);
+
+        // Assert: the filter narrows the survey to one person, so the minimum applies after it.
+        Assert.Equal(6, all.Count);
+        Assert.Empty(filtered);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AnAnonymousSurveyAtItsMinimum_LeavesOutAStatusTooFewShare()
+    {
+        // Arrange: 6 completed responses and one abandoned one.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddAnonymousResponsesAsync(5);
+
+        await using (var write = _store.OpenSession())
+        {
+            await write.SaveAsync(ResultsSqliteStore.Response("gave-up", Version("v2", "survey2"), SurveyResponseStatus.Abandoned, _day, ("q1", new SurveyAnswer { Values = ["red"] })), false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+        var abandoned = new DataCondition { Field = "Status", Operator = DataFilterOperator.In, Values = [nameof(SurveyResponseStatus.Abandoned)] };
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+        var filtered = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"), conditions: [abandoned]);
+        var wide = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
+
+        // Assert: the lone abandoned response is left out, read with every status or filtered to.
+        Assert.DoesNotContain("gave-up", rows.Keys);
+        Assert.Equal(7, rows.Count);
+        Assert.DoesNotContain("gave-up", filtered.Keys);
+        Assert.DoesNotContain("gave-up", wide.Keys);
+        Assert.Equal(6, wide.Count);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AnAnonymousSurvey_ShowsNoSiteWideResponseNumber()
+    {
+        // Arrange
+        await AddAnonymousResponsesAsync(4);
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+        var wide = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
+
+        // Assert
+        Assert.Equal("R-r1", rows["r1"]["Number"]);
+        Assert.Equal("r2", rows["r2"]["Number"]);
+        Assert.Equal("a0", wide["a0"]["Number"]);
+    }
+
+    [Fact]
     public async Task SurveyResponses_WithOnlyOwnSurveys_ReadsOnlyTheirSurveys()
     {
         // Arrange
@@ -260,14 +328,21 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         return new SurveysDataSource(sets, new SurveyWideDataSetFactory(session, authorization, access, new SurveyStore(session), versions, registry, names, RecipeRoundTrip.Localizer<SurveyWideDataSet>()));
     }
 
-    private static async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>> ReadAsync(SurveysDataSource source, string dataSet, ClaimsPrincipal user, string key = "Id")
+    private static async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>> ReadAsync(SurveysDataSource source, string dataSet, ClaimsPrincipal user, string key = "Id", DataCondition[] conditions = null)
     {
-        var table = await ReportDesignerTestServices.ReadAsync(source, new DataSourceQuery
+        var query = new DataSourceQuery
         {
             DataSet = dataSet,
             MaxRows = 100,
             Context = new DataSourceContext { User = user },
-        }, TestContext.Current.CancellationToken);
+        };
+
+        foreach (var condition in conditions ?? [])
+        {
+            query.Conditions.Add(condition);
+        }
+
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         var fields = table.Fields.Select(field => field.Name).ToList();
         var keyIndex = fields.IndexOf(key);

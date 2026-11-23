@@ -1,6 +1,7 @@
 @model ShapeViewModel<SurveyResponse>
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames RespondentNames
 
-<a href="@Url.RouteUrl("SurveysResponse", new { id = Model.Value.ItemId })"><span class="fw-semibold">@Model.Value.Number</span></a>
+<a href="@Url.RouteUrl("SurveysResponse", new { id = Model.Value.ItemId })"><span class="fw-semibold">@await RespondentNames.GetLabelAsync(Model.Value)</span></a>
 @if (Model.Value.IsTest)
 {
     <span class="badge text-bg-info fw-normal ms-1">@T["Test"]</span>

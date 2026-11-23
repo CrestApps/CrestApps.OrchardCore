@@ -38,6 +38,22 @@ public sealed class SurveyResponseQuery
     public List<SurveyResponseStatus> Statuses { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the statuses left out, such as those of an anonymous survey too few responses share.
+    /// </summary>
+    public List<SurveyResponseStatus> ExcludedStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the surveys left out, such as anonymous surveys below their minimum group size.
+    /// </summary>
+    public List<string> ExcludedSurveyIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a user whose own responses are left out, such as the grader of a grading queue, or
+    /// <see langword="null"/>.
+    /// </summary>
+    public string ExcludedUserId { get; set; }
+
+    /// <summary>
     /// Gets or sets the grading status, or <see langword="null"/>.
     /// </summary>
     public GradingStatus? Grading { get; set; }
@@ -77,6 +93,13 @@ public sealed class SurveyResponseQuery
     /// start. Work queues use it so the oldest waiting response comes first.
     /// </summary>
     public bool OldestFirst { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the page is read in the order of the responses' random ids, which orders nothing: lists of
+    /// an anonymous survey use it, since start and completion times (and response numbers) would give away the order
+    /// people answered in. It takes precedence over <see cref="OldestFirst"/>.
+    /// </summary>
+    public bool OrderById { get; set; }
 
     /// <summary>
     /// Gets or sets how many to skip.

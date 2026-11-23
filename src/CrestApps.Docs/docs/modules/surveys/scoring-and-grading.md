@@ -58,6 +58,10 @@ Every change adds an entry to the response's score history (who, when, from, to,
 
 The grading queue (`admin/surveys/grading`) lists responses waiting for a grader in the surveys the user may grade: the global permission, `ISurveyGradingScope` implementations (Learning adds course staff) and `ISurveyAuthorizationService`.
 
+Nobody grades their own work (`SurveyOwnWork`): the queue leaves out the grader's own responses, and the Grade page, its posts (grades, change score, score again), **Regrade versions** (refused when the grader has a response in a chosen version), AI scoring help, and void and delete on the responses pages all refuse a response whose `UserId` is the current user.
+
+Anonymous surveys follow the small-group rule of [Results and reports](./results-and-reports.md#anonymous-surveys) in grading too: the queue leaves out an anonymous survey until its completed responses reach the minimum group size, the Grade page and AI scoring help refuse its responses until then, rows show the response code (never the site-wide number) and the day only, and a queue that lists anonymous responses is in random-id order. The "needs grading" notification is not sent on anonymous surveys, since its time would give away when the person handed in.
+
 Nothing is added to the queue by hand: a completed response appears when it has questions a person must score, such as essays or uploaded files, and leaves once it is graded. Each response waits in one queue only. A module that grades its own responses on its own page registers its context kind with `AddSurveyContextKindGradingQueue(kind)`, and the Surveys queue then leaves those responses out. Learning does this for enrollments, so course quiz attempts wait under **Learning > Grading** with coursework. A single survey's queue (`admin/surveys/grading?surveyId=...`) still lists all of its responses.
 
 ## Accommodations

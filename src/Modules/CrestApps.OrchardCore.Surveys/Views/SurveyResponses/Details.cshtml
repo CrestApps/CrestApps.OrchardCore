@@ -10,7 +10,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="SurveysResponse" title="@T["Response {0}", response.Number]">
+    <breadcrumb name="SurveysResponse" title="@T["Response {0}", CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.ResponseLabel(Model.Survey, response)]">
         <breadcrumb-item id="Surveys" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
         <breadcrumb-item id="Responses" url="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId })">@T["Responses"]</breadcrumb-item>
     </breadcrumb>

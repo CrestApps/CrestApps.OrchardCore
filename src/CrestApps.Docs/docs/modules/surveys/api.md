@@ -12,7 +12,7 @@ With **Surveys API** on, these endpoints are under `/api/surveys` on the `Api` a
 | --- | --- | --- |
 | `GET /api/surveys` | Manage own surveys | The surveys the caller may manage |
 | `GET /api/surveys/{id}/definition?collector={token}&responseId={id}` | Respond to surveys | What a respondent sees: of the published version once the access rules allow the caller, or of the caller's own started response |
-| `GET /api/surveys/{id}/responses?skip=&take=` | View responses (of the survey) | A page of responses; who responded shows on identified surveys only; an anonymous survey returns `hidden: true` and no item below its minimum group size, days only (`startedUtc` and `completedUtc` at the start of the day) and context kinds only |
+| `GET /api/surveys/{id}/responses?skip=&take=` | View responses (of the survey) | A page of responses; who responded shows on identified surveys only; an anonymous survey returns `hidden: true` and no item below its minimum group size, leaves out a status fewer responses share than the minimum, shows days only (`startedUtc` and `completedUtc` at the start of the day), context kinds only, and in `number` the start of the random id instead of the site-wide response number, in random-id order |
 | `POST /api/surveys/responses` | Respond to surveys | Starts, or resumes, the caller's response |
 | `GET /api/surveys/responses/{responseId}` | Respond to surveys | The current page of the caller's response |
 | `PUT /api/surveys/responses/{responseId}/pages/{pageId}` | Respond to surveys | Answers the current page and moves on (or back) |
