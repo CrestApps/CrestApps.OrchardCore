@@ -21,8 +21,6 @@ public sealed class SurveyAnonymitySecrets
     /// </summary>
     public const string Purpose = "CrestApps.OrchardCore.Surveys.AnonymitySecret.v1";
 
-    private const string Prefix = "dp1:";
-
     private readonly IDataProtector _protector;
     private readonly SurveyStore _surveyStore;
     private readonly ILogger _logger;
@@ -38,7 +36,7 @@ public sealed class SurveyAnonymitySecrets
         SurveyStore surveyStore,
         ILogger<SurveyAnonymitySecrets> logger)
     {
-        _protector = dataProtectionProvider.CreateProtector(Purpose);
+        _protector = SurveyAnonymitySecretProtection.CreateProtector(dataProtectionProvider);
         _surveyStore = surveyStore;
         _logger = logger;
     }
@@ -49,7 +47,7 @@ public sealed class SurveyAnonymitySecrets
     /// <param name="stored">The stored value.</param>
     /// <returns><see langword="true"/> when it is Data Protection ciphertext.</returns>
     public static bool IsProtected(string stored)
-        => stored?.StartsWith(Prefix, StringComparison.Ordinal) == true;
+        => SurveyAnonymitySecretProtection.IsProtected(stored);
 
     /// <summary>
     /// Gives a survey a new random secret, protected. The caller saves the survey.
@@ -65,7 +63,7 @@ public sealed class SurveyAnonymitySecrets
     /// <summary>
     /// Protects a survey's secret in place when it is still stored in plain text (surveys saved before secrets were
     /// protected), keeping its value so respondent keys and invitation links stay valid, or gives it one when it has
-    /// none. The caller saves the survey.
+    /// none. The caller saves the survey. The survey store does the same on every save.
     /// </summary>
     /// <param name="survey">The survey.</param>
     /// <returns><see langword="true"/> when the survey changed.</returns>
@@ -73,14 +71,7 @@ public sealed class SurveyAnonymitySecrets
     {
         ArgumentNullException.ThrowIfNull(survey);
 
-        if (IsProtected(survey.AnonymitySecret))
-        {
-            return false;
-        }
-
-        survey.AnonymitySecret = Protect(string.IsNullOrEmpty(survey.AnonymitySecret) ? SurveyNames.NewSecret() : survey.AnonymitySecret);
-
-        return true;
+        return SurveyAnonymitySecretProtection.EnsureProtected(_protector, survey);
     }
 
     /// <summary>
@@ -102,13 +93,13 @@ public sealed class SurveyAnonymitySecrets
 
         if (!IsProtected(stored))
         {
-            // Plain text from before secrets were protected: the upgrade step protects it.
+            // Plain text from before secrets were protected: the upgrade step, or the survey's next save, protects it.
             return stored;
         }
 
         try
         {
-            return _protector.Unprotect(stored.Substring(Prefix.Length));
+            return _protector.Unprotect(stored.Substring(SurveyAnonymitySecretProtection.Prefix.Length));
         }
         catch (CryptographicException exception)
         {
@@ -142,7 +133,7 @@ public sealed class SurveyAnonymitySecrets
 
         try
         {
-            _protector.Unprotect(survey.AnonymitySecret.Substring(Prefix.Length));
+            _protector.Unprotect(survey.AnonymitySecret.Substring(SurveyAnonymitySecretProtection.Prefix.Length));
 
             return true;
         }
@@ -198,7 +189,7 @@ public sealed class SurveyAnonymitySecrets
         => SurveyInvitationTokens.Create(await RevealAsync(survey, cancellationToken), invitationId);
 
     private string Protect(string secret)
-        => Prefix + _protector.Protect(secret);
+        => SurveyAnonymitySecretProtection.Protect(_protector, secret);
 
     private async Task<string> ReplaceAsync(Survey survey, CancellationToken cancellationToken)
     {

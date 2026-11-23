@@ -21,12 +21,24 @@ namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
 /// <summary>
 /// The upkeep columns of the response index read 0 on rows that were in the table before the upgrade, on SQL Server
 /// too, where a nullable column added with a default leaves the existing rows empty and upkeep's filters skip them.
-/// The SQL Server tests run against LocalDB and are skipped where it isn't available (Linux CI).
+/// The SQL Server tests run against LocalDB and are skipped where it isn't available (Linux CI). The update builds its
+/// SQL by hand, so it also runs with a table prefix, and on SQL Server with a database schema, as a tenant's tables are.
 /// </summary>
 public sealed class SurveysMigrationsSqlTests
 {
     private const string LocalDbServer = @"(localdb)\MSSQLLocalDB";
     private const string Responses = SurveysConstants.ResponsesCollectionName;
+    private const string LocalDbMissing = "SQL Server LocalDB is not available (it runs on Windows only).";
+    private const string TablePrefix = "tenant1_";
+    private const string Schema = "tenant1";
+
+    private static readonly Lazy<bool> _localDbAvailable = new(ProbeLocalDb);
+
+    /// <summary>
+    /// Gets whether SQL Server LocalDB answers. The SQL Server tests skip through their attribute when it doesn't: a skip
+    /// thrown from inside a test is reported as a failure on CI.
+    /// </summary>
+    public static bool IsLocalDbAvailable => _localDbAvailable.Value;
 
     [Fact]
     public void AddingTheUpkeepColumns_OnSqlServer_DeclaresThemNotNullWithADefault()
@@ -65,6 +77,17 @@ public sealed class SurveysMigrationsSqlTests
     }
 
     [Fact]
+    public async Task UpdateFrom3_OnSqliteWithATablePrefix_FillsEmptyUpkeepValues()
+    {
+        await using var database = SqliteDatabase.Create(TablePrefix);
+
+        var rows = await UpgradeAsync(database.Store, AddNullableUpkeepColumnsAsync(clearValues: true), migration => migration.UpdateFrom3Async(), expectedVersion: 4);
+
+        AssertAllZero(rows);
+        await AssertTheTablesArePrefixedAsync(database.Store);
+    }
+
+    [Fact(Skip = LocalDbMissing, SkipUnless = nameof(IsLocalDbAvailable))]
     public async Task UpdateFrom2_OnSqlServer_ExistingRowsReadZero()
     {
         await using var database = await LocalDbDatabase.CreateAsync();
@@ -74,7 +97,7 @@ public sealed class SurveysMigrationsSqlTests
         AssertAllZero(rows);
     }
 
-    [Fact]
+    [Fact(Skip = LocalDbMissing, SkipUnless = nameof(IsLocalDbAvailable))]
     public async Task UpdateFrom3_OnSqlServer_FillsTheRowsTheNullableColumnsLeftEmpty()
     {
         await using var database = await LocalDbDatabase.CreateAsync();
@@ -83,6 +106,54 @@ public sealed class SurveysMigrationsSqlTests
         var rows = await UpgradeAsync(database.Store, AddNullableUpkeepColumnsAsync(clearValues: false), migration => migration.UpdateFrom3Async(), expectedVersion: 4);
 
         AssertAllZero(rows);
+    }
+
+    [Fact(Skip = LocalDbMissing, SkipUnless = nameof(IsLocalDbAvailable))]
+    public async Task UpdateFrom2_OnSqlServerWithATablePrefixAndASchema_ExistingRowsReadZero()
+    {
+        await using var database = await LocalDbDatabase.CreateAsync(TablePrefix, Schema);
+
+        var rows = await UpgradeAsync(database.Store, beforeUpdate: null, migration => migration.UpdateFrom2Async(), expectedVersion: 3);
+
+        AssertAllZero(rows);
+        await AssertTheTablesArePrefixedAsync(database.Store);
+    }
+
+    [Fact(Skip = LocalDbMissing, SkipUnless = nameof(IsLocalDbAvailable))]
+    public async Task UpdateFrom3_OnSqlServerWithATablePrefixAndASchema_FillsTheRowsTheNullableColumnsLeftEmpty()
+    {
+        await using var database = await LocalDbDatabase.CreateAsync(TablePrefix, Schema);
+
+        // The raw UPDATE must name the table with the tenant's prefix and schema: unqualified, it would miss it.
+        var rows = await UpgradeAsync(database.Store, AddNullableUpkeepColumnsAsync(clearValues: false), migration => migration.UpdateFrom3Async(), expectedVersion: 4);
+
+        AssertAllZero(rows);
+        await AssertTheTablesArePrefixedAsync(database.Store);
+    }
+
+    // The index table exists only under the tenant's prefix (and schema), so the update can't have found another one.
+    private static async Task AssertTheTablesArePrefixedAsync(IStore store)
+    {
+        var plainName = store.Configuration.TableNameConvention.GetIndexTable(typeof(SurveyResponseIndex), Responses);
+        var schema = store.Configuration.Schema;
+        var tables = new List<(string Schema, string Name)>();
+
+        await InTransactionAsync(store, async builder =>
+        {
+            var sql = store.Configuration.SqlDialect is SqlServerDialect
+                ? "SELECT TABLE_SCHEMA AS SchemaName, TABLE_NAME AS Name FROM INFORMATION_SCHEMA.TABLES"
+                : "SELECT '' AS SchemaName, name AS Name FROM sqlite_master WHERE type = 'table'";
+
+            foreach (var row in await builder.Connection.QueryAsync(sql, transaction: builder.Transaction))
+            {
+                var values = (IDictionary<string, object>)row;
+
+                tables.Add((values["SchemaName"] as string, values["Name"] as string));
+            }
+        });
+
+        Assert.Contains(tables, table => table.Name == TablePrefix + plainName && (schema is null || table.Schema == schema));
+        Assert.DoesNotContain(tables, table => table.Name == plainName);
     }
 
     private static void AssertAllZero(IReadOnlyList<(object Anonymized, object Failures, bool Matched)> rows)
@@ -98,8 +169,8 @@ public sealed class SurveysMigrationsSqlTests
         });
     }
 
-    private static Func<ISchemaBuilder, Task> AddNullableUpkeepColumnsAsync(bool clearValues)
-        => async builder =>
+    private static Func<ISchemaBuilder, string, Task> AddNullableUpkeepColumnsAsync(bool clearValues)
+        => async (builder, schema) =>
         {
             await builder.AlterIndexTableAsync<SurveyResponseIndex>(table =>
             {
@@ -113,14 +184,14 @@ public sealed class SurveysMigrationsSqlTests
             {
                 // SQLite fills a nullable column's default, so the empty values SQL Server leaves are set by hand.
                 await builder.Connection.ExecuteAsync(
-                    $"UPDATE {IndexTable(builder)} SET {dialect.QuoteForColumnName("Anonymized")} = NULL, {dialect.QuoteForColumnName("UpkeepFailures")} = NULL",
+                    $"UPDATE {IndexTable(builder, schema)} SET {dialect.QuoteForColumnName("Anonymized")} = NULL, {dialect.QuoteForColumnName("UpkeepFailures")} = NULL",
                     transaction: builder.Transaction);
             }
             else
             {
                 // The bug the update repairs: SQL Server left the rows that were there empty.
                 Assert.Equal(2, await builder.Connection.ExecuteScalarAsync<int>(
-                    $"SELECT COUNT(*) FROM {IndexTable(builder)} WHERE {dialect.QuoteForColumnName("Anonymized")} IS NULL AND {dialect.QuoteForColumnName("UpkeepFailures")} IS NULL",
+                    $"SELECT COUNT(*) FROM {IndexTable(builder, schema)} WHERE {dialect.QuoteForColumnName("Anonymized")} IS NULL AND {dialect.QuoteForColumnName("UpkeepFailures")} IS NULL",
                     transaction: builder.Transaction));
             }
         };
@@ -129,11 +200,12 @@ public sealed class SurveysMigrationsSqlTests
     // the update, then the update, and reads the upkeep columns back with upkeep's own filters.
     private static async Task<IReadOnlyList<(object Anonymized, object Failures, bool Matched)>> UpgradeAsync(
         IStore store,
-        Func<ISchemaBuilder, Task> beforeUpdate,
+        Func<ISchemaBuilder, string, Task> beforeUpdate,
         Func<SurveysMigrations, Task<int>> update,
         int expectedVersion)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
+        var schema = store.Configuration.Schema;
 
         await store.InitializeAsync(cancellationToken);
         await store.InitializeCollectionAsync(Responses, cancellationToken);
@@ -158,14 +230,14 @@ public sealed class SurveysMigrationsSqlTests
             var documents = dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetDocumentTable(Responses), store.Configuration.Schema);
 
             await builder.Connection.ExecuteAsync(
-                $"INSERT INTO {IndexTable(builder)} ({dialect.QuoteForColumnName("DocumentId")}, {dialect.QuoteForColumnName("ItemId")}, {dialect.QuoteForColumnName("Status")}) " +
+                $"INSERT INTO {IndexTable(builder, schema)} ({dialect.QuoteForColumnName("DocumentId")}, {dialect.QuoteForColumnName("ItemId")}, {dialect.QuoteForColumnName("Status")}) " +
                 $"SELECT {dialect.QuoteForColumnName("Id")}, 'r', 'Completed' FROM {documents}",
                 transaction: builder.Transaction);
         });
 
         if (beforeUpdate is not null)
         {
-            await InTransactionAsync(store, beforeUpdate);
+            await InTransactionAsync(store, builder => beforeUpdate(builder, schema));
         }
 
         var version = 0;
@@ -191,7 +263,7 @@ public sealed class SurveysMigrationsSqlTests
             var failures = dialect.QuoteForColumnName("UpkeepFailures");
             var read = await builder.Connection.QueryAsync(
                 $"SELECT {anonymized} AS Anonymized, {failures} AS Failures, " +
-                $"CASE WHEN {anonymized} = @NotAnonymized AND {failures} < 5 THEN 1 ELSE 0 END AS Matched FROM {IndexTable(builder)}",
+                $"CASE WHEN {anonymized} = @NotAnonymized AND {failures} < 5 THEN 1 ELSE 0 END AS Matched FROM {IndexTable(builder, schema)}",
                 new { NotAnonymized = false },
                 builder.Transaction);
 
@@ -206,8 +278,40 @@ public sealed class SurveysMigrationsSqlTests
         return rows;
     }
 
-    private static string IndexTable(ISchemaBuilder builder)
-        => builder.Dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetIndexTable(typeof(SurveyResponseIndex), Responses), null);
+    private static string IndexTable(ISchemaBuilder builder, string schema)
+        => builder.Dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetIndexTable(typeof(SurveyResponseIndex), Responses), schema);
+
+    private static bool ProbeLocalDb()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        try
+        {
+            using var connection = new SqlConnection(MasterConnectionString());
+
+            connection.Open();
+
+            return true;
+        }
+        catch (Exception exception) when (exception is SqlException or InvalidOperationException or PlatformNotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static string MasterConnectionString()
+        => new SqlConnectionStringBuilder
+        {
+            DataSource = LocalDbServer,
+            InitialCatalog = "master",
+            IntegratedSecurity = true,
+            Pooling = false,
+            ConnectTimeout = 30,
+            TrustServerCertificate = true,
+        }.ConnectionString;
 
     private static async Task InTransactionAsync(IStore store, Func<ISchemaBuilder, Task> work)
     {
@@ -232,11 +336,19 @@ public sealed class SurveysMigrationsSqlTests
 
         public IStore Store { get; }
 
-        public static SqliteDatabase Create()
+        public static SqliteDatabase Create(string tablePrefix = null)
         {
             var path = Path.Combine(Path.GetTempPath(), $"surveys-migrations-{Guid.NewGuid():N}.db");
 
-            return new SqliteDatabase(path, StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False")));
+            return new SqliteDatabase(path, StoreFactory.Create(configuration =>
+            {
+                configuration.UseSqLite($"Data Source={path};Pooling=False");
+
+                if (tablePrefix is not null)
+                {
+                    configuration.SetTablePrefix(tablePrefix);
+                }
+            }));
         }
 
         public ValueTask DisposeAsync()
@@ -267,20 +379,12 @@ public sealed class SurveysMigrationsSqlTests
 
         public IStore Store { get; }
 
-        public static async Task<LocalDbDatabase> CreateAsync()
+        // The tests skip through their attribute before they run (IsLocalDbAvailable), never from here.
+        public static async Task<LocalDbDatabase> CreateAsync(string tablePrefix = null, string schema = null)
         {
-            Assert.SkipUnless(OperatingSystem.IsWindows(), "SQL Server LocalDB runs on Windows only.");
-
             var name = "SurveysMigrations_" + Guid.NewGuid().ToString("N");
 
-            try
-            {
-                await ExecuteOnMasterAsync($"CREATE DATABASE [{name}]");
-            }
-            catch (Exception exception) when (exception is SqlException or InvalidOperationException or PlatformNotSupportedException)
-            {
-                Assert.Skip($"SQL Server LocalDB is not available: {exception.Message}");
-            }
+            await ExecuteOnMasterAsync($"CREATE DATABASE [{name}]");
 
             var connectionString = new SqlConnectionStringBuilder
             {
@@ -291,7 +395,22 @@ public sealed class SurveysMigrationsSqlTests
                 TrustServerCertificate = true,
             }.ConnectionString;
 
-            return new LocalDbDatabase(name, StoreFactory.Create(configuration => configuration.UseSqlServer(connectionString)));
+            if (schema is not null)
+            {
+                await using DbConnection connection = new SqlConnection(connectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await connection.ExecuteAsync($"CREATE SCHEMA [{schema}]");
+            }
+
+            return new LocalDbDatabase(name, StoreFactory.Create(configuration =>
+            {
+                configuration.UseSqlServer(connectionString, schema: schema);
+
+                if (tablePrefix is not null)
+                {
+                    configuration.SetTablePrefix(tablePrefix);
+                }
+            }));
         }
 
         public async ValueTask DisposeAsync()
@@ -309,17 +428,7 @@ public sealed class SurveysMigrationsSqlTests
 
         private static async Task ExecuteOnMasterAsync(string sql)
         {
-            var connectionString = new SqlConnectionStringBuilder
-            {
-                DataSource = LocalDbServer,
-                InitialCatalog = "master",
-                IntegratedSecurity = true,
-                Pooling = false,
-                ConnectTimeout = 30,
-                TrustServerCertificate = true,
-            }.ConnectionString;
-
-            await using DbConnection connection = new SqlConnection(connectionString);
+            await using DbConnection connection = new SqlConnection(MasterConnectionString());
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await connection.ExecuteAsync(sql);
         }

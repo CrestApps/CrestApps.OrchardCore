@@ -195,22 +195,38 @@ public sealed class SurveyParticipationService
     }
 
     /// <summary>
-    /// Deletes participation records older than the retention, a batch at a time.
+    /// Lists the index rows of participation records older than the retention, a batch at a time in the order of their
+    /// index ids, so a cleanup can read past a record it could not delete.
     /// </summary>
     /// <param name="utcNow">The current time, in UTC.</param>
-    /// <param name="batchSize">The most records to delete.</param>
+    /// <param name="afterId">The index id of the last row of the previous batch, or 0 for the first batch.</param>
+    /// <param name="batchSize">The most rows to list.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>How many were deleted.</returns>
-    public async Task<int> DeleteExpiredAsync(DateTime utcNow, int batchSize, CancellationToken cancellationToken = default)
+    /// <returns>The rows.</returns>
+    public async Task<IReadOnlyList<SurveyParticipationIndex>> ListExpiredAsync(DateTime utcNow, long afterId, int batchSize, CancellationToken cancellationToken = default)
     {
         var before = (await TodayAsync(utcNow)).AddDays(-RetentionDays).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-        var rows = await _store.YesSqlSession.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.Day < before, collection: SurveysConstants.CollectionName)
+        var rows = await _store.YesSqlSession.QueryIndex<SurveyParticipationIndex>(index => index.Day < before && index.Id > afterId, collection: SurveysConstants.CollectionName)
+            .OrderBy(index => index.Id)
             .Take(batchSize)
             .ListAsync(cancellationToken);
 
+        return rows.ToList();
+    }
+
+    /// <summary>
+    /// Deletes participation records.
+    /// </summary>
+    /// <param name="ids">The ids of the records.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many were deleted.</returns>
+    public async Task<int> DeleteAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
         var count = 0;
 
-        foreach (var row in rows)
+        foreach (var row in await _store.GetAsync(ids, cancellationToken))
         {
             await _store.DeleteAsync(row, cancellationToken);
             count++;

@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using OrchardCore;
 using OrchardCore.Documents;
 using YesSql;
 
@@ -198,20 +199,23 @@ public sealed class SurveyUpgradeStepsTests
     [Fact]
     public async Task AnonymityUpgradeStep_ProtectsPlainSecrets_AndClearsOnlyAnonymousCompletionTimes()
     {
-        // Arrange: the harness stores the secret in plain text, as surveys saved before secrets were protected.
+        // Arrange: a secret in plain text and exact completion times, written as an earlier version did (past the stores,
+        // which now protect and clear them on every save).
         await using var harness = await RuntimeTestHarness.CreateAsync(services => services.AddScoped<SurveyAnonymityUpgradeStep>());
         var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
         var completed = RuntimeTestHarness.Now.AddHours(-3);
 
+        await StorePlainSecretAsync(harness, survey.ItemId);
         await harness.RunAsync(async services =>
         {
-            var participation = services.GetRequiredService<SurveyParticipationStore>();
+            var session = services.GetRequiredService<ISession>();
 
-            await participation.CreateAsync(new SurveyParticipation { SurveyId = survey.ItemId, RespondentKey = "a:hmac", Day = DateOnly.FromDateTime(completed), CompletedCount = 1, LastCompletedUtc = completed });
-            await participation.CreateAsync(new SurveyParticipation { SurveyId = survey.ItemId, RespondentKey = "u:pat", Day = DateOnly.FromDateTime(completed), CompletedCount = 1, LastCompletedUtc = completed });
+            await session.SaveAsync(new SurveyParticipation { ItemId = "anonymous", SurveyId = survey.ItemId, RespondentKey = "a:hmac", Day = DateOnly.FromDateTime(completed), CompletedCount = 1, LastCompletedUtc = completed }, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            await session.SaveAsync(new SurveyParticipation { ItemId = "named", SurveyId = survey.ItemId, RespondentKey = "u:pat", Day = DateOnly.FromDateTime(completed), CompletedCount = 1, LastCompletedUtc = completed }, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
 
             return true;
         });
+        var plainBefore = await harness.RunAsync(async services => (await services.GetRequiredService<SurveyStore>().FindByIdAsync(survey.ItemId)).AnonymitySecret);
 
         // Act
         var runs = await RunUntilDoneAsync(harness, services => services.GetRequiredService<SurveyAnonymityUpgradeStep>());
@@ -228,8 +232,118 @@ public sealed class SurveyUpgradeStepsTests
         });
 
         Assert.Equal(2, runs);
-        Assert.NotEqual("secret", stored.AnonymitySecret);
+        Assert.Equal("secret", plainBefore);
+        Assert.True(SurveyAnonymitySecrets.IsProtected(stored.AnonymitySecret));
         Assert.Equal("secret", secret);
+        Assert.Null(rows.Single(row => row.RespondentKey == "a:hmac").LastCompletedUtc);
+        Assert.Equal(completed, rows.Single(row => row.RespondentKey == "u:pat").LastCompletedUtc);
+    }
+
+    [Fact]
+    public async Task AnonymityUpgradeStep_ReachesTheSurveysSavedWhileItWalks()
+    {
+        // Arrange: more surveys than a page, all with a plain secret, written as an earlier version did (R5-L1).
+        await using var harness = await RuntimeTestHarness.CreateAsync(services => services.AddScoped<SurveyAnonymityUpgradeStep>());
+        var ids = await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var created = new List<string>();
+
+            for (var index = 0; index <= SurveyUpgradePages.PageSize; index++)
+            {
+                var survey = new Survey { ItemId = IdGenerator.GenerateId(), Name = "s" + index, AnonymitySecret = "secret" + index };
+
+                await session.SaveAsync(survey, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+                created.Add(survey.ItemId);
+            }
+
+            return created;
+        });
+        var context = new ResumableStepContext();
+
+        // Act: the first page, then a survey saved past the step (a new index row, above the rows the walk started
+        // with) and the first survey saved again the same way, as a step running alongside it could, then the rest.
+        var done = await harness.RunAsync(services => services.GetRequiredService<SurveyAnonymityUpgradeStep>().RunAsync(context, TestContext.Current.CancellationToken));
+        var late = await harness.RunAsync(async services =>
+        {
+            var survey = new Survey { ItemId = IdGenerator.GenerateId(), Name = "late", AnonymitySecret = "late-secret" };
+
+            await services.GetRequiredService<ISession>().SaveAsync(survey, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+
+            return survey.ItemId;
+        });
+        await StorePlainSecretAsync(harness, ids[0], "secret0");
+
+        for (var run = 0; !done && run < 10; run++)
+        {
+            done = await harness.RunAsync(services => services.GetRequiredService<SurveyAnonymityUpgradeStep>().RunAsync(context, TestContext.Current.CancellationToken));
+        }
+
+        // Assert
+        var surveys = await harness.RunAsync(async services => await services.GetRequiredService<SurveyStore>().GetAsync([.. ids, late]));
+        var secrets = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<SurveyAnonymitySecrets>()));
+
+        Assert.True(done);
+        Assert.Equal(ids.Count + 1, surveys.Count);
+        Assert.All(surveys, survey => Assert.True(SurveyAnonymitySecrets.IsProtected(survey.AnonymitySecret), survey.Name));
+        Assert.Equal("late-secret", await secrets.RevealAsync(surveys.Single(survey => survey.ItemId == late), TestContext.Current.CancellationToken));
+        Assert.Equal("secret0", await secrets.RevealAsync(surveys.Single(survey => survey.ItemId == ids[0]), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SavingASurvey_ProtectsAPlainSecret_KeepingItsValue()
+    {
+        // Arrange: a survey stored with its secret in plain text, as before secrets were protected.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+
+        await StorePlainSecretAsync(harness, survey.ItemId);
+
+        // Act: any save through the store, such as the sanitizing step's or an author's.
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyStore>();
+            var loaded = await store.FindByIdAsync(survey.ItemId);
+
+            loaded.Title = "Renamed";
+            await store.UpdateAsync(loaded);
+
+            return true;
+        });
+
+        // Assert
+        var (stored, secret) = await harness.RunAsync(async services =>
+        {
+            var loaded = await services.GetRequiredService<SurveyStore>().FindByIdAsync(survey.ItemId);
+
+            return (loaded, await services.GetRequiredService<SurveyAnonymitySecrets>().RevealAsync(loaded, TestContext.Current.CancellationToken));
+        });
+
+        Assert.True(SurveyAnonymitySecrets.IsProtected(stored.AnonymitySecret));
+        Assert.Equal("secret", secret);
+    }
+
+    [Fact]
+    public async Task SavingAnAnonymousParticipationRecord_DropsItsExactCompletionTime()
+    {
+        // Arrange
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var completed = RuntimeTestHarness.Now.AddHours(-3);
+
+        // Act
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyParticipationStore>();
+
+            await store.CreateAsync(new SurveyParticipation { SurveyId = "s1", RespondentKey = "a:hmac", Day = DateOnly.FromDateTime(completed), CompletedCount = 1, LastCompletedUtc = completed });
+            await store.CreateAsync(new SurveyParticipation { SurveyId = "s1", RespondentKey = "u:pat", Day = DateOnly.FromDateTime(completed), CompletedCount = 1, LastCompletedUtc = completed });
+
+            return true;
+        });
+
+        // Assert
+        var rows = await harness.RunAsync(async services => await services.GetRequiredService<SurveyParticipationStore>().GetAllAsync());
+
         Assert.Null(rows.Single(row => row.RespondentKey == "a:hmac").LastCompletedUtc);
         Assert.Equal(completed, rows.Single(row => row.RespondentKey == "u:pat").LastCompletedUtc);
     }
@@ -253,6 +367,19 @@ public sealed class SurveyUpgradeStepsTests
         Assert.Contains(SurveyContentSanitizingStep.StepName, document.Pending.Keys);
         Assert.Contains(SurveyAnonymityUpgradeStep.StepName, document.Pending.Keys);
     }
+
+    // Stores a survey's secret in plain text past the store, as an earlier version saved it.
+    private static Task<bool> StorePlainSecretAsync(RuntimeTestHarness harness, string surveyId, string secret = "secret")
+        => harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var survey = await services.GetRequiredService<SurveyStore>().FindByIdAsync(surveyId);
+
+            survey.AnonymitySecret = secret;
+            await session.SaveAsync(survey, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+
+            return true;
+        });
 
     private static async Task<int> RunUntilDoneAsync(RuntimeTestHarness harness, Func<IServiceProvider, IResumableStep> step)
     {

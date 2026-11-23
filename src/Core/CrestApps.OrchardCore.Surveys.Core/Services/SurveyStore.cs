@@ -1,7 +1,9 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using Microsoft.AspNetCore.DataProtection;
 using YesSql;
 using YesSql.Services;
 
@@ -16,23 +18,36 @@ public sealed class SurveyStore : DocumentCatalog<Survey, SurveyIndex>, INamedCa
     private const int OwnersPerQuery = 1000;
 
     private readonly SurveyContentSanitizer _sanitizer;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private IDataProtector _protector;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     /// <param name="sanitizer">Sanitizes the draft's HTML texts on every save; the module registers it.</param>
-    public SurveyStore(ISession session, SurveyContentSanitizer sanitizer = null)
+    /// <param name="dataProtectionProvider">Protects the anonymity secret on every save, so no save stores it in plain
+    /// text (see <see cref="SurveyAnonymitySecrets"/>); the host registers it.</param>
+    public SurveyStore(ISession session, SurveyContentSanitizer sanitizer = null, IDataProtectionProvider dataProtectionProvider = null)
         : base(session)
     {
         CollectionName = SurveysConstants.CollectionName;
         _sanitizer = sanitizer;
+        _dataProtectionProvider = dataProtectionProvider;
     }
 
     /// <inheritdoc />
     protected override ValueTask SavingAsync(Survey record)
     {
         _sanitizer?.Sanitize(record?.Draft);
+
+        if (record is not null && _dataProtectionProvider is not null)
+        {
+            // Every survey write goes through here: a survey stored before secrets were protected is protected by any
+            // save, not only by the upgrade step, which may not reach a survey saved while it walks.
+            _protector ??= SurveyAnonymitySecretProtection.CreateProtector(_dataProtectionProvider);
+            SurveyAnonymitySecretProtection.EnsureProtected(_protector, record);
+        }
 
         return base.SavingAsync(record);
     }

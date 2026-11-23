@@ -59,7 +59,7 @@ internal sealed class SurveyInvitationHoldsStep : IResumableStep
                 IsHeld,
                 index => index.Status == pending && index.Held == false,
                 PageSize,
-                cancellationToken));
+                cancellationToken: cancellationToken));
     }
 
     // Saving the invitation writes its index row again, which sets the hold column from the hold mark.

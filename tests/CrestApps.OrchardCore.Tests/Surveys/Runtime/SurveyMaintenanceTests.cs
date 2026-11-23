@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using YesSql;
 
@@ -276,6 +277,153 @@ public sealed class SurveyMaintenanceTests
     }
 
     [Fact]
+    public async Task Run_MoreOverdueResponsesOfASurveyWhoseSecretCantBeReadThanABatch_DoNotKeepAnotherSurveysOverdueResponseWaiting()
+    {
+        // Arrange: survey A's overdue responses all fail because of the server (its secret can't be read here), more of
+        // them than a batch, and they are first in line; survey B's overdue response comes after them (R5-L2).
+        var surveyA = string.Empty;
+        var failure = new SaveFailureIndexProvider<SurveyResponse>(SurveysConstants.ResponsesCollectionName, response =>
+            response.SurveyId == surveyA && response.Status != SurveyResponseStatus.InProgress ? new SurveyAnonymitySecretUnreadableException() : null);
+        await using var harness = await CreateWithSaveFailureAsync(failure);
+        var a = await harness.PublishAsync(TimedDefinition());
+        var b = await harness.PublishAsync(TimedDefinition());
+        var failing = new List<string>();
+
+        for (var index = 0; index < 7; index++)
+        {
+            failing.Add((await harness.StartAsync(a, "a" + index)).Response.ItemId);
+        }
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddSeconds(30);
+        var waiting = (await harness.StartAsync(b, "b1")).Response;
+
+        surveyA = a.ItemId;
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(10);
+
+        // Act
+        await RunMaintenanceAsync(harness, batchSize: 3);
+
+        // Assert
+        Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(waiting.ItemId)).Status);
+
+        foreach (var id in failing)
+        {
+            var response = await harness.FindAsync(id);
+
+            Assert.Equal(SurveyResponseStatus.InProgress, response.Status);
+            Assert.Equal(0, response.UpkeepFailures);
+        }
+    }
+
+    [Fact]
+    public async Task Run_AResponseWhoseFailureCantBeCounted_DoesNotBlockTheBatch()
+    {
+        // Arrange: the first overdue response fails, and so does the write of its failure count; a batch of one (R5-L2).
+        var poisonedId = string.Empty;
+        var failure = new SaveFailureIndexProvider<SurveyResponse>(SurveysConstants.ResponsesCollectionName, response =>
+            response.ItemId == poisonedId ? new InvalidOperationException("index provider failed") : null);
+        await using var harness = await CreateWithSaveFailureAsync(failure);
+        var survey = await harness.PublishAsync(TimedDefinition());
+        var poisoned = (await harness.StartAsync(survey, "u1")).Response;
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddSeconds(30);
+        var healthy = (await harness.StartAsync(survey, "u2")).Response;
+
+        poisonedId = poisoned.ItemId;
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(10);
+
+        // Act
+        await RunMaintenanceAsync(harness, batchSize: 1);
+
+        // Assert
+        var failed = await harness.FindAsync(poisoned.ItemId);
+
+        Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(healthy.ItemId)).Status);
+        Assert.Equal(SurveyResponseStatus.InProgress, failed.Status);
+        Assert.Equal(0, failed.UpkeepFailures);
+    }
+
+    [Fact]
+    public async Task Run_ResponsesOfASurveyWithALongExpiry_DoNotKeepAnotherSurveysIdleResponseFromBeingAbandoned()
+    {
+        // Arrange: the oldest in-progress responses belong to a survey whose responses expire after 30 days, so they
+        // aren't idle yet; another survey's response, a minute newer, is idle after the default week.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+        var patient = await harness.PublishAsync(definition, item => item.Access = new SurveyAccessSettings { IncompleteExpiryHours = 720 });
+        var other = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var notIdle = new List<string>();
+
+        for (var index = 0; index < 5; index++)
+        {
+            notIdle.Add((await harness.StartAsync(patient, "p" + index)).Response.ItemId);
+        }
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(1);
+        var idle = (await harness.StartAsync(other, "o1")).Response;
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(10);
+
+        // Act
+        await RunMaintenanceAsync(harness, batchSize: 2);
+
+        // Assert
+        Assert.Equal(SurveyResponseStatus.Abandoned, (await harness.FindAsync(idle.ItemId)).Status);
+
+        foreach (var id in notIdle)
+        {
+            Assert.Equal(SurveyResponseStatus.InProgress, (await harness.FindAsync(id)).Status);
+        }
+    }
+
+    [Fact]
+    public async Task Run_AnOldParticipationRecordThatCantBeRead_DoesNotStopTheCleanup()
+    {
+        // Arrange: 7 old records, one of them unreadable and first in line, and a batch of 3.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var old = DateOnly.FromDateTime(RuntimeTestHarness.Now).AddDays(-SurveyParticipationService.RetentionDays - 5);
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyParticipationStore>();
+
+            for (var index = 0; index < 7; index++)
+            {
+                await store.CreateAsync(new SurveyParticipation { SurveyId = "s1", RespondentKey = "k" + index, Day = old, StartedCount = 1 });
+            }
+
+            return true;
+        });
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var configuration = session.Store.Configuration;
+            var dialect = configuration.SqlDialect;
+            var documents = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetDocumentTable(SurveysConstants.CollectionName), configuration.Schema);
+            var connection = await session.CreateConnectionAsync();
+            var changed = await connection.ExecuteAsync(
+                $"UPDATE {documents} SET {dialect.QuoteForColumnName("Content")} = @Content WHERE {dialect.QuoteForColumnName("Content")} LIKE @Match",
+                new { Content = "{ not json", Match = "%\"k0\"%" });
+
+            Assert.Equal(1, changed);
+
+            return true;
+        });
+
+        // Act
+        await RunMaintenanceAsync(harness, batchSize: 3);
+
+        // Assert: only the unreadable record is left, to be tried again on the next run.
+        var left = await harness.RunAsync(async services => (await services.GetRequiredService<ISession>()
+            .QueryIndex<SurveyParticipationIndex>(collection: SurveysConstants.CollectionName)
+            .ListAsync(TestContext.Current.CancellationToken))
+            .Select(row => row.RespondentKey)
+            .ToArray());
+
+        Assert.Equal(["k0"], left);
+    }
+
+    [Fact]
     public async Task ClearUpkeepFailures_LetsUpkeepTryAStuckResponseAgain()
     {
         // Arrange: a response upkeep stopped trying.
@@ -343,6 +491,15 @@ public sealed class SurveyMaintenanceTests
         });
 
         return (response, file.ItemId);
+    }
+
+    private static SurveyDefinition TimedDefinition()
+    {
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+
+        definition.Timing.TimeLimitMinutes = 1;
+
+        return definition;
     }
 
     private static Task<bool> RunMaintenanceAsync(RuntimeTestHarness harness, int batchSize = SurveysConstants.PageSize)
