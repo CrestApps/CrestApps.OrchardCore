@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Drivers;
+using CrestApps.OrchardCore.Taxation.Migrations;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Recipes;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -137,32 +138,6 @@ public sealed class EFilingRecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, EFileSubmissionsRecipeStepSchema>();
         services.AddDeploymentStepSchema<EFileSubmissionsDeploymentStepSchema>();
-    }
-}
-
-/// <summary>
-/// Creates the table of tax returns.
-/// </summary>
-internal sealed class TaxReturnsMigrations : DataMigration
-{
-    public async Task<int> CreateAsync()
-    {
-        await TaxReturnIndexSchema.CreateAsync(SchemaBuilder);
-
-        return 1;
-    }
-}
-
-/// <summary>
-/// Creates the table of e-file submissions.
-/// </summary>
-internal sealed class EFilingMigrations : DataMigration
-{
-    public async Task<int> CreateAsync()
-    {
-        await EFileSubmissionIndexSchema.CreateAsync(SchemaBuilder);
-
-        return 1;
     }
 }
 
