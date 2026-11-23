@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 var TelnyxWebRTC = (function() {
-	//#region \0rolldown/runtime.js
+	// \0rolldown/runtime.js
 	var __create = Object.create;
 	var __defProp = Object.defineProperty;
 	var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -25,7 +25,6 @@ var TelnyxWebRTC = (function() {
 		value: mod,
 		enumerable: true
 	}) : target, mod));
-	//#endregion
 	return /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 		(function(e, t) {
 			"object" == typeof exports && "undefined" != typeof module ? t(exports) : "function" == typeof define && define.amd ? define(["exports"], t) : t((e = e || self).TelnyxWebRTC = {});
@@ -156,7 +155,7 @@ var TelnyxWebRTC = (function() {
 				SIGNALING_RECOVERY_REQUIRED: 36003,
 				MEDIA_RECOVERY_REQUIRED: 36004,
 				RECONNECTION_FAILED_WITH_NO_AUTO_RECONNECT: 36005
-			}, { SDP_CREATE_OFFER_FAILED: u, SDP_CREATE_ANSWER_FAILED: h, SDP_SET_LOCAL_DESCRIPTION_FAILED: p, SDP_SET_REMOTE_DESCRIPTION_FAILED: g, SDP_SEND_FAILED: v, MEDIA_MICROPHONE_PERMISSION_DENIED: m, MEDIA_DEVICE_NOT_FOUND: f, MEDIA_GET_USER_MEDIA_FAILED: _, UNABLE_READ_AUDIO_INPUT_ON_DEVICE_CHANGE: y, HOLD_FAILED: b, INVALID_CALL_PARAMETERS: S, BYE_SEND_FAILED: I, SUBSCRIBE_FAILED: E, PEER_CLOSED_DURING_INIT: C, WEBSOCKET_CONNECTION_FAILED: w, WEBSOCKET_ERROR: k, RECONNECTION_EXHAUSTED: T, GATEWAY_FAILED: R, LOGIN_FAILED: A, INVALID_CREDENTIALS: O, AUTHENTICATION_REQUIRED: D, ICE_RESTART_FAILED: N, NETWORK_OFFLINE: L, SESSION_NOT_REATTACHED: M, UNEXPECTED_ERROR: P } = d, { HIGH_RTT: x, HIGH_JITTER: U, HIGH_PACKET_LOSS: F, LOW_MOS: $, LOW_LOCAL_AUDIO: j, LOW_INBOUND_AUDIO: B, LOW_BYTES_RECEIVED: H, LOW_BYTES_SENT: W, RECORDING_UNAVAILABLE: G, RECORDING_BUFFER_OVERFLOW: V, ICE_CONNECTIVITY_LOST: q, ICE_GATHERING_TIMEOUT: Y, ICE_GATHERING_EMPTY: K, PEER_CONNECTION_FAILED: J, ONLY_HOST_ICE_CANDIDATES: z, ANSWER_WHILE_PEER_ACTIVE: X, ICE_CANDIDATE_PAIR_CHANGED: Q, AUDIO_INPUT_DEVICE_CHANGE_SKIPPED: Z, MULTIPLE_ACTIVE_CALLS_DETECTED: ee, DUPLICATE_INBOUND_ANSWER: te, SHARED_REMOTE_ELEMENT_OVERWRITE: ie, REMOTE_AUDIO_ELEMENT_UNRESOLVED: ne, TOKEN_EXPIRING_SOON: se, UNKNOWN_REATTACHED_SESSION: oe, SIGNALING_RECOVERY_REQUIRED: re, MEDIA_RECOVERY_REQUIRED: ae, RECONNECTION_FAILED_WITH_NO_AUTO_RECONNECT: ce } = l, de = "wss://rtc.telnyx.com", le = {
+			}, { SDP_CREATE_OFFER_FAILED: u, SDP_CREATE_ANSWER_FAILED: h, SDP_SET_LOCAL_DESCRIPTION_FAILED: p, SDP_SET_REMOTE_DESCRIPTION_FAILED: g, SDP_SEND_FAILED: v, MEDIA_MICROPHONE_PERMISSION_DENIED: m, MEDIA_DEVICE_NOT_FOUND: f, MEDIA_GET_USER_MEDIA_FAILED: _, UNABLE_READ_AUDIO_INPUT_ON_DEVICE_CHANGE: y, HOLD_FAILED: b, INVALID_CALL_PARAMETERS: S, BYE_SEND_FAILED: I, SUBSCRIBE_FAILED: E, PEER_CLOSED_DURING_INIT: C, WEBSOCKET_CONNECTION_FAILED: w, WEBSOCKET_ERROR: k, RECONNECTION_EXHAUSTED: T, GATEWAY_FAILED: R, LOGIN_FAILED: A, INVALID_CREDENTIALS: O, AUTHENTICATION_REQUIRED: D, ICE_RESTART_FAILED: N, NETWORK_OFFLINE: M, SESSION_NOT_REATTACHED: L, UNEXPECTED_ERROR: P } = d, { HIGH_RTT: x, HIGH_JITTER: U, HIGH_PACKET_LOSS: F, LOW_MOS: $, LOW_LOCAL_AUDIO: j, LOW_INBOUND_AUDIO: B, LOW_BYTES_RECEIVED: H, LOW_BYTES_SENT: W, RECORDING_UNAVAILABLE: G, RECORDING_BUFFER_OVERFLOW: V, ICE_CONNECTIVITY_LOST: q, ICE_GATHERING_TIMEOUT: Y, ICE_GATHERING_EMPTY: K, PEER_CONNECTION_FAILED: J, ONLY_HOST_ICE_CANDIDATES: z, ANSWER_WHILE_PEER_ACTIVE: X, ICE_CANDIDATE_PAIR_CHANGED: Q, AUDIO_INPUT_DEVICE_CHANGE_SKIPPED: Z, MULTIPLE_ACTIVE_CALLS_DETECTED: ee, DUPLICATE_INBOUND_ANSWER: te, SHARED_REMOTE_ELEMENT_OVERWRITE: ie, REMOTE_AUDIO_ELEMENT_UNRESOLVED: ne, TOKEN_EXPIRING_SOON: se, UNKNOWN_REATTACHED_SESSION: oe, SIGNALING_RECOVERY_REQUIRED: re, MEDIA_RECOVERY_REQUIRED: ae, RECONNECTION_FAILED_WITH_NO_AUTO_RECONNECT: ce } = l, de = "wss://rtc.telnyx.com", le = {
 				NORMAL_CLOSURE: 1e3,
 				GOING_AWAY: 1001,
 				PROTOCOL_ERROR: 1002,
@@ -932,7 +931,7 @@ var TelnyxWebRTC = (function() {
 				return _;
 			}
 			function Te(e, t, i, n) {
-				const s = Ie[e], o = t instanceof Error ? t : void 0 !== t ? new Error(String(t)) : void 0;
+				const s = Ie[e];
 				return new we({
 					code: e,
 					name: s.name,
@@ -940,26 +939,41 @@ var TelnyxWebRTC = (function() {
 					message: i || s.message,
 					causes: [...s.causes],
 					solutions: [...s.solutions],
-					originalError: o,
+					originalError: Re(t),
 					fatal: null != n ? n : s.fatal
 				});
 			}
-			class Re extends Error {
+			function Re(e) {
+				if (void 0 === e || e instanceof Error) return e;
+				if (null === e || "object" != typeof e) return new Error(String(e));
+				const t = e, i = new Error("string" == typeof t.message ? t.message : function(e) {
+					var t;
+					try {
+						return null !== (t = JSON.stringify(e)) && void 0 !== t ? t : String(e);
+					} catch (t) {
+						return String(e);
+					}
+				}(e));
+				return Object.keys(t).forEach(((e) => {
+					e in i || (i[e] = t[e]);
+				})), i;
+			}
+			class Ae extends Error {
 				constructor(e, t, i = "") {
 					super(`Signaling request timed out (id=${e}, method=${i || "unknown"}, timeout=${t}ms)`), this.name = "RequestTimeoutError", this.requestId = e, this.timeoutMs = t, this.method = i;
 				}
 			}
-			class Ae extends Error {
+			class Oe extends Error {
 				constructor(e, t, i) {
 					super(`Stale request cancelled (id=${e}, gen=${t}, current=${i})`), this.name = "StaleRequestError", this.requestId = e, this.staleGeneration = t, this.currentGeneration = i;
 				}
 			}
-			var Oe = "undefined" != typeof globalThis ? globalThis : "undefined" != typeof window ? window : "undefined" != typeof global ? global : "undefined" != typeof self ? self : {};
-			function De(e, t) {
+			var De = "undefined" != typeof globalThis ? globalThis : "undefined" != typeof window ? window : "undefined" != typeof global ? global : "undefined" != typeof self ? self : {};
+			function Ne(e, t) {
 				return e(t = { exports: {} }, t.exports), t.exports;
 			}
-			var Ne = De((function(e) {
-				var t = Oe, i = function() {
+			var Me = Ne((function(e) {
+				var t = De, i = function() {
 					var e = function() {}, t = "undefined", i = typeof window !== t && typeof window.navigator !== t && /Trident\/|MSIE /.test(window.navigator.userAgent), n = [
 						"trace",
 						"debug",
@@ -1081,7 +1095,7 @@ var TelnyxWebRTC = (function() {
 				warn: 2,
 				error: 3
 			};
-			class Me {
+			class Pe {
 				constructor(e = {}) {
 					var t, i, n;
 					this.buffer = [], this.isCapturing = !1, this.options = {
@@ -1126,16 +1140,16 @@ var TelnyxWebRTC = (function() {
 					return this.options.enabled;
 				}
 			}
-			let Pe = null;
-			const xe = Ne.getLogger("telnyx"), Ue = {
+			let xe = null;
+			const Ue = Me.getLogger("telnyx"), Fe = {
 				trace: 0,
 				debug: 1,
 				info: 2,
 				warn: 3,
 				error: 4
 			};
-			let Fe = Ue.info;
-			function $e(e) {
+			let $e = Fe.info;
+			function je(e) {
 				if (null == e) return e;
 				if ("object" != typeof e) return e;
 				try {
@@ -1155,30 +1169,30 @@ var TelnyxWebRTC = (function() {
 				} catch (e) {}
 				return Object.keys(t).length > 0 ? t : { value: String(e) };
 			}
-			const je = xe.methodFactory;
-			xe.methodFactory = (e, t, i) => {
-				const n = je(e, t, i);
+			const Be = Ue.methodFactory;
+			Ue.methodFactory = (e, t, i) => {
+				const n = Be(e, t, i);
 				return function(...t) {
-					if (Ue[e] >= Fe) {
+					if (Fe[e] >= $e) {
 						const e = [(/* @__PURE__ */ new Date()).toISOString().replace("T", " ").replace("Z", ""), "-"];
 						for (const i of t) e.push(i);
 						n(...e);
 					}
-					const i = Pe;
+					const i = xe;
 					if (null == i ? void 0 : i.isActive()) {
 						const [n, ...s] = t, o = "string" == typeof n ? n : JSON.stringify(n);
 						let r;
-						s.length > 0 && (r = 1 === s.length && "object" == typeof s[0] && null !== s[0] ? $e(s[0]) : { args: s.map($e) }), i.addEntry(e, o, r);
+						s.length > 0 && (r = 1 === s.length && "object" == typeof s[0] && null !== s[0] ? je(s[0]) : { args: s.map(je) }), i.addEntry(e, o, r);
 					}
 				};
-			}, xe.setLevel("debug", !1);
-			const Be = (e) => {
+			}, Ue.setLevel("debug", !1);
+			const He = (e) => {
 				const [t, i, n, s, o, r] = e;
 				let a = {};
 				try {
 					a = JSON.parse(o.replace(/ID"/g, "Id\""));
 				} catch (e) {
-					xe.warn("Verto LA invalid media JSON string:", o);
+					Ue.warn("Verto LA invalid media JSON string:", o);
 				}
 				return {
 					participantId: Number(t),
@@ -1188,130 +1202,134 @@ var TelnyxWebRTC = (function() {
 					media: a,
 					participantData: r
 				};
-			}, He = (e) => {
+			}, We = (e) => {
 				if ("string" != typeof e) return e;
 				try {
 					return JSON.parse(e);
 				} catch (t) {
 					return e;
 				}
-			}, We = (e) => e instanceof Function || "function" == typeof e, Ge = (e) => {
+			}, Ge = (e) => e instanceof Function || "function" == typeof e, Ve = (e) => {
 				var t;
 				if ("undefined" != typeof HTMLMediaElement && e instanceof HTMLMediaElement) return !0;
-				const i = Ve(e) ? null === (t = e.ownerDocument) || void 0 === t ? void 0 : t.defaultView : null;
-				return !!((null == i ? void 0 : i.HTMLMediaElement) && e instanceof i.HTMLMediaElement) && (xe.info("Using a media element owned by another window (iframe, popout or Picture-in-Picture)"), !0);
-			}, Ve = (e) => "object" == typeof e && null !== e && "ownerDocument" in e, qe = (e) => "object" == typeof document && "getElementById" in document ? "string" == typeof e ? document.getElementById(e) || null : "function" == typeof e ? e() : Ge(e) ? e : null : null, Ye = /^(ws|wss):\/\//, Ke = (e, t = null) => {
+				const i = qe(e) ? null === (t = e.ownerDocument) || void 0 === t ? void 0 : t.defaultView : null;
+				return !!((null == i ? void 0 : i.HTMLMediaElement) && e instanceof i.HTMLMediaElement) && (Ue.info("Using a media element owned by another window (iframe, popout or Picture-in-Picture)"), !0);
+			}, qe = (e) => "object" == typeof e && null !== e && "ownerDocument" in e, Ye = (e) => "object" == typeof document && "getElementById" in document ? "string" == typeof e ? document.getElementById(e) || null : "function" == typeof e ? e() : Ve(e) ? e : null : null, Ke = /^(ws|wss):\/\//, Je = (e) => {
+				const { host: t, env: i, region: n } = e;
+				let s = de;
+				return i && (s = "development" === i ? "wss://rtcdev.telnyx.com" : de), t && (s = ((e) => `${Ke.test(e) ? "" : "wss://"}${e}`)(t)), n && (s = s.replace(/rtc(dev)?/, `${n}.rtc$1`)), s;
+			}, ze = (e, t = null) => {
 				const { result: i = {}, error: n } = e;
 				if (n) return { error: n };
 				const { result: s = null } = i;
 				if (null === s) return null !== t && (i.node_id = t), { result: i };
 				const { code: o = null, node_id: r = null, result: a = null } = s;
-				return o && "200" !== o ? { error: s } : a ? Ke(a, r) : { result: s };
-			}, Je = ({ login: e, passwd: t, password: i, login_token: n }) => Boolean(e && (t || i) || n), ze = ({ anonymous_login: e }) => Boolean(e) && Boolean(e.target_id) && Boolean(e.target_type), Xe = (e) => {
+				return o && "200" !== o ? { error: s } : a ? ze(a, r) : { result: s };
+			}, Xe = ({ login: e, passwd: t, password: i, login_token: n }) => Boolean(e && (t || i) || n), Qe = ({ anonymous_login: e }) => Boolean(e) && Boolean(e.target_id) && Boolean(e.target_type), Ze = (e) => {
 				var t, i, n, s, o, r;
 				let a = "", c = "";
 				null !== (i = null === (t = null == e ? void 0 : e.result) || void 0 === t ? void 0 : t.params) && void 0 !== i && i.state && (a = null === (s = null === (n = null == e ? void 0 : e.result) || void 0 === n ? void 0 : n.params) || void 0 === s ? void 0 : s.state), null !== (o = null == e ? void 0 : e.params) && void 0 !== o && o.state && (c = null === (r = null == e ? void 0 : e.params) || void 0 === r ? void 0 : r.state);
 				return a || c;
 			};
-			function Qe({ debounceTime: e }) {
+			function et({ debounceTime: e }) {
 				let t, i;
 				return {
 					promise: new Promise(((n, s) => {
-						t = e ? Ze(n, e) : n, i = s;
+						t = e ? tt(n, e) : n, i = s;
 					})),
 					resolve: t,
 					reject: i
 				};
 			}
-			const Ze = (e, t) => {
+			const tt = (e, t) => {
 				let i;
 				return (...n) => {
 					clearTimeout(i), i = window.setTimeout((() => {
 						e(...n);
 					}), t);
 				};
-			}, et = "telnyx-voice-sdk-id", tt = "telnyx-voice-sdk-id-canary-rtc-server", it = "telnyx-voice-sdk-session-id", nt = "telnyx-voice-sdk-session-id-stored-at", st = "telnyx-voice-sdk-active-calls", ot = 9e4;
-			function rt(e = Date.now()) {
+			}, it = "telnyx-voice-sdk-id", nt = "telnyx-voice-sdk-id-canary-rtc-server", st = "telnyx-voice-sdk-session-id", ot = "telnyx-voice-sdk-session-id-stored-at", rt = "telnyx-voice-sdk-active-calls", at = 9e4;
+			function ct(e = Date.now()) {
 				const t = function() {
-					const e = Number(sessionStorage.getItem(nt));
+					const e = Number(sessionStorage.getItem(ot));
 					return Number.isFinite(e) ? e : null;
 				}();
-				return null !== t && e - t <= ot;
+				return null !== t && e - t <= at;
 			}
-			function at() {
-				return sessionStorage.getItem(et);
-			}
-			function ct() {
-				const e = ut(tt);
-				return "true" === e || "false" !== e && void 0;
-			}
-			function dt(e, t = Date.now()) {
-				sessionStorage.setItem(it, e), sessionStorage.setItem(nt, String(t));
+			function dt() {
+				return sessionStorage.getItem(it);
 			}
 			function lt() {
-				sessionStorage.removeItem(et), sessionStorage.removeItem(tt), sessionStorage.removeItem(it), sessionStorage.removeItem(nt);
+				const e = pt(nt);
+				return "true" === e || "false" !== e && void 0;
 			}
-			function ut(e) {
+			function ut(e, t = Date.now()) {
+				sessionStorage.setItem(st, e), sessionStorage.setItem(ot, String(t));
+			}
+			function ht() {
+				sessionStorage.removeItem(it), sessionStorage.removeItem(nt), sessionStorage.removeItem(st), sessionStorage.removeItem(ot);
+			}
+			function pt(e) {
 				try {
 					return sessionStorage.getItem(e);
 				} catch (t) {
-					return xe.debug(`safeGetItem('${e}') failed: ${t instanceof Error ? t.message : String(t)}`), null;
+					return Ue.debug(`safeGetItem('${e}') failed: ${t instanceof Error ? t.message : String(t)}`), null;
 				}
 			}
-			function ht() {
+			function gt() {
 				(function(e) {
 					try {
 						sessionStorage.removeItem(e);
 					} catch (t) {
-						xe.debug(`safeRemoveItem('${e}') failed: ${t instanceof Error ? t.message : String(t)}`);
+						Ue.debug(`safeRemoveItem('${e}') failed: ${t instanceof Error ? t.message : String(t)}`);
 					}
-				})(st);
+				})(rt);
 			}
-			function pt(e = Date.now()) {
-				const t = ut(st);
+			function vt(e = Date.now()) {
+				const t = pt(rt);
 				if (!t) return null;
 				try {
 					const i = JSON.parse(t);
-					if (!i || "object" != typeof i || !Array.isArray(i.calls)) return xe.debug("Active-calls recovery marker payload was malformed — discarded."), ht(), null;
+					if (!i || "object" != typeof i || !Array.isArray(i.calls)) return Ue.debug("Active-calls recovery marker payload was malformed — discarded."), gt(), null;
 					const n = Number(i.storedAt);
-					return !Number.isFinite(n) || e - n > 9e5 ? (xe.debug("Active-calls recovery marker was stale or had an invalid timestamp — discarded."), ht(), null) : 0 === i.calls.length ? (xe.debug("Active-calls recovery marker had no call records — discarded."), ht(), null) : i;
+					return !Number.isFinite(n) || e - n > 9e5 ? (Ue.debug("Active-calls recovery marker was stale or had an invalid timestamp — discarded."), gt(), null) : 0 === i.calls.length ? (Ue.debug("Active-calls recovery marker had no call records — discarded."), gt(), null) : i;
 				} catch (e) {
-					return xe.debug(`Active-calls recovery marker JSON parse failed — discarded: ${e instanceof Error ? e.message : String(e)}`), ht(), null;
+					return Ue.debug(`Active-calls recovery marker JSON parse failed — discarded: ${e instanceof Error ? e.message : String(e)}`), gt(), null;
 				}
 			}
-			function gt(e, t, i = Date.now()) {
-				if (!Array.isArray(e) || 0 === e.length) return void ht();
+			function mt(e, t, i = Date.now()) {
+				if (!Array.isArray(e) || 0 === e.length) return void gt();
 				(function(e, t) {
 					try {
 						sessionStorage.setItem(e, t);
 					} catch (t) {
-						xe.info(`safeSetItem('${e}') failed: ${t instanceof Error ? t.message : String(t)}`);
+						Ue.info(`safeSetItem('${e}') failed: ${t instanceof Error ? t.message : String(t)}`);
 					}
-				})(st, JSON.stringify({
+				})(rt, JSON.stringify({
 					sessionId: t,
 					calls: e,
 					storedAt: i
 				}));
 			}
-			var vt, mt, ft;
+			var ft, _t, yt;
 			(function(e) {
 				e.Offer = "offer", e.Answer = "answer";
-			})(vt || (vt = {})), function(e) {
+			})(ft || (ft = {})), function(e) {
 				e.Inbound = "inbound", e.Outbound = "outbound";
-			}(mt || (mt = {})), function(e) {
+			}(_t || (_t = {})), function(e) {
 				e.Invite = "telnyx_rtc.invite", e.Attach = "telnyx_rtc.attach", e.Answer = "telnyx_rtc.answer", e.Info = "telnyx_rtc.info", e.Candidate = "telnyx_rtc.candidate", e.EndOfCandidates = "telnyx_rtc.endOfCandidates", e.Display = "telnyx_rtc.display", e.Media = "telnyx_rtc.media", e.Event = "telnyx_rtc.event", e.Bye = "telnyx_rtc.bye", e.Punt = "telnyx_rtc.punt", e.Broadcast = "telnyx_rtc.broadcast", e.Subscribe = "telnyx_rtc.subscribe", e.Unsubscribe = "telnyx_rtc.unsubscribe", e.ClientReady = "telnyx_rtc.clientReady", e.Modify = "telnyx_rtc.modify", e.Ringing = "telnyx_rtc.ringing", e.GatewayState = "telnyx_rtc.gatewayState", e.Ping = "telnyx_rtc.ping", e.Pong = "telnyx_rtc.pong";
-			}(ft || (ft = {}));
-			const _t = {
+			}(yt || (yt = {}));
+			const bt = {
 				generic: "event",
-				[ft.Display]: "participantData",
-				[ft.Attach]: "participantData",
+				[yt.Display]: "participantData",
+				[yt.Attach]: "participantData",
 				conferenceUpdate: "conferenceUpdate",
 				callUpdate: "callUpdate",
 				vertoClientReady: "vertoClientReady",
 				userMediaError: "userMediaError",
 				peerConnectionFailureError: "peerConnectionFailureError",
 				signalingStateClosed: "signalingStateClosed"
-			}, yt = { invalidCredentialsOptions: "InvalidCredentialsOptions" }, bt = 8e6, St = {
+			}, St = { invalidCredentialsOptions: "InvalidCredentialsOptions" }, It = 8e6, Et = {
 				destinationNumber: "",
 				remoteCallerName: "Outbound Call",
 				remoteCallerNumber: "",
@@ -1331,72 +1349,76 @@ var TelnyxWebRTC = (function() {
 				mutedMicOnStart: !1,
 				prefetchIceCandidates: !1
 			};
-			var It, Et, Ct, wt, kt, Tt;
+			var Ct, wt, kt, Tt, Rt, At;
 			(function(e) {
 				e[e.New = 0] = "New", e[e.Requesting = 1] = "Requesting", e[e.Trying = 2] = "Trying", e[e.Recovering = 3] = "Recovering", e[e.Ringing = 4] = "Ringing", e[e.Answering = 5] = "Answering", e[e.Early = 6] = "Early", e[e.Active = 7] = "Active", e[e.Held = 8] = "Held", e[e.Hangup = 9] = "Hangup", e[e.Destroy = 10] = "Destroy", e[e.Purge = 11] = "Purge";
-			})(It || (It = {})), function(e) {
+			})(Ct || (Ct = {})), function(e) {
 				e.Participant = "participant", e.Moderator = "moderator";
-			}(Et || (Et = {})), function(e) {
-				e.Join = "join", e.Leave = "leave", e.Bootstrap = "bootstrap", e.Add = "add", e.Modify = "modify", e.Delete = "delete", e.Clear = "clear", e.ChatMessage = "chatMessage", e.LayerInfo = "layerInfo", e.LogoInfo = "logoInfo", e.LayoutInfo = "layoutInfo", e.LayoutList = "layoutList", e.ModCmdResponse = "modCommandResponse";
-			}(Ct || (Ct = {})), function(e) {
-				e.Video = "videoinput", e.AudioIn = "audioinput", e.AudioOut = "audiooutput";
 			}(wt || (wt = {})), function(e) {
-				e.REGED = "REGED", e.UNREGED = "UNREGED", e.NOREG = "NOREG", e.FAILED = "FAILED", e.FAIL_WAIT = "FAIL_WAIT", e.TIMEOUT = "TIMEOUT", e.REGISTER = "REGISTER", e.TRYING = "TRYING", e.EXPIRED = "EXPIRED", e.UNREGISTER = "UNREGISTER";
+				e.Join = "join", e.Leave = "leave", e.Bootstrap = "bootstrap", e.Add = "add", e.Modify = "modify", e.Delete = "delete", e.Clear = "clear", e.ChatMessage = "chatMessage", e.LayerInfo = "layerInfo", e.LogoInfo = "logoInfo", e.LayoutInfo = "layoutInfo", e.LayoutList = "layoutList", e.ModCmdResponse = "modCommandResponse";
 			}(kt || (kt = {})), function(e) {
+				e.Video = "videoinput", e.AudioIn = "audioinput", e.AudioOut = "audiooutput";
+			}(Tt || (Tt = {})), function(e) {
+				e.REGED = "REGED", e.UNREGED = "UNREGED", e.NOREG = "NOREG", e.FAILED = "FAILED", e.FAIL_WAIT = "FAIL_WAIT", e.TIMEOUT = "TIMEOUT", e.REGISTER = "REGISTER", e.TRYING = "TRYING", e.EXPIRED = "EXPIRED", e.UNREGISTER = "UNREGISTER";
+			}(Rt || (Rt = {})), function(e) {
 				e.Hold = "hold", e.Unhold = "unhold", e.ToggleHold = "toggleHold", e.UpdateMedia = "updateMedia";
-			}(Tt || (Tt = {}));
-			const Rt = "GLOBAL", At = {}, Ot = (e, t) => `${e}|${t}`, Dt = (e, t = Rt) => Ot(e, t) in At, Nt = (e, t, i = Rt) => {
-				const n = Ot(e, i);
-				n in At || (At[n] = []), At[n].push(t);
-			}, Lt = (e, t, i = Rt) => {
+			}(At || (At = {}));
+			const Ot = "GLOBAL", Dt = {}, Nt = (e, t) => `${e}|${t}`, Mt = (e, t = Ot) => Nt(e, t) in Dt, Lt = (e, t, i = Ot) => {
+				const n = Nt(e, i);
+				n in Dt || (Dt[n] = []), Dt[n].push(t);
+			}, Pt = (e, t, i = Ot) => {
 				const n = function(s) {
-					Mt(e, n, i), t(s);
+					xt(e, n, i), t(s);
 				};
-				return n.prototype.targetRef = t, Nt(e, n, i);
-			}, Mt = (e, t, i = Rt) => {
-				if (!Dt(e, i)) return !1;
-				const n = Ot(e, i);
-				if (We(t)) for (let e = At[n].length - 1; e >= 0; e--) {
-					const i = At[n][e];
-					(t === i || i.prototype && t === i.prototype.targetRef) && At[n].splice(e, 1);
+				return n.prototype.targetRef = t, Lt(e, n, i);
+			}, xt = (e, t, i = Ot) => {
+				if (!Mt(e, i)) return !1;
+				const n = Nt(e, i);
+				if (Ge(t)) for (let e = Dt[n].length - 1; e >= 0; e--) {
+					const i = Dt[n][e];
+					(t === i || i.prototype && t === i.prototype.targetRef) && Dt[n].splice(e, 1);
 				}
-				else At[n] = [];
-				return 0 === At[n].length && delete At[n], !0;
-			}, Pt = (e, t, i = Rt, n = !0) => {
-				const s = n && i !== Rt;
-				if (!Dt(e, i)) return s && Pt(e, t), !1;
-				const o = Ot(e, i), r = At[o].length;
-				if (!r) return s && Pt(e, t), !1;
-				for (let e = r - 1; e >= 0; e--) At[o][e](t);
-				return s && Pt(e, t), !0;
-			}, xt = (e) => {
-				const t = Ot(e, "");
-				Object.keys(At).filter(((e) => 0 === e.indexOf(t))).forEach(((e) => delete At[e]));
+				else Dt[n] = [];
+				return 0 === Dt[n].length && delete Dt[n], !0;
+			}, Ut = (e, t, i = Ot, n = !0) => {
+				const s = n && i !== Ot;
+				if (!Mt(e, i)) return s && Ut(e, t), !1;
+				const o = Nt(e, i), r = Dt[o].length;
+				if (!r) return s && Ut(e, t), !1;
+				for (let e = r - 1; e >= 0; e--) Dt[o][e](t);
+				return s && Ut(e, t), !0;
+			}, Ft = (e) => {
+				const t = Nt(e, "");
+				Object.keys(Dt).filter(((e) => 0 === e.indexOf(t))).forEach(((e) => delete Dt[e]));
 			};
-			let Ut = "undefined" != typeof WebSocket ? WebSocket : null;
-			const Ft = 0, $t = 1, jt = 2, Bt = 3;
-			class Ht {
+			let $t = "undefined" != typeof WebSocket ? WebSocket : null;
+			const jt = 0, Bt = 1, Ht = 2, Wt = 3;
+			class Gt {
 				constructor(e) {
 					this.session = e, this.previousGatewayState = "", this.lastInboundAt = 0, this.socketGeneration = 0, this._wsClient = null, this._host = de, this._timers = {}, this._safetyTimeoutId = null, this._pendingRequestIds = /* @__PURE__ */ new Set(), this._pendingRequestTimers = /* @__PURE__ */ new Map(), this._pendingRequestRejecters = /* @__PURE__ */ new Map(), this.upDur = null, this.downDur = null;
 					const { host: t, env: i, region: n, useCanaryRtcServer: s } = e.options;
-					xe.debug("Creating new Connection", {
+					Ue.debug("Creating new Connection", {
 						host: this._host,
 						env: i,
 						region: n,
 						useCanaryRtcServer: s
-					}), i && (this._host = "development" === i ? "wss://rtcdev.telnyx.com" : de), t && (this._host = ((e) => `${Ye.test(e) ? "" : "wss://"}${e}`)(t)), n && (this._host = this._host.replace(/rtc(dev)?/, `${n}.rtc$1`));
+					}), this._host = Je({
+						host: t,
+						env: i,
+						region: n
+					});
 				}
 				get connected() {
-					return !!this._wsClient && this._wsClient.readyState === $t;
+					return !!this._wsClient && this._wsClient.readyState === Bt;
 				}
 				get connecting() {
-					return !!this._wsClient && this._wsClient.readyState === Ft;
-				}
-				get closing() {
 					return !!this._wsClient && this._wsClient.readyState === jt;
 				}
+				get closing() {
+					return !!this._wsClient && this._wsClient.readyState === Ht;
+				}
 				get closed() {
-					return !!this._wsClient && this._wsClient.readyState === Bt;
+					return !!this._wsClient && this._wsClient.readyState === Wt;
 				}
 				get isAlive() {
 					return this.connecting || this.connected;
@@ -1409,33 +1431,33 @@ var TelnyxWebRTC = (function() {
 				}
 				connect() {
 					var t, i;
-					xe.debug("Connection.connect() called", {
+					Ue.debug("Connection.connect() called", {
 						host: this._host,
 						socketGeneration: this.socketGeneration,
 						sessionId: this.session.sessionid
 					});
-					const n = new URL(this._host), s = at();
-					s !== this.session.reconnectTokenVoiceSdkId && (this.session.reconnectTokenVoiceSdkId = s, this.session.reconnectTokenCanaryRtcServer = ct());
+					const n = new URL(this._host), s = dt();
+					s !== this.session.reconnectTokenVoiceSdkId && (this.session.reconnectTokenVoiceSdkId = s, this.session.reconnectTokenCanaryRtcServer = lt());
 					let o, r = this.session.reconnectTokenVoiceSdkId;
-					this.session.options.rtcIp && this.session.options.rtcPort && (r = null, n.searchParams.set("rtc_ip", this.session.options.rtcIp), n.searchParams.set("rtc_port", this.session.options.rtcPort.toString())), r && n.searchParams.set("voice_sdk_id", r), this.session.options.rtcIp && this.session.options.rtcPort || (o = this.session.options.useCanaryRtcServer, "boolean" == typeof o && n.searchParams.set("canary", String(o)), r && o !== this.session.reconnectTokenCanaryRtcServer && (n.searchParams.delete("voice_sdk_id"), xe.debug("Canary routing changed. Refreshing voice_sdk_id", {
+					this.session.options.rtcIp && this.session.options.rtcPort && (r = null, n.searchParams.set("rtc_ip", this.session.options.rtcIp), n.searchParams.set("rtc_port", this.session.options.rtcPort.toString())), r && n.searchParams.set("voice_sdk_id", r), this.session.options.rtcIp && this.session.options.rtcPort || (o = this.session.options.useCanaryRtcServer, "boolean" == typeof o && n.searchParams.set("canary", String(o)), r && o !== this.session.reconnectTokenCanaryRtcServer && (n.searchParams.delete("voice_sdk_id"), Ue.debug("Canary routing changed. Refreshing voice_sdk_id", {
 						previous: this.session.reconnectTokenCanaryRtcServer,
 						current: o
 					}))), this.session.callReportVoiceSdkId = n.searchParams.get("voice_sdk_id"), this.session.options.skipLastVoiceSdkId && n.searchParams.has("voice_sdk_id") && n.searchParams.set("skip_last_voice_sdk_id", "true"), this.session.options.skipTrailing && n.searchParams.set("skip_trailing", "true");
 					try {
 						const e = this.socketGeneration;
-						null === (t = this.session._registrationTimings) || void 0 === t || t.mark("create WebSocket", { generation: e + 1 }), this._wsClient = new Ut(n.toString()), this.socketGeneration += 1, xe.debug("WebSocket connection created", {
+						null === (t = this.session._registrationTimings) || void 0 === t || t.mark("create WebSocket", { generation: e + 1 }), this._wsClient = new $t(n.toString()), this.socketGeneration += 1, Ue.debug("WebSocket connection created", {
 							sessionId: this.session.sessionid,
 							voiceSdkId: this.session.callReportVoiceSdkId,
 							socketGeneration: this.socketGeneration,
 							reconnectCount: e
 						}), this.lastInboundAt = 0, this._cleanupPendingRequests(), this._registerSocketEvents(this._wsClient, o);
 					} catch (t) {
-						null === (i = this.session._registrationTimings) || void 0 === i || i.mark("WebSocket construction failed"), xe.error("WebSocket connection failed:", t);
+						null === (i = this.session._registrationTimings) || void 0 === i || i.mark("WebSocket construction failed"), Ue.error("WebSocket connection failed:", t);
 						const n = Te(w, t);
-						Pt(e.SwEvent.Error, {
+						Ut(e.SwEvent.Error, {
 							error: n,
 							sessionId: this.session.sessionid
-						}, this.session.uuid), this.session._terminateActiveCallsLocally();
+						}, this.session.uuid), this.session._terminateActiveCallsLocally("sdk:websocket-connection-failed");
 					}
 				}
 				sendRawText(e) {
@@ -1449,21 +1471,21 @@ var TelnyxWebRTC = (function() {
 						let n = !1, a = null;
 						const c = (t) => {
 							if (null !== a && (clearTimeout(a), this._pendingRequestTimers.delete(s.id), a = null), this._pendingRequestIds.delete(s.id), this._pendingRequestRejecters.delete(s.id), this.session.onOutboundConfirmed(), n) return;
-							const { result: o, error: r } = Ke(t);
+							const { result: o, error: r } = ze(t);
 							return r ? i(r) : e(o);
 						};
-						Lt(s.id, c), this._pendingRequestIds.add(s.id), this._pendingRequestRejecters.set(s.id, {
+						Pt(s.id, c), this._pendingRequestIds.add(s.id), this._pendingRequestRejecters.set(s.id, {
 							reject: i,
 							generation: o
 						}), t && t > 0 && (a = setTimeout((() => {
-							if (n = !0, a = null, this._pendingRequestTimers.delete(s.id), this._pendingRequestRejecters.delete(s.id), Mt(s.id, c), this._pendingRequestIds.delete(s.id), this.socketGeneration !== o) return xe.debug(`Stale request timeout for ${s.id} (gen ${o}, current ${this.socketGeneration}) — settling with StaleRequestError`), void i(new Ae(s.id, o, this.socketGeneration));
-							i(new Re(s.id, t, r));
+							if (n = !0, a = null, this._pendingRequestTimers.delete(s.id), this._pendingRequestRejecters.delete(s.id), xt(s.id, c), this._pendingRequestIds.delete(s.id), this.socketGeneration !== o) return Ue.debug(`Stale request timeout for ${s.id} (gen ${o}, current ${this.socketGeneration}) — settling with StaleRequestError`), void i(new Oe(s.id, o, this.socketGeneration));
+							i(new Ae(s.id, t, r));
 						}), t), this._pendingRequestTimers.set(s.id, a));
 					}));
-					return xe.debug("SEND: \n", JSON.stringify(s, null, 2), "\n"), this.connected && (null === (i = this.session._registrationTimings) || void 0 === i || i.requestSent(s.id, r)), null === (n = this._wsClient) || void 0 === n || n.send(JSON.stringify(s)), a;
+					return Ue.debug("SEND: \n", JSON.stringify(s, null, 2), "\n"), this.connected && (null === (i = this.session._registrationTimings) || void 0 === i || i.requestSent(s.id, r)), null === (n = this._wsClient) || void 0 === n || n.send(JSON.stringify(s)), a;
 				}
 				close() {
-					if (xe.debug("Connection.close() called", {
+					if (Ue.debug("Connection.close() called", {
 						hasWsClient: !!this._wsClient,
 						closing: this.closing,
 						closed: this.closed,
@@ -1473,56 +1495,56 @@ var TelnyxWebRTC = (function() {
 					}), !this._wsClient || this.closing) return;
 					this._cleanupPendingRequests();
 					const e = this._wsClient;
-					We(this._wsClient._beginClose) ? this._wsClient._beginClose() : this._wsClient.close(), this._safetyTimeoutId || (this._safetyTimeoutId = setTimeout((() => this._handleCloseTimeout(e)), 5e3));
+					Ge(this._wsClient._beginClose) ? this._wsClient._beginClose() : this._wsClient.close(), this._safetyTimeoutId || (this._safetyTimeoutId = setTimeout((() => this._handleCloseTimeout(e)), 5e3));
 				}
 				_registerSocketEvents(t, i) {
 					const n = this.socketGeneration, s = () => t === this._wsClient && n === this.socketGeneration && this.session.connection === this;
 					t.onopen = (t) => {
 						var i;
-						return s() && (null === (i = this.session._registrationTimings) || void 0 === i || i.mark("WebSocket open", { generation: n })), xe.debug("WebSocket onopen", {
+						return s() && (null === (i = this.session._registrationTimings) || void 0 === i || i.mark("WebSocket open", { generation: n })), Ue.debug("WebSocket onopen", {
 							socketGeneration: this.socketGeneration,
 							sessionId: this.session.sessionid
-						}), Pt(e.SwEvent.SocketOpen, t, this.session.uuid);
+						}), Ut(e.SwEvent.SocketOpen, t, this.session.uuid);
 					}, t.onclose = (i) => {
 						var o;
 						return s() && (null === (o = this.session._registrationTimings) || void 0 === o || o.mark("WebSocket closed", {
 							generation: n,
 							code: null == i ? void 0 : i.code
-						})), this._clearSafetyTimeout(), this._safetyCleanupSocket(t, "close"), xe.debug("WebSocket onclose", {
+						})), this._clearSafetyTimeout(), this._safetyCleanupSocket(t, "close"), Ue.debug("WebSocket onclose", {
 							code: null == i ? void 0 : i.code,
 							reason: null == i ? void 0 : i.reason,
 							wasClean: null == i ? void 0 : i.wasClean,
 							socketGeneration: n,
 							sessionId: this.session.sessionid
-						}), Pt(e.SwEvent.SocketClose, {
+						}), Ut(e.SwEvent.SocketClose, {
 							event: i,
 							socketGeneration: n
 						}, this.session.uuid);
 					}, t.onerror = (i) => {
 						var o;
-						s() && (null === (o = this.session._registrationTimings) || void 0 === o || o.mark("WebSocket error", { generation: n })), this._clearSafetyTimeout(), this._safetyCleanupSocket(t, "error"), xe.debug("WebSocket onerror", {
+						s() && (null === (o = this.session._registrationTimings) || void 0 === o || o.mark("WebSocket error", { generation: n })), this._clearSafetyTimeout(), this._safetyCleanupSocket(t, "error"), Ue.debug("WebSocket onerror", {
 							socketGeneration: this.socketGeneration,
 							sessionId: this.session.sessionid
 						});
 						const r = Te(k);
-						return Pt(e.SwEvent.Error, {
+						return Ut(e.SwEvent.Error, {
 							error: r,
 							sessionId: this.session.sessionid
-						}, this.session.uuid), Pt(e.SwEvent.SocketError, {
+						}, this.session.uuid), Ut(e.SwEvent.SocketError, {
 							error: i,
 							sessionId: this.session.sessionid,
 							socketGeneration: n
 						}, this.session.uuid);
 					}, t.onmessage = (s) => {
 						var o, r, a;
-						this.lastInboundAt = Date.now(), Pt(e.SwEvent.SocketActivity, { timestamp: this.lastInboundAt }, this.session.uuid);
-						const c = He(s.data);
+						this.lastInboundAt = Date.now(), Ut(e.SwEvent.SocketActivity, { timestamp: this.lastInboundAt }, this.session.uuid);
+						const c = We(s.data);
 						if ("string" == typeof c) return void this._handleStringResponse(c);
 						const d = t === this._wsClient && n === this.socketGeneration && this.session.connection === this;
 						var l, u;
-						if (d && (null === (o = this.session._registrationTimings) || void 0 === o || o.responseReceived(c)), c.voice_sdk_id && d && (this.session.callReportVoiceSdkId = c.voice_sdk_id, this.session.reconnectTokenVoiceSdkId = c.voice_sdk_id, this.session.reconnectTokenCanaryRtcServer = i, l = c.voice_sdk_id, u = i, sessionStorage.setItem(et, l), "boolean" == typeof u ? sessionStorage.setItem(tt, String(u)) : sessionStorage.removeItem(tt)), this._unsetTimer(c.id), xe.debug("RECV: \n", JSON.stringify(c, null, 2), "\n"), kt[`${null === (a = null === (r = null == c ? void 0 : c.result) || void 0 === r ? void 0 : r.params) || void 0 === a ? void 0 : a.state}`] || !Pt(c.id, c)) {
-							const t = Xe(c);
-							Pt(e.SwEvent.SocketMessage, c, this.session.uuid), Boolean(t) && (this.previousGatewayState = t);
+						if (d && (null === (o = this.session._registrationTimings) || void 0 === o || o.responseReceived(c)), c.voice_sdk_id && d && (this.session.callReportVoiceSdkId = c.voice_sdk_id, this.session.reconnectTokenVoiceSdkId = c.voice_sdk_id, this.session.reconnectTokenCanaryRtcServer = i, l = c.voice_sdk_id, u = i, sessionStorage.setItem(it, l), "boolean" == typeof u ? sessionStorage.setItem(nt, String(u)) : sessionStorage.removeItem(nt)), this._unsetTimer(c.id), Ue.debug("RECV: \n", JSON.stringify(c, null, 2), "\n"), Rt[`${null === (a = null === (r = null == c ? void 0 : c.result) || void 0 === r ? void 0 : r.params) || void 0 === a ? void 0 : a.state}`] || !Ut(c.id, c)) {
+							const t = Ze(c);
+							Ut(e.SwEvent.SocketMessage, c, this.session.uuid), Boolean(t) && (this.previousGatewayState = t);
 						}
 					};
 				}
@@ -1530,30 +1552,30 @@ var TelnyxWebRTC = (function() {
 					e.onopen = null, e.onclose = null, e.onerror = null, e.onmessage = null;
 				}
 				_handleCloseTimeout(t) {
-					this._safetyTimeoutId = null, t && t.readyState !== Bt ? (xe.warn("Socket stuck in CLOSING after 5s — forcefully cleaning up"), this._deregisterSocketEvents(t), this._safetyCleanupSocket(t, "timeout"), this._wsClient && this._wsClient !== t ? xe.debug("Safety timeout: socket was replaced, not emitting SocketClose", {
+					this._safetyTimeoutId = null, t && t.readyState !== Wt ? (Ue.warn("Socket stuck in CLOSING after 5s — forcefully cleaning up"), this._deregisterSocketEvents(t), this._safetyCleanupSocket(t, "timeout"), this._wsClient && this._wsClient !== t ? Ue.debug("Safety timeout: socket was replaced, not emitting SocketClose", {
 						hasWsClient: !!this._wsClient,
 						isSameSocket: this._wsClient === t
-					}) : (xe.debug("Safety timeout: emitting SocketClose for stuck socket", {
+					}) : (Ue.debug("Safety timeout: emitting SocketClose for stuck socket", {
 						hasWsClient: !!this._wsClient,
 						isSameSocket: this._wsClient === t
-					}), Pt(e.SwEvent.SocketClose, {
+					}), Ut(e.SwEvent.SocketClose, {
 						code: le.ABNORMAL_CLOSURE,
 						reason: "STUCK_WS_TIMEOUT: Socket got stuck in CLOSING state and was forcefully cleaned up by safety timeout",
 						wasClean: !1,
 						socketGeneration: this.socketGeneration
-					}, this.session.uuid))) : xe.warn("Safety timeout fired but socket is already closed or cleaned up");
+					}, this.session.uuid))) : Ue.warn("Safety timeout fired but socket is already closed or cleaned up");
 				}
 				_clearSafetyTimeout() {
-					this._safetyTimeoutId && (xe.debug("Clearing safety timeout"), clearTimeout(this._safetyTimeoutId), this._safetyTimeoutId = null);
+					this._safetyTimeoutId && (Ue.debug("Clearing safety timeout"), clearTimeout(this._safetyTimeoutId), this._safetyTimeoutId = null);
 				}
 				_safetyCleanupSocket(e, t) {
-					this._wsClient === e ? (xe.debug(`Nulling socket reference (reason: ${t})`), this._wsClient = null) : xe.debug(`Skipping socket cleanup - old socket already replaced (reason: ${t})`);
+					this._wsClient === e ? (Ue.debug(`Nulling socket reference (reason: ${t})`), this._wsClient = null) : Ue.debug(`Skipping socket cleanup - old socket already replaced (reason: ${t})`);
 				}
 				_cleanupPendingRequests() {
 					Array.from(this._pendingRequestIds).forEach(((e) => {
-						Mt(e);
+						xt(e);
 						const t = this._pendingRequestTimers.get(e), i = this._pendingRequestRejecters.get(e);
-						t && (clearTimeout(t), this._pendingRequestTimers.delete(e), i && i.reject(new Ae(e, i.generation, this.socketGeneration))), this._pendingRequestRejecters.delete(e);
+						t && (clearTimeout(t), this._pendingRequestTimers.delete(e), i && i.reject(new Oe(e, i.generation, this.socketGeneration))), this._pendingRequestRejecters.delete(e);
 					})), this._pendingRequestIds.clear();
 				}
 				_unsetTimer(e) {
@@ -1564,16 +1586,16 @@ var TelnyxWebRTC = (function() {
 						case "U":
 							this.upDur = parseInt(t.substring(4));
 							break;
-						case "D": this.downDur = parseInt(t.substring(4)), Pt(e.SwEvent.SpeedTest, {
+						case "D": this.downDur = parseInt(t.substring(4)), Ut(e.SwEvent.SpeedTest, {
 							upDur: this.upDur,
 							downDur: this.downDur
 						}, this.session.uuid);
 					}
-					else xe.warn("Unknown message from socket", t);
+					else Ue.warn("Unknown message from socket", t);
 				}
 			}
-			Ht.DEFAULT_REQUEST_TIMEOUT_MS = 1e4;
-			class Wt {
+			Gt.DEFAULT_REQUEST_TIMEOUT_MS = 1e4;
+			class Vt {
 				buildRequest(e) {
 					this.request = Object.assign({
 						jsonrpc: "2.0",
@@ -1584,7 +1606,7 @@ var TelnyxWebRTC = (function() {
 					this.request = Object.assign({ jsonrpc: "2.0" }, e);
 				}
 			}
-			const Gt = {
+			const qt = {
 				id: "callID",
 				destinationNumber: "destination_number",
 				remoteCallerName: "remote_caller_id_name",
@@ -1593,7 +1615,7 @@ var TelnyxWebRTC = (function() {
 				callerNumber: "caller_id_number",
 				customHeaders: "custom_headers"
 			};
-			class Vt extends Wt {
+			class Yt extends Vt {
 				constructor(e = {}) {
 					if (super(), e.hasOwnProperty("dialogParams")) {
 						const i = t(e.dialogParams, [
@@ -1607,7 +1629,7 @@ var TelnyxWebRTC = (function() {
 							"micId",
 							"speakerId"
 						]);
-						for (const e in Gt) e && i.hasOwnProperty(e) && (i[Gt[e]] = i[e], delete i[e]);
+						for (const e in qt) e && i.hasOwnProperty(e) && (i[qt[e]] = i[e], delete i[e]);
 						e.dialogParams = i;
 					}
 					this.buildRequest({
@@ -1616,31 +1638,9 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class qt extends Vt {
+			class Kt extends Yt {
 				constructor(e) {
-					super(), this.method = ft.GatewayState;
-					this.buildRequest({
-						method: this.method,
-						voice_sdk_id: e,
-						params: {}
-					});
-				}
-			}
-			class Yt {
-				constructor(e) {
-					this.pendingRequestId = null, this.onSocketMessage = (e) => i(this, void 0, void 0, (function* () {
-						e.id === this.pendingRequestId && this.gatewayStateTask.resolve(Xe(e));
-					})), this.getIsRegistered = () => i(this, void 0, void 0, (function* () {
-						const e = new qt(at());
-						this.pendingRequestId = e.request.id, this.gatewayStateTask = Qe({}), this.session.execute(e);
-						const t = yield this.gatewayStateTask.promise;
-						return !!t && [kt.REGISTER, kt.REGED].includes(t);
-					})), this.session = e, this.gatewayStateTask = Qe({}), this.session.on("telnyx.socket.message", this.onSocketMessage);
-				}
-			}
-			class Kt extends Vt {
-				constructor(e) {
-					super(), this.method = ft.Ping;
+					super(), this.method = yt.GatewayState;
 					this.buildRequest({
 						method: this.method,
 						voice_sdk_id: e,
@@ -1650,16 +1650,38 @@ var TelnyxWebRTC = (function() {
 			}
 			class Jt {
 				constructor(e) {
+					this.pendingRequestId = null, this.onSocketMessage = (e) => i(this, void 0, void 0, (function* () {
+						e.id === this.pendingRequestId && this.gatewayStateTask.resolve(Ze(e));
+					})), this.getIsRegistered = () => i(this, void 0, void 0, (function* () {
+						const e = new Kt(dt());
+						this.pendingRequestId = e.request.id, this.gatewayStateTask = et({}), this.session.execute(e);
+						const t = yield this.gatewayStateTask.promise;
+						return !!t && [Rt.REGISTER, Rt.REGED].includes(t);
+					})), this.session = e, this.gatewayStateTask = et({}), this.session.on("telnyx.socket.message", this.onSocketMessage);
+				}
+			}
+			class zt extends Yt {
+				constructor(e) {
+					super(), this.method = yt.Ping;
+					this.buildRequest({
+						method: this.method,
+						voice_sdk_id: e,
+						params: {}
+					});
+				}
+			}
+			class Xt {
+				constructor(e) {
 					this._session = e, this._lastInboundAt = 0, this._lastOutboundConfirmedAt = 0, this._lastProbeSentAt = 0, this._probeInFlight = !1, this._intervalId = null, this._pendingMediaRecovery = null, this._browserWasOffline = !1, this._onlineHandler = null, this._offlineHandler = null;
 				}
 				static isCriticalMethod(e) {
-					return Jt.CRITICAL_METHODS.has(e);
+					return Xt.CRITICAL_METHODS.has(e);
 				}
 				start() {
-					this._intervalId || (xe.debug("Signaling health: monitor started"), this._lastInboundAt = Date.now(), this._lastOutboundConfirmedAt = Date.now(), this._probeInFlight = !1, this._lastProbeSentAt = 0, this._setupBrowserListeners(), this._intervalId = setInterval((() => this._check()), 3e3));
+					this._intervalId || (Ue.debug("Signaling health: monitor started"), this._lastInboundAt = Date.now(), this._lastOutboundConfirmedAt = Date.now(), this._probeInFlight = !1, this._lastProbeSentAt = 0, this._setupBrowserListeners(), this._intervalId = setInterval((() => this._check()), 3e3));
 				}
 				stop() {
-					this._intervalId && (clearInterval(this._intervalId), this._intervalId = null, this._probeInFlight = !1, this._lastProbeSentAt = 0), this._pendingMediaRecovery = null, this._cleanupBrowserListeners(), xe.debug("Signaling health: monitor stopped");
+					this._intervalId && (clearInterval(this._intervalId), this._intervalId = null, this._probeInFlight = !1, this._lastProbeSentAt = 0), this._pendingMediaRecovery = null, this._cleanupBrowserListeners(), Ue.debug("Signaling health: monitor stopped");
 				}
 				get isRunning() {
 					return null !== this._intervalId;
@@ -1675,32 +1697,32 @@ var TelnyxWebRTC = (function() {
 				}
 				_resolveProbe() {
 					if (!this._probeInFlight) return;
-					if (this._probeInFlight = !1, this._lastProbeSentAt = 0, this._lastInboundAt = Date.now(), this._lastOutboundConfirmedAt = Date.now(), xe.debug("Signaling health: probe resolved by matching Ping response"), !this._pendingMediaRecovery) return void xe.debug("Signaling health: probe resolved but no pending media recovery");
+					if (this._probeInFlight = !1, this._lastProbeSentAt = 0, this._lastInboundAt = Date.now(), this._lastOutboundConfirmedAt = Date.now(), Ue.debug("Signaling health: probe resolved by matching Ping response"), !this._pendingMediaRecovery) return void Ue.debug("Signaling health: probe resolved but no pending media recovery");
 					const e = this._pendingMediaRecovery;
-					this._pendingMediaRecovery = null, "healthy" === this._getSignalingHealthState() && (xe.info(`Signaling health: signaling probe resolved, triggering pending ICE restart for call ${e.callId}`), this._triggerIceRestart(e.callId, e.reason));
+					this._pendingMediaRecovery = null, "healthy" === this._getSignalingHealthState() && (Ue.info(`Signaling health: signaling probe resolved, triggering pending ICE restart for call ${e.callId}`), this._triggerIceRestart(e.callId, e.reason));
 				}
 				_probeIfNeeded(e) {
 					var t;
-					null !== (t = this._session.connection) && void 0 !== t && t.connected && (this._probeInFlight ? xe.debug(`Signaling health: probe already in flight, skipping duplicate probe (${e})`) : (xe.info(`Signaling health: ${e}, sending signaling probe`), this._sendProbe()));
+					null !== (t = this._session.connection) && void 0 !== t && t.connected && (this._probeInFlight ? Ue.debug(`Signaling health: probe already in flight, skipping duplicate probe (${e})`) : (Ue.info(`Signaling health: ${e}, sending signaling probe`), this._sendProbe()));
 				}
 				onRequestTimeout(e, t, i = "") {
 					var n;
 					if (!(null === (n = this._session.connection) || void 0 === n ? void 0 : n.connected)) return;
-					Jt.isCriticalMethod(i) ? (xe.warn(`Critical signaling request timed out (id=${e}, method=${i}, timeout=${t}ms) — declaring signaling unhealthy`), this._triggerSignalingRecovery(`Critical signaling request timed out (method=${i}, id=${e}, timeout=${t}ms)`, "request")) : xe.warn(`Non-critical signaling request timed out (id=${e}, method=${i || "unknown"}, timeout=${t}ms) — logging but not triggering signaling recovery`);
+					Xt.isCriticalMethod(i) ? (Ue.warn(`Critical signaling request timed out (id=${e}, method=${i}, timeout=${t}ms) — declaring signaling unhealthy`), this._triggerSignalingRecovery(`Critical signaling request timed out (method=${i}, id=${e}, timeout=${t}ms)`, "request")) : Ue.warn(`Non-critical signaling request timed out (id=${e}, method=${i || "unknown"}, timeout=${t}ms) — logging but not triggering signaling recovery`);
 				}
 				onPeerFailure(e, t) {
-					xe.warn(`Signaling health: peer failure reported (callId=${e}, evidence=${t})`), this._recoverMediaOrSignaling(e, `Peer connection failure (${t})`, `Peer failure detected (${t}) while signaling is unhealthy`, "peer_failure");
+					Ue.warn(`Signaling health: peer failure reported (callId=${e}, evidence=${t})`), this._recoverMediaOrSignaling(e, `Peer connection failure (${t})`, `Peer failure detected (${t}) while signaling is unhealthy`, "peer_failure");
 				}
 				onNoRtp(e, t) {
-					xe.warn(`Signaling health: no RTP detected (callId=${e}, direction=${t})`), this._recoverMediaOrSignaling(e, `No RTP ${t} while media should be active`, `No RTP ${t} while signaling is unhealthy`, "no_rtp");
+					Ue.warn(`Signaling health: no RTP detected (callId=${e}, direction=${t})`), this._recoverMediaOrSignaling(e, `No RTP ${t} while media should be active`, `No RTP ${t} while signaling is unhealthy`, "no_rtp");
 				}
 				_setupBrowserListeners() {
 					"undefined" == typeof window || this._onlineHandler || (this._onlineHandler = () => {
-						this._browserWasOffline && (xe.debug(`Signaling health: browser online — clearing browser offline state for session ${this._session.sessionid}`), this._browserWasOffline = !1);
+						this._browserWasOffline && (Ue.debug(`Signaling health: browser online — clearing browser offline state for session ${this._session.sessionid}`), this._browserWasOffline = !1);
 					}, this._offlineHandler = () => {
-						this._browserWasOffline = !0, xe.debug(`Signaling health: browser offline signal received for session ${this._session.sessionid}`);
-						const t = Te(L);
-						Pt(e.SwEvent.Error, {
+						this._browserWasOffline = !0, Ue.debug(`Signaling health: browser offline signal received for session ${this._session.sessionid}`);
+						const t = Te(M);
+						Ut(e.SwEvent.Error, {
 							error: t,
 							sessionId: this._session.sessionid
 						}, this._session.uuid), this.isRunning && this._probeIfNeeded("browser offline signal while monitor is active");
@@ -1710,33 +1732,33 @@ var TelnyxWebRTC = (function() {
 					"undefined" != typeof window && this._onlineHandler && this._offlineHandler && (window.removeEventListener("online", this._onlineHandler), window.removeEventListener("offline", this._offlineHandler), this._onlineHandler = null, this._offlineHandler = null, this._browserWasOffline = !1);
 				}
 				onIceRestartFailed(e) {
-					xe.warn(`Signaling health: ICE restart failed (callId=${e}) — triggering socket reconnect`), this._triggerSignalingRecovery(`ICE restart failed for call ${e}`, "peer_failure");
+					Ue.warn(`Signaling health: ICE restart failed (callId=${e}) — triggering socket reconnect`), this._triggerSignalingRecovery(`ICE restart failed for call ${e}`, "peer_failure");
 				}
 				_check() {
 					var e;
 					if (!(null === (e = this._session.connection) || void 0 === e ? void 0 : e.connected)) return;
 					const t = Date.now(), i = t - this._lastInboundAt, n = t - this._lastOutboundConfirmedAt, s = i >= 2e4;
 					if (!s && !(n >= 45e3)) return;
-					if (!this._probeInFlight) return xe.info(s ? `Signaling health: no inbound WS activity for ${Math.round(i / 1e3)}s during active call, sending health probe` : `Signaling health: inbound WS activity is flowing but no outbound request has been answered for ${Math.round(n / 1e3)}s, sending health probe`), void this._sendProbe();
+					if (!this._probeInFlight) return Ue.info(s ? `Signaling health: no inbound WS activity for ${Math.round(i / 1e3)}s during active call, sending health probe` : `Signaling health: inbound WS activity is flowing but no outbound request has been answered for ${Math.round(n / 1e3)}s, sending health probe`), void this._sendProbe();
 					const o = t - this._lastProbeSentAt;
-					o >= 5e3 && (xe.warn(`Signaling health: probe timed out after ${o}ms (inbound silent for ${Math.round(i / 1e3)}s, no outbound request answered for ${Math.round(n / 1e3)}s) — declaring signaling unhealthy`), this._triggerSignalingRecovery(s ? "Signaling health probe timed out: no inbound WS activity after probe" : "Signaling health probe timed out: inbound WS activity is flowing but no outbound request is being answered", "probe"));
+					o >= 5e3 && (Ue.warn(`Signaling health: probe timed out after ${o}ms (inbound silent for ${Math.round(i / 1e3)}s, no outbound request answered for ${Math.round(n / 1e3)}s) — declaring signaling unhealthy`), this._triggerSignalingRecovery(s ? "Signaling health probe timed out: no inbound WS activity after probe" : "Signaling health probe timed out: inbound WS activity is flowing but no outbound request is being answered", "probe"));
 				}
 				_sendProbe() {
 					var e;
 					this._probeInFlight = !0, this._lastProbeSentAt = Date.now();
-					const t = new Kt(at());
+					const t = new zt(dt());
 					null === (e = this._session.connection) || void 0 === e || e.send(t).then((() => this._resolveProbe())).catch(((e) => {
-						xe.warn("Signaling health: probe Ping failed to send", e);
+						Ue.warn("Signaling health: probe Ping failed to send", e);
 					}));
 				}
 				_recoverMediaOrSignaling(e, t, i, n) {
-					if (!this._session.hasActiveCall()) return void xe.debug(`Signaling health: ignoring ${n} recovery without an active call`);
+					if (!this._session.hasActiveCall()) return void Ue.debug(`Signaling health: ignoring ${n} recovery without an active call`);
 					const s = this._getSignalingHealthState();
-					"healthy" === s ? (xe.info(`Signaling health: signaling is healthy, triggering ICE restart for call ${e}`), this._triggerIceRestart(e, t)) : "unknown" === s ? (xe.info(`Signaling health: signaling health is unknown, deferring ICE restart decision for call ${e}`), this._pendingMediaRecovery = {
+					"healthy" === s ? (Ue.info(`Signaling health: signaling is healthy, triggering ICE restart for call ${e}`), this._triggerIceRestart(e, t)) : "unknown" === s ? (Ue.info(`Signaling health: signaling health is unknown, deferring ICE restart decision for call ${e}`), this._pendingMediaRecovery = {
 						callId: e,
 						reason: t,
 						source: n
-					}, this._probeIfNeeded(`${n} detected with stale/unknown signaling`)) : (xe.info("Signaling health: signaling is unhealthy, triggering socket reconnect instead of ICE restart"), this._triggerSignalingRecovery(i, n));
+					}, this._probeIfNeeded(`${n} detected with stale/unknown signaling`)) : (Ue.info("Signaling health: signaling is unhealthy, triggering socket reconnect instead of ICE restart"), this._triggerSignalingRecovery(i, n));
 				}
 				_getSignalingHealthState() {
 					var e;
@@ -1747,25 +1769,25 @@ var TelnyxWebRTC = (function() {
 				}
 				_triggerSignalingRecovery(t, i = "probe") {
 					var n, s, o;
-					this._pendingMediaRecovery = null, this._probeInFlight = !1, this._lastProbeSentAt = 0, xe.debug(`Signaling recovery triggered (source=${i}, reason=${t})`);
+					this._pendingMediaRecovery = null, this._probeInFlight = !1, this._lastProbeSentAt = 0, Ue.debug(`Signaling recovery triggered (source=${i}, reason=${t})`);
 					const r = Ce(re);
-					Pt(e.SwEvent.Warning, {
+					Ut(e.SwEvent.Warning, {
 						warning: r,
 						reason: t,
 						source: i,
 						sessionId: this._session.sessionid
-					}, this._session.uuid), (null === (n = this._session.connection) || void 0 === n ? void 0 : n.connected) ? (xe.info("Signaling health: force-closing WebSocket to trigger reconnect"), this._session.socketDisconnect()) : xe.debug("Signaling health: recovery triggered but connection not connected", {
+					}, this._session.uuid), (null === (n = this._session.connection) || void 0 === n ? void 0 : n.connected) ? (Ue.info("Signaling health: force-closing WebSocket to trigger reconnect"), this._session.socketDisconnect()) : Ue.debug("Signaling health: recovery triggered but connection not connected", {
 						connected: null === (s = this._session.connection) || void 0 === s ? void 0 : s.connected,
 						hasConnection: !!this._session.connection,
 						socketGeneration: null === (o = this._session.connection) || void 0 === o ? void 0 : o.socketGeneration
 					});
 				}
 				_triggerIceRestart(t, i) {
-					xe.info(`Signaling health: triggering ICE restart for call ${t}`);
+					Ue.info(`Signaling health: triggering ICE restart for call ${t}`);
 					const n = this._session.triggerIceRestart(t);
-					if (!n.started) return void xe.info(`Signaling health: ICE restart not started for call ${t}: ${n.reason}`);
+					if (!n.started) return void Ue.info(`Signaling health: ICE restart not started for call ${t}: ${n.reason}`);
 					const s = Ce(ae);
-					Pt(e.SwEvent.Warning, {
+					Ut(e.SwEvent.Warning, {
 						warning: s,
 						reason: i,
 						callId: t,
@@ -1773,13 +1795,13 @@ var TelnyxWebRTC = (function() {
 					}, this._session.uuid);
 				}
 			}
-			Jt.CRITICAL_METHODS = /* @__PURE__ */ new Set([
-				ft.Modify,
-				ft.Bye,
-				ft.Ping
+			Xt.CRITICAL_METHODS = /* @__PURE__ */ new Set([
+				yt.Modify,
+				yt.Bye,
+				yt.Ping
 			]);
-			var zt = "2.28.0", Xt = zt;
-			class Qt extends Vt {
+			var Qt = "2.28.2", Zt = Qt;
+			class ei extends Yt {
 				constructor(e, t, i, n, s = {}, o, r = !1) {
 					super(), this.method = "login";
 					const a = {
@@ -1790,7 +1812,7 @@ var TelnyxWebRTC = (function() {
 						reconnection: o,
 						loginParams: { early_sdp_answer: r },
 						"User-Agent": {
-							sdkVersion: Xt,
+							sdkVersion: Zt,
 							data: navigator.userAgent
 						}
 					};
@@ -1800,7 +1822,7 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class Zt extends Vt {
+			class ti extends Yt {
 				constructor(e, t) {
 					super(), this.buildRequest({
 						id: e,
@@ -1808,62 +1830,62 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class ei extends Vt {
+			class ii extends Yt {
 				toString() {
-					return ft.Invite;
+					return yt.Invite;
 				}
 			}
-			class ti extends Vt {
+			class ni extends Yt {
 				toString() {
-					return ft.Answer;
+					return yt.Answer;
 				}
 			}
-			class ii extends Vt {
+			class si extends Yt {
 				toString() {
-					return ft.Attach;
+					return yt.Attach;
 				}
 			}
-			class ni extends Vt {
+			class oi extends Yt {
 				toString() {
-					return ft.Bye;
+					return yt.Bye;
 				}
 			}
-			class si extends Vt {
+			class ri extends Yt {
 				toString() {
-					return ft.Candidate;
+					return yt.Candidate;
 				}
 			}
-			class oi extends Vt {
+			class ai extends Yt {
 				toString() {
-					return ft.EndOfCandidates;
+					return yt.EndOfCandidates;
 				}
 			}
-			class ri extends Vt {
+			class ci extends Yt {
 				toString() {
-					return ft.Modify;
+					return yt.Modify;
 				}
 			}
-			class ai extends Vt {
+			class di extends Yt {
 				toString() {
-					return ft.Info;
+					return yt.Info;
 				}
 			}
-			class ci extends Vt {
+			class li extends Yt {
 				toString() {
-					return ft.Broadcast;
+					return yt.Broadcast;
 				}
 			}
-			class di extends Vt {
+			class ui extends Yt {
 				toString() {
-					return ft.Subscribe;
+					return yt.Subscribe;
 				}
 			}
-			class li extends Vt {
+			class hi extends Yt {
 				toString() {
-					return ft.Unsubscribe;
+					return yt.Unsubscribe;
 				}
 			}
-			class ui extends Vt {
+			class pi extends Yt {
 				constructor(e) {
 					super(), this.method = "anonymous_login";
 					const { target_type: t, target_id: i, target_version_id: n, target_params: s, userVariables: o, sessionId: r, reconnection: a } = e, c = {
@@ -1872,7 +1894,7 @@ var TelnyxWebRTC = (function() {
 						userVariables: o,
 						reconnection: a,
 						"User-Agent": {
-							sdkVersion: Xt,
+							sdkVersion: Zt,
 							data: navigator.userAgent
 						}
 					};
@@ -1882,14 +1904,14 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class hi {
+			class gi {
 				constructor(e) {
-					if (this.options = e, this.uuid = c(), this.sessionid = "", this.subscriptions = {}, this.signature = null, this.relayProtocol = null, this.contexts = [], this.timeoutErrorCode = -32e3, this.invalidMethodErrorCode = -32601, this.authenticationRequiredErrorCode = -32e3, this.callReportId = null, this.callReportVoiceSdkId = null, this.reconnectTokenVoiceSdkId = at(), this.reconnectTokenCanaryRtcServer = ct(), this.dc = null, this.region = null, this.connection = null, this._jwtAuth = !1, this._autoReconnect = !0, this._idle = !1, this._reconnectAttempts = 0, this._reconnectCountedGeneration = -1, this._intentionalClose = !1, this._tokenExpiryTimeout = null, this._pendingCallReportUploads = /* @__PURE__ */ new Set(), this._signalingHealthMonitor = new Jt(this), this._executeQueue = [], !this.validateOptions()) throw new Error("Invalid init options");
+					if (this.options = e, this.uuid = c(), this.sessionid = "", this.subscriptions = {}, this.signature = null, this.relayProtocol = null, this.contexts = [], this.timeoutErrorCode = -32e3, this.invalidMethodErrorCode = -32601, this.authenticationRequiredErrorCode = -32e3, this.callReportId = null, this.callReportVoiceSdkId = null, this.reconnectTokenVoiceSdkId = dt(), this.reconnectTokenCanaryRtcServer = lt(), this.dc = null, this.region = null, this.connection = null, this._jwtAuth = !1, this._autoReconnect = !0, this._idle = !1, this._reconnectAttempts = 0, this._reconnectCountedGeneration = -1, this._intentionalClose = !1, this._tokenExpiryTimeout = null, this._pendingCallReportUploads = /* @__PURE__ */ new Set(), this._signalingHealthMonitor = new Xt(this), this._executeQueue = [], !this.validateOptions()) throw new Error("Invalid init options");
 					var t = e.debug ? "debug" : "info", i;
-					Fe = null !== (i = Ue[t]) && void 0 !== i ? i : Ue.info, this._onSocketOpen = this._onSocketOpen.bind(this), this.onNetworkClose = this.onNetworkClose.bind(this), this._onSocketMessage = this._onSocketMessage.bind(this), this._handleLoginError = this._handleLoginError.bind(this), this._onSocketActivity = this._onSocketActivity.bind(this), this._attachListeners(), this.connection = new Ht(this), this.registerAgent = new Yt(this);
+					$e = null !== (i = Fe[t]) && void 0 !== i ? i : Fe.info, this._onSocketOpen = this._onSocketOpen.bind(this), this.onNetworkClose = this.onNetworkClose.bind(this), this._onSocketMessage = this._onSocketMessage.bind(this), this._handleLoginError = this._handleLoginError.bind(this), this._onSocketActivity = this._onSocketActivity.bind(this), this._attachListeners(), this.connection = new Gt(this), this.registerAgent = new Jt(this);
 				}
 				get __logger() {
-					return xe;
+					return Ue;
 				}
 				get connected() {
 					return this.connection && this.connection.connected;
@@ -1901,7 +1923,7 @@ var TelnyxWebRTC = (function() {
 				}
 				get reconnectDelay() {
 					const e = this._reconnectAttempts, t = Math.min(1e3 * Math.pow(2, e - 1), 3e4), i = Math.floor(.25 * t * (2 * Math.random() - 1)), n = t + i;
-					return xe.debug("Reconnect delay computed", {
+					return Ue.debug("Reconnect delay computed", {
 						attempt: e,
 						baseDelayMs: 1e3,
 						maxDelayMs: 3e4,
@@ -1921,16 +1943,16 @@ var TelnyxWebRTC = (function() {
 						this._executeQueue.push({
 							resolve: e,
 							msg: t
-						}), xe.debug("Calling connect from execute since not currently connected."), this.connect();
+						}), Ue.debug("Calling connect from execute since not currently connected."), this.connect();
 					}));
-					const s = Jt.isCriticalMethod((null === (n = t.request) || void 0 === n ? void 0 : n.method) || "") ? Ht.DEFAULT_REQUEST_TIMEOUT_MS : void 0;
+					const s = Xt.isCriticalMethod((null === (n = t.request) || void 0 === n ? void 0 : n.method) || "") ? Gt.DEFAULT_REQUEST_TIMEOUT_MS : void 0;
 					return (null != s ? this.connection.send(t, s) : this.connection.send(t)).catch(((t) => i(this, void 0, void 0, (function* () {
-						if (t instanceof Ae) throw xe.debug(`Stale request settled (id=${t.requestId}, gen=${t.staleGeneration}) — not triggering recovery`), t;
+						if (t instanceof Oe) throw Ue.debug(`Stale request settled (id=${t.requestId}, gen=${t.staleGeneration}) — not triggering recovery`), t;
 						if ("RequestTimeoutError" === (null == t ? void 0 : t.name)) throw this.onSignalingRequestTimeout(t.requestId, t.timeoutMs, t.method), t;
 						if ((null == t ? void 0 : t.code) === this.authenticationRequiredErrorCode) {
 							if (!this._autoReconnect) {
 								const i = Te(D, t, void 0, !0);
-								Pt(e.SwEvent.Error, {
+								Ut(e.SwEvent.Error, {
 									error: i,
 									sessionId: this.sessionid
 								}, this.uuid);
@@ -1953,28 +1975,28 @@ var TelnyxWebRTC = (function() {
 						let t = !1;
 						yield Promise.race([Promise.all(e.map(((e) => e.catch((() => {}))))), new Promise(((e) => setTimeout((() => {
 							t = !0, e();
-						}), hi.CALL_REPORT_UPLOAD_DRAIN_TIMEOUT_MS)))]), t && xe.warn("Timed out waiting for pending call report uploads", { pendingCount: this._pendingCallReportUploads.size });
+						}), gi.CALL_REPORT_UPLOAD_DRAIN_TIMEOUT_MS)))]), t && Ue.warn("Timed out waiting for pending call report uploads", { pendingCount: this._pendingCallReportUploads.size });
 					}));
 				}
 				validateOptions() {
-					return Je(this.options) || ze(this.options);
+					return Xe(this.options) || Qe(this.options);
 				}
 				broadcast(e) {}
 				disconnect() {
 					return i(this, void 0, void 0, (function* () {
-						clearTimeout(this._reconnectTimeout), this._clearTokenExpiryTimeout(), this.subscriptions = {}, this._autoReconnect = !1, this._intentionalClose = !0, this._reconnectAttempts = 0, this.relayProtocol = null, yield this._drainCallReportUploads(), this._closeConnection(), yield sessionStorage.removeItem(this.signature), this._executeQueue = [], this._detachListeners(), xe.debug("Session disconnected. Cleaned up all listeners and subscriptions, closed connection, disabled auto-reconnect.");
+						clearTimeout(this._reconnectTimeout), this._clearTokenExpiryTimeout(), this.subscriptions = {}, this._autoReconnect = !1, this._intentionalClose = !0, this._reconnectAttempts = 0, this.relayProtocol = null, yield this._drainCallReportUploads(), this._closeConnection(), yield sessionStorage.removeItem(this.signature), this._executeQueue = [], this._detachListeners(), Ue.debug("Session disconnected. Cleaned up all listeners and subscriptions, closed connection, disabled auto-reconnect.");
 					}));
 				}
 				on(e, t) {
-					return Nt(e, t, this.uuid), this;
+					return Lt(e, t, this.uuid), this;
 				}
 				off(e, t) {
-					return Mt(e, t, this.uuid), this;
+					return xt(e, t, this.uuid), this;
 				}
 				connect() {
 					var e;
 					return i(this, void 0, void 0, (function* () {
-						null === (e = this._registrationTimings) || void 0 === e || e.mark("client.connect() called"), this.connection || (xe.debug("No existing connection found, creating a new one."), this.connection = new Ht(this)), this._attachListeners(), this._autoReconnect || (xe.debug("autoReconnect was disabled, resetting reconnect attempts"), this._reconnectAttempts = 0), this._autoReconnect = !0, this.connection.isAlive || (xe.debug("Connection wasn't alive, initiating connection to the server..."), this.connection.connect()), xe.debug("Connect method called. Connection initiated.");
+						null === (e = this._registrationTimings) || void 0 === e || e.mark("client.connect() called"), this.connection || (Ue.debug("No existing connection found, creating a new one."), this.connection = new Gt(this)), this._attachListeners(), this._autoReconnect || (Ue.debug("autoReconnect was disabled, resetting reconnect attempts"), this._reconnectAttempts = 0), this._autoReconnect = !0, this.connection.isAlive || (Ue.debug("Connection wasn't alive, initiating connection to the server..."), this.connection.connect()), Ue.debug("Connect method called. Connection initiated.");
 					}));
 				}
 				resetReconnectAttempts() {
@@ -1984,13 +2006,13 @@ var TelnyxWebRTC = (function() {
 					var i;
 					null === (i = this._registrationTimings) || void 0 === i || i.mark("login failed");
 					const n = Te(A, t);
-					Pt(e.SwEvent.Error, {
+					Ut(e.SwEvent.Error, {
 						error: n,
 						sessionId: this.sessionid
 					}, this.uuid);
 				}
 				clearReconnectToken() {
-					lt(), this.reconnectTokenVoiceSdkId = null, this.reconnectTokenCanaryRtcServer = void 0;
+					ht(), this.reconnectTokenVoiceSdkId = null, this.reconnectTokenCanaryRtcServer = void 0;
 				}
 				_checkTokenExpiry() {
 					this._clearTokenExpiryTimeout();
@@ -2002,20 +2024,20 @@ var TelnyxWebRTC = (function() {
 						if ("number" != typeof i) return;
 						const n = i - Math.floor(Date.now() / 1e3);
 						if (n <= 0) return;
-						if (n <= hi.TOKEN_EXPIRY_WARNING_SECONDS) this._emitTokenExpiryWarning();
+						if (n <= gi.TOKEN_EXPIRY_WARNING_SECONDS) this._emitTokenExpiryWarning();
 						else {
-							const e = 1e3 * (n - hi.TOKEN_EXPIRY_WARNING_SECONDS);
+							const e = 1e3 * (n - gi.TOKEN_EXPIRY_WARNING_SECONDS);
 							this._tokenExpiryTimeout = setTimeout((() => {
 								this._emitTokenExpiryWarning();
 							}), e);
 						}
 					} catch (e) {
-						xe.debug("login_token is not a decodable JWT, skipping expiry check");
+						Ue.debug("login_token is not a decodable JWT, skipping expiry check");
 					}
 				}
 				_emitTokenExpiryWarning() {
 					const t = Ce(se);
-					Pt(e.SwEvent.Warning, {
+					Ut(e.SwEvent.Warning, {
 						warning: t,
 						sessionId: this.sessionid
 					}, this.uuid);
@@ -2026,23 +2048,23 @@ var TelnyxWebRTC = (function() {
 				login({ creds: t, onSuccess: n, onError: s } = {}) {
 					return i(this, void 0, void 0, (function* () {
 						if (this.connection && this.connection.isAlive) {
-							if (t && (void 0 !== t.login && (this.options.login = t.login), void 0 !== t.password && (this.options.password = t.password), void 0 !== t.passwd && (this.options.passwd = t.passwd), void 0 !== t.login_token && (this.options.login_token = t.login_token), void 0 !== t.userVariables && (this.options.userVariables = t.userVariables), void 0 !== t.anonymous_login && (this.options.anonymous_login = t.anonymous_login)), Je(this.options)) return this._login({
+							if (t && (void 0 !== t.login && (this.options.login = t.login), void 0 !== t.password && (this.options.password = t.password), void 0 !== t.passwd && (this.options.passwd = t.passwd), void 0 !== t.login_token && (this.options.login_token = t.login_token), void 0 !== t.userVariables && (this.options.userVariables = t.userVariables), void 0 !== t.anonymous_login && (this.options.anonymous_login = t.anonymous_login)), Xe(this.options)) return this._login({
 								type: "login",
 								onSuccess: n,
 								onError: s
 							});
-							if (ze(this.options)) return this._login({
+							if (Qe(this.options)) return this._login({
 								type: "anonymous_login",
 								onSuccess: n,
 								onError: s
 							});
 							{
 								const t = "Invalid login options provided for authentication.";
-								xe.error(t);
+								Ue.error(t);
 								const i = Te(O, void 0, t);
-								Pt(e.SwEvent.Error, {
+								Ut(e.SwEvent.Error, {
 									error: i,
-									type: yt.invalidCredentialsOptions,
+									type: St.invalidCredentialsOptions,
 									sessionId: this.sessionid
 								}, this.uuid);
 								return;
@@ -2055,17 +2077,17 @@ var TelnyxWebRTC = (function() {
 					return i(this, void 0, void 0, (function* () {
 						let i;
 						null === (s = this._registrationTimings) || void 0 === s || s.mark(`prepare ${e} request`);
-						const u = !!at(), h = u && (this.sessionid && rt() ? this.sessionid : function(e = Date.now()) {
-							const t = sessionStorage.getItem(it);
-							return t ? rt(e) ? t : (sessionStorage.removeItem(it), sessionStorage.removeItem(nt), null) : null;
+						const u = !!dt(), h = u && (this.sessionid && ct() ? this.sessionid : function(e = Date.now()) {
+							const t = sessionStorage.getItem(st);
+							return t ? ct(e) ? t : (sessionStorage.removeItem(st), sessionStorage.removeItem(ot), null) : null;
 						}()) || "";
 						if ("login" === e) {
 							const e = null !== (a = null !== (o = this.options.pushWhenActive) && void 0 !== o ? o : null === (r = this.options.userVariables) || void 0 === r ? void 0 : r.push_when_active) && void 0 !== a && a, t = Object.assign(Object.assign({}, this.options.userVariables), {
 								push_when_active: e,
 								pn_late_fanout: e
 							}), n = null !== (c = this.options.earlySdpAnswer) && void 0 !== c && c;
-							i = new Qt(this.options.login, this.options.password || this.options.passwd, this.options.login_token, h, t, u, n);
-						} else i = new ui({
+							i = new ei(this.options.login, this.options.password || this.options.passwd, this.options.login_token, h, t, u, n);
+						} else i = new pi({
 							target_id: this.options.anonymous_login.target_id,
 							target_type: this.options.anonymous_login.target_type,
 							target_version_id: this.options.anonymous_login.target_version_id,
@@ -2077,7 +2099,7 @@ var TelnyxWebRTC = (function() {
 						const p = yield this.execute(i).catch(((e) => {
 							this._handleLoginError(e), n && n(e);
 						}));
-						p && (null === (d = this._registrationTimings) || void 0 === d || d.mark("login response processing started"), this.sessionid = p.sessid, this.sessionid && dt(this.sessionid), this._checkTokenExpiry(), t && t(), null === (l = this._registrationTimings) || void 0 === l || l.mark("login response processing complete"));
+						p && (null === (d = this._registrationTimings) || void 0 === d || d.mark("login response processing started"), this.sessionid = p.sessid, this.sessionid && ut(this.sessionid), this._checkTokenExpiry(), t && t(), null === (l = this._registrationTimings) || void 0 === l || l.mark("login response processing complete"));
 					}));
 				}
 				_onSocketOpen() {
@@ -2091,7 +2113,7 @@ var TelnyxWebRTC = (function() {
 						if (null == t ? void 0 : t.flushIntermediateCallReport) try {
 							t.flushIntermediateCallReport(e);
 						} catch (i) {
-							xe.error("Failed to flush intermediate call report", {
+							Ue.error("Failed to flush intermediate call report", {
 								callId: t.id,
 								flushReason: e,
 								error: i
@@ -2122,9 +2144,9 @@ var TelnyxWebRTC = (function() {
 				onNetworkClose(t) {
 					var i, n, s, o, r;
 					const a = null !== (n = null === (i = this.connection) || void 0 === i ? void 0 : i.socketGeneration) && void 0 !== n ? n : 0, c = null !== (s = null == t ? void 0 : t.socketGeneration) && void 0 !== s ? s : a;
-					if (c < a) xe.debug(`Skipping stale onNetworkClose for socket generation ${c} (current generation is ${a})`);
+					if (c < a) Ue.debug(`Skipping stale onNetworkClose for socket generation ${c} (current generation is ${a})`);
 					else if (c !== this._reconnectCountedGeneration) {
-						this._flushIntermediateCallReports(this._createSocketCloseFlushReason(t)), xe.debug("onNetworkClose called", {
+						this._flushIntermediateCallReports(this._createSocketCloseFlushReason(t)), Ue.debug("onNetworkClose called", {
 							closeCode: null == t ? void 0 : t.code,
 							closeReason: null == t ? void 0 : t.reason,
 							wasClean: null == t ? void 0 : t.wasClean,
@@ -2132,14 +2154,14 @@ var TelnyxWebRTC = (function() {
 							sessid: this.sessionid || void 0,
 							autoReconnect: this._autoReconnect,
 							reconnectAttempts: this._reconnectAttempts
-						}), this.relayProtocol && xt(this.relayProtocol);
-						for (const e in this.subscriptions) xt(e);
-						if (this.subscriptions = {}, this.contexts = [], clearTimeout(this._keepAliveTimeout), clearTimeout(this._reconnectTimeout), this.stopSignalingHealthMonitor(), this.sessionid && this._autoReconnect && dt(this.sessionid), this.connection && (this.connection.previousGatewayState = ""), this._autoReconnect) {
+						}), this.relayProtocol && Ft(this.relayProtocol);
+						for (const e in this.subscriptions) Ft(e);
+						if (this.subscriptions = {}, this.contexts = [], clearTimeout(this._keepAliveTimeout), clearTimeout(this._reconnectTimeout), this.stopSignalingHealthMonitor(), this.sessionid && this._autoReconnect && ut(this.sessionid), this.connection && (this.connection.previousGatewayState = ""), this._autoReconnect) {
 							const t = null !== (o = this.options.maxReconnectAttempts) && void 0 !== o ? o : 10;
 							if (this._reconnectCountedGeneration = c, this._reconnectAttempts += 1, t > 0 && this._reconnectAttempts > t) {
-								xe.info(`Reconnection exhausted after ${t} attempts. Stopping automatic reconnect.`), this._reconnectAttempts = 0, this._autoReconnect = !1, this._terminateActiveCallsLocally();
+								Ue.info(`Reconnection exhausted after ${t} attempts. Stopping automatic reconnect.`), this._reconnectAttempts = 0, this._autoReconnect = !1, this._terminateActiveCallsLocally("sdk:reconnection-exhausted");
 								const i = Te(T);
-								Pt(e.SwEvent.Error, {
+								Ut(e.SwEvent.Error, {
 									error: i,
 									sessionId: this.sessionid
 								}, this.uuid);
@@ -2149,40 +2171,40 @@ var TelnyxWebRTC = (function() {
 							null === (r = this._registrationTimings) || void 0 === r || r.mark("schedule WebSocket reconnect", {
 								delayMs: i,
 								attempt: this._reconnectAttempts
-							}), xe.debug(`Reconnect attempt ${this._reconnectAttempts}${t > 0 ? ` of ${t}` : ""} (delay=${i}ms)`), this._reconnectTimeout = setTimeout((() => {
+							}), Ue.debug(`Reconnect attempt ${this._reconnectAttempts}${t > 0 ? ` of ${t}` : ""} (delay=${i}ms)`), this._reconnectTimeout = setTimeout((() => {
 								var e;
-								null === (e = this._registrationTimings) || void 0 === e || e.mark("WebSocket reconnect timer fired"), xe.debug("Calling connect due to network close and auto-reconnect enabled."), this.connect();
+								null === (e = this._registrationTimings) || void 0 === e || e.mark("WebSocket reconnect timer fired"), Ue.debug("Calling connect due to network close and auto-reconnect enabled."), this.connect();
 							}), i);
-						} else if (xe.debug("auto_reconnect disabled, not reconnecting", {
+						} else if (Ue.debug("auto_reconnect disabled, not reconnecting", {
 							voiceSdkId: this.callReportVoiceSdkId,
 							sessid: this.sessionid || void 0,
 							intentionalClose: this._intentionalClose
 						}), !this._intentionalClose) {
 							const t = Ce(ce);
-							Pt(e.SwEvent.Warning, {
+							Ut(e.SwEvent.Warning, {
 								warning: t,
 								reason: "auto_reconnect_disabled",
 								sessionId: this.sessionid
 							}, this.uuid);
 						}
 						this._intentionalClose = !1;
-					} else xe.debug(`Skipping duplicate onNetworkClose for socket generation ${c} (already handled, reconnect attempt ${this._reconnectAttempts})`);
+					} else Ue.debug(`Skipping duplicate onNetworkClose for socket generation ${c} (already handled, reconnect attempt ${this._reconnectAttempts})`);
 				}
 				_onSocketMessage(e) {}
 				_removeSubscription(e, t) {
-					this._existsSubscription(e, t) && (t ? (delete this.subscriptions[e][t], Mt(e, null, t)) : (delete this.subscriptions[e], xt(e)));
+					this._existsSubscription(e, t) && (t ? (delete this.subscriptions[e][t], xt(e, null, t)) : (delete this.subscriptions[e], Ft(e)));
 				}
 				_addSubscription(e, t = null, i) {
-					this._existsSubscription(e, i) || (this._existsSubscription(e) || (this.subscriptions[e] = {}), this.subscriptions[e][i] = {}, We(t) && Nt(e, t, i));
+					this._existsSubscription(e, i) || (this._existsSubscription(e) || (this.subscriptions[e] = {}), this.subscriptions[e][i] = {}, Ge(t) && Lt(e, t, i));
 				}
 				_existsSubscription(e, t) {
 					return !(!this.subscriptions.hasOwnProperty(e) || !(!t || t && this.subscriptions[e].hasOwnProperty(t)));
 				}
 				_attachListeners() {
-					this._detachListeners(), xe.debug("Attaching socket event listeners"), this.on(e.SwEvent.SocketOpen, this._onSocketOpen), this.on(e.SwEvent.SocketClose, this.onNetworkClose), this.on(e.SwEvent.SocketError, this.onNetworkClose), this.on(e.SwEvent.SocketMessage, this._onSocketMessage), this.on(e.SwEvent.SocketActivity, this._onSocketActivity);
+					this._detachListeners(), Ue.debug("Attaching socket event listeners"), this.on(e.SwEvent.SocketOpen, this._onSocketOpen), this.on(e.SwEvent.SocketClose, this.onNetworkClose), this.on(e.SwEvent.SocketError, this.onNetworkClose), this.on(e.SwEvent.SocketMessage, this._onSocketMessage), this.on(e.SwEvent.SocketActivity, this._onSocketActivity);
 				}
 				_detachListeners() {
-					xe.debug("Detaching socket event listeners"), this.off(e.SwEvent.SocketOpen, this._onSocketOpen), this.off(e.SwEvent.SocketClose, this.onNetworkClose), this.off(e.SwEvent.SocketError, this.onNetworkClose), this.off(e.SwEvent.SocketMessage, this._onSocketMessage), this.off(e.SwEvent.SocketActivity, this._onSocketActivity);
+					Ue.debug("Detaching socket event listeners"), this.off(e.SwEvent.SocketOpen, this._onSocketOpen), this.off(e.SwEvent.SocketClose, this.onNetworkClose), this.off(e.SwEvent.SocketError, this.onNetworkClose), this.off(e.SwEvent.SocketMessage, this._onSocketMessage), this.off(e.SwEvent.SocketActivity, this._onSocketActivity);
 				}
 				_emptyExecuteQueues() {
 					this._executeQueue.forEach((({ resolve: e, msg: t }) => {
@@ -2191,7 +2213,7 @@ var TelnyxWebRTC = (function() {
 				}
 				_closeConnection() {
 					var e, t;
-					this._idle = !0, clearTimeout(this._keepAliveTimeout), this.stopSignalingHealthMonitor(), xe.debug("_closeConnection called", {
+					this._idle = !0, clearTimeout(this._keepAliveTimeout), this.stopSignalingHealthMonitor(), Ue.debug("_closeConnection called", {
 						connected: null === (e = this.connection) || void 0 === e ? void 0 : e.connected,
 						socketGeneration: null === (t = this.connection) || void 0 === t ? void 0 : t.socketGeneration,
 						voiceSdkId: this.callReportVoiceSdkId,
@@ -2199,13 +2221,15 @@ var TelnyxWebRTC = (function() {
 					}), this.connection && this.connection.close();
 				}
 				_resetKeepAlive() {
-					!1 === this._pong && (xe.warn("No ping/pong received, forcing PING ACK to keep alive"), this.execute(new Kt(at()))), clearTimeout(this._keepAliveTimeout), this._triggerKeepAliveTimeoutCheck();
+					!1 === this._pong && (Ue.warn("No ping/pong received, forcing PING ACK to keep alive"), this.execute(new zt(dt())).catch(((e) => {
+						Ue.debug("Keep-alive ping was not acknowledged", e);
+					}))), clearTimeout(this._keepAliveTimeout), this._triggerKeepAliveTimeoutCheck();
 				}
 				_triggerKeepAliveTimeoutCheck() {
 					this._pong = !1, this._keepAliveTimeout = setTimeout((() => this._resetKeepAlive()), 35e3);
 				}
 				setPingReceived() {
-					xe.debug("Ping received"), this._pong = !0;
+					Ue.debug("Ping received"), this._pong = !0;
 				}
 				_onSocketActivity() {
 					this._signalingHealthMonitor.onSocketActivity();
@@ -2217,19 +2241,19 @@ var TelnyxWebRTC = (function() {
 					const e = this.calls;
 					if (!e) return !1;
 					const t = /* @__PURE__ */ new Set([
-						It.Early,
-						It.Active,
-						It.Held
+						Ct.Early,
+						Ct.Active,
+						Ct.Held
 					]);
 					return Object.values(e).some(((e) => e && null != e._state && t.has(e._state)));
 				}
-				_terminateActiveCallsLocally() {
-					const e = this.calls;
-					if (!e) return;
-					const t = Object.keys(e);
-					if (0 !== t.length) {
-						xe.debug(`Reconnection exhausted — locally terminating ${t.length} active call(s) (no BYE): ${t.join(", ")}`);
-						for (const i of t) e[i]?.hangup({}, !1);
+				_terminateActiveCallsLocally(e) {
+					const t = this.calls;
+					if (!t) return;
+					const i = Object.keys(t);
+					if (0 !== i.length) {
+						Ue.debug(`Locally terminating ${i.length} active call(s) (no BYE, initiator: ${e}): ${i.join(", ")}`);
+						for (const n of i) t[n]?.hangup({ initiator: e }, !1);
 					}
 				}
 				startSignalingHealthMonitor() {
@@ -2240,17 +2264,17 @@ var TelnyxWebRTC = (function() {
 				}
 				triggerIceRestart(e) {
 					const t = this.calls, i = null == t ? void 0 : t[e];
-					if (!i) return xe.warn(`Signaling health: cannot trigger ICE restart — call ${e} not found`), {
+					if (!i) return Ue.warn(`Signaling health: cannot trigger ICE restart — call ${e} not found`), {
 						started: !1,
 						reason: "call not found"
 					};
 					const n = i.peer;
-					if (!(null == n ? void 0 : n.restartIce)) return xe.warn(`Signaling health: cannot trigger ICE restart — no peer for call ${e}`), {
+					if (!(null == n ? void 0 : n.restartIce)) return Ue.warn(`Signaling health: cannot trigger ICE restart — no peer for call ${e}`), {
 						started: !1,
 						reason: "no peer"
 					};
 					const s = n.restartIce();
-					return s.started || xe.debug(`Signaling health: ICE restart skipped for call ${e}: ${s.reason}`), s;
+					return s.started || Ue.debug(`Signaling health: ICE restart skipped for call ${e}: ${s.reason}`), s;
 				}
 				onSignalingRequestTimeout(e, t, i = "") {
 					this._signalingHealthMonitor.onRequestTimeout(e, t, i);
@@ -2265,10 +2289,10 @@ var TelnyxWebRTC = (function() {
 					this._signalingHealthMonitor.onIceRestartFailed(e);
 				}
 				static on(e, t) {
-					Nt(e, t);
+					Lt(e, t);
 				}
 				static off(e) {
-					Mt(e);
+					xt(e);
 				}
 				static uuid() {
 					return c();
@@ -2280,48 +2304,48 @@ var TelnyxWebRTC = (function() {
 					return this._autoReconnect;
 				}
 			}
-			hi.TOKEN_EXPIRY_WARNING_SECONDS = 120, hi.CALL_REPORT_UPLOAD_DRAIN_TIMEOUT_MS = 1e4;
-			const pi = (e) => navigator.mediaDevices.getUserMedia(e), gi = (e) => e && e instanceof MediaStream, vi = (t, i, n) => {
+			gi.TOKEN_EXPIRY_WARNING_SECONDS = 120, gi.CALL_REPORT_UPLOAD_DRAIN_TIMEOUT_MS = 1e4;
+			const vi = (e) => navigator.mediaDevices.getUserMedia(e), mi = (e) => e && e instanceof MediaStream, fi = (t, i, n) => {
 				if (null == t) return null;
-				const s = qe(t);
-				if (s instanceof Promise) return s.then(((e) => vi(e, i, n)), ((e) => (xe.error("attachMediaStream: element resolver rejected", e), null)));
-				if (!Ge(s)) return "function" == typeof t ? xe.warn(`attachMediaStream: element resolver returned ${s} instead of an <audio> or <video> element`) : "string" == typeof t ? xe.warn(`attachMediaStream: id "${t}" did not resolve to an <audio> or <video> element`) : xe.warn("attachMediaStream: not an <audio> or <video> element:", t), null;
-				if (s.getAttribute("autoplay") || s.setAttribute("autoplay", "autoplay"), s.getAttribute("playsinline") || s.setAttribute("playsinline", "playsinline"), s.srcObject && s.srcObject !== i && (xe.warn("attachMediaStream: element already has a different MediaStream attached; overwriting will disrupt the existing call. Use a per-call remoteElement (client.newCall({ remoteElement }) or call.answer({ remoteElement })) for concurrent calls."), n)) {
+				const s = Ye(t);
+				if (s instanceof Promise) return s.then(((e) => fi(e, i, n)), ((e) => (Ue.error("attachMediaStream: element resolver rejected", e), null)));
+				if (!Ve(s)) return "function" == typeof t ? Ue.warn(`attachMediaStream: element resolver returned ${s} instead of an <audio> or <video> element`) : "string" == typeof t ? Ue.warn(`attachMediaStream: id "${t}" did not resolve to an <audio> or <video> element`) : Ue.warn("attachMediaStream: not an <audio> or <video> element:", t), null;
+				if (s.getAttribute("autoplay") || s.setAttribute("autoplay", "autoplay"), s.getAttribute("playsinline") || s.setAttribute("playsinline", "playsinline"), s.srcObject && s.srcObject !== i && (Ue.warn("attachMediaStream: element already has a different MediaStream attached; overwriting will disrupt the existing call. Use a per-call remoteElement (client.newCall({ remoteElement }) or call.answer({ remoteElement })) for concurrent calls."), n)) {
 					const t = Ce(ie);
-					Pt(e.SwEvent.Warning, {
+					Ut(e.SwEvent.Warning, {
 						warning: t,
 						callId: n.callId,
 						sessionId: n.sessionId
 					}, n.eventTarget);
 				}
 				return s.srcObject = i, s;
-			}, mi = (e, t) => {
-				const i = qe(e);
+			}, _i = (e, t) => {
+				const i = Ye(e);
 				if (i) {
 					if (t && i.srcObject !== t) return;
 					i.srcObject = null;
 				}
-			}, fi = (e, t) => i(void 0, void 0, void 0, (function* () {
-				const i = qe(e);
-				if (null === i) return xe.info("No HTMLMediaElement to attach the speakerId"), !1;
-				if ("string" != typeof t) return xe.info(`Invalid speaker deviceId: '${t}'`), !1;
+			}, yi = (e, t) => i(void 0, void 0, void 0, (function* () {
+				const i = Ye(e);
+				if (null === i) return Ue.info("No HTMLMediaElement to attach the speakerId"), !1;
+				if ("string" != typeof t) return Ue.info(`Invalid speaker deviceId: '${t}'`), !1;
 				try {
 					return yield i.setSinkId(t), !0;
 				} catch (e) {
 					return !1;
 				}
-			})), _i = (e) => {
+			})), bi = (e) => {
 				e && "live" === e.readyState && e.stop();
-			}, yi = (e) => {
-				gi(e) && e.getTracks().forEach(_i), e = null;
-			}, bi = (e) => i(void 0, void 0, void 0, (function* () {
-				xe.info("RTCService.getUserMedia", e);
+			}, Si = (e) => {
+				mi(e) && e.getTracks().forEach(bi), e = null;
+			}, Ii = (e) => i(void 0, void 0, void 0, (function* () {
+				Ue.info("RTCService.getUserMedia", e);
 				const { audio: t, video: i } = e;
 				if (!t && !i) return null;
 				try {
-					return yield pi(e);
+					return yield vi(e);
 				} catch (t) {
-					if (xe.error("getUserMedia error: ", t), ((e) => "NotReadableError" === e.name || "NotFoundError" === e.name || "OverconstrainedError" === e.name)(t)) {
+					if (Ue.error("getUserMedia error: ", t), ((e) => "NotReadableError" === e.name || "NotFoundError" === e.name || "OverconstrainedError" === e.name)(t)) {
 						const i = ((e) => {
 							const { audio: t, video: i } = e;
 							let n = !1, s = t, o = i;
@@ -2341,24 +2365,24 @@ var TelnyxWebRTC = (function() {
 							} : null;
 						})(e);
 						if (i) {
-							xe.warn("Device not found or not readable, falling back to default device");
+							Ue.warn("Device not found or not readable, falling back to default device");
 							try {
-								return yield pi(i);
+								return yield vi(i);
 							} catch (e) {
-								throw xe.error("Fallback getUserMedia also failed: ", e), t;
+								throw Ue.error("Fallback getUserMedia also failed: ", e), t;
 							}
 						}
 					}
 					throw t;
 				}
-			})), Si = (e = null, t = !1) => i(void 0, void 0, void 0, (function* () {
+			})), Ei = (e = null, t = !1) => i(void 0, void 0, void 0, (function* () {
 				let i = [];
 				const n = yield navigator.mediaDevices.getUserMedia(((e = null) => ({
-					audio: !e || e === wt.AudioIn || e === wt.AudioOut,
-					video: !e || e === wt.Video
-				}))(e)).catch(((e) => (xe.error(e), null)));
+					audio: !e || e === Tt.AudioIn || e === Tt.AudioOut,
+					video: !e || e === Tt.Video
+				}))(e)).catch(((e) => (Ue.error(e), null)));
 				if (n) {
-					if (yi(n), i = yield navigator.mediaDevices.enumerateDevices(), e && (i = i.filter(((t) => t.kind === e))), !0 === t) return i;
+					if (Si(n), i = yield navigator.mediaDevices.enumerateDevices(), e && (i = i.filter(((t) => t.kind === e))), !0 === t) return i;
 					const s = [];
 					i = i.filter(((e) => {
 						if (!e.groupId) return !0;
@@ -2367,39 +2391,39 @@ var TelnyxWebRTC = (function() {
 					}));
 				}
 				return i;
-			})), Ii = [
+			})), Ci = [
 				[320, 240],
 				[640, 360],
 				[640, 480],
 				[1280, 720],
 				[1920, 1080]
-			], Ei = (e, t, n) => i(void 0, void 0, void 0, (function* () {
-				const i = yield Si(n, !0);
+			], wi = (e, t, n) => i(void 0, void 0, void 0, (function* () {
+				const i = yield Ei(n, !0);
 				for (let n = 0; n < i.length; n++) {
 					const { deviceId: s, label: o } = i[n];
 					if (e === s || t === o) return s;
 				}
 				return null;
-			})), Ci = (e) => {
+			})), ki = (e) => {
 				const t = navigator.mediaDevices.getSupportedConstraints();
 				Object.keys(e).map(((i) => {
 					t.hasOwnProperty(i) && null !== e[i] && void 0 !== e[i] || delete e[i];
 				}));
-			}, wi = (e) => e ? {
+			}, Ti = (e) => e ? {
 				id: e.id,
 				kind: e.kind,
 				enabled: e.enabled,
 				muted: e.muted,
 				readyState: e.readyState
-			} : null, ki = (e) => {
+			} : null, Ri = (e) => {
 				var t, i, n, s, o, r;
 				if (!e) return [];
-				return (null !== (i = null === (t = e.getTracks) || void 0 === t ? void 0 : t.call(e)) && void 0 !== i ? i : [...null !== (s = null === (n = e.getAudioTracks) || void 0 === n ? void 0 : n.call(e)) && void 0 !== s ? s : [], ...null !== (r = null === (o = e.getVideoTracks) || void 0 === o ? void 0 : o.call(e)) && void 0 !== r ? r : []]).map(((e) => wi(e)));
-			}, Ti = (e, t) => {
+				return (null !== (i = null === (t = e.getTracks) || void 0 === t ? void 0 : t.call(e)) && void 0 !== i ? i : [...null !== (s = null === (n = e.getAudioTracks) || void 0 === n ? void 0 : n.call(e)) && void 0 !== s ? s : [], ...null !== (r = null === (o = e.getVideoTracks) || void 0 === o ? void 0 : o.call(e)) && void 0 !== r ? r : []]).map(((e) => Ti(e)));
+			}, Ai = (e, t) => {
 				if (!e) return !1;
-				const { subscribed: i, alreadySubscribed: n } = Ri(e);
+				const { subscribed: i, alreadySubscribed: n } = Oi(e);
 				return i.includes(t) || n.includes(t);
-			}, Ri = (e) => {
+			}, Oi = (e) => {
 				const t = {
 					subscribed: [],
 					alreadySubscribed: [],
@@ -2410,8 +2434,8 @@ var TelnyxWebRTC = (function() {
 				return Object.keys(t).forEach(((i) => {
 					t[i] = e[`${i}Channels`] || [];
 				})), t;
-			}, Ai = (e, t = null, i = null) => {
-				if (!gi(e)) return null;
+			}, Di = (e, t = null, i = null) => {
+				if (!mi(e)) return null;
 				let n = [];
 				switch (t) {
 					case "audio":
@@ -2435,12 +2459,12 @@ var TelnyxWebRTC = (function() {
 						default: e.enabled = !e.enabled;
 					}
 				}));
-			}, Oi = (e) => {
-				Ai(e, "audio", !0);
-			}, Di = (e) => {
-				Ai(e, "audio", !1);
+			}, Ni = (e) => {
+				Di(e, "audio", !0);
+			}, Mi = (e) => {
+				Di(e, "audio", !1);
 			};
-			function Ni() {
+			function Li() {
 				try {
 					const { browserInfo: e, name: t, version: i, supportAudio: n, supportVideo: s } = function() {
 						if (!window || !window.navigator || !window.navigator.userAgent) throw new Error("You should use @telnyx/webrtc in a web browser such as Chrome|Firefox|Safari");
@@ -2497,14 +2521,14 @@ var TelnyxWebRTC = (function() {
 						supportSessionDescription: !!r,
 						supportIceCandidate: !!a,
 						supportMediaDevices: !!c,
-						supportGetUserMedia: !!bi
+						supportGetUserMedia: !!Ii
 					};
 				} catch (e) {
 					return e.message;
 				}
 			}
-			var Li;
-			function Mi(e, t) {
+			var Pi;
+			function xi(e, t) {
 				const i = document.getElementById(t);
 				if (i) return i;
 				if (e && t) {
@@ -2513,14 +2537,14 @@ var TelnyxWebRTC = (function() {
 				}
 				return null;
 			}
-			function Pi(e) {
+			function Ui(e) {
 				e && (e._playFulfilled = !1, e._promise = e.play(), e._promise.then((() => {
 					e._playFulfilled = !0;
 				})).catch(((t) => {
-					xe.error("playAudio", t), e._playFulfilled = !0;
+					Ue.error("playAudio", t), e._playFulfilled = !0;
 				})));
 			}
-			function xi(e) {
+			function Fi(e) {
 				e && (e._playFulfilled ? (e.pause(), e.currentTime = 0) : e._promise && e._promise.then ? e._promise.then((() => {
 					e.pause(), e.currentTime = 0;
 				})) : setTimeout((() => {
@@ -2529,8 +2553,8 @@ var TelnyxWebRTC = (function() {
 			}
 			(function(e) {
 				e.not_supported = "not supported", e.full = "full", e.partial = "partial";
-			})(Li || (Li = {}));
-			const Ui = (e) => {
+			})(Pi || (Pi = {}));
+			const $i = (e) => {
 				const t = [], i = [];
 				return e && 0 !== e.length ? (e.forEach(((e) => {
 					const n = e.mimeType.toLocaleLowerCase();
@@ -2543,7 +2567,7 @@ var TelnyxWebRTC = (function() {
 					videoCodecs: i
 				};
 			};
-			class Fi extends Wt {
+			class ji extends Vt {
 				constructor(e, t) {
 					super(), this.method = "ai_conversation", this.buildRequest({
 						method: this.method,
@@ -2566,7 +2590,7 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class $i extends Wt {
+			class Bi extends Vt {
 				constructor(e) {
 					super(), this.method = "ai_conversation", this.buildNotification({
 						method: this.method,
@@ -2577,7 +2601,7 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class ji {
+			class Hi {
 				constructor(e, t, i) {
 					var n;
 					this.getRegistrationTimingLog = i, this.peerConnection = null, this.intervalId = null, this.statsBuffer = [], this.intervalStartTime = null, this.callEndTime = null, this.logCollector = null, this.registrationTimingIncluded = !1, this.intervalAudioLevels = {
@@ -2591,14 +2615,14 @@ var TelnyxWebRTC = (function() {
 						level: "debug",
 						maxEntries: 1e3
 					}, this.callStartTime = /* @__PURE__ */ new Date(), this._lastIntermediateFlushTime = this.callStartTime, this.logCollectorOptions.enabled && (this.logCollector = function(e) {
-						return new Me(e);
-					}(this.logCollectorOptions), this.logCollector.start(), n = this.logCollector, Pe = n);
+						return new Pe(e);
+					}(this.logCollectorOptions), this.logCollector.start(), n = this.logCollector, xe = n);
 				}
 				start(e) {
 					var t, i;
-					this.options.enabled && (this.peerConnection = e, this.intervalStartTime = /* @__PURE__ */ new Date(), this._lastIntermediateFlushTime = this.intervalStartTime, this._stopped = !1, xe.info("CallReportCollector: Starting stats collection", {
+					this.options.enabled && (this.peerConnection = e, this.intervalStartTime = /* @__PURE__ */ new Date(), this._lastIntermediateFlushTime = this.intervalStartTime, this._stopped = !1, Ue.info("CallReportCollector: Starting stats collection", {
 						interval: this.options.interval,
-						initialInterval: ji.INITIAL_COLLECTION_INTERVAL_MS,
+						initialInterval: Hi.INITIAL_COLLECTION_INTERVAL_MS,
 						logCollectorActive: null !== (i = null === (t = this.logCollector) || void 0 === t ? void 0 : t.isActive()) && void 0 !== i && i
 					}), this._scheduleNextCollection());
 				}
@@ -2607,7 +2631,7 @@ var TelnyxWebRTC = (function() {
 					return i(this, void 0, void 0, (function* () {
 						this._stopped = !0, this.intervalId && (clearTimeout(this.intervalId), this.intervalId = null), this.callEndTime = /* @__PURE__ */ new Date(), this.peerConnection && this.intervalStartTime && (yield this._collectStats(!0));
 						const i = null !== (t = null === (e = this.logCollector) || void 0 === e ? void 0 : e.getLogCount()) && void 0 !== t ? t : 0;
-						this.logCollector && this.logCollector.stop(), xe.info("CallReportCollector: Stopped stats collection", {
+						this.logCollector && this.logCollector.stop(), Ue.info("CallReportCollector: Stopped stats collection", {
 							totalIntervals: this.statsBuffer.length,
 							totalLogs: i,
 							duration: this.callEndTime.getTime() - this.callStartTime.getTime()
@@ -2617,7 +2641,7 @@ var TelnyxWebRTC = (function() {
 				flush(e, t) {
 					var i, n, s, o;
 					const r = this._getRegistrationTimingLog(), a = this.statsBuffer.length, c = null !== (n = null === (i = this.logCollector) || void 0 === i ? void 0 : i.getLogCount()) && void 0 !== n ? n : 0, d = "socket-close" === (null == t ? void 0 : t.type) || "socket-error" === (null == t ? void 0 : t.type), l = a > 0 || c > 0 || d || !!r;
-					if (this._flushing || !l) return xe.debug("CallReportCollector: Skipping intermediate flush", {
+					if (this._flushing || !l) return Ue.debug("CallReportCollector: Skipping intermediate flush", {
 						reason: this._flushing ? "already-flushing" : "no-stats-or-logs",
 						flushReason: t,
 						statsIntervals: a,
@@ -2637,7 +2661,7 @@ var TelnyxWebRTC = (function() {
 							}),
 							stats: n
 						}, a.length > 0 ? { logs: a } : {}), { segment: i }), t ? { flushReason: t } : {});
-						return xe.info("CallReportCollector: Flushed intermediate segment", {
+						return Ue.info("CallReportCollector: Flushed intermediate segment", {
 							segment: i,
 							intervals: n.length,
 							logEntries: a.length,
@@ -2652,8 +2676,8 @@ var TelnyxWebRTC = (function() {
 					var o, r, a;
 					return i(this, void 0, void 0, (function* () {
 						const i = this._withRegistrationTiming(null !== (r = null === (o = this.logCollector) || void 0 === o ? void 0 : o.getLogs()) && void 0 !== r ? r : [], this._getRegistrationTimingLog()), c = i && i.length > 0;
-						if (!this.options.enabled) return void xe.info("CallReportCollector: Skipping report — call reports disabled");
-						if (0 === this.statsBuffer.length && !c) return void xe.info("CallReportCollector: Skipping report — no stats or logs collected");
+						if (!this.options.enabled) return void Ue.info("CallReportCollector: Skipping report — call reports disabled");
+						if (0 === this.statsBuffer.length && !c) return void Ue.info("CallReportCollector: Skipping report — no stats or logs collected");
 						const d = this._segmentIndex > 0, l = this._segmentIndex, u = Object.assign(Object.assign({
 							summary: Object.assign(Object.assign({}, e), {
 								durationSeconds: this.callEndTime && this.callStartTime ? (this.callEndTime.getTime() - this.callStartTime.getTime()) / 1e3 : void 0,
@@ -2690,7 +2714,7 @@ var TelnyxWebRTC = (function() {
 					var a, c;
 					return i(this, void 0, void 0, (function* () {
 						const i = new URL(n), d = `${i.protocol.replace(/^ws/, "http")}//${i.host}/call_report`, l = o ? "final report" : `intermediate segment ${e.segment}`;
-						xe.info(`CallReportCollector: Posting ${l}`, {
+						Ue.info(`CallReportCollector: Posting ${l}`, {
 							endpoint: d,
 							intervals: e.stats.length,
 							logEntries: null !== (c = null === (a = e.logs) || void 0 === a ? void 0 : a.length) && void 0 !== c ? c : 0,
@@ -2703,38 +2727,38 @@ var TelnyxWebRTC = (function() {
 							"x-call-id": e.summary.callId
 						};
 						s && (u["x-voice-sdk-id"] = s);
-						const h = JSON.stringify(e), p = (o || r) && h.length <= ji.KEEPALIVE_BODY_LIMIT_BYTES;
+						const h = JSON.stringify(e), p = (o || r) && h.length <= Hi.KEEPALIVE_BODY_LIMIT_BYTES;
 						let g;
-						for (let e = 0; e <= ji.RETRY_DELAYS_MS.length; e++) {
+						for (let e = 0; e <= Hi.RETRY_DELAYS_MS.length; e++) {
 							try {
 								const t = yield fetch(d, Object.assign({
 									method: "POST",
 									headers: u,
 									body: h
 								}, p ? { keepalive: !0 } : {}));
-								if (t.ok) return void xe.info(`CallReportCollector: Successfully posted ${l}`, {
+								if (t.ok) return void Ue.info(`CallReportCollector: Successfully posted ${l}`, {
 									attempt: e + 1,
 									status: t.status
 								});
 								{
 									const i = yield t.text();
-									g = /* @__PURE__ */ new Error(`Call report POST failed with status ${t.status}`), xe.error(`CallReportCollector: Failed to post ${l}`, {
+									g = /* @__PURE__ */ new Error(`Call report POST failed with status ${t.status}`), Ue.error(`CallReportCollector: Failed to post ${l}`, {
 										attempt: e + 1,
 										status: t.status,
 										error: i
 									});
 								}
 							} catch (t) {
-								g = t, xe.warn(`CallReportCollector: Network error posting ${l}`, {
+								g = t, Ue.warn(`CallReportCollector: Network error posting ${l}`, {
 									attempt: e + 1,
 									error: t
 								});
 							}
-							const t = ji.RETRY_DELAYS_MS[e];
+							const t = Hi.RETRY_DELAYS_MS[e];
 							if (void 0 === t) break;
-							xe.info(`CallReportCollector: Retrying ${l} in ${t}ms`, { attempt: e + 2 }), yield new Promise(((e) => setTimeout(e, t)));
+							Ue.info(`CallReportCollector: Retrying ${l} in ${t}ms`, { attempt: e + 2 }), yield new Promise(((e) => setTimeout(e, t)));
 						}
-						throw xe.error(`CallReportCollector: Exhausted retries posting ${l}`, { error: g }), g instanceof Error ? g : /* @__PURE__ */ new Error("Call report POST failed after retries");
+						throw Ue.error(`CallReportCollector: Exhausted retries posting ${l}`, { error: g }), g instanceof Error ? g : /* @__PURE__ */ new Error("Call report POST failed after retries");
 					}));
 				}
 				getStatsBuffer() {
@@ -2772,7 +2796,7 @@ var TelnyxWebRTC = (function() {
 				}
 				_collectionIntervalFor() {
 					const e = this._positiveInterval(this.options.interval, 5e3);
-					return Math.min(ji.INITIAL_COLLECTION_INTERVAL_MS, e);
+					return Math.min(Hi.INITIAL_COLLECTION_INTERVAL_MS, e);
 				}
 				_positiveInterval(e, t) {
 					return "number" == typeof e && Number.isFinite(e) && e > 0 ? e : t;
@@ -2842,33 +2866,33 @@ var TelnyxWebRTC = (function() {
 								currentRoundTripTime: l.currentRoundTripTime,
 								requestsSent: l.requestsSent,
 								responsesReceived: l.responsesReceived
-							}, f ? { local: f } : {}), _ ? { remote: _ } : {}), null !== this.previousCandidatePairSnapshot && l.id !== this.previousCandidatePairSnapshot.id && (xe.debug("CallReportCollector: ICE candidate pair changed mid-call", {
+							}, f ? { local: f } : {}), _ ? { remote: _ } : {}), null !== this.previousCandidatePairSnapshot && l.id !== this.previousCandidatePairSnapshot.id && (Ue.debug("CallReportCollector: ICE candidate pair changed mid-call", {
 								previous: this.previousCandidatePairSnapshot,
 								current: y
 							}), this._emitWarning(Q)), this.previousCandidatePairSnapshot = y), o && (b = this._getLocalAudioTrackSnapshot(), S = this._getOutboundAudioSourceStats(i, o)), this._logLocalAudioTrackSnapshot(b, S), this.previousStats.timestamp = s.getTime();
 							const I = s.getTime() - this.intervalStartTime.getTime(), E = this._collectionIntervalFor();
 							if (e || I >= E) {
 								const e = this._createStatsEntry(this.intervalStartTime, s, o, r, l, f, _, h, b, S, a, c, d, v, m);
-								this.statsBuffer.push(e), this.statsBuffer.length > this.MAX_BUFFER_SIZE && (this.statsBuffer.shift(), xe.warn("CallReportCollector: Buffer size limit reached, removing oldest entry")), this._checkQualityWarnings(e, r), this._requestIntermediateFlushIfNeeded(s), this.intervalStartTime = s, this._resetIntervalAccumulators();
+								this.statsBuffer.push(e), this.statsBuffer.length > this.MAX_BUFFER_SIZE && (this.statsBuffer.shift(), Ue.warn("CallReportCollector: Buffer size limit reached, removing oldest entry")), this._checkQualityWarnings(e, r), this._requestIntermediateFlushIfNeeded(s), this.intervalStartTime = s, this._resetIntervalAccumulators();
 							}
 						} catch (e) {
-							xe.error("CallReportCollector: Error collecting stats", { error: e });
+							Ue.error("CallReportCollector: Error collecting stats", { error: e });
 						}
 					}));
 				}
 				_getIntermediateReportInterval() {
 					var e;
-					return null !== (e = this.options.intermediateReportInterval) && void 0 !== e ? e : ji.DEFAULT_INTERMEDIATE_REPORT_INTERVAL_MS;
+					return null !== (e = this.options.intermediateReportInterval) && void 0 !== e ? e : Hi.DEFAULT_INTERMEDIATE_REPORT_INTERVAL_MS;
 				}
 				_requestIntermediateFlushIfNeeded(e) {
 					var t, i;
 					const n = this.statsBuffer.length, s = null !== (i = null === (t = this.logCollector) || void 0 === t ? void 0 : t.getLogCount()) && void 0 !== i ? i : 0;
 					if (!this.onFlushNeeded || this._flushing) return;
-					if (0 === n && 0 === s) return void xe.debug("CallReportCollector: Skipping intermediate flush request — no stats or logs buffered");
+					if (0 === n && 0 === s) return void Ue.debug("CallReportCollector: Skipping intermediate flush request — no stats or logs buffered");
 					const o = this._getIntermediateReportInterval(), r = e.getTime() - this._lastIntermediateFlushTime.getTime();
 					let a = null;
-					if (n >= ji.STATS_FLUSH_THRESHOLD || s >= ji.LOGS_FLUSH_THRESHOLD ? a = "buffer-limit" : o > 0 && r >= o && (a = "safety-interval"), a) {
-						xe.info("CallReportCollector: Requesting intermediate report flush", {
+					if (n >= Hi.STATS_FLUSH_THRESHOLD || s >= Hi.LOGS_FLUSH_THRESHOLD ? a = "buffer-limit" : o > 0 && r >= o && (a = "safety-interval"), a) {
+						Ue.info("CallReportCollector: Requesting intermediate report flush", {
 							reason: a,
 							statsIntervals: n,
 							logEntries: s,
@@ -2877,7 +2901,7 @@ var TelnyxWebRTC = (function() {
 						try {
 							this.onFlushNeeded();
 						} catch (e) {
-							xe.error("CallReportCollector: onFlushNeeded callback error", { error: e });
+							Ue.error("CallReportCollector: onFlushNeeded callback error", { error: e });
 						}
 					}
 				}
@@ -2894,9 +2918,9 @@ var TelnyxWebRTC = (function() {
 						}
 						this._prevPacketsReceived = e, this._prevPacketsLost = i;
 					}
-					if (this._trackBreach(x, void 0 !== f && f > ji.THRESHOLD_RTT_MS), this._trackBreach(U, void 0 !== _ && _ > ji.THRESHOLD_JITTER_MS), this._trackBreach(F, void 0 !== y && y > ji.THRESHOLD_PACKET_LOSS_PCT), this._trackLowLocalAudio(e), this._isHeld ? this._trackBreach(B, !1) : this._trackLowInboundAudio(e), void 0 !== f && void 0 !== _ && void 0 !== y) {
+					if (this._trackBreach(x, void 0 !== f && f > Hi.THRESHOLD_RTT_MS), this._trackBreach(U, void 0 !== _ && _ > Hi.THRESHOLD_JITTER_MS), this._trackBreach(F, void 0 !== y && y > Hi.THRESHOLD_PACKET_LOSS_PCT), this._trackLowLocalAudio(e), this._isHeld ? this._trackBreach(B, !1) : this._trackLowInboundAudio(e), void 0 !== f && void 0 !== _ && void 0 !== y) {
 						const e = 93.2 - .11 * _ - 2.5 * y - .01 * (1e3 * f), t = Math.max(1, Math.min(4.5, 1 + .035 * e + e * (e - 60) * (100 - e) * 7e-6));
-						this._trackBreach($, t < ji.THRESHOLD_MOS);
+						this._trackBreach($, t < Hi.THRESHOLD_MOS);
 					} else this._trackBreach($, !1);
 					if (void 0 !== (null === (c = null === (a = e.audio) || void 0 === a ? void 0 : a.inbound) || void 0 === c ? void 0 : c.bytesReceived)) {
 						const t = null === (u = null === (l = null === (d = this._previousStatsEntryForWarnings) || void 0 === d ? void 0 : d.audio) || void 0 === l ? void 0 : l.inbound) || void 0 === u ? void 0 : u.bytesReceived, i = e.audio.inbound.bytesReceived;
@@ -2912,8 +2936,8 @@ var TelnyxWebRTC = (function() {
 					var t;
 					const i = null === (t = e.audio) || void 0 === t ? void 0 : t.outbound, n = null == i ? void 0 : i.audioLevelAvg, s = null == i ? void 0 : i.localTrack;
 					if (void 0 === n || !1 === (null == s ? void 0 : s.enabled) || !0 === (null == s ? void 0 : s.muted)) return void this._resetLowLocalAudioWarning();
-					if (!(n <= ji.THRESHOLD_LOCAL_AUDIO_LEVEL)) return this._hasConfirmedLocalAudio = !0, this._confirmedLocalAudioSilenceMs = 0, void this._trackBreach(j, !1);
-					this._hasConfirmedLocalAudio ? (this._confirmedLocalAudioSilenceMs += this._getStatsIntervalDurationMs(e), this._confirmedLocalAudioSilenceMs >= ji.CONFIRMED_LOCAL_AUDIO_SILENCE_MS && this._emitWarningOncePerEpisode(j)) : this._trackBreach(j, !0);
+					if (!(n <= Hi.THRESHOLD_LOCAL_AUDIO_LEVEL)) return this._hasConfirmedLocalAudio = !0, this._confirmedLocalAudioSilenceMs = 0, void this._trackBreach(j, !1);
+					this._hasConfirmedLocalAudio ? (this._confirmedLocalAudioSilenceMs += this._getStatsIntervalDurationMs(e), this._confirmedLocalAudioSilenceMs >= Hi.CONFIRMED_LOCAL_AUDIO_SILENCE_MS && this._emitWarningOncePerEpisode(j)) : this._trackBreach(j, !0);
 				}
 				_resetLowLocalAudioWarning() {
 					this._confirmedLocalAudioSilenceMs = 0, this._trackBreach(j, !1);
@@ -2926,16 +2950,16 @@ var TelnyxWebRTC = (function() {
 					var t;
 					const i = null === (t = e.audio) || void 0 === t ? void 0 : t.inbound, n = null == i ? void 0 : i.audioLevelAvg;
 					if (void 0 === n) return void this._trackBreach(B, !1);
-					const s = n <= ji.THRESHOLD_INBOUND_AUDIO_LEVEL;
+					const s = n <= Hi.THRESHOLD_INBOUND_AUDIO_LEVEL;
 					this._trackBreach(B, s);
 				}
 				_trackBreach(e, t) {
 					var i, n;
 					if (t) {
-						if (this._breachCounters[e] = (null !== (i = this._breachCounters[e]) && void 0 !== i ? i : 0) + 1, this._breachCounters[e] >= ji.CONSECUTIVE_BREACHES_REQUIRED) {
+						if (this._breachCounters[e] = (null !== (i = this._breachCounters[e]) && void 0 !== i ? i : 0) + 1, this._breachCounters[e] >= Hi.CONSECUTIVE_BREACHES_REQUIRED) {
 							this._activeWarnings.add(e);
 							const t = Date.now();
-							t - (null !== (n = this._lastWarningEmitted[e]) && void 0 !== n ? n : 0) >= ji.WARNING_THROTTLE_MS && (this._lastWarningEmitted[e] = t, this._emitWarning(e));
+							t - (null !== (n = this._lastWarningEmitted[e]) && void 0 !== n ? n : 0) >= Hi.WARNING_THROTTLE_MS && (this._lastWarningEmitted[e] = t, this._emitWarning(e));
 						}
 					} else this._breachCounters[e] = 0, this._activeWarnings.delete(e), delete this._lastWarningEmitted[e];
 				}
@@ -2946,9 +2970,9 @@ var TelnyxWebRTC = (function() {
 					var t;
 					try {
 						const i = Ce(e);
-						xe.warn(`CallReportCollector: warning ${i.code}: ${i.message}`), null === (t = this.onWarning) || void 0 === t || t.call(this, i);
+						Ue.warn(`CallReportCollector: warning ${i.code}: ${i.message}`), null === (t = this.onWarning) || void 0 === t || t.call(this, i);
 					} catch (t) {
-						xe.error(`CallReportCollector: Failed to emit warning ${e}`, { error: t });
+						Ue.error(`CallReportCollector: Failed to emit warning ${e}`, { error: t });
 					}
 				}
 				_createStatsEntry(e, t, i, n, s, o, r, a, c, d, l, u, h, p, g) {
@@ -3029,12 +3053,12 @@ var TelnyxWebRTC = (function() {
 					return v;
 				}
 				_resolveCandidate(e, t) {
-					if (!t) return void xe.debug("CallReportCollector: candidateId is empty, skipping resolve");
+					if (!t) return void Ue.debug("CallReportCollector: candidateId is empty, skipping resolve");
 					const i = e.get(t);
-					if (!i) return void xe.debug("CallReportCollector: candidate not found in stats report", { candidateId: t });
+					if (!i) return void Ue.debug("CallReportCollector: candidate not found in stats report", { candidateId: t });
 					const n = {};
 					if (void 0 !== i.id && (n.id = i.id), void 0 !== i.address ? n.address = i.address : void 0 !== i.ip && (n.address = i.ip), void 0 !== i.port && (n.port = i.port), void 0 !== i.candidateType && (n.candidateType = i.candidateType), void 0 !== i.protocol && (n.protocol = i.protocol), void 0 !== i.networkType && (n.networkType = i.networkType), void 0 !== i.url && (n.url = i.url), void 0 !== i.relayProtocol && (n.relayProtocol = i.relayProtocol), 0 !== Object.keys(n).length) return n;
-					xe.debug("CallReportCollector: candidate report has no usable fields", { candidateId: t });
+					Ue.debug("CallReportCollector: candidate report has no usable fields", { candidateId: t });
 				}
 				_getCodec(e, t) {
 					if (!t) return;
@@ -3085,7 +3109,7 @@ var TelnyxWebRTC = (function() {
 						}, Object.keys(o).length > 0 ? { settings: o } : {}));
 						return Object.keys(r).length > 0 ? r : void 0;
 					} catch (e) {
-						xe.debug("CallReportCollector: unable to snapshot local audio track", { error: e });
+						Ue.debug("CallReportCollector: unable to snapshot local audio track", { error: e });
 						return;
 					}
 				}
@@ -3106,7 +3130,7 @@ var TelnyxWebRTC = (function() {
 				_logLocalAudioTrackSnapshot(e, t) {
 					if (!e || 0 === Object.keys(e).length) return;
 					const i = this._stableStringify(e);
-					i !== this._lastLocalAudioTrackSnapshotJson && (this._lastLocalAudioTrackSnapshotJson = i, xe.debug("CallReportCollector: local audio track snapshot", {
+					i !== this._lastLocalAudioTrackSnapshotJson && (this._lastLocalAudioTrackSnapshotJson = i, Ue.debug("CallReportCollector: local audio track snapshot", {
 						localTrack: e,
 						mediaSource: t
 					}));
@@ -3167,12 +3191,12 @@ var TelnyxWebRTC = (function() {
 					};
 				}
 			}
-			ji.INITIAL_COLLECTION_INTERVAL_MS = 1e3, ji.STATS_FLUSH_THRESHOLD = 300, ji.LOGS_FLUSH_THRESHOLD = 800, ji.DEFAULT_INTERMEDIATE_REPORT_INTERVAL_MS = 18e4, ji.CONSECUTIVE_BREACHES_REQUIRED = 3, ji.THRESHOLD_RTT_MS = .4, ji.THRESHOLD_JITTER_MS = 30, ji.THRESHOLD_PACKET_LOSS_PCT = 1, ji.THRESHOLD_MOS = 3.5, ji.THRESHOLD_LOCAL_AUDIO_LEVEL = .001, ji.CONFIRMED_LOCAL_AUDIO_SILENCE_MS = 3e4, ji.THRESHOLD_INBOUND_AUDIO_LEVEL = .001, ji.WARNING_THROTTLE_MS = 15e3, ji.RETRY_DELAYS_MS = [
+			Hi.INITIAL_COLLECTION_INTERVAL_MS = 1e3, Hi.STATS_FLUSH_THRESHOLD = 300, Hi.LOGS_FLUSH_THRESHOLD = 800, Hi.DEFAULT_INTERMEDIATE_REPORT_INTERVAL_MS = 18e4, Hi.CONSECUTIVE_BREACHES_REQUIRED = 3, Hi.THRESHOLD_RTT_MS = .4, Hi.THRESHOLD_JITTER_MS = 30, Hi.THRESHOLD_PACKET_LOSS_PCT = 1, Hi.THRESHOLD_MOS = 3.5, Hi.THRESHOLD_LOCAL_AUDIO_LEVEL = .001, Hi.CONFIRMED_LOCAL_AUDIO_SILENCE_MS = 3e4, Hi.THRESHOLD_INBOUND_AUDIO_LEVEL = .001, Hi.WARNING_THROTTLE_MS = 15e3, Hi.RETRY_DELAYS_MS = [
 				500,
 				1e3,
 				2e3
-			], ji.KEEPALIVE_BODY_LIMIT_BYTES = 61440;
-			class Bi {
+			], Hi.KEEPALIVE_BODY_LIMIT_BYTES = 61440;
+			class Wi {
 				constructor(e, t) {
 					this._buffers = {
 						local: [],
@@ -3190,11 +3214,11 @@ var TelnyxWebRTC = (function() {
 				}
 				start(e, t) {
 					if (!this.options.enabled || this._started) return;
-					if ("function" != typeof MediaStreamTrackProcessor) return xe.warn("CallRecorder: MediaStreamTrackProcessor unavailable — recording disabled for this call"), this._emitWarning(G), void (this._started = !0);
+					if ("function" != typeof MediaStreamTrackProcessor) return Ue.warn("CallRecorder: MediaStreamTrackProcessor unavailable — recording disabled for this call"), this._emitWarning(G), void (this._started = !0);
 					const i = this.options.tracks || ["local", "remote"];
 					let n = 0;
-					if (i.includes("local") && e && (this._attach(e, "local"), n++), i.includes("remote") && t && (this._attach(t, "remote"), n++), 0 === n) return xe.info("CallRecorder: no audio tracks available to record — recording idle for this call", { callId: this.callContext.callId }), void (this._started = !0);
-					this._startedAt = /* @__PURE__ */ new Date(), this._started = !0, this._scheduleFlush(), xe.info("CallRecorder: started", {
+					if (i.includes("local") && e && (this._attach(e, "local"), n++), i.includes("remote") && t && (this._attach(t, "remote"), n++), 0 === n) return Ue.info("CallRecorder: no audio tracks available to record — recording idle for this call", { callId: this.callContext.callId }), void (this._started = !0);
+					this._startedAt = /* @__PURE__ */ new Date(), this._started = !0, this._scheduleFlush(), Ue.info("CallRecorder: started", {
 						callId: this.callContext.callId,
 						tracksAttached: n,
 						flushIntervalMs: this._flushIntervalMs(),
@@ -3202,7 +3226,7 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 				stop() {
-					this._stopped || (this._stopped = !0, this._clearFlushTimer(), this._cancelReaders(), this._endedAt = /* @__PURE__ */ new Date(), xe.info("CallRecorder: stopped", {
+					this._stopped || (this._stopped = !0, this._clearFlushTimer(), this._cancelReaders(), this._endedAt = /* @__PURE__ */ new Date(), Ue.info("CallRecorder: stopped", {
 						callId: this.callContext.callId,
 						packetsBuffered: this._buffers.local.length + this._buffers.remote.length
 					}));
@@ -3210,9 +3234,9 @@ var TelnyxWebRTC = (function() {
 				postFinalReport() {
 					return i(this, void 0, void 0, (function* () {
 						if (!this.options.enabled) return;
-						if (this.stop(), !this._startedAt) return void xe.debug("CallRecorder: postFinalReport skipped — never started");
+						if (this.stop(), !this._startedAt) return void Ue.debug("CallRecorder: postFinalReport skipped — never started");
 						const e = this._resolveEndpointFromContext();
-						if (!e) return void xe.debug("CallRecorder: postFinalReport skipped — no host available");
+						if (!e) return void Ue.debug("CallRecorder: postFinalReport skipped — no host available");
 						const t = this.options.tracks || ["local", "remote"], i = this._startedAt, n = this._endedAt || /* @__PURE__ */ new Date(), s = t.flatMap(((e) => {
 							const t = this._drain(e);
 							if (0 === t.length) return [];
@@ -3221,7 +3245,7 @@ var TelnyxWebRTC = (function() {
 								envelope: s,
 								bodyBytes: JSON.stringify(s).length
 							}];
-						})), o = s.reduce(((e, t) => e + t.bodyBytes), 0) <= Bi.KEEPALIVE_BODY_LIMIT_BYTES, r = (yield Promise.allSettled(s.map((({ envelope: t }) => this._postRecording(e, t, o))))).find(((e) => "rejected" === e.status));
+						})), o = s.reduce(((e, t) => e + t.bodyBytes), 0) <= Wi.KEEPALIVE_BODY_LIMIT_BYTES, r = (yield Promise.allSettled(s.map((({ envelope: t }) => this._postRecording(e, t, o))))).find(((e) => "rejected" === e.status));
 						if (r) throw r.reason;
 					}));
 				}
@@ -3260,14 +3284,14 @@ var TelnyxWebRTC = (function() {
 									this._onFrame(t, i);
 								}
 							} catch (e) {
-								this._stopped || xe.warn("CallRecorder: reader loop error", {
+								this._stopped || Ue.warn("CallRecorder: reader loop error", {
 									track: t,
 									error: e
 								});
 							}
 						})))();
 					} catch (e) {
-						xe.warn("CallRecorder: failed to attach track", {
+						Ue.warn("CallRecorder: failed to attach track", {
 							track: t,
 							error: e
 						}), this._trackStates[t] = null;
@@ -3293,13 +3317,13 @@ var TelnyxWebRTC = (function() {
 					this._pushPacket(c, e);
 				}
 				_pushPacket(e, t) {
-					const i = e.payloadBytes.length + Bi.PACKET_OVERHEAD_BYTES, n = this._maxBufferBytes(), s = this._buffers[t];
+					const i = e.payloadBytes.length + Wi.PACKET_OVERHEAD_BYTES, n = this._maxBufferBytes(), s = this._buffers[t];
 					if (s.push(e), this._bufferBytes[t] += i, this._bufferBytes[t] > n) {
 						for (; s.length > 1 && this._bufferBytes[t] > n;) {
 							const e = s.shift();
-							e && (this._bufferBytes[t] -= e.payloadBytes.length + Bi.PACKET_OVERHEAD_BYTES);
+							e && (this._bufferBytes[t] -= e.payloadBytes.length + Wi.PACKET_OVERHEAD_BYTES);
 						}
-						this._overflowWarnedThisWindow[t] || (this._overflowWarnedThisWindow[t] = !0, xe.warn("CallRecorder: buffer overflow — oldest packets dropped", { track: t }), this._emitWarning(V));
+						this._overflowWarnedThisWindow[t] || (this._overflowWarnedThisWindow[t] = !0, Ue.warn("CallRecorder: buffer overflow — oldest packets dropped", { track: t }), this._emitWarning(V));
 					}
 				}
 				_flushIntervalMs() {
@@ -3308,12 +3332,12 @@ var TelnyxWebRTC = (function() {
 					return t <= 0 ? t : Math.min(t, this._maxSafeFlushIntervalMs());
 				}
 				_maxSafeFlushIntervalMs() {
-					const e = this._sampleRate() * Bi.BYTES_PER_SAMPLE + Bi.FRAMES_PER_SECOND * Bi.PACKET_OVERHEAD_BYTES;
+					const e = this._sampleRate() * Wi.BYTES_PER_SAMPLE + Wi.FRAMES_PER_SECOND * Wi.PACKET_OVERHEAD_BYTES;
 					return Math.max(1e3, this._maxBufferBytes() / e * 500);
 				}
 				_maxBufferBytes() {
 					var e;
-					return null !== (e = this.options.maxBufferBytes) && void 0 !== e ? e : bt;
+					return null !== (e = this.options.maxBufferBytes) && void 0 !== e ? e : It;
 				}
 				_sampleRate() {
 					var e;
@@ -3324,7 +3348,7 @@ var TelnyxWebRTC = (function() {
 					const e = this._flushIntervalMs();
 					e <= 0 || (this._flushTimerId = setInterval((() => {
 						this._periodicFlush().catch(((e) => {
-							xe.error("CallRecorder: periodic flush error", { error: e });
+							Ue.error("CallRecorder: periodic flush error", { error: e });
 						}));
 					}), e));
 				}
@@ -3343,14 +3367,14 @@ var TelnyxWebRTC = (function() {
 							this._flushing = !0;
 							try {
 								const e = this._resolveEndpointFromContext();
-								if (!e) return void xe.debug("CallRecorder: periodic flush skipped — no host available");
+								if (!e) return void Ue.debug("CallRecorder: periodic flush skipped — no host available");
 								const t = this.options.tracks || ["local", "remote"], i = this._startedAt || /* @__PURE__ */ new Date(), n = /* @__PURE__ */ new Date();
 								yield Promise.allSettled(t.map(((t) => {
 									const s = this._drain(t);
 									if (0 === s.length) return Promise.resolve();
 									const o = this._buildEnvelope(s, t, "intermediate", i, n);
 									return this._postRecording(e, o, !1).catch(((e) => {
-										xe.error("CallRecorder: intermediate flush failed", {
+										Ue.error("CallRecorder: intermediate flush failed", {
 											track: t,
 											error: e
 										});
@@ -3425,16 +3449,16 @@ var TelnyxWebRTC = (function() {
 							"x-call-id": t.call_id
 						};
 						t.voice_sdk_id && (i["x-voice-sdk-id"] = t.voice_sdk_id);
-						const s = JSON.stringify(t), o = n && s.length <= Bi.KEEPALIVE_BODY_LIMIT_BYTES, r = this.options.fetchImpl || fetch;
+						const s = JSON.stringify(t), o = n && s.length <= Wi.KEEPALIVE_BODY_LIMIT_BYTES, r = this.options.fetchImpl || fetch;
 						let a;
-						for (let n = 0; n <= Bi.RETRY_DELAYS_MS.length; n++) {
+						for (let n = 0; n <= Wi.RETRY_DELAYS_MS.length; n++) {
 							try {
 								const c = yield r(e, Object.assign({
 									method: "POST",
 									headers: i,
 									body: s
 								}, o ? { keepalive: !0 } : {}));
-								if (c.ok) return void xe.info("CallRecorder: posted", {
+								if (c.ok) return void Ue.info("CallRecorder: posted", {
 									track: t.track,
 									segment: t.segment,
 									attempt: n + 1,
@@ -3443,7 +3467,7 @@ var TelnyxWebRTC = (function() {
 								});
 								{
 									const e = yield c.text().catch((() => ""));
-									a = /* @__PURE__ */ new Error(`Call recording POST failed with status ${c.status}`), xe.error("CallRecorder: failed to post", {
+									a = /* @__PURE__ */ new Error(`Call recording POST failed with status ${c.status}`), Ue.error("CallRecorder: failed to post", {
 										track: t.track,
 										segment: t.segment,
 										attempt: n + 1,
@@ -3452,23 +3476,23 @@ var TelnyxWebRTC = (function() {
 									});
 								}
 							} catch (e) {
-								a = e, xe.warn("CallRecorder: network error posting", {
+								a = e, Ue.warn("CallRecorder: network error posting", {
 									track: t.track,
 									segment: t.segment,
 									attempt: n + 1,
 									error: e
 								});
 							}
-							const c = Bi.RETRY_DELAYS_MS[n];
+							const c = Wi.RETRY_DELAYS_MS[n];
 							if (void 0 === c) break;
-							xe.info("CallRecorder: retrying", {
+							Ue.info("CallRecorder: retrying", {
 								track: t.track,
 								segment: t.segment,
 								inMs: c,
 								attempt: n + 2
 							}), yield new Promise(((e) => setTimeout(e, c)));
 						}
-						throw xe.error("CallRecorder: exhausted retries", {
+						throw Ue.error("CallRecorder: exhausted retries", {
 							track: t.track,
 							segment: t.segment,
 							error: a
@@ -3481,7 +3505,7 @@ var TelnyxWebRTC = (function() {
 						const i = Ce(e);
 						null === (t = this.onWarning) || void 0 === t || t.call(this, i);
 					} catch (t) {
-						xe.warn("CallRecorder: failed to emit warning", {
+						Ue.warn("CallRecorder: failed to emit warning", {
 							code: e,
 							error: t
 						});
@@ -3496,13 +3520,13 @@ var TelnyxWebRTC = (function() {
 					return btoa(t);
 				}
 			}
-			Bi.RETRY_DELAYS_MS = [
+			Wi.RETRY_DELAYS_MS = [
 				500,
 				1e3,
 				2e3
-			], Bi.KEEPALIVE_BODY_LIMIT_BYTES = 61440, Bi.PACKET_OVERHEAD_BYTES = 160, Bi.BYTES_PER_SAMPLE = 4, Bi.FRAMES_PER_SECOND = 100;
-			const Hi = (e) => !e || "default" === e || "communications" === e;
-			class Wi {
+			], Wi.KEEPALIVE_BODY_LIMIT_BYTES = 61440, Wi.PACKET_OVERHEAD_BYTES = 160, Wi.BYTES_PER_SAMPLE = 4, Wi.FRAMES_PER_SECOND = 100;
+			const Gi = (e) => !e || "default" === e || "communications" === e;
+			class Vi {
 				constructor(e, t) {
 					this._call = e, this._recoverInput = t, this._rawDeviceCache = [], this._deviceChangeHandler = null, this._stopped = !1, this._running = !1, this._pending = !1;
 				}
@@ -3520,13 +3544,13 @@ var TelnyxWebRTC = (function() {
 				}
 				_usable(e, t) {
 					const i = e.filter(((e) => e.kind === t));
-					return i.some(((e) => !Hi(e.deviceId))) && i.every(((e) => Boolean(e.deviceId && e.label)));
+					return i.some(((e) => !Gi(e.deviceId))) && i.every(((e) => Boolean(e.deviceId && e.label)));
 				}
 				_bind(e, t, i, n, s) {
 					var o;
 					if (!t) return;
 					if ((null == e ? void 0 : e.owner) === t && e.id === i) return e;
-					if (!Hi(i)) return {
+					if (!Gi(i)) return {
 						owner: t,
 						id: i,
 						physicalId: i,
@@ -3534,8 +3558,8 @@ var TelnyxWebRTC = (function() {
 					};
 					const r = this._rawDeviceCache.filter(((e) => e.kind === n));
 					let a;
-					if (Hi(i)) {
-						const e = s || (null === (o = r.find(((e) => e.deviceId === (i || "default")))) || void 0 === o ? void 0 : o.groupId), t = r.filter(((t) => e && t.groupId === e && !Hi(t.deviceId)));
+					if (Gi(i)) {
+						const e = s || (null === (o = r.find(((e) => e.deviceId === (i || "default")))) || void 0 === o ? void 0 : o.groupId), t = r.filter(((t) => e && t.groupId === e && !Gi(t.deviceId)));
 						1 === t.length && (a = t[0]);
 					}
 					return a ? {
@@ -3557,7 +3581,7 @@ var TelnyxWebRTC = (function() {
 					} catch (e) {
 						this._input = void 0;
 					}
-					const o = qe(this._call.options.remoteElement);
+					const o = Ye(this._call.options.remoteElement);
 					this._output = o && "function" == typeof o.setSinkId && "string" == typeof o.sinkId ? this._bind(this._output, o, o.sinkId, "audiooutput") : void 0;
 				}
 				_removed(e, t, i) {
@@ -3569,7 +3593,7 @@ var TelnyxWebRTC = (function() {
 						const i = this._rawDeviceCache;
 						this._rawDeviceCache = ["audioinput", "audiooutput"].reduce(((t, n) => t.concat((this._usable(e, n) ? e : i).filter(((e) => e.kind === n)))), []), this._refreshBindings();
 						const s = this._input, o = this._output, r = this._removed(s, e, "audioinput"), a = this._removed(o, e, "audiooutput");
-						if (xe.debug("MediaDeviceCollector: audio devices during call", {
+						if (Ue.debug("MediaDeviceCollector: audio devices during call", {
 							devices: this._rawDeviceCache,
 							disconnected: i.filter(((e) => !this._rawDeviceCache.some(((t) => t.kind === e.kind && t.deviceId === e.deviceId))))
 						}), r) {
@@ -3577,7 +3601,7 @@ var TelnyxWebRTC = (function() {
 							try {
 								yield this._recoverInput();
 							} catch (e) {
-								xe.warn("Audio input disconnect recovery failed", { error: e });
+								Ue.warn("Audio input disconnect recovery failed", { error: e });
 							}
 						}
 						if (!this._stopped && !this._pending) {
@@ -3585,9 +3609,9 @@ var TelnyxWebRTC = (function() {
 								o.attempted = !0;
 								try {
 									const e = yield null === (n = (t = this._call).setAudioOutDevice) || void 0 === n ? void 0 : n.call(t, "default");
-									this._stopped || e || xe.warn("Audio output disconnect recovery failed"), e && (this._output = void 0);
+									this._stopped || e || Ue.warn("Audio output disconnect recovery failed"), e && (this._output = void 0);
 								} catch (e) {
-									xe.warn("Audio output disconnect recovery failed", { error: e });
+									Ue.warn("Audio output disconnect recovery failed", { error: e });
 								}
 							}
 							this._stopped || this._pending || this._refreshBindings();
@@ -3603,14 +3627,14 @@ var TelnyxWebRTC = (function() {
 									this._pending = !1;
 									try {
 										const e = yield navigator.mediaDevices.enumerateDevices();
-										if (this._stopped) return void xe.debug("MediaDeviceCollector: stopped before applying enumeration", { callId: this._call.id });
+										if (this._stopped) return void Ue.debug("MediaDeviceCollector: stopped before applying enumeration", { callId: this._call.id });
 										if (this._pending) {
-											xe.debug("MediaDeviceCollector: skipping superseded enumeration", { callId: this._call.id });
+											Ue.debug("MediaDeviceCollector: skipping superseded enumeration", { callId: this._call.id });
 											continue;
 										}
 										yield this._scan(e);
 									} catch (e) {
-										xe.debug("MediaDeviceCollector: enumerate/devices failed", { error: e });
+										Ue.debug("MediaDeviceCollector: enumerate/devices failed", { error: e });
 									}
 								}
 							} finally {
@@ -3620,7 +3644,7 @@ var TelnyxWebRTC = (function() {
 					}));
 				}
 			}
-			var Gi, Vi = De((function(e, t) {
+			var qi, Yi = Ne((function(e, t) {
 				var i;
 				function n() {}
 				function s() {
@@ -4416,9 +4440,9 @@ var TelnyxWebRTC = (function() {
 					}
 				};
 			}));
-			(Gi = Vi) && Gi.__esModule && Object.prototype.hasOwnProperty.call(Gi, "default") && Gi.default;
-			var qi = Vi.WebRTCStats;
-			function Yi(e) {
+			(qi = Yi) && qi.__esModule && Object.prototype.hasOwnProperty.call(qi, "default") && qi.default;
+			var Ki = Yi.WebRTCStats;
+			function Ji(e) {
 				const { packetsLost: t, packetsReceived: i, jitter: n, rtt: s } = e, o = function(e) {
 					const { jitter: t, rtt: i } = e, n = t + i / 2;
 					return .024 * n + .11 * (n - 177.3) * (n > 177.3 ? 1 : 0);
@@ -4434,10 +4458,10 @@ var TelnyxWebRTC = (function() {
 				}), a = 93.2 - o - r + 0, c = 1 + .035 * a + 7e-6 * a * (a - 60) * (100 - a);
 				return Math.min(Math.max(c, 1), 5);
 			}
-			function Ki(e) {
+			function zi(e) {
 				return isNaN(e) ? null : e > 4.2 ? "excellent" : e >= 4.1 && e <= 4.2 ? "good" : e >= 3.7 && e <= 4 ? "fair" : e >= 3.1 && e <= 3.6 ? "poor" : "bad";
 			}
-			class Ji extends Wt {
+			class Xi extends Vt {
 				constructor(e, t) {
 					super(), this.buildRequest({
 						type: "debug_report_start",
@@ -4447,7 +4471,7 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class zi extends Wt {
+			class Qi extends Vt {
 				constructor(e, t) {
 					super(), this.buildRequest({
 						type: "debug_report_stop",
@@ -4457,7 +4481,7 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			class Xi extends Wt {
+			class Zi extends Vt {
 				constructor(e, t, i) {
 					super(), this.buildRequest({
 						type: "debug_report_data",
@@ -4468,10 +4492,10 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 			}
-			function Qi(t, n) {
+			function en(t, n) {
 				const s = c();
 				let o = !1;
-				const r = new qi({
+				const r = new Ki({
 					getStatsInterval: 1e3,
 					rawStats: !1,
 					statsObject: !0,
@@ -4480,9 +4504,9 @@ var TelnyxWebRTC = (function() {
 					debug: !1,
 					logLevel: "warn"
 				}), a = (o) => i(this, void 0, void 0, (function* () {
-					"stats" === o.event && Pt(e.SwEvent.StatsFrame, function({ data: e }) {
+					"stats" === o.event && Ut(e.SwEvent.StatsFrame, function({ data: e }) {
 						var t, i, n, s, o, r, a, c;
-						const { audio: d, remote: l } = e, { audio: u } = l, h = null !== (i = null === (t = u.inbound[0]) || void 0 === t ? void 0 : t.jitter) && void 0 !== i ? i : 1 / 0, p = null !== (s = null === (n = u.inbound[0]) || void 0 === n ? void 0 : n.roundTripTime) && void 0 !== s ? s : 1 / 0, g = null !== (r = null === (o = d.inbound[0]) || void 0 === o ? void 0 : o.packetsReceived) && void 0 !== r ? r : -1, v = null !== (c = null === (a = d.inbound[0]) || void 0 === a ? void 0 : a.packetsLost) && void 0 !== c ? c : -1, m = Yi({
+						const { audio: d, remote: l } = e, { audio: u } = l, h = null !== (i = null === (t = u.inbound[0]) || void 0 === t ? void 0 : t.jitter) && void 0 !== i ? i : 1 / 0, p = null !== (s = null === (n = u.inbound[0]) || void 0 === n ? void 0 : n.roundTripTime) && void 0 !== s ? s : 1 / 0, g = null !== (r = null === (o = d.inbound[0]) || void 0 === o ? void 0 : o.packetsReceived) && void 0 !== r ? r : -1, v = null !== (c = null === (a = d.inbound[0]) || void 0 === a ? void 0 : a.packetsLost) && void 0 !== c ? c : -1, m = Ji({
 							jitter: 1e3 * h,
 							rtt: 1e3 * p,
 							packetsLost: v,
@@ -4492,22 +4516,22 @@ var TelnyxWebRTC = (function() {
 							jitter: h,
 							rtt: p,
 							mos: m,
-							quality: Ki(m),
+							quality: zi(m),
 							inboundAudio: d.inbound[0],
 							outboundAudio: d.outbound[0],
 							remoteInboundAudio: u.inbound[0],
 							remoteOutboundAudio: u.outbound[0]
 						};
-					}(o), t.uuid), yield t.execute(new Xi(s, n, o));
+					}(o), t.uuid), yield t.execute(new Zi(s, n, o));
 				}));
 				return {
 					get isRunning() {
 						return o;
 					},
 					start: (e, c, d) => i(this, void 0, void 0, (function* () {
-						if (o) xe.debug(`[${n}] Stats reporter already running, skipping start`);
+						if (o) Ue.debug(`[${n}] Stats reporter already running, skipping start`);
 						else {
-							yield t.execute(new Ji(s, n)), r.on("timeline", a);
+							yield t.execute(new Xi(s, n)), r.on("timeline", a);
 							try {
 								yield r.addConnection({
 									pc: e,
@@ -4515,17 +4539,17 @@ var TelnyxWebRTC = (function() {
 									connectionId: d
 								}), o = !0;
 							} catch (e) {
-								xe.error(`[${n}] Failed to start stats reporter:`, e), r.removeAllPeers(), r.destroy();
+								Ue.error(`[${n}] Failed to start stats reporter:`, e), r.removeAllPeers(), r.destroy();
 							}
 						}
 					})),
 					stop: (a) => i(this, void 0, void 0, (function* () {
 						const i = r.getTimeline();
-						if (Pt(e.SwEvent.StatsReport, i, t.uuid), "file" === a) (function(e, t) {
+						if (Ut(e.SwEvent.StatsReport, i, t.uuid), "file" === a) (function(e, t) {
 							const i = new Blob([JSON.stringify(e)], { type: "application/json" }), n = URL.createObjectURL(i), s = document.createElement("a");
 							s.href = n, s.download = `${t}.json`, s.click(), URL.revokeObjectURL(n);
 						})(i, `webrtc-stats-${s}-${Date.now()}`);
-						yield t.execute(new zi(s, n)), r.removeAllPeers(), r.destroy(), o = !1;
+						yield t.execute(new Qi(s, n)), r.removeAllPeers(), r.destroy(), o = !1;
 					})),
 					reportConnectionStateChange: (e) => {
 						const t = {
@@ -4547,31 +4571,31 @@ var TelnyxWebRTC = (function() {
 					}
 				};
 			}
-			const Zi = (t, i) => {
+			const tn = (t, i) => {
 				const { contentType: n, canvasType: s, callID: o, canvasInfo: r = null, currentLayerIdx: a = -1 } = i;
 				r && "mcu-personal-canvas" !== s && delete r.memberID;
 				const c = {
-					type: _t.conferenceUpdate,
+					type: bt.conferenceUpdate,
 					call: t.calls[o],
-					canvasInfo: en(r),
+					canvasInfo: nn(r),
 					currentLayerIdx: a
 				};
 				switch (n) {
 					case "layer-info": {
-						const i = Object.assign({ action: Ct.LayerInfo }, c);
-						Pt(e.SwEvent.Notification, i, t.uuid);
+						const i = Object.assign({ action: kt.LayerInfo }, c);
+						Ut(e.SwEvent.Notification, i, t.uuid);
 						break;
 					}
 					case "layout-info": {
-						const i = Object.assign({ action: Ct.LayoutInfo }, c);
-						Pt(e.SwEvent.Notification, i, t.uuid);
+						const i = Object.assign({ action: kt.LayoutInfo }, c);
+						Ut(e.SwEvent.Notification, i, t.uuid);
 						break;
 					}
 				}
-			}, en = (e) => {
+			}, nn = (e) => {
 				const t = JSON.stringify(e).replace(/memberID/g, "participantId").replace(/ID"/g, "Id\"").replace(/POS"/g, "Pos\"");
-				return He(t);
-			}, tn = [
+				return We(t);
+			}, sn = [
 				"new-call-start",
 				"new-peer",
 				"get-user-media",
@@ -4594,7 +4618,7 @@ var TelnyxWebRTC = (function() {
 				"dtls-connected",
 				"call-active",
 				"answer-called"
-			], nn = {
+			], on = {
 				"new-call-start": "Call Start",
 				"new-peer": "Peer object created",
 				"get-user-media": "Media devices acquired",
@@ -4618,10 +4642,10 @@ var TelnyxWebRTC = (function() {
 				"call-active": "Call is active",
 				"answer-called": "Answer delay (invite → call.answer)"
 			};
-			function sn(e, t) {
+			function rn(e, t) {
 				return `telnyx:call:${e}:${t}`;
 			}
-			function on(e) {
+			function an(e) {
 				try {
 					const t = performance.getEntriesByName(e, "mark");
 					return t.length > 0 ? t[0].startTime : void 0;
@@ -4629,19 +4653,19 @@ var TelnyxWebRTC = (function() {
 					return;
 				}
 			}
-			function rn(e, t, i) {
-				const n = on(sn(e, "new-call-start"));
+			function cn(e, t, i) {
+				const n = an(rn(e, "new-call-start"));
 				if (void 0 === n) return {
 					mode: t,
 					direction: i,
 					steps: []
 				};
 				const s = [];
-				for (const t of tn) {
+				for (const t of sn) {
 					if ("new-call-start" === t) continue;
-					const i = on(sn(e, t));
+					const i = an(rn(e, t));
 					void 0 !== i && s.push({
-						label: nn[t] || t,
+						label: on[t] || t,
 						fromStart: i - n
 					});
 				}
@@ -4659,20 +4683,20 @@ var TelnyxWebRTC = (function() {
 					steps: o
 				};
 			}
-			function an(e) {
-				for (const t of tn) try {
-					performance.clearMarks(sn(e, t));
+			function dn(e) {
+				for (const t of sn) try {
+					performance.clearMarks(rn(e, t));
 				} catch (e) {
-					xe.warn("Clearing performance marks is failed");
+					Ue.warn("Clearing performance marks is failed");
 				}
 			}
-			class cn {
+			class ln {
 				constructor(t, n, s, o, r) {
 					this.type = t, this.options = n, this.statsReporter = null, this.isIceRestarting = !1, this.iceDone = !1, this._negotiating = !1, this._prevConnectionState = null, this._restartedIceOnConnectionStateFailed = !1, this._sleepWakeupIntervalId = null, this._iceGatheringSafetyTimeout = null, this._gatheredCandidatesCount = 0, this._firstMediaTrackMarked = !1, this._timingsCollected = !1, this._iceRestartTimeoutId = null, this.handleConnectionStateChange = () => i(this, void 0, void 0, (function* () {
 						var t, n;
-						if (!this.instance) return void xe.debug("Connection state change ignored: instance is null");
+						if (!this.instance) return void Ue.debug("Connection state change ignored: instance is null");
 						const { connectionState: s } = this.instance;
-						if (xe.info(`[${(/* @__PURE__ */ new Date()).toISOString()}] Connection State changed: ${this._prevConnectionState} -> ${s}`), "failed" !== s && "disconnected" !== s || (this.isDebugEnabled && this.statsReporter && function(e, t) {
+						if (Ue.info(`[${(/* @__PURE__ */ new Date()).toISOString()}] Connection State changed: ${this._prevConnectionState} -> ${s}`), "failed" !== s && "disconnected" !== s || (this.isDebugEnabled && this.statsReporter && function(e, t) {
 							return i(this, void 0, void 0, (function* () {
 								const i = {
 									connectionState: e.connectionState,
@@ -4710,7 +4734,7 @@ var TelnyxWebRTC = (function() {
 										}))), "transport" === e.type && (i.dtlsCipher = e.dtlsCipher, i.srtpCipher = e.srtpCipher, i.tlsVersion = e.tlsVersion, e.dtlsState && (i.dtlsState = e.dtlsState));
 									}));
 								} catch (e) {
-									xe.error("Error gathering connection state details:", e);
+									Ue.error("Error gathering connection state details:", e);
 								}
 								return i;
 							}));
@@ -4718,7 +4742,7 @@ var TelnyxWebRTC = (function() {
 							this.statsReporter.reportConnectionStateChange(e);
 						})), null === (n = (t = this._session).reportPeerFailure) || void 0 === n || n.call(t, this.options.id, "connection_failed")), "disconnected" === s) {
 							const t = Ce(q);
-							Pt(e.SwEvent.Warning, {
+							Ut(e.SwEvent.Warning, {
 								warning: t,
 								callId: this.options.id,
 								sessionId: this._session.sessionid
@@ -4726,24 +4750,24 @@ var TelnyxWebRTC = (function() {
 						}
 						if ("failed" === s) {
 							const t = Ce(J);
-							Pt(e.SwEvent.PeerConnectionFailureError, {
+							Ut(e.SwEvent.PeerConnectionFailureError, {
 								warning: t,
 								error: /* @__PURE__ */ new Error(`Peer Connection failed. previous state: ${this._prevConnectionState}, current state: ${s}`),
 								sessionId: this._session.sessionid
 							}, this.options.id);
 						}
-						this._prevConnectionState = s, "connected" === s && (performance.mark(sn(this.options.id, "dtls-connected")), this.tryCollectTimings(), this._restartedIceOnConnectionStateFailed = !1), this._isTrickleIce() && ("connecting" === s && performance.mark(sn(this.options.id, "peer-connection-connecting")), "connected" === s && (this._clearIceGatheringSafetyTimeout(), performance.mark(sn(this.options.id, "peer-connection-connected"))));
+						this._prevConnectionState = s, "connected" === s && (performance.mark(rn(this.options.id, "dtls-connected")), this.tryCollectTimings(), this._restartedIceOnConnectionStateFailed = !1), this._isTrickleIce() && ("connecting" === s && performance.mark(rn(this.options.id, "peer-connection-connecting")), "connected" === s && (this._clearIceGatheringSafetyTimeout(), performance.mark(rn(this.options.id, "peer-connection-connected"))));
 					})), this._handleIceConnectionStateChange = () => {
 						var e, t;
-						if (!this.instance) return void xe.debug("ICE connection state change ignored: instance is null");
+						if (!this.instance) return void Ue.debug("ICE connection state change ignored: instance is null");
 						const i = this.instance.iceConnectionState;
-						xe.debug(`[${(/* @__PURE__ */ new Date()).toISOString()}] ICE Connection State`, i), "connected" === i && performance.mark(sn(this.options.id, "ice-connected")), "failed" === i && (null === (t = (e = this._session).reportPeerFailure) || void 0 === t || t.call(e, this.options.id, "ice_failed"));
+						Ue.debug(`[${(/* @__PURE__ */ new Date()).toISOString()}] ICE Connection State`, i), "connected" === i && performance.mark(rn(this.options.id, "ice-connected")), "failed" === i && (null === (t = (e = this._session).reportPeerFailure) || void 0 === t || t.call(e, this.options.id, "ice_failed"));
 					}, this._handleIceGatheringStateChange = () => {
 						const e = this.instance.iceGatheringState;
-						xe.debug(`[${(/* @__PURE__ */ new Date()).toISOString()}] ICE Gathering State`, e), "gathering" === e ? (this._gatheredCandidatesCount = 0, this._startIceGatheringSafetyTimeout()) : "complete" === e && this._clearIceGatheringSafetyTimeout();
+						Ue.debug(`[${(/* @__PURE__ */ new Date()).toISOString()}] ICE Gathering State`, e), "gathering" === e ? (this._gatheredCandidatesCount = 0, this._startIceGatheringSafetyTimeout()) : "complete" === e && this._clearIceGatheringSafetyTimeout();
 					}, this._setCodecs = (e, t) => {
 						if (e.setCodecPreferences) return e.setCodecPreferences(t);
-					}, xe.debug("New Peer with type:", this.type, "Options:", this.options), this._constraints = {
+					}, Ue.debug("New Peer with type:", this.type, "Options:", this.options), this._constraints = {
 						offerToReceiveAudio: !0,
 						offerToReceiveVideo: !!n.video
 					}, this.handleSignalingStateChangeEvent = this.handleSignalingStateChangeEvent.bind(this), this.handleNegotiationNeededEvent = this.handleNegotiationNeededEvent.bind(this), this.handleTrackEvent = this.handleTrackEvent.bind(this), this.createPeerConnection = this.createPeerConnection.bind(this), this._session = s, this._trickleIceSdpFn = o, this._registerPeerEvents = r;
@@ -4752,24 +4776,24 @@ var TelnyxWebRTC = (function() {
 					this.isIceRestarting && (this.isIceRestarting = !1, this._iceRestartTimeoutId && (clearTimeout(this._iceRestartTimeoutId), this._iceRestartTimeoutId = null));
 				}
 				restartIce() {
-					return this.instance ? this.isIceRestarting ? (xe.debug("ICE restart: already in progress, skipping"), {
+					return this.instance ? this.isIceRestarting ? (Ue.debug("ICE restart: already in progress, skipping"), {
 						started: !1,
 						reason: "already in progress"
 					}) : this._session.connected ? (this.isIceRestarting = !0, this._restartedIceOnConnectionStateFailed = !0, this.instance.restartIce(), this.iceDone = !1, this._iceRestartTimeoutId = setTimeout((() => {
-						this.isIceRestarting && (xe.warn("ICE restart: Modify exchange timed out, clearing isIceRestarting flag"), this.isIceRestarting = !1), this._iceRestartTimeoutId = null;
-					}), cn.ICE_RESTART_TIMEOUT_MS), xe.info("ICE restart: initiated by signaling health monitor"), { started: !0 }) : (xe.debug("ICE restart: session not connected, skipping"), {
+						this.isIceRestarting && (Ue.warn("ICE restart: Modify exchange timed out, clearing isIceRestarting flag"), this.isIceRestarting = !1), this._iceRestartTimeoutId = null;
+					}), ln.ICE_RESTART_TIMEOUT_MS), Ue.info("ICE restart: initiated by signaling health monitor"), { started: !0 }) : (Ue.debug("ICE restart: session not connected, skipping"), {
 						started: !1,
 						reason: "session not connected"
-					}) : (xe.warn("ICE restart: no RTCPeerConnection instance"), {
+					}) : (Ue.warn("ICE restart: no RTCPeerConnection instance"), {
 						started: !1,
 						reason: "no RTCPeerConnection instance"
 					});
 				}
 				get isOffer() {
-					return this.type === vt.Offer;
+					return this.type === ft.Offer;
 				}
 				get isAnswer() {
-					return this.type === vt.Answer;
+					return this.type === ft.Answer;
 				}
 				get isDebugEnabled() {
 					return this.options.debug || this._session.options.debug;
@@ -4787,44 +4811,44 @@ var TelnyxWebRTC = (function() {
 					return !!this.instance && "connected" === this.instance.connectionState && "connected" === this.instance.iceConnectionState && "closed" !== this.instance.signalingState;
 				}
 				startNegotiation() {
-					performance.mark(sn(this.options.id, "start-negotiation")), this._negotiating = !0, this._isOffer() || this.isIceRestarting ? this._createOffer().catch(((e) => this._emitNegotiationError(e))) : this._createAnswer().catch(((e) => this._emitNegotiationError(e)));
+					performance.mark(rn(this.options.id, "start-negotiation")), this._negotiating = !0, this._isOffer() || this.isIceRestarting ? this._createOffer().catch(((e) => this._emitNegotiationError(e))) : this._createAnswer().catch(((e) => this._emitNegotiationError(e)));
 				}
 				startTrickleIceNegotiation() {
 					return i(this, void 0, void 0, (function* () {
-						performance.mark(sn(this.options.id, "start-negotiation")), this._negotiating = !0, this._isOffer() || this.isIceRestarting ? yield this._createOffer().then(this._trickleIceSdpFn.bind(this)) : yield this._createAnswer().then(this._trickleIceSdpFn.bind(this));
+						performance.mark(rn(this.options.id, "start-negotiation")), this._negotiating = !0, this._isOffer() || this.isIceRestarting ? yield this._createOffer().then(this._trickleIceSdpFn.bind(this)) : yield this._createAnswer().then(this._trickleIceSdpFn.bind(this));
 					}));
 				}
 				_emitNegotiationError(t) {
-					t instanceof we && Pt(e.SwEvent.Error, {
+					t instanceof we && Ut(e.SwEvent.Error, {
 						error: t,
 						sessionId: this._session.sessionid
 					}, this.options.id);
 				}
 				_logTransceivers() {
-					this.instance ? (xe.info("Number of transceivers:", this.instance.getTransceivers().length), this.instance.getTransceivers().forEach(((e, t) => {
-						xe.info(`>> Transceiver [${t}]:`, e.mid, e.direction, e.stopped), xe.info(`>> Sender Params [${t}]:`, JSON.stringify(e.sender.getParameters(), null, 2));
-					}))) : xe.warn("Cannot log transceivers: peer connection is null");
+					this.instance ? (Ue.info("Number of transceivers:", this.instance.getTransceivers().length), this.instance.getTransceivers().forEach(((e, t) => {
+						Ue.info(`>> Transceiver [${t}]:`, e.mid, e.direction, e.stopped), Ue.info(`>> Sender Params [${t}]:`, JSON.stringify(e.sender.getParameters(), null, 2));
+					}))) : Ue.warn("Cannot log transceivers: peer connection is null");
 				}
 				handleSignalingStateChangeEvent() {
-					switch (xe.info("signalingState:", this.instance.signalingState), this.instance.signalingState) {
+					switch (Ue.info("signalingState:", this.instance.signalingState), this.instance.signalingState) {
 						case "stable":
 							this._negotiating = !1;
 							break;
 						case "closed":
-							Pt(e.SwEvent.PeerConnectionSignalingStateClosed, { sessionId: this._session.sessionid }, this.options.id), this.instance && (xe.debug(`[${this.options.id}] Closing peer due to signalingState closed`), this.close());
+							Ut(e.SwEvent.PeerConnectionSignalingStateClosed, { sessionId: this._session.sessionid }, this.options.id), this.instance && (Ue.debug(`[${this.options.id}] Closing peer due to signalingState closed`), this.close());
 							break;
 						default: this._negotiating = !0;
 					}
 				}
 				handleNegotiationNeededEvent() {
-					xe.info("Negotiation needed event"), "stable" !== this.instance.signalingState || this._negotiating ? xe.debug("Skipping negotiation, state:", this.instance.signalingState, "negotiating:", this._negotiating) : this._isTrickleIce() ? this.startTrickleIceNegotiation().catch(((e) => this._emitNegotiationError(e))) : this.startNegotiation();
+					Ue.info("Negotiation needed event"), "stable" !== this.instance.signalingState || this._negotiating ? Ue.debug("Skipping negotiation, state:", this.instance.signalingState, "negotiating:", this._negotiating) : this._isTrickleIce() ? this.startTrickleIceNegotiation().catch(((e) => this._emitNegotiationError(e))) : this.startNegotiation();
 				}
 				handleTrackEvent(e) {
 					var t;
-					this._firstMediaTrackMarked || (performance.mark(sn(this.options.id, "first-remote-media-track")), this._firstMediaTrackMarked = !0);
+					this._firstMediaTrackMarked || (performance.mark(rn(this.options.id, "first-remote-media-track")), this._firstMediaTrackMarked = !0);
 					const { streams: [i] } = e, { remoteElement: n, screenShare: s } = this.options;
 					if (this.options.remoteStream = i, !1 === s) {
-						const i = vi(n, this.options.remoteStream, {
+						const i = fi(n, this.options.remoteStream, {
 							callId: this.options.id,
 							sessionId: this._session.sessionid,
 							eventTarget: this._session.uuid
@@ -4836,7 +4860,7 @@ var TelnyxWebRTC = (function() {
 					const i = null != this._session.remoteElementId && null == this._session.remoteElement;
 					if (null === t && (null != this.options.remoteElement || i) && !this._session.markMissingRemoteAudioElementWarned(this.options.id)) {
 						const t = Ce(ne);
-						Pt(e.SwEvent.Warning, {
+						Ut(e.SwEvent.Warning, {
 							warning: t,
 							callId: this.options.id,
 							sessionId: this._session.sessionid
@@ -4845,12 +4869,12 @@ var TelnyxWebRTC = (function() {
 				}
 				tryCollectTimings() {
 					if (this._timingsCollected) return;
-					if (!(performance.getEntriesByName(sn(this.options.id, "call-active"), "mark").length > 0) || "connected" !== this.instance.connectionState) return;
+					if (!(performance.getEntriesByName(rn(this.options.id, "call-active"), "mark").length > 0) || "connected" !== this.instance.connectionState) return;
 					this._timingsCollected = !0;
-					const e = this._isTrickleIce() ? "trickle" : "non-trickle", t = this.isOffer ? "outbound" : "inbound", i = rn(this.options.id, e, t);
+					const e = this._isTrickleIce() ? "trickle" : "non-trickle", t = this.isOffer ? "outbound" : "inbound", i = cn(this.options.id, e, t);
 					this._callEstablishmentTimings = i, function(e) {
 						const { mode: t, direction: i, steps: n } = e, s = `[CallTimings][${i}][${t}]`;
-						if (0 === n.length) return void xe.info(`${s} No timing data collected`);
+						if (0 === n.length) return void Ue.info(`${s} No timing data collected`);
 						const o = Math.max(...n.map(((e) => e.label.length)), 4) + 2, r = (e, t) => {
 							for (; e.length < t;) e += " ";
 							return e;
@@ -4860,13 +4884,13 @@ var TelnyxWebRTC = (function() {
 						}, c = r("Step", o) + a("Delta", 14) + a("From Start", 14);
 						let d = "";
 						for (let e = 0; e < c.length; e++) d += "-";
-						xe.info(`${s} Call establishment timing breakdown:`), xe.info(`${s} ${c}`), xe.info(`${s} ${d}`), xe.info(`${s} ${r("Call Start", o)}${a("-", 14)}${a("0.00ms", 14)}`);
+						Ue.info(`${s} Call establishment timing breakdown:`), Ue.info(`${s} ${c}`), Ue.info(`${s} ${d}`), Ue.info(`${s} ${r("Call Start", o)}${a("-", 14)}${a("0.00ms", 14)}`);
 						for (const e of n) {
 							const t = e.delta.toFixed(2) + "ms", i = e.fromStart.toFixed(2) + "ms";
-							xe.info(`${s} ${r(e.label, o)}${a(t, 14)}${a(i, 14)}`);
+							Ue.info(`${s} ${r(e.label, o)}${a(t, 14)}${a(i, 14)}`);
 						}
-						xe.info(`${s} ${d}`);
-					}(i), an(this.options.id);
+						Ue.info(`${s} ${d}`);
+					}(i), dn(this.options.id);
 				}
 				createPeerConnection() {
 					return i(this, void 0, void 0, (function* () {
@@ -4875,8 +4899,8 @@ var TelnyxWebRTC = (function() {
 							this.options.remoteStream = e.stream;
 						})), this._registerPeerEvents(this.instance), this._prevConnectionState = this.instance.connectionState, this.isAnswer && (yield this._setRemoteDescription({
 							sdp: this.options.remoteSdp,
-							type: vt.Offer
-						}), performance.mark(sn(this.options.id, "set-remote-description")), !this.instance)) throw Te(C);
+							type: ft.Offer
+						}), performance.mark(rn(this.options.id, "set-remote-description")), !this.instance)) throw Te(C);
 						const n = Boolean(this.options.receiveOnlyAudio) && !this.options.audio;
 						let s = null;
 						if (this.options.localStream = yield this._retrieveLocalStream().catch(((t) => i(this, void 0, void 0, (function* () {
@@ -4884,7 +4908,7 @@ var TelnyxWebRTC = (function() {
 							if ((null == n ? void 0 : n.enabled) && this._isAnswer()) {
 								let o = null, r = null;
 								return yield new Promise(((i, s) => {
-									r = setTimeout((() => s(/* @__PURE__ */ new Error("Media recovery flow timed out!"))), n.timeout), Pt(e.SwEvent.Error, {
+									r = setTimeout((() => s(/* @__PURE__ */ new Error("Media recovery flow timed out!"))), n.timeout), Ut(e.SwEvent.Error, {
 										error: Te(ke(t), t, void 0, !1),
 										callId: this.options.id,
 										sessionId: this._session.sessionid,
@@ -4908,7 +4932,7 @@ var TelnyxWebRTC = (function() {
 							return s = t, null;
 						})))), !this.instance) throw Te(C);
 						if (!this.options.localStream && !n) throw Te(s ? ke(s) : _, null != s ? s : void 0);
-						performance.mark(sn(this.options.id, "get-user-media")), this.options.mutedMicOnStart && gi(this.options.localStream) && (xe.info("Muting local audio tracks on start"), Di(this.options.localStream)), this.options.applyDesiredAudioMuteState && this.options.applyDesiredAudioMuteState(), performance.mark(sn(this.options.id, "peer-creation-end"));
+						performance.mark(rn(this.options.id, "get-user-media")), this.options.mutedMicOnStart && mi(this.options.localStream) && (Ue.info("Muting local audio tracks on start"), Mi(this.options.localStream)), this.options.applyDesiredAudioMuteState && this.options.applyDesiredAudioMuteState(), performance.mark(rn(this.options.id, "peer-creation-end"));
 					}));
 				}
 				incrementGatheredCandidates() {
@@ -4919,21 +4943,21 @@ var TelnyxWebRTC = (function() {
 						if (this.instance) {
 							if (0 === this._gatheredCandidatesCount) {
 								const t = Ce(K);
-								Pt(e.SwEvent.Warning, {
+								Ut(e.SwEvent.Warning, {
 									warning: t,
 									callId: this.options.id,
 									sessionId: this._session.sessionid
 								}, this.options.id);
 							} else if ("complete" !== this.instance.iceGatheringState) {
 								const t = Ce(Y);
-								Pt(e.SwEvent.Warning, {
+								Ut(e.SwEvent.Warning, {
 									warning: t,
 									callId: this.options.id,
 									sessionId: this._session.sessionid
 								}, this.options.id);
 							}
 						}
-					}), cn.ICE_GATHERING_SAFETY_TIMEOUT_MS);
+					}), ln.ICE_GATHERING_SAFETY_TIMEOUT_MS);
 				}
 				_clearIceGatheringSafetyTimeout() {
 					null !== this._iceGatheringSafetyTimeout && (clearTimeout(this._iceGatheringSafetyTimeout), this._iceGatheringSafetyTimeout = null);
@@ -4942,38 +4966,38 @@ var TelnyxWebRTC = (function() {
 					var e;
 					return i(this, void 0, void 0, (function* () {
 						if (yield this.createPeerConnection(), !this.instance) throw Te(C);
-						this.isDebugEnabled && (this.statsReporter = Qi(this._session, this.options.id), yield null === (e = this.statsReporter) || void 0 === e ? void 0 : e.start(this.instance, this._session.sessionid, this._session.sessionid));
+						this.isDebugEnabled && (this.statsReporter = en(this._session, this.options.id), yield null === (e = this.statsReporter) || void 0 === e ? void 0 : e.start(this.instance, this._session.sessionid, this._session.sessionid));
 						const { localElement: t, localStream: i = null, screenShare: n = !1 } = this.options;
-						if (gi(i)) {
+						if (mi(i)) {
 							const e = i.getAudioTracks();
 							let s = [...e];
-							if (xe.info("Local audio tracks: ", e), "object" == typeof this.options.audio && e.forEach(((e) => {
-								xe.info("Local audio tracks constraints: ", e.getConstraints());
+							if (Ue.info("Local audio tracks: ", e), "object" == typeof this.options.audio && e.forEach(((e) => {
+								Ue.info("Local audio tracks constraints: ", e.getConstraints());
 							})), this.options.video) {
 								const t = i.getVideoTracks();
-								s = [...e, ...t], xe.info("Local video tracks: ", t), "object" == typeof this.options.video && t.forEach(((e) => {
-									xe.info("Local video tracks constraints: ", e.getConstraints());
+								s = [...e, ...t], Ue.info("Local video tracks: ", t), "object" == typeof this.options.video && t.forEach(((e) => {
+									Ue.info("Local video tracks constraints: ", e.getConstraints());
 								}));
 							}
-							const { audioCodecs: o, videoCodecs: r } = Ui(this.options.preferred_codecs), a = (t, n, o) => {
+							const { audioCodecs: o, videoCodecs: r } = $i(this.options.preferred_codecs), a = (t, n, o) => {
 								var r, a, c;
 								const d = null === (a = (r = this.instance).getTransceivers) || void 0 === a ? void 0 : a.call(r);
-								xe.debug(t, {
+								Ue.debug(t, {
 									callId: this.options.id,
 									streamId: i.id,
 									isOffer: this.isOffer,
 									audioTracksLength: e.length,
 									tracksLength: s.length,
-									tracks: s.map(wi),
+									tracks: s.map(Ti),
 									trackIndex: o,
-									track: wi(n),
+									track: Ti(n),
 									transceiversLength: null !== (c = null == d ? void 0 : d.length) && void 0 !== c ? c : null,
 									transceivers: null == d ? void 0 : d.map(((e) => ({
 										mid: e.mid,
 										direction: e.direction,
 										currentDirection: e.currentDirection,
-										senderTrack: wi(e.sender.track),
-										receiverTrack: wi(e.receiver.track)
+										senderTrack: Ti(e.sender.track),
+										receiverTrack: Ti(e.receiver.track)
 									})))
 								});
 							};
@@ -4993,11 +5017,11 @@ var TelnyxWebRTC = (function() {
 							})), this.instance.getTransceivers().forEach(((e) => {
 								"audio" === e.receiver.track.kind && o.length > 0 && this._setCodecs(e, o), "video" === e.receiver.track.kind && r.length > 0 && this._setCodecs(e, r);
 							}))) : (a("Attaching local stream using legacy addStream"), this.instance.addStream(i), a("After legacy addStream"));
-							!1 === n && vi(t, i);
+							!1 === n && fi(t, i);
 						} else if (this.options.receiveOnlyAudio && "function" == typeof this.instance.addTransceiver) {
 							const e = this.instance.addTransceiver("audio", { direction: "recvonly" });
-							xe.info("Added recvonly audio transceiver for receive-only mode", e);
-							const { audioCodecs: t } = Ui(this.options.preferred_codecs);
+							Ue.info("Added recvonly audio transceiver for receive-only mode", e);
+							const { audioCodecs: t } = $i(this.options.preferred_codecs);
 							t.length > 0 && this._setCodecs(e, t);
 						}
 						this.isOffer ? (this.options.negotiateAudio && this._checkMediaToNegotiate("audio"), this.options.negotiateVideo && this._checkMediaToNegotiate("video")) : this._isTrickleIce() || this.startNegotiation(), this._isTrickleIce() && this.startTrickleIceNegotiation().catch(((e) => this._emitNegotiationError(e))), this._logTransceivers();
@@ -5009,18 +5033,18 @@ var TelnyxWebRTC = (function() {
 				_checkMediaToNegotiate(e) {
 					if (!this._getSenderByKind(e)) {
 						const t = this.instance.addTransceiver(e);
-						xe.info("Add transceiver", e, t);
+						Ue.info("Add transceiver", e, t);
 					}
 				}
 				_createOffer() {
 					return i(this, void 0, void 0, (function* () {
 						if (this._isOffer() || this.isIceRestarting) {
-							this._constraints.offerToReceiveAudio = !1 !== this.options.audio || Boolean(this.options.receiveOnlyAudio), this._constraints.offerToReceiveVideo = Boolean(this.options.video), xe.info("_createOffer - this._constraints", this._constraints);
+							this._constraints.offerToReceiveAudio = !1 !== this.options.audio || Boolean(this.options.receiveOnlyAudio), this._constraints.offerToReceiveVideo = Boolean(this.options.video), Ue.info("_createOffer - this._constraints", this._constraints);
 							try {
 								const e = yield this.instance.createOffer(this._constraints);
-								return performance.mark(sn(this.options.id, "create-offer")), yield this._setLocalDescription(e), performance.mark(sn(this.options.id, "set-local-description")), performance.mark(sn(this.options.id, "ice-gathering-started")), e;
+								return performance.mark(rn(this.options.id, "create-offer")), yield this._setLocalDescription(e), performance.mark(rn(this.options.id, "set-local-description")), performance.mark(rn(this.options.id, "ice-gathering-started")), e;
 							} catch (e) {
-								if (xe.error("Peer _createOffer error:", e), e instanceof we) throw e;
+								if (Ue.error("Peer _createOffer error:", e), e instanceof we) throw e;
 								throw Te(u, e);
 							}
 						}
@@ -5028,11 +5052,11 @@ var TelnyxWebRTC = (function() {
 				}
 				_setRemoteDescription(e) {
 					return i(this, void 0, void 0, (function* () {
-						xe.debug("Setting remote description", e);
+						Ue.debug("Setting remote description", e);
 						try {
 							yield this.instance.setRemoteDescription(e);
 						} catch (e) {
-							xe.error("Peer _setRemoteDescription error:", e);
+							Ue.error("Peer _setRemoteDescription error:", e);
 							throw Te(g, e);
 						}
 					}));
@@ -5040,16 +5064,16 @@ var TelnyxWebRTC = (function() {
 				_createAnswer() {
 					return i(this, void 0, void 0, (function* () {
 						if (this._isAnswer()) {
-							if ("stable" !== this.instance.signalingState && "have-remote-offer" !== this.instance.signalingState) return xe.debug("Skipping negotiation, state:", this.instance.signalingState), xe.debug("  - But the signaling state isn't stable, so triggering rollback"), void (yield Promise.all([this.instance.setLocalDescription({ type: "rollback" }), this.instance.setRemoteDescription({
+							if ("stable" !== this.instance.signalingState && "have-remote-offer" !== this.instance.signalingState) return Ue.debug("Skipping negotiation, state:", this.instance.signalingState), Ue.debug("  - But the signaling state isn't stable, so triggering rollback"), void (yield Promise.all([this.instance.setLocalDescription({ type: "rollback" }), this.instance.setRemoteDescription({
 								sdp: this.options.remoteSdp,
-								type: vt.Offer
+								type: ft.Offer
 							})]));
 							this._logTransceivers();
 							try {
 								const e = yield this.instance.createAnswer();
-								return performance.mark(sn(this.options.id, "create-answer")), yield this._setLocalDescription(e), performance.mark(sn(this.options.id, "set-local-description")), performance.mark(sn(this.options.id, "ice-gathering-started")), e;
+								return performance.mark(rn(this.options.id, "create-answer")), yield this._setLocalDescription(e), performance.mark(rn(this.options.id, "set-local-description")), performance.mark(rn(this.options.id, "ice-gathering-started")), e;
 							} catch (e) {
-								if (xe.error("Peer _createAnswer error:", e), e instanceof we) throw e;
+								if (Ue.error("Peer _createAnswer error:", e), e instanceof we) throw e;
 								throw Te(h, e);
 							}
 						}
@@ -5060,31 +5084,31 @@ var TelnyxWebRTC = (function() {
 						try {
 							yield this.instance.setLocalDescription(e);
 						} catch (e) {
-							xe.error("Peer _setLocalDescription error:", e);
+							Ue.error("Peer _setLocalDescription error:", e);
 							throw Te(p, e);
 						}
 					}));
 				}
 				_retrieveLocalStream() {
 					return i(this, void 0, void 0, (function* () {
-						if (gi(this.options.localStream)) return this.options.localStream;
+						if (mi(this.options.localStream)) return this.options.localStream;
 						const e = yield (t = this.options, i(void 0, void 0, void 0, (function* () {
 							let { audio: e = !0, micId: i, video: n = !1, camId: s } = t;
 							const { micLabel: o = "", camLabel: r = "" } = t;
-							return !1 !== e && i && (i = yield Ei(i, o, wt.AudioIn).catch((() => null)), i && (e = Object.assign(Object.assign({}, "object" == typeof e ? e : {}), { deviceId: { exact: i } }))), !1 !== n && s && (s = yield Ei(s, r, wt.Video).catch((() => null)), s && (n = Object.assign(Object.assign({}, "object" == typeof n ? n : {}), { deviceId: { exact: s } }))), {
+							return !1 !== e && i && (i = yield wi(i, o, Tt.AudioIn).catch((() => null)), i && (e = Object.assign(Object.assign({}, "object" == typeof e ? e : {}), { deviceId: { exact: i } }))), !1 !== n && s && (s = yield wi(s, r, Tt.Video).catch((() => null)), s && (n = Object.assign(Object.assign({}, "object" == typeof n ? n : {}), { deviceId: { exact: s } }))), {
 								audio: e,
 								video: n
 							};
 						})));
 						var t;
-						return bi(e);
+						return Ii(e);
 					}));
 				}
 				_isOffer() {
-					return this.type === vt.Offer;
+					return this.type === ft.Offer;
 				}
 				_isAnswer() {
-					return this.type === vt.Answer;
+					return this.type === ft.Answer;
 				}
 				_isTrickleIce() {
 					return !0 === this.options.trickleIce;
@@ -5096,25 +5120,25 @@ var TelnyxWebRTC = (function() {
 						iceServers: i,
 						iceTransportPolicy: t ? "relay" : "all"
 					};
-					return xe.info("RTC config", n), n;
+					return Ue.info("RTC config", n), n;
 				}
 				restartStatsReporter() {
 					return i(this, void 0, void 0, (function* () {
-						this.isDebugEnabled && this.statsReporter && (this.instance ? this.statsReporter.isRunning ? xe.debug(`[${this.options.id}] Stats reporter already running, skipping restart`) : (xe.debug(`[${this.options.id}] Restarting stats reporter after reconnect`), yield this.statsReporter.start(this.instance, this._session.sessionid, this._session.sessionid)) : xe.debug(`[${this.options.id}] Cannot restart stats reporter - no peer connection instance`));
+						this.isDebugEnabled && this.statsReporter && (this.instance ? this.statsReporter.isRunning ? Ue.debug(`[${this.options.id}] Stats reporter already running, skipping restart`) : (Ue.debug(`[${this.options.id}] Restarting stats reporter after reconnect`), yield this.statsReporter.start(this.instance, this._session.sessionid, this._session.sessionid)) : Ue.debug(`[${this.options.id}] Cannot restart stats reporter - no peer connection instance`));
 					}));
 				}
 				close() {
 					return i(this, void 0, void 0, (function* () {
-						an(this.options.id), this.finishIceRestart(), this._clearIceGatheringSafetyTimeout(), null !== this._sleepWakeupIntervalId && (clearInterval(this._sleepWakeupIntervalId), this._sleepWakeupIntervalId = null), this.isDebugEnabled && this.statsReporter && (yield this.statsReporter.stop(this.debugOutput)), this.instance && (this.instance.close(), this.instance = null);
+						dn(this.options.id), this.finishIceRestart(), this._clearIceGatheringSafetyTimeout(), null !== this._sleepWakeupIntervalId && (clearInterval(this._sleepWakeupIntervalId), this._sleepWakeupIntervalId = null), this.isDebugEnabled && this.statsReporter && (yield this.statsReporter.stop(this.debugOutput)), this.instance && (this.instance.close(), this.instance = null);
 					}));
 				}
 			}
-			cn.ICE_GATHERING_SAFETY_TIMEOUT_MS = 15e3, cn.ICE_RESTART_TIMEOUT_MS = 15e3;
-			const dn = Xt;
-			class ln {
+			ln.ICE_GATHERING_SAFETY_TIMEOUT_MS = 15e3, ln.ICE_RESTART_TIMEOUT_MS = 15e3;
+			const un = Zt;
+			class hn {
 				constructor(e, t) {
 					var i;
-					this.session = e, this._callReportCollector = null, this._callRecorder = null, this._mediaDeviceCollector = null, this._audioDeviceRecoveryErrors = /* @__PURE__ */ new WeakSet(), this._mediaDeviceGeneration = 0, this.id = "", this.recoveredCallId = "", this.state = It[It.New], this.prevState = "", this.channels = [], this.role = Et.Participant, this.extension = null, this._state = It.New, this._prevState = It.New, this.gotAnswer = !1, this.gotEarly = !1, this._lastSerno = 0, this._targetNodeId = null, this._iceTimeout = null, this._statsBindings = [], this._statsIntervalId = null, this._pendingIceCandidates = [], this._isRemoteDescriptionSet = !1, this._signalingStateClosed = !1, this._creatingPeer = !1, this._desiredAudioMuted = !1, this._firstCandidateSent = !1, this._firstNonHostCandidateSent = !1, this._isRecovering = !1, this._wasHeldBeforeRecovery = !1, this._checkConferenceSerno = (e) => {
+					this.session = e, this._callReportCollector = null, this._callRecorder = null, this._mediaDeviceCollector = null, this._audioDeviceRecoveryErrors = /* @__PURE__ */ new WeakSet(), this._mediaDeviceGeneration = 0, this.id = "", this.recoveredCallId = "", this.state = Ct[Ct.New], this.prevState = "", this.channels = [], this.role = wt.Participant, this.extension = null, this._state = Ct.New, this._prevState = Ct.New, this.gotAnswer = !1, this.gotEarly = !1, this._lastSerno = 0, this._targetNodeId = null, this._iceTimeout = null, this._statsBindings = [], this._statsIntervalId = null, this._pendingIceCandidates = [], this._isRemoteDescriptionSet = !1, this._signalingStateClosed = !1, this._creatingPeer = !1, this._desiredAudioMuted = !1, this._firstCandidateSent = !1, this._firstNonHostCandidateSent = !1, this._isRecovering = !1, this._wasHeldBeforeRecovery = !1, this._checkConferenceSerno = (e) => {
 						const t = e < 0 || !this._lastSerno || this._lastSerno && e === this._lastSerno + 1;
 						return t && e >= 0 && (this._lastSerno = e), t;
 					}, this._doStats = () => {
@@ -5132,7 +5156,7 @@ var TelnyxWebRTC = (function() {
 						}));
 					};
 					const { iceServers: n, speaker: s, micId: o, micLabel: r, camId: a, camLabel: c, localElement: d, remoteElement: l, options: u, mediaConstraints: { audio: h, video: p }, ringtoneFile: g, ringbackFile: v } = e;
-					this.options = Object.assign({}, St, {
+					this.options = Object.assign({}, Et, {
 						audio: h,
 						video: p,
 						iceServers: (null == t ? void 0 : t.iceServers) && Array.isArray(t.iceServers) ? t.iceServers : n,
@@ -5148,11 +5172,11 @@ var TelnyxWebRTC = (function() {
 						debug: u.debug,
 						debugOutput: u.debugOutput,
 						trickleIce: u.trickleIce,
-						prefetchIceCandidates: null !== (i = u.prefetchIceCandidates) && void 0 !== i ? i : St.prefetchIceCandidates,
+						prefetchIceCandidates: null !== (i = u.prefetchIceCandidates) && void 0 !== i ? i : Et.prefetchIceCandidates,
 						forceRelayCandidate: u.forceRelayCandidate,
 						keepConnectionAliveOnSocketClose: u.keepConnectionAliveOnSocketClose,
 						mutedMicOnStart: u.mutedMicOnStart
-					}, t), this._onMediaError = this._onMediaError.bind(this), this._onPeerConnectionFailureError = this._onPeerConnectionFailureError.bind(this), this._onPeerConnectionSignalingStateClosed = this._onPeerConnectionSignalingStateClosed.bind(this), this._onTrickleIceSdp = this._onTrickleIceSdp.bind(this), this._registerPeerEvents = this._registerPeerEvents.bind(this), this._desiredAudioMuted = Boolean(this.options.mutedMicOnStart), this.options.applyDesiredAudioMuteState = this._applyDesiredAudioMuteState.bind(this), this._init(), this.options && (this._ringtone = Mi(this.options.ringtoneFile, "_ringtone"), this._ringback = Mi(this.options.ringbackFile, "_ringback"));
+					}, t), this._onMediaError = this._onMediaError.bind(this), this._onPeerConnectionFailureError = this._onPeerConnectionFailureError.bind(this), this._onPeerConnectionSignalingStateClosed = this._onPeerConnectionSignalingStateClosed.bind(this), this._onTrickleIceSdp = this._onTrickleIceSdp.bind(this), this._registerPeerEvents = this._registerPeerEvents.bind(this), this._desiredAudioMuted = Boolean(this.options.mutedMicOnStart), this.options.applyDesiredAudioMuteState = this._applyDesiredAudioMuteState.bind(this), this._init(), this.options && (this._ringtone = xi(this.options.ringtoneFile, "_ringtone"), this._ringback = xi(this.options.ringbackFile, "_ringback"));
 				}
 				get creatingPeer() {
 					return this._creatingPeer;
@@ -5206,13 +5230,13 @@ var TelnyxWebRTC = (function() {
 				}
 				invite() {
 					return i(this, void 0, void 0, (function* () {
-						this._creatingPeer = !0, this.direction = mt.Outbound, this.options.trickleIce && this._resetTrickleIceCandidateState(), performance.mark(sn(this.id, "new-peer")), this.peer = new cn(vt.Offer, this.options, this.session, this._onTrickleIceSdp, this._registerPeerEvents);
+						this._creatingPeer = !0, this.direction = _t.Outbound, this.options.trickleIce && this._resetTrickleIceCandidateState(), performance.mark(rn(this.id, "new-peer")), this.peer = new ln(ft.Offer, this.options, this.session, this._onTrickleIceSdp, this._registerPeerEvents);
 						try {
 							yield this.peer.init();
 						} catch (t) {
-							xe.error("Peer init failed, aborting call", t), this._creatingPeer = !1;
+							Ue.error("Peer init failed, aborting call", t), this._creatingPeer = !1;
 							const i = t instanceof we ? t : Te(P, t instanceof Error ? t : void 0);
-							Pt(e.SwEvent.Error, {
+							Ut(e.SwEvent.Error, {
 								error: i,
 								callId: this.id,
 								sessionId: this.session.sessionid,
@@ -5227,17 +5251,17 @@ var TelnyxWebRTC = (function() {
 					var n, s, o, r, a, c, d, l;
 					return i(this, void 0, void 0, (function* () {
 						const i = (null !== (o = null === (s = (n = this.session).getActiveCalls) || void 0 === s ? void 0 : s.call(n)) && void 0 !== o ? o : []).filter(((e) => e.id !== this.id));
-						if (i.length > 0 && xe.debug(`[${this.id}] answer(): answering inbound call while ${i.length} other active call(s) exist in session ${this.session.sessionid}`), this._creatingPeer || (null === (r = this.peer) || void 0 === r ? void 0 : r.instance) && "closed" !== this.peer.instance.signalingState) {
+						if (i.length > 0 && Ue.debug(`[${this.id}] answer(): answering inbound call while ${i.length} other active call(s) exist in session ${this.session.sessionid}`), this._creatingPeer || (null === (r = this.peer) || void 0 === r ? void 0 : r.instance) && "closed" !== this.peer.instance.signalingState) {
 							const t = Ce(X);
-							Pt(e.SwEvent.Warning, {
+							Ut(e.SwEvent.Warning, {
 								warning: t,
 								callId: this.id,
 								sessionId: this.session.sessionid
-							}, this.session.uuid), xe.warn(`[${this.id}] answer() ignored: peer connection already exists or is being created (signalingState: ${null !== (d = null === (c = null === (a = this.peer) || void 0 === a ? void 0 : a.instance) || void 0 === c ? void 0 : c.signalingState) && void 0 !== d ? d : "creating"})`);
+							}, this.session.uuid), Ue.warn(`[${this.id}] answer() ignored: peer connection already exists or is being created (signalingState: ${null !== (d = null === (c = null === (a = this.peer) || void 0 === a ? void 0 : a.instance) || void 0 === c ? void 0 : c.signalingState) && void 0 !== d ? d : "creating"})`);
 							return;
 						}
 						if (!this._registerInboundAnswerAttempt()) return;
-						performance.mark(sn(this.id, "answer-called")), this._creatingPeer = !0, this.stopRingtone(), this.direction = mt.Inbound, (null === (l = null == t ? void 0 : t.customHeaders) || void 0 === l ? void 0 : l.length) > 0 && (this.options = Object.assign(Object.assign({}, this.options), { customHeaders: t.customHeaders }));
+						performance.mark(rn(this.id, "answer-called")), this._creatingPeer = !0, this.stopRingtone(), this.direction = _t.Inbound, (null === (l = null == t ? void 0 : t.customHeaders) || void 0 === l ? void 0 : l.length) > 0 && (this.options = Object.assign(Object.assign({}, this.options), { customHeaders: t.customHeaders }));
 						for (const e of [
 							"micId",
 							"micLabel",
@@ -5249,13 +5273,13 @@ var TelnyxWebRTC = (function() {
 							"remoteElement",
 							"localElement"
 						]) void 0 !== t[e] && (this.options = Object.assign(Object.assign({}, this.options), { [e]: t[e] }));
-						this.options.trickleIce && this._resetTrickleIceCandidateState(), performance.mark(sn(this.id, "new-peer")), this.peer = new cn(vt.Answer, this.options, this.session, this._onTrickleIceSdp, this._registerPeerEvents);
+						this.options.trickleIce && this._resetTrickleIceCandidateState(), performance.mark(rn(this.id, "new-peer")), this.peer = new ln(ft.Answer, this.options, this.session, this._onTrickleIceSdp, this._registerPeerEvents);
 						try {
 							yield this.peer.init();
 						} catch (t) {
-							xe.error("Peer init failed, aborting call", t), this._creatingPeer = !1;
+							Ue.error("Peer init failed, aborting call", t), this._creatingPeer = !1;
 							const i = t instanceof we ? t : Te(P, t instanceof Error ? t : void 0);
-							Pt(e.SwEvent.Error, {
+							Ut(e.SwEvent.Error, {
 								error: i,
 								callId: this.id,
 								sessionId: this.session.sessionid,
@@ -5267,28 +5291,28 @@ var TelnyxWebRTC = (function() {
 					}));
 				}
 				playRingtone() {
-					Pi(this._ringtone);
+					Ui(this._ringtone);
 				}
 				stopRingtone() {
-					xi(this._ringtone);
+					Fi(this._ringtone);
 				}
 				playRingback() {
-					Pi(this._ringback);
+					Ui(this._ringback);
 				}
 				stopRingback() {
-					xi(this._ringback);
+					Fi(this._ringback);
 				}
 				hangup(t, n) {
 					var s, o, r, a, c, d;
 					return i(this, void 0, void 0, (function* () {
-						const i = t || {}, l = !1 !== n, u = this.state, h = this.prevState, p = this._captureHangupCallerStack(), g = i.initiator || "app:call.hangup", v = this._state < It.Active ? {
+						const i = t || {}, l = !1 !== n, u = this.state, h = this.prevState, p = this._captureHangupCallerStack(), g = i.initiator || "app:call.hangup", v = this._state < Ct.Active ? {
 							cause: "USER_BUSY",
 							causeCode: 17
 						} : {
 							cause: "NORMAL_CLEARING",
 							causeCode: 16
 						};
-						if (this.cause = i.cause || v.cause, this.causeCode = i.causeCode || v.causeCode, this.sipCode = i.sipCode || null, this.sipReason = i.sipReason || null, this.sipCallId = i.sip_call_id || null, this.options.customHeaders = [...null !== (s = this.options.customHeaders) && void 0 !== s ? s : [], ...null !== (r = null === (o = null == i ? void 0 : i.dialogParams) || void 0 === o ? void 0 : o.customHeaders) && void 0 !== r ? r : []], xe.debug(`[${this.id}] hangup() invoked`, {
+						if (this.cause = i.cause || v.cause, this.causeCode = i.causeCode || v.causeCode, this.sipCode = i.sipCode || null, this.sipReason = i.sipReason || null, this.sipCallId = i.sip_call_id || null, this.options.customHeaders = [...null !== (s = this.options.customHeaders) && void 0 !== s ? s : [], ...null !== (r = null === (o = null == i ? void 0 : i.dialogParams) || void 0 === o ? void 0 : o.customHeaders) && void 0 !== r ? r : []], Ue.debug(`[${this.id}] hangup() invoked`, {
 							callId: this.id,
 							execute: l,
 							state: u,
@@ -5302,9 +5326,9 @@ var TelnyxWebRTC = (function() {
 							isRecovering: Boolean(i.isRecovering),
 							hasDialogCustomHeaders: Boolean(null === (c = null === (a = i.dialogParams) || void 0 === a ? void 0 : a.customHeaders) || void 0 === c ? void 0 : c.length),
 							callerStack: p
-						}), i.isRecovering) return this._isRecovering = !0, this.setState(It.Recovering), void this._finalize();
-						if (this.setState(It.Hangup), this.stopRingtone(), this.stopRingback(), l) {
-							const t = new ni({
+						}), i.isRecovering) return this._isRecovering = !0, this.setState(Ct.Recovering), void this._finalize();
+						if (this.setState(Ct.Hangup), this.stopRingtone(), this.stopRingback(), l) {
+							const t = new oi({
 								sipCode: this.sipCode,
 								sip_call_id: this.sipCallId,
 								sessid: this.session.sessionid,
@@ -5316,13 +5340,13 @@ var TelnyxWebRTC = (function() {
 							try {
 								yield Promise.race([this._execute(t), new Promise(((e) => {
 									i = setTimeout((() => {
-										xe.warn(`[${this.id}] BYE execution timed out after 5000ms — proceeding to destroy.`), e();
+										Ue.warn(`[${this.id}] BYE execution timed out after 5000ms — proceeding to destroy.`), e();
 									}), 5e3);
 								}))]);
 							} catch (t) {
-								xe.error("telnyx_rtc.bye failed!", t);
+								Ue.error("telnyx_rtc.bye failed!", t);
 								const i = Te(I, t);
-								Pt(e.SwEvent.Error, {
+								Ut(e.SwEvent.Error, {
 									error: i,
 									callId: this.id,
 									sessionId: this.session.sessionid
@@ -5331,35 +5355,35 @@ var TelnyxWebRTC = (function() {
 								i && clearTimeout(i);
 							}
 						}
-						xe.debug(`[${this.id}] Closing peer from hangup`), null === (d = this.peer) || void 0 === d || d.close(), this.setState(It.Destroy);
+						Ue.debug(`[${this.id}] Closing peer from hangup`), null === (d = this.peer) || void 0 === d || d.close(), this.setState(Ct.Destroy);
 					}));
 				}
 				hold() {
-					const e = new ri({
+					const e = new ci({
 						sessid: this.session.sessionid,
-						action: Tt.Hold,
+						action: At.Hold,
 						dialogParams: this.options
 					});
 					return this._execute(e).then(this._handleChangeHoldStateSuccess.bind(this)).catch(this._handleChangeHoldStateError.bind(this));
 				}
 				unhold() {
-					const e = new ri({
+					const e = new ci({
 						sessid: this.session.sessionid,
-						action: Tt.Unhold,
+						action: At.Unhold,
 						dialogParams: this.options
 					});
 					return this._execute(e).then(this._handleChangeHoldStateSuccess.bind(this)).catch(this._handleChangeHoldStateError.bind(this));
 				}
 				toggleHold() {
-					const e = new ri({
+					const e = new ci({
 						sessid: this.session.sessionid,
-						action: Tt.ToggleHold,
+						action: At.ToggleHold,
 						dialogParams: this.options
 					});
 					return this._execute(e).then(this._handleChangeHoldStateSuccess.bind(this)).catch(this._handleChangeHoldStateError.bind(this));
 				}
 				dtmf(e) {
-					const t = new ai({
+					const t = new di({
 						sessid: this.session.sessionid,
 						dtmf: e,
 						dialogParams: this.options
@@ -5371,7 +5395,7 @@ var TelnyxWebRTC = (function() {
 						from: this.session.options.login,
 						to: e,
 						body: t
-					}, n = new ai({
+					}, n = new di({
 						sessid: this.session.sessionid,
 						msg: i,
 						dialogParams: this.options
@@ -5379,28 +5403,28 @@ var TelnyxWebRTC = (function() {
 					this._execute(n);
 				}
 				muteAudio() {
-					xe.debug("muteAudio called", {
+					Ue.debug("muteAudio called", {
 						callId: this.id,
 						previousAudioState: this._desiredAudioMuted,
 						audioTrackId: this._getLocalAudioTrackId()
-					}), this._desiredAudioMuted = !0, Di(this.options.localStream);
+					}), this._desiredAudioMuted = !0, Mi(this.options.localStream);
 				}
 				unmuteAudio() {
-					xe.debug("unmuteAudio called", {
+					Ue.debug("unmuteAudio called", {
 						callId: this.id,
 						previousAudioState: this._desiredAudioMuted,
 						audioTrackId: this._getLocalAudioTrackId()
-					}), this._desiredAudioMuted = !1, Oi(this.options.localStream);
+					}), this._desiredAudioMuted = !1, Ni(this.options.localStream);
 				}
 				_applyDesiredAudioMuteState() {
-					xe.debug("applyDesiredAudioMuteState called", {
+					Ue.debug("applyDesiredAudioMuteState called", {
 						callId: this.id,
 						previousAudioState: this._desiredAudioMuted,
 						audioTrackId: this._getLocalAudioTrackId()
-					}), this._desiredAudioMuted ? Di(this.options.localStream) : Oi(this.options.localStream);
+					}), this._desiredAudioMuted ? Mi(this.options.localStream) : Ni(this.options.localStream);
 				}
 				toggleAudioMute() {
-					xe.debug("toggleAudioMute called", {
+					Ue.debug("toggleAudioMute called", {
 						callId: this.id,
 						previousAudioState: this._desiredAudioMuted,
 						audioTrackId: this._getLocalAudioTrackId()
@@ -5419,33 +5443,33 @@ var TelnyxWebRTC = (function() {
 							var e;
 							return this._isTerminatingOrTerminated() || u !== this._mediaDeviceGeneration || (null === (e = this.peer) || void 0 === e ? void 0 : e.instance) !== h;
 						}, g = h.getSenders().find((({ track: e }) => "audio" === (null == e ? void 0 : e.kind)));
-						if (!g) return xe.warn("Skipping audio input device change: no audio sender found", {
+						if (!g) return Ue.warn("Skipping audio input device change: no audio sender found", {
 							callId: this.id,
 							deviceId: t,
 							audioMuted: this._desiredAudioMuted,
 							audioTrackId: this._getLocalAudioTrackId()
-						}), void Pt(e.SwEvent.Warning, {
+						}), void Ut(e.SwEvent.Warning, {
 							warning: Ce(Z),
 							callId: this.id,
 							deviceId: t,
 							sessionId: this.session.sessionid
 						}, (null === (r = this.options) || void 0 === r ? void 0 : r.id) || this.id);
 						let v;
-						xe.debug("Starting audio input device change", {
+						Ue.debug("Starting audio input device change", {
 							callId: this.id,
 							state: this.state,
 							deviceId: t,
 							previousDesiredAudioMuted: this._desiredAudioMuted,
 							newDesiredMuted: i,
-							currentSenderTrack: wi(g.track),
-							localTracks: ki(this.options.localStream)
+							currentSenderTrack: Ti(g.track),
+							localTracks: Ri(this.options.localStream)
 						});
 						try {
-							v = yield bi({ audio: { deviceId: { exact: t } } });
+							v = yield Ii({ audio: { deviceId: { exact: t } } });
 						} catch (t) {
 							if (p()) return;
 							const i = Te(ke(t), t);
-							s && this._audioDeviceRecoveryErrors.add(i), Pt(e.SwEvent.MediaError, i, (null === (a = this.options) || void 0 === a ? void 0 : a.id) || this.id);
+							s && this._audioDeviceRecoveryErrors.add(i), Ut(e.SwEvent.MediaError, i, (null === (a = this.options) || void 0 === a ? void 0 : a.id) || this.id);
 							return;
 						}
 						if (p()) return void v.getTracks().forEach(((e) => e.stop()));
@@ -5456,7 +5480,7 @@ var TelnyxWebRTC = (function() {
 						} catch (t) {
 							if (v.getTracks().forEach(((e) => e.stop())), p()) return;
 							const i = Te(ke(t), t);
-							s && this._audioDeviceRecoveryErrors.add(i), Pt(e.SwEvent.MediaError, i, (null === (c = this.options) || void 0 === c ? void 0 : c.id) || this.id);
+							s && this._audioDeviceRecoveryErrors.add(i), Ut(e.SwEvent.MediaError, i, (null === (c = this.options) || void 0 === c ? void 0 : c.id) || this.id);
 							return;
 						}
 						if (p()) return void v.getTracks().forEach(((e) => e.stop()));
@@ -5466,67 +5490,67 @@ var TelnyxWebRTC = (function() {
 						} catch (e) {
 							this.options.micId = "default";
 							const t = Te(y, e);
-							xe.warn("Unable to read audio input settings after device change", {
+							Ue.warn("Unable to read audio input settings after device change", {
 								callId: this.id,
 								error: t
 							});
 						}
 						const { localStream: f } = this.options;
-						f.getAudioTracks().forEach(((e) => e.stop())), f.getVideoTracks().forEach(((e) => v.addTrack(e))), this.options.localStream = v, xe.debug("Finished audio input device change", {
+						f.getAudioTracks().forEach(((e) => e.stop())), f.getVideoTracks().forEach(((e) => v.addTrack(e))), this.options.localStream = v, Ue.debug("Finished audio input device change", {
 							callId: this.id,
 							state: this.state,
 							deviceId: t,
 							desiredAudioMuted: this._desiredAudioMuted,
-							senderTrack: wi(g.track),
-							localTracks: ki(this.options.localStream)
+							senderTrack: Ti(g.track),
+							localTracks: Ri(this.options.localStream)
 						});
 					}));
 				}
 				muteVideo() {
 					var e = this.options.localStream;
-					Ai(e, "video", !1);
+					Di(e, "video", !1);
 				}
 				unmuteVideo() {
 					var e = this.options.localStream;
-					Ai(e, "video", !0);
+					Di(e, "video", !0);
 				}
 				toggleVideoMute() {
 					var e = this.options.localStream;
-					Ai(e, "video", null);
+					Di(e, "video", null);
 				}
 				setVideoDevice(e) {
 					return i(this, void 0, void 0, (function* () {
 						const { instance: t } = this.peer, i = t.getSenders().find((({ track: { kind: e } }) => "video" === e));
 						if (i) {
-							const t = yield bi({ video: { deviceId: { exact: e } } }), n = t.getVideoTracks()[0];
+							const t = yield Ii({ video: { deviceId: { exact: e } } }), n = t.getVideoTracks()[0];
 							i.replaceTrack(n);
 							const { localElement: s, localStream: o } = this.options;
-							vi(s, t), this.options.camId = e, o.getAudioTracks().forEach(((e) => t.addTrack(e))), o.getVideoTracks().forEach(((e) => e.stop())), this.options.localStream = t, this._applyDesiredAudioMuteState();
+							fi(s, t), this.options.camId = e, o.getAudioTracks().forEach(((e) => t.addTrack(e))), o.getVideoTracks().forEach(((e) => e.stop())), this.options.localStream = t, this._applyDesiredAudioMuteState();
 						}
 					}));
 				}
 				deaf() {
-					Di(this.options.remoteStream);
+					Mi(this.options.remoteStream);
 				}
 				undeaf() {
-					Oi(this.options.remoteStream);
+					Ni(this.options.remoteStream);
 				}
 				toggleDeaf() {
 					var e = this.options.remoteStream;
-					Ai(e, "audio", null);
+					Di(e, "audio", null);
 				}
 				setBandwidthEncodingsMaxBps(e, t) {
 					return i(this, void 0, void 0, (function* () {
-						if (!this || !this.peer) return void xe.error("Could not set bandwidth (reason: no peer connection). Dynamic bandwidth can only be set when there is a call running - is there any call running?)");
+						if (!this || !this.peer) return void Ue.error("Could not set bandwidth (reason: no peer connection). Dynamic bandwidth can only be set when there is a call running - is there any call running?)");
 						const { instance: i } = this.peer, n = i.getSenders();
-						if (!n) return void xe.error("Could not set bandwidth (reason: no senders). Dynamic bandwidth can only be set when there is a call running - is there any call running?)");
+						if (!n) return void Ue.error("Could not set bandwidth (reason: no senders). Dynamic bandwidth can only be set when there is a call running - is there any call running?)");
 						const s = n.find((({ track: { kind: e } }) => e === t));
 						if (s) {
 							const i = s.getParameters();
-							i.encodings || (i.encodings = [{ rid: "h" }]), xe.info("Parameters: ", i), xe.info("Setting max ", "audio" === t ? "audio" : "video", " bandwidth to: ", e, " [bps]"), i.encodings[0].maxBitrate = e, yield s.setParameters(i).then((() => {
-								xe.info("audio" === t ? "New audio" : "New video", " bandwidth settings in use: ", s.getParameters());
-							})).catch(((e) => xe.error(e)));
-						} else xe.error("Could not set bandwidth (reason: no " + t + " sender). Dynamic bandwidth can only be set when there is a call running - is there any call running?)");
+							i.encodings || (i.encodings = [{ rid: "h" }]), Ue.info("Parameters: ", i), Ue.info("Setting max ", "audio" === t ? "audio" : "video", " bandwidth to: ", e, " [bps]"), i.encodings[0].maxBitrate = e, yield s.setParameters(i).then((() => {
+								Ue.info("audio" === t ? "New audio" : "New video", " bandwidth settings in use: ", s.getParameters());
+							})).catch(((e) => Ue.error(e)));
+						} else Ue.error("Could not set bandwidth (reason: no " + t + " sender). Dynamic bandwidth can only be set when there is a call running - is there any call running?)");
 					}));
 				}
 				setAudioBandwidthEncodingsMaxBps(e) {
@@ -5537,9 +5561,9 @@ var TelnyxWebRTC = (function() {
 				}
 				_isTerminatingOrTerminated() {
 					return [
-						It.Hangup,
-						It.Destroy,
-						It.Purge
+						Ct.Hangup,
+						Ct.Destroy,
+						Ct.Purge
 					].includes(this._state);
 				}
 				getStats(e, t) {
@@ -5552,85 +5576,85 @@ var TelnyxWebRTC = (function() {
 				}
 				setState(e) {
 					var t, i, n, s, o, r, a;
-					switch (this._prevState = this._state, this._state = e, this.state = It[this._state].toLowerCase(), this.prevState = It[this._prevState].toLowerCase(), xe.debug(`Call ${this.id} state change from ${this.prevState} to ${this.state}`), this._dispatchNotification({
-						type: _t.callUpdate,
+					switch (this._prevState = this._state, this._state = e, this.state = Ct[this._state].toLowerCase(), this.prevState = Ct[this._prevState].toLowerCase(), Ue.debug(`Call ${this.id} state change from ${this.prevState} to ${this.state}`), this._dispatchNotification({
+						type: bt.callUpdate,
 						call: this
 					}), e) {
-						case It.Purge:
-							xe.info(`[${this.id}] Entering Purge state.`);
+						case Ct.Purge:
+							Ue.info(`[${this.id}] Entering Purge state.`);
 							break;
-						case It.Active:
-							if (performance.mark(sn(this.id, "call-active")), null === (t = this.peer) || void 0 === t || t.tryCollectTimings(), this._isRecovering && (this._isRecovering = !1, xe.debug(`[${this.id}] Recovery complete, call is active`)), this._wasHeldBeforeRecovery && (xe.debug(`[${this.id}] Cleared held-before-recovery intent on transition to Active`), this._wasHeldBeforeRecovery = !1), null === (i = this._callReportCollector) || void 0 === i || i.setHeld(!1), this.session.startSignalingHealthMonitor(), setTimeout((() => {
+						case Ct.Active:
+							if (performance.mark(rn(this.id, "call-active")), null === (t = this.peer) || void 0 === t || t.tryCollectTimings(), this._isRecovering && (this._isRecovering = !1, Ue.debug(`[${this.id}] Recovery complete, call is active`)), this._wasHeldBeforeRecovery && (Ue.debug(`[${this.id}] Cleared held-before-recovery intent on transition to Active`), this._wasHeldBeforeRecovery = !1), null === (i = this._callReportCollector) || void 0 === i || i.setHeld(!1), this.session.startSignalingHealthMonitor(), setTimeout((() => {
 								const { remoteElement: e, speakerId: t } = this.options;
-								e && t && fi(e, t);
+								e && t && yi(e, t);
 							}), 0), this._callReportCollector && null !== (n = this.peer) && void 0 !== n && n.instance && this.session.callReportId && this._callReportCollector.start(this.peer.instance), this._callRecorder) {
 								const e = null === (s = this.session.connection) || void 0 === s ? void 0 : s.host;
 								e && this._callRecorder._setHost(e), this.session.callReportId && this._callRecorder._setCallReportId(this.session.callReportId);
 								const t = null === (o = this.options.localStream) || void 0 === o ? void 0 : o.getAudioTracks()[0], i = null === (r = this.options.remoteStream) || void 0 === r ? void 0 : r.getAudioTracks()[0];
 								this._callRecorder.start(t, i);
 							}
-							this._mediaDeviceCollector || (this._mediaDeviceCollector = new Wi(this, (() => this._setAudioInDevice("default", void 0, !0))), this._mediaDeviceCollector.logDevicesAtStart());
+							this._mediaDeviceCollector || (this._mediaDeviceCollector = new Vi(this, (() => this._setAudioInDevice("default", void 0, !0))), this._mediaDeviceCollector.logDevicesAtStart());
 							break;
-						case It.Held:
+						case Ct.Held:
 							null === (a = this._callReportCollector) || void 0 === a || a.setHeld(!0);
 							break;
-						case It.Destroy: this._finalize();
+						case Ct.Destroy: this._finalize();
 					}
 				}
 				handleMessage(t) {
 					const { method: i, params: n } = t;
 					switch (i) {
-						case ft.Answer:
-							if (performance.mark(sn(this.id, "telnyx-rtc-answer")), this.gotAnswer = !0, n.telnyx_call_control_id && (this.options.telnyxCallControlId = n.telnyx_call_control_id), n.telnyx_session_id && (this.options.telnyxSessionId = n.telnyx_session_id), n.telnyx_leg_id && (this.options.telnyxLegId = n.telnyx_leg_id), this._state >= It.Active) return;
-							this._state >= It.Early && this.setState(It.Active), this.gotEarly || this._onRemoteSdp(n.sdp), this.stopRingback(), this.stopRingtone();
+						case yt.Answer:
+							if (performance.mark(rn(this.id, "telnyx-rtc-answer")), this.gotAnswer = !0, n.telnyx_call_control_id && (this.options.telnyxCallControlId = n.telnyx_call_control_id), n.telnyx_session_id && (this.options.telnyxSessionId = n.telnyx_session_id), n.telnyx_leg_id && (this.options.telnyxLegId = n.telnyx_leg_id), this._state >= Ct.Active) return;
+							this._state >= Ct.Early && this.setState(Ct.Active), this.gotEarly || this._onRemoteSdp(n.sdp), this.stopRingback(), this.stopRingtone();
 							break;
-						case ft.Media:
-							if (performance.mark(sn(this.id, "telnyx-rtc-media")), this._state >= It.Early) return;
+						case yt.Media:
+							if (performance.mark(rn(this.id, "telnyx-rtc-media")), this._state >= Ct.Early) return;
 							this.gotEarly = !0, this._onRemoteSdp(n.sdp);
 							break;
-						case ft.Display: {
+						case yt.Display: {
 							const { display_name: t, display_number: s, display_direction: o } = n;
 							this.extension = s;
-							const r = o === mt.Inbound ? mt.Outbound : mt.Inbound, a = {
-								type: _t[i],
+							const r = o === _t.Inbound ? _t.Outbound : _t.Inbound, a = {
+								type: bt[i],
 								call: this,
 								displayName: t,
 								displayNumber: s,
 								displayDirection: r
 							};
-							Pt(e.SwEvent.Notification, a, this.id) || Pt(e.SwEvent.Notification, a, this.session.uuid);
+							Ut(e.SwEvent.Notification, a, this.id) || Ut(e.SwEvent.Notification, a, this.session.uuid);
 							break;
 						}
-						case ft.Candidate:
+						case yt.Candidate:
 							this._addIceCandidate(n);
 							break;
-						case ft.Info:
-						case ft.Event: {
+						case yt.Info:
+						case yt.Event: {
 							const t = Object.assign(Object.assign({}, n), {
-								type: _t.generic,
+								type: bt.generic,
 								call: this
 							});
-							Pt(e.SwEvent.Notification, t, this.id) || Pt(e.SwEvent.Notification, t, this.session.uuid);
+							Ut(e.SwEvent.Notification, t, this.id) || Ut(e.SwEvent.Notification, t, this.session.uuid);
 							break;
 						}
-						case ft.Ringing:
-							performance.mark(sn(this.id, "ringing")), this.playRingback(), n.telnyx_call_control_id && (this.options.telnyxCallControlId = n.telnyx_call_control_id), n.telnyx_session_id && (this.options.telnyxSessionId = n.telnyx_session_id), n.telnyx_leg_id && (this.options.telnyxLegId = n.telnyx_leg_id);
+						case yt.Ringing:
+							performance.mark(rn(this.id, "ringing")), this.playRingback(), n.telnyx_call_control_id && (this.options.telnyxCallControlId = n.telnyx_call_control_id), n.telnyx_session_id && (this.options.telnyxSessionId = n.telnyx_session_id), n.telnyx_leg_id && (this.options.telnyxLegId = n.telnyx_leg_id);
 							break;
-						case ft.Bye:
+						case yt.Bye:
 							const t = n.client_state || n.clientState;
 							t && (this.options.clientState = t), this.stopRingback(), this.stopRingtone(), this.hangup(Object.assign(Object.assign({}, n), { initiator: "remote:telnyx_rtc.bye" }), !1);
 					}
 				}
 				handleConferenceUpdate(e, t) {
 					return i(this, void 0, void 0, (function* () {
-						if (!this._checkConferenceSerno(e.wireSerno) && e.name !== t.laName) return xe.error("ConferenceUpdate invalid wireSerno or packet name:", e), "INVALID_PACKET";
+						if (!this._checkConferenceSerno(e.wireSerno) && e.name !== t.laName) return Ue.error("ConferenceUpdate invalid wireSerno or packet name:", e), "INVALID_PACKET";
 						const { action: i, data: n, hashKey: s = String(this._lastSerno), arrIndex: o } = e;
 						switch (i) {
 							case "bootObj": {
 								this._lastSerno = 0;
 								const { chatChannel: e, infoChannel: i, modChannel: s, laName: o, conferenceMemberID: r, role: a } = t;
 								this._dispatchConferenceUpdate({
-									action: Ct.Join,
+									action: kt.Join,
 									conferenceName: o,
 									participantId: Number(r),
 									role: a
@@ -5639,36 +5663,36 @@ var TelnyxWebRTC = (function() {
 								for (const e in n) c.push(Object.assign({
 									callId: n[e][0],
 									index: Number(e)
-								}, Be(n[e][1])));
+								}, He(n[e][1])));
 								this._dispatchConferenceUpdate({
-									action: Ct.Bootstrap,
+									action: kt.Bootstrap,
 									participants: c
 								});
 								break;
 							}
 							case "add":
 								this._dispatchConferenceUpdate(Object.assign({
-									action: Ct.Add,
+									action: kt.Add,
 									callId: s,
 									index: o
-								}, Be(n)));
+								}, He(n)));
 								break;
 							case "modify":
 								this._dispatchConferenceUpdate(Object.assign({
-									action: Ct.Modify,
+									action: kt.Modify,
 									callId: s,
 									index: o
-								}, Be(n)));
+								}, He(n)));
 								break;
 							case "del":
 								this._dispatchConferenceUpdate(Object.assign({
-									action: Ct.Delete,
+									action: kt.Delete,
 									callId: s,
 									index: o
-								}, Be(n)));
+								}, He(n)));
 								break;
 							case "clear":
-								this._dispatchConferenceUpdate({ action: Ct.Clear });
+								this._dispatchConferenceUpdate({ action: kt.Clear });
 								break;
 							default: this._dispatchConferenceUpdate({
 								action: i,
@@ -5692,7 +5716,7 @@ var TelnyxWebRTC = (function() {
 							handler: (e) => {
 								const { direction: t, from: i, fromDisplay: n, message: s, type: o } = e.data;
 								this._dispatchConferenceUpdate({
-									action: Ct.ChatMessage,
+									action: kt.ChatMessage,
 									direction: t,
 									participantNumber: i,
 									participantName: n,
@@ -5702,9 +5726,9 @@ var TelnyxWebRTC = (function() {
 								});
 							}
 						}, i = yield this.session.vertoSubscribe(t).catch(((e) => {
-							xe.error("ConfChat subscription error:", e);
+							Ue.error("ConfChat subscription error:", e);
 						}));
-						Ti(i, e) && (this._addChannel(e), Object.defineProperties(this, { sendChatMessage: {
+						Ai(i, e) && (this._addChannel(e), Object.defineProperties(this, { sendChatMessage: {
 							configurable: !0,
 							value: (t, i) => {
 								this.session.vertoBroadcast({
@@ -5727,13 +5751,13 @@ var TelnyxWebRTC = (function() {
 							channels: [e],
 							handler: (e) => {
 								const { eventData: t } = e;
-								if ("layout-info" === t.contentType) t.callID = this.id, Zi(this.session, t);
-								else xe.error("Conference-Info unknown contentType", e);
+								if ("layout-info" === t.contentType) t.callID = this.id, tn(this.session, t);
+								else Ue.error("Conference-Info unknown contentType", e);
 							}
 						}, i = yield this.session.vertoSubscribe(t).catch(((e) => {
-							xe.error("ConfInfo subscription error:", e);
+							Ue.error("ConfInfo subscription error:", e);
 						}));
-						Ti(i, e) && this._addChannel(e);
+						Ai(i, e) && this._addChannel(e);
 					}));
 				}
 				_confControl(e, t = {}) {
@@ -5749,36 +5773,36 @@ var TelnyxWebRTC = (function() {
 					});
 				}
 				_handleChangeHoldStateSuccess(e) {
-					return "active" === e.holdState ? this.setState(It.Active) : this.setState(It.Held), !0;
+					return "active" === e.holdState ? this.setState(Ct.Active) : this.setState(Ct.Held), !0;
 				}
 				_handleChangeHoldStateError(t) {
-					xe.error(`Failed to ${t.action} on call ${this.id}`);
+					Ue.error(`Failed to ${t.action} on call ${this.id}`);
 					const i = Te(b, t);
-					return Pt(e.SwEvent.Error, {
+					return Ut(e.SwEvent.Error, {
 						error: i,
 						callId: this.id,
 						sessionId: this.session.sessionid
 					}, this.session.uuid), !1;
 				}
 				_sendIceRestartModify(e, t = {}) {
-					const n = new ri(Object.assign(Object.assign({
+					const n = new ci(Object.assign(Object.assign({
 						sessid: this.session.sessionid,
-						action: Tt.UpdateMedia,
+						action: At.UpdateMedia,
 						callID: this.options.id,
 						sdp: e
 					}, t.trickle ? { trickle: !0 } : {}), { dialogParams: this.options }));
-					xe.info(`ICE restart: sending ${t.trickle ? "trickle " : ""}Modify with new offer SDP`), this._execute(n).then(((e) => i(this, void 0, void 0, (function* () {
+					Ue.info(`ICE restart: sending ${t.trickle ? "trickle " : ""}Modify with new offer SDP`), this._execute(n).then(((e) => i(this, void 0, void 0, (function* () {
 						var t;
-						(null == e ? void 0 : e.sdp) ? (xe.info("ICE restart Modify response received"), null === (t = this.peer) || void 0 === t || t.finishIceRestart(), yield this._onRemoteSdp(e.sdp)) : this._onIceRestartFailed("ICE restart Modify response missing SDP");
+						(null == e ? void 0 : e.sdp) ? (Ue.info("ICE restart Modify response received"), null === (t = this.peer) || void 0 === t || t.finishIceRestart(), yield this._onRemoteSdp(e.sdp)) : this._onIceRestartFailed("ICE restart Modify response missing SDP");
 					})))).catch(((e) => {
 						this._onIceRestartFailed("ICE restart Modify failed", e);
 					}));
 				}
 				_onIceRestartFailed(t, i) {
 					var n, s, o;
-					xe.error(t, i), null === (n = this.peer) || void 0 === n || n.finishIceRestart();
+					Ue.error(t, i), null === (n = this.peer) || void 0 === n || n.finishIceRestart();
 					const r = Te(N, i);
-					Pt(e.SwEvent.Error, {
+					Ut(e.SwEvent.Error, {
 						error: r,
 						callId: this.id,
 						sessionId: this.session.sessionid
@@ -5788,14 +5812,14 @@ var TelnyxWebRTC = (function() {
 					return i(this, void 0, void 0, (function* () {
 						const n = new RTCSessionDescription({
 							sdp: t,
-							type: vt.Answer
+							type: ft.Answer
 						});
 						yield this.peer.instance.setRemoteDescription(n).then((() => {
-							performance.mark(sn(this.id, "set-remote-description")), this.options.trickleIce && (this._isRemoteDescriptionSet = !0, this._flushPendingTrickleIceCandidates()), this.gotEarly && this.setState(It.Early), this.gotAnswer && this._state !== It.Held && this.setState(It.Active);
+							performance.mark(rn(this.id, "set-remote-description")), this.options.trickleIce && (this._isRemoteDescriptionSet = !0, this._flushPendingTrickleIceCandidates()), this.gotEarly && this.setState(Ct.Early), this.gotAnswer && this._state !== Ct.Held && this.setState(Ct.Active);
 						})).catch(((t) => i(this, void 0, void 0, (function* () {
-							xe.error("Call setRemoteDescription Error: ", t);
+							Ue.error("Call setRemoteDescription Error: ", t);
 							const i = Te(g, t);
-							Pt(e.SwEvent.Error, {
+							Ut(e.SwEvent.Error, {
 								error: i,
 								callId: this.id,
 								sessionId: this.session.sessionid
@@ -5807,7 +5831,7 @@ var TelnyxWebRTC = (function() {
 									initiator: "sdk:set-remote-description-failure"
 								}, !0);
 							} catch (e) {
-								xe.error("Error during hangup after setRemoteDescription failure:", e);
+								Ue.error("Error during hangup after setRemoteDescription failure:", e);
 							}
 						}))));
 					}));
@@ -5819,7 +5843,7 @@ var TelnyxWebRTC = (function() {
 						return t.length > 0 && t.every(((e) => /\styp\s+host(?:\s|$)/i.test(e)));
 					})(t)) return;
 					const i = Ce(z);
-					xe.warn(`[${this.id}] Warning ${i.code}: ${i.message}`), Pt(e.SwEvent.Warning, {
+					Ue.warn(`[${this.id}] Warning ${i.code}: ${i.message}`), Ut(e.SwEvent.Warning, {
 						warning: i,
 						callId: this.id,
 						sessionId: this.session.sessionid
@@ -5828,38 +5852,38 @@ var TelnyxWebRTC = (function() {
 				_onIceSdp(t) {
 					var n, s, o;
 					if (this._iceTimeout && clearTimeout(this._iceTimeout), this._iceTimeout = null, this._isTerminatingOrTerminated()) return;
-					if (this.peer && (this.peer.iceDone = !0), !t) return void xe.warn("localDescription is null — PeerConnection may have been closed during ICE gathering");
+					if (this.peer && (this.peer.iceDone = !0), !t) return void Ue.warn("localDescription is null — PeerConnection may have been closed during ICE gathering");
 					const { sdp: r, type: a } = t;
-					null === (s = null === (n = this.peer) || void 0 === n ? void 0 : n.instance) || void 0 === s || s.removeEventListener("icecandidate", this._onIce), this._warnIfOnlyHostIceCandidates(r), performance.mark(sn(this.id, "ice-gathering-end"));
+					null === (s = null === (n = this.peer) || void 0 === n ? void 0 : n.instance) || void 0 === s || s.removeEventListener("icecandidate", this._onIce), this._warnIfOnlyHostIceCandidates(r), performance.mark(rn(this.id, "ice-gathering-end"));
 					let c = null;
 					const d = {
 						sessid: this.session.sessionid,
 						sdp: r,
 						dialogParams: this.options,
-						"User-Agent": `Web-${dn}`,
+						"User-Agent": `Web-${un}`,
 						call_reports_enabled: !1 !== this.session.options.enableCallReports
 					};
 					if (null === (o = this.peer) || void 0 === o ? void 0 : o.isIceRestarting) this._sendIceRestartModify(r);
 					else {
 						switch (a) {
-							case vt.Offer:
-								this.setState(It.Requesting), c = new ei(d);
+							case ft.Offer:
+								this.setState(Ct.Requesting), c = new ii(d);
 								break;
-							case vt.Answer:
-								this._isRecovering || this.setState(It.Answering), c = !0 === this.options.attach ? new ii(d) : new ti(d);
+							case ft.Answer:
+								this._isRecovering || this.setState(Ct.Answering), c = !0 === this.options.attach ? new si(d) : new ni(d);
 								break;
 							default:
-								xe.error(`${this.id} - Unknown local SDP type:`, t), this.hangup({ initiator: "sdk:unknown-local-sdp-type" }, !1);
+								Ue.error(`${this.id} - Unknown local SDP type:`, t), this.hangup({ initiator: "sdk:unknown-local-sdp-type" }, !1);
 								return;
 						}
-						performance.mark(sn(this.id, "send-sdp")), this._execute(c).then(((e) => {
-							if (this._isTerminatingOrTerminated()) return void xe.debug(`[${this.id}] Ignoring ${a} response because call is ${this.state}`);
+						performance.mark(rn(this.id, "send-sdp")), this._execute(c).then(((e) => {
+							if (this._isTerminatingOrTerminated()) return void Ue.debug(`[${this.id}] Ignoring ${a} response because call is ${this.state}`);
 							const { node_id: t = null } = e;
-							this._targetNodeId = t, a === vt.Offer ? this.setState(It.Trying) : this._wasHeldBeforeRecovery && this._isRecovering ? this.setState(It.Held) : this.setState(It.Active);
+							this._targetNodeId = t, a === ft.Offer ? this.setState(Ct.Trying) : this._wasHeldBeforeRecovery && this._isRecovering ? this.setState(Ct.Held) : this.setState(Ct.Active);
 						})).catch(((t) => i(this, void 0, void 0, (function* () {
-							xe.error(`${this.id} - Sending ${a} error:`, t);
+							Ue.error(`${this.id} - Sending ${a} error:`, t);
 							const i = Te(v, t);
-							Pt(e.SwEvent.Error, {
+							Ut(e.SwEvent.Error, {
 								error: i,
 								callId: this.id,
 								sessionId: this.session.sessionid
@@ -5871,7 +5895,7 @@ var TelnyxWebRTC = (function() {
 									initiator: "sdk:sdp-send-failure"
 								}, !0);
 							} catch (e) {
-								xe.error("Error during hangup after SDP send failure:", e);
+								Ue.error("Error during hangup after SDP send failure:", e);
 							}
 						}))));
 					}
@@ -5879,7 +5903,7 @@ var TelnyxWebRTC = (function() {
 				_onTrickleIceSdp(t) {
 					var n;
 					if (this._isTerminatingOrTerminated()) return;
-					if (!t) return xe.error("No SDP data provided"), void this.hangup({ initiator: "sdk:missing-local-sdp" }, !1);
+					if (!t) return Ue.error("No SDP data provided"), void this.hangup({ initiator: "sdk:missing-local-sdp" }, !1);
 					const { sdp: s, type: o } = t;
 					let r = null;
 					const a = {
@@ -5887,30 +5911,30 @@ var TelnyxWebRTC = (function() {
 						sdp: s,
 						dialogParams: this.options,
 						trickle: !0,
-						"User-Agent": `Web-${dn}`,
+						"User-Agent": `Web-${un}`,
 						call_reports_enabled: !1 !== this.session.options.enableCallReports
 					};
 					if (null === (n = this.peer) || void 0 === n ? void 0 : n.isIceRestarting) this._sendIceRestartModify(s, { trickle: !0 });
 					else {
 						switch (o) {
-							case vt.Offer:
-								this.setState(It.Requesting), r = new ei(a);
+							case ft.Offer:
+								this.setState(Ct.Requesting), r = new ii(a);
 								break;
-							case vt.Answer:
-								this._isRecovering || this.setState(It.Answering), r = !0 === this.options.attach ? new ii(a) : new ti(a);
+							case ft.Answer:
+								this._isRecovering || this.setState(Ct.Answering), r = !0 === this.options.attach ? new si(a) : new ni(a);
 								break;
 							default:
-								xe.error(`${this.id} - Unknown local SDP type:`, t), this.hangup({ initiator: "sdk:unknown-local-sdp-type" }, !1);
+								Ue.error(`${this.id} - Unknown local SDP type:`, t), this.hangup({ initiator: "sdk:unknown-local-sdp-type" }, !1);
 								return;
 						}
-						performance.mark(sn(this.id, "send-sdp")), this._execute(r).then(((e) => {
-							if (this._isTerminatingOrTerminated()) return void xe.debug(`[${this.id}] Ignoring ${o} response because call is ${this.state}`);
+						performance.mark(rn(this.id, "send-sdp")), this._execute(r).then(((e) => {
+							if (this._isTerminatingOrTerminated()) return void Ue.debug(`[${this.id}] Ignoring ${o} response because call is ${this.state}`);
 							const { node_id: t = null } = e;
-							this._targetNodeId = t, o === vt.Offer ? this.setState(It.Trying) : this._wasHeldBeforeRecovery && this._isRecovering ? this.setState(It.Held) : this.setState(It.Active);
+							this._targetNodeId = t, o === ft.Offer ? this.setState(Ct.Trying) : this._wasHeldBeforeRecovery && this._isRecovering ? this.setState(Ct.Held) : this.setState(Ct.Active);
 						})).catch(((t) => i(this, void 0, void 0, (function* () {
-							xe.error(`${this.id} - Sending ${o} error:`, t);
+							Ue.error(`${this.id} - Sending ${o} error:`, t);
 							const i = Te(v, t);
-							Pt(e.SwEvent.Error, {
+							Ut(e.SwEvent.Error, {
 								error: i,
 								callId: this.id,
 								sessionId: this.session.sessionid
@@ -5922,7 +5946,7 @@ var TelnyxWebRTC = (function() {
 									initiator: "sdk:sdp-send-failure"
 								}, !0);
 							} catch (e) {
-								xe.error("Error during hangup after SDP send failure:", e);
+								Ue.error("Error during hangup after SDP send failure:", e);
 							}
 						}))));
 					}
@@ -5935,14 +5959,14 @@ var TelnyxWebRTC = (function() {
 						const e = this.options.attach ? 5e3 : 1e3;
 						this._iceTimeout = setTimeout((() => this._onIceSdp(i.localDescription)), e);
 					}
-					e.candidate ? (xe.debug("RTCPeer Candidate:", e.candidate), null === (t = this.peer) || void 0 === t || t.incrementGatheredCandidates(), this._trackCandidateMarks(e.candidate)) : this._onIceSdp(i.localDescription);
+					e.candidate ? (Ue.debug("RTCPeer Candidate:", e.candidate), null === (t = this.peer) || void 0 === t || t.incrementGatheredCandidates(), this._trackCandidateMarks(e.candidate)) : this._onIceSdp(i.localDescription);
 				}
 				_onTrickleIce(e) {
 					var t, i, n, s;
-					this._isTerminatingOrTerminated() || (e.candidate && e.candidate.candidate ? (xe.debug("RTCPeer Candidate:", e.candidate), null === (t = this.peer) || void 0 === t || t.incrementGatheredCandidates(), this._trackCandidateMarks(e.candidate), this._sendIceCandidate(e.candidate)) : (null === e.candidate && this._warnIfOnlyHostIceCandidates(null === (s = null === (n = null === (i = this.peer) || void 0 === i ? void 0 : i.instance) || void 0 === n ? void 0 : n.localDescription) || void 0 === s ? void 0 : s.sdp), this._sendEndOfCandidates()));
+					this._isTerminatingOrTerminated() || (e.candidate && e.candidate.candidate ? (Ue.debug("RTCPeer Candidate:", e.candidate), null === (t = this.peer) || void 0 === t || t.incrementGatheredCandidates(), this._trackCandidateMarks(e.candidate), this._sendIceCandidate(e.candidate)) : (null === e.candidate && this._warnIfOnlyHostIceCandidates(null === (s = null === (n = null === (i = this.peer) || void 0 === i ? void 0 : i.instance) || void 0 === n ? void 0 : n.localDescription) || void 0 === s ? void 0 : s.sdp), this._sendEndOfCandidates()));
 				}
 				_sendIceCandidate(e) {
-					const t = new si({
+					const t = new ri({
 						sessid: this.session.sessionid,
 						candidate: e.candidate,
 						sdpMLineIndex: e.sdpMLineIndex,
@@ -5952,19 +5976,19 @@ var TelnyxWebRTC = (function() {
 					this._execute(t);
 				}
 				_addIceCandidate(e) {
-					if (!this._isRemoteDescriptionSet) return xe.debug("Remote description not set. Queued ICE candidate.", e), void this._pendingIceCandidates.push(e);
+					if (!this._isRemoteDescriptionSet) return Ue.debug("Remote description not set. Queued ICE candidate.", e), void this._pendingIceCandidates.push(e);
 					this._addIceCandidateToPeer(e);
 				}
 				_addIceCandidateToPeer(e) {
 					const t = this.peer.instance.addIceCandidate(e);
 					Promise.resolve(t).then((() => {
-						xe.debug("Successfully added ICE candidate:", e);
+						Ue.debug("Successfully added ICE candidate:", e);
 					})).catch(((t) => {
-						xe.error("Failed to add ICE candidate:", t, e);
+						Ue.error("Failed to add ICE candidate:", t, e);
 					}));
 				}
 				_sendEndOfCandidates() {
-					const e = new oi({
+					const e = new ai({
 						sessid: this.session.sessionid,
 						endOfCandidates: !0,
 						dialogParams: this.options
@@ -5973,9 +5997,9 @@ var TelnyxWebRTC = (function() {
 				}
 				_trackCandidateMarks(e) {
 					var t;
-					if (this._firstCandidateSent || (performance.mark(sn(this.id, "first-candidate")), this._firstCandidateSent = !0), !this._firstNonHostCandidateSent) {
+					if (this._firstCandidateSent || (performance.mark(rn(this.id, "first-candidate")), this._firstCandidateSent = !0), !this._firstNonHostCandidateSent) {
 						const i = null === (t = e.candidate.match(/typ (\w+)/)) || void 0 === t ? void 0 : t[1];
-						i && "host" !== i && (performance.mark(sn(this.id, "first-non-host-candidate")), this._firstNonHostCandidateSent = !0);
+						i && "host" !== i && (performance.mark(rn(this.id, "first-non-host-candidate")), this._firstNonHostCandidateSent = !0);
 					}
 				}
 				_resetTrickleIceCandidateState() {
@@ -5993,10 +6017,10 @@ var TelnyxWebRTC = (function() {
 						var t;
 						this.options.trickleIce ? this._onTrickleIce(e) : null !== (t = this.peer) && void 0 !== t && t.iceDone || this._onIce(e);
 					}, e.onicegatheringstatechange = (t) => {
-						xe.debug("ICE gathering state changed:", e.iceGatheringState, t), "complete" === e.iceGatheringState && (xe.debug("Finished gathering candidates"), performance.mark(sn(this.id, "ice-gathering-completed")));
+						Ue.debug("ICE gathering state changed:", e.iceGatheringState, t), "complete" === e.iceGatheringState && (Ue.debug("Finished gathering candidates"), performance.mark(rn(this.id, "ice-gathering-completed")));
 					}, e.onicecandidateerror = (t) => {
 						var i;
-						if (xe.debug("ICE candidate error:", t), null === (i = this.peer) || void 0 === i ? void 0 : i.statsReporter) {
+						if (Ue.debug("ICE candidate error:", t), null === (i = this.peer) || void 0 === i ? void 0 : i.statsReporter) {
 							const i = function(e, t) {
 								var i, n;
 								return {
@@ -6022,12 +6046,12 @@ var TelnyxWebRTC = (function() {
 				_onMediaError(t) {
 					const i = (null == t ? void 0 : t.name) || "UnknownError", n = (null == t ? void 0 : t.message) || "Unknown media error", s = (null == t ? void 0 : t.originalError) || t;
 					this._dispatchNotification({
-						type: _t.userMediaError,
+						type: bt.userMediaError,
 						error: s,
 						call: this,
 						errorName: i,
 						errorMessage: n
-					}), xe.error(`Media error (${i}): ${n}`, t), Pt(e.SwEvent.Error, {
+					}), Ue.error(`Media error (${i}): ${n}`, t), Ut(e.SwEvent.Error, {
 						error: t,
 						callId: this.id,
 						sessionId: this.session.sessionid
@@ -6035,25 +6059,25 @@ var TelnyxWebRTC = (function() {
 				}
 				_onPeerConnectionFailureError(t) {
 					this._dispatchNotification({
-						type: _t.peerConnectionFailureError,
+						type: bt.peerConnectionFailureError,
 						error: t.error
-					}), xe.error("Peer connection failure error"), t.warning && Pt(e.SwEvent.Warning, {
+					}), Ue.error("Peer connection failure error"), t.warning && Ut(e.SwEvent.Warning, {
 						warning: t.warning,
 						callId: this.id,
 						sessionId: this.session.sessionid
 					}, this.session.uuid);
 				}
 				_onPeerConnectionSignalingStateClosed(e) {
-					this._signalingStateClosed = !0, this._dispatchNotification(Object.assign({ type: _t.signalingStateClosed }, e)), xe.debug("Peer connection signaling state closed, call is not recoverable");
+					this._signalingStateClosed = !0, this._dispatchNotification(Object.assign({ type: bt.signalingStateClosed }, e)), Ue.debug("Peer connection signaling state closed, call is not recoverable");
 				}
 				_dispatchConferenceUpdate(e) {
 					this._dispatchNotification(Object.assign({
-						type: _t.conferenceUpdate,
+						type: bt.conferenceUpdate,
 						call: this
 					}, e));
 				}
 				_dispatchNotification(t) {
-					!0 !== this.options.screenShare && (Pt(e.SwEvent.Notification, t, this.id, !1) || Pt(e.SwEvent.Notification, t, this.session.uuid));
+					!0 !== this.options.screenShare && (Ut(e.SwEvent.Notification, t, this.id, !1) || Ut(e.SwEvent.Notification, t, this.session.uuid));
 				}
 				_execute(e) {
 					return this.nodeId && (e.targetNodeId = this.nodeId), this.session.execute(e);
@@ -6064,12 +6088,12 @@ var TelnyxWebRTC = (function() {
 					const i = null === (t = this.session.calls) || void 0 === t ? void 0 : t[this.id];
 					if (i && i !== this) {
 						const t = Ce(te);
-						return Pt(e.SwEvent.Warning, {
+						return Ut(e.SwEvent.Warning, {
 							warning: t,
 							callId: this.id,
 							activeCallId: i.id,
 							sessionId: this.session.sessionid
-						}, this.session.uuid), xe.warn(`[${this.id}] answer() ignored: callID ${this.id} already has an active call (${i.id})`), !1;
+						}, this.session.uuid), Ue.warn(`[${this.id}] answer() ignored: callID ${this.id} already has an active call (${i.id})`), !1;
 					}
 					return !0;
 				}
@@ -6077,9 +6101,9 @@ var TelnyxWebRTC = (function() {
 					var t, i, n, s, o, r, a, d, l, u;
 					const { id: h, userVariables: p, remoteCallerNumber: g, onNotification: v, recoveredCallId: m, wasHeldBeforeRecovery: f } = this.options;
 					var _;
-					this.options.id = h ? h.toString() : c(), this.id = this.options.id, m && (this.recoveredCallId = m, this._isRecovering = !0, this._wasHeldBeforeRecovery = Boolean(f)), p && (_ = p, 0 !== Object.keys(_).length) || (this.options.userVariables = this.session.options.userVariables || {}), g || (this.options.remoteCallerNumber = this.options.destinationNumber), this.session.calls[this.id] = this, Nt(e.SwEvent.MediaError, this._onMediaError, this.id), Nt(e.SwEvent.PeerConnectionFailureError, this._onPeerConnectionFailureError, this.id), Nt(e.SwEvent.PeerConnectionSignalingStateClosed, this._onPeerConnectionSignalingStateClosed, this.id), We(v) && Nt(e.SwEvent.Notification, v.bind(this), this.id);
+					this.options.id = h ? h.toString() : c(), this.id = this.options.id, m && (this.recoveredCallId = m, this._isRecovering = !0, this._wasHeldBeforeRecovery = Boolean(f)), p && (_ = p, 0 !== Object.keys(_).length) || (this.options.userVariables = this.session.options.userVariables || {}), g || (this.options.remoteCallerNumber = this.options.destinationNumber), this.session.calls[this.id] = this, Lt(e.SwEvent.MediaError, this._onMediaError, this.id), Lt(e.SwEvent.PeerConnectionFailureError, this._onPeerConnectionFailureError, this.id), Lt(e.SwEvent.PeerConnectionSignalingStateClosed, this._onPeerConnectionSignalingStateClosed, this.id), Ge(v) && Lt(e.SwEvent.Notification, v.bind(this), this.id);
 					const y = !1 !== this.session.options.enableCallReports, b = this.session.options.callReportInterval || 5e3, S = null !== (t = this.session.options.callReportFlushInterval) && void 0 !== t ? t : 18e4, I = this.session.options.debugLogLevel || "debug", E = this.session.options.debugLogMaxEntries || 1e3;
-					y && (this._callReportCollector = new ji({
+					y && (this._callReportCollector = new Hi({
 						enabled: !0,
 						interval: b,
 						intermediateReportInterval: S
@@ -6094,17 +6118,17 @@ var TelnyxWebRTC = (function() {
 						this._flushIntermediateReport();
 					}, this._callReportCollector.onWarning = (t) => {
 						var i, n, s, o;
-						Pt(e.SwEvent.Warning, {
+						Ut(e.SwEvent.Warning, {
 							warning: t,
 							callId: this.id,
 							sessionId: this.session.sessionid
-						}, this.session.uuid), t.code === H && this._state !== It.Held ? null === (n = (i = this.session).reportNoRtp) || void 0 === n || n.call(i, this.id, "inbound") : t.code === W && this._state !== It.Held && this._hasActiveUnmutedLocalAudioTrack() && (null === (o = (s = this.session).reportNoRtp) || void 0 === o || o.call(s, this.id, "outbound"));
+						}, this.session.uuid), t.code === H && this._state !== Ct.Held ? null === (n = (i = this.session).reportNoRtp) || void 0 === n || n.call(i, this.id, "inbound") : t.code === W && this._state !== Ct.Held && this._hasActiveUnmutedLocalAudioTrack() && (null === (o = (s = this.session).reportNoRtp) || void 0 === o || o.call(s, this.id, "outbound"));
 					});
 					if (!0 === this.session.options.enableCallRecording) {
 						const t = {
 							enabled: !0,
 							flushIntervalMs: null !== (i = this.session.options.callRecordingFlushIntervalMs) && void 0 !== i ? i : 15e3,
-							maxBufferBytes: null !== (n = this.session.options.callRecordingMaxBufferBytes) && void 0 !== n ? n : bt,
+							maxBufferBytes: null !== (n = this.session.options.callRecordingMaxBufferBytes) && void 0 !== n ? n : It,
 							sampleRate: null !== (s = this.session.options.callRecordingSampleRate) && void 0 !== s ? s : 48e3,
 							tracks: null !== (o = this.session.options.callRecordingTracks) && void 0 !== o ? o : ["local", "remote"],
 							endpoint: null !== (r = this.session.options.callRecordingEndpoint) && void 0 !== r ? r : "/call_recording"
@@ -6113,32 +6137,32 @@ var TelnyxWebRTC = (function() {
 							callReportId: null !== (a = this.session.callReportId) && void 0 !== a ? a : "",
 							voiceSdkId: this._getCallReportVoiceSdkId()
 						};
-						this._callRecorder = new Bi(t, c);
+						this._callRecorder = new Wi(t, c);
 						const l = null === (d = this.session.connection) || void 0 === d ? void 0 : d.host;
 						l && this._callRecorder._setHost(l), this._callRecorder.onWarning = (t) => {
-							Pt(e.SwEvent.Warning, {
+							Ut(e.SwEvent.Warning, {
 								warning: t,
 								callId: this.id,
 								sessionId: this.session.sessionid
 							}, this.session.uuid);
 						};
 					}
-					this._isRecovering ? this.setState(It.Recovering) : this.setState(It.New), xe.info(`New Call — region: ${null !== (l = this.session.region) && void 0 !== l ? l : "unknown"}, dc: ${null !== (u = this.session.dc) && void 0 !== u ? u : "unknown"}`, this.options);
+					this._isRecovering ? this.setState(Ct.Recovering) : this.setState(Ct.New), Ue.info(`New Call — region: ${null !== (l = this.session.region) && void 0 !== l ? l : "unknown"}, dc: ${null !== (u = this.session.dc) && void 0 !== u ? u : "unknown"}`, this.options);
 				}
 				getEstablishmentTimings() {
 					var e, t, i;
 					const n = null === (e = this.peer) || void 0 === e ? void 0 : e.callEstablishmentTimings;
 					if (n) return n;
 					const s = (null === (t = this.options) || void 0 === t ? void 0 : t.trickleIce) && !(null === (i = this.peer) || void 0 === i ? void 0 : i.isIceRestarting) ? "trickle" : "non-trickle";
-					return rn(this.id, s, this.direction);
+					return cn(this.id, s, this.direction);
 				}
 				_finalize() {
 					var t, i, n;
-					this._mediaDeviceGeneration++, this._stopStats(), null === (t = this._mediaDeviceCollector) || void 0 === t || t.stop(), this._mediaDeviceCollector = null, null === (i = this._callRecorder) || void 0 === i || i.stop(), an(this.id), xe.debug(`[${this.id}] Closing peer from _finalize`), null === (n = this.peer) || void 0 === n || n.close();
+					this._mediaDeviceGeneration++, this._stopStats(), null === (t = this._mediaDeviceCollector) || void 0 === t || t.stop(), this._mediaDeviceCollector = null, null === (i = this._callRecorder) || void 0 === i || i.stop(), dn(this.id), Ue.debug(`[${this.id}] Closing peer from _finalize`), null === (n = this.peer) || void 0 === n || n.close();
 					const { remoteStream: s, localStream: o, remoteElement: r, localElement: a } = this.options;
-					yi(s), yi(o), mi(r, s), mi(a, o), Mt(e.SwEvent.MediaError, null, this.id), Mt(e.SwEvent.PeerConnectionFailureError, null, this.id), Mt(e.SwEvent.PeerConnectionSignalingStateClosed, null, this.id), this.session.calls[this.id] = null, delete this.session.calls[this.id];
+					Si(s), Si(o), _i(r, s), _i(a, o), xt(e.SwEvent.MediaError, null, this.id), xt(e.SwEvent.PeerConnectionFailureError, null, this.id), xt(e.SwEvent.PeerConnectionSignalingStateClosed, null, this.id), this.session.calls[this.id] = null, delete this.session.calls[this.id];
 					const c = this._postCallReport().catch(((e) => {
-						xe.error("Unexpected error in _postCallReport", { error: e });
+						Ue.error("Unexpected error in _postCallReport", { error: e });
 					}));
 					this.session.trackCallReportUpload(c);
 				}
@@ -6226,41 +6250,41 @@ var TelnyxWebRTC = (function() {
 					var t;
 					if (!this._callReportCollector) return;
 					const i = this.session.callReportId;
-					if (!i) return void xe.debug("Cannot flush intermediate report: call_report_id not available");
+					if (!i) return void Ue.debug("Cannot flush intermediate report: call_report_id not available");
 					const n = null === (t = this.session.connection) || void 0 === t ? void 0 : t.host;
-					if (!n) return void xe.debug("Cannot flush intermediate report: connection host not available");
+					if (!n) return void Ue.debug("Cannot flush intermediate report: connection host not available");
 					const s = {
 						callId: this.id,
 						destinationNumber: this.options.destinationNumber,
 						callerNumber: this.options.callerNumber,
-						direction: this.direction === mt.Inbound ? "inbound" : "outbound",
+						direction: this.direction === _t.Inbound ? "inbound" : "outbound",
 						state: this.state,
 						telnyxSessionId: this.options.telnyxSessionId,
 						telnyxLegId: this.options.telnyxLegId,
-						sdkVersion: dn,
+						sdkVersion: un,
 						clientSummary: this._getClientSummary()
 					}, o = this._callReportCollector.flush(s, e);
 					if (!o) return;
-					xe.info("Flushing intermediate call report", {
+					Ue.info("Flushing intermediate call report", {
 						callId: this.id,
 						flushReason: e,
 						segment: o.segment
 					});
 					const r = this._getCallReportVoiceSdkId(), a = "page-unload" === e.type, c = this._callReportCollector.sendPayload(o, i, n, r, a).catch(((e) => {
-						xe.error("Failed to post intermediate call report segment", { error: e });
+						Ue.error("Failed to post intermediate call report segment", { error: e });
 					}));
 					this.session.trackCallReportUpload(c);
 				}
 				_postCallReport() {
 					var e, t, n, s;
 					return i(this, void 0, void 0, (function* () {
-						if (!this._callReportCollector) return void xe.warn("Call report collector not initialized");
+						if (!this._callReportCollector) return void Ue.warn("Call report collector not initialized");
 						if (yield this._callReportCollector.stop(), this._callRecorder) {
 							this._callRecorder.stop();
 							const t = null === (e = this.session.connection) || void 0 === e ? void 0 : e.host;
 							t && this._callRecorder._setHost(t), this.session.callReportId && this._callRecorder._setCallReportId(this.session.callReportId);
 							const i = this._callRecorder.postFinalReport().catch(((e) => {
-								xe.error("Failed to post final call recording", { error: e });
+								Ue.error("Failed to post final call recording", { error: e });
 							})).finally((() => {
 								var e;
 								null === (e = this._callRecorder) || void 0 === e || e.cleanup();
@@ -6268,77 +6292,77 @@ var TelnyxWebRTC = (function() {
 							this.session.trackCallReportUpload(i);
 						}
 						const i = this.session.callReportId;
-						if (!i) return xe.debug("Cannot post call report: call_report_id not available"), void this._callReportCollector.cleanup();
+						if (!i) return Ue.debug("Cannot post call report: call_report_id not available"), void this._callReportCollector.cleanup();
 						const o = {
 							callId: this.id,
 							destinationNumber: this.options.destinationNumber,
 							callerNumber: this.options.callerNumber,
-							direction: this.direction === mt.Inbound ? "inbound" : "outbound",
+							direction: this.direction === _t.Inbound ? "inbound" : "outbound",
 							state: this.state,
 							telnyxSessionId: this.options.telnyxSessionId,
 							telnyxLegId: this.options.telnyxLegId,
-							sdkVersion: dn,
+							sdkVersion: un,
 							clientSummary: this._getClientSummary()
 						}, r = null === (t = this.session.connection) || void 0 === t ? void 0 : t.host;
-						if (!r) return void xe.error("Cannot post call report: connection host not available");
+						if (!r) return void Ue.error("Cannot post call report: connection host not available");
 						const a = this._getCallReportVoiceSdkId();
 						try {
 							yield this._callReportCollector.postReport(o, i, r, a);
 						} catch (e) {
-							throw xe.error("Failed to post call report", { error: e }), e;
+							throw Ue.error("Failed to post call report", { error: e }), e;
 						} finally {
 							null === (n = this._callReportCollector) || void 0 === n || n.cleanup(), null === (s = this._callRecorder) || void 0 === s || s.cleanup();
 						}
 					}));
 				}
 				_startStats(e) {
-					this._statsIntervalId = setInterval(this._doStats, e), xe.info("Stats started");
+					this._statsIntervalId = setInterval(this._doStats, e), Ue.info("Stats started");
 				}
 				_stopStats() {
-					this._statsIntervalId && (clearInterval(this._statsIntervalId), this._statsIntervalId = null), xe.debug("Stats stopped");
+					this._statsIntervalId && (clearInterval(this._statsIntervalId), this._statsIntervalId = null), Ue.debug("Stats stopped");
 				}
 			}
-			ln.setStateTelnyx = (e) => {
+			hn.setStateTelnyx = (e) => {
 				if (e) {
 					switch (e._state) {
-						case It.Recovering:
+						case Ct.Recovering:
 							e.state = "recovering";
 							break;
-						case It.Requesting:
-						case It.Trying:
-						case It.Early:
+						case Ct.Requesting:
+						case Ct.Trying:
+						case Ct.Early:
 							e.state = "connecting";
 							break;
-						case It.Active:
+						case Ct.Active:
 							e.state = "active";
 							break;
-						case It.Held:
+						case Ct.Held:
 							e.state = "held";
 							break;
-						case It.Hangup:
-						case It.Destroy:
+						case Ct.Hangup:
+						case Ct.Destroy:
 							e.state = "done";
 							break;
-						case It.Answering:
+						case Ct.Answering:
 							e.state = "ringing";
 							break;
-						case It.New: e.state = "new";
+						case Ct.New: e.state = "new";
 					}
 					return e;
 				}
 			};
-			class un extends ln {
+			class pn extends hn {
 				constructor() {
-					super(...arguments), this._statsInterval = null, this.sendConversationMessage = (e, t) => this.session.execute(new Fi(e, t)), this.sendAIConversationMessage = (e) => {
+					super(...arguments), this._statsInterval = null, this.sendConversationMessage = (e, t) => this.session.execute(new ji(e, t)), this.sendAIConversationMessage = (e) => {
 						if (!this.session.connected) throw new Error("Cannot send AI conversation message: session is not connected. sendAIConversationMessage requires an active WebSocket connection.");
-						const t = new $i(e);
+						const t = new Bi(e);
 						this.session.connection.sendRawText(JSON.stringify(t.request));
 					};
 				}
 				hangup(e = {}, t = !0) {
 					const n = Object.create(null, { hangup: { get: () => super.hangup } });
 					return i(this, void 0, void 0, (function* () {
-						this.screenShare instanceof un && (yield this.screenShare.hangup(e, t)), yield n.hangup.call(this, e, t);
+						this.screenShare instanceof pn && (yield this.screenShare.hangup(e, t)), yield n.hangup.call(this, e, t);
 					}));
 				}
 				startScreenShare(e) {
@@ -6359,12 +6383,12 @@ var TelnyxWebRTC = (function() {
 							callerName: `${r} (Screen)`,
 							callerNumber: `${a} (Screen)`
 						}, e);
-						return this.screenShare = new un(this.session, c), this.screenShare.invite(), this.screenShare;
+						return this.screenShare = new pn(this.session, c), this.screenShare.invite(), this.screenShare;
 					}));
 				}
 				stopScreenShare() {
 					return i(this, void 0, void 0, (function* () {
-						this.screenShare instanceof un && (yield this.screenShare.hangup({ initiator: "app:stopScreenShare" }));
+						this.screenShare instanceof pn && (yield this.screenShare.hangup({ initiator: "app:stopScreenShare" }));
 					}));
 				}
 				setAudioOutDevice(e) {
@@ -6372,7 +6396,7 @@ var TelnyxWebRTC = (function() {
 						if (this._isTerminatingOrTerminated()) return !1;
 						const { remoteElement: t } = this.options, i = this._mediaDeviceGeneration;
 						if (t && e) {
-							const n = yield fi(t, e);
+							const n = yield yi(t, e);
 							return !this._isTerminatingOrTerminated() && i === this._mediaDeviceGeneration && this.options.remoteElement === t && (n && (this.options.speakerId = e), n);
 						}
 						return !1;
@@ -6402,11 +6426,11 @@ var TelnyxWebRTC = (function() {
 							i.includes(e.type) || (t += `\n${e.type}\n`, Object.keys(e).forEach(((i) => {
 								n.includes(i) || (t += `\t${i}: ${e[i]}\n`);
 							})));
-						})), xe.info(t);
+						})), Ue.info(t);
 					}))), 2e3);
 				}
 			}
-			class hn extends hi {
+			class gn extends gi {
 				constructor(e) {
 					super(e), this.calls = {}, this._missingRemoteAudioElementWarnedCallIds = /* @__PURE__ */ new Set(), this.autoRecoverCalls = !0, this._iceServers = [], this._localElement = null, this._localElementId = null, this._remoteElement = null, this._remoteElementId = null, this._jwtAuth = !0, this._audioConstraints = !0, this._previousAudioConstraints = !0, this._videoConstraints = !1, this._speaker = null, this._videoConstraints = e.video || !1, this.iceServers = e.iceServers, this.ringtoneFile = e.ringtoneFile, this.ringbackFile = e.ringbackFile;
 				}
@@ -6414,7 +6438,7 @@ var TelnyxWebRTC = (function() {
 					return !!this._missingRemoteAudioElementWarnedCallIds.has(e) || (this._missingRemoteAudioElementWarnedCallIds.add(e), !1);
 				}
 				getActiveCalls() {
-					return Object.values(this.calls).filter(((e) => hn.ACTIVE_CALL_STATE_NAMES.has(e.state)));
+					return Object.values(this.calls).filter(((e) => gn.ACTIVE_CALL_STATE_NAMES.has(e.state)));
 				}
 				_extractSafeCallIdentifiers(e) {
 					var t, i;
@@ -6431,13 +6455,13 @@ var TelnyxWebRTC = (function() {
 					const i = this.getActiveCalls().filter(((e) => e.id !== t));
 					if (0 === i.length) return;
 					const n = Ce(ee), s = this.calls[t], o = s ? this._extractSafeCallIdentifiers(s) : { callId: t };
-					Pt(e.SwEvent.Warning, {
+					Ut(e.SwEvent.Warning, {
 						warning: n,
 						callId: t,
 						sessionId: this.sessionid,
 						newCall: o,
 						activeCalls: i.map(((e) => this._extractSafeCallIdentifiers(e)))
-					}, this.uuid), xe.warn(`MULTIPLE_ACTIVE_CALLS_DETECTED: new call ${t} created while ${i.length} other call(s) are active in session ${this.sessionid}`);
+					}, this.uuid), Ue.warn(`MULTIPLE_ACTIVE_CALLS_DETECTED: new call ${t} created while ${i.length} other call(s) are active in session ${this.sessionid}`);
 				}
 				getIsRegistered() {
 					const e = Object.create(null, { getIsRegistered: { get: () => super.getIsRegistered } });
@@ -6448,17 +6472,17 @@ var TelnyxWebRTC = (function() {
 				connect() {
 					const e = Object.create(null, { connect: { get: () => super.connect } });
 					return i(this, void 0, void 0, (function* () {
-						xe.debug("BrowserSession.connect() called"), e.connect.call(this);
+						Ue.debug("BrowserSession.connect() called"), e.connect.call(this);
 					}));
 				}
 				checkPermissions(e = !0, t = !0) {
 					return i(this, void 0, void 0, (function* () {
 						try {
-							const i = yield bi({
+							const i = yield Ii({
 								audio: e,
 								video: t
 							});
-							return yi(i), !0;
+							return Si(i), !0;
 						} catch (e) {
 							return !1;
 						}
@@ -6470,10 +6494,10 @@ var TelnyxWebRTC = (function() {
 				disconnect() {
 					const e = Object.create(null, { disconnect: { get: () => super.disconnect } });
 					return i(this, void 0, void 0, (function* () {
-						xe.info("[disconnect] Client-initiated disconnect — setting Purge with BYE on all active calls.");
+						Ue.info("[disconnect] Client-initiated disconnect — setting Purge with BYE on all active calls.");
 						for (const e in this.calls) {
 							const t = this.calls[e];
-							t.setState(It.Purge), xe.info("Start hangup for ", t), yield t.hangup({ initiator: "app:client.disconnect" }, !0);
+							t.setState(Ct.Purge), Ue.info("Start hangup for ", t), yield t.hangup({ initiator: "app:client.disconnect" }, !0);
 						}
 						this.calls = {}, this._missingRemoteAudioElementWarnedCallIds.clear(), yield e.disconnect.call(this);
 					}));
@@ -6481,10 +6505,10 @@ var TelnyxWebRTC = (function() {
 				serverDisconnect() {
 					const e = Object.create(null, { disconnect: { get: () => super.disconnect } });
 					return i(this, void 0, void 0, (function* () {
-						xe.info("[serverDisconnect] Server-initiated disconnect — setting Purge without BYE on all active calls.");
+						Ue.info("[serverDisconnect] Server-initiated disconnect — setting Purge without BYE on all active calls.");
 						for (const e in this.calls) {
 							const t = this.calls[e];
-							t.setState(It.Purge), t.hangup({ initiator: "sdk:server-disconnect" }, !1);
+							t.setState(Ct.Purge), t.hangup({ initiator: "sdk:server-disconnect" }, !1);
 						}
 						this.calls = {}, this._missingRemoteAudioElementWarnedCallIds.clear(), yield e.disconnect.call(this);
 					}));
@@ -6497,7 +6521,7 @@ var TelnyxWebRTC = (function() {
 				}
 				speedTest(t) {
 					return new Promise(((i, n) => {
-						if (Lt(e.SwEvent.SpeedTest, ((e) => {
+						if (Pt(e.SwEvent.SpeedTest, ((e) => {
 							const { upDur: n, downDur: s } = e, o = s ? 8 * t / (s / 1e3) / 1024 : 0;
 							i({
 								upDur: n,
@@ -6515,33 +6539,33 @@ var TelnyxWebRTC = (function() {
 					}));
 				}
 				getDevices() {
-					return Si().catch(((t) => {
+					return Ei().catch(((t) => {
 						const i = Te(ke(t), t);
-						return Pt(e.SwEvent.MediaError, i, this.uuid), [];
+						return Ut(e.SwEvent.MediaError, i, this.uuid), [];
 					}));
 				}
 				getVideoDevices() {
-					return Si(wt.Video).catch(((t) => (Pt(e.SwEvent.MediaError, t, this.uuid), [])));
+					return Ei(Tt.Video).catch(((t) => (Ut(e.SwEvent.MediaError, t, this.uuid), [])));
 				}
 				getAudioInDevices() {
-					return Si(wt.AudioIn).catch(((t) => {
+					return Ei(Tt.AudioIn).catch(((t) => {
 						const i = Te(ke(t), t);
-						return Pt(e.SwEvent.MediaError, i, this.uuid), [];
+						return Ut(e.SwEvent.MediaError, i, this.uuid), [];
 					}));
 				}
 				getAudioOutDevices() {
-					return Si(wt.AudioOut).catch(((t) => (xe.error("getAudioOutDevices", t), Pt(e.SwEvent.MediaError, t, this.uuid), [])));
+					return Ei(Tt.AudioOut).catch(((t) => (Ue.error("getAudioOutDevices", t), Ut(e.SwEvent.MediaError, t, this.uuid), [])));
 				}
 				validateDeviceId(e, t, i) {
-					return Ei(e, t, i);
+					return wi(e, t, i);
 				}
 				getDeviceResolutions(e) {
 					return i(this, void 0, void 0, (function* () {
 						try {
 							return yield ((e) => i(void 0, void 0, void 0, (function* () {
-								const t = [], i = yield bi({ video: { deviceId: { exact: e } } }), n = i.getVideoTracks()[0];
-								for (let e = 0; e < Ii.length; e++) {
-									const [i, s] = Ii[e];
+								const t = [], i = yield Ii({ video: { deviceId: { exact: e } } }), n = i.getVideoTracks()[0];
+								for (let e = 0; e < Ci.length; e++) {
+									const [i, s] = Ci[e];
 									(yield n.applyConstraints({
 										width: { exact: i },
 										height: { exact: s }
@@ -6551,7 +6575,7 @@ var TelnyxWebRTC = (function() {
 										height: s
 									});
 								}
-								return yi(i), t;
+								return Si(i), t;
 							})))(e);
 						} catch (e) {
 							throw e;
@@ -6568,10 +6592,10 @@ var TelnyxWebRTC = (function() {
 					return i(this, void 0, void 0, (function* () {
 						if (!e) throw new Error("You need to provide the settings object");
 						const { micId: n, micLabel: s } = e, o = t(e, ["micId", "micLabel"]);
-						return Ci(o), this._audioConstraints = yield ((e, t, n, s) => i(void 0, void 0, void 0, (function* () {
+						return ki(o), this._audioConstraints = yield ((e, t, n, s) => i(void 0, void 0, void 0, (function* () {
 							const { deviceId: i } = s;
 							if (void 0 === i && (e || t)) {
-								const i = yield Ei(e, t, n).catch((() => null));
+								const i = yield wi(e, t, n).catch((() => null));
 								i && (s.deviceId = { exact: i });
 							}
 							return s;
@@ -6600,7 +6624,7 @@ var TelnyxWebRTC = (function() {
 					return this._speaker;
 				}
 				set localElement(e) {
-					this._localElementId = "string" == typeof e ? e : null, this._localElement = qe(e);
+					this._localElementId = "string" == typeof e ? e : null, this._localElement = Ye(e);
 				}
 				get localElement() {
 					return this._localElement;
@@ -6609,7 +6633,7 @@ var TelnyxWebRTC = (function() {
 					return this._localElementId;
 				}
 				set remoteElement(e) {
-					this._remoteElementId = "string" == typeof e ? e : null, this._remoteElement = qe(e);
+					this._remoteElementId = "string" == typeof e ? e : null, this._remoteElement = Ye(e);
 				}
 				get remoteElement() {
 					return this._remoteElement;
@@ -6619,7 +6643,7 @@ var TelnyxWebRTC = (function() {
 				}
 				vertoBroadcast({ nodeId: e, channel: t = "", data: i }) {
 					if (!t) throw new Error(`Invalid channel for broadcast: ${t}`);
-					const n = new ci({
+					const n = new li({
 						sessid: this.sessionid,
 						eventChannel: t,
 						data: i
@@ -6629,32 +6653,32 @@ var TelnyxWebRTC = (function() {
 				vertoSubscribe({ nodeId: e, channels: t = [], handler: n }) {
 					return i(this, void 0, void 0, (function* () {
 						if (!(t = t.filter(((e) => e && !this._existsSubscription(this.relayProtocol, e)))).length) return {};
-						const i = new di({
+						const i = new ui({
 							sessid: this.sessionid,
 							eventChannel: t
 						});
 						e && (i.targetNodeId = e);
-						const s = yield this.execute(i), { unauthorized: o = [], subscribed: r = [] } = Ri(s);
+						const s = yield this.execute(i), { unauthorized: o = [], subscribed: r = [] } = Oi(s);
 						return o.length && o.forEach(((e) => this._removeSubscription(this.relayProtocol, e))), r.forEach(((e) => this._addSubscription(this.relayProtocol, n, e))), s;
 					}));
 				}
 				vertoUnsubscribe({ nodeId: e, channels: t = [] }) {
 					return i(this, void 0, void 0, (function* () {
 						if (!(t = t.filter(((e) => e && this._existsSubscription(this.relayProtocol, e)))).length) return {};
-						const i = new li({
+						const i = new hi({
 							sessid: this.sessionid,
 							eventChannel: t
 						});
 						e && (i.targetNodeId = e);
-						const n = yield this.execute(i), { unsubscribed: s = [], notSubscribed: o = [] } = Ri(n);
+						const n = yield this.execute(i), { unsubscribed: s = [], notSubscribed: o = [] } = Oi(n);
 						return s.forEach(((e) => this._removeSubscription(this.relayProtocol, e))), o.forEach(((e) => this._removeSubscription(this.relayProtocol, e))), n;
 					}));
 				}
 				static telnyxStateCall(e) {
-					return un.setStateTelnyx(e);
+					return pn.setStateTelnyx(e);
 				}
 			}
-			hn.ACTIVE_CALL_STATE_NAMES = /* @__PURE__ */ new Set([
+			gn.ACTIVE_CALL_STATE_NAMES = /* @__PURE__ */ new Set([
 				"new",
 				"requesting",
 				"trying",
@@ -6665,17 +6689,17 @@ var TelnyxWebRTC = (function() {
 				"active",
 				"held"
 			]);
-			class pn {
+			class vn {
 				constructor(e, t) {
 					this.code = t, this.message = e;
 				}
 			}
-			class gn {
+			class mn {
 				constructor(e) {
 					this.session = e, this.retriedConnect = 0, this.retriedRegister = 0;
 				}
 				_ack(e, t) {
-					const i = new Zt(e, t);
+					const i = new ti(e, t);
 					this.nodeId && (i.targetNodeId = this.nodeId), this.session.execute(i);
 				}
 				reconnectDelay() {
@@ -6688,41 +6712,41 @@ var TelnyxWebRTC = (function() {
 					g.setPingReceived();
 					const { id: v, method: m, params: f = {}, voice_sdk_id: _ } = t, y = null == f ? void 0 : f.callID, b = null == f ? void 0 : f.eventChannel, S = null == f ? void 0 : f.eventType, I = g.calls[y], E = null === (i = null == I ? void 0 : I.peer) || void 0 === i ? void 0 : i.isConnectionHealthy(), C = new Set(Object.keys(g.calls));
 					if (Array.isArray(null == f ? void 0 : f.reattached_sessions) && C.size) {
-						xe.debug(`Reattach: active call IDs before cleanup check: [${Array.from(C).join(", ")}].`);
+						Ue.debug(`Reattach: active call IDs before cleanup check: [${Array.from(C).join(", ")}].`);
 						const t = 0 === f.reattached_sessions.length, i = f.reattached_sessions.some(((e) => C.has(e)));
 						if (t || !i) for (const t of Object.keys(g.calls)) {
 							const i = g.calls[t];
-							xe.debug(`Session not reattached — terminating active call ${t} `);
-							const n = Te(M);
-							Pt(e.SwEvent.Error, {
+							Ue.debug(`Session not reattached — terminating active call ${t} `);
+							const n = Te(L);
+							Ut(e.SwEvent.Error, {
 								error: n,
 								callId: t,
 								sessionId: g.sessionid
-							}, g.uuid), i.hangup({}, !1);
+							}, g.uuid), i.hangup({ initiator: "sdk:session-not-reattached" }, !1);
 						}
 					}
 					if (Array.isArray(null == f ? void 0 : f.reattached_sessions) && g.sessionid) {
-						const t = pt();
-						if (t && t.calls.length > 0) if (t.sessionId !== g.sessionid) xe.debug(`Recovery markers were saved for a different sessid (saved=${t.sessionId}, current=${g.sessionid}) — ignoring all.`), ht();
+						const t = vt();
+						if (t && t.calls.length > 0) if (t.sessionId !== g.sessionid) Ue.debug(`Recovery markers were saved for a different sessid (saved=${t.sessionId}, current=${g.sessionid}) — ignoring all.`), gt();
 						else {
 							const i = new Set(f.reattached_sessions), n = [];
 							for (const s of t.calls) try {
 								if (i.has(s.id)) {
-									xe.debug(`Recovery marker for call ${s.id} was reattached — keeping for Attach element restore.`), n.push(s);
+									Ue.debug(`Recovery marker for call ${s.id} was reattached — keeping for Attach element restore.`), n.push(s);
 									continue;
 								}
-								xe.info(`Recovery marker for call ${s.id} (sessid=${g.sessionid}) was not reattached — emitting SESSION_NOT_REATTACHED.`);
-								const t = Te(M);
-								Pt(e.SwEvent.Error, {
+								Ue.info(`Recovery marker for call ${s.id} (sessid=${g.sessionid}) was not reattached — emitting SESSION_NOT_REATTACHED.`);
+								const t = Te(L);
+								Ut(e.SwEvent.Error, {
 									error: t,
 									callId: s.id,
 									sessionId: g.sessionid,
 									customHeaders: s.customHeaders
 								}, g.uuid);
 							} catch (e) {
-								xe.debug(`Recovery marker for a saved call failed to process (callId=${null == s ? void 0 : s.id}) — skipping: ${e instanceof Error ? e.message : String(e)}`), n.push(s);
+								Ue.debug(`Recovery marker for a saved call failed to process (callId=${null == s ? void 0 : s.id}) — skipping: ${e instanceof Error ? e.message : String(e)}`), n.push(s);
 							}
-							gt(n, t.sessionId, t.storedAt);
+							mt(n, t.sessionId, t.storedAt);
 						}
 					}
 					if ("channelPvtData" === S) return this._handlePvtEvent(f.pvtData);
@@ -6737,7 +6761,7 @@ var TelnyxWebRTC = (function() {
 							remoteCallerNumber: f.caller_id_number,
 							callerName: f.callee_id_name,
 							callerNumber: f.callee_id_number,
-							attach: m === ft.Attach,
+							attach: m === yt.Attach,
 							mediaSettings: f.mediaSettings,
 							debug: null !== (r = g.options.debug) && void 0 !== r && r,
 							debugOutput: null !== (a = g.options.debugOutput) && void 0 !== a ? a : "socket",
@@ -6747,41 +6771,43 @@ var TelnyxWebRTC = (function() {
 							keepConnectionAliveOnSocketClose: null !== (u = g.options.keepConnectionAliveOnSocketClose) && void 0 !== u && u,
 							mutedMicOnStart: null != i ? i : g.options.mutedMicOnStart
 						};
-						y && (h.id = y), f.telnyx_call_control_id && (h.telnyxCallControlId = f.telnyx_call_control_id), f.telnyx_session_id && (h.telnyxSessionId = f.telnyx_session_id), f.telnyx_leg_id && (h.telnyxLegId = f.telnyx_leg_id), f.client_state && (h.clientState = f.client_state), f.dialogParams && f.dialogParams.custom_headers && f.dialogParams.custom_headers.length && (h.customHeaders = f.dialogParams.custom_headers), e && (h.recoveredCallId = e), o && (h.wasHeldBeforeRecovery = o), void 0 !== n && (h.remoteElement = n), void 0 !== s && (h.localElement = s), performance.mark(sn(h.id, "new-call-start"));
-						const p = new un(g, h);
+						y && (h.id = y), f.telnyx_call_control_id && (h.telnyxCallControlId = f.telnyx_call_control_id), f.telnyx_session_id && (h.telnyxSessionId = f.telnyx_session_id), f.telnyx_leg_id && (h.telnyxLegId = f.telnyx_leg_id), f.client_state && (h.clientState = f.client_state), f.dialogParams && f.dialogParams.custom_headers && f.dialogParams.custom_headers.length && (h.customHeaders = f.dialogParams.custom_headers), e && (h.recoveredCallId = e), o && (h.wasHeldBeforeRecovery = o), void 0 !== n && (h.remoteElement = n), void 0 !== s && (h.localElement = s), performance.mark(rn(h.id, "new-call-start"));
+						const p = new pn(g, h);
 						return p.nodeId = this.nodeId, p;
-					}, k = new qt(_), O = new Kt(_);
+					}, k = new Kt(_), O = new zt(_);
 					switch (m) {
-						case ft.Answer:
-						case ft.Display:
-						case ft.Candidate:
-						case ft.Ringing:
-						case ft.Bye:
-						case ft.Media:
-							if (!y || !I) return void xe.error(`Received ${m} for non existing call:`, f);
+						case yt.Answer:
+						case yt.Display:
+						case yt.Candidate:
+						case yt.Ringing:
+						case yt.Bye:
+						case yt.Media:
+							if (!y || !I) return void Ue.error(`Received ${m} for non existing call:`, f);
 							I.handleMessage(t), this._ack(v, m);
 							break;
-						case ft.Ping:
-							this.session.setPingReceived(), this.session.execute(O);
+						case yt.Ping:
+							this.session.setPingReceived(), this.session.execute(O).catch(((e) => {
+								Ue.debug("Ping reply was not acknowledged", e);
+							}));
 							break;
-						case ft.Punt:
-							g.options.keepConnectionAliveOnSocketClose && E ? (xe.info("[punt] Received PUNT from server. keepConnectionAliveOnSocketClose=true — disconnecting socket only, keeping calls alive."), g.socketDisconnect(), this._ack(v, m)) : (xe.info("[punt] Received PUNT from server — calling serverDisconnect() to purge all calls without BYE."), g.serverDisconnect());
+						case yt.Punt:
+							g.options.keepConnectionAliveOnSocketClose && E ? (Ue.info("[punt] Received PUNT from server. keepConnectionAliveOnSocketClose=true — disconnecting socket only, keeping calls alive."), g.socketDisconnect(), this._ack(v, m)) : (Ue.info("[punt] Received PUNT from server — calling serverDisconnect() to purge all calls without BYE."), g.serverDisconnect());
 							break;
-						case ft.Invite: {
+						case yt.Invite: {
 							const e = w();
-							e.direction = mt.Inbound, e.playRingtone(), e.setState(It.Ringing), this.session.emitMultipleActiveCallsWarning(e.id), this._ack(v, m);
+							e.direction = _t.Inbound, e.playRingtone(), e.setState(Ct.Ringing), this.session.emitMultipleActiveCallsWarning(e.id), this._ack(v, m);
 							break;
 						}
-						case ft.Attach: {
+						case yt.Attach: {
 							const t = I || null;
 							if (0 === Object.keys(g.calls).length) {
 								let e, t;
-								xe.warn(`[${(/* @__PURE__ */ new Date()).toISOString()}][${y}] Attach: SDK doens't have any active call therefore we recover first arrived attach session ${y}`);
+								Ue.warn(`[${(/* @__PURE__ */ new Date()).toISOString()}][${y}] Attach: SDK doens't have any active call therefore we recover first arrived attach session ${y}`);
 								let i = !1, n = !1;
-								const s = pt();
+								const s = vt();
 								if (s && s.sessionId === g.sessionid) {
 									const o = s.calls.find(((e) => null !== e && "object" == typeof e && e.id === y));
-									o && (e = o.remoteElement, t = o.localElement, i = !0 === o.wasHeld, "boolean" == typeof o.forceRelayCandidate && (n = o.forceRelayCandidate), (e || t) && xe.info(`[${y}] Attach: restoring per-call media elements from recovery marker (remoteElement=${null != e ? e : "<none>"}, localElement=${null != t ? t : "<none>"}).`), "boolean" == typeof o.forceRelayCandidate && xe.info(`[${y}] Attach: restoring forceRelayCandidate=${o.forceRelayCandidate} from recovery marker.`));
+									o && (e = o.remoteElement, t = o.localElement, i = !0 === o.wasHeld, "boolean" == typeof o.forceRelayCandidate && (n = o.forceRelayCandidate), (e || t) && Ue.info(`[${y}] Attach: restoring per-call media elements from recovery marker (remoteElement=${null != e ? e : "<none>"}, localElement=${null != t ? t : "<none>"}).`), "boolean" == typeof o.forceRelayCandidate && Ue.info(`[${y}] Attach: restoring forceRelayCandidate=${o.forceRelayCandidate} from recovery marker.`));
 								}
 								const o = w({
 									recoveredCallId: y,
@@ -6795,7 +6821,7 @@ var TelnyxWebRTC = (function() {
 							}
 							if (t) {
 								const e = t.id, i = "held" === t.state, n = t.shouldForceRelayCandidateForRecovery();
-								n && xe.warn(`[${(/* @__PURE__ */ new Date()).toISOString()}][${y}] Attach: forcing relay candidate for recovery`), xe.info(`[${(/* @__PURE__ */ new Date()).toISOString()}][${y}] Attach: recovering active call ${e}.`), t.hangup({
+								n && Ue.warn(`[${(/* @__PURE__ */ new Date()).toISOString()}][${y}] Attach: forcing relay candidate for recovery`), Ue.info(`[${(/* @__PURE__ */ new Date()).toISOString()}][${y}] Attach: recovering active call ${e}.`), t.hangup({
 									isRecovering: !0,
 									initiator: "sdk:attach-recovery"
 								}, !1);
@@ -6810,7 +6836,7 @@ var TelnyxWebRTC = (function() {
 								s.answer(), this.session.emitMultipleActiveCallsWarning(s.id), this._ack(v, m);
 								break;
 							}
-							xe.warn(`Attach: callID ${y} does not match any active calls. `), Pt(e.SwEvent.Warning, {
+							Ue.warn(`Attach: callID ${y} does not match any active calls. `), Ut(e.SwEvent.Warning, {
 								warning: Ce(oe),
 								callId: y,
 								params: f,
@@ -6818,47 +6844,47 @@ var TelnyxWebRTC = (function() {
 							}, g.uuid), this._ack(v, m);
 							break;
 						}
-						case ft.Event:
+						case yt.Event:
 						case "webrtc.event":
-							if (!b) return void xe.error("Verto received an unknown event:", f);
+							if (!b) return void Ue.error("Verto received an unknown event:", f);
 							const i = g.relayProtocol, S = b.split(".")[0];
-							g._existsSubscription(i, b) ? Pt(i, f, b) : b === g.sessionid ? this._handleSessionEvent(f.eventData) : g._existsSubscription(i, S) ? Pt(i, f, S) : g.calls.hasOwnProperty(b) ? g.calls[b].handleMessage(t) : Pt(e.SwEvent.Notification, f, g.uuid);
+							g._existsSubscription(i, b) ? Ut(i, f, b) : b === g.sessionid ? this._handleSessionEvent(f.eventData) : g._existsSubscription(i, S) ? Ut(i, f, S) : g.calls.hasOwnProperty(b) ? g.calls[b].handleMessage(t) : Ut(e.SwEvent.Notification, f, g.uuid);
 							break;
-						case ft.Info:
-							f.type = _t.generic, Pt(e.SwEvent.Notification, f, g.uuid);
+						case yt.Info:
+							f.type = bt.generic, Ut(e.SwEvent.Notification, f, g.uuid);
 							break;
-						case ft.ClientReady:
+						case yt.ClientReady:
 							this.session.execute(k);
 							break;
 						case "ai_conversation":
-							Pt(e.SwEvent.AIConversationMessage, {
+							Ut(e.SwEvent.AIConversationMessage, {
 								method: "ai_conversation",
 								params: f,
 								voice_sdk_id: _
 							}, g.uuid);
 							break;
 						default: {
-							const i = Xe(t);
+							const i = Ze(t);
 							if (i) {
 								switch (i) {
-									case kt.REGISTER:
-									case kt.REGED:
-										if (!this.isDuplicateGatewayState(i, [kt.REGED, kt.REGISTER])) {
-											this.session._triggerKeepAliveTimeoutCheck(), this.retriedRegister = 0, i === kt.REGED && this.session.resetReconnectAttempts();
+									case Rt.REGISTER:
+									case Rt.REGED:
+										if (!this.isDuplicateGatewayState(i, [Rt.REGED, Rt.REGISTER])) {
+											this.session._triggerKeepAliveTimeoutCheck(), this.retriedRegister = 0, i === Rt.REGED && this.session.resetReconnectAttempts();
 											const h = null === (s = null === (n = null == t ? void 0 : t.result) || void 0 === n ? void 0 : n.params) || void 0 === s ? void 0 : s.call_report_id;
-											h && (g.callReportId = h, xe.debug("Captured call_report_id from REGED:", h));
+											h && (g.callReportId = h, Ue.debug("Captured call_report_id from REGED:", h));
 											const p = null === (r = null === (o = null == t ? void 0 : t.result) || void 0 === o ? void 0 : o.params) || void 0 === r ? void 0 : r.dc;
 											p && (g.dc = p);
 											const v = null === (c = null === (a = null == t ? void 0 : t.result) || void 0 === a ? void 0 : a.params) || void 0 === c ? void 0 : c.region;
-											v && (g.region = v), xe.info(`Connected to Telnyx — region: ${null !== (d = g.region) && void 0 !== d ? d : "unknown"}, dc: ${null !== (l = g.dc) && void 0 !== l ? l : "unknown"}`), f.type = _t.vertoClientReady, null === (u = g._registrationTimings) || void 0 === u || u.finish(g.sessionid), Pt(e.SwEvent.Ready, f, g.uuid);
+											v && (g.region = v), Ue.info(`Connected to Telnyx — region: ${null !== (d = g.region) && void 0 !== d ? d : "unknown"}, dc: ${null !== (l = g.dc) && void 0 !== l ? l : "unknown"}`), f.type = bt.vertoClientReady, null === (u = g._registrationTimings) || void 0 === u || u.finish(g.sessionid), Ut(e.SwEvent.Ready, f, g.uuid);
 										}
 										break;
-									case kt.UNREGED:
-									case kt.NOREG:
+									case Rt.UNREGED:
+									case Rt.NOREG:
 										if (this.retriedRegister += 1, 5 === this.retriedRegister) {
 											this.retriedRegister = 0;
-											const t = new pn("Fail to register the user, the server tried 5 times", "UNREGED|NOREG"), i = Te(A, t);
-											Pt(e.SwEvent.Error, {
+											const t = new vn("Fail to register the user, the server tried 5 times", "UNREGED|NOREG"), i = Te(A, t);
+											Ut(e.SwEvent.Error, {
 												error: i,
 												sessionId: g.sessionid
 											}, g.uuid);
@@ -6876,33 +6902,33 @@ var TelnyxWebRTC = (function() {
 											}), e);
 											break;
 										}
-									case kt.FAILED:
-									case kt.FAIL_WAIT:
-									case kt.TIMEOUT:
+									case Rt.FAILED:
+									case Rt.FAIL_WAIT:
+									case Rt.TIMEOUT:
 										if (!this.isDuplicateGatewayState(i, [
-											kt.FAILED,
-											kt.FAIL_WAIT,
-											kt.TIMEOUT
+											Rt.FAILED,
+											Rt.FAIL_WAIT,
+											Rt.TIMEOUT
 										])) {
 											const t = Te(R, /* @__PURE__ */ new Error(`Gateway state: ${i}`));
-											if (Pt(e.SwEvent.Error, {
+											if (Ut(e.SwEvent.Error, {
 												error: t,
 												sessionId: g.sessionid
-											}, g.uuid), g.options.skipLastVoiceSdkId = !0, xe.debug(`Set skipLastVoiceSdkId=true on session options to avoid sticky reconnect to same b2bua-rtc instance (sessionId=${g.sessionid})`), !this.session.hasAutoReconnect()) {
+											}, g.uuid), g.options.skipLastVoiceSdkId = !0, Ue.debug(`Set skipLastVoiceSdkId=true on session options to avoid sticky reconnect to same b2bua-rtc instance (sessionId=${g.sessionid})`), !this.session.hasAutoReconnect()) {
 												this.retriedConnect = 0;
-												const t = new pn("Fail to connect the server, the server tried 5 times", "FAILED|FAIL_WAIT|TIMEOUT");
-												this.session._terminateActiveCallsLocally();
+												const t = new vn("Fail to connect the server, the server tried 5 times", "FAILED|FAIL_WAIT|TIMEOUT");
+												this.session._terminateActiveCallsLocally("sdk:gateway-failed");
 												const i = Te(T, t);
-												Pt(e.SwEvent.Error, {
+												Ut(e.SwEvent.Error, {
 													error: i,
 													sessionId: g.sessionid
 												}, g.uuid);
 												break;
 											}
 											if (this.retriedConnect += 1, 5 === this.retriedConnect) {
-												this.retriedConnect = 0, this.session._terminateActiveCallsLocally();
+												this.retriedConnect = 0, this.session._terminateActiveCallsLocally("sdk:gateway-retry-exhausted");
 												const t = Te(T, /* @__PURE__ */ new Error("Connection Retry Failed"));
-												Pt(e.SwEvent.Error, {
+												Ut(e.SwEvent.Error, {
 													error: t,
 													sessionId: g.sessionid
 												}, g.uuid);
@@ -6916,12 +6942,12 @@ var TelnyxWebRTC = (function() {
 													delayMs: e
 												}), setTimeout((() => {
 													var e;
-													if (null === (e = g._registrationTimings) || void 0 === e || e.mark("gateway reconnect timer fired"), xe.debug(`Reconnecting... Retry ${this.retriedConnect} of 5`), this.session.options.keepConnectionAliveOnSocketClose) {
+													if (null === (e = g._registrationTimings) || void 0 === e || e.mark("gateway reconnect timer fired"), Ue.debug(`Reconnecting... Retry ${this.retriedConnect} of 5`), this.session.options.keepConnectionAliveOnSocketClose) {
 														if (Object.values(g.calls).some(((e) => {
 															var t;
 															return (null === (t = e.peer) || void 0 === t ? void 0 : t.instance) && !e.signalingStateClosed;
-														}))) return xe.debug("Reconnecting by keeping the existing session due to keepConnectionAliveOnSocketClose option being set."), void this.session.socketDisconnect();
-														xe.debug("keepConnectionAliveOnSocketClose is set but all peer connections have signalingState closed, doing full reconnect");
+														}))) return Ue.debug("Reconnecting by keeping the existing session due to keepConnectionAliveOnSocketClose option being set."), void this.session.socketDisconnect();
+														Ue.debug("keepConnectionAliveOnSocketClose is set but all peer connections have signalingState closed, doing full reconnect");
 													}
 													this.session.disconnect().then((() => {
 														this.session.clearConnection(), this.session.connect();
@@ -6930,18 +6956,18 @@ var TelnyxWebRTC = (function() {
 											}
 										}
 										break;
-									default: xe.warn("GatewayState message unknown method:", t);
+									default: Ue.warn("GatewayState message unknown method:", t);
 								}
 								break;
 							}
-							xe.debug("Verto message unknown method:", t);
+							Ue.debug("Verto message unknown method:", t);
 							break;
 						}
 					}
 				}
 				isDuplicateGatewayState(e, t) {
 					const { previousGatewayState: i } = this.session.connection, n = t.includes(i);
-					return n && xe.debug(`Gateway state '${e}' received but previous state was '${i}' — guard condition met, skipping re-emission (sessionId=${this.session.sessionid})`), n;
+					return n && Ue.debug(`Gateway state '${e}' received but previous state was '${i}' — guard condition met, skipping re-emission (sessionId=${this.session.sessionid})`), n;
 				}
 				_retrieveCallId(e, t) {
 					const i = Object.keys(this.session.calls);
@@ -6979,14 +7005,14 @@ var TelnyxWebRTC = (function() {
 										}
 									}
 								}, a = yield i.vertoSubscribe(s).catch(((t) => {
-									xe.error("liveArray subscription error:", t);
+									Ue.error("liveArray subscription error:", t);
 									const n = Te(E, t);
-									Pt(e.SwEvent.Error, {
+									Ut(e.SwEvent.Error, {
 										error: n,
 										sessionId: i.sessionid
 									}, i.uuid);
 								}));
-								Ti(a, o) && n();
+								Ai(a, o) && n();
 								break;
 							}
 							case "conference-liveArray-part": {
@@ -6995,13 +7021,13 @@ var TelnyxWebRTC = (function() {
 									const { callId: s = null } = i.subscriptions[n][o];
 									if (t = i.calls[s] || null, null !== s) {
 										const n = {
-											type: _t.conferenceUpdate,
-											action: Ct.Leave,
+											type: bt.conferenceUpdate,
+											action: kt.Leave,
 											conferenceName: r,
 											participantId: Number(l),
 											role: u
 										};
-										Pt(e.SwEvent.Notification, n, s, !1) || Pt(e.SwEvent.Notification, n, i.uuid), null === t && Mt(e.SwEvent.Notification, null, s);
+										Ut(e.SwEvent.Notification, n, s, !1) || Ut(e.SwEvent.Notification, n, i.uuid), null === t && xt(e.SwEvent.Notification, null, s);
 									}
 								}
 								const s = [
@@ -7016,7 +7042,7 @@ var TelnyxWebRTC = (function() {
 								}).then((({ unsubscribedChannels: e = [] }) => {
 									t && (t.channels = t.channels.filter(((t) => !e.includes(t))));
 								})).catch(((e) => {
-									xe.error("liveArray unsubscribe error:", e);
+									Ue.error("liveArray unsubscribe error:", e);
 								}));
 								break;
 							}
@@ -7027,21 +7053,21 @@ var TelnyxWebRTC = (function() {
 					switch (t.contentType) {
 						case "layout-info":
 						case "layer-info":
-							Zi(this.session, t);
+							tn(this.session, t);
 							break;
 						case "logo-info": {
 							const i = {
-								type: _t.conferenceUpdate,
-								action: Ct.LogoInfo,
+								type: bt.conferenceUpdate,
+								action: kt.LogoInfo,
 								logo: t.logoURL
 							};
-							Pt(e.SwEvent.Notification, i, this.session.uuid);
+							Ut(e.SwEvent.Notification, i, this.session.uuid);
 							break;
 						}
 					}
 				}
 			}
-			class vn extends hn {
+			class fn extends gn {
 				constructor(e) {
 					super(e), this.relayProtocol = "verto-protocol", this.timeoutErrorCode = -329990, this.handleLoginOnSocketOpen = () => i(this, void 0, void 0, (function* () {
 						this._idle = !1;
@@ -7051,9 +7077,9 @@ var TelnyxWebRTC = (function() {
 						} });
 					})), this.handleAnonymousLoginOnSocketOpen = () => i(this, void 0, void 0, (function* () {
 						this._idle = !1, yield this.login();
-					})), this._vertoHandler = new gn(this), window.addEventListener("beforeunload", ((t) => {
-						if (xe.debug("Window beforeunload triggered."), !1 !== e.hangupOnBeforeUnload) return lt(), void (this.calls && Object.keys(this.calls).forEach(((e) => {
-							this.calls[e] && (xe.info(`Hanging up call due to window unload: ${e}`), this.calls[e].hangup({ initiator: "sdk:beforeunload" }, !0));
+					})), this._vertoHandler = new mn(this), window.addEventListener("beforeunload", ((t) => {
+						if (Ue.debug("Window beforeunload triggered."), !1 !== e.hangupOnBeforeUnload) return ht(), void (this.calls && Object.keys(this.calls).forEach(((e) => {
+							this.calls[e] && (Ue.info(`Hanging up call due to window unload: ${e}`), this.calls[e].hangup({ initiator: "sdk:beforeunload" }, !0));
 						})));
 						try {
 							const e = this.getActiveCalls().map(((e) => {
@@ -7066,27 +7092,27 @@ var TelnyxWebRTC = (function() {
 							}));
 							if (this.getActiveCalls().forEach(((e) => {
 								if (e.flushIntermediateCallReport) try {
-									xe.debug(`beforeunload: flushing call report for ${e.id}.`), e.flushIntermediateCallReport({ type: "page-unload" });
+									Ue.debug(`beforeunload: flushing call report for ${e.id}.`), e.flushIntermediateCallReport({ type: "page-unload" });
 								} catch (t) {
-									xe.debug(`beforeunload: failed to flush call report for ${e.id}: ${t instanceof Error ? t.message : String(t)}`);
+									Ue.debug(`beforeunload: failed to flush call report for ${e.id}: ${t instanceof Error ? t.message : String(t)}`);
 								}
-							})), !this.sessionid || 0 === e.length) return xe.debug(`No sessionID ${this.sessionid} or activeCalls ${e.length} during saving calls recover marker!`), void ht();
-							xe.info(`Saving recovery marker for ${e.length} active call(s) before unload (sessid=${this.sessionid}): [${e.map(((e) => e.id)).join(", ")}].`), gt(e, this.sessionid);
+							})), !this.sessionid || 0 === e.length) return Ue.debug(`No sessionID ${this.sessionid} or activeCalls ${e.length} during saving calls recover marker!`), void gt();
+							Ue.info(`Saving recovery marker for ${e.length} active call(s) before unload (sessid=${this.sessionid}): [${e.map(((e) => e.id)).join(", ")}].`), mt(e, this.sessionid);
 						} catch (e) {
 							const t = this.calls ? Object.keys(this.calls) : [];
-							xe.debug(`Failed to save active-calls recovery marker before unload (active call ids: [${t.join(", ")}]): ${e instanceof Error ? e.message : String(e)}`);
+							Ue.debug(`Failed to save active-calls recovery marker before unload (active call ids: [${t.join(", ")}]): ${e instanceof Error ? e.message : String(e)}`);
 						}
 					})), document.addEventListener("visibilitychange", (() => {
-						"hidden" === document.visibilityState && !1 === e.hangupOnBeforeUnload && this.sessionid && this.hasActiveCall() && (xe.debug("visibilitychange → hidden: re-stamping reconnect session-id freshness."), dt(this.sessionid));
+						"hidden" === document.visibilityState && !1 === e.hangupOnBeforeUnload && this.sessionid && this.hasActiveCall() && (Ue.debug("visibilitychange → hidden: re-stamping reconnect session-id freshness."), ut(this.sessionid));
 					}));
 				}
 				validateOptions() {
-					return Je(this.options) || ze(this.options);
+					return Xe(this.options) || Qe(this.options);
 				}
 				newCall(e) {
 					if (!this.validateCallOptions(e)) throw Te(S, void 0, "Error: destinationNumber is required");
-					const t = new un(this, e);
-					return e.id || xe.debug(`newCall: callId was not provided in options, SDK-generated ID: ${t.id}`), this.emitMultipleActiveCallsWarning(t.id), performance.mark(sn(t.id, "new-call-start")), t.invite(), t;
+					const t = new pn(this, e);
+					return e.id || Ue.debug(`newCall: callId was not provided in options, SDK-generated ID: ${t.id}`), this.emitMultipleActiveCallsWarning(t.id), performance.mark(rn(t.id, "new-call-start")), t.invite(), t;
 				}
 				broadcast(e) {
 					return this.vertoBroadcast(e);
@@ -7098,20 +7124,20 @@ var TelnyxWebRTC = (function() {
 					return this.vertoUnsubscribe(e);
 				}
 				validateCallOptions(e) {
-					return !!ze(this.options) || Boolean(e.destinationNumber);
+					return !!Qe(this.options) || Boolean(e.destinationNumber);
 				}
 				_onSocketOpen() {
 					const e = Object.create(null, { _onSocketOpen: { get: () => super._onSocketOpen } });
 					return i(this, void 0, void 0, (function* () {
-						return e._onSocketOpen.call(this), Je(this.options) ? this.handleLoginOnSocketOpen() : ze(this.options) ? this.handleAnonymousLoginOnSocketOpen() : void 0;
+						return e._onSocketOpen.call(this), Xe(this.options) ? this.handleLoginOnSocketOpen() : Qe(this.options) ? this.handleAnonymousLoginOnSocketOpen() : void 0;
 					}));
 				}
 				_onSocketMessage(e) {
 					this._vertoHandler.handleMessage(e);
 				}
 			}
-			const mn = (e) => Number(e.toFixed(2)), fn = (e = {}) => Object.entries(e).filter((([, e]) => void 0 !== e)).map((([e, t]) => `${e}=${t}${e.endsWith("Ms") ? " ms" : ""}`)).join(", ");
-			class _n {
+			const _n = (e) => Number(e.toFixed(2)), yn = (e = {}) => Object.entries(e).filter((([, e]) => void 0 !== e)).map((([e, t]) => `${e}=${t}${e.endsWith("Ms") ? " ms" : ""}`)).join(", ");
+			class bn {
 				constructor(e) {
 					this.sdkVersion = e, this.clientId = "", this.startedAtUtc = (/* @__PURE__ */ new Date()).toISOString(), this.previousStep = "new TelnyxRTC()", this.clockAdjusted = !1, this.finished = !1, this.socketAttempts = 0, this.droppedSteps = 0, this.droppedRequests = 0, this.entries = [{
 						timestamp: this.startedAtUtc,
@@ -7136,7 +7162,7 @@ var TelnyxWebRTC = (function() {
 					return this.clockAdjusted = !0, this.previousAt;
 				}
 				record(e, t, i = this.now(), n = !0) {
-					const s = mn(i - this.previousAt);
+					const s = _n(i - this.previousAt);
 					(!this.longestInterval || s > this.longestInterval.durationMs) && (this.longestInterval = {
 						from: this.previousStep,
 						to: e,
@@ -7146,14 +7172,14 @@ var TelnyxWebRTC = (function() {
 						timestamp: (/* @__PURE__ */ new Date()).toISOString(),
 						step: e,
 						deltaMs: s,
-						elapsedMs: mn(i - this.startedAt)
+						elapsedMs: _n(i - this.startedAt)
 					}, t ? { details: t } : {});
-					return this.entries.length === _n.MAX_STEPS && (this.entries.shift(), this.droppedSteps += 1), this.entries.push(o), n && this.logStep(o), o;
+					return this.entries.length === bn.MAX_STEPS && (this.entries.shift(), this.droppedSteps += 1), this.entries.push(o), n && this.logStep(o), o;
 				}
 				logStep(e) {
 					try {
-						const t = fn(e.details);
-						xe.info(`[TelnyxRTC registration ${this.clientId}] ${e.timestamp} +${e.deltaMs} ms / ${e.elapsedMs} ms total: ${e.step}` + (t ? ` (${t})` : ""));
+						const t = yn(e.details);
+						Ue.info(`[TelnyxRTC registration ${this.clientId}] ${e.timestamp} +${e.deltaMs} ms / ${e.elapsedMs} ms total: ${e.step}` + (t ? ` (${t})` : ""));
 					} catch (e) {}
 				}
 				mark(e, t) {
@@ -7162,9 +7188,9 @@ var TelnyxWebRTC = (function() {
 					"TelnyxRTC constructor complete" === e && (this.constructorFinishedAt = i), "client.connect() called" === e && void 0 === this.connectStartedAt && (this.connectStartedAt = i), "create WebSocket" === e && (this.socketAttempts += 1, this.requests.clear()), "WebSocket closed" !== e && "WebSocket error" !== e || this.requests.clear(), this.record(e, t, i);
 				}
 				requestSent(e, t) {
-					if (this.finished || !((e) => "login" === e || "anonymous_login" === e || e === ft.GatewayState)(t) || "string" != typeof e || e.length > 128) return;
+					if (this.finished || !((e) => "login" === e || "anonymous_login" === e || e === yt.GatewayState)(t) || "string" != typeof e || e.length > 128) return;
 					const i = this.now();
-					this.requests.has(e) || this.requests.size !== _n.MAX_REQUESTS || (this.requests.delete(this.requests.keys().next().value), this.droppedRequests += 1), this.requests.set(e, {
+					this.requests.has(e) || this.requests.size !== bn.MAX_REQUESTS || (this.requests.delete(this.requests.keys().next().value), this.droppedRequests += 1), this.requests.set(e, {
 						method: t,
 						startedAt: i
 					}), this.record(`send ${t}`, { requestId: e }, i);
@@ -7173,9 +7199,9 @@ var TelnyxWebRTC = (function() {
 					var t, i, n;
 					if (this.finished || !e) return;
 					const s = this.now(), o = "string" == typeof e.id ? e.id : void 0, r = this.requests.get(o), a = {};
-					r && (a.requestId = o, a.requestMs = mn(s - r.startedAt), this.requests.delete(o));
+					r && (a.requestId = o, a.requestMs = _n(s - r.startedAt), this.requests.delete(o));
 					const c = (null === (i = null === (t = e.result) || void 0 === t ? void 0 : t.params) || void 0 === i ? void 0 : i.state) || (null === (n = e.params) || void 0 === n ? void 0 : n.state);
-					Object.values(kt).includes(c) && (a.state = c), e.method === ft.ClientReady ? this.record("receive server clientReady", a, s) : r ? this.record(`receive ${r.method}${e.error ? " error" : ""}`, a, s) : a.state && this.record("receive gateway state", a, s);
+					Object.values(Rt).includes(c) && (a.state = c), e.method === yt.ClientReady ? this.record("receive server clientReady", a, s) : r ? this.record(`receive ${r.method}${e.error ? " error" : ""}`, a, s) : a.state && this.record("receive gateway state", a, s);
 				}
 				finish(e) {
 					if (this.finished) return;
@@ -7191,8 +7217,8 @@ var TelnyxWebRTC = (function() {
 						timestamp: this.completedAtUtc,
 						clock: this.clock,
 						clockAdjusted: this.clockAdjusted,
-						totalMs: mn(t - this.startedAt)
-					}, void 0 !== this.constructorFinishedAt ? { constructorMs: mn(this.constructorFinishedAt - this.startedAt) } : {}), void 0 !== this.connectStartedAt ? Object.assign({ connectToReadyMs: mn(t - this.connectStartedAt) }, void 0 !== this.constructorFinishedAt ? { appWaitBeforeConnectMs: mn(this.connectStartedAt - this.constructorFinishedAt) } : {}) : {}), {
+						totalMs: _n(t - this.startedAt)
+					}, void 0 !== this.constructorFinishedAt ? { constructorMs: _n(this.constructorFinishedAt - this.startedAt) } : {}), void 0 !== this.connectStartedAt ? Object.assign({ connectToReadyMs: _n(t - this.connectStartedAt) }, void 0 !== this.constructorFinishedAt ? { appWaitBeforeConnectMs: _n(this.connectStartedAt - this.constructorFinishedAt) } : {}) : {}), {
 						socketAttempts: this.socketAttempts,
 						droppedSteps: this.droppedSteps,
 						droppedRequests: this.droppedRequests,
@@ -7204,13 +7230,13 @@ var TelnyxWebRTC = (function() {
 							const e = this.summary, t = [`${e.totalMs} ms total`];
 							void 0 !== e.constructorMs && t.push(`constructor=${e.constructorMs} ms`), void 0 !== e.appWaitBeforeConnectMs && t.push(`app wait=${e.appWaitBeforeConnectMs} ms`), void 0 !== e.connectToReadyMs && t.push(`connect-to-ready=${e.connectToReadyMs} ms`);
 							const i = e.longestInterval;
-							xe.info(`[TelnyxRTC registration ${this.clientId}] ${e.timestamp} COMPLETE: ${t.join("; ")}; longest interval: ${i.from} → ${i.to} (${i.durationMs} ms); socket attempts=${e.socketAttempts}; dropped steps=${e.droppedSteps}`);
+							Ue.info(`[TelnyxRTC registration ${this.clientId}] ${e.timestamp} COMPLETE: ${t.join("; ")}; longest interval: ${i.from} → ${i.to} (${i.durationMs} ms); socket attempts=${e.socketAttempts}; dropped steps=${e.droppedSteps}`);
 						} catch (e) {}
 						try {
 							(function(e) {
-								const t = Ue[e];
-								return t >= Fe && t >= xe.getLevel();
-							})("info") && "undefined" != typeof console && "function" == typeof console.table && console.table(this.summary.steps.map(((e) => Object.assign(Object.assign({}, e), { details: fn(e.details) }))));
+								const t = Fe[e];
+								return t >= $e && t >= Ue.getLevel();
+							})("info") && "undefined" != typeof console && "function" == typeof console.table && console.table(this.summary.steps.map(((e) => Object.assign(Object.assign({}, e), { details: yn(e.details) }))));
 						} catch (e) {}
 					}));
 				}
@@ -7223,13 +7249,42 @@ var TelnyxWebRTC = (function() {
 					};
 				}
 			}
-			function yn(e) {
+			function Sn(e = {}) {
+				return i(this, void 0, void 0, (function* () {
+					if ("function" != typeof fetch) return !1;
+					const t = function(e = {}) {
+						return Je(e).replace(/^ws(s?):\/\//i, "http$1://");
+					}(e);
+					try {
+						return yield fetch(t, {
+							method: "HEAD",
+							mode: "no-cors",
+							cache: "no-store",
+							credentials: "omit"
+						}), Ue.debug(`prepareConnection: warmed up ${t}`), !0;
+					} catch (e) {
+						return Ue.debug(`prepareConnection: could not reach ${t}`, e), !1;
+					}
+				}));
+			}
+			bn.MAX_STEPS = 128, bn.MAX_REQUESTS = 32;
+			const In = 5e4;
+			function En(e = {}) {
+				const { intervalMs: i = In } = e, n = t(e, ["intervalMs"]);
+				if ("function" != typeof fetch || "function" != typeof setInterval) return () => {};
+				Sn(n);
+				const s = setInterval((() => {
+					Sn(n);
+				}), Math.max(1e3, i));
+				return () => clearInterval(s);
+			}
+			function Cn(e) {
 				return {
 					options: e,
 					statsSamples: []
 				};
 			}
-			function bn(e) {
+			function wn(e) {
 				var t, i;
 				const n = null === (i = null === (t = e.call) || void 0 === t ? void 0 : t.peer) || void 0 === i ? void 0 : i.instance, s = e.statsSamples[e.statsSamples.length - 1];
 				if (!n || !s) return;
@@ -7304,7 +7359,7 @@ var TelnyxWebRTC = (function() {
 					if (!e || 0 === e.length) return;
 					const s = [];
 					for (const o of e) {
-						const e = Array.isArray(o.urls) ? o.urls : [o.urls], r = t.filter(((t) => e.some(((e) => Cn(t.url, e, t.protocol))))), a = null !== (n = null === (i = r[0]) || void 0 === i ? void 0 : i.candidateType) && void 0 !== n ? n : null, c = r.length > 0;
+						const e = Array.isArray(o.urls) ? o.urls : [o.urls], r = t.filter(((t) => e.some(((e) => An(t.url, e, t.protocol))))), a = null !== (n = null === (i = r[0]) || void 0 === i ? void 0 : i.candidateType) && void 0 !== n ? n : null, c = r.length > 0;
 						s.push({
 							urls: o.urls,
 							hasCandidates: c,
@@ -7316,10 +7371,10 @@ var TelnyxWebRTC = (function() {
 					return s;
 				}(r, o.candidates)), o;
 			}
-			function Sn(e) {
+			function kn(e) {
 				return (Array.isArray(e.urls) ? e.urls : [e.urls]).some(((e) => /^turns?:/i.test(e)));
 			}
-			function In(e) {
+			function Tn(e) {
 				var t;
 				let i = e;
 				const n = i.match(/^([a-z]+:)(\/\/)?([^@]*@)(.+)$/i);
@@ -7327,24 +7382,23 @@ var TelnyxWebRTC = (function() {
 				const s = i.indexOf("?transport=");
 				return -1 !== s && (i = i.substring(0, s)), i;
 			}
-			function En(e) {
+			function Rn(e) {
 				const t = e.indexOf("?transport=");
 				if (-1 === t) return;
 				const i = e.substring(t + 11).toLowerCase(), n = i.indexOf("&");
 				return -1 === n ? i : i.substring(0, n);
 			}
-			function Cn(e, t, i) {
+			function An(e, t, i) {
 				var n;
 				if (!e || !t) return !1;
-				if (In(e) !== In(t)) return !1;
-				const s = En(t);
+				if (Tn(e) !== Tn(t)) return !1;
+				const s = Rn(t);
 				if (void 0 === s) return !0;
-				const o = null !== (n = En(e)) && void 0 !== n ? n : null == i ? void 0 : i.toLowerCase();
+				const o = null !== (n = Rn(e)) && void 0 !== n ? n : null == i ? void 0 : i.toLowerCase();
 				return void 0 === o || o === s;
 			}
-			_n.MAX_STEPS = 128, _n.MAX_REQUESTS = 32;
-			const wn = 2e3, kn = 100, Tn = .01, Rn = "To check your microphone, we will be recorded your voice for a few seconds and played back to you so you can hear how it sounds.";
-			function An() {
+			const On = 2e3, Dn = 100, Nn = .01, Mn = "To check your microphone, we will be recorded your voice for a few seconds and played back to you so you can hear how it sounds.";
+			function Ln() {
 				var e;
 				return i(this, void 0, void 0, (function* () {
 					if ("undefined" == typeof navigator || "function" != typeof (null === (e = navigator.mediaDevices) || void 0 === e ? void 0 : e.getUserMedia)) return {
@@ -7392,7 +7446,7 @@ var TelnyxWebRTC = (function() {
 					}
 				}));
 			}
-			function On(e, t, n) {
+			function Pn(e, t, n) {
 				return i(this, void 0, void 0, (function* () {
 					if ("undefined" == typeof AudioContext) return null;
 					let i, s, o;
@@ -7407,7 +7461,7 @@ var TelnyxWebRTC = (function() {
 							const t = Math.sqrt(e / r.length);
 							c = Math.max(c, t), d += t, l += 1;
 							const i = a - Date.now();
-							i > 0 && (yield new Promise(((e) => setTimeout(e, Math.min(kn, i)))));
+							i > 0 && (yield new Promise(((e) => setTimeout(e, Math.min(Dn, i)))));
 						}
 						return {
 							audioLevel: c,
@@ -7427,7 +7481,7 @@ var TelnyxWebRTC = (function() {
 					}
 				}));
 			}
-			function Dn(e, t) {
+			function xn(e, t) {
 				return i(this, void 0, void 0, (function* () {
 					if ("undefined" != typeof MediaRecorder) try {
 						const n = ["audio/webm;codecs=opus", "audio/webm"].find(((e) => "function" != typeof MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(e))), s = n ? new MediaRecorder(e, { mimeType: n }) : new MediaRecorder(e), o = [], r = Date.now();
@@ -7468,15 +7522,15 @@ var TelnyxWebRTC = (function() {
 					}
 				}));
 			}
-			function Nn(e) {
+			function Un(e) {
 				var t, n;
 				return i(this, void 0, void 0, (function* () {
 					const s = function(e) {
 						var t, i;
 						const n = e && "object" == typeof e ? e : void 0;
 						return {
-							sampleDurationMs: Math.max(0, null !== (t = null == n ? void 0 : n.sampleDurationMs) && void 0 !== t ? t : wn),
-							silenceThreshold: Math.min(1, Math.max(0, null !== (i = null == n ? void 0 : n.silenceThreshold) && void 0 !== i ? i : Tn)),
+							sampleDurationMs: Math.max(0, null !== (t = null == n ? void 0 : n.sampleDurationMs) && void 0 !== t ? t : On),
+							silenceThreshold: Math.min(1, Math.max(0, null !== (i = null == n ? void 0 : n.silenceThreshold) && void 0 !== i ? i : Nn)),
 							record: !0 === (null == n ? void 0 : n.record),
 							warnOnRecording: null == n ? void 0 : n.warnOnRecording
 						};
@@ -7490,7 +7544,7 @@ var TelnyxWebRTC = (function() {
 								return "unknown";
 							}
 						}));
-					}(), { report: r, stream: a } = yield An(), c = yield function() {
+					}(), { report: r, stream: a } = yield Ln(), c = yield function() {
 						var e;
 						return i(this, void 0, void 0, (function* () {
 							if ("undefined" != typeof navigator && "function" == typeof (null === (e = navigator.mediaDevices) || void 0 === e ? void 0 : e.enumerateDevices)) try {
@@ -7525,8 +7579,8 @@ var TelnyxWebRTC = (function() {
 						const e = yield function(e, t, n) {
 							var s, o, r;
 							return i(this, void 0, void 0, (function* () {
-								e.activeCapturePerformed = !0, e.recordingPerformed = n.record, n.record && n.warnOnRecording && n.warnOnRecording(Rn);
-								const [i, a] = yield Promise.all([On(t, null !== (s = n.sampleDurationMs) && void 0 !== s ? s : wn, null !== (o = n.silenceThreshold) && void 0 !== o ? o : Tn), n.record ? Dn(t, null !== (r = n.sampleDurationMs) && void 0 !== r ? r : wn) : Promise.resolve(void 0)]);
+								e.activeCapturePerformed = !0, e.recordingPerformed = n.record, n.record && n.warnOnRecording && n.warnOnRecording(Mn);
+								const [i, a] = yield Promise.all([Pn(t, null !== (s = n.sampleDurationMs) && void 0 !== s ? s : On, null !== (o = n.silenceThreshold) && void 0 !== o ? o : Nn), n.record ? xn(t, null !== (r = n.sampleDurationMs) && void 0 !== r ? r : On) : Promise.resolve(void 0)]);
 								return i && (e.audioLevel = i.audioLevel, e.audioDetected = i.audioDetected, e.audioLevelStats = i.audioLevelStats), a && (e.recordingDataUrl = a.recordingDataUrl, e.recordingMimeType = a.recordingMimeType, e.recordingDurationMs = a.recordingDurationMs, e.recordingPerformed = !0), a;
 							}));
 						}(l, a, s);
@@ -7565,12 +7619,12 @@ var TelnyxWebRTC = (function() {
 					return p.length > 0 && (l.reasons = p), Object.keys(l).length > 0 ? l : void 0;
 				}));
 			}
-			const Ln = 300, Mn = 500, Pn = 30, xn = 100, Un = .02, Fn = .05, $n = 8e3;
-			function jn(e) {
+			const Fn = 300, $n = 500, jn = 30, Bn = 100, Hn = .02, Wn = .05, Gn = 8e3;
+			function Vn(e) {
 				if ("number" == typeof e && !Number.isNaN(e) && Number.isFinite(e)) return e;
 			}
-			function Bn(e) {
-				const t = e.filter(((e) => void 0 !== jn(e)));
+			function qn(e) {
+				const t = e.filter(((e) => void 0 !== Vn(e)));
 				if (0 === t.length) return;
 				let i = 1 / 0, n = -1 / 0, s = 0;
 				for (const e of t) e < i && (i = e), e > n && (n = e), s += e;
@@ -7580,7 +7634,7 @@ var TelnyxWebRTC = (function() {
 					average: s / t.length
 				};
 			}
-			function Hn(e) {
+			function Yn(e) {
 				var t, i;
 				const n = [], s = /* @__PURE__ */ new Set();
 				e.forEach(((e) => {
@@ -7590,15 +7644,15 @@ var TelnyxWebRTC = (function() {
 				const o = n.filter(((e) => "candidate-pair" === e.type));
 				return null !== (i = null !== (t = o.find(((e) => s.has(e.id)))) && void 0 !== t ? t : o.find(((e) => !0 === e.selected || !0 === e.nominated && "succeeded" === e.state))) && void 0 !== i ? i : o.find(((e) => "succeeded" === e.state));
 			}
-			function Wn(e, t) {
+			function Kn(e, t) {
 				let i = 0, n = !1;
 				for (const s of e) {
-					const e = jn(s[t]);
+					const e = Vn(s[t]);
 					void 0 !== e && (i += e, n = !0);
 				}
 				return n ? i : void 0;
 			}
-			function Gn(e, t, i = !1) {
+			function Jn(e, t, i = !1) {
 				const n = [];
 				return e.forEach(((e) => {
 					const s = e;
@@ -7609,32 +7663,32 @@ var TelnyxWebRTC = (function() {
 					}(s) || n.push(s);
 				})), n;
 			}
-			function Vn(e, t) {
+			function zn(e, t) {
 				const i = void 0 === e.packets ? void 0 !== t.packets : void 0 !== t.packets && t.packets > e.packets, n = void 0 === e.bytes ? void 0 !== t.bytes : void 0 !== t.bytes && t.bytes > e.bytes;
 				return i || n;
 			}
-			function qn(e, t) {
-				if (void 0 !== e && void 0 !== t) return jn(t - e);
+			function Xn(e, t) {
+				if (void 0 !== e && void 0 !== t) return Vn(t - e);
 			}
-			function Yn(e, t) {
+			function Qn(e, t) {
 				var i, n;
-				if (!e.some(((e) => Gn(e, `${t}-rtp`, !0).length > 0))) return;
+				if (!e.some(((e) => Jn(e, `${t}-rtp`, !0).length > 0))) return;
 				const s = e.map(((e) => function(e, t) {
-					const i = Gn(e, `${t}-rtp`, !0);
+					const i = Jn(e, `${t}-rtp`, !0);
 					return "outbound" === t ? {
-						packets: Wn(i, "packetsSent"),
-						bytes: Wn(i, "bytesSent")
+						packets: Kn(i, "packetsSent"),
+						bytes: Kn(i, "bytesSent")
 					} : {
-						packets: Wn(i, "packetsReceived"),
-						bytes: Wn(i, "bytesReceived")
+						packets: Kn(i, "packetsReceived"),
+						bytes: Kn(i, "bytesReceived")
 					};
-				}(e, t))).filter((({ packets: e, bytes: t }) => void 0 !== e || void 0 !== t)), o = null !== (i = s[0]) && void 0 !== i ? i : {}, r = null !== (n = s[s.length - 1]) && void 0 !== n ? n : {}, a = qn(o.packets, r.packets), c = qn(o.bytes, r.bytes);
-				return Object.assign(Object.assign(Object.assign(Object.assign({ flowing: s.length > 1 && Vn(o, r) }, void 0 !== r.packets ? { packets: r.packets } : {}), void 0 !== r.bytes ? { bytes: r.bytes } : {}), void 0 !== a ? { packetsDelta: a } : {}), void 0 !== c ? { bytesDelta: c } : {});
+				}(e, t))).filter((({ packets: e, bytes: t }) => void 0 !== e || void 0 !== t)), o = null !== (i = s[0]) && void 0 !== i ? i : {}, r = null !== (n = s[s.length - 1]) && void 0 !== n ? n : {}, a = Xn(o.packets, r.packets), c = Xn(o.bytes, r.bytes);
+				return Object.assign(Object.assign(Object.assign(Object.assign({ flowing: s.length > 1 && zn(o, r) }, void 0 !== r.packets ? { packets: r.packets } : {}), void 0 !== r.bytes ? { bytes: r.bytes } : {}), void 0 !== a ? { packetsDelta: a } : {}), void 0 !== c ? { bytesDelta: c } : {});
 			}
-			function Kn(e, t) {
+			function Zn(e, t) {
 				const i = [];
-				for (const n of e) for (const e of Gn(n, t, !0)) {
-					const t = jn(e.jitter);
+				for (const n of e) for (const e of Jn(n, t, !0)) {
+					const t = Vn(e.jitter);
 					if (void 0 !== t) {
 						const e = 1e3 * t;
 						e >= 0 && i.push(e);
@@ -7642,40 +7696,40 @@ var TelnyxWebRTC = (function() {
 				}
 				return i;
 			}
-			function Jn(e) {
-				const t = Wn(e, "packetsReceived"), i = Wn(e, "packetsLost"), n = e.map(((e) => jn(e.fractionLost))).filter(((e) => void 0 !== e && e >= 0 && e <= 1)), s = n.length > 0 ? Math.max(...n) : void 0, o = void 0 !== t && void 0 !== i ? t + i : void 0;
+			function es(e) {
+				const t = Kn(e, "packetsReceived"), i = Kn(e, "packetsLost"), n = e.map(((e) => Vn(e.fractionLost))).filter(((e) => void 0 !== e && e >= 0 && e <= 1)), s = n.length > 0 ? Math.max(...n) : void 0, o = void 0 !== t && void 0 !== i ? t + i : void 0;
 				return {
 					packetsReceived: t,
 					packetsLost: i,
 					packetLossFraction: null != s ? s : void 0 !== i && void 0 !== o && o > 0 ? i / o : void 0
 				};
 			}
-			function zn(e) {
+			function ts(e) {
 				let t;
 				return e.forEach(((e) => {
-					void 0 === t && (t = jn(e.timestamp));
+					void 0 === t && (t = Vn(e.timestamp));
 				})), t;
 			}
-			function Xn(e) {
+			function is(e) {
 				if (0 === e.statsSamples.length) return {
 					quality: "unknown",
 					reasons: []
 				};
-				const t = e.statsSamples, i = Yn(t, "inbound"), n = Yn(t, "outbound"), s = Bn(function(e) {
+				const t = e.statsSamples, i = Qn(t, "inbound"), n = Qn(t, "outbound"), s = qn(function(e) {
 					var t;
 					const i = [];
 					for (const n of e) {
 						let e = !1;
-						const s = Gn(n, "remote-inbound-rtp", !0);
+						const s = Jn(n, "remote-inbound-rtp", !0);
 						for (const t of s) {
-							const n = jn(t.roundTripTime);
+							const n = Vn(t.roundTripTime);
 							if (void 0 !== n) {
 								const t = 1e3 * n;
 								t >= 0 && (i.push(t), e = !0);
 							}
 						}
 						if (!e) {
-							const e = jn(null === (t = Hn(n)) || void 0 === t ? void 0 : t.currentRoundTripTime);
+							const e = Vn(null === (t = Yn(n)) || void 0 === t ? void 0 : t.currentRoundTripTime);
 							if (void 0 !== e) {
 								const t = 1e3 * e;
 								t >= 0 && i.push(t);
@@ -7683,17 +7737,17 @@ var TelnyxWebRTC = (function() {
 						}
 					}
 					return i;
-				}(t)), o = (r = Bn(Kn(t, "inbound-rtp")), a = Bn(Kn(t, "remote-inbound-rtp")), void 0 === (null == r ? void 0 : r.average) ? a : void 0 === (null == a ? void 0 : a.average) ? r : a.average > r.average ? a : r);
+				}(t)), o = (r = qn(Zn(t, "inbound-rtp")), a = qn(Zn(t, "remote-inbound-rtp")), void 0 === (null == r ? void 0 : r.average) ? a : void 0 === (null == a ? void 0 : a.average) ? r : a.average > r.average ? a : r);
 				var r, a;
 				const c = function(e, t, i) {
 					var n;
 					if (0 === e.length) return;
-					const s = e[e.length - 1], o = Gn(s, "inbound-rtp", !0), r = Gn(s, "remote-inbound-rtp", !0), a = function(e, t) {
+					const s = e[e.length - 1], o = Jn(s, "inbound-rtp", !0), r = Jn(s, "remote-inbound-rtp", !0), a = function(e, t) {
 						return void 0 === e.packetLossFraction ? t : void 0 === t.packetLossFraction ? e : t.packetLossFraction > e.packetLossFraction ? t : e;
-					}(Jn(o), Jn(r));
+					}(es(o), es(r));
 					let c = null == i ? void 0 : i.packets, d = null !== (n = a.packetsReceived) && void 0 !== n ? n : null == t ? void 0 : t.packets;
-					const l = a.packetsLost, u = a.packetLossFraction, h = Hn(s);
-					return void 0 === c && (c = jn(null == h ? void 0 : h.packetsSent)), void 0 === d && (d = jn(null == h ? void 0 : h.packetsReceived)), void 0 !== c || void 0 !== d || void 0 !== l ? {
+					const l = a.packetsLost, u = a.packetLossFraction, h = Yn(s);
+					return void 0 === c && (c = Vn(null == h ? void 0 : h.packetsSent)), void 0 === d && (d = Vn(null == h ? void 0 : h.packetsReceived)), void 0 !== c || void 0 !== d || void 0 !== l ? {
 						packetsSent: c,
 						packetsReceived: d,
 						packetsLost: l,
@@ -7703,14 +7757,14 @@ var TelnyxWebRTC = (function() {
 					if (0 === e.length) return;
 					const n = e[e.length - 1];
 					let s = null == i ? void 0 : i.bytes, o = null == t ? void 0 : t.bytes;
-					const r = Hn(n);
-					return void 0 === s && (s = jn(null == r ? void 0 : r.bytesSent)), void 0 === o && (o = jn(null == r ? void 0 : r.bytesReceived)), void 0 !== s || void 0 !== o ? {
+					const r = Yn(n);
+					return void 0 === s && (s = Vn(null == r ? void 0 : r.bytesSent)), void 0 === o && (o = Vn(null == r ? void 0 : r.bytesReceived)), void 0 !== s || void 0 !== o ? {
 						bytesSent: s,
 						bytesReceived: o
 					} : void 0;
 				}(t, i, n), l = function(e, t, i) {
 					if (e.length < 2) return;
-					const n = e[0], s = e[e.length - 1], o = zn(n), r = zn(s);
+					const n = e[0], s = e[e.length - 1], o = ts(n), r = ts(s);
 					if (void 0 === o || void 0 === r) return;
 					const a = (r - o) / 1e3;
 					if (a <= 0) return;
@@ -7721,40 +7775,40 @@ var TelnyxWebRTC = (function() {
 					} : void 0;
 				}(t, i, n), u = function(e, t, i) {
 					let n = !1, s = "good";
-					return void 0 !== (null == e ? void 0 : e.average) && (n = !0, e.average >= Mn ? s = "poor" : e.average >= Ln && "good" === s && (s = "fair")), void 0 !== (null == t ? void 0 : t.average) && (n = !0, t.average >= xn ? s = "poor" : t.average >= Pn && "good" === s && (s = "fair")), void 0 !== (null == i ? void 0 : i.packetLossFraction) && (n = !0, i.packetLossFraction >= Fn ? s = "poor" : i.packetLossFraction >= Un && "good" === s && (s = "fair")), n ? s : "unknown";
+					return void 0 !== (null == e ? void 0 : e.average) && (n = !0, e.average >= $n ? s = "poor" : e.average >= Fn && "good" === s && (s = "fair")), void 0 !== (null == t ? void 0 : t.average) && (n = !0, t.average >= Bn ? s = "poor" : t.average >= jn && "good" === s && (s = "fair")), void 0 !== (null == i ? void 0 : i.packetLossFraction) && (n = !0, i.packetLossFraction >= Wn ? s = "poor" : i.packetLossFraction >= Hn && "good" === s && (s = "fair")), n ? s : "unknown";
 				}(s, o, c), h = function(e, t, i, n) {
 					const s = [];
-					return void 0 !== (null == e ? void 0 : e.average) && (e.average >= Mn ? s.push({
+					return void 0 !== (null == e ? void 0 : e.average) && (e.average >= $n ? s.push({
 						code: "network_high_rtt",
-						message: `Average RTT is ${Math.round(e.average)}ms (poor: ≥${Mn}ms threshold)`,
+						message: `Average RTT is ${Math.round(e.average)}ms (poor: ≥${$n}ms threshold)`,
 						source: "network"
-					}) : e.average >= Ln && s.push({
+					}) : e.average >= Fn && s.push({
 						code: "network_high_rtt",
-						message: `Average RTT is ${Math.round(e.average)}ms (degraded: ≥${Ln}ms threshold)`,
+						message: `Average RTT is ${Math.round(e.average)}ms (degraded: ≥${Fn}ms threshold)`,
 						source: "network"
-					})), void 0 !== (null == t ? void 0 : t.average) && (t.average >= xn ? s.push({
+					})), void 0 !== (null == t ? void 0 : t.average) && (t.average >= Bn ? s.push({
 						code: "network_high_jitter",
-						message: `Average jitter is ${Math.round(t.average)}ms (poor: ≥${xn}ms threshold)`,
+						message: `Average jitter is ${Math.round(t.average)}ms (poor: ≥${Bn}ms threshold)`,
 						source: "network"
-					}) : t.average >= Pn && s.push({
+					}) : t.average >= jn && s.push({
 						code: "network_high_jitter",
-						message: `Average jitter is ${Math.round(t.average)}ms (degraded: ≥${Pn}ms threshold)`,
+						message: `Average jitter is ${Math.round(t.average)}ms (degraded: ≥${jn}ms threshold)`,
 						source: "network"
-					})), void 0 !== (null == i ? void 0 : i.packetLossFraction) && (i.packetLossFraction >= Fn ? s.push({
+					})), void 0 !== (null == i ? void 0 : i.packetLossFraction) && (i.packetLossFraction >= Wn ? s.push({
 						code: "network_packet_loss",
-						message: `Packet loss is ${(100 * i.packetLossFraction).toFixed(1)}% (poor: ≥${100 * Fn}% threshold)`,
+						message: `Packet loss is ${(100 * i.packetLossFraction).toFixed(1)}% (poor: ≥${100 * Wn}% threshold)`,
 						source: "network"
-					}) : i.packetLossFraction >= Un && s.push({
+					}) : i.packetLossFraction >= Hn && s.push({
 						code: "network_packet_loss",
-						message: `Packet loss is ${(100 * i.packetLossFraction).toFixed(1)}% (degraded: ≥${100 * Un}% threshold)`,
+						message: `Packet loss is ${(100 * i.packetLossFraction).toFixed(1)}% (degraded: ≥${100 * Hn}% threshold)`,
 						source: "network"
-					})), n && (void 0 !== n.outbound && n.outbound < $n && s.push({
+					})), n && (void 0 !== n.outbound && n.outbound < Gn && s.push({
 						code: "network_low_bitrate",
-						message: `Outbound audio bitrate is ${Math.round(n.outbound)} bps (<${$n} bps threshold)`,
+						message: `Outbound audio bitrate is ${Math.round(n.outbound)} bps (<${Gn} bps threshold)`,
 						source: "network"
-					}), void 0 !== n.inbound && n.inbound < $n && s.push({
+					}), void 0 !== n.inbound && n.inbound < Gn && s.push({
 						code: "network_low_bitrate",
-						message: `Inbound audio bitrate is ${Math.round(n.inbound)} bps (<${$n} bps threshold)`,
+						message: `Inbound audio bitrate is ${Math.round(n.inbound)} bps (<${Gn} bps threshold)`,
 						source: "network"
 					})), s;
 				}(s, o, c, "network-only" === e.options.mode ? void 0 : l);
@@ -7770,15 +7824,15 @@ var TelnyxWebRTC = (function() {
 					reasons: h.length > 0 ? h : void 0
 				};
 			}
-			function Qn(e) {
+			function ns(e) {
 				return "number" == typeof e && Number.isFinite(e) && e >= 0 ? e : void 0;
 			}
-			function Zn(e, t) {
+			function ss(e, t) {
 				return e.find(((e) => e.label === t));
 			}
-			class es {
+			class os {
 				constructor() {
-					this.startedAtMonoMs = ts();
+					this.startedAtMonoMs = rs();
 				}
 				build(e = {}) {
 					var t, i;
@@ -7791,29 +7845,29 @@ var TelnyxWebRTC = (function() {
 								direction: s.direction,
 								steps: s.steps.map(((e) => Object.assign({}, e)))
 							};
-							const e = Zn(s.steps, "ICE candidate gathering started"), t = Zn(s.steps, "All ICE candidates gathered"), i = Qn(e && t ? t.fromStart - e.fromStart : void 0);
+							const e = ss(s.steps, "ICE candidate gathering started"), t = ss(s.steps, "All ICE candidates gathered"), i = ns(e && t ? t.fromStart - e.fromStart : void 0);
 							void 0 !== i && (n.iceGatheringMs = i);
-							const o = Zn(s.steps, "First server-reflexive/relay candidate found"), r = Qn(e && o ? o.fromStart - e.fromStart : void 0);
+							const o = ss(s.steps, "First server-reflexive/relay candidate found"), r = ns(e && o ? o.fromStart - e.fromStart : void 0);
 							void 0 !== r && (n.firstNonHostCandidateMs = r);
 						}
 					} catch (e) {}
 					return n;
 				}
 				complete(e) {
-					const t = ts() - this.startedAtMonoMs;
+					const t = rs() - this.startedAtMonoMs;
 					Number.isFinite(t) && t >= 0 && (e.totalMs = t);
 				}
 			}
-			function ts() {
+			function rs() {
 				try {
 					if ("undefined" != typeof performance && "function" == typeof performance.now) return performance.now();
 				} catch (e) {}
 				return Date.now();
 			}
-			function is() {
-				return new es();
+			function as() {
+				return new os();
 			}
-			const ns = {
+			const cs = {
 				NoCandidates: "ice_no_candidates",
 				OnlyHostCandidates: "ice_only_host_candidates",
 				GatheringTimeout: "ice_gathering_timeout",
@@ -7824,7 +7878,7 @@ var TelnyxWebRTC = (function() {
 				StrictNetwork: "ice_strict_network",
 				MultipleInterfaces: "ice_multiple_interfaces",
 				VpnDetected: "ice_vpn_detected"
-			}, ss = {
+			}, ds = {
 				HighJitter: "network_high_jitter",
 				HighRtt: "network_high_rtt",
 				PacketLoss: "network_packet_loss",
@@ -7834,7 +7888,7 @@ var TelnyxWebRTC = (function() {
 				FairQuality: "network_fair_quality",
 				NoAudioFlow: "network_no_audio_flow",
 				OneWayAudio: "network_one_way_audio"
-			}, os = {
+			}, ls = {
 				PermissionDenied: "microphone_permission_denied",
 				NoDevice: "microphone_no_device",
 				CapturePermissionDenied: "microphone_capture_permission_denied",
@@ -7843,81 +7897,81 @@ var TelnyxWebRTC = (function() {
 				CaptureFailed: "microphone_capture_failed",
 				Silent: "microphone_silent",
 				SilenceDetected: "microphone_silence_detected"
-			}, rs = () => ({
+			}, us = () => ({
 				reasons: [],
 				warnings: []
-			}), as = {
+			}), hs = {
 				inconclusive: 0,
 				ready: 1,
 				degraded: 2,
 				blocked: 3,
 				permission_denied: 4
 			};
-			function cs(e, t) {
-				return e ? t ? as[e] >= as[t] ? e : t : e : t;
+			function ps(e, t) {
+				return e ? t ? hs[e] >= hs[t] ? e : t : e : t;
 			}
-			function ds(e, t, i) {
+			function gs(e, t, i) {
 				return {
 					code: e,
 					message: t,
 					source: i
 				};
 			}
-			function ls(e, t, i) {
+			function vs(e, t, i) {
 				return {
 					code: e,
 					message: t,
 					source: i
 				};
 			}
-			function us(e, t = !1) {
+			function ms(e, t = !1) {
 				var i;
-				if (!e) return rs();
-				const n = rs(), { reasons: s, warnings: o } = n, r = e.candidates.length > 0;
-				r || (s.push(ds(ns.NoCandidates, "No ICE candidates were gathered.", "ice")), n.verdict = "inconclusive"), r && e.onlyHostCandidates && (e.hasSelectedPair ? o.push(ls(ns.OnlyHostCandidates, "Only host ICE candidates were found. Connectivity succeeded, but NAT traversal may not be possible.", "ice")) : (s.push(ds(ns.OnlyHostCandidates, "Only host ICE candidates were found. NAT traversal may not be possible.", "ice")), n.verdict = cs(n.verdict, "degraded"))), e.isTurnRequired && !t && (s.push(ds(ns.TurnRequired, "The selected ICE candidate pair requires a TURN relay.", "ice")), n.verdict = cs(n.verdict, "degraded"));
+				if (!e) return us();
+				const n = us(), { reasons: s, warnings: o } = n, r = e.candidates.length > 0;
+				r || (s.push(gs(cs.NoCandidates, "No ICE candidates were gathered.", "ice")), n.verdict = "inconclusive"), r && e.onlyHostCandidates && (e.hasSelectedPair ? o.push(vs(cs.OnlyHostCandidates, "Only host ICE candidates were found. Connectivity succeeded, but NAT traversal may not be possible.", "ice")) : (s.push(gs(cs.OnlyHostCandidates, "Only host ICE candidates were found. NAT traversal may not be possible.", "ice")), n.verdict = ps(n.verdict, "degraded"))), e.isTurnRequired && !t && (s.push(gs(cs.TurnRequired, "The selected ICE candidate pair requires a TURN relay.", "ice")), n.verdict = ps(n.verdict, "degraded"));
 				const a = void 0 !== e.iceConnectionState && "new" !== e.iceConnectionState;
-				r && !e.hasSelectedPair && a && (s.push(ds(ns.NoSelectedPair, "No ICE candidate pair was selected. Connectivity failed.", "ice")), n.verdict = cs(n.verdict, "blocked")), !1 === e.candidateGatheringCompleted && (s.push(ds(ns.GatheringTimeout, "ICE gathering did not complete within the timeout.", "ice")), n.verdict = cs(n.verdict, "degraded"));
+				r && !e.hasSelectedPair && a && (s.push(gs(cs.NoSelectedPair, "No ICE candidate pair was selected. Connectivity failed.", "ice")), n.verdict = ps(n.verdict, "blocked")), !1 === e.candidateGatheringCompleted && (s.push(gs(cs.GatheringTimeout, "ICE gathering did not complete within the timeout.", "ice")), n.verdict = ps(n.verdict, "degraded"));
 				const c = (null !== (i = e.serverCandidateComparison) && void 0 !== i ? i : []).filter((({ hasCandidates: e }) => !e));
-				return c.length > 0 && o.push(ls(ns.ServerNoCandidates, `${c.length} configured ICE server${1 === c.length ? "" : "s"} produced no candidates.`, "ice")), e.hasMultipleNetworkInterfaces && o.push(ls(ns.MultipleInterfaces, "Multiple network interfaces were detected on the host.", "ice")), e.vpnDetected && o.push(ls(ns.VpnDetected, "A VPN appears to be active and may affect media routing.", "ice")), !n.verdict && r && (n.verdict = "ready"), n;
+				return c.length > 0 && o.push(vs(cs.ServerNoCandidates, `${c.length} configured ICE server${1 === c.length ? "" : "s"} produced no candidates.`, "ice")), e.hasMultipleNetworkInterfaces && o.push(vs(cs.MultipleInterfaces, "Multiple network interfaces were detected on the host.", "ice")), e.vpnDetected && o.push(vs(cs.VpnDetected, "A VPN appears to be active and may affect media routing.", "ice")), !n.verdict && r && (n.verdict = "ready"), n;
 			}
-			function hs(e) {
-				if (e.established && !e.error) return rs();
+			function fs(e) {
+				if (e.established && !e.error) return us();
 				const t = Array.isArray(e.server.urls) ? e.server.urls.join(", ") : e.server.urls;
 				return {
 					verdict: "degraded",
-					reasons: [ds("ice_server_failed", e.error ? `ICE server [${t}] failed: ${e.error}` : `ICE server [${t}] did not establish a diagnostic call.`, "ice")],
+					reasons: [gs("ice_server_failed", e.error ? `ICE server [${t}] failed: ${e.error}` : `ICE server [${t}] did not establish a diagnostic call.`, "ice")],
 					warnings: []
 				};
 			}
-			function ps(e, t = !0) {
+			function _s(e, t = !0) {
 				var i;
-				if (!e) return rs();
-				const n = rs(), { reasons: s, warnings: o } = n, r = t ? e.reasons : null === (i = e.reasons) || void 0 === i ? void 0 : i.filter((({ code: e }) => e !== ss.LowBitrate));
+				if (!e) return us();
+				const n = us(), { reasons: s, warnings: o } = n, r = t ? e.reasons : null === (i = e.reasons) || void 0 === i ? void 0 : i.filter((({ code: e }) => e !== ds.LowBitrate));
 				switch (null != r && r.length && (s.push(...r), n.verdict = "degraded"), e.quality) {
 					case "poor":
-						s.push(ds(ss.PoorQuality, "Network quality is poor.", "network")), n.verdict = cs(n.verdict, "blocked");
+						s.push(gs(ds.PoorQuality, "Network quality is poor.", "network")), n.verdict = ps(n.verdict, "blocked");
 						break;
 					case "fair":
-						o.push(ls(ss.FairQuality, "Network quality is fair.", "network")), n.verdict = cs(n.verdict, "degraded");
+						o.push(vs(ds.FairQuality, "Network quality is fair.", "network")), n.verdict = ps(n.verdict, "degraded");
 						break;
-					case "good": n.verdict = cs(n.verdict, "ready");
+					case "good": n.verdict = ps(n.verdict, "ready");
 				}
 				const a = [e.inbound, e.outbound].filter(((e) => !!e));
 				if (t && a.length > 0) {
 					const e = a.filter((({ flowing: e }) => e)).length;
-					2 === a.length && 2 === e ? n.verdict = cs(n.verdict, "ready") : e > 0 ? (s.push(ds(ss.OneWayAudio, "Audio RTP is flowing in only one direction.", "network")), n.verdict = cs(n.verdict, "blocked")) : (s.push(ds(ss.NoAudioFlow, "No inbound or outbound audio RTP is flowing.", "network")), n.verdict = cs(n.verdict, "blocked"));
+					2 === a.length && 2 === e ? n.verdict = ps(n.verdict, "ready") : e > 0 ? (s.push(gs(ds.OneWayAudio, "Audio RTP is flowing in only one direction.", "network")), n.verdict = ps(n.verdict, "blocked")) : (s.push(gs(ds.NoAudioFlow, "No inbound or outbound audio RTP is flowing.", "network")), n.verdict = ps(n.verdict, "blocked"));
 				}
 				return n;
 			}
-			function gs(e) {
+			function ys(e) {
 				var t;
-				if (!e) return rs();
-				const i = rs();
+				if (!e) return us();
+				const i = us();
 				null !== (t = e.reasons) && void 0 !== t && t.length && i.reasons.push(...e.reasons);
 				const n = "denied" === e.currentPermissionState || !1 === e.isPermissionGrantedCurrently || "permission_denied" === e.captureError, s = !1 === e.deviceAvailable || void 0 !== e.captureError, o = !0 === e.activeCapturePerformed && !1 === e.audioDetected;
 				return n ? i.verdict = "permission_denied" : s ? i.verdict = "blocked" : o ? i.verdict = "degraded" : (!0 === e.activeCapturePerformed && !0 === e.audioDetected || !0 !== e.activeCapturePerformed && !0 === e.isPermissionGrantedCurrently && !1 !== e.deviceAvailable) && (i.verdict = "ready"), i;
 			}
-			class vs {
+			class bs {
 				constructor(e) {
 					this.options = e;
 				}
@@ -7925,7 +7979,7 @@ var TelnyxWebRTC = (function() {
 					return i(this, void 0, void 0, (function* () {
 						switch (this.options.mode) {
 							case "network-only": return this.runNetworkOnly();
-							case "microphone-only": return this.runMicrophoneOnly(yn(this.options));
+							case "microphone-only": return this.runMicrophoneOnly(Cn(this.options));
 							default: return this.runFull();
 						}
 					}));
@@ -7941,7 +7995,7 @@ var TelnyxWebRTC = (function() {
 							},
 							autoHangup: !1 !== this.options.autoHangup
 						});
-						return e.setupFailed ? e.error ? ms({
+						return e.setupFailed ? e.error ? Ss({
 							callId: e.callId,
 							timings: e.timings
 						}, e.error) : {
@@ -7954,7 +8008,7 @@ var TelnyxWebRTC = (function() {
 							}],
 							callId: e.callId,
 							timings: e.timings
-						} : ms({
+						} : Ss({
 							ice: e.ice,
 							network: e.network,
 							microphone: e.microphone,
@@ -7975,7 +8029,7 @@ var TelnyxWebRTC = (function() {
 							return t;
 						}(null !== (n = null !== (t = null === (e = this.options.rtcConfig) || void 0 === e ? void 0 : e.iceServers) && void 0 !== t ? t : s) && void 0 !== n ? n : []);
 						let r = [];
-						const a = is();
+						const a = as();
 						let c;
 						try {
 							return r = yield Promise.all(o.map(((e) => i(this, void 0, void 0, (function* () {
@@ -7986,7 +8040,7 @@ var TelnyxWebRTC = (function() {
 										rtcConfig: Object.assign(Object.assign({}, this.options.rtcConfig), { iceServers: [e] })
 									}),
 									iceServers: [e],
-									forceRelayCandidate: Sn(e),
+									forceRelayCandidate: kn(e),
 									modules: {
 										ice: !0,
 										network: !!this.options.network,
@@ -8009,12 +8063,12 @@ var TelnyxWebRTC = (function() {
 									timings: t.timings,
 									error: i
 								};
-							}))))), c = ms({
+							}))))), c = Ss({
 								serverTests: r,
 								timings: a.build()
 							}, void 0, { networkOnly: !0 }), c;
 						} catch (e) {
-							return c = ms({ timings: a.build() }, fs(e), { networkOnly: !0 }), c;
+							return c = Ss({ timings: a.build() }, Is(e), { networkOnly: !0 }), c;
 						} finally {
 							null != c && c.timings && a.complete(c.timings);
 						}
@@ -8022,10 +8076,10 @@ var TelnyxWebRTC = (function() {
 				}
 				runTest(e) {
 					return i(this, void 0, void 0, (function* () {
-						const t = yn(e.diagnosticOptions), i = is();
+						const t = Cn(e.diagnosticOptions), i = as();
 						let n, s, o, r = !1;
 						const a = (e) => {
-							e.callId === (null == n ? void 0 : n.id) && (s = fs(e.error));
+							e.callId === (null == n ? void 0 : n.id) && (s = Is(e.error));
 						};
 						e.diagnosticOptions.client.on("telnyx.error", a);
 						try {
@@ -8037,7 +8091,7 @@ var TelnyxWebRTC = (function() {
 								error: s
 							}, o;
 							yield this.collectSamples(n, t);
-							const a = e.modules.ice ? bn(t) : void 0, c = e.modules.network ? Xn(t) : void 0, d = e.modules.microphone ? yield Nn(t) : void 0;
+							const a = e.modules.ice ? wn(t) : void 0, c = e.modules.network ? is(t) : void 0, d = e.modules.microphone ? yield Un(t) : void 0;
 							return o = {
 								established: !0,
 								setupFailed: !1,
@@ -8049,7 +8103,7 @@ var TelnyxWebRTC = (function() {
 								raw: { samples: t.statsSamples.length ? t.statsSamples : void 0 }
 							}, o;
 						} catch (e) {
-							return t.error = fs(e), o = {
+							return t.error = Is(e), o = {
 								established: r,
 								setupFailed: !1,
 								callId: null == n ? void 0 : n.id,
@@ -8058,7 +8112,7 @@ var TelnyxWebRTC = (function() {
 							}, o;
 						} finally {
 							if (e.diagnosticOptions.client.off("telnyx.error", a), n && e.autoHangup) try {
-								yield n.hangup();
+								yield n.hangup({ initiator: "sdk:precall-diagnostic" });
 							} catch (e) {}
 							null != o && o.timings && i.complete(o.timings);
 						}
@@ -8066,15 +8120,15 @@ var TelnyxWebRTC = (function() {
 				}
 				runMicrophoneOnly(e) {
 					return i(this, void 0, void 0, (function* () {
-						const t = is();
+						const t = as();
 						let i;
 						try {
-							return i = ms({
-								microphone: this.options.microphone ? yield Nn(e) : void 0,
+							return i = Ss({
+								microphone: this.options.microphone ? yield Un(e) : void 0,
 								timings: t.build()
 							}, e.error), i;
 						} catch (n) {
-							return e.error = fs(n), i = ms({ timings: t.build() }, e.error), i;
+							return e.error = Is(n), i = Ss({ timings: t.build() }, e.error), i;
 						} finally {
 							null != i && i.timings && t.complete(i.timings);
 						}
@@ -8093,7 +8147,7 @@ var TelnyxWebRTC = (function() {
 								"hangup",
 								"destroy"
 							].includes(e.state)) return !1;
-							yield _s(500);
+							yield Es(500);
 						}
 						return i();
 					}));
@@ -8119,40 +8173,40 @@ var TelnyxWebRTC = (function() {
 								const i = yield null === (o = e.peer.instance) || void 0 === o ? void 0 : o.getStats();
 								i && t.statsSamples.push(i);
 							} catch (e) {}
-							yield _s(Math.min(r, Math.max(0, a - Date.now())));
+							yield Es(Math.min(r, Math.max(0, a - Date.now())));
 						}
 					}));
 				}
 			}
-			function ms(e, t, i) {
+			function Ss(e, t, i) {
 				const { verdict: n, reasons: s, warnings: o } = function(e, t, i = {}) {
 					var n, s;
 					const o = [
-						us(e.ice),
-						ps(e.network),
-						gs(e.microphone),
+						ms(e.ice),
+						_s(e.network),
+						ys(e.microphone),
 						...(null !== (n = e.serverTests) && void 0 !== n ? n : []).flatMap(((e) => [
-							us(e.ice, i.networkOnly && Sn(e.server)),
-							ps(e.network, !i.networkOnly),
-							hs(e)
+							ms(e.ice, i.networkOnly && kn(e.server)),
+							_s(e.network, !i.networkOnly),
+							fs(e)
 						]))
 					], r = o.flatMap(((e) => e.reasons)), a = o.flatMap(((e) => e.warnings));
-					let c = o.reduce(((e, t) => cs(e, t.verdict)), void 0);
+					let c = o.reduce(((e, t) => ps(e, t.verdict)), void 0);
 					if (i.networkOnly && (null === (s = e.serverTests) || void 0 === s ? void 0 : s.length)) {
 						const t = e.serverTests.filter(((e) => e.established && !e.error)).length;
 						0 === t ? c = "blocked" : t < e.serverTests.length && (c = "degraded");
 					}
 					if (t) switch (t.code) {
 						case m:
-							r.push(ds(os.CapturePermissionDenied, "Microphone access was denied while establishing the diagnostic call.", "microphone")), c = cs(c, "permission_denied");
+							r.push(gs(ls.CapturePermissionDenied, "Microphone access was denied while establishing the diagnostic call.", "microphone")), c = ps(c, "permission_denied");
 							break;
 						case f:
-							r.push(ds(os.CaptureNoDevice, "No microphone device was available while establishing the diagnostic call.", "microphone")), c = cs(c, "blocked");
+							r.push(gs(ls.CaptureNoDevice, "No microphone device was available while establishing the diagnostic call.", "microphone")), c = ps(c, "blocked");
 							break;
 						case _:
-							r.push(ds(os.CaptureFailed, "Microphone capture failed while establishing the diagnostic call.", "microphone")), c = cs(c, "blocked");
+							r.push(gs(ls.CaptureFailed, "Microphone capture failed while establishing the diagnostic call.", "microphone")), c = ps(c, "blocked");
 							break;
-						default: r.push(ds("diagnostic_run_error", `Diagnostic run encountered an error: ${t.message}`, "diagnostic")), c = cs(c, "blocked");
+						default: r.push(gs("diagnostic_run_error", `Diagnostic run encountered an error: ${t.message}`, "diagnostic")), c = ps(c, "blocked");
 					}
 					return {
 						verdict: null != c ? c : "inconclusive",
@@ -8167,17 +8221,17 @@ var TelnyxWebRTC = (function() {
 					warnings: o.length ? o : void 0
 				});
 			}
-			function fs(e) {
+			function Is(e) {
 				return e instanceof Error ? e : new Error(String(e));
 			}
-			function _s(e) {
+			function Es(e) {
 				return new Promise(((t) => setTimeout(t, e)));
 			}
-			const ys = "+1-872-231-5806";
-			class bs extends vn {
+			const Cs = "+1-872-231-5806";
+			class ws extends fn {
 				constructor(e) {
-					const t = new _n(zt);
-					super(e), this._registrationTimings = t, t.clientId = this.uuid, xe.info(`SDK version: ${zt}`), t.mark("TelnyxRTC constructor complete");
+					const t = new bn(Qt);
+					super(e), this._registrationTimings = t, t.clientId = this.uuid, Ue.info(`SDK version: ${Qt}`), t.mark("TelnyxRTC constructor complete");
 				}
 				newCall(e) {
 					return super.newCall(e);
@@ -8187,7 +8241,7 @@ var TelnyxWebRTC = (function() {
 					return i(this, void 0, void 0, (function* () {
 						const i = {
 							client: this,
-							destinationNumber: null !== (t = e.destinationNumber) && void 0 !== t ? t : ys,
+							destinationNumber: null !== (t = e.destinationNumber) && void 0 !== t ? t : Cs,
 							durationMs: e.durationMs,
 							ice: !0,
 							network: !0,
@@ -8195,7 +8249,7 @@ var TelnyxWebRTC = (function() {
 							mode: "full",
 							rtcConfig: { iceServers: null !== (n = e.iceServers) && void 0 !== n ? n : this.iceServers }
 						};
-						return new vs(i).run();
+						return new bs(i).run();
 					}));
 				}
 				runNetworkCheck(e = {}) {
@@ -8203,14 +8257,14 @@ var TelnyxWebRTC = (function() {
 					return i(this, void 0, void 0, (function* () {
 						const i = {
 							client: this,
-							destinationNumber: ys,
+							destinationNumber: Cs,
 							ice: !0,
 							network: !0,
 							microphone: !1,
 							mode: "network-only",
 							rtcConfig: { iceServers: null !== (t = e.iceServers) && void 0 !== t ? t : this.iceServers }
 						};
-						return new vs(i).run();
+						return new bs(i).run();
 					}));
 				}
 				runMicrophoneCheck(e = {}) {
@@ -8228,11 +8282,17 @@ var TelnyxWebRTC = (function() {
 							},
 							mode: "microphone-only"
 						};
-						return new vs(i).run();
+						return new bs(i).run();
 					}));
 				}
+				static prepareConnection(e = {}) {
+					return Sn(e);
+				}
+				static keepConnectionWarm(e = {}) {
+					return En(e);
+				}
 				static webRTCInfo() {
-					return Ni();
+					return Li();
 				}
 				static webRTCSupportedBrowserList() {
 					return [
@@ -8242,20 +8302,20 @@ var TelnyxWebRTC = (function() {
 								{
 									browserName: "Chrome",
 									features: ["audio"],
-									supported: Li.full
+									supported: Pi.full
 								},
 								{
 									browserName: "Firefox",
 									features: ["audio"],
-									supported: Li.partial
+									supported: Pi.partial
 								},
 								{
 									browserName: "Safari",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								},
 								{
 									browserName: "Edge",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								}
 							]
 						},
@@ -8264,20 +8324,20 @@ var TelnyxWebRTC = (function() {
 							supported: [
 								{
 									browserName: "Chrome",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								},
 								{
 									browserName: "Firefox",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								},
 								{
 									browserName: "Safari",
 									features: ["video", "audio"],
-									supported: Li.full
+									supported: Pi.full
 								},
 								{
 									browserName: "Edge",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								}
 							]
 						},
@@ -8287,20 +8347,20 @@ var TelnyxWebRTC = (function() {
 								{
 									browserName: "Chrome",
 									features: ["video", "audio"],
-									supported: Li.full
+									supported: Pi.full
 								},
 								{
 									browserName: "Firefox",
 									features: ["audio"],
-									supported: Li.partial
+									supported: Pi.partial
 								},
 								{
 									browserName: "Safari",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								},
 								{
 									browserName: "Edge",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								}
 							]
 						},
@@ -8310,22 +8370,22 @@ var TelnyxWebRTC = (function() {
 								{
 									browserName: "Chrome",
 									features: ["video", "audio"],
-									supported: Li.full
+									supported: Pi.full
 								},
 								{
 									browserName: "Firefox",
 									features: ["audio"],
-									supported: Li.partial
+									supported: Pi.partial
 								},
 								{
 									browserName: "Safari",
 									features: ["video", "audio"],
-									supported: Li.full
+									supported: Pi.full
 								},
 								{
 									browserName: "Edge",
 									features: ["audio"],
-									supported: Li.partial
+									supported: Pi.partial
 								}
 							]
 						},
@@ -8335,35 +8395,35 @@ var TelnyxWebRTC = (function() {
 								{
 									browserName: "Chrome",
 									features: ["video", "audio"],
-									supported: Li.full
+									supported: Pi.full
 								},
 								{
 									browserName: "Firefox",
 									features: ["audio"],
-									supported: Li.partial
+									supported: Pi.partial
 								},
 								{
 									browserName: "Safari",
-									supported: Li.not_supported
+									supported: Pi.not_supported
 								},
 								{
 									browserName: "Edge",
 									features: ["audio"],
-									supported: Li.partial
+									supported: Pi.partial
 								}
 							]
 						}
 					];
 				}
 			}
-			class Ss {
+			class ks {
 				static run(t) {
 					return i(this, void 0, void 0, (function* () {
-						const i = Qe({}), n = Qe({}), s = new bs(t.credentials);
+						const i = et({}), n = et({}), s = new ws(t.credentials);
 						yield s.connect(), s.on(e.SwEvent.Ready, i.resolve), s.on(e.SwEvent.Error, i.reject), s.on(e.SwEvent.MediaError, i.reject), s.on(e.SwEvent.MediaError, i.reject), s.on(e.SwEvent.Notification, ((e) => {
 							e.call && e.call.sipCode >= 400 && n.reject(new Error(e.call.sipReason));
-						})), Nt(e.SwEvent.StatsReport, ((e) => {
-							n.resolve(Ss.mapReport(e));
+						})), Lt(e.SwEvent.StatsReport, ((e) => {
+							n.resolve(ks.mapReport(e));
 						})), yield i.promise, yield s.newCall({
 							destinationNumber: t.texMLApplicationNumber,
 							debug: !0
@@ -8389,7 +8449,7 @@ var TelnyxWebRTC = (function() {
 						const s = null !== (i = e.remote.audio.inbound[0].jitter) && void 0 !== i ? i : 0, o = null !== (n = e.remote.audio.inbound[0].roundTripTime) && void 0 !== n ? n : 0;
 						y += s, I += o, _ = Math.max(_, s), f = Math.min(f, s), S = Math.max(S, o), b = Math.min(b, o);
 					}));
-					const E = I / m, C = y / m, w = v[v.length - 1], k = Yi({
+					const E = I / m, C = y / m, w = v[v.length - 1], k = Ji({
 						jitter: 1e3 * C,
 						rtt: 1e3 * E,
 						packetsReceived: null !== (n = null === (i = null === (t = w.audio.inbound) || void 0 === t ? void 0 : t[0]) || void 0 === i ? void 0 : i.packetsReceived) && void 0 !== n ? n : 0,
@@ -8409,7 +8469,7 @@ var TelnyxWebRTC = (function() {
 								max: S,
 								min: b
 							},
-							quality: Ki(k)
+							quality: zi(k)
 						},
 						sessionStats: {
 							packetsSent: null !== (a = w.connection.packetsSent) && void 0 !== a ? a : 0,
@@ -8429,15 +8489,20 @@ var TelnyxWebRTC = (function() {
 					};
 				}
 			}
-			e.Call = un, e.ERROR_TYPE = yt, e.IceReasonCode = ns, e.MICROPHONE_RECORDING_NOTICE = Rn, e.MicrophoneReasonCode = os, e.NOTIFICATION_TYPE = _t, e.NetworkReasonCode = ss, e.PreCallDiagnosis = Ss, e.PreCallDiagnostic = vs, e.Region = {
+			e.Call = pn, e.DEFAULT_KEEP_WARM_INTERVAL_MS = In, e.ERROR_TYPE = St, e.IceReasonCode = cs, e.MICROPHONE_RECORDING_NOTICE = Mn, e.MicrophoneReasonCode = ls, e.NOTIFICATION_TYPE = bt, e.NetworkReasonCode = ds, e.PreCallDiagnosis = ks, e.PreCallDiagnostic = bs, e.Region = {
 				EU: "eu",
 				US_CENTRAL: "us-central",
 				US_EAST: "us-east",
 				US_WEST: "us-west",
 				CA_CENTRAL: "ca-central",
 				APAC: "apac",
-				SOUTH_ASIA: "south-asia"
-			}, e.SDK_ERRORS = Ie, e.SDK_WARNINGS = Ee, e.TELNYX_ERROR_CODES = d, e.TELNYX_ICE_SERVERS = be, e.TELNYX_WARNING_CODES = l, e.TelnyxError = we, e.TelnyxRTC = bs, e.TimingsCollector = es, e.createTimingsCollector = is, e.isFunctionCallOutputParams = function(e) {
+				ASIA: "asia",
+				SOUTH_ASIA: "south-asia",
+				IN: "in",
+				AU: "au",
+				SY: "sy",
+				ME: "me"
+			}, e.SDK_ERRORS = Ie, e.SDK_WARNINGS = Ee, e.TELNYX_ERROR_CODES = d, e.TELNYX_ICE_SERVERS = be, e.TELNYX_WARNING_CODES = l, e.TelnyxError = we, e.TelnyxRTC = ws, e.TimingsCollector = os, e.createTimingsCollector = as, e.isFunctionCallOutputParams = function(e) {
 				if (!e || "object" != typeof e) return !1;
 				if ("conversation.item.create" !== e.type) return !1;
 				const t = e.item;
@@ -8453,7 +8518,7 @@ var TelnyxWebRTC = (function() {
 				return "function_call" === i.type && "string" == typeof i.call_id && "string" == typeof i.name && "string" == typeof i.arguments;
 			}, e.isMediaRecoveryErrorEvent = function(e) {
 				return !0 === e.recoverable;
-			}, Object.defineProperty(e, "__esModule", { value: !0 });
+			}, e.keepConnectionWarm = En, e.prepareConnection = Sn, Object.defineProperty(e, "__esModule", { value: !0 });
 		}));
 	})))());
 })();

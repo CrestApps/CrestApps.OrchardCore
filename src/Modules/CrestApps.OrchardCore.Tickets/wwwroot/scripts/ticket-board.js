@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Tickets/Assets/js/ticket-board.js
+	// src/Modules/CrestApps.OrchardCore.Tickets/Assets/js/ticket-board.js
 	(function() {
 		"use strict";
 		const refreshMs = 2e4;
@@ -422,5 +422,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})();
-	//#endregion
 })();

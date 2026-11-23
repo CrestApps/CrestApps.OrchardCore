@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Products/Assets/js/product-listing-editor.js
+	// src/Modules/CrestApps.OrchardCore.Products/Assets/js/product-listing-editor.js
 	(function() {
 		"use strict";
 		function reassignOrders(orders) {
@@ -174,5 +174,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})();
-	//#endregion
 })();

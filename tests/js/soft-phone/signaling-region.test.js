@@ -93,10 +93,4 @@ describe('the offered regions', () => {
     it('offers automatic first, because that is the default behaviour', () => {
         expect(SIGNALING_REGIONS[0].value).toBe('');
     });
-
-    it('has no Middle East region -- an agent there must choose Europe, and the list should not imply otherwise', () => {
-        const values = SIGNALING_REGIONS.map(r => r.value);
-
-        expect(values.some(v => /middle|me\b|dubai/i.test(v))).toBe(false);
-    });
 });

@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Addresses/Assets/js/address-editor.js
+	// src/Modules/CrestApps.OrchardCore.Addresses/Assets/js/address-editor.js
 	(function() {
 		"use strict";
 		var COMPONENTS = [
@@ -314,5 +314,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initializeAll);
 		else initializeAll();
 	})();
-	//#endregion
 })();
