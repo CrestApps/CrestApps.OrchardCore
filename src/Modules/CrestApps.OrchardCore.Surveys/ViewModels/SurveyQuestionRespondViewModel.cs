@@ -41,6 +41,12 @@ public class SurveyQuestionRespondViewModel
     public bool CanCheck { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the answer was checked with immediate feedback and is locked: the runner script never shows
+    /// or hides it as other answers change, because the server refuses a change that would hide it.
+    /// </summary>
+    public bool Locked { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the question is answerable.
     /// </summary>
     public bool Answerable { get; set; }

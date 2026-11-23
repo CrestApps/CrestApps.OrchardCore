@@ -167,7 +167,7 @@ public sealed class SurveyRuntimeIntegrityTests
     }
 
     [Fact]
-    public async Task LockedAnswer_SurvivesHidingItsQuestion_AndCanNotBeAnsweredAgain()
+    public async Task LockedAnswer_CanNotBeHiddenByAnotherAnswer_NorAnsweredAgain()
     {
         // Arrange
         await using var harness = await RuntimeTestHarness.CreateAsync();
@@ -187,21 +187,24 @@ public sealed class SurveyRuntimeIntegrityTests
         var check = await CheckAsync(harness, response, identity, "q2", ("q1", "yes"), ("q2", "b"));
 
         // Act
-        await SaveAsync(harness, response, identity, ("q1", "no"));
-        var hidden = await harness.FindAsync(response.ItemId);
+        var hiding = await SaveAsync(harness, response, identity, ("q1", "no"));
+        var afterHiding = await harness.FindAsync(response.ItemId);
         await SaveAsync(harness, response, identity, ("q1", "yes"), ("q2", "a"));
         var again = await CheckAsync(harness, response, identity, "q2", ("q1", "yes"), ("q2", "a"));
 
-        // Assert
+        // Assert: the change that would hide the locked answer is refused, and the locked answer can't change.
         Assert.True(check.Succeeded);
-        Assert.Equal("b", hidden.Answers["q2"].Values[0]);
-        Assert.NotNull(hidden.Answers["q2"].CheckedUtc);
+        Assert.Equal(SurveyErrorCode.InvalidAnswer, hiding.Error);
+        Assert.Contains("q1", hiding.Errors.Keys);
+        Assert.Equal("yes", afterHiding.Answers["q1"].Values[0]);
+        Assert.Equal("b", afterHiding.Answers["q2"].Values[0]);
+        Assert.NotNull(afterHiding.Answers["q2"].CheckedUtc);
         Assert.Equal(SurveyErrorCode.InvalidState, again.Error);
         Assert.Equal("b", (await harness.FindAsync(response.ItemId)).Answers["q2"].Values[0]);
     }
 
     [Fact]
-    public async Task LockedAnswer_WhoseQuestionIsHiddenLater_StillCountsTowardTheScore_AndAnUnlockedOneDoesNot()
+    public async Task Finish_ThatWouldHideALockedAnswer_IsRefused_AndTheKeptPathIsScored()
     {
         // Arrange: q2 and q3 show only when q1 is "yes"; q4 always shows.
         await using var harness = await RuntimeTestHarness.CreateAsync(services =>
@@ -234,19 +237,25 @@ public sealed class SurveyRuntimeIntegrityTests
         var check = await CheckAsync(harness, response, identity, "q2", ("q1", "yes"), ("q2", "a"));
         await SaveAsync(harness, response, identity, ("q1", "yes"), ("q2", "a"), ("q3", "a"));
 
-        // Act: q1 changes to "no", hiding q2 and q3, and the respondent finishes.
-        var finish = await harness.PostAsync(response, identity, SurveyPageDirection.Finish, ("q1", "no"), ("q4", "a"));
+        // Act: finishing with q1 changed to "no" would hide q2 and q3; the respondent then finishes with "yes".
+        var refused = await harness.PostAsync(response, identity, SurveyPageDirection.Finish, ("q1", "no"), ("q4", "a"));
+        var stillOpen = await harness.FindAsync(response.ItemId);
+        var finish = await harness.PostAsync(response, identity, SurveyPageDirection.Finish, ("q1", "yes"), ("q3", "a"), ("q4", "a"));
 
-        // Assert: q2 counts with its 2 points out of 2; q3 counts neither its points nor its most points.
+        // Assert: the refused finish changed nothing; the kept path counts q2 (locked), q3 and q4.
         Assert.True(check.Succeeded, check.Error + " " + string.Join(", ", check.Errors));
+        Assert.Equal(SurveyErrorCode.InvalidAnswer, refused.Error);
+        Assert.Equal(["q1"], refused.Errors.Keys);
+        Assert.Equal(SurveyResponseStatus.InProgress, stillOpen.Status);
+        Assert.Equal("a", stillOpen.Answers["q3"].Values[0]);
         Assert.True(finish.Ended, finish.Error + " " + string.Join(", ", finish.Errors.SelectMany(pair => pair.Value)));
 
         var stored = await harness.FindAsync(response.ItemId);
 
         Assert.Equal(SurveyResponseStatus.Completed, stored.Status);
         Assert.True(stored.Answers["q2"].IsLocked);
-        Assert.Equal(3m, stored.Score);
-        Assert.Equal(3m, stored.MaxScore);
+        Assert.Equal(6m, stored.Score);
+        Assert.Equal(6m, stored.MaxScore);
         Assert.Equal(100m, stored.Percent);
         Assert.Equal(2m, stored.Answers["q2"].MaxPoints);
     }

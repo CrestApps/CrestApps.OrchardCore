@@ -299,7 +299,8 @@ public sealed class SurveyRunnerController : Controller
             Form = Request.Form,
         });
 
-        return Json(new { ok = result.Succeeded, error = result.Error.ToString(), savedUtc = result.SavedUtc }, _jsonOptions);
+        // A refused save (answers that would skip or hide an answer already checked) saved nothing and says why.
+        return Json(new { ok = result.Succeeded, error = result.Error.ToString(), savedUtc = result.SavedUtc, errors = result.Errors }, _jsonOptions);
     }
 
     /// <summary>
@@ -332,6 +333,7 @@ public sealed class SurveyRunnerController : Controller
             hiddenQuestionIds = result.HiddenQuestionIds,
             hiddenChoiceIds = result.HiddenChoiceIds,
             texts = result.Texts,
+            errors = result.Errors,
         }, _jsonOptions);
     }
 
@@ -812,9 +814,14 @@ public sealed class SurveyRunnerController : Controller
 
     // Whether the respondent may still come back to an ended response after the short cookie life would end: reopen it
     // (edit after submit while the survey is open) or review its answers (the review shown later while the survey is
-    // open, or the one after it closed when it already is).
-    private bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response)
+    // open, or the one after it closes). An open survey closes on its close date or whenever staff close it, so a review
+    // after close that shows the answers keeps the cookie too; a closed one already uses that review.
+    internal static bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response, ReviewShows later)
     {
+        ArgumentNullException.ThrowIfNull(survey);
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(response);
+
         if (response.Status != SurveyResponseStatus.Completed)
         {
             return false;
@@ -825,8 +832,19 @@ public sealed class SurveyRunnerController : Controller
             return true;
         }
 
-        return (ReviewMoment(survey, definition, response, _clock.UtcNow + SurveyResumeCookies.CompletedMaxAge) & ReviewShows.Responses) != 0;
+        if ((later & ReviewShows.Responses) != 0)
+        {
+            return true;
+        }
+
+        // A completed response is never voided or abandoned by its respondent, so what the review after close shows of
+        // its answers is the setting itself.
+        return survey.Status == SurveyStatus.Open
+            &&((definition.Review ?? new SurveyReviewSettings()).AfterClose & ReviewShows.Responses) != 0;
     }
+
+    private bool CanReturnLater(Survey survey, SurveyDefinition definition, SurveyResponse response)
+        => CanReturnLater(survey, definition, response, ReviewMoment(survey, definition, response, _clock.UtcNow + SurveyResumeCookies.CompletedMaxAge));
 
     private ReviewShows ReviewMoment(Survey survey, SurveyDefinition definition, SurveyResponse response, DateTime utcNow)
     {

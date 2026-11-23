@@ -7,7 +7,7 @@
     var css = "survey-question mb-4" + (Model.Errors.Count > 0 ? " has-errors" : string.Empty);
 }
 
-<div class="@css" data-question-id="@question.Id" data-control-type="@question.ControlType" hidden="@Model.Hidden">
+<div class="@css" data-question-id="@question.Id" data-control-type="@question.ControlType" data-survey-locked="@(Model.Locked ? "true" : null)" hidden="@Model.Hidden">
     @if (Model.Answerable)
     {
         <div class="survey-question-title fw-semibold mb-1" id="q-@question.Id-title">
@@ -30,6 +30,12 @@
     }
 
     @await DisplayAsync(Model.Control)
+
+    @if (Model.DisplayType == CrestApps.OrchardCore.Surveys.Services.SurveyRunnerShapes.Respond && Model.Answerable)
+    {
+        @* The runner script writes here when a changed answer would skip or hide an answer already checked. *@
+        <div class="survey-lock-error text-danger small mt-1" data-survey-lock-error="@question.Id" hidden></div>
+    }
 
     @if (Model.Feedback is { } feedback)
     {

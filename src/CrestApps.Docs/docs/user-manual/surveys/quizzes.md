@@ -23,7 +23,11 @@ A quiz is a survey whose answers earn points.
 3. Choose when **Answers are checked**: **At the end**, or **One at a time, then locked**.
 4. Save the draft.
 
-With **One at a time, then locked**, a respondent can't change an answer once they check it. That answer keeps counting toward the score even if a later answer hides its question or skips its page, because the respondent already saw it graded. Its points count toward the most points too, so the percent stays right, and the review and the grading page show it. An answer that was not checked and is hidden later does not count.
+With **One at a time, then locked**, a respondent can't change an answer once they check it. They also can't change another answer in a way that would hide a checked answer or skip its page: for example, going back and picking the other track of a quiz after checking answers on the first one. The page then says "You can't change this answer now" on the answer they changed, and nothing is saved until they put it back. This stops a respondent from checking answers on one track and then finishing another to add both.
+
+Your own logic can still hide a checked answer without the respondent doing anything, for example a rule on the date or time. That answer keeps counting toward the score, because the respondent already saw it graded. Its points count toward the most points too, so the percent stays right, and the review and the grading page show it. An answer that was not checked and is hidden later does not count.
+
+The score counts only the pages the respondent went through: a page a branch skipped adds nothing to the most points. The score is worked out when the respondent finishes, before the ending is chosen, so an ending that shows for a score reads the score of this response.
 
 ## Set the right answers
 
