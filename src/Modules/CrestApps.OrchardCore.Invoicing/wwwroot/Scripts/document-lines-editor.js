@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Invoicing/Assets/js/document-lines-editor.js
+	// src/Modules/CrestApps.OrchardCore.Invoicing/Assets/js/document-lines-editor.js
 	(function() {
 		"use strict";
 		function parseAmount(text) {
@@ -306,5 +306,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})();
-	//#endregion
 })();

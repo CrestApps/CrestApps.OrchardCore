@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Carts/Assets/js/variant-picker.js
+	// src/Modules/CrestApps.OrchardCore.Carts/Assets/js/variant-picker.js
 	(function() {
 		"use strict";
 		function findVariant(variants, chosen) {
@@ -121,5 +121,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})();
-	//#endregion
 })();

@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
+	// src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
 	/**
 	* Returns the browser's IANA time zone, or an empty string when it is unknown.
 	* @returns {string}
@@ -89,8 +89,7 @@
 	function calendarDateToInstant(value, timeZone) {
 		return fromWallClock(fromCalendarDate(value), timeZone);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-picker.js
+	// src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-picker.js
 	(function() {
 		/**
 		* Opens the picker.
@@ -233,5 +232,4 @@
 			fromWallClock
 		};
 	})();
-	//#endregion
 })();

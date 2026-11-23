@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-board-filters.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-board-filters.js
 	var STATUS_FILTERS = [
 		"available",
 		"busy",
@@ -60,8 +60,7 @@
 			search: typeof chosen.search === "string" ? chosen.search : ""
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
 	var STATUS_NAMES = [
 		"Offline",
 		"Available",
@@ -120,8 +119,7 @@
 		var entry = STATUS_LABELS[status];
 		return entry ? text$1(labels, entry[0], entry[1]) : status;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
 	var MONITOR_MODES = [
 		"Monitor",
 		"Whisper",
@@ -306,8 +304,7 @@
 		}
 		return parts.join(" · ");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/supervisor-interventions.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/supervisor-interventions.js
 	var TAKEOVER_JOIN_TIMEOUT_MS = 3e4;
 	var PANEL_TITLES = {
 		"end-call": ["endCallTitle", "End call"],
@@ -694,8 +691,7 @@
 			}
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/supervisor-dashboard.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/supervisor-dashboard.js
 	(function(window, document) {
 		"use strict";
 		var REFRESH_INTERVAL_MS = 1e4;
@@ -1132,5 +1128,4 @@
 		else boot();
 		window.contactCenterSupervisorDashboard = { init };
 	})(window, document);
-	//#endregion
 })();
