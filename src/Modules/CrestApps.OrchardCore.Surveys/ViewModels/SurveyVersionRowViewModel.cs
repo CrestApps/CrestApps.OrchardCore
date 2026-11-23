@@ -26,4 +26,10 @@ public class SurveyVersionRowViewModel
     /// Gets or sets whether it is the published version.
     /// </summary>
     public bool IsCurrent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stamp (ticks) of the survey's draft when the list was shown, so a restore refuses a draft changed
+    /// since.
+    /// </summary>
+    public long? DraftStamp { get; set; }
 }

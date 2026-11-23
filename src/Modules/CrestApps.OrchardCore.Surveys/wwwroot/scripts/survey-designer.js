@@ -455,15 +455,29 @@
 			initRepeaters(root, (item) => wire(item));
 			initRuleBuilders(root, context);
 		};
+		const versionInput = settingsForm?.querySelector("[data-survey-draft-version]") ?? null;
+		let knownVersion = versionInput?.value ?? "";
 		/**
-		* Keeps the draft version the settings form posts in step with saves made here.
+		* Adopts the draft version a save returned. The server accepted the save only because the page knew the draft it
+		* replaced, so the settings form may post over the new version too.
 		* @param {Response} response The response of a save.
 		*/
 		const trackVersion = (response) => {
 			const version = response.headers.get("X-Survey-Draft-Version");
-			const input = settingsForm?.querySelector("[data-survey-draft-version]") ?? null;
-			if (version && input) input.value = version;
+			if (version) {
+				knownVersion = version;
+				if (versionInput) versionInput.value = version;
+			}
 		};
+		/**
+		* Gets the headers every save sends.
+		* @param {Record<string, string>} headers Other headers.
+		* @returns {Record<string, string>} The headers.
+		*/
+		const saveHeaders = (headers) => knownVersion ? {
+			...headers,
+			"X-Survey-Draft-Version": knownVersion
+		} : headers;
 		/**
 		* Shows a short error in the panel.
 		* @param {string} message The message.
@@ -511,9 +525,13 @@
 			const response = await fetch(form.action, {
 				method: "POST",
 				credentials: "same-origin",
-				headers: { "X-Requested-With": "XMLHttpRequest" },
+				headers: saveHeaders({ "X-Requested-With": "XMLHttpRequest" }),
 				body: new FormData(form)
 			});
+			if (response.status === 409) {
+				showError(await response.text());
+				return false;
+			}
 			if (!response.ok && response.status !== 422) {
 				showError(context.texts.failed);
 				return false;
@@ -572,11 +590,11 @@
 			const response = await fetch(url, {
 				method: "POST",
 				credentials: "same-origin",
-				headers: {
+				headers: saveHeaders({
 					"Content-Type": "application/json",
 					"RequestVerificationToken": token(),
 					"X-Requested-With": "XMLHttpRequest"
-				},
+				}),
 				body: JSON.stringify(command)
 			});
 			if (!response.ok) {

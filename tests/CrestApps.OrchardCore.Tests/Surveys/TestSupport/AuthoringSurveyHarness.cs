@@ -61,6 +61,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
                 new SurveyParticipationIndexProvider(),
                 new SurveyInvitationIndexProvider(),
                 new SurveyOverrideIndexProvider(),
+                new SurveyCounterIndexProvider(),
             ],
             SurveysConstants.CollectionName);
         harness.Store.RegisterIndexes([new SurveyResponseIndexProvider()], SurveysConstants.ResponsesCollectionName);
@@ -74,6 +75,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
 
         Assert.Equal(5, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
 
+        await SurveyCountersIndexSchema.CreateAsync(new SchemaBuilder(harness.Store.Configuration, transaction));
         await transaction.CommitAsync(cancellationToken);
 
         return harness;
@@ -112,6 +114,11 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
             []);
     }
 
+    /// <summary>
+    /// Gets the attachments the survey manager's purger releases files through.
+    /// </summary>
+    public SurveyFilesFakeAttachmentService Attachments { get; } = new();
+
     public AuthoringServices CreateServices(ISession session, ISurveyFormulaValidator formulaValidator = null)
     {
         var clock = new Mock<IClock>();
@@ -144,6 +151,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
             [],
             siteService.Object,
             new CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymitySecrets(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(), surveyStore, NullLogger<CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymitySecrets>.Instance),
+            new SurveyDataPurger(session, new CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyResponseFiles([Attachments], NullLogger<CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyResponseFiles>.Instance), [new SurveyCounterStore(session)]),
             clock.Object,
             [],
             NullLogger<CrestApps.Core.Services.NamedCatalogManager<Survey>>.Instance);

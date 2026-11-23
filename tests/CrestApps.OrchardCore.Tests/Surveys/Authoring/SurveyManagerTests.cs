@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Authoring;
 
@@ -67,17 +68,29 @@ public sealed class SurveyManagerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DuplicateAsync_GivesNewIdsAndKeepsReferences()
+    public async Task DuplicateAsync_GivesNewIdsAndKeepsReferencesCodesAndTranslations()
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var session = _harness.Store.CreateSession();
         var services = _harness.CreateServices(session);
         var definition = AuthoringDefinitions.TwoPages();
+        definition.ScoreCategories = [new ScoreCategory { Id = "cat1", Name = "skill", Title = "Skill" }];
         definition.Pages[1].Questions[0].Visibility = new SurveyVisibility
         {
             Mode = VisibilityMode.ShowWhen,
             Rule = new() { Conditions = [new() { Source = "q1", Operator = CrestApps.OrchardCore.Conditions.ConditionOperator.Is, Values = ["red"] }] },
+        };
+        definition.Pages[0].Questions[1].Visibility = new SurveyVisibility
+        {
+            Mode = VisibilityMode.ShowWhen,
+            Rule = new() { Conditions = [new() { Source = "score:cat1", Operator = CrestApps.OrchardCore.Conditions.ConditionOperator.Is, Values = ["1"] }] },
+        };
+        definition.Translations["fr"] = new Dictionary<string, string>
+        {
+            ["survey:title"] = "Essai",
+            ["title:q3"] = "Pourquoi {color} ?",
+            ["choice:q1:red"] = "rouge",
         };
         var source = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Source", Definition = definition }, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
@@ -89,14 +102,49 @@ public sealed class SurveyManagerTests : IAsyncLifetime
         var sourceIds = SurveyDefinitions.Questions(source.Draft).Select(item => item.Question.Id).ToHashSet();
         var copyQuestions = SurveyDefinitions.Questions(copy.Draft).Select(item => item.Question).ToList();
         Assert.DoesNotContain(copyQuestions, question => sourceIds.Contains(question.Id));
-        Assert.All(copyQuestions, question => Assert.EndsWith("_copy", question.Name));
 
-        var color = copyQuestions.Single(question => question.Name == "color_copy");
-        var why = copyQuestions.Single(question => question.Name == "why_copy");
+        // Codes are per survey: the copy keeps them, so piping such as {color} still points at a question.
+        Assert.Equal(["color", "comment", "why"], copyQuestions.Select(question => question.Name));
+
+        var color = copyQuestions.Single(question => question.Name == "color");
+        var why = copyQuestions.Single(question => question.Name == "why");
+        var comment = copyQuestions.Single(question => question.Name == "comment");
         var condition = why.Visibility.Rule.Conditions.Single();
         Assert.Equal(color.Id, condition.Source);
         Assert.Contains(condition.Values.Single(), color.Choices.Select(choice => choice.Id));
+        Assert.Equal("Why {color}?", why.Title);
+        Assert.Equal("score:" + copy.Draft.ScoreCategories.Single().Id, comment.Visibility.Rule.Conditions.Single().Source);
         Assert.Equal("source-copy", copy.Name);
+
+        // Every translation follows its item to the new ids.
+        var red = color.Choices.Single(choice => choice.Value == "red");
+        var french = copy.Draft.Translations["fr"];
+        Assert.Equal("Essai", french["survey:title"]);
+        Assert.Equal("Pourquoi {color} ?", french["title:" + why.Id]);
+        Assert.Equal("rouge", french[$"choice:{color.Id}:{red.Id}"]);
+        Assert.Empty(CrestApps.OrchardCore.Surveys.Core.Translations.SurveyTranslations.OutdatedKeys(copy.Draft, "fr"));
+        Assert.All(french.Keys, key => Assert.Contains(key, CrestApps.OrchardCore.Surveys.Core.Translations.SurveyTextCatalog.KnownKeys(copy.Draft)));
+    }
+
+    [Fact]
+    public async Task CreateSurveyAsync_FromADefinitionWithTranslations_KeepsThemOnTheNewIds()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _harness.Store.CreateSession();
+        var services = _harness.CreateServices(session);
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Translations["fr"] = new Dictionary<string, string> { ["title:q1"] = "Couleur", ["page-title:p2"] = "Deux" };
+        definition.Pages[1].Title = "Two";
+
+        // Act
+        var survey = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "From template", Definition = definition }, cancellationToken);
+
+        // Assert
+        var question = SurveyDefinitions.Questions(survey.Draft).Single(item => item.Question.Name == "color").Question;
+        Assert.NotEqual("q1", question.Id);
+        Assert.Equal("Couleur", survey.Draft.Translations["fr"]["title:" + question.Id]);
+        Assert.Equal("Deux", survey.Draft.Translations["fr"]["page-title:" + survey.Draft.Pages[1].Id]);
     }
 
     [Theory]
@@ -174,5 +222,77 @@ public sealed class SurveyManagerTests : IAsyncLifetime
         {
             Assert.Null(await _harness.CreateServices(session).Manager.FindByNameAsync("remove-me", cancellationToken));
         }
+    }
+
+    [Fact]
+    public async Task DeleteSurveyAsync_RemovesItsInvitationsAccommodationsParticipationCountersAndTestResponsesWithFiles()
+    {
+        // Arrange: more invitations than one purge batch, a test response with a file, and another survey's records.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        string surveyId;
+        string otherId;
+        CrestApps.OrchardCore.Attachments.Models.Attachment file;
+
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var services = _harness.CreateServices(session);
+            surveyId = (await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Name = "purge-me", Title = "Purge" }, cancellationToken)).ItemId;
+            otherId = (await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Name = "keep-me", Title = "Keep" }, cancellationToken)).ItemId;
+
+            for (var i = 0; i < SurveyDataPurger.BatchSize + 50; i++)
+            {
+                await session.SaveAsync(new SurveyInvitation { ItemId = $"inv{i:D4}", SurveyId = surveyId, Email = $"person{i}@example.com" }, false, SurveysConstants.CollectionName, cancellationToken);
+            }
+
+            await session.SaveAsync(new SurveyInvitation { ItemId = "invother", SurveyId = otherId, Email = "other@example.com" }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new SurveyOverride { ItemId = "ov1", SurveyId = surveyId, UserId = "u1", Reason = "Accommodation" }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new SurveyParticipation { ItemId = "pa1", SurveyId = surveyId, RespondentKey = "u:u1", Day = new DateOnly(2026, 11, 20) }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyCounter { ItemId = "co1", SurveyId = surveyId, Kind = "quota" }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new SurveyResponse { ItemId = "test1", SurveyId = surveyId, IsTest = true, StartedUtc = _harness.Now }, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+            file = _harness.Attachments.Seed(CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyResponseFiles.OwnerOf("test1"), _harness.Now);
+        }
+
+        // Act
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var result = await _harness.CreateServices(session).Manager.DeleteSurveyAsync(surveyId, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+
+            Assert.Equal(SurveyErrorCode.None, result);
+        }
+
+        // Assert
+        await using (var session = _harness.Store.CreateSession())
+        {
+            Assert.Equal(0, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyInvitationIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+            Assert.Equal(1, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyInvitationIndex>(index => index.SurveyId == otherId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+            Assert.Equal(0, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyOverrideIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+            Assert.Equal(0, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyParticipationIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+            Assert.Equal(0, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyCounterIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+            Assert.Equal(0, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyResponseIndex>(index => index.SurveyId == surveyId, SurveysConstants.ResponsesCollectionName).CountAsync(cancellationToken));
+            Assert.Null(await _harness.CreateServices(session).Manager.FindByNameAsync("purge-me", cancellationToken));
+            Assert.False(_harness.Attachments.Stored.ContainsKey(file.ItemId));
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSurveyAsync_WithResponses_KeepsItsInvitations()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _harness.Store.CreateSession();
+        var services = _harness.CreateServices(session);
+        var survey = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Answered" }, cancellationToken);
+        await session.SaveAsync(new SurveyResponse { ItemId = "real1", SurveyId = survey.ItemId, StartedUtc = _harness.Now }, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+        await session.SaveAsync(new SurveyInvitation { ItemId = "invkeep", SurveyId = survey.ItemId, Email = "keep@example.com" }, false, SurveysConstants.CollectionName, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Act
+        var result = await services.Manager.DeleteSurveyAsync(survey.ItemId, cancellationToken);
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.HasResponses, result);
+        Assert.Equal(1, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyInvitationIndex>(index => index.SurveyId == survey.ItemId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
     }
 }

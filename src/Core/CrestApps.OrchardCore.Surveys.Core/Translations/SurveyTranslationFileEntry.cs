@@ -11,7 +11,8 @@ public sealed class SurveyTranslationFileEntry
     public string Key { get; set; }
 
     /// <summary>
-    /// Gets or sets the original text, for the translator; ignored on import.
+    /// Gets or sets the original text the translation was made from. On import, an entry whose original no longer
+    /// matches the survey's text is left out, so a file translated before an item was reworded never writes the old meaning.
     /// </summary>
     public string Original { get; set; }
 

@@ -54,8 +54,14 @@ internal sealed class SurveysRecipeExporter
 
         var node = SurveysRecipeJson.Write(survey, nameof(Survey.AnonymitySecret), nameof(Survey.PublishedVersionId));
         var versions = (await _versionStore.ListBySurveyAsync(survey.ItemId, cancellationToken)).OrderBy(version => version.Number).ToList();
-        var names = await _userLookup.GetUserNamesAsync(versions.Select(version => version.PublishedBy));
+        var names = await _userLookup.GetUserNamesAsync(versions.Select(version => version.PublishedBy).Append(survey.OwnerId));
         var versionArray = new JsonArray();
+
+        // The owner travels by user name, as the publisher does: user ids differ between sites.
+        if (!string.IsNullOrEmpty(survey.OwnerId) && names.TryGetValue(survey.OwnerId, out var ownerName))
+        {
+            node[SurveysRecipeJson.OwnerUserName] = ownerName;
+        }
 
         foreach (var version in versions)
         {
@@ -97,6 +103,11 @@ internal sealed class SurveysRecipeExporter
         var node = SurveysRecipeJson.Write(bank);
         var questions = new JsonArray();
 
+        if (!string.IsNullOrEmpty(bank.OwnerId) && (await _userLookup.GetUserNamesAsync([bank.OwnerId])).TryGetValue(bank.OwnerId, out var ownerName))
+        {
+            node[SurveysRecipeJson.OwnerUserName] = ownerName;
+        }
+
         foreach (var question in await _bankQuestionStore.ListByBankAsync(bank.ItemId, includeRetired: true, cancellationToken))
         {
             questions.Add(SurveysRecipeJson.Write(question, nameof(BankQuestion.BankId)));
@@ -119,6 +130,22 @@ internal sealed class SurveysRecipeExporter
 
         var surveyNames = await SurveyNamesAsync(responses.Select(response => response.SurveyId));
         var names = await _userLookup.GetUserNamesAsync(responses.SelectMany(response => new[] { response.UserId, response.GradedBy }));
+        var collectorNames = new Dictionary<string, string>(StringComparer.Ordinal);
+        var surveyIds = responses.Select(response => response.SurveyId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var anonymous = (surveyIds.Length == 0 ? [] : await _surveyStore.GetAsync(surveyIds))
+            .Where(survey => survey.Access?.Anonymity == AnonymityMode.Anonymous)
+            .Select(survey => survey.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // A collector's id differs between sites (the personal-links collector is made on each), so it travels by name too.
+        foreach (var surveyId in responses.Select(response => response.SurveyId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            foreach (var collector in await _collectorStore.ListBySurveyAsync(surveyId))
+            {
+                collectorNames[collector.ItemId] = collector.Name;
+            }
+        }
+
         var array = new JsonArray();
 
         foreach (var response in responses)
@@ -134,6 +161,18 @@ internal sealed class SurveysRecipeExporter
                 nameof(SurveyResponse.UpkeepFailures));
 
             node["SurveyName"] = surveyNames.GetValueOrDefault(response.SurveyId);
+
+            // The number of a response comes from one sequence for the whole site, so next to the numbers of identified
+            // responses it can name the person who gave an anonymous one: it stays behind, and the import gives a new one.
+            if (anonymous.Contains(response.SurveyId))
+            {
+                node.Remove(nameof(SurveyResponse.Number));
+            }
+
+            if (!string.IsNullOrEmpty(response.CollectorId) && collectorNames.TryGetValue(response.CollectorId, out var collectorName))
+            {
+                node[SurveysRecipeJson.CollectorName] = collectorName;
+            }
 
             if (!string.IsNullOrEmpty(response.UserId) && names.TryGetValue(response.UserId, out var userName))
             {

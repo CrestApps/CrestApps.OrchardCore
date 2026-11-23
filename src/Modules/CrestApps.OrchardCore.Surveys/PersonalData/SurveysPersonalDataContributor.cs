@@ -18,7 +18,9 @@ namespace CrestApps.OrchardCore.Surveys.PersonalData;
 /// or guest invitations to one of their e-mail addresses, with the responses linked to them); erasure removes who gave
 /// the responses and everything that could point back to them (context, variables and properties; the answers stay for
 /// results, and the key an in-progress response is counted under goes too), deletes the files they uploaded, their
-/// invitations and their participation counts. Participation is found
+/// invitations, their accommodations (extra time or attempts, with the reason they were granted) and their participation
+/// counts. Accommodations a staff member granted to others keep that staff member as their actor: that is a record of
+/// staff work, not the staff member's personal data. Participation is found
 /// by the keys it is really stored under: <c>u:{id}</c> (or its hash when long) on identified surveys, the key of each of
 /// the person's invitations, and <c>a:{hmac}</c> on each anonymous survey, recomputed with that survey's protected
 /// secret.
@@ -30,6 +32,7 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
     private const string InvitationKind = "SurveyInvitation";
     private const string ParticipationKind = "SurveyParticipation";
     private const string FileKind = "SurveyFile";
+    private const string OverrideKind = "SurveyAccommodation";
 
     private readonly ISession _session;
     private readonly ISurveyVersionCache _versions;
@@ -118,6 +121,18 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             record.Fields["Status"] = invitation.Status.ToString();
             record.Fields["Sent"] = invitation.SentUtc?.ToString("O", CultureInfo.InvariantCulture);
         }
+
+        foreach (var accommodation in await OverridesAsync(context.Subject, cancellationToken))
+        {
+            var record = context.Add(OverrideKind, accommodation.ItemId, accommodation.SurveyId, accommodation.CreatedUtc);
+
+            record.Fields["Survey"] = accommodation.SurveyId;
+            record.Fields["ExtraMinutes"] = accommodation.ExtraMinutes.ToString(CultureInfo.InvariantCulture);
+            record.Fields["ExtraAttempts"] = accommodation.ExtraAttempts.ToString(CultureInfo.InvariantCulture);
+            record.Fields["Opens"] = accommodation.OpensUtc?.ToString("O", CultureInfo.InvariantCulture);
+            record.Fields["Closes"] = accommodation.ClosesUtc?.ToString("O", CultureInfo.InvariantCulture);
+            record.Fields["Reason"] = accommodation.Reason;
+        }
     }
 
     /// <inheritdoc />
@@ -193,6 +208,13 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             context.Result.Count(InvitationKind);
         }
 
+        // The person's accommodations name them and say why they need them (a disability, say): they go.
+        foreach (var accommodation in await OverridesAsync(context.Subject, cancellationToken))
+        {
+            _session.Delete(accommodation, SurveysConstants.CollectionName);
+            context.Result.Count(OverrideKind);
+        }
+
         foreach (var batch in keys.Where(key => !string.IsNullOrEmpty(key)).Chunk(200))
         {
             var participation = await _session.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.RespondentKey.IsIn(batch), collection: SurveysConstants.CollectionName)
@@ -244,6 +266,19 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         }
 
         return found.Values.OrderBy(response => response.StartedUtc).ToList();
+    }
+
+    // The accommodations granted to the person's user accounts.
+    private async Task<IReadOnlyList<SurveyOverride>> OverridesAsync(PersonalDataSubject subject, CancellationToken cancellationToken)
+    {
+        var found = new List<SurveyOverride>();
+
+        foreach (var batch in subject.UserIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Chunk(200))
+        {
+            found.AddRange(await _session.Query<SurveyOverride, SurveyOverrideIndex>(index => index.UserId.IsIn(batch), collection: SurveysConstants.CollectionName).ListAsync(cancellationToken));
+        }
+
+        return found;
     }
 
     // The person's invitations: those sent to their user account, and guest invitations sent to one of their e-mail

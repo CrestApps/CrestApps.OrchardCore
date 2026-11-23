@@ -169,7 +169,7 @@ public sealed class SurveyPublisherTests : IAsyncLifetime
         await session.SaveChangesAsync(cancellationToken);
 
         // Act
-        var result = await services.Publisher.RestoreAsync(survey.ItemId, published.Version.ItemId, cancellationToken);
+        var result = await services.Publisher.RestoreAsync(survey.ItemId, published.Version.ItemId, cancellationToken: cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
         survey = await services.Manager.FindByIdAsync(survey.ItemId, cancellationToken);
 
@@ -178,6 +178,36 @@ public sealed class SurveyPublisherTests : IAsyncLifetime
         Assert.Equal(2, survey.Draft.Pages[0].Questions.Count);
         Assert.DoesNotContain(survey.Draft.Pages[1].Questions, question => question.Id == "bq");
         Assert.True(survey.HasUnpublishedChanges);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_OverADraftAnotherAuthorChangedSince_IsRefusedAndKeepsTheirChange()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _harness.Store.CreateSession();
+        var services = _harness.CreateServices(session);
+        var created = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Restore", Definition = AuthoringDefinitions.TwoPages() }, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var published = await services.Publisher.PublishAsync(created.ItemId, null, "admin-id", cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var survey = await services.Manager.FindByIdAsync(created.ItemId, cancellationToken);
+        var seen = survey.DraftModifiedUtc;
+
+        // Another author changes the draft after the Versions page was shown.
+        _harness.Now = _harness.Now.AddMinutes(3);
+        var theirs = SurveyDefinitionCloner.Clone(survey.Draft);
+        theirs.Pages[0].Title = "Their change";
+        await services.Manager.SaveDraftAsync(survey, theirs, cancellationToken: cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Act
+        var result = await services.Publisher.RestoreAsync(survey.ItemId, published.Version.ItemId, seen, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.Busy, result);
+        Assert.Equal("Their change", (await services.Manager.FindByIdAsync(survey.ItemId, cancellationToken)).Draft.Pages[0].Title);
     }
 
     [Fact]

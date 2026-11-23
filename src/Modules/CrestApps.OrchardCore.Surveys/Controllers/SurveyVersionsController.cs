@@ -152,20 +152,22 @@ public sealed class SurveyVersionsController : Controller
     /// </summary>
     /// <param name="id">The survey.</param>
     /// <param name="versionId">The version.</param>
+    /// <param name="draft">The stamp (ticks) of the draft the page was shown with; a draft changed since is not replaced.</param>
     /// <param name="auditTrail">The audit trail.</param>
     /// <returns>A redirect to the designer.</returns>
     [HttpPost]
     [Admin("surveys/{id}/versions/{versionId}/restore", "SurveysVersionRestore")]
-    public async Task<IActionResult> Restore(string id, string versionId, [FromServices] ISurveyAuditTrail auditTrail)
+    public async Task<IActionResult> Restore(string id, string versionId, long? draft, [FromServices] ISurveyAuditTrail auditTrail)
     {
-        var survey = await AuthorizeAsync(id, SurveyOperation.Publish);
+        // Restoring replaces the draft, which is editing: it needs Manage (as the Versions list does) as well as Publish.
+        var survey = await AuthorizeAsync(id, SurveyOperation.Manage);
 
-        if (survey is null)
+        if (survey is null || !await _surveyAuthorization.AuthorizeAsync(User, survey, SurveyOperation.Publish, HttpContext.RequestAborted))
         {
             return Forbid();
         }
 
-        var result = await _publisher.RestoreAsync(id, versionId, HttpContext.RequestAborted);
+        var result = await _publisher.RestoreAsync(id, versionId, SurveyDraftStamp.ToUtc(draft), HttpContext.RequestAborted);
 
         if (result == SurveyErrorCode.None)
         {
@@ -180,6 +182,12 @@ public sealed class SurveyVersionsController : Controller
             }, HttpContext.RequestAborted);
 
             await _notifier.SuccessAsync(H["The version has been copied into the draft. Publish the draft to use it."]);
+        }
+        else if (result == SurveyErrorCode.Busy)
+        {
+            await _notifier.ErrorAsync(H["Someone else changed the draft since you opened this page. Reload the page and try again."]);
+
+            return RedirectToAction(nameof(Index), new { id });
         }
         else
         {

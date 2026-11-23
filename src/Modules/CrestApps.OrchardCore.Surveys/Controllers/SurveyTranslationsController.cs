@@ -215,12 +215,21 @@ public sealed class SurveyTranslationsController : Controller
 
         var draft = SurveyDefinitionCloner.Clone(survey.Draft) ?? new SurveyDefinition();
         var html = SurveyTextCatalog.Describe(draft).Where(entry => entry.IsHtml).Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
-        var written = SurveyTranslations.Merge(draft, culture, content.Texts
-            .Where(entry => !string.IsNullOrEmpty(entry?.Key) && !string.IsNullOrWhiteSpace(entry.Translation))
+
+        // A text whose original in the file differs from the survey's now was translated before an author reworded it:
+        // writing it would give respondents the old meaning, so it is left out and counted.
+        var (current, changed) = SurveyTranslations.SplitByOriginal(draft, content.Texts);
+        var written = SurveyTranslations.Merge(draft, culture, current
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Translation))
             .Select(entry => new KeyValuePair<string, string>(entry.Key, html.Contains(entry.Key) ? _htmlSanitizer.Sanitize(entry.Translation) : entry.Translation)));
 
         await _manager.SaveDraftAsync(survey, draft, cancellationToken: HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["{0} texts were imported into the draft.", written]);
+
+        if (changed > 0)
+        {
+            await _notifier.WarningAsync(H["{0} texts were left out because their original text has changed since the file was exported. Export the file again and translate them.", changed]);
+        }
 
         return RedirectToAction(nameof(Index), new { id, culture });
     }
@@ -228,6 +237,7 @@ public sealed class SurveyTranslationsController : Controller
     private static SurveyTranslationsViewModel Build(Survey survey, string culture, List<SelectListItem> cultures)
     {
         var texts = SurveyTranslations.Texts(survey.Draft, culture);
+        var outdated = SurveyTranslations.OutdatedKeys(survey.Draft, culture);
         var model = new SurveyTranslationsViewModel
         {
             Survey = survey,
@@ -248,9 +258,14 @@ public sealed class SurveyTranslationsController : Controller
                 Original = entry.Text,
                 Translation = translation,
                 IsHtml = entry.IsHtml,
+                Outdated = outdated.Contains(entry.Key),
             });
 
-            if (!string.IsNullOrWhiteSpace(translation))
+            if (outdated.Contains(entry.Key))
+            {
+                model.Outdated++;
+            }
+            else if (!string.IsNullOrWhiteSpace(translation))
             {
                 model.Translated++;
             }

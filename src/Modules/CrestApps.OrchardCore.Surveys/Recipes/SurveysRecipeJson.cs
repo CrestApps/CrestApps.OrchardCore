@@ -10,6 +10,16 @@ namespace CrestApps.OrchardCore.Surveys.Recipes;
 internal static class SurveysRecipeJson
 {
     /// <summary>
+    /// The property that carries the owner of a survey or question bank by user name.
+    /// </summary>
+    public const string OwnerUserName = "OwnerUserName";
+
+    /// <summary>
+    /// The property that carries a record's collector by name, since collector ids differ between sites.
+    /// </summary>
+    public const string CollectorName = "CollectorName";
+
+    /// <summary>
     /// Reads a text property.
     /// </summary>
     /// <param name="token">The record.</param>

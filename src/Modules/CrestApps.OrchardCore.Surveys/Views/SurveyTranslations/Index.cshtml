@@ -31,6 +31,10 @@
                         <button type="submit" class="btn btn-outline-secondary">@T["Open"]</button>
                     </div>
                     <span class="hint">@T["{0} of {1} texts are translated. Respondents see a translation once the survey is published, when their language or the link's culture matches.", Model.Translated, Model.Entries.Count]</span>
+                    @if (Model.Outdated > 0)
+                    {
+                        <span class="hint text-warning">@T["{0} translations are out of date: their original text changed after they were translated. Change each one to mark it current.", Model.Outdated]</span>
+                    }
                 </div>
             </div>
         </form>
@@ -80,6 +84,10 @@
                                     <div class="form-control bg-body-tertiary text-break" style="white-space: pre-wrap;">@entry.Original</div>
                                 </div>
                                 <div class="col-md-6">
+                                    @if (entry.Outdated)
+                                    {
+                                        <span class="badge text-bg-warning mb-1">@T["Out of date"]</span>
+                                    }
                                     @if (entry.IsHtml || entry.Original?.Length > 80)
                                     {
                                         <textarea id="translation-@index" name="Entries[@index].Translation" rows="3" class="form-control" lang="@Model.Culture">@entry.Translation</textarea>

@@ -37,4 +37,7 @@
 {
     <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Closed" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Unarchive"]" data-message="@T["Bring this survey back to the list as closed?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Unarchive"]</a>
 }
-<a asp-action="Delete" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete this survey? A survey with responses cannot be deleted; archive it instead."]">@T["Delete"]</a>
+@if (survey.Owner is null)
+{
+    <a asp-action="Delete" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete this survey? A survey with responses cannot be deleted; archive it instead. Its invitations, accommodations and test responses are deleted with it."]">@T["Delete"]</a>
+}

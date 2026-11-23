@@ -61,6 +61,7 @@ internal sealed class SurveyVersionDisplayDriver : DisplayDriver<SurveyVersion>
             Responses = responses,
             PublishedBy = user is null ? null : await _displayNameProvider.GetAsync(user),
             IsCurrent = survey?.PublishedVersionId == version.ItemId,
+            DraftStamp = SurveyDraftStamp.From(survey?.DraftModifiedUtc),
         };
 
         return Combine(

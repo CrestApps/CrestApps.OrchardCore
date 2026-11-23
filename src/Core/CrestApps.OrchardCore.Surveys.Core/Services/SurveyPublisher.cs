@@ -145,7 +145,7 @@ public sealed class SurveyPublisher : ISurveyPublisher
     }
 
     /// <inheritdoc />
-    public async Task<SurveyErrorCode> RestoreAsync(string surveyId, string versionId, CancellationToken cancellationToken = default)
+    public async Task<SurveyErrorCode> RestoreAsync(string surveyId, string versionId, DateTime? expectedDraftModifiedUtc = null, CancellationToken cancellationToken = default)
     {
         var survey = await _surveyManager.FindByIdAsync(surveyId, cancellationToken);
 
@@ -164,7 +164,7 @@ public sealed class SurveyPublisher : ISurveyPublisher
         var draft = SurveyDefinitionCloner.Clone(version.Definition);
         SurveyBankDrawResolver.RemoveResolved(draft);
 
-        return await _surveyManager.SaveDraftAsync(survey, draft, cancellationToken: cancellationToken);
+        return await _surveyManager.SaveDraftAsync(survey, draft, expectedDraftModifiedUtc, cancellationToken);
     }
 
     private async Task<(SurveyDefinition Resolved, List<SurveyValidationMessage> Messages)> ResolveAndValidateAsync(Survey survey, CancellationToken cancellationToken)

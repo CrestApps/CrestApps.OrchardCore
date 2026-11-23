@@ -25,6 +25,8 @@ Translate a survey so each respondent reads it in their language.
 
 ## Use a translation file
 
-Under **Translation file**, select **Export** to download every original text, translate the file, and select **Import** to load it.
+Under **Translation file**, select **Export** to download every original text, translate the file, and select **Import** to load it. If someone reworded a text after you exported the file, its translation is left out, and a message says how many: export the file again and translate those texts.
+
+When someone changes a text after it was translated, its translation shows **Out of date** and no longer counts as translated. Change the translation to mark it current. Respondents see the old translation until you do.
 
 With Surveys AI, **Translate with AI** in the survey's menu translates the texts for you to review.

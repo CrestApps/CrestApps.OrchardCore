@@ -52,6 +52,16 @@ public sealed class CreateSurveyLinkTask : SurveyTaskActivity<CreateSurveyLinkTa
         }
 
         var userId = await evaluate(UserId);
+
+        // The setting may name the user by id, user name or e-mail; one that names nobody fails the task.
+        if (userId is not null && (userId = await SurveyWorkflowUsers.ResolveAsync(_serviceProvider, userId)) is null)
+        {
+            output["SurveyId"] = surveyId;
+            output["Error"] = "UnknownUser";
+
+            return "Failed";
+        }
+
         var email = await evaluate(Email);
         var contextKind = await evaluate(ContextKind);
         var contextId = await evaluate(ContextId);

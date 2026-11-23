@@ -48,6 +48,7 @@ A question pool on a page shows each respondent `DrawCount` of its questions (0 
 The designer page (`admin/surveys/{id}/design`) has an outline of pages and questions on the left and an editor panel on the right.
 
 - Outline changes (add page, add question, move, duplicate, delete) post small JSON commands to `admin/surveys/{id}/draft/commands`; the server applies them to the draft and returns the outline.
+- Every panel save and outline command sends the draft version the page last saw (`X-Survey-Draft-Version`); a draft another author changed since is refused with 409 and the edits stay in the panel, unsaved. The page takes the new version only from a save the server accepted, so the settings form never posts over a change it didn't see.
 - Pages are reordered by drag and drop or with the move buttons.
 - The question editor is built with `IDisplayManager<SurveyQuestion>`, so any module adds settings to any question with a display driver. The built-in drivers edit the common fields, choices, rows, validation and scoring; each question type adds its own settings card ([Question types](./controls.md)).
 - The survey settings are built with `IDisplayManager<SurveyDefinition>`: General, Presentation, Navigation, Variables, Endings, Score categories and bands, Scoring and review, Timing and Quotas. Their drivers place shapes on the tabs `General;1`, `Scoring;2`, `Endings;3`, `Variables;4` and `Quotas;5`; a module's driver joins a tab by name or adds its own with a later position.

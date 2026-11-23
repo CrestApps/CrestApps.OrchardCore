@@ -28,6 +28,8 @@ Create a survey from a template, then design its questions and set who may respo
 
 Each row has **Design** and **Preview** buttons, and a menu with **Collect responses**, **Responses**, **Results**, **Versions**, **Access and settings**, **Logic overview**, **Accommodations**, **Regrade versions**, **Grading**, **Save as a template**, **Copy as a draft**, **Close** or **Open**, **Archive** or **Unarchive**, and **Delete**. Search by name, and filter the list by its filters above the rows.
 
+**Copy as a draft** makes a new survey with the same questions, codes, logic and translations. **Delete** removes a survey that has no responses, together with its invitations, accommodations and test responses. A survey that belongs to something else, such as a course quiz, has no **Delete**: it goes when you delete that item.
+
 You can delete only a survey that has no responses. Archive a survey with responses instead: it keeps its results and leaves the default list.
 
 ## The survey's pages
