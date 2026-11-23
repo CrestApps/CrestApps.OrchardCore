@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Outreach;
 using CrestApps.OrchardCore.Outreach.Core.Services;
 using CrestApps.OrchardCore.Outreach.Models;
+using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Core;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Invitations;
@@ -167,6 +169,7 @@ public sealed class SurveyInvitationDeliveryTests
             services.AddConsentSource<SurveyInvitationConsentSource>();
             services.AddSingleton(other.Object);
         });
+        await AddOptOutTableAsync(harness.Store);
 
         // An address unsubscribed from survey invitations, then the list's Data Protection key is lost.
         await using (var scope = harness.Services.CreateAsyncScope())
@@ -740,6 +743,57 @@ public sealed class SurveyInvitationDeliveryTests
         Assert.Equal(SurveyInvitationOptOutState.NotOptedOut, bAfterOptIn);
     }
 
+    [Fact]
+    public async Task OptOuts_AreARecordEach_AndTheOldSingleListIsMovedIntoRecords()
+    {
+        // Arrange: the old single list holds a plain hash, as sites upgraded from it do; then two new unsubscribes.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var (store, protection) = await harness.RunAsync(services => Task.FromResult((services.GetRequiredService<IStore>(), services.GetRequiredService<IDataProtectionProvider>())));
+
+        await using (var seed = store.CreateSession())
+        {
+            var list = new SurveyInvitationOptOutDocument();
+            list.AddressHashes.Add(SurveyInvitationOptOutStore.HashOf("old@example.com"));
+            await seed.SaveAsync(list, cancellationToken: TestContext.Current.CancellationToken);
+            await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var write = store.CreateSession())
+        {
+            var optOuts = new SurveyInvitationOptOutStore(write, protection, NullLogger<SurveyInvitationOptOutStore>.Instance);
+            await optOuts.SetAsync("a@example.com", optedOut: true, TestContext.Current.CancellationToken);
+            await optOuts.SetAsync("b@example.com", optedOut: true, TestContext.Current.CancellationToken);
+            await write.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Act: the old list is still honored before the move, then the move step empties it into records.
+        await using var before = store.CreateSession();
+        var oldBeforeMove = await new SurveyInvitationOptOutStore(before, protection, NullLogger<SurveyInvitationOptOutStore>.Instance).GetStateAsync("old@example.com", TestContext.Current.CancellationToken);
+
+        await using (var move = store.CreateSession())
+        {
+            var step = new CrestApps.OrchardCore.Surveys.Migrations.SurveyInvitationOptOutMoveStep(move);
+            Assert.False(await step.RunAsync(new CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext(), TestContext.Current.CancellationToken));
+            await move.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var after = store.CreateSession();
+        var done = await new CrestApps.OrchardCore.Surveys.Migrations.SurveyInvitationOptOutMoveStep(after).RunAsync(new CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext(), TestContext.Current.CancellationToken);
+        var reader = new SurveyInvitationOptOutStore(after, protection, NullLogger<SurveyInvitationOptOutStore>.Instance);
+        var lists = await after.Query<SurveyInvitationOptOutDocument>().ListAsync(TestContext.Current.CancellationToken);
+        var records = await after.Query<SurveyInvitationOptOut, SurveyInvitationOptOutIndex>(collection: SurveysConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
+
+        // Assert: a record per address, the list keeps only its key, and every address is still opted out.
+        Assert.Equal(SurveyInvitationOptOutState.OptedOut, oldBeforeMove);
+        Assert.True(done);
+        Assert.Empty(Assert.Single(lists).AddressHashes);
+        Assert.NotNull(Assert.Single(lists).ProtectedKey);
+        Assert.Equal(3, records.Count());
+        Assert.Equal(SurveyInvitationOptOutState.OptedOut, await reader.GetStateAsync("old@example.com", TestContext.Current.CancellationToken));
+        Assert.Equal(SurveyInvitationOptOutState.OptedOut, await reader.GetStateAsync("A@Example.com ", TestContext.Current.CancellationToken));
+        Assert.Equal(SurveyInvitationOptOutState.NotOptedOut, await reader.GetStateAsync("c@example.com", TestContext.Current.CancellationToken));
+    }
+
     [Theory]
     [InlineData("2026-11-19T23:00:00Z", "America/New_York", "2026-11-19T05:00:00Z")]
     [InlineData("2026-11-20T05:30:00Z", "America/New_York", "2026-11-20T05:00:00Z")]
@@ -748,6 +802,19 @@ public sealed class SurveyInvitationDeliveryTests
         => Assert.Equal(
             DateTime.Parse(expected, null, System.Globalization.DateTimeStyles.AdjustToUniversal),
             SurveyInvitationService.DayStartUtc(DateTime.Parse(utcNow, null, System.Globalization.DateTimeStyles.AdjustToUniversal), timeZoneId));
+
+    // The opt-out records live in the Surveys collection, which a harness of another module doesn't create.
+    private static async Task AddOptOutTableAsync(IStore store)
+    {
+        store.RegisterIndexes(new SurveyInvitationOptOutIndexProvider());
+        await store.InitializeCollectionAsync(SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+
+        await using var session = store.CreateSession();
+        var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+        await SurveysIndexSchema.CreateInvitationOptOutTableAsync(new global::YesSql.Sql.SchemaBuilder(store.Configuration, transaction));
+        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+    }
 
     private static Task<RuntimeTestHarness> CreateAsync(RecordingSender sender, int emailsPerDay, BreakableDataProtection protection = null)
         => CreateAsync(sender, SiteService(emailsPerDay), protection);

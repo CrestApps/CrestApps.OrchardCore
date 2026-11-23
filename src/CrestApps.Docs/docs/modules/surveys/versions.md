@@ -25,3 +25,7 @@ A response keeps the version it started on, through every page, resume and reope
 ## Bank questions
 
 When a pool draws from question banks, publishing copies the matching questions (not retired, with the tags and difficulty asked for) into the version's pool, with their bank question id as question id and the bank revision in `Properties["bankRevision"]`. A version is therefore self-contained. Each draw adds at most 500 candidates by default (2,000 at most). When a bank question changes after publishing, the survey must be published again to use the change.
+
+## The versions list
+
+The **Versions** page is paged and reads a page of `SurveyVersionIndex` (number, date, publisher and notes, the notes cut to 500 characters), so it loads no version and its definition. Publishing numbers the new version from the index, and **Regrade versions** lists the versions from it too. On a site upgraded from a version without the publisher and notes columns, the `Surveys.SurveyVersionsReindex` resumable step fills them; until it reaches a version, the list reads that version itself.

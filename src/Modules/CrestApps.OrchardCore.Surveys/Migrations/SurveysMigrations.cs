@@ -40,7 +40,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 7;
+        return 9;
     }
 
     /// <summary>
@@ -121,5 +121,31 @@ internal sealed class SurveysMigrations : DataMigration
         await _steps.RequestAsync(SurveyUpkeepReindexStep.StepName);
 
         return 7;
+    }
+
+    /// <summary>
+    /// Adds the index of the invitation opt-out records and asks for the step that moves the opt-outs of the old single
+    /// list into them.
+    /// </summary>
+    /// <returns>The new version.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        await SurveysIndexSchema.CreateInvitationOptOutTableAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveyInvitationOptOutMoveStep.StepName);
+
+        return 8;
+    }
+
+    /// <summary>
+    /// Adds the publisher and notes columns of the version index, so the versions list loads no version, and asks for
+    /// the step that fills them.
+    /// </summary>
+    /// <returns>The new version.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await SurveysIndexSchema.AddVersionListColumnsAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveyVersionsReindexStep.StepName);
+
+        return 9;
     }
 }

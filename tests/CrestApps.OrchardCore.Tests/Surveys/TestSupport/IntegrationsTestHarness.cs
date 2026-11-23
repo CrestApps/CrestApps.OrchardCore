@@ -60,6 +60,7 @@ internal sealed class IntegrationsTestHarness : IAsyncDisposable
                 new SurveyResponseIndexProvider(),
                 new SurveyParticipationIndexProvider(),
                 new SurveyInvitationIndexProvider(),
+                new SurveyInvitationOptOutIndexProvider(),
                 new SurveyOverrideIndexProvider(),
             },
             [SurveysConstants.CollectionName, SurveysConstants.ResponsesCollectionName]);

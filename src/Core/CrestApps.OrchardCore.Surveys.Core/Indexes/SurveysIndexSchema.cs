@@ -51,6 +51,7 @@ public static class SurveysIndexSchema
         }, collection: collection);
 
         await CreateSurveyTagTableAsync(schemaBuilder);
+        await CreateInvitationOptOutTableAsync(schemaBuilder);
 
         await schemaBuilder.CreateMapIndexTableAsync<SurveyTemplateIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
@@ -71,7 +72,9 @@ public static class SurveysIndexSchema
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("SurveyId", column => column.Nullable().WithLength(26))
             .Column<int>("Number")
-            .Column<DateTime>("PublishedUtc"),
+            .Column<DateTime>("PublishedUtc")
+            .Column<string>("PublishedBy", column => column.Nullable().WithLength(26))
+            .Column<string>("Notes", column => column.Nullable().WithLength(SurveyVersionIndex.NotesLength)),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyVersionIndex>(table =>
@@ -329,6 +332,43 @@ public static class SurveysIndexSchema
         await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
             table.CreateIndex("IDX_SurveyIndex_Retention", "RetentionDays"),
             collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Creates the index of the survey invitation opt-out records, one per address that unsubscribed, found by the hash
+    /// of the address.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateInvitationOptOutTableAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<SurveyInvitationOptOutIndex>(table => table
+            .Column<string>("AddressHash", column => column.WithLength(SurveyInvitationOptOutIndex.HashLength)),
+            collection: SurveysConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationOptOutIndex>(table =>
+            table.CreateIndex("IDX_SurveyInvitationOptOutIndex_Hash", "AddressHash"),
+            collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Adds what the versions list shows without loading versions: who published each version and its notes. Rows
+    /// indexed before have an empty publisher, so the list reads those versions themselves until the step that indexes
+    /// the versions again reaches them.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddVersionListColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyVersionIndex>(table =>
+        {
+            table.AddColumn<string>("PublishedBy", column => column.Nullable().WithLength(26));
+            table.AddColumn<string>("Notes", column => column.Nullable().WithLength(SurveyVersionIndex.NotesLength));
+        }, collection: SurveysConstants.CollectionName);
     }
 
     private static async Task CreateSurveyTagTableAsync(ISchemaBuilder schemaBuilder)

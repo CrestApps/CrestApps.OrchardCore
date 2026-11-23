@@ -415,7 +415,8 @@ public sealed class SurveyGradingController : Controller
     {
         model.SurveyId = survey.ItemId;
         model.SurveyTitle = survey.Title;
-        model.Versions = (await _versionCache.ListAsync(survey.ItemId, HttpContext.RequestAborted))
+        // The version index gives the ids and numbers; no version is loaded to fill the list.
+        model.Versions = (await HttpContext.RequestServices.GetRequiredService<SurveyVersionStore>().ListRowsAsync(survey.ItemId, HttpContext.RequestAborted))
             .Select(version => new SelectListItem(H["Version {0}", version.Number].Value, version.ItemId))
             .ToList();
         model.KeyVersionId ??= survey.PublishedVersionId;
@@ -527,7 +528,7 @@ public sealed class SurveyGradingController : Controller
 
         var queries = HttpContext.RequestServices.GetRequiredService<ISurveyResponseQueries>();
 
-        foreach (var version in await _versionCache.ListAsync(survey.ItemId, HttpContext.RequestAborted))
+        foreach (var version in await HttpContext.RequestServices.GetRequiredService<SurveyVersionStore>().ListRowsAsync(survey.ItemId, HttpContext.RequestAborted))
         {
             if (!versionIds.Contains(version.ItemId, StringComparer.Ordinal))
             {
