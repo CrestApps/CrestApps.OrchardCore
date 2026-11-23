@@ -249,7 +249,7 @@ public sealed class SurveysPersonalDataContributorTests
         var erased = await harness.FindAsync(started.ItemId);
 
         harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(10);
-        await harness.RunAsync(async services =>
+        await harness.RunInShellAsync(async services =>
         {
             await services.GetRequiredService<SurveyMaintenanceService>().RunAsync(SurveysConstants.PageSize, TestContext.Current.CancellationToken);
 
