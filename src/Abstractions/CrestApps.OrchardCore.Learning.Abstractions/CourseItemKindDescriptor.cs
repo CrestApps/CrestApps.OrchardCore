@@ -86,6 +86,12 @@ public sealed class CourseItemKindDescriptor
     public bool GradableCompletesWhenGraded { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the kind decides itself whether a score passes, as a quiz does with its survey's score bands
+    /// and pass mark. The item's own pass mark is then never used, and the item editor does not offer it.
+    /// </summary>
+    public bool DecidesPass { get; set; }
+
+    /// <summary>
     /// Gets whether an item of this kind can use a completion mode.
     /// </summary>
     /// <param name="mode">The completion mode.</param>

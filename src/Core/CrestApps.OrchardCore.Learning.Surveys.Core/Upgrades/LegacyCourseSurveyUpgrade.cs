@@ -22,6 +22,14 @@ public static class LegacyCourseSurveyUpgrade
     private static readonly string[] _legacyTypes = ["SingleChoice", "MultipleChoice", "Rating", "Text"];
 
     /// <summary>
+    /// Reads the legacy part of an item without changing the item.
+    /// </summary>
+    /// <param name="item">The content item version.</param>
+    /// <returns>The legacy part, or <see langword="null"/> when the item has none.</returns>
+    public static JsonObject ReadLegacyPart(ContentItem item)
+        => ((JsonObject)item?.Content)?[LegacyPartName] as JsonObject;
+
+    /// <summary>
     /// Moves the legacy part of an item to a <see cref="CourseSurveyPart"/>, and returns what it held.
     /// </summary>
     /// <param name="item">The content item version.</param>

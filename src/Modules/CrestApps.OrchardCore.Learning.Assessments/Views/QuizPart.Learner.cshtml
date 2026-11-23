@@ -68,7 +68,7 @@
                                 {
                                     @T["Waiting for a grader"]
                                 }
-                                else if (attempt.Percent is { } percent)
+                                else if (attempt.Percent is { } percent && Model.ShowsFor(attempt).HasFlag(CrestApps.OrchardCore.Surveys.Models.ReviewShows.Score))
                                 {
                                     @T["{0}%", percent.ToString("0.#")]
                                     @if (attempt.Passed is true)
@@ -80,9 +80,13 @@
                                         <span class="badge text-bg-danger ms-1">@T["Not passed"]</span>
                                     }
                                 }
+                                else if (attempt.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.Completed)
+                                {
+                                    <span data-learning-quiz-score-hidden>@T["Submitted"]</span>
+                                }
                             </td>
                             <td>
-                                @if (attempt.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.Completed)
+                                @if (attempt.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.Completed && Model.ShowsFor(attempt) != CrestApps.OrchardCore.Surveys.Models.ReviewShows.None)
                                 {
                                     <a href="@Url.Content("~/s/r/" + attempt.ItemId + "/review")">@T["Review"]</a>
                                 }
@@ -93,7 +97,7 @@
             </table>
         }
 
-        @if (published && Model.Enrolled && (Model.Open is not null || Model.AttemptsLeft is null or > 0))
+        @if (published && Model.Enrolled && (Model.Open is not null || Model.CanStart))
         {
             <form method="post" action="@Url.Content("~/learning/quizzes/" + Model.QuizId + "/start")">
                 @Html.AntiForgeryToken()

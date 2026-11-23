@@ -33,6 +33,22 @@ public sealed class LegacyCourseSurveyUpgradeTests
     }
 
     [Fact]
+    public void P4L6_ReadLegacyPart_LeavesTheQuestionsOnTheItem_UntilTheyAreSaved()
+    {
+        // Arrange
+        var item = new ContentItem();
+        ((JsonObject)item.Content)["SurveyPart"] = new JsonObject { ["Questions"] = new JsonArray(new JsonObject { ["Text"] = "Pace?" }) };
+
+        // Act
+        var legacy = LegacyCourseSurveyUpgrade.ReadLegacyPart(item);
+
+        // Assert: reading never takes the part, so a failed upgrade keeps the questions.
+        Assert.NotNull(legacy);
+        Assert.NotNull(((JsonObject)item.Content)["SurveyPart"]);
+        Assert.False(item.TryGet<CourseSurveyPart>(out _));
+    }
+
+    [Fact]
     public void TakeLegacyPart_AnItemWithoutTheOldPart_IsLeftAlone()
     {
         // Arrange

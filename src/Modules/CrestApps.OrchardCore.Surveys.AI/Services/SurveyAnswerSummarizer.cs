@@ -91,7 +91,12 @@ public sealed class SurveyAnswerSummarizer
         }
 
         var filter = new SurveyAnswerFilter { SurveyId = survey.ItemId };
-        var answers = await _aggregates.TextSamplesAsync(filter, question.Id, SurveysAIConstants.MaxSummarizedAnswers, cancellationToken);
+        // Respondents' answers are untrusted: links and markup are removed and each is shortened before the model reads
+        // them, as the results tool does, so injected text can't plant a link or a fake theme in the summary.
+        var answers = (await _aggregates.TextSamplesAsync(filter, question.Id, SurveysAIConstants.MaxSummarizedAnswers, cancellationToken) ?? [])
+            .Select(SurveyRespondentText.Clean)
+            .Where(text => text.Length > 0)
+            .ToList();
         // The survey's minimum group size, never below the floor of the site settings.
         var settings = _siteService is null ? null : await _siteService.GetSettingsAsync<SurveySettings>();
         var minimum = Math.Max(1, CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.MinimumGroupSize(survey, settings));
@@ -103,6 +108,7 @@ public sealed class SurveyAnswerSummarizer
 
         var input = new JsonObject
         {
+            ["notice"] = SurveyRespondentText.Notice,
             ["question"] = question.Title,
             ["answers"] = new JsonArray(answers.Select(answer => (JsonNode)answer).ToArray()),
         };

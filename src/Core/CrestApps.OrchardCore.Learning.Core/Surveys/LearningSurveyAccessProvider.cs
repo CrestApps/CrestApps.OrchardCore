@@ -61,7 +61,13 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
             return false;
         }
 
-        var item = await _learningSurveys.FindOwnerItemAsync(survey);
+        // Grading and reading responses follow the grading scope, which reads the latest items, published or not: a grader
+        // of an unpublished quiz gets AI help, file answers and names along with the grading itself. Changing the survey
+        // stays tied to the published item.
+        var grading = operation is SurveyOperation.Grade or SurveyOperation.ViewResponses;
+        var item = grading
+            ? await _learningSurveys.FindLatestOwnerItemAsync(survey)
+            : await _learningSurveys.FindOwnerItemAsync(survey);
         var courseId = item is null ? null : _courseStructure.GetCourseId(item);
 
         if (string.IsNullOrEmpty(courseId))

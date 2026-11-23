@@ -64,16 +64,7 @@ public sealed class RespondentLimitsRule : ISurveyAccessRule
             return SurveyAccessDecision.Allow;
         }
 
-        var counts = await _participation.CountAsync(context.Survey, context.RespondentKey, context.Context, context.UtcNow);
-        var used = countStarted ? counts.Started : counts.Completed;
-
-        var usedTotal = used.Total;
-
-        // Attempt limits of identified respondents count every response kept, not only the participation window.
-        if (countStarted && context.Survey.Access?.Anonymity != AnonymityMode.Anonymous && !string.IsNullOrEmpty(context.Identity?.UserId))
-        {
-            usedTotal = await _counter.CountForUserAsync(context.Survey.ItemId, context.Identity.UserId, context.Context?.ToString());
-        }
+        var (counts, used, usedTotal) = await CountUsedAsync(context, countStarted);
 
         if (limits.Total is { } total && usedTotal >= total + (context.Override?.ExtraAttempts ?? 0))
         {
@@ -93,5 +84,42 @@ public sealed class RespondentLimitsRule : ISurveyAccessRule
         }
 
         return SurveyAccessDecision.Allow;
+    }
+
+    /// <summary>
+    /// Gets how many attempts the total limit leaves a respondent, counted exactly as the limit is checked: started or
+    /// completed responses as the limit counts them, plus the extra attempts of the respondent's accommodation.
+    /// </summary>
+    /// <param name="context">The access context of a start.</param>
+    /// <returns>The attempts left, never below zero, or <see langword="null"/> when no total limit applies.</returns>
+    public async Task<int?> GetAttemptsLeftAsync(SurveyAccessContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var limits = context.Survey?.Access?.Limits;
+
+        if (context.IsTest || limits?.Total is not { } total || string.IsNullOrEmpty(context.RespondentKey))
+        {
+            return null;
+        }
+
+        var (_, _, usedTotal) = await CountUsedAsync(context, limits.Counts == LimitCount.Started);
+
+        return Math.Max(total + (context.Override?.ExtraAttempts ?? 0) - usedTotal, 0);
+    }
+
+    private async Task<(SurveyParticipationCounts Counts, SurveyParticipationWindowCounts Used, int UsedTotal)> CountUsedAsync(SurveyAccessContext context, bool countStarted)
+    {
+        var counts = await _participation.CountAsync(context.Survey, context.RespondentKey, context.Context, context.UtcNow);
+        var used = countStarted ? counts.Started : counts.Completed;
+        var usedTotal = used.Total;
+
+        // Attempt limits of identified respondents count every response kept, not only the participation window.
+        if (countStarted && context.Survey.Access?.Anonymity != AnonymityMode.Anonymous && !string.IsNullOrEmpty(context.Identity?.UserId))
+        {
+            usedTotal = await _counter.CountForUserAsync(context.Survey.ItemId, context.Identity.UserId, context.Context?.ToString());
+        }
+
+        return (counts, used, usedTotal);
     }
 }

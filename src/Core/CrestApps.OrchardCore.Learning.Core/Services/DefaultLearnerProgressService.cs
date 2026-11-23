@@ -193,7 +193,9 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
             var passMark = context.Entry.Part?.PassMark;
 
-            item.Passed = result.Passed ?? (passMark is not null && item.Score is not null ? item.Score >= passMark : item.Passed);
+            item.Passed = result.PassDecided
+                ? result.Passed
+                : result.Passed ?? (passMark is not null && item.Score is not null ? item.Score >= passMark : item.Passed);
             context.Result = result;
 
             return null;
@@ -237,7 +239,9 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         }
 
         item.Score = Math.Clamp(result.Score.Value, 0, 100);
-        item.Passed = result.Passed ?? (entry.Part.PassMark is { } passMark ? item.Score >= passMark : item.Passed);
+        item.Passed = result.PassDecided
+            ? result.Passed
+            : result.Passed ?? (entry.Part.PassMark is { } passMark ? item.Score >= passMark : item.Passed);
         item.SelfReported = result.SelfReported;
         item.ResultSelfReported = result.SelfReported;
         progress.ModifiedUtc = now;
@@ -319,8 +323,15 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             return false;
         }
 
-        item.FirstAccessUtc ??= now;
-        item.LastAccessUtc = now;
+        // A result of an anonymous response is recorded by the day only, and the last access stays where it was.
+        var anonymousDay = update.Result?.AnonymousDayUtc;
+
+        item.FirstAccessUtc ??= anonymousDay ?? now;
+
+        if (anonymousDay is null)
+        {
+            item.LastAccessUtc = now;
+        }
 
         if (item.State == CourseItemState.NotStarted)
         {
@@ -333,7 +344,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (itemCompleted)
         {
-            item.CompletedUtc = now;
+            item.CompletedUtc = anonymousDay ?? now;
         }
 
         progress.ModifiedUtc = now;
@@ -691,8 +702,18 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = isNewProgress ? null : item, RefusedReason = refused };
         }
 
-        item.FirstAccessUtc ??= now;
-        item.LastAccessUtc = now;
+        // A result of an anonymous response is recorded by the day only: the item's completion, and a course completion
+        // it causes, carry the start of the day, and the last access and activity stay where they were, so no exact time
+        // links the learner to the response.
+        var anonymousDay = context.Result?.AnonymousDayUtc;
+        var stamp = anonymousDay ?? now;
+
+        item.FirstAccessUtc ??= stamp;
+
+        if (anonymousDay is null)
+        {
+            item.LastAccessUtc = now;
+        }
 
         if (item.State == CourseItemState.NotStarted)
         {
@@ -710,7 +731,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (itemCompleted)
         {
-            item.CompletedUtc = now;
+            item.CompletedUtc = stamp;
         }
 
         progress.ModifiedUtc = now;
@@ -728,11 +749,11 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (enrollment.StartedUtc is null)
         {
-            enrollment.StartedUtc = now;
+            enrollment.StartedUtc = stamp;
             enrollmentChanged = true;
         }
 
-        if (enrollment.LastActivityUtc is null || now - enrollment.LastActivityUtc >= _activityWriteInterval)
+        if (anonymousDay is null && (enrollment.LastActivityUtc is null || now - enrollment.LastActivityUtc >= _activityWriteInterval))
         {
             enrollment.LastActivityUtc = now;
             enrollmentChanged = true;
@@ -754,7 +775,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (enrollment.Status == EnrollmentStatus.Active && await _completionEvaluator.IsCompleteAsync(outline, enrollment, progress, grade))
         {
-            Complete(enrollment, outline, progress, now, grade, passed, manual ? context.Result?.RecordedBy ?? context.Item.CompletedBy : enrollment.UserId);
+            Complete(enrollment, outline, progress, stamp, grade, passed, manual ? context.Result?.RecordedBy ?? context.Item.CompletedBy : enrollment.UserId);
             enrollmentChanged = true;
             courseCompleted = true;
         }

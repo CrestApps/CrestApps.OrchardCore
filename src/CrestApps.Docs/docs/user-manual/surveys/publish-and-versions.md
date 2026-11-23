@@ -30,7 +30,7 @@ The first publish opens the survey and makes its public link. People who already
 
 ## Versions
 
-Open the survey's menu and select **Versions**. Each version shows when it was published and by whom. View a version, compare two versions (or a version and the draft), or restore a version into the draft and publish it again.
+Open the survey's menu and select **Versions**. Each version shows when it was published and by whom. View a version, compare it with the draft (**Compare with draft**), or restore a version into the draft and publish it again.
 
 ## Preview
 

@@ -32,7 +32,7 @@ You can delete only a survey that has no responses. Archive a survey with respon
 
 ## The survey's pages
 
-Every page of a survey shows a header with its status (**Draft**, **Open**, **Closed** or **Archived**), the published version, an **Unpublished changes** badge when the draft differs, and the **Preview** and **Publish** buttons. In the designer, **Publish** is the **Save and publish** button at the bottom of the page, so your changes are saved first. A menu at the side moves between its pages:
+Every page of a survey shows a header with its status (**Draft**, **Open**, **Closed** or **Archived**), the published version, an **Unpublished changes** badge when the draft differs, and the **Preview** and **Publish** buttons. **Publish** shows only when there is something to publish: it is hidden on a published survey with no unpublished changes and on an archived survey. In the designer, **Publish** is the **Save and publish** button at the bottom of the page, so your changes are saved first. A menu at the side moves between its pages:
 
 | Group | Pages |
 | --- | --- |

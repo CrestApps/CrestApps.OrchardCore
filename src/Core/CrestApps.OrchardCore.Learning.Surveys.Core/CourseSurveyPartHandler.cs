@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Learning.Core.Surveys;
+using CrestApps.OrchardCore.Learning.Surveys.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
@@ -15,18 +17,22 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
 {
     private readonly ILearningSurveyService _learningSurveys;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ISurveyManager _surveyManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CourseSurveyPartHandler"/> class.
     /// </summary>
     /// <param name="learningSurveys">The Learning survey service.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="surveyManager">The survey manager.</param>
     public CourseSurveyPartHandler(
         ILearningSurveyService learningSurveys,
-        IContentDefinitionManager contentDefinitionManager)
+        IContentDefinitionManager contentDefinitionManager,
+        ISurveyManager surveyManager)
     {
         _learningSurveys = learningSurveys;
         _contentDefinitionManager = contentDefinitionManager;
+        _surveyManager = surveyManager;
     }
 
     /// <inheritdoc />
@@ -57,15 +63,37 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
 
     private async Task EnsureSurveyAsync(CourseSurveyPart part)
     {
-        if (!string.IsNullOrEmpty(part.SurveyId))
+        var legacy = LegacyCourseSurveyUpgrade.ReadLegacyPart(part.ContentItem);
+
+        if (!string.IsNullOrEmpty(part.SurveyId) && legacy is null)
         {
             return;
         }
 
-        var (kind, template) = await KindAndTemplateAsync(part.ContentItem.ContentType);
-        var survey = await _learningSurveys.CreateOwnedSurveyAsync(part.ContentItem, kind, template);
+        var survey = string.IsNullOrEmpty(part.SurveyId) ? null : await _surveyManager.FindByIdAsync(part.SurveyId);
 
-        part.SurveyId = survey?.ItemId;
+        if (survey is null)
+        {
+            var (kind, template) = await KindAndTemplateAsync(part.ContentItem.ContentType);
+
+            survey = await _learningSurveys.CreateOwnedSurveyAsync(part.ContentItem, kind, template);
+        }
+
+        // An item of the first Learning release that the upgrade could not finish still holds its questions in the
+        // legacy part: its survey takes them, and the legacy part goes only once they are saved.
+        if (survey is not null && legacy is not null)
+        {
+            var definition = LegacyCourseSurveyUpgrade.ToDefinition(legacy, survey.Title);
+
+            LegacyCourseSurveyUpgrade.ApplySettings(legacy, survey);
+
+            if (await _surveyManager.SaveDraftAsync(survey, definition ?? survey.Draft) == SurveyErrorCode.None)
+            {
+                LegacyCourseSurveyUpgrade.TakeLegacyPart(part.ContentItem);
+            }
+        }
+
+        part.SurveyId = survey?.ItemId ?? part.SurveyId;
         part.ContentItem.Apply(part);
     }
 

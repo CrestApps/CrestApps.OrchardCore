@@ -1,22 +1,15 @@
 using CrestApps.OrchardCore.Learning.Core.Services;
-using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Surveys.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
-using CrestApps.OrchardCore.Surveys;
-using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.Extensions.Logging;
-using OrchardCore.ContentManagement;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
-using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data.Migration;
 using OrchardCore.Html.Models;
-using OrchardCore.Modules;
 using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Title.Models;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Learning.Surveys.Migrations;
 
@@ -38,11 +31,7 @@ internal sealed class LearningSurveysMigrations : DataMigration
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
     private readonly IRecipeMigrator _recipeMigrator;
-    private readonly ISession _session;
-    private readonly ILearningSurveyService _learningSurveys;
-    private readonly ISurveyManager _surveyManager;
-    private readonly ISurveyPublisher _publisher;
-    private readonly ILogger _logger;
+    private readonly ResumableSteps _resumableSteps;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningSurveysMigrations"/> class.
@@ -50,29 +39,17 @@ internal sealed class LearningSurveysMigrations : DataMigration
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="courseListSynchronizer">The course list synchronizer.</param>
     /// <param name="recipeMigrator">The recipe migrator.</param>
-    /// <param name="session">The session.</param>
-    /// <param name="learningSurveys">The Learning survey service, which creates the surveys of upgraded items.</param>
-    /// <param name="surveyManager">The survey manager.</param>
-    /// <param name="publisher">The survey publisher.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="resumableSteps">The resumable steps, which upgrade the items in the background.</param>
     public LearningSurveysMigrations(
         IContentDefinitionManager contentDefinitionManager,
         CourseListSynchronizer courseListSynchronizer,
         IRecipeMigrator recipeMigrator,
-        ISession session,
-        ILearningSurveyService learningSurveys,
-        ISurveyManager surveyManager,
-        ISurveyPublisher publisher,
-        ILogger<LearningSurveysMigrations> logger)
+        ResumableSteps resumableSteps)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _courseListSynchronizer = courseListSynchronizer;
         _recipeMigrator = recipeMigrator;
-        _session = session;
-        _learningSurveys = learningSurveys;
-        _surveyManager = surveyManager;
-        _publisher = publisher;
-        _logger = logger;
+        _resumableSteps = resumableSteps;
     }
 
     /// <summary>
@@ -113,7 +90,10 @@ internal sealed class LearningSurveysMigrations : DataMigration
         {
             // The first release kept responses in its own table; they are not carried over.
             await SchemaBuilder.DropTableAsync("LearningSurveyResponses_SurveyResponseIndex");
-            await UpgradeItemsAsync();
+
+            // The items are moved in the background, a few at a time, so the migration never reads them all at once and
+            // a failure never loses questions (see LegacyCourseSurveyUpgradeStep).
+            await _resumableSteps.RequestAsync(LegacyCourseSurveyUpgradeStep.StepName);
         }
 
         return 1;
@@ -132,64 +112,6 @@ internal sealed class LearningSurveysMigrations : DataMigration
         }
 
         return false;
-    }
-
-    // Each item gets a survey built from the questions its old part held, published when the item is, and every version
-    // of the item points at it. An item whose survey can't be made here gets one when it is next saved.
-    private async Task UpgradeItemsAsync()
-    {
-        foreach (var type in _types)
-        {
-            var singleQuestion = string.Equals(type, LearningSurveysConstants.ContentTypes.Choice, StringComparison.Ordinal);
-            var versions = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType == type).ListAsync();
-
-            foreach (var group in versions.GroupBy(item => item.ContentItemId, StringComparer.Ordinal))
-            {
-                var items = group.ToList();
-                var latest = items.FirstOrDefault(item => item.Latest) ?? items.FirstOrDefault(item => item.Published) ?? items[^1];
-                var legacy = LegacyCourseSurveyUpgrade.TakeLegacyPart(latest);
-
-                foreach (var item in items.Where(item => !ReferenceEquals(item, latest)))
-                {
-                    LegacyCourseSurveyUpgrade.TakeLegacyPart(item);
-                }
-
-                try
-                {
-                    var survey = await _learningSurveys.CreateOwnedSurveyAsync(
-                        latest,
-                        singleQuestion ? SurveyKinds.Poll : SurveyKinds.Survey,
-                        singleQuestion ? SurveyTemplateNames.Poll : LearningSurveysConstants.CourseFeedbackTemplate);
-
-                    if (survey is not null)
-                    {
-                        var definition = LegacyCourseSurveyUpgrade.ToDefinition(legacy, survey.Title);
-
-                        LegacyCourseSurveyUpgrade.ApplySettings(legacy, survey);
-                        await _surveyManager.SaveDraftAsync(survey, definition ?? survey.Draft);
-
-                        if (definition is not null && items.Any(item => item.Published))
-                        {
-                            await _publisher.PublishAsync(survey.ItemId, "Upgraded from the first Learning release", null);
-                        }
-
-                        foreach (var item in items)
-                        {
-                            LegacyCourseSurveyUpgrade.SetSurveyId(item, survey.ItemId);
-                        }
-                    }
-                }
-                catch (Exception ex) when (!ex.IsFatal())
-                {
-                    _logger.LogWarning(ex, "The survey of the course item '{ContentItemId}' could not be made while upgrading; it is made when the item is next saved.", group.Key);
-                }
-
-                foreach (var item in items)
-                {
-                    await _session.SaveAsync(item);
-                }
-            }
-        }
     }
 
     private Task DefineAsync(string typeName, string displayName, string description, bool singleQuestion)

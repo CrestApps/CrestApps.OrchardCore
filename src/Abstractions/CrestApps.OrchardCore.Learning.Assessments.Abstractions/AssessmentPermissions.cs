@@ -4,8 +4,9 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Learning.Assessments;
 
 /// <summary>
-/// The permissions of Learning Assessments. Quizzes are surveys: designing, grading and accommodations use the Surveys
-/// permissions, or course staff roles.
+/// The permissions of Learning Assessments. Quizzes are surveys: course staff work on their course's quiz surveys through
+/// their staff roles, and <see cref="GradeAssessments"/> and <see cref="OverrideGrades"/> reach the surveys of every
+/// course item (and no other survey) through the Assessments access provider.
 /// </summary>
 public static class AssessmentPermissions
 {

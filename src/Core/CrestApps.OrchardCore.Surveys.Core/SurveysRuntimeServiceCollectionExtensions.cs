@@ -59,6 +59,7 @@ public static class SurveysRuntimeServiceCollectionExtensions
         services.TryAddScoped<SurveyParticipationService>();
         services.TryAddScoped<SurveyResponseCounter>();
         services.TryAddScoped<SurveyAccessEvaluator>();
+        services.TryAddScoped<ISurveyStartCheck, SurveyStartCheck>();
         services.TryAddScoped<SurveyContextGuard>();
         services.TryAddScoped<SurveyResponseService>();
         services.TryAddScoped<ISurveyResponseService>(provider => provider.GetRequiredService<SurveyResponseService>());

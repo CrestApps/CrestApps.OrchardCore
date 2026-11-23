@@ -59,6 +59,7 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
 
             model.KindDisplayName = kind?.DisplayName?.Value ?? settings.Kind ?? part.Kind;
             model.ProducesGrade = kind?.ProducesGrade ?? false;
+            model.DecidesPass = kind?.DecidesPass == true;
             model.Inline = kind?.Inline == true;
             model.CompletionMode = mode;
             model.MinimumMinutes = part.MinimumMinutes;
@@ -163,7 +164,9 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
         part.EstimatedMinutes = model.EstimatedMinutes is > 0 ? model.EstimatedMinutes : null;
         part.Gradable = model.Gradable;
         part.Weight = model.Weight;
-        part.PassMark = model.PassMark;
+        // A kind that decides its own pass, such as a quiz with its survey's score bands and pass mark, keeps no second
+        // pass mark that could disagree with it.
+        part.PassMark = kind?.DecidesPass == true ? null : model.PassMark;
         part.FreePreview = model.FreePreview;
 
         // Only a category of the item's course is kept; the course is the list that contains the item.

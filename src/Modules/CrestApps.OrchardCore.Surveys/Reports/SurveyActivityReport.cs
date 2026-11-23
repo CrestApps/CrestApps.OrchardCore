@@ -5,30 +5,33 @@ using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Reports;
 
 /// <summary>
 /// The activity of the surveys a person may read: completed responses per survey in the days chosen, and the responses
-/// waiting for a grader. The Survey Activity dashboard widget shows it.
+/// waiting for a grader. The Survey Activity dashboard widget shows it. The counts of every survey come from two grouped
+/// statements, and only the surveys with activity are looked up and authorized, so the cost does not grow with the
+/// number of surveys (every Learning quiz owns one).
 /// </summary>
 internal sealed class SurveyActivityReport : IReport
 {
     private readonly SurveyReportData _data;
-    private readonly SurveyResultsQueries _queries;
-    private readonly ISurveyAnswerAggregates _aggregates;
+    private readonly SurveyActivityCounts _counts;
+    private readonly ISurveyManager _surveyManager;
 
     internal readonly IStringLocalizer S;
 
     public SurveyActivityReport(
         SurveyReportData data,
-        SurveyResultsQueries queries,
-        ISurveyAnswerAggregates aggregates,
+        ISession session,
+        ISurveyManager surveyManager,
         IStringLocalizer<SurveyActivityReport> stringLocalizer)
     {
         _data = data;
-        _queries = queries;
-        _aggregates = aggregates;
+        _counts = new SurveyActivityCounts(session);
+        _surveyManager = surveyManager;
         S = stringLocalizer;
     }
 
@@ -50,22 +53,23 @@ internal sealed class SurveyActivityReport : IReport
 
         var range = context.Filter.GetDateRange();
         var to = range.ToUtc is { } end && end.Ticks < DateTime.MaxValue.Ticks ? end.AddTicks(1) : (DateTime?)null;
-        var rows = new List<(string Title, long Completed, int Pending)>();
+        var rows = new List<(string Title, long Completed, long Pending)>();
 
-        foreach (var survey in await _data.ListReadableAsync(context.User, cancellationToken))
+        foreach (var (surveyId, counts) in await _counts.CountBySurveyAsync(range.FromUtc, to, cancellationToken))
         {
-            var completed = await _aggregates.CountResponsesAsync(new SurveyAnswerFilter
+            if (counts.Completed <= 0 && counts.Pending <= 0)
             {
-                SurveyId = survey.ItemId,
-                CompletedFromUtc = range.FromUtc,
-                CompletedToUtc = to,
-            }, cancellationToken);
-            var pending = await _queries.CountPendingGradingAsync(survey.ItemId, cancellationToken);
-
-            if (completed > 0 || pending > 0)
-            {
-                rows.Add((survey.Title ?? survey.Name, completed, pending));
+                continue;
             }
+
+            var survey = await _surveyManager.FindByIdAsync(surveyId, cancellationToken);
+
+            if (survey is null || survey.PublishedVersionNumber <= 0 || !await _data.CanViewResponsesAsync(context.User, survey, cancellationToken))
+            {
+                continue;
+            }
+
+            rows.Add((survey.Title ?? survey.Name, counts.Completed, counts.Pending));
         }
 
         var table = ReportSection.ForTable(S["Surveys"].Value,

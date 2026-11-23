@@ -51,6 +51,9 @@ public class CourseItemPartViewModel
     public bool ProducesGrade { get; set; }
 
     [BindNever]
+    public bool DecidesPass { get; set; }
+
+    [BindNever]
     public IList<SelectListItem> CompletionModeOptions { get; set; } = [];
 
     [BindNever]

@@ -2,20 +2,13 @@ using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Services;
-using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
-using CrestApps.OrchardCore.Surveys;
-using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.Extensions.Logging;
-using OrchardCore.ContentManagement;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
-using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data.Migration;
 using OrchardCore.Html.Models;
-using OrchardCore.Modules;
 using OrchardCore.Title.Models;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Migrations;
 
@@ -27,34 +20,22 @@ internal sealed class AssessmentsMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
-    private readonly ISession _session;
-    private readonly ILearningSurveyService _learningSurveys;
-    private readonly ISurveyManager _surveyManager;
-    private readonly ILogger _logger;
+    private readonly ResumableSteps _resumableSteps;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AssessmentsMigrations"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="courseListSynchronizer">The course list synchronizer.</param>
-    /// <param name="session">The session.</param>
-    /// <param name="learningSurveys">The Learning survey service, which creates the surveys of upgraded quizzes.</param>
-    /// <param name="surveyManager">The survey manager.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="resumableSteps">The resumable steps, which finish an upgrade in the background.</param>
     public AssessmentsMigrations(
         IContentDefinitionManager contentDefinitionManager,
         CourseListSynchronizer courseListSynchronizer,
-        ISession session,
-        ILearningSurveyService learningSurveys,
-        ISurveyManager surveyManager,
-        ILogger<AssessmentsMigrations> logger)
+        ResumableSteps resumableSteps)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _courseListSynchronizer = courseListSynchronizer;
-        _session = session;
-        _learningSurveys = learningSurveys;
-        _surveyManager = surveyManager;
-        _logger = logger;
+        _resumableSteps = resumableSteps;
     }
 
     /// <summary>
@@ -106,13 +87,10 @@ internal sealed class AssessmentsMigrations : DataMigration
         await SchemaBuilder.DropTableAsync("QuestionSourceIndex");
         await SchemaBuilder.DropTableAsync("LearningAttemptDeadlines_LeasedWorkItemIndex");
 
+        // The items of the removed types are deleted, and the quizzes given their surveys, in the background a batch at a
+        // time (LegacyQuizUpgradeStep), so the migration never reads every item at once.
         foreach (var type in LegacyQuizUpgrade.RemovedContentTypes)
         {
-            foreach (var item in await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType == type).ListAsync())
-            {
-                _session.Delete(item);
-            }
-
             if (await _contentDefinitionManager.GetTypeDefinitionAsync(type) is not null)
             {
                 await _contentDefinitionManager.DeleteTypeDefinitionAsync(type);
@@ -128,7 +106,7 @@ internal sealed class AssessmentsMigrations : DataMigration
         }
 
         await DefineQuizPartAsync();
-        await CreateQuizSurveysAsync();
+        await _resumableSteps.RequestAsync(LegacyQuizUpgradeStep.StepName);
 
         return 4;
     }
@@ -138,46 +116,4 @@ internal sealed class AssessmentsMigrations : DataMigration
             .Attachable(false)
             .WithDisplayName("Quiz")
             .WithDescription("Makes a course item a quiz whose questions, attempts and grading live in a scored survey of the Surveys module the quiz owns."));
-
-    // Every version of a quiz points at the one survey the quiz owns. A quiz whose survey can't be made here gets one
-    // when it is next saved.
-    private async Task CreateQuizSurveysAsync()
-    {
-        var versions = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType == AssessmentsConstants.ContentTypes.Quiz).ListAsync();
-
-        foreach (var quiz in versions.GroupBy(item => item.ContentItemId, StringComparer.Ordinal))
-        {
-            var items = quiz.ToList();
-
-            if (!items.Any(LegacyQuizUpgrade.NeedsSurvey))
-            {
-                continue;
-            }
-
-            var latest = items.FirstOrDefault(item => item.Latest) ?? items.FirstOrDefault(item => item.Published) ?? items[^1];
-
-            try
-            {
-                var survey = await _learningSurveys.CreateOwnedSurveyAsync(latest, SurveyKinds.Quiz, SurveyTemplateNames.Quiz);
-
-                if (survey is null)
-                {
-                    continue;
-                }
-
-                LegacyQuizUpgrade.ApplySettings(LegacyQuizUpgrade.PartOf(latest), survey);
-                await _surveyManager.SaveDraftAsync(survey, survey.Draft);
-
-                foreach (var item in items)
-                {
-                    LegacyQuizUpgrade.SetSurveyId(item, survey.ItemId);
-                    await _session.SaveAsync(item);
-                }
-            }
-            catch (Exception ex) when (!ex.IsFatal())
-            {
-                _logger.LogWarning(ex, "The survey of the quiz '{QuizId}' could not be made while upgrading; it is made when the quiz is next saved.", quiz.Key);
-            }
-        }
-    }
 }

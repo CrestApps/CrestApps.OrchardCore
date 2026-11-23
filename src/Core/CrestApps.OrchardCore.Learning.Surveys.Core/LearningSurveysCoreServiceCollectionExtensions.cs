@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Core;
+using CrestApps.OrchardCore.Learning.Surveys.Core.Upgrades;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Localization;
@@ -24,6 +26,7 @@ public static class LearningSurveysCoreServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILearningSurveyItemResultProvider, CourseSurveyResultProvider>());
+        services.AddResumableStep<LegacyCourseSurveyUpgradeStep>();
         services.AddCourseItemKind<CourseSurveyPart>(LearningSurveysConstants.SurveyKind, kind =>
         {
             kind.DisplayName = LocalizationSource.Create("Survey", typeof(LearningSurveysCoreServiceCollectionExtensions));

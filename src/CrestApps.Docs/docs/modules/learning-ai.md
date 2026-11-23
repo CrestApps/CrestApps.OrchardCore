@@ -79,7 +79,7 @@ The grader confirms or changes the suggestion and saves as usual. A grade saved 
 
 ### Adding help to the grading pages
 
-The grading pages render each piece of work through `IDisplayManager<GradingAssistContext>` (in `Learning.Abstractions`; display type `Detail`), whose shape renders nothing unless a module adds a display driver. The context gives the kind (`AttemptItem` or `Submission`), the record id and question index, the most points, whether the grade can be changed, and the names of the form fields for the points, the feedback, the rubric choices and the field that records the help was used. Scoring help is one such driver; another module can add its own.
+The grading pages render each piece of work through `IDisplayManager<GradingAssistContext>` (in `Learning.Abstractions`; display type `Detail`), whose shape renders nothing unless a module adds a display driver. The context gives the kind (`Submission`, the only kind: quiz answers are graded on the Surveys grading page, whose scoring help is the Surveys AI button), the record id and question index, the most points, whether the grade can be changed, and the names of the form fields for the points, the feedback, the rubric choices and the field that records the help was used. Scoring help is one such driver; another module can add its own.
 
 ## The AI Data Sources result filter
 

@@ -23,6 +23,7 @@ public static class LearningSurveysBridgeServiceCollectionExtensions
         services.TryAddScoped<ILearningSurveyService, LearningSurveyService>();
         services.AddSurveyAccessRule<LearningEnrollmentAccessRule>();
         services.AddSurveyAccessProvider<LearningSurveyAccessProvider>();
+        services.AddSurveyAccessProvider<LearningManagerSurveyAccessProvider>();
         services.AddSurveyGradingScope<LearningSurveyGradingScope>();
         services.AddSurveyResponseObserver<LearningSurveyResultObserver>();
         services.AddSurveyOwnerLinkProvider<LearningSurveyOwnerLinkProvider>();
