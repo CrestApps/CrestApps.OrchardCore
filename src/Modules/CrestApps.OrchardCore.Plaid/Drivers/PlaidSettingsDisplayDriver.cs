@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.Plaid.Models;
+using CrestApps.OrchardCore.Plaid.Services;
 using CrestApps.OrchardCore.Plaid.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -15,14 +15,16 @@ namespace CrestApps.OrchardCore.Plaid.Drivers;
 
 /// <summary>
 /// The Plaid settings page: the environment, the client id and which Orchard secret holds the Plaid secret. The secret
-/// itself is never on this page.
+/// itself is never on this page. When the host supplies the keys (a provider registered with
+/// <c>AddPlaidCredentialsProvider</c>), the page says so instead, and saving it changes nothing.
 /// </summary>
 internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly ISecretManager _secretManager;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly IPlaidCredentialsProvider _credentialsProvider;
+    private readonly IPlaidLinkSite _linkSite;
 
     internal readonly IStringLocalizer S;
 
@@ -30,13 +32,15 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         ISecretManager secretManager,
-        LinkGenerator linkGenerator,
+        IPlaidCredentialsProvider credentialsProvider,
+        IPlaidLinkSite linkSite,
         IStringLocalizer<PlaidSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _secretManager = secretManager;
-        _linkGenerator = linkGenerator;
+        _credentialsProvider = credentialsProvider;
+        _linkSite = linkSite;
         S = stringLocalizer;
     }
 
@@ -46,6 +50,16 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
     public override IDisplayResult Edit(ISite site, PlaidSettings settings, BuildEditorContext context)
         => Initialize<PlaidSettingsViewModel>("PlaidSettings_Edit", async model =>
             {
+                model.WebhookUrl = await _linkSite.GetWebhookUrlAsync();
+
+                if (HostSuppliesKeys(_credentialsProvider))
+                {
+                    model.HostSuppliesKeys = true;
+                    model.IsConfigured = await _credentialsProvider.GetAsync() is not null;
+
+                    return;
+                }
+
                 model.Environment = settings.Environment;
                 model.ClientId = settings.ClientId;
                 model.SecretName = string.IsNullOrEmpty(settings.SecretName) ? PlaidConstants.DefaultSecretName : settings.SecretName;
@@ -56,10 +70,6 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
                 ];
                 model.Secrets = await GetTextSecretsAsync(model.SecretName);
                 model.IsConfigured = settings.IsConfigured();
-
-                var httpContext = _httpContextAccessor.HttpContext;
-
-                model.WebhookUrl = httpContext is null ? null : _linkGenerator.GetUriByName(httpContext, PlaidConstants.WebhookRouteName, values: null);
             })
             .Location("Content:5")
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PlaidPermissions.ManagePlaidSettings))
@@ -70,6 +80,12 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PlaidPermissions.ManagePlaidSettings))
         {
             return null;
+        }
+
+        // The host's keys are used whatever the settings hold, so they are left as they are.
+        if (HostSuppliesKeys(_credentialsProvider))
+        {
+            return Edit(site, settings, context);
         }
 
         var model = new PlaidSettingsViewModel();
@@ -108,6 +124,13 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
 
         return items.OrderBy(item => item.Text, StringComparer.OrdinalIgnoreCase).ToList();
     }
+
+    /// <summary>
+    /// Returns whether the keys come from the host rather than these settings: another provider replaced the
+    /// settings-based one.
+    /// </summary>
+    internal static bool HostSuppliesKeys(IPlaidCredentialsProvider provider)
+        => provider is not PlaidCredentialsProvider;
 
     /// <summary>
     /// Returns whether a secret's stored type is a text secret. The store records the full type name

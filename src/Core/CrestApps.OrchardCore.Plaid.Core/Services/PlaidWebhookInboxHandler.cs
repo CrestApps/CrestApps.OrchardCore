@@ -15,8 +15,6 @@ namespace CrestApps.OrchardCore.Plaid.Services;
 /// </summary>
 public sealed class PlaidWebhookInboxHandler : IProviderWebhookInboxHandler
 {
-    private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web);
-
     private readonly IEnumerable<IPlaidWebhookHandler> _handlers;
     private readonly ILogger _logger;
 
@@ -46,7 +44,7 @@ public sealed class PlaidWebhookInboxHandler : IProviderWebhookInboxHandler
     {
         ArgumentException.ThrowIfNullOrEmpty(payload);
 
-        var webhook = JsonSerializer.Deserialize<PlaidWebhook>(payload, _options)
+        var webhook = JsonSerializer.Deserialize<PlaidWebhook>(payload, PlaidJsonSerializerOptions.Default)
             ?? throw new InvalidDataException("The Plaid webhook payload could not be read.");
 
         var context = new PlaidWebhookContext(webhook, payload);

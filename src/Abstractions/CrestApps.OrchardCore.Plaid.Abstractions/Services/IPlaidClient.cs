@@ -63,6 +63,18 @@ public interface IPlaidClient
     Task<PlaidInstitution> GetInstitutionAsync(string institutionId, IEnumerable<string> countryCodes = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Changes the webhook URL Plaid sends an item's webhooks to (<c>/item/webhook/update</c>), such as when the site moves
+    /// to another address or an app replaces its own webhook endpoint with the Plaid webhook endpoint. Plaid sends a
+    /// <c>WEBHOOK_UPDATE_ACKNOWLEDGED</c> webhook to the new URL. Get this tenant's URL from
+    /// <see cref="IPlaidLinkSite.GetWebhookUrlAsync"/>.
+    /// </summary>
+    /// <param name="accessToken">The item's access token.</param>
+    /// <param name="webhookUrl">The new webhook URL, an absolute HTTPS address Plaid can reach.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The item, with the webhook URL Plaid now holds.</returns>
+    Task<PlaidItemInfo> UpdateItemWebhookAsync(string accessToken, string webhookUrl, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Removes an item, so its access token stops working and Plaid stops billing for it.
     /// </summary>
     /// <param name="accessToken">The item's access token.</param>

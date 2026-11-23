@@ -74,9 +74,11 @@ public interface IEFileFormat
     /// Writes a document.
     /// </summary>
     /// <param name="target">The document.</param>
+    /// <param name="submission">The submission being made, not saved yet: its <see cref="EFileSubmission.Options"/> hold
+    /// the choices made when it was submitted, and <see cref="EFileSubmission.IsTest"/> whether it is a test.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The file, with the problems that keep it from being sent.</returns>
-    Task<EFilePayload> WriteAsync(EFileTarget target, CancellationToken cancellationToken = default);
+    Task<EFilePayload> WriteAsync(EFileTarget target, EFileSubmission submission, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -104,6 +106,12 @@ public interface IEFileTransport
     bool IsManual { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the channel takes test submissions: it sends a submission marked
+    /// <see cref="EFileSubmission.IsTest"/> to the agency's test system, whose acceptance files nothing.
+    /// </summary>
+    bool SupportsTestSubmissions { get; }
+
+    /// <summary>
     /// Gets whether the channel sends a document in a format, such as a gateway that takes only its state's schema.
     /// </summary>
     /// <param name="target">The document.</param>
@@ -114,7 +122,8 @@ public interface IEFileTransport
     /// <summary>
     /// Sends a submission's file.
     /// </summary>
-    /// <param name="submission">The submission, with its file.</param>
+    /// <param name="submission">The submission, with its file, its <see cref="EFileSubmission.Options"/> and whether it is
+    /// a test.</param>
     /// <param name="payload">The file.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>What happened: submitted, accepted at once, rejected or failed.</returns>
@@ -182,15 +191,14 @@ public interface IEFilingService
     IEFileTransport GetTransport(string name);
 
     /// <summary>
-    /// Builds a document's file in a format and sends it through a channel.
+    /// Builds a document's file in a format and sends it through a channel, with the choices and the test flag of the
+    /// request kept on the submission.
     /// </summary>
-    /// <param name="target">The document.</param>
-    /// <param name="format">The format's name.</param>
-    /// <param name="transport">The channel's name.</param>
+    /// <param name="request">The document, the format, the channel, whether it is a test, and the choices.</param>
     /// <param name="user">Who submits it.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The submission, or the errors.</returns>
-    Task<EFilingResult> SubmitAsync(EFileTarget target, string format, string transport, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+    Task<EFilingResult> SubmitAsync(EFileSubmissionRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asks a submission's channel for the agency's answer and records it.
@@ -212,6 +220,34 @@ public interface IEFilingService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The result.</returns>
     Task<EFilingResult> RecordAnswerAsync(EFileSubmission submission, bool accepted, string confirmationNumber, DateOnly filedOn, string message, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Shortcuts for <see cref="IEFilingService"/>.
+/// </summary>
+public static class EFilingServiceExtensions
+{
+    /// <summary>
+    /// Builds a document's file in a format and sends it through a channel, with no choices and not as a test.
+    /// </summary>
+    /// <param name="eFiling">The e-filing service.</param>
+    /// <param name="target">The document.</param>
+    /// <param name="format">The format's name.</param>
+    /// <param name="transport">The channel's name.</param>
+    /// <param name="user">Who submits it.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The submission, or the errors.</returns>
+    public static Task<EFilingResult> SubmitAsync(this IEFilingService eFiling, EFileTarget target, string format, string transport, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(eFiling);
+
+        return eFiling.SubmitAsync(new EFileSubmissionRequest
+        {
+            Target = target,
+            Format = format,
+            Transport = transport,
+        }, user, cancellationToken);
+    }
 }
 
 /// <summary>

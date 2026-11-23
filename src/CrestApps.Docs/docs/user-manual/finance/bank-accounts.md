@@ -83,6 +83,8 @@ If the bank can't give the numbers at once, nothing is saved and you can enter t
 
 The **Link your bank with Plaid** buttons show once the settings work. Plaid bills each linked account. To turn Plaid off, empty the client id.
 
+If your provider supplies the Plaid keys for you, the page says so and has nothing to fill in; **Test the connection** checks their keys.
+
 ## See a full account number
 
 People with **Reveal bank account numbers** see **Show the full number** at the bottom of the account page. The number opens on a page of its own, and every time someone opens it, it is recorded in the Audit Trail with who and when. Ask your administrator to keep the Audit Trail on: the site also writes each opening to its log, but the Audit Trail is where you can look it up.

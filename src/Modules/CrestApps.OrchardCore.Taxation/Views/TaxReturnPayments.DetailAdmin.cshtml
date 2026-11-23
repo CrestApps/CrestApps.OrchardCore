@@ -50,34 +50,10 @@
             </form>
         }
 
-        @if (Model.CanFile && taxReturn.Status != TaxReturnStatus.Amended)
+        @if (Model.PaymentEditor is not null)
         {
             <form asp-action="RecordPayment" asp-controller="TaxReturns" asp-route-id="@taxReturn.ItemId" method="post" class="no-multisubmit">
-                <div class="ocat-wrapper">
-                    <label for="paymentAmount" class="ocat-label">@T["Amount"]</label>
-                    <div class="ocat-end">
-                        <input id="paymentAmount" name="amount" class="form-control" inputmode="decimal" style="max-width: 12rem" value="@(taxReturn.Balance > 0 ? taxReturn.Balance.ToString(CultureInfo.InvariantCulture) : string.Empty)" />
-                        <span class="hint">@T["Amounts take a dot for decimals."]</span>
-                    </div>
-                </div>
-                <div class="ocat-wrapper">
-                    <label for="paymentPaidOn" class="ocat-label">@T["Paid on"]</label>
-                    <div class="ocat-end">
-                        <input id="paymentPaidOn" name="paidOn" type="date" class="form-control" style="max-width: 12rem" value="@Model.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
-                    </div>
-                </div>
-                <div class="ocat-wrapper">
-                    <label for="paymentReference" class="ocat-label">@T["Reference"]</label>
-                    <div class="ocat-end">
-                        <input id="paymentReference" name="reference" class="form-control" style="max-width: 20rem" />
-                    </div>
-                </div>
-                <div class="ocat-wrapper">
-                    <label for="paymentMethod" class="ocat-label">@T["Method"]</label>
-                    <div class="ocat-end">
-                        <input id="paymentMethod" name="method" class="form-control" style="max-width: 20rem" placeholder="@T["Such as ACH debit or check"]" />
-                    </div>
-                </div>
+                @await DisplayAsync(Model.PaymentEditor)
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
                         <button type="submit" class="btn btn-secondary">@T["Record payment"]</button>

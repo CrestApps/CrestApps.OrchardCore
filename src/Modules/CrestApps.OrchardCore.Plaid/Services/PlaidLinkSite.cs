@@ -41,15 +41,42 @@ internal sealed class PlaidLinkSite : IPlaidLinkSite
 
         var site = await _siteService.GetSiteSettingsAsync();
         var language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-        var httpContext = _httpContextAccessor.HttpContext;
 
         return new PlaidLinkTokenRequest
         {
             ClientUserId = ClientUserId(_shellSettings.Name, userId),
             ClientName = site.SiteName,
             Language = _languages.Contains(language) ? language : "en",
-            WebhookUrl = httpContext is null ? null : _linkGenerator.GetUriByName(httpContext, PlaidConstants.WebhookRouteName, values: null),
+            WebhookUrl = await GetWebhookUrlAsync(cancellationToken),
         };
+    }
+
+    public async Task<string> GetWebhookUrlAsync(CancellationToken cancellationToken = default)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext is not null)
+        {
+            return _linkGenerator.GetUriByName(httpContext, PlaidConstants.WebhookRouteName, values: null);
+        }
+
+        var site = await _siteService.GetSiteSettingsAsync();
+
+        return WebhookUrlFrom(site.BaseUrl);
+    }
+
+    /// <summary>
+    /// Returns the webhook URL under a site's base URL, which holds the tenant's prefix, or <see langword="null"/> when
+    /// the base URL is not an absolute address.
+    /// </summary>
+    internal static string WebhookUrlFrom(string baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl) || !Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        return uri.GetLeftPart(UriPartial.Path).TrimEnd('/') + "/" + PlaidConstants.WebhookPath;
     }
 
     /// <summary>

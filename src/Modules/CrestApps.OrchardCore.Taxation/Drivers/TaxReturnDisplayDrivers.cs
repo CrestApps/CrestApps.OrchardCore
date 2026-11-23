@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
@@ -90,6 +91,7 @@ internal sealed class TaxReturnDisplayDriver : DisplayDriver<TaxReturn>
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILocalClock _localClock;
+    private readonly IDisplayManager<TaxReturnPaymentEntry> _paymentDisplayManager;
 
     public TaxReturnDisplayDriver(
         ITaxReturnService service,
@@ -98,7 +100,8 @@ internal sealed class TaxReturnDisplayDriver : DisplayDriver<TaxReturn>
         IStringLocalizerFactory localizerFactory,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        IDisplayManager<TaxReturnPaymentEntry> paymentDisplayManager)
     {
         _service = service;
         _returns = returns;
@@ -107,6 +110,7 @@ internal sealed class TaxReturnDisplayDriver : DisplayDriver<TaxReturn>
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _localClock = localClock;
+        _paymentDisplayManager = paymentDisplayManager;
     }
 
     public override async Task<IDisplayResult> DisplayAsync(TaxReturn taxReturn, BuildDisplayContext context)
@@ -138,7 +142,16 @@ internal sealed class TaxReturnDisplayDriver : DisplayDriver<TaxReturn>
             Initialize<TaxReturnDetailViewModel>("TaxReturnSummary_DetailAdmin", Fill).Location(DetailAdmin, "Content:1"),
             Initialize<TaxReturnDetailViewModel>("TaxReturnLines_DetailAdmin", Fill).Location(DetailAdmin, "Content:5"),
             Initialize<TaxReturnDetailViewModel>("TaxReturnBoxes_DetailAdmin", Fill).Location(DetailAdmin, "Content:10"),
-            Initialize<TaxReturnDetailViewModel>("TaxReturnPayments_DetailAdmin", Fill).Location(DetailAdmin, "Content:15"));
+            Initialize<TaxReturnDetailViewModel>("TaxReturnPayments_DetailAdmin", async model =>
+            {
+                Fill(model);
+
+                // The payment form is built from drivers, so a pack adds the fields its observer needs.
+                if (canFile && taxReturn.Status != TaxReturnStatus.Amended)
+                {
+                    model.PaymentEditor = await _paymentDisplayManager.BuildEditorAsync(new TaxReturnPaymentEntry { Return = taxReturn }, context.Updater, isNew: true);
+                }
+            }).Location(DetailAdmin, "Content:15"));
     }
 }
 
@@ -153,6 +166,7 @@ internal sealed class TaxReturnEFilingDisplayDriver : DisplayDriver<TaxReturn>
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILocalClock _localClock;
+    private readonly IDisplayManager<EFileSubmissionRequest> _requestDisplayManager;
 
     public TaxReturnEFilingDisplayDriver(
         IEFilingService eFiling,
@@ -160,7 +174,8 @@ internal sealed class TaxReturnEFilingDisplayDriver : DisplayDriver<TaxReturn>
         IStringLocalizerFactory localizerFactory,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        IDisplayManager<EFileSubmissionRequest> requestDisplayManager)
     {
         _eFiling = eFiling;
         _submissions = submissions;
@@ -168,6 +183,7 @@ internal sealed class TaxReturnEFilingDisplayDriver : DisplayDriver<TaxReturn>
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _localClock = localClock;
+        _requestDisplayManager = requestDisplayManager;
     }
 
     public override async Task<IDisplayResult> DisplayAsync(TaxReturn taxReturn, BuildDisplayContext context)
@@ -193,8 +209,14 @@ internal sealed class TaxReturnEFilingDisplayDriver : DisplayDriver<TaxReturn>
         var canFile = await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TaxationPermissions.FileTaxReturns);
         var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 
-        return Initialize<TaxReturnEFilingViewModel>("TaxReturnEFiling_DetailAdmin", model =>
+        return Initialize<TaxReturnEFilingViewModel>("TaxReturnEFiling_DetailAdmin", async model =>
         {
+            // The submit form is built from drivers, so a pack adds the choices its format or channel needs.
+            if (canFile && string.IsNullOrEmpty(target.NotFileableReason) && options.Count > 0)
+            {
+                model.SubmitEditor = await _requestDisplayManager.BuildEditorAsync(new EFileSubmissionRequest { Target = target }, context.Updater, isNew: true);
+            }
+
             model.Return = taxReturn;
             model.Submissions = submissions;
             model.NotFileableReason = target.NotFileableReason;

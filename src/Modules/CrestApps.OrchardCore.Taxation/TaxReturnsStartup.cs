@@ -42,6 +42,7 @@ public sealed class TaxReturnsStartup : StartupBase
         services.AddDisplayDriver<MerchantTaxRegistration, MerchantTaxRegistrationFilingDisplayDriver>();
         services.AddDisplayDriver<TaxReturnPeriodSummary, TaxReturnPeriodSummaryDisplayDriver>();
         services.AddDisplayDriver<TaxReturn, TaxReturnDisplayDriver>();
+        services.AddDisplayDriver<TaxReturnPaymentEntry, TaxReturnPaymentEntryDisplayDriver>();
         services.AddNavigationProvider<TaxReturnsAdminMenu>();
         services.AddPermissionProvider<TaxReturnsPermissionsProvider>();
     }
@@ -102,6 +103,7 @@ public sealed class EFilingStartup : StartupBase
         services.AddDataMigration<EFilingMigrations>()
             .AddIndexProvider<EFileSubmissionIndexProvider>();
         services.AddDisplayDriver<TaxReturn, TaxReturnEFilingDisplayDriver>();
+        services.AddDisplayDriver<EFileSubmissionRequest, EFileSubmissionRequestDisplayDriver>();
         services.AddSingleton<IBackgroundTask, EFileAcknowledgementBackgroundTask>();
     }
 }

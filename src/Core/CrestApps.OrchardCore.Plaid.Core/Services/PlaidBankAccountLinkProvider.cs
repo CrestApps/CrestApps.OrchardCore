@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Banking;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
@@ -286,13 +285,10 @@ public sealed class PlaidBankAccountLinkProvider : IBankAccountLinkProvider
     /// </summary>
     internal sealed class PlaidLinkClientResult
     {
-        [JsonPropertyName("publicToken")]
         public string PublicToken { get; set; }
 
-        [JsonPropertyName("accountId")]
         public string AccountId { get; set; }
 
-        [JsonPropertyName("institutionName")]
         public string InstitutionName { get; set; }
     }
 

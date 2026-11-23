@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -8,12 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Taxation.Controllers;
 
@@ -30,12 +33,15 @@ public sealed class TaxReturnsController : Controller
     private readonly ITaxReturnManager _returns;
     private readonly IMerchantTaxRegistrationStore _registrations;
     private readonly IDisplayManager<TaxReturn> _displayManager;
+    private readonly IDisplayManager<TaxReturnPaymentEntry> _paymentDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
     private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly ISession _session;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -45,12 +51,15 @@ public sealed class TaxReturnsController : Controller
         ITaxReturnManager returns,
         IMerchantTaxRegistrationStore registrations,
         IDisplayManager<TaxReturn> displayManager,
+        IDisplayManager<TaxReturnPaymentEntry> paymentDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IAuthorizationService authorizationService,
         IShapeFactory shapeFactory,
         ILocalClock localClock,
         INotifier notifier,
         IStringLocalizerFactory localizerFactory,
+        ISession session,
+        ILogger<TaxReturnsController> logger,
         IHtmlLocalizer<TaxReturnsController> htmlLocalizer,
         IStringLocalizer<TaxReturnsController> stringLocalizer)
     {
@@ -58,12 +67,15 @@ public sealed class TaxReturnsController : Controller
         _returns = returns;
         _registrations = registrations;
         _displayManager = displayManager;
+        _paymentDisplayManager = paymentDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
         _localClock = localClock;
         _notifier = notifier;
         _localizerFactory = localizerFactory;
+        _session = session;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -185,14 +197,35 @@ public sealed class TaxReturnsController : Controller
 
     [HttpPost]
     [Admin("taxation/returns/{id}/payments", "TaxationReturnsRecordPayment")]
-    public Task<IActionResult> RecordPayment(string id, string amount, DateOnly? paidOn, string reference, string method)
-        => ActAsync(id, TaxationPermissions.FileTaxReturns, (taxReturn, cancellationToken) => _service.RecordPaymentAsync(taxReturn, new TaxReturnPayment
+    public async Task<IActionResult> RecordPayment(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TaxationPermissions.FileTaxReturns))
         {
-            Amount = decimal.TryParse(amount?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ? value : 0,
-            PaidOn = paidOn ?? default,
-            Reference = reference,
-            Method = method,
-        }, User, cancellationToken), H["The payment has been recorded."]);
+            return Forbid();
+        }
+
+        if (await FindAsync(id) is not { } taxReturn)
+        {
+            return NotFound();
+        }
+
+        // The payment form is built from drivers: each one reads its own fields, such as a pack's account paid from.
+        var entry = new TaxReturnPaymentEntry { Return = taxReturn };
+
+        await _paymentDisplayManager.UpdateEditorAsync(entry, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        // Recording the payment saves the return, so the return's own rules run first, as for any other write.
+        await CatalogEntryValidation.ValidateAsync(_returns, taxReturn, _updateModelAccessor.ModelUpdater, nameof(TaxReturn), HttpContext.RequestAborted);
+
+        if (!ModelState.IsValid)
+        {
+            await _notifier.ErrorAsync(H["{0}", string.Join(" ", ModelState.Values.SelectMany(value => value.Errors).Select(error => error.ErrorMessage))]);
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        return await RunAsync(taxReturn, (current, cancellationToken) => _service.RecordPaymentAsync(current, entry.Payment, User, cancellationToken), H["The payment has been recorded."]);
+    }
 
     [HttpPost]
     [Admin("taxation/returns/{id}/payments/{paymentId}/delete", "TaxationReturnsRemovePayment")]
@@ -239,13 +272,33 @@ public sealed class TaxReturnsController : Controller
             return NotFound();
         }
 
-        var result = await action(taxReturn, HttpContext.RequestAborted);
+        return await RunAsync(taxReturn, action, success);
+    }
+
+    // A module that follows tax returns (an ITaxReturnObserver, such as one that posts the payment to the books) may fail:
+    // nothing of the change is saved, and the person is told instead of getting an error page.
+    private async Task<IActionResult> RunAsync(TaxReturn taxReturn, Func<TaxReturn, CancellationToken, Task<TaxReturnResult>> action, LocalizedHtmlString success)
+    {
+        TaxReturnResult result;
+
+        try
+        {
+            result = await action(taxReturn, HttpContext.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await _session.CancelAsync();
+            _logger.LogError(exception, "A change to the tax return '{TaxReturnId}' failed, so nothing of it was saved.", taxReturn.ItemId);
+            await _notifier.ErrorAsync(H["The change was not saved: a module that acts on tax returns failed. The error has been logged."]);
+
+            return RedirectToAction(nameof(Details), new { id = taxReturn.ItemId });
+        }
 
         await (result.Succeeded
             ? _notifier.SuccessAsync(success)
             : _notifier.ErrorAsync(H["{0}", string.Join(" ", result.Errors)]));
 
-        return RedirectToAction(nameof(Details), new { id = result.Return?.ItemId ?? id });
+        return RedirectToAction(nameof(Details), new { id = result.Return?.ItemId ?? taxReturn.ItemId });
     }
 
     private async Task<TaxReturn> FindAsync(string id)
