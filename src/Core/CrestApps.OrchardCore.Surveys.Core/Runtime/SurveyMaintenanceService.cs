@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
@@ -101,13 +102,9 @@ public sealed class SurveyMaintenanceService
     public async Task RunAsync(int batchSize = SurveysConstants.PageSize, CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
+        // The surveys read in the run, each once. A step finds the surveys it needs by the survey index and reads only
+        // those, never every survey of the site.
         var surveys = new Dictionary<string, Survey>(StringComparer.Ordinal);
-
-        // Every survey is read once for the run: retention, the close and the participation cleanup need them.
-        foreach (var survey in await _session.Query<Survey, SurveyIndex>(collection: SurveysConstants.CollectionName).ListAsync(cancellationToken))
-        {
-            surveys[survey.ItemId] = survey;
-        }
 
         // Responses of a closed survey are submitted before idle ones are abandoned, so a response left in progress at
         // the close is submitted as it was saved rather than dropped.
@@ -230,9 +227,11 @@ public sealed class SurveyMaintenanceService
         var inProgress = nameof(SurveyResponseStatus.InProgress);
         var handled = 0;
 
-        foreach (var survey in surveys.Values.Where(survey => survey is not null).ToList())
+        foreach (var id in await SurveyIdsAsync(index => index.RetentionDays > 0, survey => survey.Retention?.Days > 0, surveys, cancellationToken))
         {
-            if (survey.Retention?.Days is not { } days || days <= 0 || handled >= batchSize)
+            var survey = await SurveyAsync(id, surveys, cancellationToken);
+
+            if (survey?.Retention?.Days is not { } days || days <= 0 || handled >= batchSize)
             {
                 continue;
             }
@@ -286,16 +285,21 @@ public sealed class SurveyMaintenanceService
     private async Task SubmitClosedAsync(DateTime now, int batchSize, Dictionary<string, Survey> surveys, CancellationToken cancellationToken)
     {
         var inProgress = nameof(SurveyResponseStatus.InProgress);
+        var closed = nameof(SurveyStatus.Closed);
+        var archived = nameof(SurveyStatus.Archived);
         var handled = 0;
+        var closedIds = await SurveyIdsAsync(
+            index => index.Status == closed || index.Status == archived || (index.ClosesUtc != null && index.ClosesUtc <= now),
+            survey => SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, now),
+            surveys,
+            cancellationToken);
 
-        foreach (var survey in surveys.Values.Where(survey => survey is not null && SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, now)).ToList())
+        foreach (var surveyId in closedIds)
         {
             if (handled >= batchSize)
             {
                 return;
             }
-
-            var surveyId = survey.ItemId;
 
             handled += await WalkAsync(
                 batchSize - handled,
@@ -367,9 +371,7 @@ public sealed class SurveyMaintenanceService
     {
         var started = Stopwatch.GetTimestamp();
         long afterId = 0;
-        var kept = surveys.Values
-            .Where(SurveyParticipationService.KeepsRecords)
-            .Select(survey => survey.ItemId)
+        var kept = (await SurveyIdsAsync(index => index.TotalLimit != null, SurveyParticipationService.KeepsRecords, surveys, cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
 
         for (var batch = 0; batch < MaxParticipationBatches; batch++)
@@ -651,6 +653,40 @@ public sealed class SurveyMaintenanceService
 
     private static bool Done(SurveyResponseResult result)
         => result.Error != SurveyErrorCode.Busy;
+
+    // The ids of the surveys a step needs, found by the survey index. A row indexed before the upkeep columns existed (its
+    // retention days are empty) is decided from its survey until SurveyUpkeepReindexStep reaches it.
+    private async Task<IReadOnlyList<string>> SurveyIdsAsync(
+        Expression<Func<SurveyIndex, bool>> indexed,
+        Func<Survey, bool> unindexed,
+        Dictionary<string, Survey> surveys,
+        CancellationToken cancellationToken)
+    {
+        var ids = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var row in await _session.QueryIndex(indexed, collection: SurveysConstants.CollectionName).OrderBy(index => index.Id).ListAsync(cancellationToken))
+        {
+            if (!string.IsNullOrEmpty(row.ItemId) && seen.Add(row.ItemId))
+            {
+                ids.Add(row.ItemId);
+            }
+        }
+
+        foreach (var row in await _session.QueryIndex<SurveyIndex>(index => index.RetentionDays == null, collection: SurveysConstants.CollectionName).OrderBy(index => index.Id).ListAsync(cancellationToken))
+        {
+            if (!string.IsNullOrEmpty(row.ItemId)
+                && !seen.Contains(row.ItemId)
+                && await SurveyAsync(row.ItemId, surveys, cancellationToken) is { } survey
+                && unindexed(survey)
+                && seen.Add(row.ItemId))
+            {
+                ids.Add(row.ItemId);
+            }
+        }
+
+        return ids;
+    }
 
     private async Task<Survey> SurveyAsync(string surveyId, Dictionary<string, Survey> surveys, CancellationToken cancellationToken)
     {

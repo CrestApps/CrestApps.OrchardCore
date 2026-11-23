@@ -34,6 +34,9 @@ public sealed class SurveyIndexProvider : IndexProvider<Survey>
                 OwnerId = Cut(item.OwnerId, 26),
                 Anonymity = (item.Access?.Anonymity ?? AnonymityMode.Identified).ToString(),
                 MinimumGroupSize = item.Access?.MinimumGroupSize,
+                RetentionDays = item.Retention?.Days is > 0 and var days ? days : 0,
+                ClosesUtc = item.Access?.ClosesUtc,
+                TotalLimit = item.Access?.Limits?.Total,
             });
 
     private static string Cut(string value, int length)

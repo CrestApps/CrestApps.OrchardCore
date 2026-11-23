@@ -40,7 +40,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 6;
+        return 7;
     }
 
     /// <summary>
@@ -108,5 +108,18 @@ internal sealed class SurveysMigrations : DataMigration
         await _steps.RequestAsync(SurveysReindexStep.StepName);
 
         return 6;
+    }
+
+    /// <summary>
+    /// Adds the upkeep columns of the survey index (retention days, closing date, total limit), so upkeep reads only the
+    /// surveys each of its steps needs, and asks for the step that fills them from each survey.
+    /// </summary>
+    /// <returns>The new version.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await SurveysIndexSchema.AddSurveyUpkeepColumnsAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveyUpkeepReindexStep.StepName);
+
+        return 7;
     }
 }

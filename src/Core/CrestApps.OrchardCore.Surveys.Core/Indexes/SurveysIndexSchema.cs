@@ -33,7 +33,10 @@ public static class SurveysIndexSchema
             .Column<DateTime?>("ModifiedUtc", column => column.Nullable())
             .Column<string>("OwnerId", column => column.Nullable().WithLength(26))
             .Column<string>("Anonymity", column => column.Nullable().WithLength(20))
-            .Column<int?>("MinimumGroupSize", column => column.Nullable()),
+            .Column<int?>("MinimumGroupSize", column => column.Nullable())
+            .Column<int?>("RetentionDays", column => column.Nullable())
+            .Column<DateTime?>("ClosesUtc", column => column.Nullable())
+            .Column<int?>("TotalLimit", column => column.Nullable()),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
@@ -44,6 +47,7 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyIndex_Owner", "OwnerRef");
             table.CreateIndex("IDX_SurveyIndex_Modified", "ModifiedUtc", "Id");
             table.CreateIndex("IDX_SurveyIndex_OwnerId", "OwnerId");
+            table.CreateIndex("IDX_SurveyIndex_Retention", "RetentionDays");
         }, collection: collection);
 
         await CreateSurveyTagTableAsync(schemaBuilder);
@@ -302,6 +306,29 @@ public static class SurveysIndexSchema
             collection: SurveysConstants.CollectionName);
 
         await CreateSurveyTagTableAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Adds what upkeep reads without loading every survey: the retention days, the closing date and the total limit of
+    /// the survey index. Rows indexed before have empty retention days, so upkeep reads those surveys themselves until
+    /// the step that indexes the surveys again reaches them.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddSurveyUpkeepColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
+        {
+            table.AddColumn<int?>("RetentionDays", column => column.Nullable());
+            table.AddColumn<DateTime?>("ClosesUtc", column => column.Nullable());
+            table.AddColumn<int?>("TotalLimit", column => column.Nullable());
+        }, collection: SurveysConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
+            table.CreateIndex("IDX_SurveyIndex_Retention", "RetentionDays"),
+            collection: SurveysConstants.CollectionName);
     }
 
     private static async Task CreateSurveyTagTableAsync(ISchemaBuilder schemaBuilder)

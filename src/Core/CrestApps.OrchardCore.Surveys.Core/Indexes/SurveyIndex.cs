@@ -58,4 +58,22 @@ public sealed class SurveyIndex : CatalogItemIndex
     /// Gets or sets the survey's own minimum group size, or null.
     /// </summary>
     public int? MinimumGroupSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many days responses are kept before retention removes or anonymizes them, or 0 when the survey
+    /// has no retention. Null on a row indexed before the upkeep columns existed: upkeep then reads that survey itself
+    /// until the step that indexes the surveys again reaches it.
+    /// </summary>
+    public int? RetentionDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the survey's own closing date, in UTC, or null.
+    /// </summary>
+    public DateTime? ClosesUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most responses a respondent may give in total, or null; participation records of such a survey
+    /// are kept.
+    /// </summary>
+    public int? TotalLimit { get; set; }
 }
