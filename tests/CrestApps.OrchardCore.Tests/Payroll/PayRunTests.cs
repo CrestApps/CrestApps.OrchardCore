@@ -447,6 +447,22 @@ public sealed class PayRunTests
         var setup = await SetUpAsync(harness, withElection: false);
         var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
 
+        // A federal income tax that reads the person's election: without one the person can't be paid.
+        await harness.RunAsync(async services =>
+        {
+            var rules = services.GetRequiredService<IIncomeTaxRuleManager>();
+            var rule = await rules.NewAsync();
+
+            rule.Name = "Federal income tax";
+            rule.TaxCode = "US-FIT";
+            rule.Jurisdiction = "US";
+            rule.Method = "Percentage";
+            rule.Rate = 10m;
+            rule.UsesElections = true;
+            rule.EffectiveFrom = new DateOnly(2020, 1, 1);
+            await rules.CreateAsync(rule);
+        });
+
         var (submit, cancel, recalculate, run, statements) = await harness.RunAsync(async services =>
         {
             var service = services.GetRequiredService<IPayRunService>();

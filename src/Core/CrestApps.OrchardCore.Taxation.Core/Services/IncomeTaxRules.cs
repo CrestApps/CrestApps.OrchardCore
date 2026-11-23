@@ -453,6 +453,32 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
+    /// <remarks>
+    /// A rule reads an election when it uses elections or takes the exemptions an election claims (an exemption
+    /// allowance), and it reads the election of the jurisdiction it names in <see cref="IncomeTaxRule.ElectionsFrom"/>, or
+    /// else of its own. Only rules turned on and in effect on the day count.
+    /// </remarks>
+    public async Task<IReadOnlySet<string>> GetElectionJurisdictionsAsync(DateOnly date, CancellationToken cancellationToken = default)
+    {
+        var jurisdictions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rule in await _rules.ListAsync(cancellationToken))
+        {
+            if (rule.AppliesOn(date) && (rule.UsesElections || rule.ExemptionAllowance is not null))
+            {
+                var jurisdiction = string.IsNullOrWhiteSpace(rule.ElectionsFrom) ? rule.Jurisdiction : rule.ElectionsFrom;
+
+                if (!string.IsNullOrWhiteSpace(jurisdiction))
+                {
+                    jurisdictions.Add(jurisdiction.Trim());
+                }
+            }
+        }
+
+        return jurisdictions;
+    }
+
+    /// <inheritdoc />
     public async Task<IncomeTaxResult> CalculateAsync(IncomeTaxRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);

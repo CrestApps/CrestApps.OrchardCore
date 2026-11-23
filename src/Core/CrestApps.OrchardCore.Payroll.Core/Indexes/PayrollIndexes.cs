@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Indexes;
 /// <summary>
 /// Indexes employers.
 /// </summary>
-public sealed class EmployerIndex : CatalogItemIndex
+public sealed class PayrollEmployerIndex : CatalogItemIndex
 {
     /// <summary>
     /// Gets or sets the name.
@@ -29,7 +29,7 @@ public sealed class EmployerIndex : CatalogItemIndex
 /// <summary>
 /// Indexes pay profiles: by staff member, employer, schedule and the keyed hash of the tax id.
 /// </summary>
-public sealed class PayProfileIndex : CatalogItemIndex
+public sealed class PayrollPayProfileIndex : CatalogItemIndex
 {
     /// <summary>
     /// Gets or sets the staff member.
@@ -65,7 +65,7 @@ public sealed class PayProfileIndex : CatalogItemIndex
 /// <summary>
 /// Indexes pay items: by profile, staff member, employer and pay code.
 /// </summary>
-public sealed class PayItemIndex : CatalogItemIndex
+public sealed class PayrollPayItemIndex : CatalogItemIndex
 {
     /// <summary>
     /// Gets or sets the pay profile.
@@ -89,7 +89,7 @@ public sealed class PayItemIndex : CatalogItemIndex
 }
 
 /// <summary>
-/// Maps pay profiles to <see cref="PayProfileIndex"/> rows.
+/// Maps pay profiles to <see cref="PayrollPayProfileIndex"/> rows.
 /// </summary>
 public sealed class PayProfileIndexProvider : IndexProvider<EmployeePayProfile>
 {
@@ -105,10 +105,10 @@ public sealed class PayProfileIndexProvider : IndexProvider<EmployeePayProfile>
     public override void Describe(DescribeContext<EmployeePayProfile> context)
     {
         context
-            .For<PayProfileIndex>()
+            .For<PayrollPayProfileIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(item => new PayProfileIndex
+            .Map(item => new PayrollPayProfileIndex
             {
                 ItemId = item.ItemId,
                 StaffMemberId = item.StaffMemberId,
@@ -122,7 +122,7 @@ public sealed class PayProfileIndexProvider : IndexProvider<EmployeePayProfile>
 }
 
 /// <summary>
-/// Maps pay items to <see cref="PayItemIndex"/> rows.
+/// Maps pay items to <see cref="PayrollPayItemIndex"/> rows.
 /// </summary>
 public sealed class PayItemIndexProvider : IndexProvider<EmployeePayItem>
 {
@@ -138,10 +138,10 @@ public sealed class PayItemIndexProvider : IndexProvider<EmployeePayItem>
     public override void Describe(DescribeContext<EmployeePayItem> context)
     {
         context
-            .For<PayItemIndex>()
+            .For<PayrollPayItemIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(item => new PayItemIndex
+            .Map(item => new PayrollPayItemIndex
             {
                 ItemId = item.ItemId,
                 ProfileId = item.ProfileId,
@@ -153,7 +153,7 @@ public sealed class PayItemIndexProvider : IndexProvider<EmployeePayItem>
 }
 
 /// <summary>
-/// Maps employers to <see cref="EmployerIndex"/> rows.
+/// Maps employers to <see cref="PayrollEmployerIndex"/> rows.
 /// </summary>
 public sealed class EmployerIndexProvider : IndexProvider<Employer>
 {
@@ -169,10 +169,10 @@ public sealed class EmployerIndexProvider : IndexProvider<Employer>
     public override void Describe(DescribeContext<Employer> context)
     {
         context
-            .For<EmployerIndex>()
+            .For<PayrollEmployerIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(item => new EmployerIndex
+            .Map(item => new PayrollEmployerIndex
             {
                 ItemId = item.ItemId,
                 Name = item.Name,
@@ -203,22 +203,33 @@ public static class PayrollIndexSchema
     {
         ArgumentNullException.ThrowIfNull(schemaBuilder);
 
+        await CreateEmployerTableAsync(schemaBuilder);
+        await CreateProfileTablesAsync(schemaBuilder);
+        await PayStatementIndexSchema.CreateAsync(schemaBuilder);
+        await CrestApps.OrchardCore.Payroll.Core.Services.PayRunIndexSchema.CreateAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the table of employers.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateEmployerTableAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
         const string collection = PayrollConstants.CollectionName;
 
-        await schemaBuilder.CreateMapIndexTableAsync<EmployerIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollEmployerIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.Nullable().WithLength(255))
             .Column<string>("Status", column => column.Nullable().WithLength(20))
             .Column<string>("Currency", column => column.Nullable().WithLength(3)),
             collection: collection);
 
-        await schemaBuilder.AlterIndexTableAsync<EmployerIndex>(table => table
-            .CreateIndex("IDX_EmployerIndex_ItemId", "ItemId", "DocumentId"),
+        await schemaBuilder.AlterIndexTableAsync<PayrollEmployerIndex>(table => table
+            .CreateIndex("IDX_PayrollEmployerIndex_ItemId", "ItemId", "DocumentId"),
             collection: collection);
-
-        await CreateProfileTablesAsync(schemaBuilder);
-        await PayStatementIndexSchema.CreateAsync(schemaBuilder);
-        await CrestApps.OrchardCore.Payroll.Core.Services.PayRunIndexSchema.CreateAsync(schemaBuilder);
     }
 
     /// <summary>
@@ -232,7 +243,7 @@ public static class PayrollIndexSchema
 
         const string collection = PayrollConstants.CollectionName;
 
-        await schemaBuilder.CreateMapIndexTableAsync<PayProfileIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollPayProfileIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("StaffMemberId", column => column.Nullable().WithLength(26))
             .Column<string>("EmployerId", column => column.Nullable().WithLength(26))
@@ -242,15 +253,15 @@ public static class PayrollIndexSchema
             .Column<string>("TaxIdHash", column => column.Nullable().WithLength(64)),
             collection: collection);
 
-        await schemaBuilder.AlterIndexTableAsync<PayProfileIndex>(table =>
+        await schemaBuilder.AlterIndexTableAsync<PayrollPayProfileIndex>(table =>
         {
-            table.CreateIndex("IDX_PayProfileIndex_ItemId", "ItemId", "DocumentId");
-            table.CreateIndex("IDX_PayProfileIndex_Staff", "StaffMemberId", "EmployerId", "DocumentId");
-            table.CreateIndex("IDX_PayProfileIndex_Employer", "EmployerId", "Status", "DocumentId");
-            table.CreateIndex("IDX_PayProfileIndex_TaxId", "TaxIdHash", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayProfileIndex_ItemId", "ItemId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayProfileIndex_Staff", "StaffMemberId", "EmployerId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayProfileIndex_Employer", "EmployerId", "Status", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayProfileIndex_TaxId", "TaxIdHash", "DocumentId");
         }, collection: collection);
 
-        await schemaBuilder.CreateMapIndexTableAsync<PayItemIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollPayItemIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("ProfileId", column => column.Nullable().WithLength(26))
             .Column<string>("StaffMemberId", column => column.Nullable().WithLength(26))
@@ -258,11 +269,11 @@ public static class PayrollIndexSchema
             .Column<string>("PayCodeId", column => column.Nullable().WithLength(26)),
             collection: collection);
 
-        await schemaBuilder.AlterIndexTableAsync<PayItemIndex>(table =>
+        await schemaBuilder.AlterIndexTableAsync<PayrollPayItemIndex>(table =>
         {
-            table.CreateIndex("IDX_PayItemIndex_ItemId", "ItemId", "DocumentId");
-            table.CreateIndex("IDX_PayItemIndex_Profile", "ProfileId", "DocumentId");
-            table.CreateIndex("IDX_PayItemIndex_PayCode", "PayCodeId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayItemIndex_ItemId", "ItemId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayItemIndex_Profile", "ProfileId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayItemIndex_PayCode", "PayCodeId", "DocumentId");
         }, collection: collection);
     }
 }

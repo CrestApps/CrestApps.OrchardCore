@@ -442,8 +442,8 @@ public sealed class UnitedStatesPayrollTests
     {
         var rows = new[]
         {
-            new PayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261120, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 15615, TaxableWagesMinor = 200000 },
-            new PayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261106, PeriodStartDay = 20261018, PeriodEndDay = 20261031, AmountMinor = 15615, TaxableWagesMinor = 200000 },
+            new PayrollPayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261120, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 15615, TaxableWagesMinor = 200000 },
+            new PayrollPayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261106, PeriodStartDay = 20261018, PeriodEndDay = 20261031, AmountMinor = 15615, TaxableWagesMinor = 200000 },
         };
 
         var totals = PayAccumulatorService.Sum(rows, new DateOnly(2026, 11, 27), 20261101, 20261114, "USD").For(PayAccumulators.TaxKey("US-FIT"));
@@ -451,7 +451,7 @@ public sealed class UnitedStatesPayrollTests
         Assert.Equal((2000m, 4000m), (totals.PeriodTaxableWages, totals.YearTaxableWages));
 
         // A bonus withheld on at the flat rate in the same period is kept apart.
-        var withBonus = rows.Append(new PayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261118, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 110000, TaxableWagesMinor = 500000, FlatWagesMinor = 500000 });
+        var withBonus = rows.Append(new PayrollPayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261118, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 110000, TaxableWagesMinor = 500000, FlatWagesMinor = 500000 });
         var bonusTotals = PayAccumulatorService.Sum(withBonus, new DateOnly(2026, 11, 27), 20261101, 20261114, "USD").For(PayAccumulators.TaxKey("US-FIT"));
 
         Assert.Equal((7000m, 5000m), (bonusTotals.PeriodTaxableWages, bonusTotals.PeriodFlatWages));

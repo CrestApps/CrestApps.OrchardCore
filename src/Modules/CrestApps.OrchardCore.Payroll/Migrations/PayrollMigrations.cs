@@ -2,21 +2,30 @@ using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Services;
 using OrchardCore.Data.Migration;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Payroll.Migrations;
 
 /// <summary>
-/// Creates the Payroll feature's tables and adds the pay codes payroll needs.
+/// Creates the Payroll feature's tables, adds the pay codes payroll needs and makes the key tax ids are hashed with.
 /// </summary>
 internal sealed class PayrollMigrations : DataMigration
 {
     private readonly PayrollPayCodeSeeder _seeder;
     private readonly PayRunApprovalPolicySeeder _policySeeder;
+    private readonly PayrollTaxIdHasher _taxIdHasher;
+    private readonly IStore _store;
 
-    public PayrollMigrations(PayrollPayCodeSeeder seeder, PayRunApprovalPolicySeeder policySeeder)
+    public PayrollMigrations(
+        PayrollPayCodeSeeder seeder,
+        PayRunApprovalPolicySeeder policySeeder,
+        PayrollTaxIdHasher taxIdHasher,
+        IStore store)
     {
         _seeder = seeder;
         _policySeeder = policySeeder;
+        _taxIdHasher = taxIdHasher;
+        _store = store;
     }
 
     public async Task<int> CreateAsync()
@@ -25,8 +34,9 @@ internal sealed class PayrollMigrations : DataMigration
         await PayrollFilingIndexSchema.CreateAsync(SchemaBuilder);
         await _seeder.SeedAsync();
         await _policySeeder.SeedAsync();
+        await _taxIdHasher.EnsureKeyAsync();
 
-        return 10;
+        return 11;
     }
 
     // Pay profiles and pay items.
@@ -101,5 +111,56 @@ internal sealed class PayrollMigrations : DataMigration
         await _policySeeder.TitleSeededStageAsync();
 
         return 10;
+    }
+
+    // The index tables get module-specific names (Payroll_PayRunIndex becomes Payroll_PayrollPayRunIndex), so an
+    // application module with an index of the same generic name in a Payroll collection of its own no longer shares
+    // them. The rows are copied and the old tables dropped. The key tax ids are hashed with is made here too, in the
+    // migration's own unit of work, so a recipe or an import that hashes a tax id finds it.
+    public async Task<int> UpdateFrom10Async()
+    {
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_EmployerIndex", typeof(PayrollEmployerIndex), PayrollIndexSchema.CreateEmployerTableAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_EmployerIndex");
+        }
+
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_PayProfileIndex", typeof(PayrollPayProfileIndex), PayrollIndexSchema.CreateProfileTablesAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_PayProfileIndex");
+        }
+
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_PayItemIndex", typeof(PayrollPayItemIndex), PayrollIndexSchema.CreateProfileTablesAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_PayItemIndex");
+        }
+
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_PayStatementIndex", typeof(PayrollPayStatementIndex), PayStatementIndexSchema.CreateAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_PayStatementIndex");
+        }
+
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_PayStatementLineIndex", typeof(PayrollPayStatementLineIndex), PayStatementIndexSchema.CreateAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_PayStatementLineIndex");
+        }
+
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_PayRunIndex", typeof(PayrollPayRunIndex), PayRunIndexSchema.CreateAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_PayRunIndex");
+        }
+
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_PayRunInputIndex", typeof(PayrollPayRunInputIndex), PayRunIndexSchema.CreateAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_PayRunInputIndex");
+        }
+
+        if (await PayrollIndexTableMove.MoveAsync(SchemaBuilder, _store, "Payroll_TaxDepositIndex", typeof(PayrollTaxDepositIndex), PayrollFilingIndexSchema.CreateTaxDepositTableAsync))
+        {
+            await SchemaBuilder.DropTableAsync("Payroll_TaxDepositIndex");
+        }
+
+        await _taxIdHasher.EnsureKeyAsync();
+
+        return 11;
     }
 }
