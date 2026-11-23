@@ -296,7 +296,7 @@ public sealed class PlaidClient
 
             try
             {
-                error = await response.Content.ReadFromJsonAsync<PlaidError>(cancellationToken);
+                error = await response.Content.ReadFromJsonAsync<PlaidError>(PlaidJsonSerializerOptions.Default, cancellationToken);
             }
             catch (JsonException)
             {
@@ -306,7 +306,7 @@ public sealed class PlaidClient
             throw new PlaidApiException(response.StatusCode, error);
         }
 
-        return await response.Content.ReadFromJsonAsync<T>(cancellationToken)
+        return await response.Content.ReadFromJsonAsync<T>(PlaidJsonSerializerOptions.Default, cancellationToken)
             ?? throw new PlaidApiException(response.StatusCode, new PlaidError { ErrorType = "API_ERROR", ErrorCode = "EMPTY_RESPONSE" });
     }
 

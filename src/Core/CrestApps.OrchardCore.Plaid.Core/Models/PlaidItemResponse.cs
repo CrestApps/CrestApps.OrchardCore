@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace CrestApps.OrchardCore.Plaid.Models;
 
 /// <summary>
@@ -10,6 +8,5 @@ internal sealed class PlaidItemResponse
     /// <summary>
     /// Gets or sets the item.
     /// </summary>
-    [JsonPropertyName("item")]
     public PlaidItemInfo Item { get; set; }
 }
