@@ -377,9 +377,16 @@ public sealed class SurveyGradingController : Controller
             return View(await BuildRegradeAsync(survey, model));
         }
 
-        var count = await _grading.RegradeVersionsAsync(surveyId, model.FromVersionIds, model.KeyVersionId, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted);
+        var result = await _grading.RegradeVersionsAsync(surveyId, model.FromVersionIds, model.KeyVersionId, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted);
 
-        await _notifier.SuccessAsync(H["{0} responses have been scored again.", count]);
+        await _notifier.SuccessAsync(H["{0} responses have been scored again.", result.Count]);
+
+        if (result.SkippedQuestions.Count > 0)
+        {
+            var skipped = string.Join(", ", result.SkippedQuestions.Select(question => H["{0} (version {1})", question.Title, question.VersionNumber].Value));
+
+            await _notifier.WarningAsync(H["These questions kept their scores because the key names choices their version does not have: {0}. Grade them by hand if they need a change.", skipped]);
+        }
 
         return RedirectToAction(nameof(Index), new { surveyId });
     }

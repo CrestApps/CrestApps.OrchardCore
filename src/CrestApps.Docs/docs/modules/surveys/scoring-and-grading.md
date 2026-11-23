@@ -53,7 +53,7 @@ A response whose deadline and grace passed is submitted with what was saved in t
 | `GradeAsync` | Scores questions by hand with comments and overall feedback |
 | `RecordScoringHelpAsync` | Marks that a grader used AI help on a question |
 | `RegradeAsync` | Scores a response again with its version's key; grader scores are kept |
-| `RegradeVersionsAsync` | Scores responses of older versions with another version's key, only for questions whose type did not change |
+| `RegradeVersionsAsync` | Scores responses of older versions with another version's key, only for questions whose type did not change; a question whose key names choices or rows its version lacks keeps its scores and is listed in `SurveyRegradeResult.SkippedQuestions` |
 | `ChangeScoreAsync` | Sets the total score; a reason is required |
 
 Every change adds an entry to the response's score history (who, when, from, to, why) and raises `GradedAsync` or `ScoreChangedAsync`.

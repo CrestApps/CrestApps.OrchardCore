@@ -40,7 +40,8 @@ public interface ISurveyGradingService
 
     /// <summary>
     /// Scores the completed responses of older versions again with the key of another version, matched by question id
-    /// (only questions whose type did not change).
+    /// (only questions whose type did not change). A question whose key names choices or rows its version does not have
+    /// keeps its scores and is listed in the result.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
     /// <param name="fromVersionIds">The versions whose responses are scored again.</param>
@@ -48,8 +49,8 @@ public interface ISurveyGradingService
     /// <param name="actorId">Who regrades.</param>
     /// <param name="reason">Why.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>How many responses were scored again.</returns>
-    Task<int> RegradeVersionsAsync(string surveyId, IReadOnlyCollection<string> fromVersionIds, string keyVersionId, string actorId, string reason, CancellationToken cancellationToken = default);
+    /// <returns>How many responses were scored again, and the questions left alone.</returns>
+    Task<SurveyRegradeResult> RegradeVersionsAsync(string surveyId, IReadOnlyCollection<string> fromVersionIds, string keyVersionId, string actorId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sets the total score of a response.

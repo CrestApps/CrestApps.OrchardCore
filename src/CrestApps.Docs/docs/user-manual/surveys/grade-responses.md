@@ -32,4 +32,4 @@ On an anonymous survey, responses wait in the list until the survey has enough c
 
 - **Change the total score**: enter the **New score** and a **Reason**, then **Change score**. The reason is kept in the score history.
 - **Score again**: scores the response again with the key of its version. Grader scores are kept.
-- **Regrade versions** (in the survey's menu): scores the responses of older versions with the key of another version, with a **Reason**. Only questions whose type did not change take the other key.
+- **Regrade versions** (in the survey's menu): scores the responses of older versions with the key of another version, with a **Reason**. Only questions whose type did not change take the other key. A question whose choices changed ids between the two versions (for example, a bank imported again) keeps its scores, and a message lists those questions so you can grade them by hand.

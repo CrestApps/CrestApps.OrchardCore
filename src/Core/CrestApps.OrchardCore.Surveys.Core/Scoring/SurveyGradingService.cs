@@ -202,7 +202,7 @@ public sealed class SurveyGradingService : ISurveyGradingService
     }
 
     /// <inheritdoc />
-    public async Task<int> RegradeVersionsAsync(
+    public async Task<SurveyRegradeResult> RegradeVersionsAsync(
         string surveyId,
         IReadOnlyCollection<string> fromVersionIds,
         string keyVersionId,
@@ -210,9 +210,11 @@ public sealed class SurveyGradingService : ISurveyGradingService
         string reason,
         CancellationToken cancellationToken = default)
     {
+        var result = new SurveyRegradeResult();
+
         if (string.IsNullOrEmpty(surveyId) || fromVersionIds is null || fromVersionIds.Count == 0 || string.IsNullOrWhiteSpace(reason))
         {
-            return 0;
+            return result;
         }
 
         var keyVersion = await _versionCache.GetAsync(keyVersionId, cancellationToken);
@@ -220,7 +222,7 @@ public sealed class SurveyGradingService : ISurveyGradingService
 
         if (keyVersion is null || survey is null || keyVersion.SurveyId != surveyId)
         {
-            return 0;
+            return result;
         }
 
         var count = 0;
@@ -234,7 +236,18 @@ public sealed class SurveyGradingService : ISurveyGradingService
                 continue;
             }
 
-            var definition = WithKeyOf(version.Definition, keyVersion.Definition);
+            var (definition, kept) = WithKeyOf(version.Definition, keyVersion.Definition);
+
+            foreach (var question in kept)
+            {
+                result.SkippedQuestions.Add(new SurveyRegradeSkippedQuestion
+                {
+                    VersionNumber = version.Number,
+                    QuestionId = question.Id,
+                    Title = string.IsNullOrWhiteSpace(question.Title) ? question.Name : question.Title,
+                });
+            }
+
             var skip = 0;
 
             while (true)
@@ -259,7 +272,7 @@ public sealed class SurveyGradingService : ISurveyGradingService
                     var before = response.Score;
                     var wasGrading = response.Grading;
 
-                    _scoringEngine.Score(definition, response);
+                    ScoreKeeping(definition, response, kept);
 
                     var change = new ScoreChange
                     {
@@ -282,14 +295,18 @@ public sealed class SurveyGradingService : ISurveyGradingService
 
                 if (!await _committer.CommitAsync(cancellationToken))
                 {
-                    return count - page.Count;
+                    result.Count = count - page.Count;
+
+                    return result;
                 }
 
                 skip += page.Count;
             }
         }
 
-        return count;
+        result.Count = count;
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -424,9 +441,46 @@ public sealed class SurveyGradingService : ISurveyGradingService
         return (response, survey, version, definition, SurveyErrorCode.None);
     }
 
-    private static SurveyDefinition WithKeyOf(SurveyDefinition definition, SurveyDefinition keyDefinition)
+    private void ScoreKeeping(SurveyDefinition definition, SurveyResponse response, IReadOnlyList<SurveyQuestion> kept)
+    {
+        if (kept.Count == 0)
+        {
+            _scoringEngine.Score(definition, response);
+
+            return;
+        }
+
+        // A kept question counts the points it has now: they stand in as a grader's score while the engine adds the
+        // total up, then the answer goes back to how it was.
+        var saved = new List<(SurveyAnswer Answer, decimal? Manual, decimal? Auto)>();
+
+        foreach (var question in kept)
+        {
+            if (response.Answers.TryGetValue(question.Id, out var answer) && answer is not null && (answer.ManualScore ?? answer.AutoScore) is { } points)
+            {
+                saved.Add((answer, answer.ManualScore, answer.AutoScore));
+                answer.ManualScore = points;
+            }
+        }
+
+        try
+        {
+            _scoringEngine.Score(definition, response);
+        }
+        finally
+        {
+            foreach (var (answer, manual, auto) in saved)
+            {
+                answer.ManualScore = manual;
+                answer.AutoScore = auto;
+            }
+        }
+    }
+
+    private static (SurveyDefinition Definition, IReadOnlyList<SurveyQuestion> Kept) WithKeyOf(SurveyDefinition definition, SurveyDefinition keyDefinition)
     {
         var copy = JsonSerializer.Deserialize<SurveyDefinition>(JsonSerializer.Serialize(definition));
+        var kept = new List<SurveyQuestion>();
         var keys = keyDefinition.Pages
             .SelectMany(page => page.Questions)
             .Where(question => !string.IsNullOrEmpty(question?.Id))
@@ -436,15 +490,58 @@ public sealed class SurveyGradingService : ISurveyGradingService
         foreach (var question in copy.Pages.SelectMany(page => page.Questions))
         {
             // Only questions of an unchanged type take the other version's key: a changed type scores differently.
-            if (question?.Id is not null
-                && keys.TryGetValue(question.Id, out var key)
-                && string.Equals(key.ControlType, question.ControlType, StringComparison.OrdinalIgnoreCase))
+            if (question?.Id is null
+                || !keys.TryGetValue(question.Id, out var key)
+                || !string.Equals(key.ControlType, question.ControlType, StringComparison.OrdinalIgnoreCase))
             {
-                question.Scoring = JsonSerializer.Deserialize<SurveyQuestionScoring>(JsonSerializer.Serialize(key.Scoring ?? new SurveyQuestionScoring()));
+                continue;
+            }
+
+            // A key that names choices or rows this version does not have (a bank imported again before choices kept
+            // their ids) would score every answer 0, so the question keeps its own key and its scores.
+            if (!KeyFits(question, key.Scoring))
+            {
+                kept.Add(question);
+
+                continue;
+            }
+
+            question.Scoring = JsonSerializer.Deserialize<SurveyQuestionScoring>(JsonSerializer.Serialize(key.Scoring ?? new SurveyQuestionScoring()));
+        }
+
+        return (copy, kept);
+    }
+
+    private static bool KeyFits(SurveyQuestion question, SurveyQuestionScoring key)
+    {
+        if (key is null)
+        {
+            return true;
+        }
+
+        // Only ids the question lists can be checked: a yes/no question keys "true" or "false", and a question whose
+        // choices come from another one has none of its own.
+        var choiceIds = (question.Choices ?? []).Where(choice => !string.IsNullOrEmpty(choice?.Id)).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);
+        var rowIds = (question.Rows ?? []).Where(row => !string.IsNullOrEmpty(row?.Id)).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
+
+        if (choiceIds.Count > 0)
+        {
+            var named = (key.CorrectChoiceIds ?? [])
+                .Concat(key.ChoicePoints?.Keys ?? Enumerable.Empty<string>())
+                .Concat(key.Pairs?.Values ?? Enumerable.Empty<string>());
+
+            if (named.Any(id => !string.IsNullOrEmpty(id) && !choiceIds.Contains(id)))
+            {
+                return false;
             }
         }
 
-        return copy;
+        if (rowIds.Count > 0 && (key.Pairs?.Keys ?? Enumerable.Empty<string>()).Any(id => !string.IsNullOrEmpty(id) && !rowIds.Contains(id)))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static SurveyResponseResult Fail(SurveyErrorCode error, SurveyResponse response)
