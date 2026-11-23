@@ -126,8 +126,8 @@ Checks on one survey go through `ISurveyAuthorizationService`: the global permis
 | Task | Runs | Does |
 | --- | --- | --- |
 | Survey deadlines | Every minute | Submits responses whose time ran out (leased queue) |
-| Survey upkeep | Hourly | Abandons idle unfinished responses, applies retention (delete, or anonymize: who responded and every file of the response are removed), submits responses past their deadline, and removes old participation rows in batches until it catches up (up to 30 seconds a run). A response that fails five runs in a row is logged and no longer tried (`SurveyResponse.UpkeepFailures`). |
-| Survey invitation reminders | Hourly (Invitations feature) | Sends the reminders that are due |
+| Survey upkeep | Hourly | Abandons idle unfinished responses, applies retention (delete, or anonymize: who responded and every file of the response are removed), submits responses past their deadline, and removes old participation rows in batches until it catches up (up to 30 seconds a run). Each response is handled in its own child shell scope, whose session commits on its own, so a response whose save fails never takes the others' changes with it, and its files, observers and notifications only run after its own commit. A response that fails five runs in a row is logged and no longer tried (`SurveyResponse.UpkeepFailures`); a step that succeeds resets the count, failures from the server's environment (an unreadable anonymity secret, a timeout, a transient database error) aren't counted, and the responses list shows the stopped responses with an **Upkeep stopped** filter and a **Try again** action (`SurveyResponseService.ClearUpkeepFailuresAsync`). |
+| Survey invitation reminders | Hourly (Invitations feature) | Sends the reminders that are due. Each invitation list is handled in its own child shell scope that commits on its own, so a list that fails is logged and never takes the other lists' updates with it |
 
 ## Known gaps
 

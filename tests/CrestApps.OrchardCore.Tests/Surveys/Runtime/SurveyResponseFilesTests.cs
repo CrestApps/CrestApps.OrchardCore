@@ -242,6 +242,38 @@ public sealed class SurveyResponseFilesTests
     }
 
     [Fact]
+    public async Task Next_WhenAttachmentsRefusesAReDrawnSignature_KeepsTheStoredSignature()
+    {
+        // Arrange: a signature stored by the first page.
+        var (harness, files) = await CreateAsync();
+        await using var _ = harness;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(
+            RuntimeSurveys.Page("p1", SignatureQuestion("s1"), RuntimeSurveys.Text("t1", required: true)),
+            RuntimeSurveys.Page("p2", RuntimeSurveys.Text("t2"))));
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+        var first = await harness.ResponsesAsync(responses => responses.SubmitPageAsync(new SubmitPageRequest { ResponseId = response.ItemId, Identity = _identity, PageId = "p1", Direction = SurveyPageDirection.Next, Form = Form([("q.t1", "x"), ("q.s1", SignatureDataUrl(1))]) }));
+        var signatureId = (await harness.FindAsync(response.ItemId)).Answers["s1"].AttachmentIds.Single();
+        var back = await harness.PostAsync(first.Response, _identity, SurveyPageDirection.Back);
+
+        // Act: the re-drawn signature passes validation, but Attachments refuses to store it.
+        files.Refuse = true;
+        var refused = await harness.ResponsesAsync(responses => responses.SubmitPageAsync(new SubmitPageRequest
+        {
+            ResponseId = response.ItemId,
+            Identity = _identity,
+            PageId = back.Response.CurrentPageId,
+            Direction = SurveyPageDirection.Next,
+            Form = Form([("q.t1", "x"), ("q.s1", SignatureDataUrl(2))]),
+        }));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.InvalidAnswer, refused.Error);
+        Assert.True(refused.Errors.ContainsKey("s1"));
+        Assert.Equal([signatureId], (await harness.FindAsync(response.ItemId)).Answers["s1"].AttachmentIds);
+        Assert.True(files.Stored.ContainsKey(signatureId));
+    }
+
+    [Fact]
     public async Task Finish_FailingAfterTheFilesAreStored_RemovesThem()
     {
         // Arrange

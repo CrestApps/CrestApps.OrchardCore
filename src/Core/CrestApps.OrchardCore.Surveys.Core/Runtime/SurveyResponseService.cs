@@ -604,6 +604,13 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             var fileErrors = await Files.StorePendingAsync(response, pendingFiles, cancellationToken);
 
+            if (fileErrors.Count > 0)
+            {
+                // Each question whose new files were refused gets its stored answer back, so a replaced signature or file
+                // stays referenced and is not removed below.
+                RestoreFileAnswers(response, fileErrors.Keys, storedFileAnswers);
+            }
+
             // Once committed, the files the response referred to under this lock and no longer refers to are removed.
             referencedFiles.UnionWith(SurveyResponseFiles.ReferencedIds(response));
             notifications.Add(() => Files.DeleteReleasedAsync(referencedFiles, response, CancellationToken.None));
@@ -968,6 +975,40 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             var context = new SurveyResponseEventContext { Survey = survey, Version = version, Response = response };
             notifications.Add(() => NotifyAsync(observer => observer.AbandonedAsync(context)));
+
+            return new SurveyResponseResult { Response = response };
+        }, cancellationToken, allowMissingVersion: true);
+
+    /// <summary>
+    /// Counts one more failed upkeep run on a response, under its write lock, for the maintenance task.
+    /// </summary>
+    /// <param name="responseId">The response.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result, with the response and its new <see cref="SurveyResponse.UpkeepFailures"/>.</returns>
+    public Task<SurveyResponseResult> CountUpkeepFailureAsync(string responseId, CancellationToken cancellationToken = default)
+        => WriteAsync<SurveyResponseResult>(responseId, () => new SurveyResponseResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
+        {
+            response.UpkeepFailures++;
+            await _responseStore.UpdateAsync(response, cancellationToken);
+
+            return new SurveyResponseResult { Response = response };
+        }, cancellationToken, allowMissingVersion: true);
+
+    /// <summary>
+    /// Clears the count of failed upkeep runs of a response, under its write lock: after an upkeep step succeeds, or when
+    /// an admin retries a response upkeep had stopped trying.
+    /// </summary>
+    /// <param name="responseId">The response.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result.</returns>
+    public Task<SurveyResponseResult> ClearUpkeepFailuresAsync(string responseId, CancellationToken cancellationToken = default)
+        => WriteAsync<SurveyResponseResult>(responseId, () => new SurveyResponseResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
+        {
+            if (response.UpkeepFailures != 0)
+            {
+                response.UpkeepFailures = 0;
+                await _responseStore.UpdateAsync(response, cancellationToken);
+            }
 
             return new SurveyResponseResult { Response = response };
         }, cancellationToken, allowMissingVersion: true);

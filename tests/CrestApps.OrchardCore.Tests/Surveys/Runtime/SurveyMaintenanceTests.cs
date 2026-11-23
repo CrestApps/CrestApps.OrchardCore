@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Scoring;
@@ -13,8 +14,9 @@ using YesSql;
 namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
 
 /// <summary>
-/// The hourly upkeep: participation records are deleted until it catches up, anonymize retention removes the files, and
-/// a response that keeps failing stops being tried so it can't block the rest.
+/// The hourly upkeep: participation records are deleted until it catches up, anonymize retention removes the files, a
+/// response that keeps failing stops being tried so it can't block the rest, and a response whose save fails never takes
+/// the other responses' changes with it (R4-H1).
 /// </summary>
 public sealed class SurveyMaintenanceTests
 {
@@ -154,13 +156,214 @@ public sealed class SurveyMaintenanceTests
         Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(healthy.ItemId)).Status);
     }
 
+    [Fact]
+    public async Task Run_ASaveFailsForOneResponse_TheNextResponseIsStillSaved_AndNotifiedOnce()
+    {
+        // Arrange: two idle responses; the older one's save fails at flush time once it is abandoned.
+        var observer = new RecordingObserver();
+        var poisonedId = string.Empty;
+        var failure = new SaveFailureIndexProvider<SurveyResponse>(SurveysConstants.ResponsesCollectionName, response =>
+            response.ItemId == poisonedId && response.Status == SurveyResponseStatus.Abandoned ? new InvalidOperationException("index provider failed") : null);
+        await using var harness = await CreateWithSaveFailureAsync(failure, services => services.AddSingleton<ISurveyResponseObserver>(observer));
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var poisoned = (await harness.StartAsync(survey, "u1")).Response;
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddSeconds(30);
+        var healthy = (await harness.StartAsync(survey, "u2")).Response;
+
+        poisonedId = poisoned.ItemId;
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(10);
+
+        // Act
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        var failed = await harness.FindAsync(poisoned.ItemId);
+
+        Assert.Equal(SurveyResponseStatus.Abandoned, (await harness.FindAsync(healthy.ItemId)).Status);
+        Assert.Equal([healthy.ItemId], observer.Abandoned);
+        Assert.Equal(SurveyResponseStatus.InProgress, failed.Status);
+        Assert.Equal(1, failed.UpkeepFailures);
+    }
+
+    [Fact]
+    public async Task Run_AnAnonymizeSaveFails_KeepsThatResponsesFiles_AndStillAnonymizesTheNext()
+    {
+        // Arrange: two old responses with a file each; the older one's anonymized save fails at flush time.
+        var files = new SurveyFilesFakeAttachmentService();
+        var poisonedId = string.Empty;
+        var failure = new SaveFailureIndexProvider<SurveyResponse>(SurveysConstants.ResponsesCollectionName, response =>
+            response.ItemId == poisonedId && response.AnonymizedUtc is not null ? new InvalidOperationException("index provider failed") : null);
+        await using var harness = await CreateWithSaveFailureAsync(failure, services => services.AddSingleton<IAttachmentService>(files));
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))), item => item.Retention = new SurveyRetentionSettings { Days = 30, Action = RetentionAction.Anonymize });
+        var first = await CompleteWithFileAsync(harness, files, survey, "u1");
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(5);
+        var second = await CompleteWithFileAsync(harness, files, survey, "u2");
+
+        poisonedId = first.Response.ItemId;
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(40);
+
+        // Act
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        var failed = await harness.FindAsync(first.Response.ItemId);
+        var anonymized = await harness.FindAsync(second.Response.ItemId);
+
+        Assert.Equal("u1", failed.UserId);
+        Assert.Equal(1, failed.UpkeepFailures);
+        Assert.True(files.Stored.ContainsKey(first.FileId));
+        Assert.Null(anonymized.UserId);
+        Assert.Null(anonymized.RespondentKey);
+        Assert.NotNull(anonymized.AnonymizedUtc);
+        Assert.False(files.Stored.ContainsKey(second.FileId));
+    }
+
+    [Fact]
+    public async Task Run_AStepThatSucceedsAfterEarlierFailures_ClearsTheCount()
+    {
+        // Arrange: an idle response whose abandon fails at save time for two runs.
+        var poisonedId = string.Empty;
+        var failing = true;
+        var failure = new SaveFailureIndexProvider<SurveyResponse>(SurveysConstants.ResponsesCollectionName, response =>
+            failing && response.ItemId == poisonedId && response.Status == SurveyResponseStatus.Abandoned ? new InvalidOperationException("index provider failed") : null);
+        await using var harness = await CreateWithSaveFailureAsync(failure);
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        poisonedId = response.ItemId;
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(10);
+
+        await RunMaintenanceAsync(harness);
+        await RunMaintenanceAsync(harness);
+        var afterFailures = await harness.FindAsync(response.ItemId);
+
+        // Act
+        failing = false;
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        var after = await harness.FindAsync(response.ItemId);
+
+        Assert.Equal(2, afterFailures.UpkeepFailures);
+        Assert.Equal(SurveyResponseStatus.Abandoned, after.Status);
+        Assert.Equal(0, after.UpkeepFailures);
+    }
+
+    [Fact]
+    public async Task Run_AFailureFromTheServersEnvironment_IsNotCounted()
+    {
+        // Arrange: the anonymity secret can't be read on this server.
+        var poisonedId = string.Empty;
+        var failure = new SaveFailureIndexProvider<SurveyResponse>(SurveysConstants.ResponsesCollectionName, response =>
+            response.ItemId == poisonedId && response.Status == SurveyResponseStatus.Abandoned ? new SurveyAnonymitySecretUnreadableException() : null);
+        await using var harness = await CreateWithSaveFailureAsync(failure);
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        poisonedId = response.ItemId;
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(10);
+
+        // Act
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        var after = await harness.FindAsync(response.ItemId);
+
+        Assert.Equal(SurveyResponseStatus.InProgress, after.Status);
+        Assert.Equal(0, after.UpkeepFailures);
+    }
+
+    [Fact]
+    public async Task ClearUpkeepFailures_LetsUpkeepTryAStuckResponseAgain()
+    {
+        // Arrange: a response upkeep stopped trying.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        for (var failure = 0; failure < SurveyMaintenanceService.MaxUpkeepFailures; failure++)
+        {
+            await harness.RunAsync(services => services.GetRequiredService<SurveyResponseService>().CountUpkeepFailureAsync(response.ItemId, TestContext.Current.CancellationToken));
+        }
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(10);
+        await RunMaintenanceAsync(harness);
+        var skipped = await harness.FindAsync(response.ItemId);
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<SurveyResponseService>().ClearUpkeepFailuresAsync(response.ItemId, TestContext.Current.CancellationToken));
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        Assert.Equal(SurveyResponseStatus.InProgress, skipped.Status);
+        Assert.Equal(SurveyResponseStatus.Abandoned, (await harness.FindAsync(response.ItemId)).Status);
+    }
+
+    [Fact]
+    public void Anonymize_ClearsTheRespondentKey()
+    {
+        var response = new SurveyResponse { RespondentKey = "u:u1" };
+
+        Assert.True(SurveyMaintenanceService.Anonymize(response));
+        Assert.Null(response.RespondentKey);
+    }
+
+    private static async Task<RuntimeTestHarness> CreateWithSaveFailureAsync(SaveFailureIndexProvider<SurveyResponse> failure, Action<IServiceCollection> configure = null)
+    {
+        var harness = await RuntimeTestHarness.CreateAsync(services =>
+        {
+            SaveFailureIndexProvider<SurveyResponse>.Register(services, failure);
+            configure?.Invoke(services);
+        });
+
+        var store = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<IStore>()));
+        await SaveFailureIndexProvider<SurveyResponse>.CreateTableAsync(store, SurveysConstants.ResponsesCollectionName);
+
+        return harness;
+    }
+
+    private static async Task<(SurveyResponse Response, string FileId)> CompleteWithFileAsync(RuntimeTestHarness harness, SurveyFilesFakeAttachmentService files, Survey survey, string userId)
+    {
+        var response = (await harness.StartAsync(survey, userId)).Response;
+
+        await harness.PostAsync(response, new SurveyRespondentIdentity { UserId = userId }, SurveyPageDirection.Finish, ("q1", "a"));
+
+        var file = files.Seed(SurveyResponseFiles.OwnerOf(response.ItemId), RuntimeTestHarness.Now);
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyResponseStore>();
+            var stored = await store.FindByIdAsync(response.ItemId);
+
+            stored.Answers["sig"] = new SurveyAnswer { AttachmentIds = [file.ItemId] };
+            await store.UpdateAsync(stored);
+
+            return true;
+        });
+
+        return (response, file.ItemId);
+    }
+
     private static Task<bool> RunMaintenanceAsync(RuntimeTestHarness harness, int batchSize = SurveysConstants.PageSize)
-        => harness.RunAsync(async services =>
+        => harness.RunInShellAsync(async services =>
         {
             await services.GetRequiredService<SurveyMaintenanceService>().RunAsync(batchSize, TestContext.Current.CancellationToken);
 
             return true;
         });
+
+    private sealed class RecordingObserver : ISurveyResponseObserver
+    {
+        public List<string> Abandoned { get; } = [];
+
+        public Task AbandonedAsync(SurveyResponseEventContext context)
+        {
+            Abandoned.Add(context.Response.ItemId);
+
+            return Task.CompletedTask;
+        }
+    }
 
     private sealed class PoisonScoringEngine : ISurveyScoringEngine
     {

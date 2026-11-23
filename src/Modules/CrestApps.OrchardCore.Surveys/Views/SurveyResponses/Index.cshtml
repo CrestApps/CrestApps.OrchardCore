@@ -37,6 +37,25 @@
     {
         <div class="alert alert-info">@T["This survey is anonymous, and fewer than {0} responses match these filters. They are hidden so no one can be recognized.", Model.HiddenBelow]</div>
     }
+    else if (Model.HidesSmallStatusGroups)
+    {
+        <div class="alert alert-info">@T["This survey is anonymous. Responses with a status too few responses share are not listed, so no one can be recognized."]</div>
+    }
+
+    @if (Model.UpkeepStoppedCount > 0)
+    {
+        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+            <span class="me-auto">@T.Plural(Model.UpkeepStoppedCount, "Background upkeep failed on 1 response {1} times in a row and stopped trying it. It is no longer abandoned, submitted at its deadline, or deleted or anonymized by retention.", "Background upkeep failed on {0} responses {1} times in a row and stopped trying them. They are no longer abandoned, submitted at their deadline, or deleted or anonymized by retention.", CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyMaintenanceService.MaxUpkeepFailures)</span>
+            @if (!Model.UpkeepStopped)
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId, UpkeepStopped = true })">@T["Show them"]</a>
+            }
+            @if (Model.CanRetryUpkeep)
+            {
+                <button type="submit" class="btn btn-sm btn-warning" formaction="@Url.RouteUrl("SurveysResponsesRetryUpkeep", new { id = Model.Survey.ItemId })">@T["Try again"]</button>
+            }
+        </div>
+    }
 
     <admin-list name="SurveyResponses" context="Model.List"
                 bulk-actions="Model.BulkActions"

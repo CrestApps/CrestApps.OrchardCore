@@ -171,27 +171,59 @@ public sealed class SurveyResponsesController : Controller
             query = query.Where(index => index.Number.Contains(search));
         }
 
-        var count = await query.CountAsync();
+        if (options.UpkeepStopped)
+        {
+            query = query.Where(index => index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures);
+        }
+
         IEnumerable<SurveyResponse> items;
+        var count = 0;
 
         // An anonymous survey lists nothing until the completed, non-test responses the narrowing filters (version,
-        // collector, search) select reach its minimum group size. Test and in-progress rows never count, so previews
-        // can't pad the group. A status filter can't open a smaller group either: the rows it selects (test rows left
-        // out) must reach the minimum too, or filtering to Abandoned could single out the one person who gave up.
+        // collector, search, upkeep) select reach its minimum group size. Test and in-progress rows never count, so
+        // previews can't pad the group. A status filter can't open a smaller group either: the rows it selects (test
+        // rows left out) must reach the minimum too, or filtering to Abandoned could single out the one person who gave
+        // up. With no status filter, each status with fewer rows than the minimum is left out, for the same reason.
         var filtersStatus = Enum.TryParse<SurveyResponseStatus>(options.Status, out var shown);
+        var anonymous = SurveyAnonymity.IsAnonymous(survey);
 
-        if (SurveyAnonymity.IsAnonymous(survey)
+        if (anonymous
             && (SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options, SurveyResponseStatus.Completed))
                 || (filtersStatus && SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options, shown)))))
         {
             options.HiddenBelow = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
             items = [];
-            count = 0;
         }
         else
         {
+            if (anonymous && !filtersStatus)
+            {
+                var hidden = new List<string>();
+
+                foreach (var other in Enum.GetValues<SurveyResponseStatus>().Where(value => value != SurveyResponseStatus.Completed))
+                {
+                    var rows = await CountRealAsync(surveyId, versionNumber, options, other);
+
+                    if (rows > 0 && SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), rows))
+                    {
+                        hidden.Add(other.ToString());
+                    }
+                }
+
+                if (hidden.Count > 0)
+                {
+                    // Test rows are previews by staff, not people, so they stay.
+                    query = query.Where(index => index.Status.IsNotIn(hidden) || index.IsTest);
+                    options.HidesSmallStatusGroups = true;
+                }
+            }
+
+            count = await query.CountAsync();
             items = await query.OrderByDescending(index => index.StartedUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync();
         }
+
+        options.UpkeepStoppedCount = await CountUpkeepStoppedAsync(surveyId);
+        options.CanRetryUpkeep = options.UpkeepStoppedCount > 0 && await AuthorizeAsync(survey, SurveyOperation.DeleteResponses);
 
         options.StatusOptions =
         [
@@ -233,6 +265,7 @@ public sealed class SurveyResponsesController : Controller
         routeData.Values[nameof(options.Collector)] = options.Collector;
         routeData.Values[nameof(options.IncludeTest)] = options.IncludeTest;
         routeData.Values[nameof(options.Search)] = options.Search;
+        routeData.Values[nameof(options.UpkeepStopped)] = options.UpkeepStopped;
 
         options.List = new AdminListContext<SurveyResponse>
         {
@@ -317,6 +350,7 @@ public sealed class SurveyResponsesController : Controller
             options?.Collector,
             options?.IncludeTest,
             options?.Search,
+            options?.UpkeepStopped,
         });
 
     /// <summary>
@@ -442,6 +476,56 @@ public sealed class SurveyResponsesController : Controller
         await _notifier.SuccessAsync(H["The response was deleted."]);
 
         return RedirectToAction(nameof(Index), new { id = survey.ItemId });
+    }
+
+    /// <summary>
+    /// Has background upkeep try again the responses of a survey it stopped trying after too many failures in a row.
+    /// </summary>
+    /// <param name="id">The survey.</param>
+    /// <param name="responses">The response service, which clears the counts under each response's lock.</param>
+    /// <returns>A redirect to the list.</returns>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("surveys/{id}/responses/retry-upkeep", "SurveysResponsesRetryUpkeep")]
+    public async Task<IActionResult> RetryUpkeep(string id, [FromServices] SurveyResponseService responses)
+    {
+        var survey = await _surveyStore.FindByIdAsync(id);
+
+        if (survey is null)
+        {
+            return NotFound();
+        }
+
+        if (!await AuthorizeAsync(survey, SurveyOperation.DeleteResponses))
+        {
+            return Forbid();
+        }
+
+        var surveyId = survey.ItemId;
+        var stopped = await _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures, collection: SurveysConstants.ResponsesCollectionName)
+            .Take(SurveysConstants.PageSize)
+            .ListAsync(HttpContext.RequestAborted);
+        var cleared = 0;
+
+        foreach (var row in stopped)
+        {
+            var result = await responses.ClearUpkeepFailuresAsync(row.ItemId, HttpContext.RequestAborted);
+
+            // A response being changed right now is left for another try: after a refused save the session takes no more.
+            if (result.Error == SurveyErrorCode.Busy)
+            {
+                break;
+            }
+
+            if (result.Succeeded)
+            {
+                cleared++;
+            }
+        }
+
+        await _notifier.SuccessAsync(H["Background upkeep will try {0} responses again on its next run.", cleared]);
+
+        return RedirectToAction(nameof(Index), new { id });
     }
 
     /// <summary>
@@ -582,8 +666,17 @@ public sealed class SurveyResponsesController : Controller
             query = query.Where(index => index.Number.Contains(search));
         }
 
+        if (options.UpkeepStopped)
+        {
+            query = query.Where(index => index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures);
+        }
+
         return await query.CountAsync(HttpContext.RequestAborted);
     }
+
+    private Task<int> CountUpkeepStoppedAsync(string surveyId)
+        => _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures, collection: SurveysConstants.ResponsesCollectionName)
+            .CountAsync(HttpContext.RequestAborted);
 
     private async Task<bool> IsTooFewAsync(Survey survey)
     {

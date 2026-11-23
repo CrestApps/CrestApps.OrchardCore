@@ -19,7 +19,13 @@ Read each response, and the totals in the survey reports.
 
 ## Responses
 
-Select **Responses** in the survey's menu. Search by number and filter the list. Open a response to see its **Summary**, the **Answers** page by page, the **Score by category**, **Variables**, **Page visits** and **Score history**, in your time zone. On an anonymous survey the list stays empty until the responses you filtered reach the survey's minimum group size, a response opens only once the survey has that many completed responses, and times show the day only. **Void response** and **Delete response** need the Void and delete survey responses permission, or Void and delete responses of own surveys for your own surveys.
+Select **Responses** in the survey's menu. Search by number and filter the list. Open a response to see its **Summary**, the **Answers** page by page, the **Score by category**, **Variables**, **Page visits** and **Score history**, in your time zone. On an anonymous survey the list stays empty until the responses you filtered reach the survey's minimum group size, a status that fewer responses than that share is left out of the list (a lone abandoned response, for example), a response opens only once the survey has that many completed responses, and times show the day only. **Void response** and **Delete response** need the Void and delete survey responses permission, or Void and delete responses of own surveys for your own surveys.
+
+### Responses the hourly upkeep stopped trying
+
+Every hour the site abandons unfinished responses left idle too long, submits responses whose time ran out, and deletes or anonymizes old responses as the survey's retention says. If this fails on a response five runs in a row, the site stops trying it. A run that works clears the count.
+
+When that happens, a warning on the **Responses** list says how many responses it stopped trying, and those rows show **Upkeep stopped**. Select **Show them** to list only them (or pick **Upkeep stopped** in the filter). Once the cause is fixed, select **Try again**: the next hourly run tries those responses again. **Try again** needs the Void and delete survey responses permission, or Void and delete responses of own surveys for your own surveys.
 
 ## Reports
 

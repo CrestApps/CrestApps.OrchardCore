@@ -5,14 +5,16 @@ using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
-/// Sends the survey invitation reminders that are due, once an hour. One invitation list that fails (an anonymous
-/// survey whose secret can't be read on this server, for example) is logged and skipped, so the lists after it still
-/// get their reminders.
+/// Sends the survey invitation reminders that are due, once an hour. Each invitation list is handled in its own child
+/// shell scope, with a session of its own that commits on its own: a list that fails (an anonymous survey whose secret
+/// can't be read on this server, or a save that fails) is logged and skipped, and never takes the other lists' updates
+/// with it.
 /// </summary>
 [BackgroundTask(
     Title = "Survey invitation reminders",
@@ -26,10 +28,12 @@ public sealed class SurveyInvitationReminderBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
-        var invitations = serviceProvider.GetRequiredService<SurveyInvitationService>();
         var logger = serviceProvider.GetRequiredService<ILogger<SurveyInvitationReminderBackgroundTask>>();
         var collectorIds = await session.QueryIndex<SurveyCollectorIndex>(index => index.Kind == SurveyCollectorKinds.Invitation && index.Status == nameof(CollectorStatus.Open), collection: SurveysConstants.CollectionName)
             .ListAsync(cancellationToken);
+
+        // Ends this scope's read transaction before the lists' own scopes write.
+        await session.SaveChangesAsync(cancellationToken);
 
         foreach (var row in collectorIds)
         {
@@ -37,7 +41,11 @@ public sealed class SurveyInvitationReminderBackgroundTask : IBackgroundTask
 
             try
             {
-                await invitations.RemindAsync(row.ItemId, force: false, cancellationToken);
+                await ShellScope.UsingChildScopeAsync(async scope =>
+                {
+                    await scope.ServiceProvider.GetRequiredService<SurveyInvitationService>().RemindAsync(row.ItemId, force: false, cancellationToken);
+                    await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+                });
             }
             catch (SurveyAnonymitySecretUnreadableException exception)
             {

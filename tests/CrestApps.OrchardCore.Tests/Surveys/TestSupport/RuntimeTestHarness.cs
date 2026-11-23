@@ -20,6 +20,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Builders;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -39,11 +41,13 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
 {
     private readonly string _databasePath;
     private readonly ServiceProvider _provider;
+    private readonly ShellContext _shellContext;
 
-    private RuntimeTestHarness(string databasePath, ServiceProvider provider, RuntimeTestClock clock)
+    private RuntimeTestHarness(string databasePath, ServiceProvider provider, ShellContext shellContext, RuntimeTestClock clock)
     {
         _databasePath = databasePath;
         _provider = provider;
+        _shellContext = shellContext;
         Clock = clock;
     }
 
@@ -104,7 +108,11 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
         services.AddSingleton<IDistributedLock, KeyedDistributedLock>();
         services.AddSingleton<IClock>(clock);
         services.AddSingleton<ILocalClock>(new FixedOffsetLocalClock(() => clock.UtcNow, TimeSpan.Zero));
-        services.AddSingleton(new ShellSettings { Name = "Default" });
+        var shellSettings = new ShellSettings { Name = "Default" };
+        var shellHost = new Mock<IShellHost>();
+
+        services.AddSingleton(shellSettings);
+        services.AddSingleton(shellHost.Object);
 
         var site = new Mock<ISite>();
         var siteService = new Mock<ISiteService>();
@@ -125,7 +133,19 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
 
         configure?.Invoke(services);
 
-        return new RuntimeTestHarness(databasePath, services.BuildServiceProvider(), clock);
+        var provider = services.BuildServiceProvider();
+
+        // A shell over the test's services, whose host makes the child scopes ShellScope.UsingChildScopeAsync runs in.
+        var shellContext = new ShellContext
+        {
+            Settings = shellSettings,
+            ServiceProvider = provider,
+            IsActivated = true,
+        };
+
+        shellHost.Setup(host => host.GetScopeAsync(It.IsAny<ShellSettings>())).ReturnsAsync(() => new ShellScope(shellContext));
+
+        return new RuntimeTestHarness(databasePath, provider, shellContext, clock);
     }
 
     public async Task<T> RunAsync<T>(Func<IServiceProvider, Task<T>> work)
@@ -134,6 +154,23 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
         var result = await work(scope.ServiceProvider);
 
         await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Runs work in a shell scope, as a background task does, so it can run parts of itself in child scopes.
+    /// </summary>
+    public async Task<T> RunInShellAsync<T>(Func<IServiceProvider, Task<T>> work)
+    {
+        var result = default(T);
+
+        await new ShellScope(_shellContext).UsingAsync(async scope =>
+        {
+            result = await work(scope.ServiceProvider);
+
+            await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+        });
 
         return result;
     }

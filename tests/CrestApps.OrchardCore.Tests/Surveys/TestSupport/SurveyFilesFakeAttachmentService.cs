@@ -18,9 +18,19 @@ internal sealed class SurveyFilesFakeAttachmentService : IAttachmentService
 
     public Func<DateTime> Clock { get; set; } = () => DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets or sets whether uploads are refused, as a scanner or a type check would.
+    /// </summary>
+    public bool Refuse { get; set; }
+
     public Task<AttachmentResult> AddAsync(IReadOnlyList<AttachmentUpload> uploads, CancellationToken cancellationToken = default)
     {
         AddCalls++;
+
+        if (Refuse)
+        {
+            return Task.FromResult(new AttachmentResult { Errors = ["The file was refused."] });
+        }
 
         var added = uploads.Select(upload => new Attachment
         {
