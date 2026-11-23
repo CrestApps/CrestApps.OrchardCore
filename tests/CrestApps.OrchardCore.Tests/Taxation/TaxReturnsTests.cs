@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Core.Services;
@@ -383,6 +384,7 @@ public sealed class TaxReturnsTests
         public string Name
             => GenericTaxReturnForm.FormName;
 
+        [JsonIgnore]
         public LocalizationSource DisplayName
             => _generic.DisplayName;
 
@@ -399,6 +401,7 @@ public sealed class TaxReturnsTests
         public string Name
             => "US-MI-ANNUAL";
 
+        [JsonIgnore]
         public LocalizationSource DisplayName
             => LocalizationSource.Create<AnnualForm>("Annual return");
 

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
@@ -270,6 +271,7 @@ public sealed class GenericTaxReturnForm : ITaxReturnForm
         => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName
         => _displayName;
 
