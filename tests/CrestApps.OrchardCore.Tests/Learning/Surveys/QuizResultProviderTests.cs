@@ -73,6 +73,45 @@ public sealed class QuizResultProviderTests
         Assert.True(result.ResetScore);
     }
 
+    [Fact]
+    public void P4M2_AFailingBandWithNoPassMark_IsNotPassed_AndTheDecisionIsTheSurveys()
+    {
+        // Arrange
+        var definition = new SurveyDefinition
+        {
+            ScoreBands =
+            [
+                new ScoreBand { Id = "fail", MinPercent = 0, Passing = false },
+                new ScoreBand { Id = "pass", MinPercent = 70, Passing = true },
+            ],
+        };
+        definition.Scoring.Enabled = true;
+
+        // Act
+        var result = new QuizResultProvider().Build(Quiz(GradingMethod.Highest), new Enrollment { ItemId = "e1" }, definition, [Graded("r1", 50, 1)]);
+
+        // Assert
+        Assert.Equal(50, result.Score);
+        Assert.False(result.Passed);
+        Assert.True(result.PassDecided);
+    }
+
+    [Fact]
+    public void P4M2_NoPassMark_IsNoPassDecision_NotAPass()
+    {
+        // Arrange
+        var definition = new SurveyDefinition();
+        definition.Scoring.Enabled = true;
+
+        // Act
+        var result = new QuizResultProvider().Build(Quiz(GradingMethod.Highest), new Enrollment { ItemId = "e1" }, definition, [Graded("r1", 100, 1)]);
+
+        // Assert
+        Assert.Equal(100, result.Score);
+        Assert.Null(result.Passed);
+        Assert.True(result.PassDecided);
+    }
+
     private static ContentItem Quiz(GradingMethod method)
     {
         var item = new ContentItem { ContentItemId = "quiz1", ContentType = "QuizLesson" };

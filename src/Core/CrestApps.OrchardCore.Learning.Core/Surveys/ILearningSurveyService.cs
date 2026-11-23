@@ -47,6 +47,18 @@ public interface ILearningSurveyService
     Task<SurveyStartResult> StartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Tells whether the learner may start a new response to the survey of a course item now, and how many attempts are
+    /// left, with the access rules Surveys runs on a start (limits with their counting mode and accommodations
+    /// included) and the same request <see cref="StartAsync"/> makes. Nothing is started.
+    /// </summary>
+    /// <param name="user">The learner.</param>
+    /// <param name="item">The course item.</param>
+    /// <param name="surveyId">The survey of the item.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result.</returns>
+    Task<SurveyStartCheckResult> CheckStartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the responses given through an enrollment to a survey, newest first, test responses left out.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
@@ -61,6 +73,14 @@ public interface ILearningSurveyService
     /// <param name="survey">The survey.</param>
     /// <returns>The course item, or <see langword="null"/> when the survey is not owned by one.</returns>
     Task<ContentItem> FindOwnerItemAsync(Survey survey);
+
+    /// <summary>
+    /// Finds the latest version of the course item that owns a survey, published or not, while it is in a course. The
+    /// grading scope reads items the same way, so staff who may grade an unpublished quiz get every grading tool for it.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <returns>The course item, or <see langword="null"/> when the survey is not owned by an item in a course.</returns>
+    Task<ContentItem> FindLatestOwnerItemAsync(Survey survey);
 
     /// <summary>
     /// Gets whether a survey belongs to a course item, whatever the item's publish state: a draft, an unpublished item,

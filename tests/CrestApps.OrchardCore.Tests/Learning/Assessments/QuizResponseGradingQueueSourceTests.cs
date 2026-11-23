@@ -137,6 +137,80 @@ public sealed class QuizResponseGradingQueueSourceTests
         Assert.InRange(queries.Max(query => query.Skip + query.Take), 1, QuizResponseGradingQueueSource.MaxTake);
     }
 
+    [Fact]
+    public async Task P4M1_TheGradersOwnAttempt_IsNotListed()
+    {
+        // Arrange: a member of the course staff who also took the quiz.
+        await using var h = await CreateAsync();
+        var mine = await AddAsync(h, "mine", "survey1", "course1", LearningTestHarness.Now.AddMinutes(-10));
+        await AddAsync(h, "theirs", "survey1", "course1", LearningTestHarness.Now.AddMinutes(-5));
+        mine.UserId = "grader";
+
+        // Act
+        var page = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course1"], "grader", 1, 10, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(1, page.Count);
+        Assert.Equal("theirs", Assert.Single(page.Items).Id);
+    }
+
+    [Fact]
+    public async Task P2M3_AnAnonymousQuizSurvey_ListsNothing_WhileTheSmallGroupRuleCannotOpenIt()
+    {
+        // Arrange: quiz1's survey is anonymous; this site has no small-group rule to count it, so it never opens.
+        var surveyManager = new Mock<ISurveyManager>();
+        surveyManager
+            .Setup(manager => manager.ListByOwnersAsync(It.IsAny<IReadOnlyCollection<RecordRef>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<RecordRef> owners, CancellationToken _) => owners
+                .Where(owner => owner.Id == "quiz1")
+                .Select(owner => new Survey
+                {
+                    ItemId = "survey1",
+                    Kind = SurveyKinds.Quiz,
+                    Owner = owner,
+                    Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous },
+                })
+                .ToArray());
+        await using var h = await CreateAsync(surveyManager);
+        await AddAsync(h, "anonymous", "survey1", "course1", LearningTestHarness.Now.AddMinutes(-10));
+
+        // Act
+        var page = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course1"], 1, 10, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(0, page.Count);
+        Assert.Empty(page.Items);
+    }
+
+    [Fact]
+    public async Task P2M3_AnAnonymousAttemptOnTheEveryCourseList_NamesNobody_AndShowsNoResponseNumberOrTime()
+    {
+        // Arrange: the list of every course, where the survey of an attempt is looked up and is anonymous.
+        var surveyManager = SurveyManager();
+        surveyManager
+            .Setup(manager => manager.FindByIdAsync("survey1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Survey { ItemId = "survey1", Kind = SurveyKinds.Quiz, Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous } });
+        await using var h = await CreateAsync(surveyManager);
+        var response = await AddAsync(h, "01anonymousresponseid", "survey1", "course1", new DateTime(2026, 1, 10, 14, 37, 12, DateTimeKind.Utc));
+        response.Number = "R0000042";
+
+        // Act
+        var page = await h.RunAsync(services => Source(services).ListWaitingAsync(new GradingQueueQuery { CourseIds = null, Take = 10 }, TestContext.Current.CancellationToken));
+
+        // Assert
+        var item = Assert.Single(page.Items);
+
+        Assert.Null(item.UserId);
+        Assert.NotEqual("R0000042", item.Reference);
+        Assert.Equal("01anonymou", item.Reference);
+        // The start of the day in the site's time zone: a whole hour before the real time, less than a day before.
+        var submitted = new DateTime(2026, 1, 10, 14, 37, 12, DateTimeKind.Utc);
+
+        Assert.Equal(0, item.SubmittedUtc.Minute);
+        Assert.Equal(0, item.SubmittedUtc.Second);
+        Assert.InRange(submitted - item.SubmittedUtc, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
+    }
+
     private static QuizResponseGradingQueueSource Source(IServiceProvider services)
         => services.GetServices<IGradingQueueSource>().OfType<QuizResponseGradingQueueSource>().Single();
 

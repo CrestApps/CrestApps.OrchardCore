@@ -60,10 +60,11 @@
             "ManageMediaContent",
             "ManageQuestionBanks",
             "ViewQuestionBanks",
-            "ManageSurveys",
-            "ViewSurveyResponses",
-            "GradeSurveyResponses",
-            "ManageSurveyOverrides",
+            "ManageOwnSurveys",
+            "PublishOwnSurveys",
+            "ViewOwnSurveyResponses",
+            "GradeOwnSurveyResponses",
+            "ManageOwnSurveyOverrides",
             "GradeAssessments",
             "OverrideGrades",
             "ManageGradeScales"
@@ -95,7 +96,7 @@
             "ManageQuestionBanks",
             "ViewQuestionBanks",
             "ManageOwnSurveys",
-            "PublishSurveys",
+            "PublishOwnSurveys",
             "EditContent_QuizLesson",
             "PublishContent_QuizLesson"
           ]
@@ -143,7 +144,7 @@
             "ViewLearningReports",
             "AccessLearning",
             "OverrideGrades",
-            "ManageSurveyOverrides"
+            "ManageOwnSurveyOverrides"
           ]
         },
         {

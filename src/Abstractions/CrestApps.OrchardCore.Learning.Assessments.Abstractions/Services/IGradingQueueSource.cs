@@ -27,6 +27,12 @@ public sealed class GradingQueueQuery
     public IReadOnlyCollection<string> CourseIds { get; set; }
 
     /// <summary>
+    /// Gets or sets the user id of the grader the list is for, or <see langword="null"/>. Nobody grades their own work,
+    /// so a source leaves out the grader's own work.
+    /// </summary>
+    public string GraderUserId { get; set; }
+
+    /// <summary>
     /// Gets or sets the most items to return: the items before the page and the page itself.
     /// </summary>
     public int Take { get; set; }
@@ -64,7 +70,8 @@ public sealed class GradingQueueItem
     public string Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the learner.
+    /// Gets or sets the learner, or <see langword="null"/> when the work must not name them, such as a response to an
+    /// anonymous survey.
     /// </summary>
     public string UserId { get; set; }
 

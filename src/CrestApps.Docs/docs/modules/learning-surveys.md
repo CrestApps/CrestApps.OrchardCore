@@ -40,7 +40,8 @@ What the earlier `SurveyPart` held is now a setting of the survey. On a site fro
 The survey panel of the course player (`CourseSurveyPartLearnerDisplayDriver`) shows whether the learner answered, why they cannot answer when that is the case, and a button that posts to `learning/surveys/{itemId}/start`. `ILearningSurveyService.StartAsync` (`Learning.Core`) starts or continues the learner's response with their enrollment (or, for an anonymous survey, the course) as its context and `CourseId`, `EnrollmentId` and `CourseItemId` in its properties; the learner answers on the Surveys runner (`/s/r/{response id}`), and the ending page links back to the course.
 
 - `LearningEnrollmentAccessRule` lets a learner start only while they may open the item (enrolled, item released, access not ended).
-- `LearningSurveyResultObserver` records the item as **Submitted** through `ILearnerProgressService` once a response is completed (`CourseSurveyResultProvider`).
+- `LearningSurveyResultObserver` records the item as **Submitted** through `ILearnerProgressService` once a response is completed (`CourseSurveyResultProvider`). For an anonymous survey the result carries `CourseItemResult.AnonymousDayUtc`, the start of the day in the site's time zone: the item's completion (and a course completion it causes) is recorded at that time, and the learner's last access and last activity do not move, so the progress never gives the time that would link the learner to their anonymous response.
+- **Change your answers** shows when the version the learner answered allows changing a finished response, as reopening it does; never from the unpublished draft.
 - Removing an item removes its survey: deleted when it has no responses, closed and archived when it has.
 
 ## Totals

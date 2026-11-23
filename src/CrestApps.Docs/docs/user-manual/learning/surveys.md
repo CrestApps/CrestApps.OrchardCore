@@ -33,7 +33,7 @@ Create a **Choice** instead. Its survey starts as a poll with one question. To s
 
 The learner opens the survey in the course and selects **Answer the survey**. The questions open on the survey page; the learner answers and finishes, and the last page links back to the course. Afterwards the lesson shows the date they answered, and **Change your answers** when the survey lets them. When a learner cannot answer, the lesson says so.
 
-An anonymous survey tells learners that the course staff see their answers without their name.
+An anonymous survey tells learners that the course staff see their answers without their name. The learner's progress records that they answered it by the day only, not the time, so the time can't tie them to their answers.
 
 ## Read the totals
 

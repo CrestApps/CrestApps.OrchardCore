@@ -3,17 +3,22 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Drivers;
 
 /// <summary>
-/// Shows learners a quiz: their attempts with scores and reviews, and the button that starts or continues one.
+/// Shows learners a quiz: their attempts with scores and reviews, and the button that starts or continues one. What an
+/// attempt shows follows the quiz's review settings (<see cref="ISurveyReviewPolicy"/>), and whether a new attempt may
+/// start, with the attempts left, comes from the access rules Surveys runs on a start, so accommodations and the
+/// limit's counting mode apply here as they do there.
 /// </summary>
 internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<QuizPart>
 {
@@ -22,6 +27,8 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
     private readonly ISurveyVersionCache _versionCache;
     private readonly ICourseAccessService _courseAccess;
     private readonly ILearningSurveyService _learningSurveys;
+    private readonly ISurveyReviewPolicy _reviewPolicy;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QuizPartLearnerDisplayDriver"/> class.
@@ -31,18 +38,24 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
     /// <param name="versionCache">The survey version cache.</param>
     /// <param name="courseAccess">The course access service.</param>
     /// <param name="learningSurveys">The Learning survey service.</param>
+    /// <param name="reviewPolicy">The review policy.</param>
+    /// <param name="clock">The clock.</param>
     public QuizPartLearnerDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         ISurveyManager surveyManager,
         ISurveyVersionCache versionCache,
         ICourseAccessService courseAccess,
-        ILearningSurveyService learningSurveys)
+        ILearningSurveyService learningSurveys,
+        ISurveyReviewPolicy reviewPolicy,
+        IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
         _surveyManager = surveyManager;
         _versionCache = versionCache;
         _courseAccess = courseAccess;
         _learningSurveys = learningSurveys;
+        _reviewPolicy = reviewPolicy;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -72,8 +85,27 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
             model.Attempts = await _learningSurveys.ListEnrollmentResponsesAsync(model.Survey.ItemId, access.Enrollment.ItemId);
             model.Open = model.Attempts.FirstOrDefault(attempt => attempt.Status == SurveyResponseStatus.InProgress);
 
-            var counted = model.Attempts.Count(attempt => attempt.Status != SurveyResponseStatus.Voided);
+            // Each attempt shows what the review settings of the version it ran on allow now.
+            var versions = new Dictionary<string, SurveyVersion>(StringComparer.Ordinal);
+            var now = _clock.UtcNow;
 
-            model.AttemptsLeft = model.Survey.Access?.Limits?.Total is { } total ? Math.Max(total - counted, 0) : null;
+            foreach (var attempt in model.Attempts)
+            {
+                var versionId = attempt.SurveyVersionId ?? string.Empty;
+
+                if (!versions.TryGetValue(versionId, out var version))
+                {
+                    version = string.IsNullOrEmpty(attempt.SurveyVersionId) ? null : await _versionCache.GetAsync(attempt.SurveyVersionId);
+                    versions[versionId] = version;
+                }
+
+                model.Shows[attempt.ItemId] = _reviewPolicy.GetAllowed(model.Survey, version?.Definition, attempt, now);
+            }
+
+            // Whether a new attempt may start, and the attempts left, as the start itself decides them.
+            var check = await _learningSurveys.CheckStartAsync(user, part.ContentItem, model.Survey.ItemId);
+
+            model.CanStart = check.CanStart;
+            model.AttemptsLeft = check.AttemptsLeft;
         }).Location("Detail", "Content:5");
 }

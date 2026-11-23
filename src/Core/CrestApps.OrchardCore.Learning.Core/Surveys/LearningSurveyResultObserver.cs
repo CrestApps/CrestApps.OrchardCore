@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
@@ -7,12 +8,16 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 
 /// <summary>
 /// Records the result of a course item when a learner's response to its survey changes: completed, graded, rescored or
 /// voided. The provider of the item's kind builds the result (a course survey is submitted; a quiz combines attempts).
+/// The result of an anonymous survey is recorded by the day only (the start of the day in the site's time zone), so the
+/// learner's progress never gives the exact time that would link them to their anonymous response.
 /// </summary>
 public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
 {
@@ -22,6 +27,8 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
     private readonly ILearnerProgressService _progress;
     private readonly IEnumerable<ILearningSurveyItemResultProvider> _providers;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ISiteService _siteService;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -33,6 +40,8 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
     /// <param name="progress">The learner progress service.</param>
     /// <param name="providers">The result providers by course item kind.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public LearningSurveyResultObserver(
         ILearningSurveyService learningSurveys,
@@ -41,6 +50,8 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
         ILearnerProgressService progress,
         IEnumerable<ILearningSurveyItemResultProvider> providers,
         IHttpContextAccessor httpContextAccessor,
+        ISiteService siteService,
+        IClock clock,
         ILogger<LearningSurveyResultObserver> logger)
     {
         _learningSurveys = learningSurveys;
@@ -49,6 +60,8 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
         _progress = progress;
         _providers = providers;
         _httpContextAccessor = httpContextAccessor;
+        _siteService = siteService;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -123,12 +136,40 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
             return;
         }
 
+        // An anonymous survey's response keeps no enrollment; its completion reaches the progress by the day only.
+        if (context.Survey.Access?.Anonymity == AnonymityMode.Anonymous
+            || string.Equals(responseContext.Kind, LearningSurveyContexts.CourseKind, StringComparison.Ordinal))
+        {
+            result.AnonymousDayUtc = await StartOfTodayUtcAsync();
+        }
+
         var update = await _progress.RecordWithRetryAsync(enrollment, result);
 
         if (update?.RefusedReason is not null && _logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation("The result of item {ItemId} was not recorded on enrollment {EnrollmentId}: {Reason}.", item.ContentItemId, enrollment.ItemId, update.RefusedReason);
         }
+    }
+
+    private async Task<DateTime> StartOfTodayUtcAsync()
+    {
+        var site = await _siteService.GetSiteSettingsAsync();
+
+        return StartOfDayUtc(_clock.UtcNow, site?.TimeZoneId);
+    }
+
+    /// <summary>
+    /// Gets the start of the day a time falls on in a time zone, as UTC.
+    /// </summary>
+    /// <param name="utc">The time, in UTC.</param>
+    /// <param name="timeZoneId">The time zone id; UTC when empty or unknown.</param>
+    /// <returns>The start of the day, in UTC.</returns>
+    public static DateTime StartOfDayUtc(DateTime utc, string timeZoneId)
+    {
+        var zone = CalendarTime.GetZone(timeZoneId);
+        var day = NodaTime.Instant.FromDateTimeUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc)).InZone(zone).Date;
+
+        return zone.AtStartOfDay(day).ToDateTimeUtc();
     }
 
     private async Task<Enrollment> FindEnrollmentAsync(RecordRef responseContext, string courseId)

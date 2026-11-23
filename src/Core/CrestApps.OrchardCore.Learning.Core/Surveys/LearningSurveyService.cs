@@ -144,27 +144,56 @@ public sealed class LearningSurveyService : ILearningSurveyService
     /// <inheritdoc />
     public async Task<SurveyStartResult> StartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, CancellationToken cancellationToken = default)
     {
+        var (request, error) = await BuildStartRequestAsync(user, item, surveyId, returnUrl, cancellationToken);
+
+        if (request is null)
+        {
+            return new SurveyStartResult { Error = error };
+        }
+
+        return await _serviceProvider.GetRequiredService<ISurveyResponseService>().StartAsync(request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<SurveyStartCheckResult> CheckStartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, CancellationToken cancellationToken = default)
+    {
+        var (request, error) = await BuildStartRequestAsync(user, item, surveyId, null, cancellationToken);
+
+        if (request is null)
+        {
+            return new SurveyStartCheckResult { Error = error };
+        }
+
+        // The start the learner would make, checked by the rules that start runs: limits with their counting mode and
+        // accommodations included.
+        return await _serviceProvider.GetRequiredService<ISurveyStartCheck>().CheckAsync(request, cancellationToken);
+    }
+
+    // The start request of a learner's response, built once for starting and for checking a start, so the two never
+    // differ in the context, the identity or the survey they run on.
+    private async Task<(StartResponseRequest Request, SurveyErrorCode Error)> BuildStartRequestAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(item);
 
         var userId = LearningSurveyUsers.GetUserId(user);
 
         if (string.IsNullOrEmpty(userId))
         {
-            return new SurveyStartResult { Error = SurveyErrorCode.SignInRequired };
+            return (null, SurveyErrorCode.SignInRequired);
         }
 
         var survey = string.IsNullOrEmpty(surveyId) ? null : await _surveyManager.FindByIdAsync(surveyId, cancellationToken);
 
         if (survey is null || !LearningSurveyContexts.IsContentOwner(survey.Owner) || survey.Owner.Value.Id != item.ContentItemId)
         {
-            return new SurveyStartResult { Error = SurveyErrorCode.NotFound };
+            return (null, SurveyErrorCode.NotFound);
         }
 
         var access = await _courseAccess.GetItemAccessAsync(user, item);
 
         if (access.Reason != CourseItemAccessReason.Enrolled || access.Enrollment is null || !string.Equals(access.Enrollment.UserId, userId, StringComparison.Ordinal))
         {
-            return new SurveyStartResult { Error = SurveyErrorCode.NotInAudience };
+            return (null, SurveyErrorCode.NotInAudience);
         }
 
         var enrollment = access.Enrollment;
@@ -187,7 +216,7 @@ public sealed class LearningSurveyService : ILearningSurveyService
             properties[SurveyResponseProperties.ReturnText] = item.DisplayText;
         }
 
-        return await _serviceProvider.GetRequiredService<ISurveyResponseService>().StartAsync(new StartResponseRequest
+        return (new StartResponseRequest
         {
             SurveyId = survey.ItemId,
             Identity = new SurveyRespondentIdentity
@@ -197,7 +226,7 @@ public sealed class LearningSurveyService : ILearningSurveyService
             },
             Context = anonymous ? LearningSurveyContexts.Course(enrollment.CourseId) : LearningSurveyContexts.Enrollment(enrollment.ItemId),
             Properties = properties,
-        }, cancellationToken);
+        }, SurveyErrorCode.None);
     }
 
     /// <inheritdoc />
@@ -227,6 +256,19 @@ public sealed class LearningSurveyService : ILearningSurveyService
         }
 
         var item = await _contentManager.GetAsync(survey.Owner.Value.Id, VersionOptions.Published);
+
+        return item is not null && !string.IsNullOrEmpty(_courseStructure.GetCourseId(item)) ? item : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<ContentItem> FindLatestOwnerItemAsync(Survey survey)
+    {
+        if (!LearningSurveyContexts.IsContentOwner(survey?.Owner))
+        {
+            return null;
+        }
+
+        var item = await _contentManager.GetAsync(survey.Owner.Value.Id, VersionOptions.Latest);
 
         return item is not null && !string.IsNullOrEmpty(_courseStructure.GetCourseId(item)) ? item : null;
     }

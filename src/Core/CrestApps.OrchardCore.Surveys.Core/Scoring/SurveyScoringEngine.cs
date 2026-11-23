@@ -168,13 +168,7 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(response);
 
-        var settings = definition.Scoring ?? new SurveyScoringSettings();
-        var band = response.Percent is { } percent
-            ? (definition.ScoreBands ?? [])
-                .Where(candidate => candidate is not null && candidate.MinPercent <= percent)
-                .OrderByDescending(candidate => candidate.MinPercent)
-                .FirstOrDefault()
-            : null;
+        var band = SurveyPassRule.FindBand(definition, response.Percent);
 
         response.ScoreBandId = band?.Id;
 
@@ -185,7 +179,7 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
             return;
         }
 
-        response.Passed = band?.Passing ?? (settings.PassMarkPercent is { } mark ? response.Percent >= mark : null);
+        response.Passed = SurveyPassRule.Decide(definition, response.Percent);
     }
 
     /// <summary>

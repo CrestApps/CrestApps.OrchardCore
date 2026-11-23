@@ -43,7 +43,27 @@ public class QuizPanelViewModel
     public SurveyResponse Open { get; set; }
 
     /// <summary>
-    /// Gets or sets how many attempts are left, or <see langword="null"/> for no limit.
+    /// Gets or sets how many attempts are left, accommodations included and counted as the quiz's limit counts, or
+    /// <see langword="null"/> for no limit.
     /// </summary>
     public int? AttemptsLeft { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the learner may start a new attempt now, as decided by the access rules a start runs.
+    /// </summary>
+    public bool CanStart { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the quiz's review settings let the learner see of each attempt now, by response id. The score
+    /// and whether the attempt passed show only when it includes <see cref="ReviewShows.Score"/>.
+    /// </summary>
+    public IDictionary<string, ReviewShows> Shows { get; set; } = new Dictionary<string, ReviewShows>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets what the review settings let the learner see of an attempt now.
+    /// </summary>
+    /// <param name="attempt">The attempt.</param>
+    /// <returns>What shows; nothing when unknown.</returns>
+    public ReviewShows ShowsFor(SurveyResponse attempt)
+        => attempt?.ItemId is { } id && Shows.TryGetValue(id, out var shows) ? shows : ReviewShows.None;
 }

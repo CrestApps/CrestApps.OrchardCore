@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Learning.Credentials.Core.Rules;
 /// <summary>
 /// The quiz passed rule. Only an attempt the site scored counts (a completed response to the quiz's survey that passed),
 /// made in an enrollment that counts as evidence; a preview attempt is made in no enrollment and never counts. When the
-/// attempt is voided or its score changes so that it is no longer a pass, the credentials it awarded are revoked.
+/// attempt is voided or deleted, or its score changes so that it is no longer a pass, the credentials it awarded are revoked.
 /// </summary>
 public sealed class CredentialSurveyObserver : ISurveyResponseObserver
 {
@@ -54,6 +54,17 @@ public sealed class CredentialSurveyObserver : ISurveyResponseObserver
     /// <inheritdoc />
     public Task VoidedAsync(SurveyResponseEventContext context)
         => ChangedAsync(context);
+
+    /// <inheritdoc />
+    public Task DeletedAsync(SurveyResponseEventContext context)
+    {
+        var response = context?.Response;
+
+        // A deleted attempt is gone, so nothing may rest on it any longer: revoke as for a voided one.
+        return response is null || string.IsNullOrEmpty(response.ItemId)
+            ? Task.CompletedTask
+            : _revoker.RevokeAsync(CredentialsConstants.RuleKinds.QuizPassed, response.ItemId, context.ActorId, S["The quiz attempt that this credential rests on was deleted."]);
+    }
 
     private Task ChangedAsync(SurveyResponseEventContext context)
     {

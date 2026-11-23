@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
+using CrestApps.OrchardCore.Learning.Assessments.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Localization;
 
@@ -26,6 +28,8 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
         services.TryAddScoped<GradingQueue>();
         services.AddGradingQueueSource<QuizResponseGradingQueueSource>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILearningSurveyItemResultProvider, QuizResultProvider>());
+        services.AddSurveyAccessProvider<AssessmentsSurveyAccessProvider>();
+        services.AddResumableStep<LegacyQuizUpgradeStep>();
 
         services.AddCourseItemKind(AssessmentsConstants.QuizKind, kind =>
         {
@@ -37,6 +41,7 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
             kind.CompletionModes.Add(CrestApps.OrchardCore.Learning.Models.CompletionModes.Submitted);
             kind.CompletionModes.Add(CrestApps.OrchardCore.Learning.Models.CompletionModes.Graded);
             kind.ProducesGrade = true;
+            kind.DecidesPass = true;
             kind.Icon = "fa-solid fa-circle-question";
         });
 

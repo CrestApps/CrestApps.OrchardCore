@@ -64,7 +64,7 @@ The admin's course pickers (the prerequisites, the courses of a learning path se
 
 ### Course item part
 
-`CompletionMode` (`Viewed`, `MarkedDone`, `MinimumTime`, `Watched`, `Acknowledged`, and the modes other kinds add, such as `MinimumScore` for learning packages: the score reaches the pass mark whatever the package reports about passing), `MinimumMinutes`, `EstimatedMinutes`, `Gradable`, `Weight`, `GradeCategoryId` (the gradebook category of its course), `PassMark`, `FreePreview` (anyone may open it), `AllowSelfReported` and `ReleaseRules`.
+`CompletionMode` (`Viewed`, `MarkedDone`, `MinimumTime`, `Watched`, `Acknowledged`, and the modes other kinds add, such as `MinimumScore` for learning packages: the score reaches the pass mark whatever the package reports about passing), `MinimumMinutes`, `EstimatedMinutes`, `Gradable`, `Weight`, `GradeCategoryId` (the gradebook category of its course), `PassMark` (not used, and not offered by the editor, for a kind that decides its own pass, such as a quiz: `CourseItemKindDescriptor.DecidesPass`), `FreePreview` (anyone may open it), `AllowSelfReported` and `ReleaseRules`.
 
 ## Records
 
@@ -232,7 +232,7 @@ With **Learner Pages** on, `/learning/catalog` (route `LearningCatalog`, for peo
 | Export learner records | Yes | |
 | Access learning | Yes | Authenticated |
 
-The **Learning roles** recipe creates Learning Administrator, Course Author, Instructor, Grader, Training Manager and Learner roles.
+The **Learning roles** recipe creates Learning Administrator, Course Author, Instructor, Grader, Training Manager and Learner roles. They get no site-wide Surveys permission (which would reach every survey of the site): only the own-survey ones, and the Learning access providers give them the surveys course items own (see [Learning Assessments](./learning-assessments)).
 
 ## Workflows
 

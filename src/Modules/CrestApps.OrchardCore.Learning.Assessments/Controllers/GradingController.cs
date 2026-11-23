@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using CrestApps.OrchardCore.Users;
@@ -53,7 +54,8 @@ public sealed class GradingController : Controller
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var page = await queue.PageAsync(courses, pager.Page, pager.PageSize, HttpContext.RequestAborted);
+        // Nobody grades their own work: a member of the course staff who also takes the course never sees their own.
+        var page = await queue.PageAsync(courses, User.FindFirstValue(ClaimTypes.NameIdentifier), pager.Page, pager.PageSize, HttpContext.RequestAborted);
         var people = (await _userSearchService.GetAsync(page.Items.Select(item => item.UserId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal)))
             .ToDictionary(user => user.UserId, user => string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName, StringComparer.Ordinal);
 

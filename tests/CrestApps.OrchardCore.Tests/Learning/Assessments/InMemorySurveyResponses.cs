@@ -36,6 +36,8 @@ internal sealed class InMemorySurveyResponses : ISurveyResponseQueries
         var matches = _responses
             .Where(response => query.SurveyIds.Count == 0 || query.SurveyIds.Contains(response.SurveyId))
             .Where(response => query.UserId is null || response.UserId == query.UserId)
+            .Where(response => query.ExcludedUserId is null || response.UserId != query.ExcludedUserId)
+            .Where(response => query.ExcludedSurveyIds.Count == 0 || !query.ExcludedSurveyIds.Contains(response.SurveyId))
             .Where(response => query.ContextRef is null || response.Context?.ToString() == query.ContextRef)
             .Where(response => query.Statuses.Count == 0 || query.Statuses.Contains(response.Status))
             .Where(response => query.Grading is null || response.Grading == query.Grading)

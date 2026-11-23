@@ -85,13 +85,16 @@
                     })();
                 </script>
             }
-            <div class="ocat-wrapper" asp-validation-class-for="PassMark">
-                <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
-                <div class="ocat-end">
-                    <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
-                    <span asp-validation-for="PassMark"></span>
+            @if (!Model.DecidesPass)
+            {
+                <div class="ocat-wrapper" asp-validation-class-for="PassMark">
+                    <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
+                        <span asp-validation-for="PassMark"></span>
+                    </div>
                 </div>
-            </div>
+            }
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
                     <div class="form-check">

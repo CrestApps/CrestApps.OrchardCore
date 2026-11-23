@@ -19,6 +19,7 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ISurveyManager _surveyManager;
+    private readonly ISurveyVersionCache _versionCache;
     private readonly ICourseAccessService _courseAccess;
     private readonly ILearningSurveyService _learningSurveys;
 
@@ -27,16 +28,19 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="surveyManager">The survey manager.</param>
+    /// <param name="versionCache">The survey version cache.</param>
     /// <param name="courseAccess">The course access service.</param>
     /// <param name="learningSurveys">The Learning survey service.</param>
     public CourseSurveyPartLearnerDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         ISurveyManager surveyManager,
+        ISurveyVersionCache versionCache,
         ICourseAccessService courseAccess,
         ILearningSurveyService learningSurveys)
     {
         _httpContextAccessor = httpContextAccessor;
         _surveyManager = surveyManager;
+        _versionCache = versionCache;
         _courseAccess = courseAccess;
         _learningSurveys = learningSurveys;
     }
@@ -80,8 +84,19 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
                 model.Response = responses.Count > 0 ? responses[0] : null;
             }
 
+            // Changing a submitted response follows the version it was answered on, as reopening it does; never the
+            // unpublished draft.
+            var canChange = false;
+
+            if (model.Response is { Status: SurveyResponseStatus.Completed } completed && !string.IsNullOrEmpty(completed.SurveyVersionId))
+            {
+                var version = await _versionCache.GetAsync(completed.SurveyVersionId);
+
+                canChange = version?.Definition?.Navigation?.AllowEditAfterSubmit == true;
+            }
+
             model.CanAnswer = model.Response is null
                 || model.Response.Status == SurveyResponseStatus.InProgress
-                || (model.Response.Status == SurveyResponseStatus.Completed && model.Survey.Draft?.Navigation?.AllowEditAfterSubmit == true);
+                || canChange;
         }).Location("Detail", "Content:5");
 }

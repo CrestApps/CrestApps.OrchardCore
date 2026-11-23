@@ -28,12 +28,24 @@ public sealed class GradingQueue
     /// <param name="pageSize">The page size.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count of all waiting work and the page.</returns>
-    public async Task<GradingQueuePage> PageAsync(IReadOnlyCollection<string> courseIds, int page, int pageSize, CancellationToken cancellationToken = default)
+    public Task<GradingQueuePage> PageAsync(IReadOnlyCollection<string> courseIds, int page, int pageSize, CancellationToken cancellationToken = default)
+        => PageAsync(courseIds, null, page, pageSize, cancellationToken);
+
+    /// <summary>
+    /// Reads a page of the merged list for a grader: their own work is left out, since nobody grades their own work.
+    /// </summary>
+    /// <param name="courseIds">The courses the grader grades, or <see langword="null"/> for every course.</param>
+    /// <param name="graderUserId">The grader's user id, or <see langword="null"/>.</param>
+    /// <param name="page">The page, from one.</param>
+    /// <param name="pageSize">The page size.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The count of all waiting work and the page.</returns>
+    public async Task<GradingQueuePage> PageAsync(IReadOnlyCollection<string> courseIds, string graderUserId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         pageSize = Math.Max(pageSize, 1);
 
         var skip = (Math.Max(page, 1) - 1) * pageSize;
-        var query = new GradingQueueQuery { CourseIds = courseIds, Take = skip + pageSize };
+        var query = new GradingQueueQuery { CourseIds = courseIds, GraderUserId = graderUserId, Take = skip + pageSize };
         var count = 0;
         var items = new List<GradingQueueItem>();
 
