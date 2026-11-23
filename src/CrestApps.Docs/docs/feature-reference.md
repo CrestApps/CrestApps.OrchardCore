@@ -366,6 +366,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Taxation` | Sales Tax | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Taxation.Tables` | Tax Tables | [Taxation](./modules/taxation#features) |
 | `CrestApps.OrchardCore.Taxation.TaxJar` | TaxJar | [Taxation](./modules/taxation#taxjar) |
+| `CrestApps.OrchardCore.Taxation.Returns` | Tax Returns | [Taxation](./modules/taxation#tax-returns) |
+| `CrestApps.OrchardCore.Taxation.EFiling` | Tax E-Filing | [Taxation](./modules/taxation#e-filing) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |

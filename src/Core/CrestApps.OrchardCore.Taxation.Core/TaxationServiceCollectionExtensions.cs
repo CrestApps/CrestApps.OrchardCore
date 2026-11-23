@@ -1,11 +1,14 @@
 using CrestApps.Core;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Taxation.Core.Services;
+using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Taxation.Core;
 
@@ -26,6 +29,12 @@ public static class TaxationServiceCollectionExtensions
 
         services.TryAddScoped<IExemptionCertificateStore, ExemptionCertificateStore>();
         services.TryAddScoped<IMerchantTaxRegistrationStore, MerchantTaxRegistrationStore>();
+
+        // The admin page and Tax Returns manage registrations through the catalog manager, so their handlers run.
+        services.TryAddScoped<ICatalogManager<MerchantTaxRegistration>>(serviceProvider => new CatalogManager<MerchantTaxRegistration>(
+            serviceProvider.GetRequiredService<IMerchantTaxRegistrationStore>(),
+            serviceProvider.GetServices<ICatalogEntryHandler<MerchantTaxRegistration>>(),
+            serviceProvider.GetRequiredService<ILogger<CatalogManager<MerchantTaxRegistration>>>()));
 
         services.TryAddScoped<ITaxService, TaxService>();
         services.TryAddScoped<ITaxableBaseCalculator, DefaultTaxableBaseCalculator>();

@@ -32,4 +32,20 @@ public static class TaxationPermissions
         "VerifyIncomeTaxRules",
         LocalizationSource.Create("Verify income tax rules", typeof(TaxationPermissions)),
         isSecurityCritical: true);
+
+    /// <summary>
+    /// Grants marking tax returns as filed, amending them, recording their payments and filing them electronically. It
+    /// grants <see cref="ManageTaxReturns"/> too.
+    /// </summary>
+    public static readonly Permission FileTaxReturns = new(
+        "FileTaxReturns",
+        LocalizationSource.Create("File tax returns", typeof(TaxationPermissions)));
+
+    /// <summary>
+    /// Grants preparing tax returns from the books, marking them ready, and seeing them.
+    /// </summary>
+    public static readonly Permission ManageTaxReturns = new(
+        "ManageTaxReturns",
+        LocalizationSource.Create("Manage tax returns", typeof(TaxationPermissions)),
+        [FileTaxReturns]);
 }

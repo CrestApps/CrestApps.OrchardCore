@@ -1,0 +1,55 @@
+@model TaxReturnDetailViewModel
+@using System.Globalization
+
+@{
+    var taxReturn = Model.Return;
+    var status = taxReturn.Status switch
+    {
+        TaxReturnStatus.Ready => T["Ready to file"],
+        TaxReturnStatus.Filed => T["Filed"],
+        TaxReturnStatus.Amended => T["Amended"],
+        _ => T["Draft"],
+    };
+}
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between">
+        <span>@Model.RegistrationName · @Model.FormName · @taxReturn.PeriodStart.ToString("d", CultureInfo.CurrentCulture) – @taxReturn.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)</span>
+        <span class="badge ta-badge fw-normal">@status</span>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Due date"]</dt>
+            <dd class="col-sm-9">@taxReturn.DueDate.ToString("d", CultureInfo.CurrentCulture)</dd>
+            @if (!string.IsNullOrEmpty(taxReturn.RegistrationNumber))
+            {
+                <dt class="col-sm-3">@T["Registration number"]</dt>
+                <dd class="col-sm-9">@taxReturn.RegistrationNumber</dd>
+            }
+            <dt class="col-sm-3">@T["Amount due"]</dt>
+            <dd class="col-sm-9">@taxReturn.AmountDue.ToString("N2", CultureInfo.CurrentCulture) @taxReturn.Currency</dd>
+            <dt class="col-sm-3">@T["Paid"]</dt>
+            <dd class="col-sm-9">@taxReturn.AmountPaid.ToString("N2", CultureInfo.CurrentCulture)</dd>
+            <dt class="col-sm-3">@T["Left to pay"]</dt>
+            <dd class="col-sm-9">@taxReturn.Balance.ToString("N2", CultureInfo.CurrentCulture)</dd>
+            @if (taxReturn.PreparedUtc is { } prepared)
+            {
+                <dt class="col-sm-3">@T["Prepared"]</dt>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(prepared, DateTimeKind.Utc), Format: "g")) @(string.IsNullOrEmpty(taxReturn.PreparedBy) ? string.Empty : "· " + taxReturn.PreparedBy)</dd>
+            }
+            @if (taxReturn.FiledOn is { } filedOn)
+            {
+                <dt class="col-sm-3">@T["Filed on"]</dt>
+                <dd class="col-sm-9">@filedOn.ToString("d", CultureInfo.CurrentCulture) @(string.IsNullOrEmpty(taxReturn.ConfirmationNumber) ? string.Empty : "· " + taxReturn.ConfirmationNumber)</dd>
+            }
+        </dl>
+        @if (Model.Amends is { } amends)
+        {
+            <p class="mt-2 mb-0">@T["Corrects the return filed on {0}.", amends.FiledOn?.ToString("d", CultureInfo.CurrentCulture) ?? string.Empty] <a asp-action="Details" asp-controller="TaxReturns" asp-route-id="@amends.ItemId">@T["Open it"]</a></p>
+        }
+        @foreach (var note in taxReturn.Notes)
+        {
+            <div class="alert alert-warning py-1 my-1">@note</div>
+        }
+    </div>
+</div>

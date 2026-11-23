@@ -1,0 +1,15 @@
+@model TaxReturnPeriodRowViewModel
+
+@{
+    var summary = Model.Summary;
+}
+
+@if (summary.Return is { } taxReturn)
+{
+    <a asp-action="Details" asp-controller="TaxReturns" asp-route-id="@taxReturn.ItemId">@summary.Registration.Name · @summary.Period.Key</a>
+}
+else
+{
+    <span>@summary.Registration.Name · @summary.Period.Key</span>
+}
+<span class="text-muted small ms-1">@Model.FormName</span>

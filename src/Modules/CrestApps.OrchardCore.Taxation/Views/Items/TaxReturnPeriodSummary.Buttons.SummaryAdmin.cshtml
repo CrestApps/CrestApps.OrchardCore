@@ -1,0 +1,15 @@
+@model TaxReturnPeriodRowViewModel
+
+@{
+    var summary = Model.Summary;
+}
+
+@if (summary.Return is { } taxReturn)
+{
+    <a asp-action="Details" asp-controller="TaxReturns" asp-route-id="@taxReturn.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>
+}
+else if (Model.CanPrepare)
+{
+    @* Posted with the list's form, which has the antiforgery token. *@
+    <button type="submit" class="btn btn-primary btn-sm" formaction="@Url.Action("Prepare", "TaxReturns", new { registrationId = summary.Registration.ItemId, periodKey = summary.Period.Key, annual = summary.IsAnnualReconciliation })">@T["Prepare"]</button>
+}
