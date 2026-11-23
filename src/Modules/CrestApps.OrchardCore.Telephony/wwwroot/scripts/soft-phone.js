@@ -1203,6 +1203,26 @@
 		{
 			value: "south-asia",
 			label: "South Asia"
+		},
+		{
+			value: "asia",
+			label: "Asia"
+		},
+		{
+			value: "in",
+			label: "India"
+		},
+		{
+			value: "au",
+			label: "Australia"
+		},
+		{
+			value: "sy",
+			label: "Sydney"
+		},
+		{
+			value: "me",
+			label: "Middle East"
 		}
 	];
 	function clampSignalingRegion(value) {
