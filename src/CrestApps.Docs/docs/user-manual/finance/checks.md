@@ -52,7 +52,19 @@ Print a check on plain paper and hold it against the stock. If everything is too
    - **Already written by hand**: for a check you wrote from a checkbook. Enter the **Number written on the check**. The check is recorded as printed and is never printed here. A number another check of the account has is refused.
 4. Enter who it is paid to, the amount, the date and a memo, and choose **Issue**.
 
+Other features can add their own fields to this page, such as the expense accounts a check is posted to, and can refuse a check, such as one dated in a closed accounting period: the page then says why and nothing is written.
+
 Checks that other features write, such as paychecks, appear in the same register.
+
+## Edit a check before it prints
+
+A check that is **Waiting to print** or **Issued** can still be corrected, such as a wrong amount or a misspelled name.
+
+1. In **Banking > Checks**, choose **Edit** in the check's menu.
+2. Change who it is paid to, the address, the amount, the date or the memo. The bank account and the number can't change.
+3. Optionally enter a **Reason**, and choose **Save**.
+
+The feature the check pays can refuse a change, such as a bill payment of more than the bill: the page then says why and nothing changes. Once a check is printed it can't be edited: void it and write a new one instead. When your administrator has turned on the Audit Trail, each edit is recorded with what changed and who changed it.
 
 ## Print checks
 

@@ -35,7 +35,7 @@ internal sealed class ChecksTestContext
         LocalClock = new FixedOffsetLocalClock(() => Banking.Now, TimeSpan.Zero);
         Manager = new CheckManager(Store, [new CheckRecordHandler(clock.Object)], NullLogger<CatalogManager<CheckRecord>>.Instance);
         Observers = [Observer];
-        Service = new CheckService(Manager, Banking.Manager, Numbers, Observers, Handlers, Locks, Committer, new HttpContextAccessor(), clock.Object, LocalClock, RecipeRoundTrip.Localizer<CheckService>());
+        Service = new CheckService(Manager, Banking.Manager, Numbers, Observers, Handlers, WriteHandlers, Locks, Committer, new HttpContextAccessor(), clock.Object, LocalClock, RecipeRoundTrip.Localizer<CheckService>());
         Banking.Usages.Add(new CheckBankAccountUsage(Store, RecipeRoundTrip.Localizer<CheckBankAccountUsage>()));
     }
 
@@ -63,6 +63,11 @@ internal sealed class ChecksTestContext
     /// Gets the handlers the check service asks before a change; tests add to it.
     /// </summary>
     public List<ICheckChangeHandler> Handlers { get; } = [];
+
+    /// <summary>
+    /// Gets the handlers that take part in writing a check; tests add to it.
+    /// </summary>
+    public List<ICheckWriteHandler> WriteHandlers { get; } = [];
 
     /// <summary>
     /// Gets the locks the check service takes; a test may hold one.

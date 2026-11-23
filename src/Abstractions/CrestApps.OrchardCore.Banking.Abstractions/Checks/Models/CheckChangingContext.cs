@@ -30,7 +30,8 @@ public sealed class CheckChangingContext
 
     /// <summary>
     /// Gets the change: <see cref="CheckChangeKind.Voided"/>, <see cref="CheckChangeKind.Reissued"/>,
-    /// <see cref="CheckChangeKind.Cleared"/> or <see cref="CheckChangeKind.Uncleared"/>.
+    /// <see cref="CheckChangeKind.Cleared"/>, <see cref="CheckChangeKind.Uncleared"/> or
+    /// <see cref="CheckChangeKind.Updated"/>.
     /// </summary>
     public CheckChangeKind Kind { get; }
 
@@ -54,6 +55,12 @@ public sealed class CheckChangingContext
     /// Gets why the change is made.
     /// </summary>
     public string Reason { get; init; }
+
+    /// <summary>
+    /// Gets what the check becomes, for <see cref="CheckChangeKind.Updated"/>: the new payee, address, amount, date,
+    /// memo and properties, already checked by Banking. <see cref="Check"/> still holds what it was. Don't change it here.
+    /// </summary>
+    public CheckDetails Details { get; init; }
 
     /// <summary>
     /// Gets why the change was refused; empty while no handler refused it.
