@@ -34,4 +34,9 @@ public class SurveyTranslationEntryViewModel
     /// Gets or sets whether the text is HTML.
     /// </summary>
     public bool IsHtml { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the original text changed after the translation was made.
+    /// </summary>
+    public bool Outdated { get; set; }
 }

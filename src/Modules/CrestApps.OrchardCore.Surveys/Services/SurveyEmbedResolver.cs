@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.Surveys.Services;
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
-/// Finds what an embedded survey links to: its survey, the published version and an open collector.
+/// Finds what an embedded survey links to: its survey, the published version and an open collector. Invitation and
+/// kiosk collectors are never embedded: an invitation link is personal, and a kiosk link takes unlimited guest answers,
+/// which on a public page would bypass the survey's per-person limits.
 /// </summary>
 public sealed class SurveyEmbedResolver
 {
@@ -59,11 +61,19 @@ public sealed class SurveyEmbedResolver
 
         collector ??= await _collectorStore.FindDefaultAsync(survey.ItemId);
 
-        if (collector is null || collector.SurveyId != survey.ItemId || collector.Status != CollectorStatus.Open || collector.Kind == SurveyCollectorKinds.Invitation)
+        if (collector is null || collector.SurveyId != survey.ItemId || collector.Status != CollectorStatus.Open || !CanEmbed(collector))
         {
             collector = null;
         }
 
         return (survey, version, collector);
     }
+
+    /// <summary>
+    /// Gets whether a collector's link may be embedded in a page: not an invitation or kiosk collector.
+    /// </summary>
+    /// <param name="collector">The collector.</param>
+    /// <returns><see langword="true"/> when it may.</returns>
+    public static bool CanEmbed(SurveyCollector collector)
+        => collector is not null && collector.Kind is not SurveyCollectorKinds.Invitation and not SurveyCollectorKinds.Kiosk;
 }

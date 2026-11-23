@@ -85,7 +85,7 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
 
                 continue;
             }
-            string[] handled = ["Versions", "Collectors", nameof(Survey.AnonymitySecret), nameof(Survey.PublishedVersionId)];
+            string[] handled = ["Versions", "Collectors", nameof(Survey.AnonymitySecret), nameof(Survey.PublishedVersionId), SurveysRecipeJson.OwnerUserName];
             var now = _clock.UtcNow;
             var isNew = survey is null;
 
@@ -102,6 +102,16 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
             }
 
             survey.Name = name;
+
+            // The owner comes by user name; a survey that has an owner on this site keeps it.
+            if (string.IsNullOrEmpty(survey.OwnerId)
+                && SurveysRecipeJson.String(token, SurveysRecipeJson.OwnerUserName) is { Length: > 0 } ownerName
+                && await _userLookup.FindUserIdAsync(ownerName) is { Length: > 0 } ownerId)
+            {
+                survey.OwnerId = ownerId;
+                survey.Author = ownerName;
+            }
+
             _secrets.EnsureProtected(survey);
             survey.Draft ??= new SurveyDefinition();
             survey.ModifiedUtc = now;

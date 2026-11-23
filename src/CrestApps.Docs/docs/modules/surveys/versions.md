@@ -20,7 +20,7 @@ A response keeps the version it started on, through every page, resume and reope
 4. **Create** version N+1, clear the "unpublished changes" flag, open the survey on its first publish and create its default web link.
 5. Raise `ISurveyObserver.PublishedAsync` (workflow event, audit trail, webhook).
 
-**Restore** copies an old version's definition into the draft. **Compare** shows the changes between two versions or the draft.
+**Restore** copies an old version's definition into the draft. It needs Manage as well as Publish on the survey, and like **Discard draft** it refuses a draft another author changed after the page was shown. **Compare** shows the changes between two versions or the draft.
 
 ## Bank questions
 

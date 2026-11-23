@@ -30,7 +30,9 @@ public interface ISurveyPublisher
     /// </summary>
     /// <param name="surveyId">The survey.</param>
     /// <param name="versionId">The version.</param>
+    /// <param name="expectedDraftModifiedUtc">When set, the draft must still be the one changed at this time; otherwise
+    /// another author changed it since, and <see cref="SurveyErrorCode.Busy"/> is returned without replacing it.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The error, or <see cref="SurveyErrorCode.None"/>.</returns>
-    Task<SurveyErrorCode> RestoreAsync(string surveyId, string versionId, CancellationToken cancellationToken = default);
+    Task<SurveyErrorCode> RestoreAsync(string surveyId, string versionId, DateTime? expectedDraftModifiedUtc = null, CancellationToken cancellationToken = default);
 }

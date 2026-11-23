@@ -5,7 +5,8 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Surveys.Core.Translations;
 
 /// <summary>
-/// Warns before publishing about translations of items that no longer exist, so authors can tidy them.
+/// Warns before publishing about translations of items that no longer exist, so authors can tidy them, and about
+/// translations made from an original text that has changed since.
 /// </summary>
 public sealed class SurveyTranslationValidationContributor : ISurveyDefinitionValidationContributor
 {
@@ -41,6 +42,13 @@ public sealed class SurveyTranslationValidationContributor : ISurveyDefinitionVa
             if (stale > 0)
             {
                 context.AddWarning("stale-translation", S["The {0} translation has {1} texts of items that no longer exist. They are ignored.", culture, stale]);
+            }
+
+            var outdated = SurveyTranslations.OutdatedKeys(context.Definition, culture).Count;
+
+            if (outdated > 0)
+            {
+                context.AddWarning("outdated-translation", S["The {0} translation has {1} texts whose original text changed after they were translated. Respondents still see the old translation.", culture, outdated]);
             }
         }
 

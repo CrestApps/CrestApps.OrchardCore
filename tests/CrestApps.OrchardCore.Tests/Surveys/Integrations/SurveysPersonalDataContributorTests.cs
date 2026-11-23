@@ -267,4 +267,48 @@ public sealed class SurveysPersonalDataContributorTests
         Assert.Equal(SurveyResponseStatus.Completed, completed.Status);
         Assert.Empty(participation);
     }
+
+    [Fact]
+    public async Task ExportAndErasure_CoverThePersonsAccommodationsWithTheirReason()
+    {
+        // Arrange
+        var mine = IdGenerator.GenerateId();
+        var theirs = IdGenerator.GenerateId();
+        await using var harness = await IntegrationsTestHarness.CreateAsync(services => services.AddScoped<SurveysPersonalDataContributor>());
+        await harness.RunAsync(async services =>
+        {
+            var overrides = services.GetRequiredService<SurveyOverrideStore>();
+
+            await overrides.CreateAsync(new SurveyOverride { ItemId = mine, SurveyId = "s1", UserId = "user-learner1", ExtraMinutes = 30, Reason = "Reading accommodation", Actor = "user-staff" });
+            await overrides.CreateAsync(new SurveyOverride { ItemId = theirs, SurveyId = "s1", UserId = "user-other", ExtraMinutes = 15, Reason = "Other", Actor = "user-learner1" });
+        });
+
+        // Act
+        var export = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataExport();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().ExportAsync(new PersonalDataExportContext(new PersonalDataSubject("user-learner1"), result));
+
+            return result;
+        });
+
+        var erased = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataAnonymizeResult();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject("user-learner1"), "[removed]", result));
+
+            return result;
+        });
+
+        // Assert
+        var record = Assert.Single(export.Records, item => item.Kind == "SurveyAccommodation");
+        Assert.Equal(mine, record.Id);
+        Assert.Equal("Reading accommodation", record.Fields["Reason"]);
+        Assert.Equal("30", record.Fields["ExtraMinutes"]);
+        Assert.Equal(1, erased.Records["SurveyAccommodation"]);
+
+        // An accommodation the person granted as staff is staff work and stays.
+        var left = await harness.RunAsync(async services => await services.GetRequiredService<SurveyOverrideStore>().GetAllAsync());
+        Assert.Equal([theirs], left.Select(entry => entry.ItemId));
+    }
 }

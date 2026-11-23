@@ -257,13 +257,23 @@ public sealed partial class QuestionBankManager : IQuestionBankManager
 
             var target = existing ?? await NewQuestionAsync(bankId, imported.Question.ControlType, cancellationToken);
 
-            // The bank question keeps its id; the question inside takes it, so versions that drew it keep matching.
+            // The bank question keeps its id; the question inside takes it, so versions that drew it keep matching. A file
+            // read again gives every choice and row a new id, so an update keeps the ids of the matching choices and rows
+            // (and remaps the scoring keys to them): results across versions then count one choice once, and a regrade
+            // with a later version's key still scores the earlier answers.
+            if (existing?.Question is not null)
+            {
+                SurveyDefinitionCloner.KeepIds(imported.Question, existing.Question);
+            }
+
             target.Question = imported.Question;
             target.Question.Id = target.ItemId;
             target.Tags = imported.Tags ?? [];
             target.Difficulty = imported.Difficulty;
             target.SourceIdentifier = imported.SourceIdentifier;
-            target.Retired = false;
+
+            // A question the author retired stays retired when the file is imported again.
+            target.Retired = existing?.Retired ?? false;
 
             var result = await SaveQuestionAsync(target, existing is null, cancellationToken);
 

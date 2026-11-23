@@ -125,6 +125,117 @@ public static class SurveyDefinitionCloner
         return map;
     }
 
+    /// <summary>
+    /// Gives the choices and rows of a question the ids of the matching choices and rows of an earlier copy of it, and
+    /// rewrites the references inside the question (scoring keys, choice rules) to them. A choice matches by value, then
+    /// by text, then by position; a row by name, then by text, then by position. Choices and rows of the earlier copy that
+    /// match nothing are kept, retired, so answers given to them still read.
+    /// </summary>
+    /// <param name="question">The new copy of the question, changed in place.</param>
+    /// <param name="previous">The earlier copy.</param>
+    /// <returns>The map from the new copy's ids to the kept ids.</returns>
+    public static IReadOnlyDictionary<string, string> KeepIds(SurveyQuestion question, SurveyQuestion previous)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (previous is null)
+        {
+            return map;
+        }
+
+        var keptChoices = Match(question.Choices, previous.Choices, choice => choice.Id, (choice, id) => choice.Id = id, choice => choice.Value, choice => choice.Text, map);
+
+        foreach (var choice in keptChoices)
+        {
+            choice.Retired = true;
+            question.Choices.Add(choice);
+        }
+
+        var keptRows = Match(question.Rows, previous.Rows, row => row.Id, (row, id) => row.Id = id, row => row.Name, row => row.Text, map);
+
+        foreach (var row in keptRows)
+        {
+            row.Retired = true;
+            question.Rows.Add(row);
+        }
+
+        RemapQuestion(question, map);
+
+        return map;
+    }
+
+    // Matches incoming items to earlier ones (by key, then by text, then by position), gives each matched item the
+    // earlier id, and returns the earlier items nothing matched.
+    private static List<T> Match<T>(List<T> incoming, List<T> earlier, Func<T, string> id, Action<T, string> setId, Func<T, string> key, Func<T, string> text, Dictionary<string, string> map)
+        where T : class
+    {
+        incoming ??= [];
+        var left = (earlier ?? []).Where(item => item is not null && !string.IsNullOrEmpty(id(item))).ToList();
+        var matched = new T[incoming.Count];
+
+        void Pass(Func<T, string> by)
+        {
+            for (var i = 0; i < incoming.Count; i++)
+            {
+                if (matched[i] is not null || incoming[i] is null || string.IsNullOrWhiteSpace(by(incoming[i])))
+                {
+                    continue;
+                }
+
+                var found = left.FirstOrDefault(item => string.Equals(by(item)?.Trim(), by(incoming[i]).Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (found is not null)
+                {
+                    matched[i] = found;
+                    left.Remove(found);
+                }
+            }
+        }
+
+        Pass(key);
+        Pass(text);
+
+        // By position, only for items without a key on either side: the item at the same place, when it was not taken
+        // by another. An item with a key that matched nothing is new, and the earlier one it replaces stays, retired.
+        var earlierList = earlier ?? [];
+
+        for (var i = 0; i < incoming.Count && i < earlierList.Count; i++)
+        {
+            if (matched[i] is null
+                && incoming[i] is not null
+                && earlierList[i] is not null
+                && string.IsNullOrWhiteSpace(key(incoming[i]))
+                && string.IsNullOrWhiteSpace(key(earlierList[i]))
+                && left.Contains(earlierList[i]))
+            {
+                matched[i] = earlierList[i];
+                left.Remove(earlierList[i]);
+            }
+        }
+
+        for (var i = 0; i < incoming.Count; i++)
+        {
+            if (matched[i] is null)
+            {
+                continue;
+            }
+
+            var oldId = id(incoming[i]);
+            var keptId = id(matched[i]);
+
+            if (!string.IsNullOrEmpty(oldId))
+            {
+                map[oldId] = keptId;
+            }
+
+            setId(incoming[i], keptId);
+        }
+
+        return left;
+    }
+
     private static void AssignNewIds(SurveyQuestion question, Func<string, string> next)
     {
         question.Id = next(question.Id);
@@ -169,6 +280,60 @@ public static class SurveyDefinitionCloner
             RemapRule(quota.Rule, map);
             quota.EndingId = Map(quota.EndingId, map);
         }
+
+        RemapTranslations(definition, map);
+    }
+
+    // Translation keys name items by id (title:{question}, choice:{question}:{choice}...; see SurveyTextKeys), so every
+    // id segment after the kind follows its item.
+    private static void RemapTranslations(SurveyDefinition definition, Dictionary<string, string> map)
+    {
+        if (definition.Translations is not { Count: > 0 })
+        {
+            return;
+        }
+
+        foreach (var culture in definition.Translations.Keys.ToList())
+        {
+            if (definition.Translations[culture] is not { } texts)
+            {
+                continue;
+            }
+
+            definition.Translations[culture] = texts.ToDictionary(pair => RemapKey(pair.Key, map), pair => pair.Value, StringComparer.Ordinal);
+        }
+
+        if (definition.TranslationSources is not { Count: > 0 })
+        {
+            return;
+        }
+
+        foreach (var culture in definition.TranslationSources.Keys.ToList())
+        {
+            if (definition.TranslationSources[culture] is not { } sources)
+            {
+                continue;
+            }
+
+            definition.TranslationSources[culture] = sources.ToDictionary(pair => RemapKey(pair.Key, map), pair => pair.Value, StringComparer.Ordinal);
+        }
+    }
+
+    private static string RemapKey(string key, IReadOnlyDictionary<string, string> map)
+    {
+        if (string.IsNullOrEmpty(key) || !key.Contains(':'))
+        {
+            return key;
+        }
+
+        var parts = key.Split(':');
+
+        for (var i = 1; i < parts.Length; i++)
+        {
+            parts[i] = Map(parts[i], map);
+        }
+
+        return string.Join(':', parts);
     }
 
     private static void RemapQuestion(SurveyQuestion question, IReadOnlyDictionary<string, string> map)
@@ -231,7 +396,18 @@ public static class SurveyDefinitionCloner
 
     private static string MapSource(string source, IReadOnlyDictionary<string, string> map)
     {
-        if (string.IsNullOrEmpty(source) || source.Contains(':'))
+        if (string.IsNullOrEmpty(source))
+        {
+            return source;
+        }
+
+        // A category score source names the category by id (or by name, which stays).
+        if (source.StartsWith("score:", StringComparison.Ordinal))
+        {
+            return "score:" + Map(source.Substring(6), map);
+        }
+
+        if (source.Contains(':'))
         {
             return source;
         }

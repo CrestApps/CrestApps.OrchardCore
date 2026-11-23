@@ -3,7 +3,9 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -22,6 +24,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     private readonly IEnumerable<ISurveyObserver> _observers;
     private readonly ISiteService _siteService;
     private readonly SurveyAnonymitySecrets _secrets;
+    private readonly SurveyDataPurger _purger;
     private readonly IClock _clock;
 
     /// <summary>
@@ -35,6 +38,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     /// <param name="observers">The survey observers.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="secrets">The anonymity secrets.</param>
+    /// <param name="purger">The purger of the records a deleted survey leaves behind.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="handlers">The catalog entry handlers.</param>
     /// <param name="logger">The logger.</param>
@@ -47,6 +51,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         IEnumerable<ISurveyObserver> observers,
         ISiteService siteService,
         SurveyAnonymitySecrets secrets,
+        SurveyDataPurger purger,
         IClock clock,
         IEnumerable<ICatalogEntryHandler<Survey>> handlers,
         ILogger<NamedCatalogManager<Survey>> logger)
@@ -60,6 +65,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         _observers = observers;
         _siteService = siteService;
         _secrets = secrets;
+        _purger = purger;
         _clock = clock;
     }
 
@@ -141,13 +147,9 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
             return null;
         }
 
+        // The copy keeps the question codes: they only need to be unique inside one survey, and piping, formulas and
+        // exports name them. CreateSurveyAsync gives every item a new id and carries the translations over to them.
         var definition = SurveyDefinitionCloner.Clone(source.Draft) ?? new SurveyDefinition();
-        SurveyDefinitionCloner.RegenerateIds(definition);
-
-        foreach (var (_, _, question) in SurveyDefinitions.Questions(definition))
-        {
-            question.Name = string.IsNullOrEmpty(question.Name) ? question.Name : question.Name + "_copy";
-        }
 
         var copy = await CreateSurveyAsync(new SurveyCreateRequest
         {
@@ -220,6 +222,20 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
             return SurveyErrorCode.HasResponses;
         }
 
+        // The records that hang off the survey go first, a batch at a time, each committed on its own: invitations (with
+        // e-mail addresses and names), accommodations, participation, counters, and test responses with their files.
+        // Nothing revisits them once the survey is gone, and a delete that stops half way leaves the survey in place, so
+        // deleting it again finishes the job.
+        await PurgeAsync(survey.ItemId, cancellationToken);
+
+        // A batch that ran on this scope's session committed it, which detaches what it had loaded: read the survey again.
+        survey = await FindByIdAsync(surveyId, cancellationToken);
+
+        if (survey is null)
+        {
+            return SurveyErrorCode.NotFound;
+        }
+
         foreach (var collector in await _collectorStore.ListBySurveyAsync(survey.ItemId, cancellationToken))
         {
             await _collectorStore.DeleteAsync(collector, cancellationToken);
@@ -247,6 +263,30 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     /// <inheritdoc />
     public Task<IReadOnlyList<Survey>> ListByOwnersAsync(IReadOnlyCollection<RecordRef> owners, CancellationToken cancellationToken = default)
         => _store.ListByOwnersAsync((owners ?? []).Where(owner => !owner.IsEmpty).Select(owner => owner.ToString()).ToArray(), cancellationToken);
+
+    private async Task PurgeAsync(string surveyId, CancellationToken cancellationToken)
+    {
+        int removed;
+
+        do
+        {
+            removed = 0;
+
+            if (ShellScope.Current is null)
+            {
+                // Outside a shell (tools and tests) the batches run on this scope's session.
+                removed = await _purger.DeleteBatchAsync(surveyId, SurveyDataPurger.BatchSize, cancellationToken);
+            }
+            else
+            {
+                await ShellScope.UsingChildScopeAsync(async scope =>
+                {
+                    removed = await scope.ServiceProvider.GetRequiredService<SurveyDataPurger>().DeleteBatchAsync(surveyId, SurveyDataPurger.BatchSize, cancellationToken);
+                });
+            }
+        }
+        while (removed >= SurveyDataPurger.BatchSize);
+    }
 
     private async Task<SurveyDefinition> BuildFromTemplateAsync(string template, CancellationToken cancellationToken)
     {

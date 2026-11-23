@@ -262,6 +262,70 @@ public sealed class QuestionBankManagerTests : IAsyncLifetime
         Assert.Equal([removed.ItemId], after.RemovedQuestionIds);
     }
 
+    [Fact]
+    public async Task ImportAsync_AgainKeepsTheChoiceIdsRemapsTheKeyAndKeepsARetiredQuestionRetired()
+    {
+        // Arrange: a quiz question imported once, then retired by the author.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _store.Store.CreateSession();
+        var manager = BanksTestStore.Manager(session);
+        var bank = await CreateBankAsync(manager, "quiz");
+
+        await manager.ImportAsync(bank.ItemId, [ImportedChoice("src-q", ("a", "Paris"), ("b", "Lyon"), ("c", "Nice"), correct: "b")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var first = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        var firstIds = first.Question.Choices.ToDictionary(choice => choice.Value, choice => choice.Id);
+        await manager.RetireQuestionsAsync([first.ItemId], retired: true, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Act: the file is fixed (the key is now "a", "c" is dropped, "d" is new) and imported again. Every choice of the
+        // file read again has a new id, as the QTI and spreadsheet readers give.
+        var summary = await manager.ImportAsync(bank.ItemId, [ImportedChoice("src-q", ("a", "Paris"), ("b", "Lyon"), ("d", "Lille"), correct: "a")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Assert
+        Assert.Equal(1, summary.Updated);
+
+        var updated = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        var choices = updated.Question.Choices.ToDictionary(choice => choice.Value);
+        Assert.Equal(firstIds["a"], choices["a"].Id);
+        Assert.Equal(firstIds["b"], choices["b"].Id);
+        Assert.DoesNotContain(choices["d"].Id, firstIds.Values);
+
+        // The key follows the kept ids, so a regrade of earlier answers with this key still matches them.
+        Assert.Equal([firstIds["a"]], updated.Question.Scoring.CorrectChoiceIds);
+        Assert.Equal(firstIds["a"], updated.Question.Scoring.ChoicePoints.Single(pair => pair.Value == 1).Key);
+
+        // The dropped choice stays, retired, so answers given to it still read; the retired question stays retired.
+        Assert.Equal(firstIds["c"], choices["c"].Id);
+        Assert.True(choices["c"].Retired);
+        Assert.True(updated.Retired);
+    }
+
+    private static BankQuestion ImportedChoice(string source, (string Value, string Text) first, (string Value, string Text) second, (string Value, string Text) third, string correct)
+    {
+        var choices = new[] { first, second, third }
+            .Select(item => new SurveyChoice { Id = global::OrchardCore.IdGenerator.GenerateId(), Value = item.Value, Text = item.Text })
+            .ToList();
+        var key = choices.Single(choice => choice.Value == correct).Id;
+
+        return new BankQuestion
+        {
+            SourceIdentifier = source,
+            Question = new SurveyQuestion
+            {
+                ControlType = SurveyControlNames.SingleChoice,
+                Title = "Capital of France?",
+                Choices = choices,
+                Scoring = new SurveyQuestionScoring
+                {
+                    CorrectChoiceIds = [key],
+                    ChoicePoints = choices.ToDictionary(choice => choice.Id, choice => choice.Id == key ? 1m : 0m),
+                },
+            },
+        };
+    }
+
     private static SurveyQuestion Copy(BankQuestion question)
     {
         var copy = new SurveyQuestion { Id = question.ItemId, PoolId = "pool1" };

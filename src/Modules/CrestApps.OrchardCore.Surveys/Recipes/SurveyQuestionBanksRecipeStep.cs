@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
@@ -16,6 +17,7 @@ internal sealed class SurveyQuestionBanksRecipeStep : NamedRecipeStepHandler
 {
     private readonly QuestionBankStore _bankStore;
     private readonly BankQuestionStore _questionStore;
+    private readonly ISurveyUserLookup _userLookup;
     private readonly IClock _clock;
 
     /// <summary>
@@ -23,15 +25,18 @@ internal sealed class SurveyQuestionBanksRecipeStep : NamedRecipeStepHandler
     /// </summary>
     /// <param name="bankStore">The bank store.</param>
     /// <param name="questionStore">The bank question store.</param>
+    /// <param name="userLookup">The user lookup, to find the owner by user name.</param>
     /// <param name="clock">The clock.</param>
     public SurveyQuestionBanksRecipeStep(
         QuestionBankStore bankStore,
         BankQuestionStore questionStore,
+        ISurveyUserLookup userLookup,
         IClock clock)
         : base(SurveysRecipeSteps.QuestionBanks)
     {
         _bankStore = bankStore;
         _questionStore = questionStore;
+        _userLookup = userLookup;
         _clock = clock;
     }
 
@@ -55,20 +60,23 @@ internal sealed class SurveyQuestionBanksRecipeStep : NamedRecipeStepHandler
 
             if (bank is null)
             {
-                var imported = SurveysRecipeJson.Read<QuestionBank>(token, "Questions");
+                var imported = SurveysRecipeJson.Read<QuestionBank>(token, "Questions", SurveysRecipeJson.OwnerUserName);
 
                 imported.ItemId = !string.IsNullOrEmpty(id) && UniqueId.IsValid(id) ? id : IdGenerator.GenerateId();
                 imported.Name = name;
                 imported.CreatedUtc = now;
                 imported.ModifiedUtc = now;
+
+                await AssignOwnerAsync(imported, token);
                 await _bankStore.CreateAsync(imported);
                 bank = imported;
             }
             else
             {
-                SurveysRecipeJson.Populate(bank, token, "Questions");
+                SurveysRecipeJson.Populate(bank, token, "Questions", SurveysRecipeJson.OwnerUserName);
                 bank.Name = name;
                 bank.ModifiedUtc = now;
+                await AssignOwnerAsync(bank, token);
                 await _bankStore.UpdateAsync(bank);
             }
 
@@ -106,6 +114,18 @@ internal sealed class SurveyQuestionBanksRecipeStep : NamedRecipeStepHandler
                 existing.Revision = Math.Max(SurveysRecipeJson.Int(node, nameof(BankQuestion.Revision)) ?? 0, previousRevision + 1);
                 await _questionStore.UpdateAsync(existing);
             }
+        }
+    }
+
+    // The owner comes by user name, as user ids differ between sites; a bank that has an owner on this site keeps it.
+    private async Task AssignOwnerAsync(QuestionBank bank, System.Text.Json.Nodes.JsonObject token)
+    {
+        if (string.IsNullOrEmpty(bank.OwnerId)
+            && SurveysRecipeJson.String(token, SurveysRecipeJson.OwnerUserName) is { Length: > 0 } ownerName
+            && await _userLookup.FindUserIdAsync(ownerName) is { Length: > 0 } ownerId)
+        {
+            bank.OwnerId = ownerId;
+            bank.Author = ownerName;
         }
     }
 }

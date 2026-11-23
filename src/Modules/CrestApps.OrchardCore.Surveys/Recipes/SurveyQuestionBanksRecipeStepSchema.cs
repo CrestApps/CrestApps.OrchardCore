@@ -35,6 +35,7 @@ internal sealed class SurveyQuestionBanksRecipeStepSchema : IRecipeStep
         var bank = SurveyModelSchemaBuilder.Build(typeof(QuestionBank), [], nameof(QuestionBank.CreatedUtc), nameof(QuestionBank.ModifiedUtc), nameof(QuestionBank.OwnerId), nameof(QuestionBank.Author))
             .Properties(
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("The unique technical name.")),
+                ("OwnerUserName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The user name of the owner; set when the record is created, or on one that has no owner yet.")),
                 ("Questions", RecipeStepSchemaBuilders.Array(question).Description("The questions.")))
             .Required("Name");
 

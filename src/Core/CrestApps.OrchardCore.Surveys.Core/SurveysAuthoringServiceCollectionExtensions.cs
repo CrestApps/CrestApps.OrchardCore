@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -27,6 +28,9 @@ public static class SurveysAuthoringServiceCollectionExtensions
         services.TryAddScoped<INamedCatalogManager<Survey>>(provider => provider.GetRequiredService<SurveyManager>());
         services.TryAddScoped<ICatalogManager<Survey>>(provider => provider.GetRequiredService<SurveyManager>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Survey>, SurveyCatalogHandler>());
+        services.TryAddScoped<SurveyResponseFiles>();
+        services.TryAddScoped<SurveyDataPurger>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISurveyGradingScope, OwnSurveysGradingScope>());
 
         services.TryAddScoped<ISurveyResponseQueries, SurveyResponseQueries>();
         services.TryAddScoped<ISurveyFormulaValidator, NullSurveyFormulaValidator>();

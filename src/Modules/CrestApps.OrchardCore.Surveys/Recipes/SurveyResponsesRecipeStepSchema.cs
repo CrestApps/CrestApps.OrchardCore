@@ -21,7 +21,8 @@ internal sealed class SurveyResponsesRecipeStepSchema : RecipeStepSchemaBase
                 ("SurveyName", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("The technical name of the survey.")),
                 ("VersionNumber", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Description("The version the response is on; the site must have it.")),
                 ("UserName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The user name of an identified respondent; the user must be on the site. Left out for anonymous responses.")),
-                ("GradedByUserName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The user name of the grader.")))
+                ("GradedByUserName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The user name of the grader.")),
+                ("CollectorName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The name of the collector the response came through; matched by name, then by CollectorId, then the survey's default collector.")))
             .Required("SurveyName", "VersionNumber");
 
         return RecipeStepSchemaBuilders.BuildNamedStep(

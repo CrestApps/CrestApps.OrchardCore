@@ -58,18 +58,35 @@ if (designer) {
         initRuleBuilders(root, context);
     };
 
+    const versionInput = /** @type {HTMLInputElement | null} */ (settingsForm?.querySelector('[data-survey-draft-version]') ?? null);
+
+    // The version of the draft this page last saw. Every save sends it and the server refuses one made over another
+    // author's change (409), so a save here never moves the page past a change it didn't see.
+    let knownVersion = versionInput?.value ?? '';
+
     /**
-     * Keeps the draft version the settings form posts in step with saves made here.
+     * Adopts the draft version a save returned. The server accepted the save only because the page knew the draft it
+     * replaced, so the settings form may post over the new version too.
      * @param {Response} response The response of a save.
      */
     const trackVersion = response => {
         const version = response.headers.get('X-Survey-Draft-Version');
-        const input = /** @type {HTMLInputElement | null} */ (settingsForm?.querySelector('[data-survey-draft-version]') ?? null);
 
-        if (version && input) {
-            input.value = version;
+        if (version) {
+            knownVersion = version;
+
+            if (versionInput) {
+                versionInput.value = version;
+            }
         }
     };
+
+    /**
+     * Gets the headers every save sends.
+     * @param {Record<string, string>} headers Other headers.
+     * @returns {Record<string, string>} The headers.
+     */
+    const saveHeaders = headers => (knownVersion ? { ...headers, 'X-Survey-Draft-Version': knownVersion } : headers);
 
     /**
      * Shows a short error in the panel.
@@ -131,9 +148,16 @@ if (designer) {
         const response = await fetch(form.action, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            headers: saveHeaders({ 'X-Requested-With': 'XMLHttpRequest' }),
             body: new FormData(form),
         });
+
+        if (response.status === 409) {
+            // Another author changed the draft: the edits stay in the panel, unsaved, and the message says to reload.
+            showError(await response.text());
+
+            return false;
+        }
 
         if (!response.ok && response.status !== 422) {
             showError(context.texts.failed);
@@ -218,7 +242,7 @@ if (designer) {
         const response = await fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token(), 'X-Requested-With': 'XMLHttpRequest' },
+            headers: saveHeaders({ 'Content-Type': 'application/json', 'RequestVerificationToken': token(), 'X-Requested-With': 'XMLHttpRequest' }),
             body: JSON.stringify(command),
         });
 

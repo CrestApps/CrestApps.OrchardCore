@@ -355,6 +355,15 @@ public sealed class SurveysController : Controller
             return Forbid();
         }
 
+        // A survey another feature owns (a course quiz, say) goes with its owner; deleting it here would leave the owner
+        // pointing at a survey that no longer exists.
+        if (survey.Owner is not null)
+        {
+            await _notifier.WarningAsync(H["This survey belongs to another item and is deleted with it. Delete or change that item instead."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var result = await _manager.DeleteSurveyAsync(id, HttpContext.RequestAborted);
 
         if (result == SurveyErrorCode.HasResponses)

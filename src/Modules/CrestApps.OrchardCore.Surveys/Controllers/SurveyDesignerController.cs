@@ -182,7 +182,10 @@ public sealed class SurveyDesignerController : Controller
             return BadRequest(result.Error);
         }
 
-        await _manager.SaveDraftAsync(survey, draft, cancellationToken: HttpContext.RequestAborted);
+        if (await _manager.SaveDraftAsync(survey, draft, ExpectedDraftVersion(), HttpContext.RequestAborted) == SurveyErrorCode.Busy)
+        {
+            return DraftConflict();
+        }
 
         Response.Headers["X-Survey-Item"] = result.ItemId ?? string.Empty;
         Response.Headers["X-Survey-Draft-Version"] = DraftVersion(survey).ToString(CultureInfo.InvariantCulture);
@@ -282,7 +285,10 @@ public sealed class SurveyDesignerController : Controller
             return PartialView("_SurveyQuestionEditor", model);
         }
 
-        await _manager.SaveDraftAsync(survey, draft, cancellationToken: HttpContext.RequestAborted);
+        if (await _manager.SaveDraftAsync(survey, draft, ExpectedDraftVersion(), HttpContext.RequestAborted) == SurveyErrorCode.Busy)
+        {
+            return DraftConflict();
+        }
 
         model.Saved = true;
         Response.Headers["X-Survey-Draft-Version"] = DraftVersion(survey).ToString(CultureInfo.InvariantCulture);
@@ -443,7 +449,11 @@ public sealed class SurveyDesignerController : Controller
 
             page.Pools = pools;
 
-            await _manager.SaveDraftAsync(survey, draft, cancellationToken: HttpContext.RequestAborted);
+            if (await _manager.SaveDraftAsync(survey, draft, ExpectedDraftVersion(), HttpContext.RequestAborted) == SurveyErrorCode.Busy)
+            {
+                return DraftConflict();
+            }
+
             Response.Headers["X-Survey-Draft-Version"] = DraftVersion(survey).ToString(CultureInfo.InvariantCulture);
 
             var saved = await BuildPageEditorAsync(survey, draft, page);
@@ -465,10 +475,11 @@ public sealed class SurveyDesignerController : Controller
     /// Replaces the draft with the published version.
     /// </summary>
     /// <param name="id">The survey.</param>
+    /// <param name="draft">The stamp (ticks) of the draft the designer was opened with; a draft changed since is kept.</param>
     /// <returns>A redirect to the designer.</returns>
     [HttpPost]
     [Admin("surveys/{id}/draft/discard", "SurveysDraftDiscard")]
-    public async Task<IActionResult> Discard(string id)
+    public async Task<IActionResult> Discard(string id, long? draft)
     {
         var survey = await AuthorizeAsync(id, SurveyOperation.Manage);
 
@@ -481,9 +492,12 @@ public sealed class SurveyDesignerController : Controller
         {
             await _notifier.WarningAsync(H["The survey has never been published, so there is no version to go back to."]);
         }
+        else if (await _publisher.RestoreAsync(id, survey.PublishedVersionId, SurveyDraftStamp.ToUtc(draft), HttpContext.RequestAborted) == SurveyErrorCode.Busy)
+        {
+            await _notifier.ErrorAsync(H["Someone else changed this survey. Reload the page and try again."]);
+        }
         else
         {
-            await _publisher.RestoreAsync(id, survey.PublishedVersionId, HttpContext.RequestAborted);
 
             var restored = await _manager.FindByIdAsync(id);
 
@@ -694,6 +708,22 @@ public sealed class SurveyDesignerController : Controller
             Banks = banks.OrderBy(bank => bank.Title).Select(bank => new SelectListItem(bank.Title ?? bank.Name, bank.ItemId)).ToList(),
         };
     }
+
+    // The draft version the designer page last saw, sent with every panel save and outline command. The page and question
+    // forms post their whole state (choices, branches, pools), so a save over a draft another author changed since would
+    // overwrite that change.
+    private DateTime? ExpectedDraftVersion()
+        => long.TryParse(Request.Headers["X-Survey-Draft-Version"].ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var ticks)
+            ? SurveyDraftStamp.ToUtc(ticks)
+            : null;
+
+    private ContentResult DraftConflict()
+        => new()
+        {
+            StatusCode = StatusCodes.Status409Conflict,
+            ContentType = "text/plain; charset=utf-8",
+            Content = S["Someone else changed the draft since you opened the designer. Reload the page and make your change again."],
+        };
 
     private static long DraftVersion(Survey survey)
         => survey.DraftModifiedUtc is { } modified ? new DateTime(modified.Ticks - (modified.Ticks % TimeSpan.TicksPerSecond), DateTimeKind.Utc).Ticks : 0;

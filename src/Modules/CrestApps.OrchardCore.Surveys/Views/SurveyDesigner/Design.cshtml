@@ -154,7 +154,7 @@
         @if (!string.IsNullOrEmpty(survey.PublishedVersionId) && survey.HasUnpublishedChanges)
         {
             @* A link, not a formaction button: the admin theme's confirm posts the link's own URL, while a confirmed button would post the form to Save draft. *@
-            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysDraftDiscard", new { id = survey.ItemId })" data-survey-discard data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Discard draft"]" data-message="@T["Replace the draft with the published version? Your unpublished changes are lost."]">@T["Discard draft"]</a>
+            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysDraftDiscard", new { id = survey.ItemId, draft = CrestApps.OrchardCore.Surveys.Services.SurveyDraftStamp.From(survey.DraftModifiedUtc) })" data-survey-discard data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Discard draft"]" data-message="@T["Replace the draft with the published version? Your unpublished changes are lost."]">@T["Discard draft"]</a>
         }
         <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-controller="Surveys">@T["Back"]</a>
     </div>

@@ -42,6 +42,7 @@ internal sealed class SurveysRecipeStepSchema : IRecipeStep
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A 26-character unique id; omit it to make one. Never a readable name.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("The unique technical name: lowercase letters, digits and dashes. A survey on the site with the same name is updated.")),
                 ("Draft", _definitions.BuildDefinition()),
+                ("OwnerUserName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The user name of the owner; set when the record is created, or on one that has no owner yet.")),
                 ("PublishedVersionNumber", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(0).Description("The number of the published version, set once every version exists; 0 before the first publish.")),
                 ("Versions", RecipeStepSchemaBuilders.Array(new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)

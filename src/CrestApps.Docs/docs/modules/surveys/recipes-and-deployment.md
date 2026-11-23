@@ -13,9 +13,11 @@ Every Surveys record has a recipe step and a deployment step with schemas (when 
 | `Surveys` | Surveys with their draft, access, retention, `Versions` and `Collectors` | Id, then `Name`; versions by survey and number |
 | `SurveyTemplates` | Survey templates (`Templates`) with their `Definition` | Id, then `Name` |
 | `SurveyQuestionBanks` | Question banks (`QuestionBanks`) with their `Questions` | Bank id, then `Name`; questions by id, then `SourceIdentifier` |
-| `SurveyResponses` | Responses (opt-in) | Id |
+| `SurveyResponses` | Responses (opt-in); collector by `CollectorName` | Id |
 | `SurveyOverrides` | Accommodations, people by user name | Id |
 | `SurveyInvitations` | Invitations, token hashes only; the invitation list travels by name (`CollectorName`) and is matched by name on import, then by id among the survey's invitation lists, then the survey's first invitation list, else a new personal links list | Id |
+
+Surveys and question banks carry their owner as `OwnerUserName`, set on the target when the record is created or has no owner yet. A response names its collector by `CollectorName` (matched by name, then by `CollectorId`, then the survey's default collector) and keeps its `InvitationId` only when an invitation of the same survey with that id is on the site, so import the `SurveyInvitations` step before `SurveyResponses`. Responses of anonymous surveys are exported without their `Number` (one sequence numbers every response of the site, so it could name the respondent next to identified responses), and the import gives them, and any response without a number, a new one from the target's sequence. The `SurveyResponses`, `SurveyInvitations` and `SurveyOverrides` deployment steps hold personal data (answers, e-mail addresses, names, reasons for accommodations): they write records only for a signed-in user with Export survey responses, and an empty list otherwise, a scheduled or remote export included.
 
 Survey site settings travel in Orchard Core's `Settings` step as `SurveySettings`.
 

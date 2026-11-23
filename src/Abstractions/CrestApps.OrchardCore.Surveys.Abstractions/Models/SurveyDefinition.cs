@@ -83,6 +83,12 @@ public sealed class SurveyDefinition
     public Dictionary<string, Dictionary<string, string>> Translations { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets a fingerprint of the original text each translation was made from: culture, then text key, then
+    /// fingerprint. A translation whose original text has changed since is out of date.
+    /// </summary>
+    public Dictionary<string, Dictionary<string, string>> TranslationSources { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets settings of consumers that must be versioned with the definition.
     /// </summary>
     public JsonObject Properties { get; set; } = [];

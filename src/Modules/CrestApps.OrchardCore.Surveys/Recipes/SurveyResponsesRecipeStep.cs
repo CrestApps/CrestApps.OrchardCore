@@ -1,5 +1,8 @@
+using System.Globalization;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -11,13 +14,19 @@ namespace CrestApps.OrchardCore.Surveys.Recipes;
 
 /// <summary>
 /// Imports responses. A response names its survey by name and its version by number; an identified respondent by user
-/// name, which must exist on the site. A response already on the site, by id, is replaced.
+/// name, which must exist on the site. A response already on the site, by id, is replaced. Its collector is matched by
+/// name, then by id, then falls back to the survey's default collector, since collector ids differ between sites; its
+/// invitation is kept only when an invitation of the same survey with that id is on the site (an imported invitation
+/// keeps its id), and cleared otherwise.
 /// </summary>
 internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
 {
     private readonly SurveyResponseStore _responseStore;
     private readonly SurveyStore _surveyStore;
     private readonly SurveyVersionStore _versionStore;
+    private readonly SurveyCollectorStore _collectorStore;
+    private readonly SurveyInvitationStore _invitationStore;
+    private readonly INumberSequence _numberSequence;
     private readonly ISurveyUserLookup _userLookup;
 
     /// <summary>
@@ -26,17 +35,26 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
     /// <param name="responseStore">The response store.</param>
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="versionStore">The version store.</param>
+    /// <param name="collectorStore">The collector store.</param>
+    /// <param name="invitationStore">The invitation store.</param>
+    /// <param name="numberSequences">The number sequence, to number a response the file gives no number (an anonymous one).</param>
     /// <param name="userLookup">The user lookup, which turns user ids into user names and back.</param>
     public SurveyResponsesRecipeStep(
         SurveyResponseStore responseStore,
         SurveyStore surveyStore,
         SurveyVersionStore versionStore,
+        SurveyCollectorStore collectorStore,
+        SurveyInvitationStore invitationStore,
+        IEnumerable<INumberSequence> numberSequences,
         ISurveyUserLookup userLookup)
         : base(SurveysRecipeSteps.Responses)
     {
         _responseStore = responseStore;
         _surveyStore = surveyStore;
         _versionStore = versionStore;
+        _collectorStore = collectorStore;
+        _invitationStore = invitationStore;
+        _numberSequence = numberSequences.FirstOrDefault();
         _userLookup = userLookup;
     }
 
@@ -71,11 +89,11 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
             }
 
             var existing = string.IsNullOrEmpty(id) ? null : await _responseStore.FindByIdAsync(id);
-            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
+            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName", SurveysRecipeJson.CollectorName, nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
 
             if (existing is not null)
             {
-                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.ResumeTokenHash), nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
+                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", SurveysRecipeJson.CollectorName, nameof(SurveyResponse.ResumeTokenHash), nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
             }
 
             var version = await _versionStore.FindByNumberAsync(survey.ItemId, response.VersionNumber);
@@ -125,6 +143,14 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
             response.GradedBy = await _userLookup.FindUserIdAsync(SurveysRecipeJson.String(token, "GradedByUserName"));
             response.SurveyId = survey.ItemId;
             response.SurveyVersionId = version.ItemId;
+            response.CollectorId = await ResolveCollectorAsync(survey, response.CollectorId, SurveysRecipeJson.String(token, SurveysRecipeJson.CollectorName));
+
+            if (!string.IsNullOrEmpty(response.InvitationId)
+                && (await _invitationStore.FindByIdAsync(response.InvitationId) is not { } invitation || invitation.SurveyId != survey.ItemId))
+            {
+                response.InvitationId = null;
+                response.InvitationSeal = null;
+            }
 
             // An anonymous response never carries who gave it, whatever the file says.
             if (survey.Access?.Anonymity == AnonymityMode.Anonymous)
@@ -133,6 +159,13 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
                 response.Respondent = null;
                 response.IpAddress = null;
                 response.InvitationId = null;
+            }
+
+            // An anonymous response comes without its number (the source site's sequence could name its respondent), and
+            // a number in the file of an anonymous survey is never kept: it gets a new one from this site's sequence.
+            if (existing is null && (string.IsNullOrEmpty(response.Number) || survey.Access?.Anonymity == AnonymityMode.Anonymous))
+            {
+                response.Number = await NextNumberAsync();
             }
 
             if (existing is null)
@@ -146,5 +179,30 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
                 await _responseStore.UpdateAsync(response);
             }
         }
+    }
+
+    // The same numbers the response service gives (R and seven digits), or an opaque one when no sequence is registered.
+    private async Task<string> NextNumberAsync()
+        => _numberSequence is null
+            ? "R" + IdGenerator.GenerateId()[..10].ToUpperInvariant()
+            : "R" + (await _numberSequence.NextAsync(SurveyResponseService.NumberSeries)).ToString("D7", CultureInfo.InvariantCulture);
+
+    // A response's collector on this site: the survey's collector of that name, then the one with that id, then the
+    // survey's default collector. A response with no collector (a preview) keeps none.
+    private async Task<string> ResolveCollectorAsync(Survey survey, string collectorId, string collectorName)
+    {
+        if (string.IsNullOrEmpty(collectorId) && string.IsNullOrEmpty(collectorName))
+        {
+            return null;
+        }
+
+        var collectors = await _collectorStore.ListBySurveyAsync(survey.ItemId);
+
+        var match = (string.IsNullOrEmpty(collectorName) ? null : collectors.FirstOrDefault(collector => string.Equals(collector.Name, collectorName, StringComparison.OrdinalIgnoreCase)))
+            ?? (string.IsNullOrEmpty(collectorId) ? null : collectors.FirstOrDefault(collector => collector.ItemId == collectorId))
+            ?? await _collectorStore.FindDefaultAsync(survey.ItemId)
+            ?? (collectors.Count > 0 ? collectors[0] : null);
+
+        return match?.ItemId;
     }
 }

@@ -42,6 +42,8 @@ Inputs include `ResponseId`, `Number`, `Status`, `Grading`, `VersionNumber`, `At
 | Void Survey Response | Done, Failed | Voids a response with a reason |
 | Regrade Survey Response | Done, Failed | Scores a response again with a reason |
 | Grant Survey Accommodation | Done, Failed | Grants extra minutes or attempts with a reason |
+
+The user setting of **Create Survey Link**, **Send Survey Invitation** and **Grant Survey Accommodation** takes a user id, a user name or an e-mail address; the task stores the user's id, and fails (`Error` = `UnknownUser`) when the value names no user.
 | Set Survey Response Property | Done, Failed | Writes a value into the response's properties |
 
 ## Notifications, audit trail and webhooks

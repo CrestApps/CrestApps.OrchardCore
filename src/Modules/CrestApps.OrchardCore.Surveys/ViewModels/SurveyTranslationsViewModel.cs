@@ -34,7 +34,12 @@ public class SurveyTranslationsViewModel
     public DateTime? DraftModifiedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets how many texts are translated.
+    /// Gets or sets how many texts are translated from their current original text.
     /// </summary>
     public int Translated { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many translations were made from an original text that has changed since.
+    /// </summary>
+    public int Outdated { get; set; }
 }

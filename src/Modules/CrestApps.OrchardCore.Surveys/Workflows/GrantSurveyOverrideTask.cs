@@ -52,6 +52,14 @@ public sealed class GrantSurveyOverrideTask : SurveyTaskActivity<GrantSurveyOver
             return "Failed";
         }
 
+        // The setting may name the user by id, user name or e-mail; one that names nobody fails the task.
+        if ((userId = await SurveyWorkflowUsers.ResolveAsync(_serviceProvider, userId)) is null)
+        {
+            output["Error"] = "UnknownUser";
+
+            return "Failed";
+        }
+
         var entry = new SurveyOverride
         {
             ItemId = IdGenerator.GenerateId(),

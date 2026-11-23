@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using CrestApps.OrchardCore.Surveys.Models;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Translations;
@@ -54,6 +56,90 @@ public static class SurveyTranslations
     }
 
     /// <summary>
+    /// Gets the fingerprint of an original text, stored with each translation so a later change of the original shows.
+    /// </summary>
+    /// <param name="text">The original text.</param>
+    /// <returns>The fingerprint, or <see langword="null"/> for an empty text.</returns>
+    public static string Fingerprint(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.Trim())), 0, 8);
+    }
+
+    /// <summary>
+    /// Gets the keys of a culture whose translation was made from an original text that has changed since. A translation
+    /// saved before fingerprints were kept has nothing to compare with and is not counted.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="culture">The culture.</param>
+    /// <returns>The keys.</returns>
+    public static IReadOnlySet<string> OutdatedKeys(SurveyDefinition definition, string culture)
+    {
+        var outdated = new HashSet<string>(StringComparer.Ordinal);
+        var texts = Texts(definition, culture);
+        var sources = Sources(definition, culture);
+
+        if (texts.Count == 0 || sources is null || sources.Count == 0)
+        {
+            return outdated;
+        }
+
+        foreach (var entry in SurveyTextCatalog.Describe(definition))
+        {
+            if (texts.TryGetValue(entry.Key, out var text)
+                && !string.IsNullOrWhiteSpace(text)
+                && sources.TryGetValue(entry.Key, out var fingerprint)
+                && !string.IsNullOrEmpty(fingerprint)
+                && !string.Equals(fingerprint, Fingerprint(entry.Text), StringComparison.Ordinal))
+            {
+                outdated.Add(entry.Key);
+            }
+        }
+
+        return outdated;
+    }
+
+    /// <summary>
+    /// Splits the texts of a translation file into those made from the current original texts and those whose original
+    /// text in the file differs from the survey's now (the file was translated before an author reworded the item). An
+    /// entry without an original is taken as current.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="entries">The entries of the file.</param>
+    /// <returns>The current entries, and how many were left out.</returns>
+    public static (IReadOnlyList<SurveyTranslationFileEntry> Current, int Changed) SplitByOriginal(SurveyDefinition definition, IEnumerable<SurveyTranslationFileEntry> entries)
+    {
+        var originals = SurveyTextCatalog.Describe(definition).ToDictionary(entry => entry.Key, entry => entry.Text, StringComparer.Ordinal);
+        var current = new List<SurveyTranslationFileEntry>();
+        var changed = 0;
+
+        foreach (var entry in entries ?? [])
+        {
+            if (string.IsNullOrEmpty(entry?.Key))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Original)
+                && originals.TryGetValue(entry.Key, out var original)
+                && !string.Equals(entry.Original.Trim(), original?.Trim(), StringComparison.Ordinal))
+            {
+                changed++;
+
+                continue;
+            }
+
+            current.Add(entry);
+        }
+
+        return (current, changed);
+    }
+
+    /// <summary>
     /// Writes texts of a culture into a definition. Keys of items that do not exist are left out; an empty text removes
     /// the translation of its key. A culture left without texts is removed.
     /// </summary>
@@ -77,7 +163,16 @@ public static class SurveyTranslations
             definition.Translations[name] = target;
         }
 
+        definition.TranslationSources ??= [];
+
+        if (!definition.TranslationSources.TryGetValue(name, out var sources) || sources is null)
+        {
+            sources = new Dictionary<string, string>(StringComparer.Ordinal);
+            definition.TranslationSources[name] = sources;
+        }
+
         var known = SurveyTextCatalog.KnownKeys(definition);
+        var originals = SurveyTextCatalog.Describe(definition).ToDictionary(entry => entry.Key, entry => entry.Text, StringComparer.Ordinal);
         var written = 0;
 
         foreach (var (key, text) in texts ?? [])
@@ -91,6 +186,7 @@ public static class SurveyTranslations
             {
                 if (overwrite && target.Remove(key))
                 {
+                    sources.Remove(key);
                     written++;
                 }
 
@@ -102,8 +198,28 @@ public static class SurveyTranslations
                 continue;
             }
 
-            target[key] = text.Trim();
+            var trimmed = text.Trim();
+
+            // A translation posted again unchanged keeps the fingerprint it was made from, so it stays marked out of
+            // date until someone really translates the new original.
+            if (target.TryGetValue(key, out var previous) && string.Equals(previous, trimmed, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            target[key] = trimmed;
+
+            if (Fingerprint(originals.GetValueOrDefault(key)) is { } fingerprint)
+            {
+                sources[key] = fingerprint;
+            }
+
             written++;
+        }
+
+        foreach (var key in sources.Keys.Where(key => !target.ContainsKey(key)).ToList())
+        {
+            sources.Remove(key);
         }
 
         if (target.Count == 0)
@@ -111,6 +227,23 @@ public static class SurveyTranslations
             definition.Translations.Remove(name);
         }
 
+        if (sources.Count == 0)
+        {
+            definition.TranslationSources.Remove(name);
+        }
+
         return written;
+    }
+
+    private static Dictionary<string, string> Sources(SurveyDefinition definition, string culture)
+    {
+        if (definition?.TranslationSources is null || string.IsNullOrWhiteSpace(culture))
+        {
+            return null;
+        }
+
+        var match = definition.TranslationSources.Keys.FirstOrDefault(key => string.Equals(key, culture.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        return match is null ? null : definition.TranslationSources[match];
     }
 }

@@ -26,7 +26,7 @@ You change a survey in its draft. Publishing makes a numbered version that respo
 
 The first publish opens the survey and makes its public link. People who already started keep the version they started on; results join the versions question by question.
 
-**Discard draft** replaces the draft with the published version.
+**Discard draft** replaces the draft with the published version. If someone else changed the draft since you opened the page, nothing is replaced: reload and try again.
 
 ## Versions
 
