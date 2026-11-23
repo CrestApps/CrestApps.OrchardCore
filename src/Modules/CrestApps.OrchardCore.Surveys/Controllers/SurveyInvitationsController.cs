@@ -366,31 +366,36 @@ public sealed class SurveyInvitationsController : Controller
             return View(await BuildInviteAsync(survey, collector, model));
         }
 
-        var created = 0;
+        IReadOnlyList<SurveyInvitationResult> results;
 
         try
         {
-            foreach (var request in requests.Take(MaxRecipients))
-            {
-                request.SurveyId = survey.ItemId;
-                request.CollectorId = collector.ItemId;
-
-                var result = model.SendNow
-                    ? await _invitations.InviteAsync(request, HttpContext.RequestAborted)
-                    : await _invitations.CreateAsync(request, requireRecipient: true, HttpContext.RequestAborted);
-
-                if (result.Succeeded)
-                {
-                    created++;
-                }
-            }
+            // One send for the whole batch: the invitations are created, then sent under one batch of the daily e-mail
+            // limit, which waits for its lock at most once and holds what it can't send for the hourly reminder task.
+            results = await _invitations.InviteManyAsync(survey.ItemId, collector.ItemId, requests.Take(MaxRecipients).ToList(), model.SendNow, HttpContext.RequestAborted);
         }
         catch (SurveyAnonymitySecretUnreadableException)
         {
             await NotifySecretUnreadableAsync();
+
+            return RedirectToAction(nameof(Index), new { collectorId });
         }
 
-        await _notifier.SuccessAsync(H["{0} people were invited.", created]);
+        await _notifier.SuccessAsync(H["{0} people were invited.", results.Count(result => result.Succeeded)]);
+
+        if (model.SendNow)
+        {
+            var waiting = results
+                .Where(result => result.Succeeded && result.Invitation.TryGet<SurveyInvitationHold>(out var hold) && hold is not null)
+                .Select(result => result.Invitation.ItemId)
+                .Distinct(StringComparer.Ordinal)
+                .Count();
+
+            if (waiting > 0)
+            {
+                await _notifier.WarningAsync(H["{0} invitations will be sent later: today's e-mail limit was reached, or another send was still going out. They go out by themselves with the hourly reminder run.", waiting]);
+            }
+        }
 
         return RedirectToAction(nameof(Index), new { collectorId });
     }

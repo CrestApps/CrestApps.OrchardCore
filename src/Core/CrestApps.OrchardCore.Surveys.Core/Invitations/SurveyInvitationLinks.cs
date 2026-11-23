@@ -12,6 +12,8 @@ public sealed class SurveyInvitationLinks
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    private string _baseUrl;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationLinks"/> class.
     /// </summary>
@@ -35,11 +37,13 @@ public sealed class SurveyInvitationLinks
         ArgumentException.ThrowIfNullOrEmpty(token);
 
         var path = "/s/i/" + Uri.EscapeDataString(token);
-        var site = await _siteService.GetSiteSettingsAsync();
 
-        if (!string.IsNullOrWhiteSpace(site.BaseUrl))
+        // Read once a scope: a send of many invitations builds a link for each.
+        _baseUrl ??= (await _siteService.GetSiteSettingsAsync())?.BaseUrl ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(_baseUrl))
         {
-            return site.BaseUrl.TrimEnd('/') + path;
+            return _baseUrl.TrimEnd('/') + path;
         }
 
         var request = _httpContextAccessor.HttpContext?.Request;

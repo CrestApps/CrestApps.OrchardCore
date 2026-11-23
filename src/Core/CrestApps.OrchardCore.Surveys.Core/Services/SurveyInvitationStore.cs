@@ -22,6 +22,48 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
+    /// Lists a collector's invitations of one user, one recipient or one e-mail address, oldest first, by the index,
+    /// so inviting someone doesn't read the whole collector. Give exactly one of the three.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="userId">The user, or <see langword="null"/>.</param>
+    /// <param name="recipientRef">The recipient as Kind:Id, or <see langword="null"/>.</param>
+    /// <param name="email">The e-mail address, or <see langword="null"/>; compared without case.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The invitations, at most 10.</returns>
+    public async Task<IReadOnlyList<SurveyInvitation>> ListForRecipientAsync(string collectorId, string userId, string recipientRef, string email, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(collectorId))
+        {
+            return [];
+        }
+
+        IQuery<SurveyInvitation, SurveyInvitationIndex> query;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.UserId == userId, collection: SurveysConstants.CollectionName);
+        }
+        else if (!string.IsNullOrEmpty(recipientRef))
+        {
+            var key = recipientRef.Length > 255 ? recipientRef[..255] : recipientRef;
+            query = Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.RecipientRef == key, collection: SurveysConstants.CollectionName);
+        }
+        else if (!string.IsNullOrWhiteSpace(email))
+        {
+            var key = email.Trim().ToLowerInvariant();
+            key = key.Length > 254 ? key[..254] : key;
+            query = Session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Email == key, collection: SurveysConstants.CollectionName);
+        }
+        else
+        {
+            return [];
+        }
+
+        return (await query.OrderBy(index => index.Id).Take(10).ListAsync(cancellationToken)).ToList();
+    }
+
+    /// <summary>
     /// Finds an invitation by the hash of its token.
     /// </summary>
     /// <param name="tokenHash">The hash.</param>

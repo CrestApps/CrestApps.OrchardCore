@@ -14,7 +14,8 @@ namespace CrestApps.OrchardCore.Surveys.Services;
 /// Sends the survey invitation reminders that are due, once an hour. Each invitation list is handled in its own child
 /// shell scope, with a session of its own that commits on its own: a list that fails (an anonymous survey whose secret
 /// can't be read on this server, or a save that fails) is logged and skipped, and never takes the other lists' updates
-/// with it.
+/// with it. Each list is its own batch of the daily e-mail limit, which it saves before the next list starts; once a
+/// list finds the limit's lock busy, the rest of the run holds its e-mails instead of waiting for the lock per list.
 /// </summary>
 [BackgroundTask(
     Title = "Survey invitation reminders",
@@ -35,6 +36,10 @@ public sealed class SurveyInvitationReminderBackgroundTask : IBackgroundTask
         // Ends this scope's read transaction before the lists' own scopes write.
         await session.SaveChangesAsync(cancellationToken);
 
+        // Once one list couldn't get the daily e-mail limit's lock (another send holds it), the later lists of the run hold
+        // their e-mails without waiting for it again; their notifications to users still go out.
+        var emailsHeld = false;
+
         foreach (var row in collectorIds)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -43,8 +48,22 @@ public sealed class SurveyInvitationReminderBackgroundTask : IBackgroundTask
             {
                 await ShellScope.UsingChildScopeAsync(async scope =>
                 {
-                    await scope.ServiceProvider.GetRequiredService<SurveyInvitationService>().RemindAsync(row.ItemId, force: false, cancellationToken);
-                    await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+                    var emailLimit = scope.ServiceProvider.GetRequiredService<SurveyInvitationEmailLimit>();
+
+                    if (emailsHeld)
+                    {
+                        emailLimit.HoldEmails();
+                    }
+
+                    try
+                    {
+                        await scope.ServiceProvider.GetRequiredService<SurveyInvitationService>().RemindAsync(row.ItemId, force: false, cancellationToken);
+                        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+                    }
+                    finally
+                    {
+                        emailsHeld |= emailLimit.LockUnavailable;
+                    }
                 });
             }
             catch (SurveyAnonymitySecretUnreadableException exception)

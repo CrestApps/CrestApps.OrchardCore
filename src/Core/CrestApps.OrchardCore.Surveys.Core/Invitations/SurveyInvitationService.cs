@@ -77,11 +77,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Every send of a scope is one batch of the daily e-mail limit (see <see cref="SurveyInvitationEmailLimit"/>), so
+    /// calling this once per recipient in one scope (a workflow loop) reads the limit and asks for its lock once. To
+    /// invite many recipients at once, use <see cref="InviteManyAsync"/>.
+    /// </remarks>
     public async Task<SurveyInvitationResult> InviteAsync(SurveyInvitationRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-
-        _emailLimit.BeginBatch();
 
         var result = await CreateAsync(request, requireRecipient: true, cancellationToken);
 
@@ -97,6 +100,58 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     }
 
     /// <summary>
+    /// Invites many recipients to one invitation collector as one send: every invitation is created first, then, when
+    /// <paramref name="send"/> is set, the new ones are sent in one batch of the daily e-mail limit. The limit is read and
+    /// its lock asked for once; when the lock is busy, the limit is reached or the batch's sending window passes, the
+    /// remaining e-mails are held, without waiting again, and the hourly reminder task sends them.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="collectorId">The invitation collector, or <see langword="null"/> for the survey's personal links collector.</param>
+    /// <param name="requests">Who to invite; their survey and collector are set from the parameters.</param>
+    /// <param name="send">Whether to send the invitations, or only create them.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A result per request, in order.</returns>
+    public async Task<IReadOnlyList<SurveyInvitationResult>> InviteManyAsync(string surveyId, string collectorId, IReadOnlyCollection<SurveyInvitationRequest> requests, bool send, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+
+        var survey = await _surveyStore.FindByIdAsync(surveyId, cancellationToken);
+        var collector = survey is null ? null : await FindCollectorAsync(survey, collectorId, cancellationToken);
+        var results = new List<SurveyInvitationResult>(requests.Count);
+
+        foreach (var request in requests)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            request.SurveyId = surveyId;
+            request.CollectorId = collector?.ItemId ?? collectorId;
+
+            results.Add(collector is null
+                ? new SurveyInvitationResult { Error = SurveyErrorCode.NotFound }
+                : await CreateCoreAsync(survey, collector, request, requireRecipient: true, cancellationToken));
+        }
+
+        if (!send || collector is null)
+        {
+            return results;
+        }
+
+        // Sent after every invitation exists, so once the batch stops sending only holds are left before the save, and
+        // the daily limit's lock is held for the sends and little else.
+        var delivered = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var result in results)
+        {
+            if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending && delivered.Add(result.Invitation.ItemId))
+            {
+                await DeliverAsync(survey, collector, result.Invitation, result.Link, isReminder: false, cancellationToken);
+            }
+        }
+
+        return results;
+    }
+
+    /// <summary>
     /// Creates an invitation and its link without sending it, or renews the link of the recipient's open invitation.
     /// </summary>
     /// <param name="request">The invitation.</param>
@@ -108,21 +163,29 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         ArgumentNullException.ThrowIfNull(request);
 
         var survey = await _surveyStore.FindByIdAsync(request.SurveyId, cancellationToken);
+        var collector = survey is null ? null : await FindCollectorAsync(survey, request.CollectorId, cancellationToken);
 
-        if (survey is null)
+        if (collector is null)
         {
             return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
         }
 
-        var collector = string.IsNullOrEmpty(request.CollectorId)
+        return await CreateCoreAsync(survey, collector, request, requireRecipient, cancellationToken);
+    }
+
+    // The survey's invitation collector by id, or its personal links collector; null when the id names another kind of
+    // collector or another survey's.
+    private async Task<SurveyCollector> FindCollectorAsync(Survey survey, string collectorId, CancellationToken cancellationToken)
+    {
+        var collector = string.IsNullOrEmpty(collectorId)
             ? await EnsureCollectorAsync(survey, cancellationToken)
-            : await _collectorStore.FindByIdAsync(request.CollectorId, cancellationToken);
+            : await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
 
-        if (collector is null || collector.SurveyId != survey.ItemId || collector.Kind != SurveyCollectorKinds.Invitation)
-        {
-            return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
-        }
+        return collector is null || collector.SurveyId != survey.ItemId || collector.Kind != SurveyCollectorKinds.Invitation ? null : collector;
+    }
 
+    private async Task<SurveyInvitationResult> CreateCoreAsync(Survey survey, SurveyCollector collector, SurveyInvitationRequest request, bool requireRecipient, CancellationToken cancellationToken)
+    {
         var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
 
         // One personal link goes to one address: a list (a@x;b@y) or a malformed value is refused here, below every
@@ -195,8 +258,6 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <returns>How many were sent.</returns>
     public async Task<int> SendPendingAsync(string collectorId, CancellationToken cancellationToken = default)
     {
-        _emailLimit.BeginBatch();
-
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
         var survey = collector is null ? null : await _surveyStore.FindByIdAsync(collector.SurveyId, cancellationToken);
 
@@ -231,8 +292,6 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <returns>How many reminders, and invitations held back earlier, were sent.</returns>
     public async Task<int> RemindAsync(string collectorId, bool force, CancellationToken cancellationToken = default)
     {
-        _emailLimit.BeginBatch();
-
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
         var survey = collector is null ? null : await _surveyStore.FindByIdAsync(collector.SurveyId, cancellationToken);
 
@@ -452,6 +511,18 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return false;
         }
 
+        var isEmail = string.IsNullOrEmpty(invitation.UserId) && !string.IsNullOrWhiteSpace(invitation.Email);
+
+        // Once the scope's e-mails are held (the daily limit's lock was busy, its sending window passed, or today's
+        // limit is reached), an e-mail is held right away, without asking the opt-out checks; they are asked when it is
+        // sent. So a batch that stopped sending has only holds left before its save.
+        if (isEmail && _emailLimit.IsClosed)
+        {
+            await HoldAsync(invitation, isReminder, cancellationToken);
+
+            return false;
+        }
+
         var optedOut = await HasOptedOutAsync(survey, invitation, cancellationToken);
 
         // A check that can't tell (the opt-out list can't be read) sends nothing and changes nothing but the hold mark,
@@ -471,8 +542,6 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
             return false;
         }
-
-        var isEmail = string.IsNullOrEmpty(invitation.UserId) && !string.IsNullOrWhiteSpace(invitation.Email);
 
         // The site's daily e-mail limit, checked under the lock of the site's day: an invitation over it, or one whose
         // sender can't get the lock in time, is not sent. A first send is held back and the hourly reminder task sends
@@ -627,11 +696,36 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
     private async Task<SurveyInvitation> FindForRecipientAsync(string collectorId, string userId, PartyRef? recipient, string email, CancellationToken cancellationToken)
     {
-        var invitations = await _invitationStore.ListByCollectorAsync(collectorId, null, int.MaxValue, cancellationToken);
+        // Read by the index, one kind of recipient at a time, so a bulk invite doesn't read the whole collector for each
+        // recipient. The user is matched first, then the recipient, then (with neither) the e-mail address.
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var byUser = (await _invitationStore.ListForRecipientAsync(collectorId, userId, null, null, cancellationToken))
+                .FirstOrDefault(invitation => string.Equals(invitation.UserId, userId, StringComparison.Ordinal));
 
-        return invitations.FirstOrDefault(invitation =>
-            (!string.IsNullOrEmpty(userId) && string.Equals(invitation.UserId, userId, StringComparison.Ordinal))
-            || (recipient is not null && invitation.Recipient == recipient)
-            || (email is not null && string.IsNullOrEmpty(userId) && recipient is null && string.Equals(invitation.Email, email, StringComparison.OrdinalIgnoreCase)));
+            if (byUser is not null)
+            {
+                return byUser;
+            }
+        }
+
+        if (recipient is not null)
+        {
+            var byRecipient = (await _invitationStore.ListForRecipientAsync(collectorId, null, recipient.Value.ToString(), null, cancellationToken))
+                .FirstOrDefault(invitation => invitation.Recipient == recipient);
+
+            if (byRecipient is not null)
+            {
+                return byRecipient;
+            }
+        }
+
+        if (email is null || !string.IsNullOrEmpty(userId) || recipient is not null)
+        {
+            return null;
+        }
+
+        return (await _invitationStore.ListForRecipientAsync(collectorId, null, null, email, cancellationToken))
+            .FirstOrDefault(invitation => string.Equals(invitation.Email, email, StringComparison.OrdinalIgnoreCase));
     }
 }
