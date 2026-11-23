@@ -99,7 +99,7 @@ internal sealed class TicketsMigrations : DataMigration
         await DefineCategoriesAsync();
         await SeedAsync();
 
-        return 18;
+        return 19;
     }
 
     /// <summary>
@@ -355,6 +355,18 @@ internal sealed class TicketsMigrations : DataMigration
         }
 
         return 18;
+    }
+
+    /// <summary>
+    /// Moves the requester e-mails to the durable templated e-mail outbox: the ones the service desk's own outbox still
+    /// keeps are handed to it, a batch at a time, by a resumable step.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom18Async()
+    {
+        await _steps.RequestAsync(TicketEmailHandOverStep.StepName);
+
+        return 19;
     }
 
     // The part a ticket category's term carries, and a term type with it for taxonomies of ticket categories.

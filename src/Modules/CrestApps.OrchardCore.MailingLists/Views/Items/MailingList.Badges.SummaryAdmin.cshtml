@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.MailingLists.Services
+@model ShapeViewModel<MailingList>
+@inject IMailingListProviderResolver Providers
+
+@{
+    var provider = Providers.Find(Model.Value.ProviderName);
+    var confirmation = Model.Value.Confirmation switch
+    {
+        MailingListConfirmation.None => T["Single opt-in"],
+        MailingListConfirmation.Provider => T["The provider confirms"],
+        _ => T["Double opt-in"],
+    };
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Where the list lives"]"><i class="fa-solid fa-server" aria-hidden="true"></i> @(provider?.DisplayName.Value ?? Model.Value.ProviderName)</span>
+<span class="badge ta-badge fw-normal" title="@T["How a sign-up is confirmed"]"><i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> @confirmation</span>
+@if (provider is null)
+{
+    <span class="badge ta-badge fw-normal text-warning" title="@T["The provider's feature is off. Sign-ups keep working, and member changes wait until the feature is on again."]"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @T["Provider not available"]</span>
+}
+@if (!Model.Value.IsEnabled)
+{
+    <span class="badge ta-badge fw-normal" title="@T["The list is not offered to people"]"><i class="fa-solid fa-ban" aria-hidden="true"></i> @T["Off"]</span>
+}

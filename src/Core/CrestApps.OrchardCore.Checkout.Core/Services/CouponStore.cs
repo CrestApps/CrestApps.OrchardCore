@@ -1,15 +1,13 @@
-using CrestApps.OrchardCore.Numbering;
-using CrestApps.OrchardCore.Transactions.Core.Indexes;
-using CrestApps.OrchardCore.Checkout.Models;
-using CrestApps.OrchardCore.Checkout.Services;
-using CrestApps.OrchardCore.YesSql.Core.Services;
 using System.Text.Json;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Emails;
+using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore;
 using OrchardCore.Modules;
-using YesSql.Services;
 using YesSql;
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
 
@@ -18,9 +16,6 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </summary>
 public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponStore
 {
-    private const int CodeLength = 8;
-
-
     /// <summary>
     /// Enables document-version concurrency checks so two purchases redeeming the same coupon at once
     /// cannot both write a stale count and give away an extra redemption.
@@ -79,6 +74,9 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
         return parent is null ? null : ForGeneratedCode(parent, generated);
     }
 
+    // The code's own values lie over its coupon's: a code bound to an e-mail works only for that address, whoever the
+    // coupon was for, and a code with its own expiry ends at the earlier of it and the coupon's end. Every check made on
+    // a coupon found by its code (availability, redemption, scope) then reads them.
     internal static Coupon ForGeneratedCode(Coupon parent, CouponCode generated)
     {
         var coupon = JsonSerializer.Deserialize<Coupon>(JsonSerializer.Serialize(parent));
@@ -91,6 +89,19 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
         coupon.IsEnabled = parent.IsEnabled && generated.IsEnabled;
         coupon.CreatedUtc = generated.CreatedUtc;
         coupon.GeneratedCodeId = generated.ItemId;
+
+        if (EmailAddresses.Normalize(generated.CustomerEmail) is { } email)
+        {
+            coupon.CustomerEmail = email;
+            coupon.CustomerId = null;
+        }
+
+        if (generated.ExpiresUtc is { } expires)
+        {
+            coupon.EndsUtc = parent.EndsUtc is { } ends && ends < expires
+                ? ends
+                : expires;
+        }
 
         return coupon;
     }
@@ -125,42 +136,12 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
         ArgumentNullException.ThrowIfNull(coupon);
 
         count = Math.Clamp(count, 0, CheckoutConstants.MaxGeneratedCodes);
-        prefix = prefix?.Trim().ToUpperInvariant() ?? string.Empty;
 
-        var codes = new HashSet<string>(StringComparer.Ordinal);
-
-        // Codes are random enough that clashes are rare; the few there are, with each other or with codes already in
-        // use, are drawn again.
-        for (var attempt = 0; attempt < 5 && codes.Count < count; attempt++)
-        {
-            var candidates = new HashSet<string>(StringComparer.Ordinal);
-
-            while (candidates.Count < count - codes.Count)
-            {
-                var code = prefix + ReadableCodes.Generate(CodeLength);
-
-                if (!codes.Contains(code))
-                {
-                    candidates.Add(code);
-                }
-            }
-
-            foreach (var chunk in candidates.Chunk(500))
-            {
-                var taken = (await Session.QueryIndex<CouponIndex>(x => x.NormalizedCode.IsIn(chunk), collection: CollectionName).ListAsync(cancellationToken))
-                    .Select(index => index.NormalizedCode)
-                    .Concat((await Session.QueryIndex<CouponCodeIndex>(x => x.NormalizedCode.IsIn(chunk), collection: CollectionName).ListAsync(cancellationToken))
-                        .Select(index => index.NormalizedCode))
-                    .ToHashSet(StringComparer.Ordinal);
-
-                codes.UnionWith(chunk.Where(code => !taken.Contains(code)));
-            }
-        }
-
+        var codes = await CouponCodeGenerator.DrawUniqueAsync(Session, prefix, count, cancellationToken);
         var now = Clock.UtcNow;
         var generated = new List<CouponCode>();
 
-        foreach (var code in codes.Take(count))
+        foreach (var code in codes)
         {
             var entry = new CouponCode
             {

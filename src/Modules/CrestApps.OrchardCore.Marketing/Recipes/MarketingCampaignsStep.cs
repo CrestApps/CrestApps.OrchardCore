@@ -11,14 +11,16 @@ namespace CrestApps.OrchardCore.Marketing.Recipes;
 
 /// <summary>
 /// Adds or updates marketing campaigns from a <c>MarketingCampaigns</c> recipe step. A campaign is matched by its
-/// <c>ItemId</c>, so running a recipe twice adds nothing, and its segment must exist.
+/// <c>ItemId</c>, so running a recipe twice adds nothing, and its segment, or its mailing list, must exist.
 /// </summary>
 /// <remarks>
 /// <code>
 /// { "name": "MarketingCampaigns", "Campaigns": [ { "ItemId": "...", "Name": "Win back", "SegmentId": "...", "Subject": "We miss you", "Body": "..." } ] }
 /// </code>
-/// A recipe never sends email: a new campaign is always a draft, whatever status the recipe carries, and a campaign that
-/// is scheduled or has started sending on this site is left as it is.
+/// A campaign to a mailing list carries <c>"AudienceKind": "MailingList"</c> and the list's <c>MailingListId</c>, and is
+/// imported only while the Mailing Lists feature is on. A recipe never sends email: a new campaign is always a draft,
+/// whatever status the recipe carries, and a campaign that is scheduled or has started sending on this site is left as
+/// it is.
 /// </remarks>
 internal sealed class MarketingCampaignsStep : CatalogStoreRecipeStep<Campaign>
 {
@@ -27,17 +29,20 @@ internal sealed class MarketingCampaignsStep : CatalogStoreRecipeStep<Campaign>
     public const string EntriesName = "Campaigns";
 
     private readonly ISegmentStore _segmentStore;
+    private readonly ICampaignMailingLists _mailingLists;
 
     internal readonly IStringLocalizer S;
 
     public MarketingCampaignsStep(
         ICampaignStore store,
         ISegmentStore segmentStore,
-        IStringLocalizer<MarketingCampaignsStep> stringLocalizer)
+        IStringLocalizer<MarketingCampaignsStep> stringLocalizer,
+        ICampaignMailingLists mailingLists = null)
         : base(StepKey, EntriesName, store)
     {
         _segmentStore = segmentStore;
         S = stringLocalizer;
+        _mailingLists = mailingLists ?? NullCampaignMailingLists.Instance;
     }
 
     protected override async ValueTask<Campaign> NewAsync(JsonObject token, RecipeExecutionContext context)
@@ -71,6 +76,20 @@ internal sealed class MarketingCampaignsStep : CatalogStoreRecipeStep<Campaign>
     {
         entry.Name = entry.Name?.Trim();
         entry.Subject = entry.Subject?.Trim();
+
+        // A campaign that names no audience, as before mailing lists, goes to its segment.
+        var toList = CampaignAudienceKinds.IsMailingList(entry.AudienceKind);
+
+        entry.AudienceKind = toList ? CampaignAudienceKinds.MailingList : CampaignAudienceKinds.Segment;
+
+        if (toList)
+        {
+            entry.SegmentId = null;
+        }
+        else
+        {
+            entry.MailingListId = null;
+        }
     }
 
     protected override async ValueTask<ValidationResultDetails> ValidateAsync(Campaign entry)
@@ -82,7 +101,18 @@ internal sealed class MarketingCampaignsStep : CatalogStoreRecipeStep<Campaign>
             result.Fail(new ValidationResult(S["Name the campaign. Only staff see it."]));
         }
 
-        if (string.IsNullOrEmpty(entry.SegmentId) || await _segmentStore.FindByIdAsync(entry.SegmentId) is null)
+        if (CampaignAudienceKinds.IsMailingList(entry.AudienceKind))
+        {
+            if (!_mailingLists.IsAvailable)
+            {
+                result.Fail(new ValidationResult(S["The campaign '{0}' goes to a mailing list. Turn on the Mailing Lists feature first.", entry.Name]));
+            }
+            else if (string.IsNullOrEmpty(entry.MailingListId) || await _mailingLists.FindAsync(entry.MailingListId) is null)
+            {
+                result.Fail(new ValidationResult(S["The campaign '{0}' goes to a mailing list that doesn't exist. Import the mailing lists first.", entry.Name]));
+            }
+        }
+        else if (string.IsNullOrEmpty(entry.SegmentId) || await _segmentStore.FindByIdAsync(entry.SegmentId) is null)
         {
             result.Fail(new ValidationResult(S["The campaign '{0}' goes to a segment that doesn't exist. Import the segments first.", entry.Name]));
         }

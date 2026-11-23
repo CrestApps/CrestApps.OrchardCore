@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.MailingLists.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<MailingListMemberVerifiedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> @T["Mailing List Member Verified"]</h4>
+<p>@T["Starts when a member of a mailing list proves they own the address. The input holds ListId, ListName, MemberId, Email, Name, Status and Source."]</p>

@@ -665,6 +665,45 @@ The daily Learning upkeep raises the access-ending, due-soon and inactive notice
 
 See [Learning](./modules/learning#configuration).
 
+## Mailing lists
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:MailingLists` |
+| **Feature** | Mailing Lists (`CrestApps.OrchardCore.MailingLists`) |
+| **Controls** | The provider outbox, how long unconfirmed sign-ups are kept, and the cap of confirmation e-mails per address |
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "MailingLists": {
+        "SyncBatchSize": 25,
+        "SyncMaxAttempts": 8,
+        "PendingRetentionDays": 30,
+        "ConfirmationCap": 3,
+        "ConfirmationCapMinutes": 15
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__MailingLists__PendingRetentionDays=14
+OrchardCore__Default__CrestApps__MailingLists__ConfirmationCap=5
+```
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `SyncBatchSize` | 25 | How many member changes the provider outbox sends in one batch. |
+| `SyncMaxAttempts` | 8 | How many times the provider outbox tries a change before it marks the member not synced. |
+| `PendingRetentionDays` | 30 | How many days an unconfirmed sign-up is kept before it is deleted (1 at least). |
+| `ConfirmationCap` | 3 | How many confirmation and claim e-mails one address may be sent for one list within `ConfirmationCapMinutes`. 0 turns the cap off. |
+| `ConfirmationCapMinutes` | 15 | The window of `ConfirmationCap`, in minutes. |
+
+The Mailchimp connection is not configuration: it is a site setting (**Settings > Mailing Lists**) that names an Orchard Core secret. See [Mailing Lists](./modules/mailing-lists#configuration) and [Mailchimp](./modules/mailing-lists-mailchimp#set-it-up).
+
 ## MCP and A2A
 
 ### MCP server

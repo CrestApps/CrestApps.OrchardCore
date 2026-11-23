@@ -1,0 +1,65 @@
+@using CrestApps.OrchardCore.MailingLists.SignupWidget
+@model MailingListSignupPartViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Sign-up form"]</div>
+    <div class="card-body">
+        @if (!Model.ChallengeConfigured)
+        {
+            <div class="alert alert-warning">@T["Without a challenge such as reCAPTCHA, robots can sign up addresses through this form from many places. Turn on ReCaptcha under Tools > Features and set its keys; visitors then have to pass it."]</div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="ListIds">
+            <label asp-for="ListIds" class="ocat-label ocat-label-required">@T["Mailing lists"]</label>
+            <div class="ocat-end">
+                @if (Model.AvailableLists.Count == 0)
+                {
+                    <p class="text-body-secondary mb-0">@T["There are no mailing lists yet. Add one under Mailing lists first."]</p>
+                }
+                @foreach (var list in Model.AvailableLists)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.ListIds)" value="@list.Value" id="@Html.IdFor(m => m.ListIds)-@list.Value" checked="@list.Selected" />
+                        <label class="form-check-label" for="@Html.IdFor(m => m.ListIds)-@list.Value">@list.Text</label>
+                    </div>
+                }
+                <span asp-validation-for="ListIds" class="text-danger"></span>
+                <span class="hint">@T["One list is joined at once; with several, visitors tick the ones they want."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Heading" class="ocat-label">@T["Heading"]</label>
+            <div class="ocat-end">
+                <input asp-for="Heading" class="form-control" maxlength="200" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Text" class="ocat-label">@T["Text"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Text" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ButtonLabel" class="ocat-label">@T["Button label"]</label>
+            <div class="ocat-end">
+                <input asp-for="ButtonLabel" class="form-control" maxlength="100" />
+                <span class="hint">@T["Leave it empty for Sign up."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AskForName" type="checkbox" class="form-check-input" />
+                    <label asp-for="AskForName" class="form-check-label">@T["Ask for the person's name"]</label>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="SuccessMessage" class="ocat-label">@T["After signing up"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="SuccessMessage" class="form-control" rows="2"></textarea>
+                <span class="hint">@T["What the visitor reads once they sign up. It is the same whether or not the address was already on the list. Leave it empty for the default."]</span>
+            </div>
+        </div>
+    </div>
+</div>

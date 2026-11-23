@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -64,7 +65,9 @@ internal sealed class CouponMigrations : DataMigration
             .Column<string>("CouponId", column => column.WithLength(26))
             .Column<string>("NormalizedCode", column => column.WithLength(64))
             .Column<int>("RedemptionCount")
-            .Column<DateTime>("CreatedUtc"),
+            .Column<DateTime>("CreatedUtc")
+            .Column<string>("IdempotencyKey", column => column.Nullable().WithLength(CheckoutConstants.MaxCouponIdempotencyKeyLength))
+            .Column<string>("NormalizedEmail", column => column.Nullable().WithLength(EmailAddresses.MaxLength)),
             collection: CheckoutConstants.CouponCollectionName
         );
 
@@ -76,9 +79,11 @@ internal sealed class CouponMigrations : DataMigration
             table.CreateIndex("IDX_CouponCodeIndex_ItemId", "ItemId");
         }, collection: CheckoutConstants.CouponCollectionName);
 
+        await CreateIdempotencyKeyIndexAsync();
+        await CreateNormalizedEmailIndexAsync();
         await CreateReportIndexesAsync();
 
-        return 2;
+        return 4;
     }
 
     /// <summary>
@@ -91,6 +96,61 @@ internal sealed class CouponMigrations : DataMigration
         await CreateReportIndexesAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the key a code issued to one person is found by, so asking to issue it again returns the same code.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await IndexTableColumnCreation.AddIfMissingAsync<CouponCodeIndex>(
+            SchemaBuilder,
+            CheckoutConstants.CouponCollectionName,
+            "IdempotencyKey",
+            table => table.AddColumn<string>("IdempotencyKey", column => column.Nullable().WithLength(CheckoutConstants.MaxCouponIdempotencyKeyLength)));
+
+        await CreateIdempotencyKeyIndexAsync();
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the e-mail address a code is bound to, so a privacy request finds the codes issued to a person. No code was
+    /// bound to an address before this step, so no row needs to be filled in.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await IndexTableColumnCreation.AddIfMissingAsync<CouponCodeIndex>(
+            SchemaBuilder,
+            CheckoutConstants.CouponCollectionName,
+            "NormalizedEmail",
+            table => table.AddColumn<string>("NormalizedEmail", column => column.Nullable().WithLength(EmailAddresses.MaxLength)));
+
+        await CreateNormalizedEmailIndexAsync();
+
+        return 4;
+    }
+
+    private Task<bool> CreateNormalizedEmailIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<CouponCodeIndex>(
+            SchemaBuilder,
+            "IDX_CouponCodeIndex_NormalizedEmail",
+            CheckoutConstants.CouponCollectionName,
+            "NormalizedEmail");
+    }
+
+    // Not unique: every code generated in bulk has no key, and SQL Server counts those NULLs as equal. The issuer's
+    // lock on the key is what keeps one code per key.
+    private Task<bool> CreateIdempotencyKeyIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<CouponCodeIndex>(
+            SchemaBuilder,
+            "IDX_CouponCodeIndex_IdempotencyKey",
+            CheckoutConstants.CouponCollectionName,
+            "IdempotencyKey");
     }
 
     private async Task CreateReportIndexesAsync()

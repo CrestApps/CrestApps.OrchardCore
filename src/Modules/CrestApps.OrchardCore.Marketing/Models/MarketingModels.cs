@@ -99,14 +99,28 @@ public sealed class SegmentRules
 }
 
 /// <summary>
-/// An email to a segment's customers who accept marketing: its subject and body (HTML with Liquid), and where its
-/// sending is.
+/// An email to a segment's customers who accept marketing, or to the subscribed members of a mailing list: its subject
+/// and body (HTML with Liquid), and where its sending is.
 /// </summary>
 public sealed class Campaign : CatalogItem
 {
     public string Name { get; set; }
 
+    /// <summary>
+    /// Gets or sets who the campaign goes to: <see cref="CampaignAudienceKinds.Segment"/> (also when empty, as for
+    /// campaigns made before mailing lists) or <see cref="CampaignAudienceKinds.MailingList"/>.
+    /// </summary>
+    public string AudienceKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the segment the campaign goes to, when its audience is a segment.
+    /// </summary>
     public string SegmentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the mailing list the campaign goes to, when its audience is a mailing list.
+    /// </summary>
+    public string MailingListId { get; set; }
 
     public string Subject { get; set; }
 
@@ -127,14 +141,14 @@ public sealed class Campaign : CatalogItem
     public DateTime? CompletedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the document id of the last customer it went to, so sending picks up there.
+    /// Gets or sets the position of the last recipient it went to, so sending picks up there.
     /// </summary>
     public string Cursor { get; set; }
 
     public int Sent { get; set; }
 
     /// <summary>
-    /// Gets or sets the customers in the segment it didn't go to: no email, or they don't accept marketing.
+    /// Gets or sets the recipients it didn't go to: no email, or they don't accept marketing.
     /// </summary>
     public int Skipped { get; set; }
 

@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.MailingLists.Workflows
+
+@model UnsubscribeFromMailingListTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="List" class="form-label">@T["Mailing list"]</label>
+    <input asp-for="List" class="form-control code" />
+    <span class="hint">@T["The list's id or technical name; leave it empty for every list. Liquid is allowed."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Email" class="form-label">@T["E-mail"]</label>
+    <input asp-for="Email" class="form-control code" />
+    <span class="hint">@T["Liquid is allowed, such as {0}.", "{{ Workflow.Input.Email }}"]</span>
+</div>

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tickets.WebForm;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
@@ -23,9 +24,14 @@ public sealed class RateLimitsStartup : StartupBase
     public const int RepliesPerTenMinutes = 30;
 
     /// <summary>
-    /// Replies, ratings and form submissions a visitor address may send in ten minutes.
+    /// Replies and ratings a visitor address may send in ten minutes.
     /// </summary>
     public const int GuestPostsPerTenMinutes = 10;
+
+    /// <summary>
+    /// Ticket Form submissions a visitor may send in ten minutes.
+    /// </summary>
+    public const int WebFormPostsPerTenMinutes = 5;
 
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
@@ -36,6 +42,9 @@ public sealed class RateLimitsStartup : StartupBase
             options.AddGroupRateLimit(TicketsConstants.RateLimitGroups.PortalCreate, RateLimitPartitionHelpers.CreateFixedWindowPolicy(TicketsConstants.RateLimitGroups.PortalCreate, CreatesPerTenMinutes, window, RateLimitPartitionHelpers.GetClientPartitionKey));
             options.AddGroupRateLimit(TicketsConstants.RateLimitGroups.PortalReply, RateLimitPartitionHelpers.CreateFixedWindowPolicy(TicketsConstants.RateLimitGroups.PortalReply, RepliesPerTenMinutes, window, RateLimitPartitionHelpers.GetClientPartitionKey));
             options.AddGroupRateLimit(TicketsConstants.RateLimitGroups.PortalGuest, RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(TicketsConstants.RateLimitGroups.PortalGuest, GuestPostsPerTenMinutes, window));
-            options.AddGroupRateLimit(TicketsConstants.RateLimitGroups.WebForm, RateLimitPartitionHelpers.CreateFixedWindowPolicy(TicketsConstants.RateLimitGroups.WebForm, GuestPostsPerTenMinutes, window, RateLimitPartitionHelpers.GetClientPartitionKey));
+            options.AddGroupRateLimit(TicketsConstants.RateLimitGroups.WebForm, RateLimitPartitionHelpers.CreateFixedWindowPolicy(TicketsConstants.RateLimitGroups.WebForm, WebFormPostsPerTenMinutes, window, RateLimitPartitionHelpers.GetClientPartitionKey));
+
+            // A refused form post goes back to the page, which asks the visitor to wait, instead of an error page.
+            options.AddRouteRejectionHandler(TicketFormController.SubmitRouteName, TicketFormController.OnRateLimitedAsync);
         });
 }

@@ -48,7 +48,7 @@ Click **Save**. The segment shows how many customers are in it, and how many of 
 <YouTube video="marketing" title="Video of campaigns" start={155} end={231} />
 
 1. On **Commerce > Campaigns**, click **Add campaign**.
-2. Name it (only staff see the name), and choose its **Segment**.
+2. Name it (only staff see the name). In the **Audience** card, choose its **Segment**. While mailing lists are on, choose first in **Send to**: **The customers of a segment**, or **The members of a mailing list** and then the **Mailing list**.
 3. Write the **Subject** and the **Email**, in HTML. Put in the customer's details with Liquid:
 
 | Write | To show |
@@ -57,9 +57,12 @@ Click **Save**. The segment shows how many customers are in it, and how many of 
 | `{{ Customer.OrderCount }}` and `{{ Customer.TotalSpent }}` | How many orders they've placed, and what they've spent. |
 | `{{ StoreName }}` | Your store's name. |
 | `{{ UnsubscribeUrl }}` | Their unsubscribe link. If you leave it out, one is added at the end. |
+| `{{ Recipient.Name }}` and `{{ Recipient.Email }}` | The name and address the e-mail goes to, for a segment and for a mailing list. |
 
 4. To check it, enter your address under **Send a test to** and click **Send test**. It's filled in as the segment's first customer would get it.
 5. Click **Send**. Fill in **Send at** first to send it later, in your site's time zone.
+
+A campaign to a mailing list goes to the list's subscribed members, except people who stopped all marketing e-mail. A member of a list isn't a customer: `{{ Customer.FirstName }}` and `{{ Customer.Name }}` show the name they gave, which may be empty, and their orders aren't known. Its unsubscribe link removes the person from that list. Only lists with **Offer the list to people** on can be chosen. See [Mailing Lists](../mailing-lists/index.md).
 
 A campaign goes out in batches over the next minutes, to the segment's customers as they are when each batch goes. Its page shows how many it was sent to, how many it skipped (no email, or they don't accept marketing) and how many failed. **Cancel the campaign** stops it.
 
@@ -69,7 +72,9 @@ Campaigns need your site's email to be set up, and your site's base URL for the 
 
 <YouTube video="marketing" title="Video of consent and unsubscribing" start={231} end={262} />
 
-The unsubscribe link opens a page that asks them to confirm. Once they do, they no longer accept marketing, and no campaign or review request goes to them. They can tick **Send me news and offers** again in their account.
+The unsubscribe link opens your site's [e-mail preferences page](../mailing-lists/email-preferences.md), which asks them to confirm. Once they click **Unsubscribe**, their address gets no more marketing: no campaign or review request goes to them, they no longer accept marketing on every customer record with that address, and they leave every [mailing list](../mailing-lists/index.md). E-mails about their orders still come. They can tick **Send me news and offers** again in their account.
+
+The unsubscribe links in campaigns sent before this page existed still work.
 
 ## Ready-made automations
 

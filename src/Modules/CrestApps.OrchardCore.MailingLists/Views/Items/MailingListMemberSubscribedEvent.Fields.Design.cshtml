@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.MailingLists.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<MailingListMemberSubscribedEvent>
+
+<header><h4><i class="fa-solid fa-user-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Mailing List Member Subscribed"])</h4></header>

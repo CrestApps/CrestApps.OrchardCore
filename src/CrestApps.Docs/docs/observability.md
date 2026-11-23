@@ -469,6 +469,25 @@ Also feeds: `crestapps.background_task.*` for the five Omnichannel.Managements t
 
 The load run opens a `BatchId` log scope.
 
+### Mailing lists
+
+Meter: `CrestApps.OrchardCore.MailingLists` (class `MailingListsTelemetry` in `CrestApps.OrchardCore.MailingLists.Core`). No instrument carries an address, a list id or a tenant.
+
+| Instrument | Type | Unit | What it measures |
+|---|---|---|---|
+| `crestapps.mailing_lists.sign_ups` | Counter | `{sign_up}` | Sign-ups, by what they did (subscribed, confirmation sent, already subscribed, refused) |
+| `crestapps.mailing_lists.verifications` | Counter | `{verification}` | Addresses verified by a confirmation or claim link, an account or the provider |
+| `crestapps.mailing_lists.unsubscribes` | Counter | `{membership}` | Memberships unsubscribed or cleaned, by how |
+| `crestapps.mailing_lists.sync_failures` | Counter | `{change}` | Member changes a provider did not take, by provider and whether they will be tried again |
+
+Meter: `CrestApps.OrchardCore.MailingLists.Mailchimp` (class `MailchimpTelemetry`).
+
+| Instrument | Type | Unit | Tags | What it measures |
+|---|---|---|---|---|
+| `crestapps.mailing_lists.mailchimp.webhooks` | Counter | `{webhook}` | outcome (accepted, duplicate, ignored, rejected_url, rejected_signature, rejected_body, rejected_audience, busy, error), `type` | Mailchimp webhooks received |
+
+Also feeds: `crestapps.background_task.*` for the provider outbox and reconciliation tasks and the templated e-mail outbox task.
+
 ### Recipes and deployments
 
 Meter: `CrestApps.OrchardCore.Recipes` (the internal `RecipeStepTelemetry` in `CrestApps.OrchardCore.Core`). Orchard Core's own `Execute recipe` and `Execute recipe step` spans cover recipe execution, so the modules add only what those cannot see: what a named-catalog recipe step did with its entries.

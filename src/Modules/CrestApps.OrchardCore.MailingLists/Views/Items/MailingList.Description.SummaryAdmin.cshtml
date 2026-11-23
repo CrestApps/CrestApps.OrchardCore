@@ -1,0 +1,9 @@
+@model ShapeViewModel<MailingList>
+
+<div class="admin-list-secondary">
+    <span class="text-body-secondary">@Model.Value.Name</span>
+    @if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+    {
+        <span> &middot; @Model.Value.Description</span>
+    }
+</div>

@@ -1,0 +1,7 @@
+@model ShapeViewModel<MailingListMember>
+
+<a asp-controller="MailingListMembers" asp-action="Details" asp-route-listId="@Model.Value.ListId" asp-route-id="@Model.Value.ItemId">@(Model.Value.Contact?.Email ?? Model.Value.NormalizedEmail)</a>
+@if (!string.IsNullOrWhiteSpace(Model.Value.Contact?.Name))
+{
+    <span class="text-body-secondary ms-1">@Model.Value.Contact.Name</span>
+}

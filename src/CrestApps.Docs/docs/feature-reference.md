@@ -397,6 +397,11 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.SignalR.Azure` | SignalR Azure Backplane (Deprecated) | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.Telnyx.Sms` | Telnyx SMS | [Telnyx SMS](./telephony/telnyx#telnyx-sms) |
 | `CrestApps.OrchardCore.Outreach` | Outreach (dependency only) | [Outreach](./modules/outreach) |
+| `CrestApps.OrchardCore.Consent` | E-mail Preferences (dependency only) | [E-mail Preferences and Consent](./modules/consent) |
+| `CrestApps.OrchardCore.MailingLists` | Mailing Lists | [Mailing Lists](./modules/mailing-lists) |
+| `CrestApps.OrchardCore.MailingLists.SignupWidget` | Mailing List Sign-up Widget | [Mailing Lists](./modules/mailing-lists#sign-up-widget) |
+| `CrestApps.OrchardCore.MailingLists.WelcomeCoupon` | Mailing List Welcome Coupon | [Mailing Lists](./modules/mailing-lists#welcome-coupon) |
+| `CrestApps.OrchardCore.MailingLists.Mailchimp` | Mailing Lists Mailchimp | [Mailchimp](./modules/mailing-lists-mailchimp) |
 
 ## Users
 
@@ -451,6 +456,7 @@ Orchard Core's settings screen (`/Admin/Settings/{groupId}`) authorizes `Setting
 | `ai-settings` | `ManageAIProfiles`, `ManageChatInteractionSettings`, `EditChatInteractions`, `ManageCopilotSettings`, `ManageClaudeSettings`, `ManageMcpServerSettings` | Each AI feature registers the permission its own section checks (AI, AI Chat, AI Chat admin widget, AI Data Sources, AI Documents, AI Memory, Chat Interactions, Copilot, Claude, MCP Server) |
 | DNC registry groups (`ImportContentSettings`, `UsaFtcRegistry`, `CanadaDnclRegistry` in `DncRegistryConstants.SettingsGroupIds`) | `ManageDncRegistrySettings` | DNC Registry and its USA FTC and Canada DNCL features |
 | `PhoneNumberVerificationsConstants.SettingsGroupIds.Verifications` | `ManagePhoneNumberVerificationSettings` | Phone Number Verifications and each provider feature |
+| `mailing-lists` | `ManageMailingListSettings` | Mailing Lists (the e-mail templates) and Mailing Lists Mailchimp (the Mailchimp connection) |
 | `userDisplayName` | `ManageDisplaySettings` | User Display Name |
 | `avatarOptions` | `ManageAvatarSettings` | User Avatars |
 

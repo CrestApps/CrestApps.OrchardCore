@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Emails;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Indexes;
@@ -32,6 +33,19 @@ public sealed class CouponCodeIndex : MapIndex
     /// The UTC time it was generated.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// The key the code was issued under with <c>ICouponIssuer</c>, or <see langword="null"/> for a code generated in
+    /// bulk. At most <see cref="CheckoutConstants.MaxCouponIdempotencyKeyLength"/> characters.
+    /// </summary>
+    public string IdempotencyKey { get; set; }
+
+    /// <summary>
+    /// The e-mail address the code is bound to, normalized with <see cref="EmailAddresses.Normalize"/>, or
+    /// <see langword="null"/> when the coupon decides who may use it. A privacy request finds a person's codes by it. At
+    /// most <see cref="EmailAddresses.MaxLength"/> characters.
+    /// </summary>
+    public string NormalizedEmail { get; set; }
 }
 
 /// <summary>
@@ -60,6 +74,10 @@ public sealed class CouponCodeIndexProvider : IndexProvider<CouponCode>
                 NormalizedCode = code.Code?.ToUpperInvariant(),
                 RedemptionCount = code.RedemptionCount,
                 CreatedUtc = code.CreatedUtc,
+                IdempotencyKey = string.IsNullOrWhiteSpace(code.IdempotencyKey) ? null : code.IdempotencyKey.Trim(),
+                NormalizedEmail = EmailAddresses.Normalize(code.CustomerEmail) is { Length: <= EmailAddresses.MaxLength } email
+                    ? email
+                    : null,
             });
     }
 }

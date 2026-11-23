@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Plaid.Models;
 using CrestApps.OrchardCore.Plaid.Services;
 using CrestApps.OrchardCore.Plaid.ViewModels;
@@ -68,7 +69,7 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
                     new SelectListItem(S["Sandbox (test banks)"], nameof(PlaidEnvironment.Sandbox)),
                     new SelectListItem(S["Production (real banks)"], nameof(PlaidEnvironment.Production)),
                 ];
-                model.Secrets = await GetTextSecretsAsync(model.SecretName);
+                model.Secrets = await TextSecretSelectList.BuildAsync(_secretManager, model.SecretName, S);
                 model.IsConfigured = settings.IsConfigured();
             })
             .Location("Content:5")
@@ -104,39 +105,10 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
         return Edit(site, settings, context);
     }
 
-    private async Task<List<SelectListItem>> GetTextSecretsAsync(string selected)
-    {
-        var items = new List<SelectListItem>();
-
-        foreach (var info in await _secretManager.GetSecretInfosAsync())
-        {
-            if (IsTextSecret(info.Type))
-            {
-                items.Add(new SelectListItem(info.Name, info.Name, string.Equals(info.Name, selected, StringComparison.Ordinal)));
-            }
-        }
-
-        // A name typed earlier, or the default, shows even before the secret exists.
-        if (!string.IsNullOrEmpty(selected) && !items.Any(item => item.Value == selected))
-        {
-            items.Insert(0, new SelectListItem(S["{0} (not created yet)", selected], selected, selected: true));
-        }
-
-        return items.OrderBy(item => item.Text, StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
     /// <summary>
     /// Returns whether the keys come from the host rather than these settings: another provider replaced the
     /// settings-based one.
     /// </summary>
     internal static bool HostSuppliesKeys(IPlaidCredentialsProvider provider)
         => provider is not PlaidCredentialsProvider;
-
-    /// <summary>
-    /// Returns whether a secret's stored type is a text secret. The store records the full type name
-    /// (<c>OrchardCore.Secrets.TextSecret</c>); the short name is accepted too.
-    /// </summary>
-    internal static bool IsTextSecret(string type)
-        => string.Equals(type, typeof(TextSecret).FullName, StringComparison.Ordinal)
-            || string.Equals(type, nameof(TextSecret), StringComparison.Ordinal);
 }

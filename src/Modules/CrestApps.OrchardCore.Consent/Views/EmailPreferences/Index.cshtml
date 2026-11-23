@@ -1,0 +1,64 @@
+@using CrestApps.OrchardCore.Consent.Controllers
+@addTagHelper *, OrchardCore.Navigation.Core
+@model EmailPreferencesViewModel
+
+@* The e-mail preferences page an unsubscribe link opens. Opening it changes nothing; only a button does. *@
+
+<zone Name="Title">
+    <breadcrumb name="ConsentEmailPreferences" title="@T["E-mail preferences"]" />
+</zone>
+
+<meta asp-name="robots" content="noindex, nofollow" />
+
+<div class="container my-5" style="max-width: 36rem;">
+    @if (!Model.IsValid)
+    {
+        <h1 class="h4">@T["This link doesn't work any more"]</h1>
+        <p>@T["Use the unsubscribe link in a newer e-mail from us."]</p>
+    }
+    else if (Model.StoppedAllMarketing)
+    {
+        <h1 class="h4">@T["You're unsubscribed from all marketing e-mail"]</h1>
+        <p>@T["{0} won't get our news and offers any more. E-mails you asked for, such as order and account notices, still come.", Model.Email]</p>
+    }
+    else if (Model.Unsubscribed)
+    {
+        <h1 class="h4">@T["You're unsubscribed"]</h1>
+        <p>@T["{0} won't get {1} any more.", Model.Email, Model.ScopeTitle]</p>
+        <form asp-route="@EmailPreferencesController.UpdateRouteName" asp-route-token="@Model.Token" method="post" class="no-multisubmit">
+            <input type="hidden" name="stopAll" value="true" />
+            <p>@T["Stop all our marketing e-mail too?"]</p>
+            <button type="submit" class="btn btn-outline-secondary">@T["Stop all marketing e-mail"]</button>
+        </form>
+    }
+    else if (Model.IsAllMarketing)
+    {
+        <h1 class="h4">@T["Unsubscribe from all marketing e-mail?"]</h1>
+        <p>@T["{0} will stop getting our news and offers. E-mails you asked for, such as order and account notices, still come.", Model.Email]</p>
+        <form asp-route="@EmailPreferencesController.UpdateRouteName" asp-route-token="@Model.Token" method="post" class="no-multisubmit">
+            <input type="hidden" name="stopAll" value="true" />
+            <button type="submit" class="btn btn-primary">@T["Unsubscribe"]</button>
+        </form>
+    }
+    else
+    {
+        if (Model.CanUnsubscribeScope)
+        {
+            <h1 class="h4">@T["Unsubscribe from {0}?", Model.ScopeTitle]</h1>
+            <p>@T["{0} will stop getting {1}. You can also stop all our marketing e-mail.", Model.Email, Model.ScopeTitle]</p>
+        }
+        else
+        {
+            <h1 class="h4">@T["Unsubscribe from our marketing e-mail?"]</h1>
+            <p>@T["What this e-mail came from no longer exists. {0} can stop all our marketing e-mail.", Model.Email]</p>
+        }
+
+        <form asp-route="@EmailPreferencesController.UpdateRouteName" asp-route-token="@Model.Token" method="post" class="no-multisubmit">
+            @if (Model.CanUnsubscribeScope)
+            {
+                <button type="submit" name="stopAll" value="false" class="btn btn-primary">@T["Unsubscribe"]</button>
+            }
+            <button type="submit" name="stopAll" value="true" class="btn @(Model.CanUnsubscribeScope ? "btn-outline-secondary" : "btn-primary")">@T["Stop all marketing e-mail"]</button>
+        </form>
+    }
+</div>

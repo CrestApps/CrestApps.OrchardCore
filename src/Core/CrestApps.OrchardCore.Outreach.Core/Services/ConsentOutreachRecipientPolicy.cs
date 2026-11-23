@@ -4,8 +4,9 @@ using CrestApps.OrchardCore.Outreach.Models;
 namespace CrestApps.OrchardCore.Outreach.Core.Services;
 
 /// <summary>
-/// Skips the recipients who opted out of a run's <see cref="OutreachRun.ConsentChannel"/>, by asking the consent
-/// service, so every bulk send honors the same opt-outs, unsubscribes and consent records as every other send.
+/// Skips the recipients who opted out of a run's <see cref="OutreachRun.ConsentChannel"/>, for the run's
+/// <see cref="OutreachRun.ConsentPurpose"/>, by asking the consent service, so every bulk send honors the same
+/// opt-outs, unsubscribes and consent records as every other send.
 /// </summary>
 /// <remarks>
 /// A run without a consent channel is not checked here, and nor is any run while no feature registers the consent
@@ -41,6 +42,7 @@ public sealed class ConsentOutreachRecipientPolicy : IOutreachRecipientPolicy
             Address = recipient.Address,
             ContactKind = run.ConsentContactKind,
             ContactId = recipient.ContactId,
+            Purpose = run.ConsentPurpose,
         }, cancellationToken);
 
         return status?.HasOptedOut == true

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Models;
@@ -37,6 +38,11 @@ namespace CrestApps.OrchardCore.Customers.Controllers;
 /// </summary>
 public sealed class CustomersAdminController : Controller
 {
+    /// <summary>
+    /// Where a marketing choice changed by a person who manages customers is said to come from, kept with it.
+    /// </summary>
+    public const string ConsentSource = "customer-admin";
+
     private const string OptionsSearch = "Options.Search";
     private const string OptionsFilter = "Options.Filter";
 
@@ -58,6 +64,7 @@ public sealed class CustomersAdminController : Controller
     private readonly PagerOptions _pagerOptions;
     private readonly IDisplayManager<Customer> _customerDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IConsentService _consentService;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -75,7 +82,8 @@ public sealed class CustomersAdminController : Controller
         IStringLocalizer<CustomersAdminController> stringLocalizer,
         IHtmlLocalizer<CustomersAdminController> htmlLocalizer,
         IDisplayManager<Customer> customerDisplayManager,
-        IUpdateModelAccessor updateModelAccessor)
+        IUpdateModelAccessor updateModelAccessor,
+        IConsentService consentService)
     {
         _store = store;
         _privacy = privacy;
@@ -88,6 +96,7 @@ public sealed class CustomersAdminController : Controller
         _pagerOptions = pagerOptions.Value;
         _customerDisplayManager = customerDisplayManager;
         _updateModelAccessor = updateModelAccessor;
+        _consentService = consentService;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -222,6 +231,9 @@ public sealed class CustomersAdminController : Controller
         }
 
         Apply(model, customer, now);
+
+        // A new customer's first choice, with nothing to withdraw: the store can't find the customer yet to record it.
+        customer.AcceptsMarketing = model.AcceptsMarketing;
 
         await _store.CreateAsync(customer, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The customer {0} was added.", customer.GetName()]);
@@ -508,10 +520,29 @@ public sealed class CustomersAdminController : Controller
             return View(await BuildEditorAsync(invalid));
         }
 
+        var marketingChanged = customer.AcceptsMarketing != model.AcceptsMarketing;
+
         Apply(model, customer, _clock.UtcNow);
 
         try
         {
+            if (marketingChanged)
+            {
+                // Recorded through the consent service, so every place consent is kept hears it: the customer's
+                // AcceptsMarketing, and the opt-outs kept for the address (a tick here lifts the address's own
+                // "stop all marketing").
+                await _consentService.RecordAsync(ConsentChannels.Email, customer.Email, new ConsentChange
+                {
+                    OptedOut = !model.AcceptsMarketing,
+                    Purpose = ConsentPurposes.Marketing,
+                    Source = ConsentSource,
+                    ContactKind = ConsentContactKinds.Customer,
+                    ContactId = customer.ItemId,
+                }, HttpContext.RequestAborted);
+
+                customer.AcceptsMarketing = model.AcceptsMarketing;
+            }
+
             await _store.UpdateAsync(customer, HttpContext.RequestAborted);
         }
         catch (ConcurrencyException)
@@ -568,7 +599,6 @@ public sealed class CustomersAdminController : Controller
         customer.IsTaxExempt = model.IsTaxExempt;
         customer.TaxExemptionReason = model.IsTaxExempt ? Trim(model.TaxExemptionReason) : null;
         customer.Phone = Trim(model.Phone);
-        customer.AcceptsMarketing = model.AcceptsMarketing;
 
         if (string.IsNullOrEmpty(customer.UserId))
         {

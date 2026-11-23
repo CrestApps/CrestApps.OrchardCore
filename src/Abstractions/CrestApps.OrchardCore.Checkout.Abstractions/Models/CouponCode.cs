@@ -45,4 +45,27 @@ public sealed class CouponCode
     /// Gets or sets the UTC time the code was generated.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the e-mail address the code is bound to; it overrides the template coupon's own e-mail. Empty means
+    /// the template decides.
+    /// </summary>
+    public string CustomerEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the code stops working (UTC); the code also stops when the template coupon ends. Empty means the
+    /// template decides.
+    /// </summary>
+    public DateTime? ExpiresUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record the code was issued for (for example a mailing list member), when it was issued with
+    /// <c>ICouponIssuer</c>.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key the code was issued under with <c>ICouponIssuer</c>; one code exists per key.
+    /// </summary>
+    public string IdempotencyKey { get; set; }
 }

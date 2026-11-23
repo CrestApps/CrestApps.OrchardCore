@@ -1,0 +1,9 @@
+@model MailingListMembersFilterViewModel
+@* The status and source filters of a list's members, at the end of the list's toolbar. Each submits the list's form when it changes. *@
+
+<div class="btn-group filter">
+    <select name="Options.Status" asp-items="Model.Statuses" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Show"]" data-dropdown-align-right="auto" data-mailing-list-filter aria-label="@T["Show"]"></select>
+</div>
+<div class="btn-group filter">
+    <select name="Options.Source" asp-items="Model.Sources" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Joined through"]" data-dropdown-align-right="auto" data-mailing-list-filter aria-label="@T["Joined through"]"></select>
+</div>

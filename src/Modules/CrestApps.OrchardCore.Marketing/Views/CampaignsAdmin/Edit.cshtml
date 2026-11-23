@@ -5,6 +5,11 @@
         => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
 }
 
+@{
+    // The audience choice shows while the Mailing Lists feature is on, or when the campaign already goes to a list.
+    var offersMailingLists = Model.CanSendToMailingLists || Model.SendsToMailingList;
+}
+
 <zone Name="Title">
     <breadcrumb name="CampaignEdit" title="@(Model.IsNew ? T["Add campaign"] : T["Edit campaign"])">
         <breadcrumb-item id="Campaigns" action="Index" controller="CampaignsAdmin" area="@MarketingConstants.Feature" permission="@MarketingPermissions.ManageMarketing.Name">@T["Campaigns"]</breadcrumb-item>
@@ -14,6 +19,11 @@
 @if (!Model.CanEmail || !Model.HasBaseUrl)
 {
     <div class="alert alert-warning">@T["Campaigns go out once the site's email is set up and the site has a base URL, for each email's unsubscribe link."]</div>
+}
+
+@if (Model.SendsToMailingList && !Model.CanSendToMailingLists)
+{
+    <div class="alert alert-warning">@T["This campaign goes to a mailing list, but the Mailing Lists feature is off. Turn it on, or send the campaign to a segment."]</div>
 }
 
 @if (Model.Campaign is { } campaign && campaign.Status is not CampaignStatus.Draft)
@@ -49,57 +59,112 @@
 <form method="post" class="no-multisubmit">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <fieldset disabled="@(!Model.CanChange)">
-        <div class="ocat-wrapper" asp-validation-class-for="Name">
-            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
-            <div class="ocat-end">
-                <input asp-for="Name" class="form-control" maxlength="255" required />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <span class="hint">@T["Such as October win-back. Only staff see it."]</span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper" asp-validation-class-for="SegmentId">
-            <label asp-for="SegmentId" class="ocat-label ocat-label-required">@T["Segment"]</label>
-            <div class="ocat-end">
-                <select asp-for="SegmentId" asp-items="Model.Segments" class="form-select"><option value="">@T["Choose a segment"]</option></select>
-                <span asp-validation-for="SegmentId" class="text-danger"></span>
-                <span class="hint">@T["It goes to the segment's customers who accept marketing, as the segment is when each batch goes out."]</span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper" asp-validation-class-for="Subject">
-            <label asp-for="Subject" class="ocat-label ocat-label-required">@T["Subject"]</label>
-            <div class="ocat-end">
-                <input asp-for="Subject" class="form-control" maxlength="255" />
-                <span asp-validation-for="Subject" class="text-danger"></span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper" asp-validation-class-for="Body">
-            <label asp-for="Body" class="ocat-label ocat-label-required">@T["Email"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Body" class="form-control font-monospace" rows="14"></textarea>
-                <span asp-validation-for="Body" class="text-danger"></span>
-                <span class="hint">@T["HTML with Liquid. Use {{{{ Customer.FirstName }}}}, {{{{ Customer.Name }}}}, {{{{ Customer.OrderCount }}}}, {{{{ Customer.TotalSpent }}}}, {{{{ StoreName }}}} and {{{{ UnsubscribeUrl }}}}. An unsubscribe link is added at the end when the email has none."]</span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper">
-            <label asp-for="ScheduledLocal" class="ocat-label">@T["Send at"]</label>
-            <div class="ocat-end">
-                <input asp-for="ScheduledLocal" type="datetime-local" class="form-control" />
-                <span class="hint">@T["Optional, in the site's time zone. Blank sends it at once."]</span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper">
-            <label asp-for="TestEmail" class="ocat-label">@T["Send a test to"]</label>
-            <div class="ocat-end">
-                <div class="input-group">
-                    <input asp-for="TestEmail" type="email" class="form-control" autocomplete="off" />
-                    <button type="submit" name="submit" value="test" class="btn btn-outline-secondary">@T["Send test"]</button>
+        <div class="card mb-3">
+            <div class="card-header">@T["Campaign"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper" asp-validation-class-for="Name">
+                    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Name" class="form-control" maxlength="255" required />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                        <span class="hint">@T["Such as October win-back. Only staff see it."]</span>
+                    </div>
                 </div>
-                <span class="hint">@T["As the segment's first customer would get it."]</span>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Audience"]</div>
+            <div class="card-body">
+                @if (offersMailingLists)
+                {
+                    <div class="ocat-wrapper" asp-validation-class-for="AudienceKind">
+                        <label asp-for="AudienceKind" class="ocat-label">@T["Send to"]</label>
+                        <div class="ocat-end">
+                            <select asp-for="AudienceKind" class="form-select" data-campaign-audience>
+                                <option value="@CampaignAudienceKinds.Segment">@T["The customers of a segment"]</option>
+                                <option value="@CampaignAudienceKinds.MailingList">@T["The members of a mailing list"]</option>
+                            </select>
+                            <span asp-validation-for="AudienceKind" class="text-danger"></span>
+                            <span class="hint">@T["A segment's customers who accept marketing, or a mailing list's subscribed members."]</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" name="@nameof(Model.AudienceKind)" value="@CampaignAudienceKinds.Segment" />
+                }
+
+                <div class="ocat-wrapper" asp-validation-class-for="SegmentId" data-campaign-audience-kind="@CampaignAudienceKinds.Segment">
+                    <label asp-for="SegmentId" class="ocat-label ocat-label-required">@T["Segment"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="SegmentId" asp-items="Model.Segments" class="form-select"><option value="">@T["Choose a segment"]</option></select>
+                        <span asp-validation-for="SegmentId" class="text-danger"></span>
+                        <span class="hint">@T["It goes to the segment's customers who accept marketing, as the segment is when each batch goes out."]</span>
+                    </div>
+                </div>
+
+                @if (Model.CanSendToMailingLists)
+                {
+                    <div class="ocat-wrapper" asp-validation-class-for="MailingListId" data-campaign-audience-kind="@CampaignAudienceKinds.MailingList">
+                        <label asp-for="MailingListId" class="ocat-label ocat-label-required">@T["Mailing list"]</label>
+                        <div class="ocat-end">
+                            <select asp-for="MailingListId" asp-items="Model.MailingLists" class="form-select"><option value="">@T["Choose a mailing list"]</option></select>
+                            <span asp-validation-for="MailingListId" class="text-danger"></span>
+                            <span class="hint">@T["It goes to the list's subscribed members, as the list is when each batch goes out, except addresses that stopped marketing e-mail. Each e-mail's unsubscribe link unsubscribes the list."]</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Email"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper" asp-validation-class-for="Subject">
+                    <label asp-for="Subject" class="ocat-label ocat-label-required">@T["Subject"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Subject" class="form-control" maxlength="255" />
+                        <span asp-validation-for="Subject" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper" asp-validation-class-for="Body">
+                    <label asp-for="Body" class="ocat-label ocat-label-required">@T["Email"]</label>
+                    <div class="ocat-end">
+                        <textarea asp-for="Body" class="form-control font-monospace" rows="14"></textarea>
+                        <span asp-validation-for="Body" class="text-danger"></span>
+                        <span class="hint">@T["HTML with Liquid. Use {{{{ Customer.FirstName }}}}, {{{{ Customer.Name }}}}, {{{{ Customer.OrderCount }}}}, {{{{ Customer.TotalSpent }}}}, {{{{ StoreName }}}} and {{{{ UnsubscribeUrl }}}}. An unsubscribe link is added at the end when the email has none."]</span>
+                        @if (offersMailingLists)
+                        {
+                            <span class="hint">@T["{{{{ Recipient.Name }}}} and {{{{ Recipient.Email }}}} work for both audiences. A mailing list's member is not a customer: {{{{ Customer.FirstName }}}} and {{{{ Customer.Name }}}} are the name they gave, which may be empty, and their orders are not known."]</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Sending"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <label asp-for="ScheduledLocal" class="ocat-label">@T["Send at"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="ScheduledLocal" type="datetime-local" class="form-control" />
+                        <span class="hint">@T["Optional, in the site's time zone. Blank sends it at once."]</span>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper">
+                    <label asp-for="TestEmail" class="ocat-label">@T["Send a test to"]</label>
+                    <div class="ocat-end">
+                        <div class="input-group">
+                            <input asp-for="TestEmail" type="email" class="form-control" autocomplete="off" />
+                            <button type="submit" name="submit" value="test" class="btn btn-outline-secondary">@T["Send test"]</button>
+                        </div>
+                        <span class="hint">@T["As the segment's first customer would get it, or, for a mailing list, as a member with this address would."]</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -110,3 +175,26 @@
         </div>
     </fieldset>
 </form>
+
+@if (offersMailingLists)
+{
+    <script at="Foot">
+        (function () {
+            // Shows the picker of the chosen audience only; without script, both pickers show.
+            const audience = document.querySelector('[data-campaign-audience]');
+
+            if (!audience) {
+                return;
+            }
+
+            const show = function () {
+                document.querySelectorAll('[data-campaign-audience-kind]').forEach(function (picker) {
+                    picker.classList.toggle('d-none', picker.getAttribute('data-campaign-audience-kind') !== audience.value);
+                });
+            };
+
+            audience.addEventListener('change', show);
+            show();
+        })();
+    </script>
+}

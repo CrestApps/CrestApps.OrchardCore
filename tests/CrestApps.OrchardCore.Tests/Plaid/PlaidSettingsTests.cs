@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Plaid.Drivers;
 using CrestApps.OrchardCore.Plaid.Models;
 using CrestApps.OrchardCore.Plaid.Services;
@@ -18,7 +19,7 @@ public sealed class PlaidSettingsTests
     public void SecretPicker_ListsTextSecretsByTheirStoredTypeName(string type, bool listed)
     {
         // Act
-        var isText = PlaidSettingsDisplayDriver.IsTextSecret(type);
+        var isText = TextSecretSelectList.IsTextSecret(type);
 
         // Assert
         Assert.Equal(listed, isText);

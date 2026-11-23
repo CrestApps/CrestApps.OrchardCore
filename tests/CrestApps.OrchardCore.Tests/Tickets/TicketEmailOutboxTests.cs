@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Emails;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Core.Services;
@@ -10,69 +12,145 @@ using YesSql;
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
 /// <summary>
-/// The requester e-mails go through an outbox on a real store: a send that throws leaves the e-mail to try again and a
-/// notice on the reply that it wasn't delivered; a later send that works clears the notice; after the last try the
-/// e-mail is given up and the reply says so. An import creates tickets without telling anyone.
+/// The requester e-mails go through the templated e-mail outbox, carrying their ticket and the reply they belong to: an
+/// e-mail that isn't delivered at once leaves a notice on the reply, a later delivery clears it, a given-up e-mail says
+/// it wasn't delivered, and an e-mail the site can't send says so at once. The e-mails an earlier version kept in the
+/// service desk's own outbox are handed to the templated e-mail outbox. An import creates tickets without telling
+/// anyone.
 /// </summary>
 public sealed class TicketEmailOutboxTests
 {
     [Fact]
-    public async Task ASendThatThrows_IsTriedAgain_AndTheReplyShowsItWasntDelivered_UntilItIs()
+    public async Task AnEmail_CarriesItsTicketAndReply_ToTheTemplatedEmailOutbox()
     {
         // Arrange
         await using var kit = await TicketKit.CreateAsync();
         var (ticketId, entryId) = await ReplyAsync(kit);
-        kit.Sender.Failure = new InvalidOperationException("Mailbox unavailable");
 
         // Act
-        var sent = await kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().SendAsync(Item(ticketId, entryId), TestContext.Current.CancellationToken));
+        var sent = await SendAsync(kit, Item(ticketId, entryId));
 
         // Assert
-        Assert.False(sent);
-        var pending = await OutboxAsync(kit);
-        Assert.Equal(TicketEmailOutboxStatus.Pending, pending.Status);
-        Assert.Equal(1, pending.Attempts);
-        Assert.Equal(Calendars.CalendarTestHarness.Now.AddMinutes(5), pending.NextAttemptUtc);
-        Assert.Equal("Mailbox unavailable", pending.LastError);
-        Assert.Contains("Mailbox unavailable", await NoticeAsync(kit, ticketId, entryId));
-
-        // Act: the retry is due and the mailbox is back.
-        await DueNowAsync(kit);
-        kit.Sender.Failure = null;
-        var retried = await kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().SendDueAsync(TestContext.Current.CancellationToken));
-
-        // Assert
-        Assert.Equal(1, retried);
-        Assert.Equal(TicketEmailOutboxStatus.Sent, (await OutboxAsync(kit)).Status);
-        Assert.Null(await NoticeAsync(kit, ticketId, entryId));
+        Assert.True(sent);
         var email = Assert.Single(kit.Sender.Sent);
         Assert.Equal("dana@example.com", email.Email.To);
+        Assert.Equal(TicketsConstants.EmailKinds.Reply, email.Email.Kind);
+        Assert.Equal(new RecordRef(TicketsConstants.RecordKind, ticketId), email.Email.Source);
+        Assert.Equal(entryId, email.Email.Properties[TicketEmailOutbox.EntryIdProperty]);
         Assert.Equal("<p>Hello</p>", ((TicketEmailReply)email.Email.Models["Reply"]).Html);
+        Assert.Equal("[T-1] Printer jams", email.Content.Subject);
+        Assert.Null(await NoticeAsync(kit, ticketId, entryId));
     }
 
     [Fact]
-    public async Task AnEmailThatKeepsFailing_IsGivenUpAfterSixTries_AndTheReplySaysItWasntDelivered()
+    public async Task AnEmailThatIsntDelivered_LeavesANoticeOnTheReply_UntilItIs()
     {
         // Arrange
         await using var kit = await TicketKit.CreateAsync();
         var (ticketId, entryId) = await ReplyAsync(kit);
         kit.Sender.Failure = new InvalidOperationException("Mailbox unavailable");
-        await kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().SendAsync(Item(ticketId, entryId), TestContext.Current.CancellationToken));
 
         // Act
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            await DueNowAsync(kit);
-            await kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().SendDueAsync(TestContext.Current.CancellationToken));
-        }
+        var sent = await SendAsync(kit, Item(ticketId, entryId));
 
         // Assert
-        var abandoned = await OutboxAsync(kit);
-        Assert.Equal(TicketEmailOutboxStatus.Abandoned, abandoned.Status);
-        Assert.Equal(6, abandoned.Attempts);
-        Assert.Null(abandoned.NextAttemptUtc);
+        Assert.False(sent);
+        var notice = await NoticeAsync(kit, ticketId, entryId);
+        Assert.StartsWith("Not delivered yet; trying again.", notice);
+        Assert.Contains("Mailbox unavailable", notice);
+
+        // Act: the outbox's retry delivers it.
+        await ObserveAsync(kit, (observer, token) => observer.DeliveredAsync(Delivery(ticketId, entryId, TemplatedEmailOutboxStatus.Sent, null), token));
+
+        // Assert
+        Assert.Null(await NoticeAsync(kit, ticketId, entryId));
+    }
+
+    [Fact]
+    public async Task AnEmailGivenUp_LeavesANotDeliveredNoticeOnTheReply()
+    {
+        // Arrange
+        await using var kit = await TicketKit.CreateAsync();
+        var (ticketId, entryId) = await ReplyAsync(kit);
+
+        // Act
+        await ObserveAsync(kit, (observer, token) => observer.AbandonedAsync(Delivery(ticketId, entryId, TemplatedEmailOutboxStatus.Abandoned, "Mailbox unavailable"), token));
+
+        // Assert
+        var notice = await NoticeAsync(kit, ticketId, entryId);
+        Assert.StartsWith("Not delivered to the requester", notice);
+        Assert.Contains("Mailbox unavailable", notice);
+    }
+
+    [Fact]
+    public async Task TheEmailOfAnotherRecord_LeavesTheTicketsEntriesAlone()
+    {
+        // Arrange
+        await using var kit = await TicketKit.CreateAsync();
+        var (ticketId, entryId) = await ReplyAsync(kit);
+        var delivery = new TemplatedEmailDelivery
+        {
+            ItemId = "other",
+            Source = new RecordRef("MailingListMember", "m1"),
+            Properties = new Dictionary<string, string>(StringComparer.Ordinal) { [TicketEmailOutbox.EntryIdProperty] = entryId },
+            Status = TemplatedEmailOutboxStatus.Abandoned,
+            LastError = "Mailbox unavailable",
+        };
+
+        // Act
+        await ObserveAsync(kit, (observer, token) => observer.AbandonedAsync(delivery, token));
+
+        // Assert
+        Assert.Null(await NoticeAsync(kit, ticketId, entryId));
+    }
+
+    [Fact]
+    public async Task AnEmailTheSiteCantSend_SaysAtOnceThatItWasntDelivered()
+    {
+        // Arrange
+        await using var kit = await TicketKit.CreateAsync(configureServices: services => services.AddScoped<ITemplatedEmailOutbox, SkippingOutbox>());
+        var (ticketId, entryId) = await ReplyAsync(kit);
+
+        // Act
+        var sent = await SendAsync(kit, Item(ticketId, entryId));
+
+        // Assert
+        Assert.False(sent);
         Assert.StartsWith("Not delivered to the requester", await NoticeAsync(kit, ticketId, entryId));
-        Assert.Equal(0, await kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().SendDueAsync(TestContext.Current.CancellationToken)));
+    }
+
+    [Fact]
+    public async Task TheEmailsAnEarlierVersionKept_AreHandedToTheTemplatedEmailOutbox_AndRemoved()
+    {
+        // Arrange
+        await using var kit = await TicketKit.CreateAsync();
+        var (ticketId, entryId) = await ReplyAsync(kit);
+        await kit.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var waiting = Item(ticketId, entryId);
+            waiting.Status = TicketEmailOutboxStatus.Pending;
+            waiting.Attempts = 2;
+            var sent = Item(ticketId, null);
+            sent.Status = TicketEmailOutboxStatus.Sent;
+            sent.Kind = TicketsConstants.EmailKinds.Received;
+            await session.SaveAsync(waiting, false, TicketsConstants.CollectionName, TestContext.Current.CancellationToken);
+            await session.SaveAsync(sent, false, TicketsConstants.CollectionName, TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+        // Act
+        var first = await kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().HandOverAsync(TestContext.Current.CancellationToken));
+        var second = await kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().HandOverAsync(TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(2, first);
+        Assert.Equal(0, second);
+        var email = Assert.Single(kit.Sender.Sent);
+        Assert.Equal(TicketsConstants.EmailKinds.Reply, email.Email.Kind);
+        Assert.Equal(entryId, email.Email.Properties[TicketEmailOutbox.EntryIdProperty]);
+        Assert.Null(await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken)));
     }
 
     [Fact]
@@ -107,6 +185,31 @@ public sealed class TicketEmailOutboxTests
         return (ticketId, entry.ItemId);
     }
 
+    private static Task<bool> SendAsync(TicketKit kit, TicketEmailOutboxItem item)
+        => kit.RunAsync(services => services.GetRequiredService<TicketEmailOutbox>().SendAsync(item, TestContext.Current.CancellationToken));
+
+    // Tells the Tickets observer of the templated e-mail outbox what became of an e-mail, as the outbox's retries do.
+    private static Task<bool> ObserveAsync(TicketKit kit, Func<ITemplatedEmailOutboxObserver, CancellationToken, Task> callback)
+        => kit.RunAsync(async services =>
+        {
+            var observer = services.GetServices<ITemplatedEmailOutboxObserver>().OfType<TicketEmailDeliveryObserver>().Single();
+            await callback(observer, TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+    private static TemplatedEmailDelivery Delivery(string ticketId, string entryId, TemplatedEmailOutboxStatus status, string error)
+        => new()
+        {
+            ItemId = "email-1",
+            Kind = TicketsConstants.EmailKinds.Reply,
+            To = "dana@example.com",
+            Source = new RecordRef(TicketsConstants.RecordKind, ticketId),
+            Properties = new Dictionary<string, string>(StringComparer.Ordinal) { [TicketEmailOutbox.EntryIdProperty] = entryId },
+            Status = status,
+            LastError = error,
+        };
+
     private static TicketEmailOutboxItem Item(string ticketId, string entryId)
         => new()
         {
@@ -124,25 +227,17 @@ public sealed class TicketEmailOutboxTests
             ReplyAuthorName = "Ana",
         };
 
-    private static Task<TicketEmailOutboxItem> OutboxAsync(TicketKit kit)
-        => kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken));
-
-    // Moves the next try to now, as if its wait had passed.
-    private static Task<bool> DueNowAsync(TicketKit kit)
-        => kit.RunAsync(async services =>
-        {
-            var session = services.GetRequiredService<ISession>();
-            var item = await session.Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-            item.NextAttemptUtc = Calendars.CalendarTestHarness.Now;
-            await session.SaveAsync(item, false, TicketsConstants.CollectionName, TestContext.Current.CancellationToken);
-
-            return true;
-        });
-
     private static async Task<string> NoticeAsync(TicketKit kit, string ticketId, string entryId)
     {
         var entry = (await kit.EntriesAsync(ticketId)).Single(value => value.ItemId == entryId);
 
         return entry.Properties is not null && entry.Properties.TryGetValue(TimelineConstants.Properties.Notice, out var notice) ? notice?.ToString() : null;
+    }
+
+    // An outbox on a site without an e-mail service.
+    private sealed class SkippingOutbox : ITemplatedEmailOutbox
+    {
+        public Task<TemplatedEmailOutboxResult> SendAsync(TemplatedEmail email, Func<CancellationToken, Task<TemplatedEmailContent>> buildAsync, CancellationToken cancellationToken = default)
+            => Task.FromResult(new TemplatedEmailOutboxResult { Status = TemplatedEmailOutboxStatus.Skipped });
     }
 }

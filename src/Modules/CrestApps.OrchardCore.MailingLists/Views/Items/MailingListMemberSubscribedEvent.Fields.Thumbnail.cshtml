@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.MailingLists.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<MailingListMemberSubscribedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-user-check" aria-hidden="true"></i> @T["Mailing List Member Subscribed"]</h4>
+<p>@T["Starts when a member of a mailing list becomes subscribed. The input holds ListId, ListName, MemberId, Email, Name, Status and Source."]</p>

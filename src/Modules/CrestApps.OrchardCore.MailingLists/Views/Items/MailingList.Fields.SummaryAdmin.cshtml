@@ -1,0 +1,3 @@
+@model ShapeViewModel<MailingList>
+
+<a asp-controller="MailingListMembers" asp-action="Index" asp-route-listId="@Model.Value.ItemId">@Model.Value.DisplayText</a>

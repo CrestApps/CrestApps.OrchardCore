@@ -1,0 +1,23 @@
+@model MailingListProviderViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Provider"]</div>
+    <div class="card-body">
+        @if (Model.ProviderMissing)
+        {
+            <div class="alert alert-warning">@T["The list's provider is not available: its feature is off. Sign-ups keep working, and every member change waits in the provider outbox until the feature is on again, then it is sent."]</div>
+        }
+        else if (Model.ProviderNotConfigured)
+        {
+            <div class="alert alert-warning">@T["The list's provider is not set up yet. Member changes wait in the provider outbox until it is, then they are sent. Set it up under Settings > Mailing Lists."]</div>
+        }
+        <div class="ocat-wrapper" asp-validation-class-for="ProviderName">
+            <label asp-for="ProviderName" class="ocat-label">@T["Where the list lives"]</label>
+            <div class="ocat-end">
+                <select asp-for="ProviderName" asp-items="Model.Providers" class="form-select"></select>
+                <span asp-validation-for="ProviderName" class="text-danger"></span>
+                <span class="hint">@T["The site always keeps every member and the evidence of their consent. An outside provider gets each change through a durable outbox and sends its own changes back."]</span>
+            </div>
+        </div>
+    </div>
+</div>

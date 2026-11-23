@@ -1,0 +1,31 @@
+@model ShapeViewModel<MailingListMember>
+
+@{
+    var member = Model.Value;
+    var (status, icon) = member.Status switch
+    {
+        MailingListMemberStatus.Subscribed => (T["Subscribed"], "fa-user-check"),
+        MailingListMemberStatus.Unsubscribed => (T["Unsubscribed"], "fa-user-minus"),
+        MailingListMemberStatus.Cleaned => (T["Cleaned"], "fa-envelope-circle-check"),
+        _ => (T["Pending"], "fa-hourglass-half"),
+    };
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Status"]"><i class="fa-solid @icon" aria-hidden="true"></i> @status</span>
+@if (member.EmailVerifiedUtc is not null)
+{
+    <span class="badge ta-badge fw-normal" title="@T["The person proved they own the address"]"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> @T["Verified"]</span>
+}
+@if (member.SyncState == MailingListSyncState.Failed)
+{
+    <span class="badge ta-badge fw-normal text-danger" title="@member.SyncError"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @T["Not synced"]</span>
+}
+else if (member.SyncState == MailingListSyncState.Pending && !string.IsNullOrEmpty(member.SyncError))
+{
+    @* The change waits for a provider whose feature is off or that is not set up; the reason says which. *@
+    <span class="badge ta-badge fw-normal text-warning" title="@member.SyncError"><i class="fa-solid fa-clock" aria-hidden="true"></i> @T["Waiting for the provider"]</span>
+}
+else if (member.SyncState == MailingListSyncState.Pending)
+{
+    <span class="badge ta-badge fw-normal" title="@T["The change waits for the provider"]"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> @T["Syncing"]</span>
+}

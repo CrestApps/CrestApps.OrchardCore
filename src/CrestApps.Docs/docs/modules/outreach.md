@@ -28,7 +28,7 @@ applies the policies, sends, retries and keeps count.
 | How it is sent | `Sender`, `Channel`, `SenderAddress`, `ActorId` | An `IOutreachChannelSender` (`Email`, `Messaging`, …) |
 | What is sent | `Template` (`Subject`, `Body`, `IsHtml`), `Renderer` | An `IOutreachTemplateRenderer`; without one the template is sent as it is (`Text`) |
 | When it may send | `SendingHoursScheduleId` | A Business Hours schedule, for senders that observe quiet hours |
-| Whose consent it needs | `ConsentChannel`, `ConsentContactKind` | The consent channel (`Email`, `SMS`, …) and the kind of person recipients are (`Customer`, `Contact`) |
+| Whose consent it needs | `ConsentChannel`, `ConsentContactKind`, `ConsentPurpose` | The consent channel (`Email`, `SMS`, …), the kind of person recipients are (`Customer`, `Contact`), and why the run contacts them (`Marketing`, or empty for every purpose) |
 | How far it got | `Status`, `Cursor`, `BatchesCompleted`, `Sent`, `Skipped`, `Failed` | The engine |
 
 `IOutreachEngine.StartAsync(run)` stores the run and queues its first batch in the caller's unit of work, so starting a
@@ -85,8 +85,10 @@ services
 ## Consent and opt-outs
 
 The engine asks [`IConsentService`](../omnichannel/management.md#consent-may-we-reach-them) about every recipient of a
-run that names a `ConsentChannel`, just before it is sent, with the run's `ConsentContactKind` and the recipient's
-`ContactId`. A recipient any consent source reports as opted out (a STOP keyword, a do-not-text flag on any record that
+run that names a `ConsentChannel`, just before it is sent, with the run's `ConsentContactKind`, the run's
+`ConsentPurpose` and the recipient's `ContactId`. With a purpose, such as `Marketing`, a recipient who opted out of that
+purpose is skipped too (a "stop all marketing" from the [e-mail preferences page](consent.md)); without one, only a
+recipient who opted out of every purpose is (see [purposes](consent.md#purposes)). A recipient any consent source reports as opted out (a STOP keyword, a do-not-text flag on any record that
 holds the number, an unsubscribe link, a customer who doesn't accept marketing) is counted as skipped. Because the
 question is asked at send time, an opt-out recorded after the run started still stops the message. A run without a
 `ConsentChannel` leaves consent to its sender, and no check is made while no feature registers the consent service.
@@ -96,4 +98,6 @@ question is asked at send time, an opt-out recorded after the run started still 
 | Record | Source | Sender | Renderer | Policies |
 | --- | --- | --- | --- | --- |
 | Messaging broadcast | `MessagingBroadcastRecipients`: the broadcast's recipient list, by position | `Messaging`: each recipient in their own 1:1 thread, quiet hours where the channel observes them | `Text` | Consent on the broadcast's channel, as a CRM contact |
-| Marketing campaign | `MarketingSegment`: the segment's customers, by document id; customers who don't accept marketing are skipped | `Email` | `MarketingCampaign`: the campaign's Liquid and the customer's unsubscribe link | Consent on `Email`, as a commerce customer |
+| Marketing campaign | `MarketingSegment`: the segment's customers, by document id; customers who don't accept marketing are skipped | `Email` | `MarketingCampaign`: the campaign's Liquid and the address's unsubscribe link to the e-mail preferences page | Consent on `Email`, as a commerce customer, for the `Marketing` purpose |
+
+[Mailing Lists](mailing-lists.md#sending-to-a-list) adds the `MailingList` audience source (the subscribed members of one list) for runs a module starts.

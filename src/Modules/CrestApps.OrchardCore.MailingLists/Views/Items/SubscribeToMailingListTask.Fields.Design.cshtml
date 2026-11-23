@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.MailingLists.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscribeToMailingListTask>
+
+<header><h4><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Subscribe to Mailing List"])</h4></header>

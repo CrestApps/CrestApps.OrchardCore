@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.PublicForms
+
+@* A trap for robots: off screen, out of the tab order and hidden from screen readers, so only a robot fills it. *@
+<div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+    <label>@T["Leave this empty"] <input type="text" name="@PublicFormTrap.FieldName" tabindex="-1" autocomplete="off" /></label>
+</div>

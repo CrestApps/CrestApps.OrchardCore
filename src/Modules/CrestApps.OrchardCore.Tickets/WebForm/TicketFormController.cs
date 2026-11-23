@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.PublicForms;
 using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Portal;
@@ -8,6 +9,10 @@ using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
@@ -26,6 +31,7 @@ namespace CrestApps.OrchardCore.Tickets.WebForm;
 [Feature(TicketsConstants.Features.WebForm)]
 public sealed class TicketFormController : Controller
 {
+    internal const string SubmitRouteName = "TicketFormSubmit";
     internal const string FormQueryName = "ticketForm";
     internal const string SentQueryName = "ticketSent";
     internal const string ErrorQueryName = "ticketError";
@@ -40,15 +46,14 @@ public sealed class TicketFormController : Controller
     private readonly IContentManager _contentManager;
     private readonly ITicketService _tickets;
     private readonly ICatalog<TicketDesk> _desks;
-    private readonly TicketFormGuard _guard;
-    private readonly IEnumerable<ITicketFormChallenge> _challenges;
+    private readonly IEnumerable<IPublicFormChallenge> _challenges;
     private readonly IAuthorizationService _authorizationService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ITicketCategoryService _categories;
 
-    public TicketFormController(IContentManager contentManager, ITicketService tickets, ICatalog<TicketDesk> desks, TicketFormGuard guard, IEnumerable<ITicketFormChallenge> challenges, IAuthorizationService authorizationService, IContentDefinitionManager contentDefinitionManager, IContentItemDisplayManager contentItemDisplayManager, IUpdateModelAccessor updateModelAccessor, ITicketCategoryService categories)
+    public TicketFormController(IContentManager contentManager, ITicketService tickets, ICatalog<TicketDesk> desks, IEnumerable<IPublicFormChallenge> challenges, IAuthorizationService authorizationService, IContentDefinitionManager contentDefinitionManager, IContentItemDisplayManager contentItemDisplayManager, IUpdateModelAccessor updateModelAccessor, ITicketCategoryService categories)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _contentItemDisplayManager = contentItemDisplayManager;
@@ -58,7 +63,6 @@ public sealed class TicketFormController : Controller
         _contentManager = contentManager;
         _tickets = tickets;
         _desks = desks;
-        _guard = guard;
         _challenges = challenges;
     }
 
@@ -74,7 +78,7 @@ public sealed class TicketFormController : Controller
     /// <param name="categoryId">The category, when the ticket type has categories.</param>
     /// <returns>A redirect back to the page.</returns>
     [AllowAnonymous]
-    [HttpPost("tickets/forms/{widgetId}", Name = "TicketFormSubmit")]
+    [HttpPost("tickets/forms/{widgetId}", Name = SubmitRouteName)]
     [RequestSizeLimit(MaxRequestBytes)]
     [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.WebForm)]
     public async Task<IActionResult> Submit(string widgetId, string name, string email, string subject, string body, string returnUrl, string categoryId = null, string protectedLabel = null, string protectedValue = null)
@@ -91,22 +95,20 @@ public sealed class TicketFormController : Controller
             return NotFound();
         }
 
-        // A filled trap is answered as if it worked, so a robot learns nothing.
-        if (TicketFormGuard.IsTrapped(Request.Form[TicketFormGuard.TrapFieldName]))
+        // A filled trap is answered as if it worked, so a robot learns nothing. How many requests a visitor may send is
+        // Orchard Core's Rate Limits group of the form, across nodes (OnRateLimitedAsync answers the ones it refuses).
+        if (PublicFormTrap.IsTrapped(Request.Form[PublicFormTrap.FieldName]))
         {
             return Back(back, widgetId, SentQueryName, "-");
         }
 
-        // A last line on this node, per visitor address; Orchard's Rate Limits feature, when on, holds the form across
-        // nodes by the visitor (their user, or their address as Reverse Proxy gives it).
-        if (!_guard.TryTake(HttpContext.Connection.RemoteIpAddress?.ToString()))
+        // Every challenge that is set up (ReCaptcha, when that feature is on) must pass.
+        foreach (var challenge in _challenges)
         {
-            return Back(back, widgetId, ErrorQueryName, "busy");
-        }
-
-        if (_challenges.FirstOrDefault() is { IsConfigured: true } challenge && !await challenge.VerifyAsync())
-        {
-            return Back(back, widgetId, ErrorQueryName, "challenge");
+            if (challenge.IsConfigured && !await challenge.VerifyAsync())
+            {
+                return Back(back, widgetId, ErrorQueryName, "challenge");
+            }
         }
 
         var signedIn = User.Identity?.IsAuthenticated == true ? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
@@ -189,12 +191,41 @@ public sealed class TicketFormController : Controller
             _ => null,
         };
 
-    private RedirectResult Back(string url, string widgetId, string key, string value)
+    /// <summary>
+    /// Answers a post the form's Rate Limits group refused: the visitor goes back to the page, which tells them to wait,
+    /// as it did before the limit moved to Rate Limits.
+    /// </summary>
+    /// <param name="context">The refused request.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task that completes when the response is written.</returns>
+    internal static ValueTask OnRateLimitedAsync(OnRejectedContext context, CancellationToken cancellationToken)
     {
-        var target = Url.Content(url);
+        var httpContext = context.HttpContext;
+
+        if (httpContext.GetRouteValue("widgetId")?.ToString() is not { Length: > 0 } widgetId)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        var url = httpContext.RequestServices.GetRequiredService<IUrlHelperFactory>()
+            .GetUrlHelper(new ActionContext(httpContext, httpContext.GetRouteData(), new ActionDescriptor()));
+        var returnUrl = httpContext.Request.Query["returnUrl"].ToString();
+
+        httpContext.Response.StatusCode = StatusCodes.Status302Found;
+        httpContext.Response.Headers.Location = Location(url, url.IsLocalUrl(returnUrl) ? returnUrl : "~/", widgetId, ErrorQueryName, "busy");
+
+        return ValueTask.CompletedTask;
+    }
+
+    private RedirectResult Back(string url, string widgetId, string key, string value)
+        => Redirect(Location(Url, url, widgetId, key, value));
+
+    private static string Location(IUrlHelper urlHelper, string url, string widgetId, string key, string value)
+    {
+        var target = urlHelper.Content(url);
         var separator = target.Contains('?') ? '&' : '?';
 
-        return Redirect($"{target}{separator}{FormQueryName}={Uri.EscapeDataString(widgetId)}&{key}={Uri.EscapeDataString(value ?? string.Empty)}#ticket-form-{widgetId}");
+        return $"{target}{separator}{FormQueryName}={Uri.EscapeDataString(widgetId)}&{key}={Uri.EscapeDataString(value ?? string.Empty)}#ticket-form-{widgetId}";
     }
 
     private static bool LooksLikeEmail(string email)

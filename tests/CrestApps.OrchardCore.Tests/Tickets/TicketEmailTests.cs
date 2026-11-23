@@ -237,6 +237,7 @@ public sealed class TicketEmailTests
         site.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(new SiteSettings { BaseUrl = baseUrl });
         var services = new ServiceCollection()
             .AddSingleton(sender.Object)
+            .AddSingleton<ITemplatedEmailOutbox>(new TicketKit.SenderOutbox(sender.Object))
             .AddSingleton(Mock.Of<global::YesSql.ISession>())
             .AddSingleton(Mock.Of<ITimelineService>())
             .AddSingleton(clock.Object)

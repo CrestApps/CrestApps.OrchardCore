@@ -70,7 +70,17 @@ public class CampaignEditViewModel
 
     public string Name { get; set; }
 
+    /// <summary>
+    /// Gets or sets who the campaign goes to: a segment or a mailing list.
+    /// </summary>
+    public string AudienceKind { get; set; } = CampaignAudienceKinds.Segment;
+
     public string SegmentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the mailing list the campaign goes to, when it goes to one.
+    /// </summary>
+    public string MailingListId { get; set; }
 
     public string Subject { get; set; }
 
@@ -88,6 +98,25 @@ public class CampaignEditViewModel
 
     [BindNever]
     public IList<SelectListItem> Segments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the enabled mailing lists the campaign can go to, while the Mailing Lists feature is on.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> MailingLists { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether a campaign can go to a mailing list: the Mailing Lists feature is on.
+    /// </summary>
+    [BindNever]
+    public bool CanSendToMailingLists { get; set; }
+
+    /// <summary>
+    /// Gets whether the campaign goes to a mailing list.
+    /// </summary>
+    [BindNever]
+    public bool SendsToMailingList
+        => CampaignAudienceKinds.IsMailingList(AudienceKind);
 
     [BindNever]
     public bool CanEmail { get; set; }

@@ -11,6 +11,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// held. A change for a contact sets or clears the contact's flag; an opt-out for an address no contact holds is
 /// recorded against the address, and an opt-in lifts it.
 /// </summary>
+/// <remarks>
+/// Everything it keeps stops every purpose, so it answers a question for any purpose (a Do not email also stops
+/// marketing), and records only changes with no purpose (<see cref="ConsentChange.Purpose"/> empty).
+/// </remarks>
 public sealed class ContactPreferencesConsentSource : IConsentSource
 {
     private readonly IContactOptOutResolver _optOutResolver;
@@ -59,7 +63,9 @@ public sealed class ContactPreferencesConsentSource : IConsentSource
     {
         ArgumentNullException.ThrowIfNull(change);
 
-        if (!IsContactKind(change.ContactKind) || !IsKeptChannel(channel))
+        // The flags and the address opt-outs here stop every purpose. A change for one purpose (a "stop all marketing")
+        // must not set Do not email, which would also stop the person's own conversations and order notices.
+        if (!string.IsNullOrWhiteSpace(change.Purpose) || !IsContactKind(change.ContactKind) || !IsKeptChannel(channel))
         {
             return;
         }

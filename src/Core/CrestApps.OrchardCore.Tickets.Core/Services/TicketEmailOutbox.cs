@@ -1,37 +1,41 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Emails;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
-using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tickets.Core.Services;
 
 /// <summary>
-/// Sends the requester messages of tickets and keeps what happened: a message is stored, tried at once, and tried again
-/// later when it fails (after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours), then given up. A requester with a
-/// site account gets it through the site's notifications (<see cref="ITicketRequesterNotifier"/>), written by the
-/// site's notification template; anyone else gets it by e-mail. A reply's entry on the ticket says when its message
-/// couldn't be delivered, so the agent doesn't believe the requester got an answer they never saw.
+/// Sends the requester messages of tickets. A requester with a site account gets one through the site's notifications
+/// (<see cref="ITicketRequesterNotifier"/>), written by the site's notification template; anyone else, or a requester
+/// whose account is gone, gets it by e-mail through the durable templated e-mail outbox (<see cref="ITemplatedEmailOutbox"/>),
+/// which tries a failed e-mail again after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours, then gives it up. A
+/// reply's entry on the ticket says when its message couldn't be delivered (<see cref="TicketEmailDeliveryObserver"/>),
+/// so the agent doesn't believe the requester got an answer they never saw.
 /// </summary>
 public sealed class TicketEmailOutbox
 {
     /// <summary>
-    /// How many e-mails one run tries.
+    /// How many e-mails kept by an earlier version one run of <see cref="HandOverAsync"/> hands to the templated e-mail
+    /// outbox.
     /// </summary>
     public const int SendsPerRun = 50;
 
-    private static readonly TimeSpan[] _retries = [TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromHours(1), TimeSpan.FromHours(4), TimeSpan.FromHours(12)];
+    /// <summary>
+    /// The property of a requester e-mail (<see cref="TemplatedEmail.Properties"/>) that names the timeline entry it
+    /// carries, such as a reply.
+    /// </summary>
+    public const string EntryIdProperty = "Tickets.EntryId";
 
     private readonly ISession _session;
-    private readonly ITemplatedEmailSender _sender;
+    private readonly ITemplatedEmailOutbox _outbox;
     private readonly ITicketRequesterNotifier _notifier;
     private readonly ITemplatedEmailTemplates _templates;
     private readonly ITimelineService _timeline;
-    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -41,117 +45,81 @@ public sealed class TicketEmailOutbox
     /// </summary>
     public TicketEmailOutbox(
         ISession session,
-        ITemplatedEmailSender sender,
+        ITemplatedEmailOutbox outbox,
         IEnumerable<ITicketRequesterNotifier> notifiers,
         IEnumerable<ITemplatedEmailTemplates> templates,
         ITimelineService timeline,
-        IClock clock,
         ILogger<TicketEmailOutbox> logger,
         IStringLocalizer<TicketEmailOutbox> stringLocalizer)
     {
-        _logger = logger;
         _session = session;
-        _sender = sender;
+        _outbox = outbox;
         _notifier = notifiers.LastOrDefault();
         _templates = templates.LastOrDefault();
         _timeline = timeline;
-        _clock = clock;
+        _logger = logger;
         S = stringLocalizer;
     }
 
     /// <summary>
-    /// Stores an e-mail and tries it now.
+    /// Sends a requester message: as a notification to a requester with a site account, by e-mail otherwise.
     /// </summary>
-    /// <param name="item">The e-mail.</param>
+    /// <param name="item">The message.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>Whether it was sent.</returns>
+    /// <returns>Whether it reached the requester now; an e-mail that didn't is tried again later.</returns>
     public async Task<bool> SendAsync(TicketEmailOutboxItem item, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        item.CreatedUtc = _clock.UtcNow;
-        item.Status = TicketEmailOutboxStatus.Pending;
+        // A requester with an account hears of it through the site's notifications; one whose account is gone, or anyone
+        // without one, by e-mail.
+        if (await NotifyAsync(item, cancellationToken))
+        {
+            await TicketEmailDeliveryObserver.MarkEntryAsync(_timeline, item.EntryId, null, cancellationToken);
 
-        return await TryAsync(item, cancellationToken);
+            return true;
+        }
+
+        var result = await _outbox.SendAsync(Email(item), _ => Task.FromResult(new TemplatedEmailContent { Subject = item.Subject, Html = item.Html }), cancellationToken);
+
+        // The outbox's observer marks the entry of an e-mail it keeps; one it skipped is never tried again.
+        if (result.Status == TemplatedEmailOutboxStatus.Skipped)
+        {
+            await TicketEmailDeliveryObserver.MarkEntryAsync(
+                _timeline,
+                item.EntryId,
+                S["Not delivered to the requester: {0}", S["The site can't send e-mail, or the requester has no e-mail address."]],
+                cancellationToken);
+        }
+
+        return result.Status == TemplatedEmailOutboxStatus.Sent;
     }
 
     /// <summary>
-    /// Tries the e-mails whose next attempt is due.
+    /// Hands the requester e-mails an earlier version kept in the service desk's own outbox to the templated e-mail
+    /// outbox: a waiting one is sent again through it, and every one, waiting, sent or given up, is removed.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>How many were sent.</returns>
-    public async Task<int> SendDueAsync(CancellationToken cancellationToken = default)
+    /// <returns>How many e-mails it took; fewer than <see cref="SendsPerRun"/> when none is left.</returns>
+    public async Task<int> HandOverAsync(CancellationToken cancellationToken = default)
     {
-        var now = _clock.UtcNow;
-        var due = await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.Status == TicketEmailOutboxStatus.Pending && index.NextAttemptUtc != null && index.NextAttemptUtc <= now, TicketsConstants.CollectionName)
-            .OrderBy(index => index.NextAttemptUtc)
+        var items = await _session.Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName)
             .Take(SendsPerRun)
             .ListAsync(cancellationToken);
-        var sent = 0;
+        var count = 0;
 
-        foreach (var item in due)
+        foreach (var item in items)
         {
-            if (await TryAsync(item, cancellationToken))
+            count++;
+            _session.Delete(item, TicketsConstants.CollectionName);
+
+            if (item.Status == TicketEmailOutboxStatus.Pending)
             {
-                sent++;
+                await SendAsync(item, cancellationToken);
             }
         }
 
-        return sent;
-    }
-
-    private async Task<bool> TryAsync(TicketEmailOutboxItem item, CancellationToken cancellationToken)
-    {
-        var now = _clock.UtcNow;
-        bool sent;
-
-        item.Attempts++;
-
-        try
-        {
-            // A requester with an account hears of it through the site's notifications; one whose account is gone, or
-            // anyone without one, by e-mail.
-            sent = await NotifyAsync(item, cancellationToken);
-
-            if (sent)
-            {
-                item.LastError = null;
-            }
-            else
-            {
-                sent = await _sender.SendAsync(Email(item), _ => Task.FromResult(new TemplatedEmailContent { Subject = item.Subject, Html = item.Html }), cancellationToken);
-                item.LastError = sent ? null : S["The e-mail service didn't take it; check that the site's e-mail is set up."];
-            }
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            sent = false;
-            item.LastError = exception.Message;
-        }
-
-        if (sent)
-        {
-            item.Status = TicketEmailOutboxStatus.Sent;
-            item.SentUtc = now;
-            item.NextAttemptUtc = null;
-        }
-        else if (item.Attempts > _retries.Length)
-        {
-            item.Status = TicketEmailOutboxStatus.Abandoned;
-            item.NextAttemptUtc = null;
-
-            // Shown on the reply as "not delivered", and here for whoever watches the logs.
-            _logger.LogWarning("The {Kind} e-mail of ticket {Number} wasn't delivered after {Attempts} attempts: {Error}", item.Kind, item.TicketNumber.SanitizeLogValue(), item.Attempts, item.LastError.SanitizeLogValue());
-        }
-        else
-        {
-            item.NextAttemptUtc = now.Add(_retries[item.Attempts - 1]);
-        }
-
-        await _session.SaveAsync(item, false, TicketsConstants.CollectionName, cancellationToken);
-        await MarkEntryAsync(item, cancellationToken);
-
-        return sent;
+        return count;
     }
 
     // The message as the site's template writes it, sent as a notification; false when there's nobody to notify.
@@ -162,47 +130,29 @@ public sealed class TicketEmailOutbox
             return false;
         }
 
-        var email = Email(item);
-        var message = _templates is null
-            ? new TemplatedEmailMessage(item.Subject, null, item.Html)
-            : await _templates.ApplyAsync(new TemplatedEmailContext
-            {
-                Kind = email.Kind,
-                Models = email.Models,
-                Subject = item.Subject,
-                Html = item.Html,
-                Values = new Dictionary<string, string>(),
-            }, cancellationToken);
-
-        return await _notifier.NotifyAsync(item.RecipientUserId, item, message, cancellationToken);
-    }
-
-    // The reply's entry shows a notice while its e-mail hasn't reached the requester.
-    private async Task MarkEntryAsync(TicketEmailOutboxItem item, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(item.EntryId))
+        try
         {
-            return;
+            var email = Email(item);
+            var message = _templates is null
+                ? new TemplatedEmailMessage(item.Subject, null, item.Html)
+                : await _templates.ApplyAsync(new TemplatedEmailContext
+                {
+                    Kind = email.Kind,
+                    Models = email.Models,
+                    Subject = item.Subject,
+                    Html = item.Html,
+                    Values = new Dictionary<string, string>(),
+                }, cancellationToken);
+
+            return await _notifier.NotifyAsync(item.RecipientUserId, item, message, cancellationToken);
         }
-
-        string notice = item.Status switch
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            TicketEmailOutboxStatus.Sent => null,
-            TicketEmailOutboxStatus.Abandoned => S["Not delivered to the requester: {0}", item.LastError],
-            _ => S["Not delivered yet; trying again. {0}", item.LastError],
-        };
+            // The requester still gets the message, by e-mail, where the e-mail outbox keeps trying it.
+            _logger.LogWarning(exception, "The {Kind} notification of ticket {Number} couldn't be sent; it goes by e-mail.", item.Kind, item.TicketNumber.SanitizeLogValue());
 
-        await _timeline.UpdateAsync(item.EntryId, changes =>
-        {
-            if (notice is null)
-            {
-                changes.Properties.Remove(TimelineConstants.Properties.Notice);
-            }
-            else
-            {
-                changes.Properties[TimelineConstants.Properties.Notice] = notice;
-            }
-        }, cancellationToken);
+            return false;
+        }
     }
 
     private static TemplatedEmail Email(TicketEmailOutboxItem item)
@@ -217,6 +167,21 @@ public sealed class TicketEmailOutbox
             models["Reply"] = new TicketEmailReply { Body = item.ReplyBody, Html = item.ReplyHtml, AuthorName = item.ReplyAuthorName };
         }
 
-        return new TemplatedEmail { Kind = item.Kind, To = item.To, Models = models, Reference = item.Reference };
+        var properties = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (!string.IsNullOrEmpty(item.EntryId))
+        {
+            properties[EntryIdProperty] = item.EntryId;
+        }
+
+        return new TemplatedEmail
+        {
+            Kind = item.Kind,
+            To = item.To,
+            Models = models,
+            Reference = item.Reference,
+            Source = string.IsNullOrEmpty(item.TicketId) ? default : new RecordRef(TicketsConstants.RecordKind, item.TicketId),
+            Properties = properties,
+        };
     }
 }

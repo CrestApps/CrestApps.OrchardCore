@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tickets;
@@ -50,7 +51,7 @@ public sealed class TicketRequesterNotificationTests
         Assert.Equal(("u-dana", TicketsConstants.EmailKinds.Reply), (userId, notified.Kind));
         Assert.Equal(("Template: [T-1] Printer jams", "<div class=\"template\"><p>Hello</p></div>"), (message.Subject, message.Html));
         Assert.Empty(kit.Sender.Sent);
-        Assert.Equal(TicketEmailOutboxStatus.Sent, (await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken))).Status);
+        Assert.Null(await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken)));
     }
 
     [Fact]
@@ -87,8 +88,9 @@ public sealed class TicketRequesterNotificationTests
     public async Task TheRequesterMessages_NameTheRequestersAccount_EvenWithoutAnEmailAddress()
     {
         // Arrange: Dana signs in and has no e-mail address on the ticket or in the directory; Lee is a guest.
-        var outbox = new List<TicketEmailOutboxItem>();
-        var observer = Observer(outbox);
+        var notifier = new FakeNotifier();
+        var emails = new List<TemplatedEmail>();
+        var observer = Observer(notifier, emails);
         var dana = Ticket("t1", new PartyRef(PartyKinds.User, "u-dana"), email: null);
         var lee = Ticket("t2", default, email: "lee@example.com");
 
@@ -97,10 +99,13 @@ public sealed class TicketRequesterNotificationTests
         await observer.RepliedAsync(dana, new TimelineEntry { ItemId = "e1", Kind = TicketsConstants.EntryKinds.Reply, Visibility = TimelineVisibility.Public, Body = "Try the rear tray.", AuthorName = "Ana" }, fromRequester: false, TestContext.Current.CancellationToken);
         await observer.CreatedAsync(lee, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: Dana hears through her account, Lee by e-mail.
         Assert.Equal(
-            [("t1", TicketsConstants.EmailKinds.Received, "u-dana", null), ("t1", TicketsConstants.EmailKinds.Reply, "u-dana", null), ("t2", TicketsConstants.EmailKinds.Received, null, "lee@example.com")],
-            outbox.Select(item => (item.TicketId, item.Kind, item.RecipientUserId, item.To)));
+            [("t1", TicketsConstants.EmailKinds.Received, "u-dana", (string)null), ("t1", TicketsConstants.EmailKinds.Reply, "u-dana", null)],
+            notifier.Notified.Select(notified => (notified.Item.TicketId, notified.Item.Kind, notified.UserId, notified.Item.To)));
+        var email = Assert.Single(emails);
+        Assert.Equal((TicketsConstants.EmailKinds.Received, "lee@example.com"), (email.Kind, email.To));
+        Assert.Equal(new RecordRef(TicketsConstants.RecordKind, "t2"), email.Source);
     }
 
     [Theory]
@@ -170,29 +175,20 @@ public sealed class TicketRequesterNotificationTests
         return ticket;
     }
 
-    // The observer with an outbox that only keeps what it is given.
-    private static TicketEmailObserver Observer(List<TicketEmailOutboxItem> outbox)
+    // The observer with a notifier and an outbox that only keep what they are given.
+    private static TicketEmailObserver Observer(FakeNotifier notifier, List<TemplatedEmail> emails)
     {
         var desks = new Mock<ICatalog<TicketDesk>>();
         desks.Setup(catalog => catalog.FindByIdAsync("support", It.IsAny<CancellationToken>())).ReturnsAsync(new TicketDesk { ItemId = "support", NotifyRequester = true });
-        var session = new Mock<ISession>();
-        session.Setup(value => value.SaveAsync(It.IsAny<object>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback((object item, bool _, string _, CancellationToken _) =>
-            {
-                if (item is TicketEmailOutboxItem outboxItem && !outbox.Contains(outboxItem))
-                {
-                    outbox.Add(outboxItem);
-                }
-            })
-            .Returns(Task.CompletedTask);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 11, 2, 12, 0, 0, DateTimeKind.Utc));
+        var outbox = new Mock<ITemplatedEmailOutbox>();
+        outbox.Setup(value => value.SendAsync(It.IsAny<TemplatedEmail>(), It.IsAny<Func<CancellationToken, Task<TemplatedEmailContent>>>(), It.IsAny<CancellationToken>()))
+            .Callback((TemplatedEmail email, Func<CancellationToken, Task<TemplatedEmailContent>> _, CancellationToken _) => emails.Add(email))
+            .ReturnsAsync(new TemplatedEmailOutboxResult { ItemId = "email-1", Status = TemplatedEmailOutboxStatus.Sent });
         var services = new ServiceCollection()
-            .AddSingleton(Mock.Of<ITemplatedEmailSender>())
-            .AddSingleton(session.Object)
+            .AddSingleton(outbox.Object)
+            .AddSingleton(Mock.Of<ISession>())
             .AddSingleton(Mock.Of<ITimelineService>())
-            .AddSingleton(clock.Object)
-            .AddSingleton<ITicketRequesterNotifier>(new FakeNotifier())
+            .AddSingleton<ITicketRequesterNotifier>(notifier)
             .AddSingleton(RecipeRoundTrip.Localizer<TicketEmailOutbox>())
             .AddLogging()
             .AddSingleton<TicketEmailOutbox>();

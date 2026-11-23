@@ -1,0 +1,55 @@
+@model MailingListGeneralViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["General"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="DisplayText">
+            <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="DisplayText" class="form-control" maxlength="255" required />
+                <span asp-validation-for="DisplayText" class="text-danger"></span>
+                <span class="hint">@T["The name people see on the sign-up form and the e-mail preferences page, such as Weekly news."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Technical name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="128" required />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["A unique name for recipes and workflows: letters, digits, dashes and underscores, starting with a letter."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                <span class="hint">@T["What the list sends and how often. It shows under the name."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ConsentText" class="ocat-label">@T["Consent text"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="ConsentText" class="form-control" rows="3"></textarea>
+                <span class="hint">@T["What people agree to when they sign up, shown on the sign-up form. Each member keeps the text they agreed to as evidence of consent."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="IsEnabled" class="form-check-label">@T["Offer the list to people"]</label>
+                    <span class="hint dashed">@T["A list that is off is not offered in sign-up widgets, takes no sign-ups from widgets, workflows or other modules, and can't be picked as a Marketing campaign's audience. An admin can still add and import members, and members can still unsubscribe."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="SendWelcomeEmail" type="checkbox" class="form-check-input" />
+                    <label asp-for="SendWelcomeEmail" class="form-check-label">@T["Send a welcome e-mail"]</label>
+                    <span class="hint dashed">@T["Sent when a person is subscribed. A welcome coupon is always e-mailed, even when this is off."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps Mailing Lists configuration",
+  "description": "The settings of the Mailing Lists module read from appsettings.json, in the OrchardCore section of the host or a tenant.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps": {
+          "type": "object",
+          "properties": {
+            "MailingLists": {
+              "type": "object",
+              "description": "The provider outbox, the retention of unconfirmed sign-ups and the cap of confirmation e-mails.",
+              "properties": {
+                "SyncBatchSize": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 25,
+                  "description": "How many member changes the provider outbox sends in one batch."
+                },
+                "SyncMaxAttempts": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 8,
+                  "description": "How many times the provider outbox tries a member change before it marks the member not synced."
+                },
+                "PendingRetentionDays": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 30,
+                  "description": "How many days an unconfirmed sign-up is kept before it is deleted."
+                },
+                "ConfirmationCap": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 3,
+                  "description": "How many confirmation and claim e-mails one address may be sent for one list within ConfirmationCapMinutes; 0 turns the cap off."
+                },
+                "ConfirmationCapMinutes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 15,
+                  "description": "The window, in minutes, of ConfirmationCap."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

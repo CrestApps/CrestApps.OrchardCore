@@ -1,6 +1,8 @@
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Consent;
+using CrestApps.OrchardCore.Consent.Core.Services;
+using CrestApps.OrchardCore.Consent.Unsubscribe;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Marketing.Models;
@@ -16,8 +18,6 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Outreach;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Fluid.Values;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -88,16 +88,22 @@ public sealed class MarketingTests
 
         var message = Assert.Single(sent);
         Assert.Equal("sam@example.com", message.To);
-        Assert.Contains("https://store.example.com/marketing/unsubscribe?token=", message.HtmlBody);
+        Assert.Contains("https://store.example.com/email-preferences?token=", message.HtmlBody);
         Assert.Equal("Come back", message.TextBody.Split('\n')[0]);
         Assert.Equal((1, 2, 0, CampaignStatus.Sent), (campaign.Sent, campaign.Skipped, campaign.Failed, campaign.Status));
         Assert.NotNull(campaign.CompletedUtc);
 
-        var token = message.HtmlBody[(message.HtmlBody.IndexOf("token=", StringComparison.Ordinal) + 6)..message.HtmlBody.IndexOf('"', message.HtmlBody.IndexOf("token=", StringComparison.Ordinal))];
-        var service = harness.Services.GetRequiredService<CampaignService>();
+        // The link opens the e-mail preferences page for the customer's address and all marketing.
+        const string LinkStart = "email-preferences?token=";
+        var start = message.HtmlBody.IndexOf(LinkStart, StringComparison.Ordinal) + LinkStart.Length;
+        var token = message.HtmlBody.Substring(start, message.HtmlBody.IndexOf('"', start) - start);
 
-        Assert.Equal("yes", service.ReadUnsubscribeToken(System.Net.WebUtility.HtmlDecode(token)));
-        Assert.Null(service.ReadUnsubscribeToken("forged"));
+        Assert.True(harness.Services.GetRequiredService<IUnsubscribeLinks>().TryRead(Uri.UnescapeDataString(System.Net.WebUtility.HtmlDecode(token)), out var ticket));
+        Assert.Equal("sam@example.com", ticket.Address);
+        Assert.Equal(UnsubscribeScopeKinds.AllMarketing, ticket.Scope.Kind);
+
+        // Links sent before the preferences page are still read; a forged one isn't.
+        Assert.Null(harness.Services.GetRequiredService<CampaignService>().ReadUnsubscribeToken("forged"));
     }
 
     [Fact]
@@ -111,7 +117,7 @@ public sealed class MarketingTests
         consent
             .Setup(service => service.GetAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ConsentQuery query, CancellationToken _) =>
-                query is { Channel: ConsentChannels.Email, ContactKind: ConsentContactKinds.Customer, ContactId: "yes" }
+                query is { Channel: ConsentChannels.Email, ContactKind: ConsentContactKinds.Customer, ContactId: "yes", Purpose: ConsentPurposes.Marketing }
                     ? ConsentStatus.OptedOutBy("customer-marketing")
                     : ConsentStatus.NotOptedOut);
         await using var harness = await CreateCampaignHarnessAsync(campaign, segment, sent, consent: consent.Object);
@@ -269,7 +275,7 @@ public sealed class MarketingTests
             services.AddSingleton(liquid.Object);
             services.AddSingleton(SiteService());
             services.AddSingleton(SignedLinkDoubles.Tokens());
-            services.AddSingleton<LinkGenerator>(new UnsubscribeLinkGenerator());
+            services.AddScoped<IUnsubscribeLinks, UnsubscribeLinks>();
             services.AddSingleton<IStringLocalizer<CampaignService>>(new PassThroughStringLocalizer<CampaignService>());
             services.AddScoped<CampaignService>();
             services.AddOutreachChannelSender<EmailOutreachChannelSender>();
@@ -282,27 +288,6 @@ public sealed class MarketingTests
                 services.AddSingleton(consent);
             }
         });
-    }
-
-    /// <summary>
-    /// Returns the unsubscribe route's path with the token in the query.
-    /// </summary>
-    private sealed class UnsubscribeLinkGenerator : LinkGenerator
-    {
-        public override string GetPathByAddress<TAddress>(HttpContext httpContext, TAddress address, RouteValueDictionary values, RouteValueDictionary ambientValues = null, PathString? pathBase = null, FragmentString fragment = default, LinkOptions options = null)
-            => Path(values);
-
-        public override string GetPathByAddress<TAddress>(TAddress address, RouteValueDictionary values, PathString pathBase = default, FragmentString fragment = default, LinkOptions options = null)
-            => Path(values);
-
-        public override string GetUriByAddress<TAddress>(HttpContext httpContext, TAddress address, RouteValueDictionary values, RouteValueDictionary ambientValues = null, string scheme = null, HostString? host = null, PathString? pathBase = null, FragmentString fragment = default, LinkOptions options = null)
-            => null;
-
-        public override string GetUriByAddress<TAddress>(TAddress address, RouteValueDictionary values, string scheme, HostString host, PathString pathBase = default, FragmentString fragment = default, LinkOptions options = null)
-            => null;
-
-        private static string Path(RouteValueDictionary values)
-            => "/marketing/unsubscribe?token=" + Uri.EscapeDataString(values["token"]?.ToString() ?? string.Empty);
     }
 
     private static IClock Clock()

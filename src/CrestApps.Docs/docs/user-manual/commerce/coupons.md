@@ -130,7 +130,7 @@ To give each customer their own code, for example single-use codes printed on ca
 1. Create the coupon with the discount and rules the codes share. Tick **Only the generated codes work** if its own code shouldn't work.
 2. Save it, then under **Share and generate codes** on its page, enter **How many** (up to 5,000 at a time), an optional **Prefix** such as *VIP-*, and **Uses per code** (1 for single-use; blank for no limit).
 3. Click **Generate codes**. The message *Generated 100 codes.* confirms it, and the page shows how many codes there are and how many have been used.
-4. Click **Download them (CSV)** for a file with every code, how often it was used, its limit and when it was made.
+4. Click **Download them (CSV)** for a file with every code, how often it was used, its limit and when it was made. A code made for one person, such as a mailing list's [welcome code](../mailing-lists/welcome-coupon.md), also shows the e-mail address it is for, when it ends and what it was made for.
 
 Codes are eight letters and digits after the prefix, without 0, O, 1 or I, which are easy to misread. Each code shares the coupon's discount, dates, limits per customer, products and who it's for, and has its own uses: a single-use code that was used is used up, while the others still work. Changing or disabling the coupon changes or disables all its codes. Deleting it deletes them.
 

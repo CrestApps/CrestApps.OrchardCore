@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel;
 
@@ -126,7 +127,7 @@ public sealed class ConsentServiceTests
         customers.Setup(store => store.FindByIdAsync("c1", It.IsAny<CancellationToken>())).ReturnsAsync(customer);
 
         var crm = new SharedNumberOptOutResolver();
-        var consent = new DefaultConsentService([CrmSource(crm, out _), new CustomerMarketingConsentSource(customers.Object, Clock())]);
+        var consent = new DefaultConsentService([CrmSource(crm, out _), new CustomerMarketingConsentSource(customers.Object, Mock.Of<ISession>(), Clock())]);
         var query = new ConsentQuery { Channel = ConsentChannels.Email, Address = "sam@example.com", ContactKind = ConsentContactKinds.Customer, ContactId = "c1" };
 
         Assert.False((await consent.GetAsync(query, TestContext.Current.CancellationToken)).HasOptedOut);

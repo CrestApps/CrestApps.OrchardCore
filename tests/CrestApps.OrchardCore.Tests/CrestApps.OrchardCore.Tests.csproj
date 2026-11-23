@@ -115,6 +115,11 @@
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Commerce.Abstractions/CrestApps.OrchardCore.Commerce.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Consent.Abstractions/CrestApps.OrchardCore.Consent.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Consent.Core/CrestApps.OrchardCore.Consent.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.MailingLists.Core/CrestApps.OrchardCore.MailingLists.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.MailingLists.Mailchimp.Core/CrestApps.OrchardCore.MailingLists.Mailchimp.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.MailingLists/CrestApps.OrchardCore.MailingLists.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.MailingLists.Mailchimp/CrestApps.OrchardCore.MailingLists.Mailchimp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Consent/CrestApps.OrchardCore.Consent.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Approvals/CrestApps.OrchardCore.Approvals.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Banking/CrestApps.OrchardCore.Banking.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" PrivateAssets="none" />

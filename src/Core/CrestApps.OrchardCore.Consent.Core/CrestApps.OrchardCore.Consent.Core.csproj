@@ -7,10 +7,15 @@
       $(CrestAppsDescription)
 
       The consent service: asks each consent source whether a person opted out of a channel at an address, and
-      records opt-outs and opt-ins with every source that keeps them.
+      records opt-outs and opt-ins with every source that keeps them. Also the address opt-outs kept for one purpose
+      (such as marketing) and the signed unsubscribe links of the e-mail preferences page.
     </Description>
-    <PackageTags>$(PackageTags) Consent OptOut DoNotContact</PackageTags>
+    <PackageTags>$(PackageTags) Consent OptOut DoNotContact Unsubscribe</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
@@ -18,6 +23,10 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Consent.Abstractions/CrestApps.OrchardCore.Consent.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>
 
 </Project>

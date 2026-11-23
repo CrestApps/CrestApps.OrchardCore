@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Mailing Lists Mailchimp Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The Mailchimp provider of mailing lists: the Marketing API client, member pushes, the change feed for the
+      reconciliation, and the parser and signature check of Mailchimp webhooks.
+    </Description>
+    <PackageTags>$(PackageTags) MailingLists Newsletter Mailchimp Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.MailingLists.Mailchimp" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.MailingLists.Abstractions\CrestApps.OrchardCore.MailingLists.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Webhooks.Core\CrestApps.OrchardCore.Webhooks.Core.csproj" />
+  </ItemGroup>
+
+</Project>

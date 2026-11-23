@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.ViewModels;
@@ -19,11 +20,17 @@ namespace CrestApps.OrchardCore.Customers.Services;
 /// </summary>
 public sealed class CustomerAccountPages
 {
+    /// <summary>
+    /// Where a change of the customer's own marketing choice is said to come from, kept with it.
+    /// </summary>
+    public const string ConsentSource = "customer-profile";
+
     private readonly ICustomerService _customerService;
     private readonly ICustomerStore _store;
     private readonly CustomerAddressBook _addressBook;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly IConsentService _consentService;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -35,6 +42,7 @@ public sealed class CustomerAccountPages
         CustomerAddressBook addressBook,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        IConsentService consentService,
         IClock clock,
         IStringLocalizer<CustomerAccountPages> stringLocalizer,
         IHtmlLocalizer<CustomerAccountPages> htmlLocalizer)
@@ -44,6 +52,7 @@ public sealed class CustomerAccountPages
         _addressBook = addressBook;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _consentService = consentService;
         _clock = clock;
         S = stringLocalizer;
         H = htmlLocalizer;
@@ -109,11 +118,12 @@ public sealed class CustomerAccountPages
         customer.CompanyName = Trim(model.CompanyName);
         customer.TaxId = Trim(model.TaxId);
         customer.Phone = Trim(model.Phone);
-        customer.AcceptsMarketing = model.AcceptsMarketing;
     }
 
     /// <summary>
-    /// Checks the profile form and saves it to the customer.
+    /// Checks the profile form and saves it to the customer. A changed marketing choice is recorded through the consent
+    /// service, so every place consent is kept hears it (the customer's <c>AcceptsMarketing</c>, and the opt-outs kept
+    /// for their address); an unchanged one records nothing.
     /// </summary>
     public async Task<CustomerAccountSaveResult> SaveProfileAsync(Customer customer, MyAccountViewModel model, ModelStateDictionary modelState, CancellationToken cancellationToken = default)
     {
@@ -124,7 +134,32 @@ public sealed class CustomerAccountPages
             return CustomerAccountSaveResult.Invalid;
         }
 
+        var marketingChanged = customer.AcceptsMarketing != model.AcceptsMarketing;
+
         Apply(customer, model);
+
+        if (marketingChanged)
+        {
+            try
+            {
+                await _consentService.RecordAsync(ConsentChannels.Email, customer.Email, new ConsentChange
+                {
+                    OptedOut = !model.AcceptsMarketing,
+                    Purpose = ConsentPurposes.Marketing,
+                    Source = ConsentSource,
+                    ContactKind = ConsentContactKinds.Customer,
+                    ContactId = customer.ItemId,
+                }, cancellationToken);
+            }
+            catch (ConcurrencyException)
+            {
+                return CustomerAccountSaveResult.Conflict;
+            }
+
+            // The customer marketing source sets it on this same tracked record; this keeps the form's choice whatever
+            // the store hands that source.
+            customer.AcceptsMarketing = model.AcceptsMarketing;
+        }
 
         return await TrySaveAsync(customer, cancellationToken)
             ? CustomerAccountSaveResult.Saved

@@ -60,14 +60,12 @@
                 <textarea id="ticket-form-body-@Model.WidgetId" name="body" class="form-control" rows="5" required></textarea>
             </div>
 
-            @* A trap for robots: hidden from people and screen readers. *@
-            <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
-                <label>@T["Leave this empty"] <input type="text" name="@TicketFormGuard.TrapFieldName" tabindex="-1" autocomplete="off" /></label>
-            </div>
+            @* The shared protection of public forms: a trap for robots, and the challenge (ReCaptcha) when one is set up. *@
+            <shape type="PublicFormTrap" />
 
             @if (Model.ShowChallenge)
             {
-                <div class="mb-3"><shape type="ReCaptcha" /></div>
+                <shape type="PublicFormChallenge" />
             }
 
             <partial name="_TicketProtectedInputs" />

@@ -1,0 +1,26 @@
+@model ShapeViewModel<MailingListMember>
+@inject IAuthorizationService AuthorizationService
+
+@if (await AuthorizationService.AuthorizeAsync(User, MailingListsPermissions.ManageMailingListMembers))
+{
+    @if (Model.Value.Status is MailingListMemberStatus.Pending or MailingListMemberStatus.Subscribed)
+    {
+        <a asp-controller="MailingListMembers"
+           asp-action="Unsubscribe"
+           asp-route-listId="@Model.Value.ListId"
+           asp-route-id="@Model.Value.ItemId"
+           class="dropdown-item"
+           data-title="@T["Unsubscribe"]"
+           data-message="@T["Unsubscribe this member from the list?"]"
+           data-url-af="UnsafeUrl">@T["Unsubscribe"]</a>
+    }
+    <a asp-controller="MailingListMembers"
+       asp-action="Erase"
+       asp-route-listId="@Model.Value.ListId"
+       asp-route-id="@Model.Value.ItemId"
+       class="dropdown-item text-danger"
+       data-title="@T["Erase"]"
+       data-message="@T["Erase every membership of this address, on every list, for a privacy request? This cannot be undone."]"
+       data-mailing-list-erase
+       data-url-af="RemoveUrl UnsafeUrl">@T["Erase"]</a>
+}

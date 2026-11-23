@@ -1,0 +1,46 @@
+@model MailingListConfirmationViewModel
+
+@{
+    var modes = new[]
+    {
+        (MailingListConfirmation.Email, T["Double opt-in: the site e-mails a confirmation link"].Value),
+        (MailingListConfirmation.None, T["Single opt-in: people are subscribed at once"].Value),
+        (MailingListConfirmation.Provider, T["The provider sends its own confirmation e-mail"].Value),
+    };
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Confirmation"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Confirmation">
+            <label asp-for="Confirmation" class="ocat-label">@T["Confirm sign-ups"]</label>
+            <div class="ocat-end">
+                <select asp-for="Confirmation" class="form-select">
+                    @foreach (var (value, text) in modes)
+                    {
+                        <option value="@value" selected="@(Model.Confirmation == value)">@text</option>
+                    }
+                </select>
+                <span asp-validation-for="Confirmation" class="text-danger"></span>
+                <span class="hint">@T["Double opt-in proves the person owns the address and is expected in many countries. With single opt-in, an address with a marketing opt-out on file still gets a confirmation e-mail, so nobody can undo another person's opt-out. A provider that cannot confirm falls back to double opt-in by the site."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="LinkLifetimeDays">
+            <label asp-for="LinkLifetimeDays" class="ocat-label">@T["Confirmation link works for (days)"]</label>
+            <div class="ocat-end">
+                <input asp-for="LinkLifetimeDays" type="number" min="1" max="30" class="form-control" style="max-width: 10rem" />
+                <span asp-validation-for="LinkLifetimeDays" class="text-danger"></span>
+                <span class="hint">@T["Between 1 and 30 days. After that, the page offers to send a new link. Sign-ups never confirmed are deleted after 30 days."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="SkipConfirmationForVerifiedUsers" type="checkbox" class="form-check-input" />
+                    <label asp-for="SkipConfirmationForVerifiedUsers" class="form-check-label">@T["Skip the confirmation for signed-in users with a confirmed e-mail"]</label>
+                    <span class="hint dashed">@T["A signed-in user who signs up with the confirmed e-mail of their account is subscribed and verified at once."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

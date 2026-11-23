@@ -8,8 +8,13 @@ using OrchardCore.DisplayManagement;
 namespace CrestApps.OrchardCore.Marketing.Controllers;
 
 /// <summary>
-/// The unsubscribe link of a campaign email: the customer stops getting marketing, with one click to confirm.
+/// The unsubscribe link campaign e-mails carried before the site's e-mail preferences page: the customer stops getting
+/// marketing, with one click to confirm. New campaigns link to the preferences page; this page stays for the e-mails
+/// already sent, until their links expire.
 /// </summary>
+/// <remarks>
+/// The endpoints take no permission: the signed token in the link is the authorization.
+/// </remarks>
 public sealed class UnsubscribeController : Controller
 {
     /// <summary>
@@ -54,10 +59,12 @@ public sealed class UnsubscribeController : Controller
 
         if (customer is { AcceptsMarketing: true })
         {
-            // Recorded through the consent service, which every campaign and send asks.
+            // Recorded through the consent service, which every campaign and send asks, for marketing only: the
+            // customer's order e-mails and conversations still come.
             await _consentService.RecordAsync(ConsentChannels.Email, customer.Email, new ConsentChange
             {
                 OptedOut = true,
+                Purpose = ConsentPurposes.Marketing,
                 Source = ConsentSource,
                 ContactKind = ConsentContactKinds.Customer,
                 ContactId = customer.ItemId,

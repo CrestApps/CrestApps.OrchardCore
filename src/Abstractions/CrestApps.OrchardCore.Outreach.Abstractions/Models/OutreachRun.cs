@@ -78,6 +78,13 @@ public sealed class OutreachRun : CatalogItem, IModifiedUtcAwareModel
     public string ConsentContactKind { get; set; }
 
     /// <summary>
+    /// Gets or sets why the run contacts its recipients, such as <c>Marketing</c>, for the consent check; optional.
+    /// With a purpose, a recipient who opted out of that purpose is skipped too; without one, only a recipient who
+    /// opted out of every purpose is.
+    /// </summary>
+    public string ConsentPurpose { get; set; }
+
+    /// <summary>
     /// Gets or sets the business hours schedule the run may send in, for channels that observe quiet hours; optional.
     /// Outside it, batches wait for the schedule to open.
     /// </summary>

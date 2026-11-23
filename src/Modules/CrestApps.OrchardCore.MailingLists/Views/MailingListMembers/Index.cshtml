@@ -1,0 +1,92 @@
+@model MailingListMembersIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MailingListMembersIndex" title="@T["Members of '{0}'", Model.MailingList.DisplayText]">
+        <breadcrumb-item id="MailingListsIndex" action="Index" controller="MailingLists" area="CrestApps.OrchardCore.MailingLists" permission="@MailingListsPermissions.ViewMailingListMembers.Name">@T["Mailing lists"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<style asp-name="bootstrap-select"></style>
+
+<form asp-action="Index" asp-route-listId="@Model.MailingList.ItemId" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false" data-mailing-list-members data-erase-message="@Model.EraseConfirmation">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search by e-mail address"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (Model.CanManage)
+                {
+                    <div class="col-auto">
+                        <a class="btn btn-secondary create" role="button" asp-action="Create" asp-route-listId="@Model.MailingList.ItemId">@T["Add member"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (Model.CanManage)
+    {
+        <admin-list name="MailingListMembers" context="Model.List"
+                    bulk-actions="Model.Options.BulkActions"
+                    empty-message="@T["<strong>Nothing here!</strong> No member matches."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column type="Select" />
+                <admin-list-column name="Email" position="20" title="@T["E-mail"]" />
+                <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+                <admin-list-column name="Changed" position="40" title="@T["Last change"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
+    }
+    else
+    {
+        <admin-list name="MailingListMembers" context="Model.List"
+                    show-select-all="false"
+                    empty-message="@T["<strong>Nothing here!</strong> No member matches."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Email" position="20" title="@T["E-mail"]" />
+                <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+                <admin-list-column name="Changed" position="40" title="@T["Last change"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
+    }
+</form>
+
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="list-management-ui" at="Foot"></script>
+<script at="Foot">
+    document.querySelectorAll('[data-mailing-list-filter]').forEach(select => {
+        select.addEventListener('change', () => {
+            const submit = document.getElementById('submitFilter');
+
+            if (select.form && submit) {
+                select.form.requestSubmit(submit);
+            }
+        });
+    });
+
+    // The erase bulk action and row action ask the page's question, which says when an outside provider deletes the
+    // addresses for good.
+    document.querySelectorAll('[data-mailing-list-members]').forEach(form => {
+        const message = form.dataset.eraseMessage;
+
+        if (!message) {
+            return;
+        }
+
+        form.querySelectorAll('[data-action="Erase"], [data-mailing-list-erase]').forEach(item => {
+            item.dataset.message = message;
+        });
+    });
+</script>

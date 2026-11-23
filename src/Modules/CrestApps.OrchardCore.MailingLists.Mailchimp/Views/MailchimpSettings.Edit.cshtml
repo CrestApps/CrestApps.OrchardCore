@@ -1,0 +1,38 @@
+@model MailchimpSettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Mailchimp"]</div>
+    <div class="card-body">
+        <p class="text-muted">@T["Mailing lists whose provider is Mailchimp keep their members in a Mailchimp audience. Create an API key in Mailchimp (Profile > Extras > API keys) and save it as an Orchard text secret; Mailchimp API keys never expire and give full access to the account, so keep the secret to the people who need it."]</p>
+
+        <div class="ocat-wrapper" asp-validation-class-for="SecretName">
+            <label asp-for="SecretName" class="ocat-label">@T["API key secret"]</label>
+            <div class="ocat-end">
+                <select asp-for="SecretName" asp-items="Model.Secrets" class="form-select">
+                    <option value="">@T["Choose a secret"]</option>
+                </select>
+                <span asp-validation-for="SecretName" class="text-danger"></span>
+                <span class="hint">@T["The Orchard secret (a text secret, for example named {0}) that holds the Mailchimp API key. The key is never kept in these settings. Add or change it under", MailchimpConstants.DefaultSecretName] <a href="@Url.Action("Index", "Admin", new { area = OrchardCoreFeatureIds.Secrets })">@T["Security > Secrets"]</a>. @T["Leave it empty to turn Mailchimp off."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="ServerPrefix">
+            <label asp-for="ServerPrefix" class="ocat-label">@T["Server prefix"]</label>
+            <div class="ocat-end">
+                <input asp-for="ServerPrefix" class="form-control" maxlength="8" autocomplete="off" placeholder="us21" />
+                <span asp-validation-for="ServerPrefix" class="text-danger"></span>
+                <span class="hint">@T["The data center of the account, the part after the dash at the end of the API key (us21 in ...-us21) and at the start of the address of your Mailchimp pages. Leave it empty to take it from the API key."]</span>
+            </div>
+        </div>
+
+        @if (Model.IsConfigured)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <button class="btn btn-secondary" type="submit" formaction="@Url.Action("TestConnection", "MailchimpAdmin", new { area = MailchimpConstants.Features.Mailchimp })">@T["Test the connection"]</button>
+                    <span class="hint">@T["Asks Mailchimp to answer with the saved settings. Save your changes first."]</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>

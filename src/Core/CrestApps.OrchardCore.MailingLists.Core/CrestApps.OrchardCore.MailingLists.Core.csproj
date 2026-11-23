@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Mailing Lists Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for mailing lists: the list and member stores and indexes, sign-up with optional e-mail
+      verification, the consent source, the unsubscribe scope, the Local provider and the durable provider outbox.
+    </Description>
+    <PackageTags>$(PackageTags) MailingLists Newsletter Subscribers DoubleOptIn Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.MailingLists" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.MailingLists.Abstractions\CrestApps.OrchardCore.MailingLists.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Consent.Abstractions\CrestApps.OrchardCore.Consent.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Outreach.Abstractions\CrestApps.OrchardCore.Outreach.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.PersonalData.Abstractions\CrestApps.OrchardCore.PersonalData.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Timeline.Abstractions\CrestApps.OrchardCore.Timeline.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

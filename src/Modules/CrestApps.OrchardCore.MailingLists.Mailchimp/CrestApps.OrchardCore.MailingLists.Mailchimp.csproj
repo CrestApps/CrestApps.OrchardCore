@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Mailing Lists Mailchimp</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Keeps mailing lists in Mailchimp audiences: members are pushed through a durable outbox, Mailchimp's own double
+      opt-in can confirm sign-ups, and Mailchimp webhooks and a daily reconciliation bring unsubscribes and bounces back.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS MailingLists Newsletter Mailchimp</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Secrets.Abstractions" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.MailingLists.Abstractions\CrestApps.OrchardCore.MailingLists.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.MailingLists.Mailchimp.Core\CrestApps.OrchardCore.MailingLists.Mailchimp.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.MailingLists\CrestApps.OrchardCore.MailingLists.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Webhooks\CrestApps.OrchardCore.Webhooks.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

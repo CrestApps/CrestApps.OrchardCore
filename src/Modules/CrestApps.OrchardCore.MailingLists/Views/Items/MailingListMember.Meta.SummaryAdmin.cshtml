@@ -1,0 +1,7 @@
+@model ShapeViewModel<MailingListMember>
+
+<span class="badge ta-badge fw-normal" title="@T["Last change"]"><i class="fa-regular fa-clock" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.Value.StatusChangedUtc, DateTimeKind.Utc), Format: "g"))</span>
+@if (!string.IsNullOrEmpty(Model.Value.Source))
+{
+    <span class="badge ta-badge fw-normal" title="@T["How the member joined"]"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> @Model.Value.Source</span>
+}

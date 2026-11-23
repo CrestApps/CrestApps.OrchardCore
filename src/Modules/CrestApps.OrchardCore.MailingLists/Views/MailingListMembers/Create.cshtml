@@ -1,0 +1,53 @@
+@model AddMailingListMemberViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MailingListMembersCreate" title="@T["New Member"]">
+        <breadcrumb-item id="MailingListsIndex" action="Index" controller="MailingLists" area="CrestApps.OrchardCore.MailingLists" permission="@MailingListsPermissions.ViewMailingListMembers.Name">@T["Mailing lists"]</breadcrumb-item>
+        <breadcrumb-item id="MailingListMembersIndex" action="Index" controller="MailingListMembers" area="CrestApps.OrchardCore.MailingLists" route-listId="@Model.MailingList.ItemId" permission="@MailingListsPermissions.ViewMailingListMembers.Name">@Model.MailingList.DisplayText</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Create" asp-route-listId="@Model.MailingList.ItemId" method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Member"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Email">
+                <label asp-for="Email" class="ocat-label ocat-label-required">@T["E-mail"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Email" type="email" class="form-control" maxlength="254" autocomplete="off" required />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" maxlength="200" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ConsentNote" class="ocat-label">@T["Where the person agreed"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ConsentNote" class="form-control" maxlength="500" />
+                    <span class="hint">@T["Kept as evidence of consent, such as Signed up on paper at the trade fair."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="ConsentConfirmed">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="ConsentConfirmed" type="checkbox" class="form-check-input" />
+                        <label asp-for="ConsentConfirmed" class="form-check-label">@T["I hold this person's consent to receive {0}", Model.MailingList.DisplayText]</label>
+                        <span asp-validation-for="ConsentConfirmed" class="text-danger"></span>
+                        <span class="hint dashed">@T["The member is subscribed at once. No e-mail is sent and no welcome coupon is given."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Add"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-listId="@Model.MailingList.ItemId">@T["Cancel"]</a>
+    </div>
+</form>

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Emails;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Entities;
 
@@ -73,7 +74,7 @@ public sealed class CouponScopeEvaluator
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(coupon.CustomerEmail) && !await MatchesEmailAsync(coupon.CustomerEmail.Trim(), session, scope, cancellationToken))
+        if (EmailAddresses.Normalize(coupon.CustomerEmail) is { } email && !await MatchesEmailAsync(email, session, scope, cancellationToken))
         {
             return false;
         }
@@ -81,14 +82,15 @@ public sealed class CouponScopeEvaluator
         return true;
     }
 
+    // Both sides are compared in the one normalized form every module matches an address in.
     private async Task<bool> MatchesEmailAsync(string email, CheckoutSession session, CheckoutDiscountScope scope, CancellationToken cancellationToken)
     {
-        if (string.Equals(email, scope?.CustomerEmail?.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (SameEmail(email, scope?.CustomerEmail))
         {
             return true;
         }
 
-        if (session.TryGet<CheckoutContactInfo>(out var contact) && string.Equals(email, contact.Email?.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (session.TryGet<CheckoutContactInfo>(out var contact) && SameEmail(email, contact.Email))
         {
             return true;
         }
@@ -101,8 +103,11 @@ public sealed class CouponScopeEvaluator
 
         var account = await contactResolver.ResolveAsync(CustomerOwner.ForUser(session.OwnerId), guestContact: null, cancellationToken);
 
-        return string.Equals(email, account?.Email?.Trim(), StringComparison.OrdinalIgnoreCase);
+        return SameEmail(email, account?.Email);
     }
+
+    private static bool SameEmail(string normalized, string candidate)
+        => string.Equals(normalized, EmailAddresses.Normalize(candidate), StringComparison.Ordinal);
 
     private static bool Contains(IEnumerable<string> values, string value)
         => !string.IsNullOrWhiteSpace(value) &&

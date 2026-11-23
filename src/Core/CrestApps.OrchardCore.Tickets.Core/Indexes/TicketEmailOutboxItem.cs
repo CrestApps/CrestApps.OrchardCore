@@ -3,8 +3,10 @@ using YesSql.Indexes;
 namespace CrestApps.OrchardCore.Tickets.Core.Indexes;
 
 /// <summary>
-/// An e-mail to a requester waiting to be sent, sent, or given up on, kept so a send that fails is tried again and the
-/// ticket shows whether the requester got it.
+/// A requester message: the ticket it is about, its kind, the requester and the message as Tickets wrote it, which
+/// <see cref="Services.TicketEmailOutbox"/> sends as a notification or through the templated e-mail outbox. Earlier
+/// versions kept these in the service desk's collection as an outbox of their own; the ones still stored are handed to
+/// the templated e-mail outbox (<see cref="Services.TicketEmailHandOverStep"/>) and removed.
 /// </summary>
 public sealed class TicketEmailOutboxItem
 {
@@ -76,7 +78,7 @@ public enum TicketEmailOutboxStatus
 }
 
 /// <summary>
-/// Finds the outbox e-mails due to be tried.
+/// Finds the requester e-mails earlier versions kept, by ticket, so a requester who asks to be forgotten loses them too.
 /// </summary>
 public sealed class TicketEmailOutboxIndex : MapIndex
 {

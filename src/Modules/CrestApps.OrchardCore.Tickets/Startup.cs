@@ -104,7 +104,6 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, TicketAutoCloseBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TicketProblemIncidentsBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TicketBacklogBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, TicketEmailOutboxBackgroundTask>();
 
         services
             .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Received, LocalizationSource.Create<Startup>("Ticket received"))

@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.PublicForms
+@inject IEnumerable<IPublicFormChallenge> Challenges
+
+@* What each configured challenge shows on the form, such as the ReCaptcha widget; nothing when none is set up. *@
+@foreach (var challenge in Challenges)
+{
+    if (challenge.IsConfigured && challenge is IPublicFormChallengeShape { ShapeType.Length: > 0 } shape)
+    {
+        <div class="mb-3"><shape type="@shape.ShapeType" /></div>
+    }
+}

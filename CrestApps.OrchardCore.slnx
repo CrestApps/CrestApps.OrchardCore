@@ -42,6 +42,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Lti.Abstractions/CrestApps.OrchardCore.Learning.Lti.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Xapi.Abstractions/CrestApps.OrchardCore.Learning.Xapi.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Credentials.Abstractions/CrestApps.OrchardCore.Learning.Credentials.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.MailingLists.Abstractions/CrestApps.OrchardCore.MailingLists.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.SigningKeys.Abstractions/CrestApps.OrchardCore.SigningKeys.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Programs.Abstractions/CrestApps.OrchardCore.Learning.Programs.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Commerce.Abstractions/CrestApps.OrchardCore.Learning.Commerce.Abstractions.csproj" />
@@ -115,6 +116,8 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Learning.Lti.Core/CrestApps.OrchardCore.Learning.Lti.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/CrestApps.OrchardCore.Learning.Xapi.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Learning.Credentials.Core/CrestApps.OrchardCore.Learning.Credentials.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.MailingLists.Core/CrestApps.OrchardCore.MailingLists.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.MailingLists.Mailchimp.Core/CrestApps.OrchardCore.MailingLists.Mailchimp.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.SigningKeys.Core/CrestApps.OrchardCore.SigningKeys.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Learning.Programs.Core/CrestApps.OrchardCore.Learning.Programs.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Learning.Commerce.Core/CrestApps.OrchardCore.Learning.Commerce.Core.csproj" />
@@ -182,6 +185,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Approvals/CrestApps.OrchardCore.Approvals.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Banking/CrestApps.OrchardCore.Banking.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Consent/CrestApps.OrchardCore.Consent.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Dispatch/CrestApps.OrchardCore.Dispatch.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning/CrestApps.OrchardCore.Learning.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.AI/CrestApps.OrchardCore.Learning.AI.csproj" />
@@ -196,6 +200,8 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Credentials/CrestApps.OrchardCore.Learning.Credentials.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Programs/CrestApps.OrchardCore.Learning.Programs.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Commerce/CrestApps.OrchardCore.Learning.Commerce.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.MailingLists.Mailchimp/CrestApps.OrchardCore.MailingLists.Mailchimp.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.MailingLists/CrestApps.OrchardCore.MailingLists.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.OrTools/CrestApps.OrchardCore.OrTools.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Outreach/CrestApps.OrchardCore.Outreach.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Payroll/CrestApps.OrchardCore.Payroll.csproj" />

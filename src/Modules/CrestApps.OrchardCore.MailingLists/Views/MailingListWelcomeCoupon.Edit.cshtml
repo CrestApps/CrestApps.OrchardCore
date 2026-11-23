@@ -1,0 +1,80 @@
+@using CrestApps.OrchardCore.MailingLists.WelcomeCoupon
+@model MailingListWelcomeCouponViewModel
+
+@{
+    var timings = new[]
+    {
+        (MailingListCouponTiming.AfterVerification, T["Once the address is verified"].Value),
+        (MailingListCouponTiming.AtSignup, T["At sign-up"].Value),
+    };
+    var deliveries = new[]
+    {
+        (MailingListCouponDelivery.Email, T["The site e-mails the code"].Value),
+        (MailingListCouponDelivery.Provider, T["The list's provider sends it from the member's profile"].Value),
+    };
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Welcome coupon"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="IsEnabled" class="form-check-label">@T["Give each new address a welcome coupon"]</label>
+                    <span class="hint dashed">@T["Each address gets one code per list, ever: unsubscribing and signing up again, or an alias of the same mailbox, gets no second code. Members added by an admin or an import never get one."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CouponId">
+            <label asp-for="CouponId" class="ocat-label">@T["Coupon"]</label>
+            <div class="ocat-end">
+                <select asp-for="CouponId" asp-items="Model.Coupons" class="form-select">
+                    <option value="">@T["Choose one"]</option>
+                </select>
+                <span asp-validation-for="CouponId" class="text-danger"></span>
+                <span class="hint">@T["The codes work like this coupon. A coupon that only accepts generated codes is recommended, so its own code can't be shared."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Prefix">
+            <label asp-for="Prefix" class="ocat-label">@T["Code prefix"]</label>
+            <div class="ocat-end">
+                <input asp-for="Prefix" class="form-control" maxlength="12" style="max-width: 14rem" />
+                <span asp-validation-for="Prefix" class="text-danger"></span>
+                <span class="hint">@T["Each code starts with it, such as WELCOME-."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ValidForDays">
+            <label asp-for="ValidForDays" class="ocat-label">@T["Valid for (days)"]</label>
+            <div class="ocat-end">
+                <input asp-for="ValidForDays" type="number" min="1" class="form-control" style="max-width: 10rem" />
+                <span asp-validation-for="ValidForDays" class="text-danger"></span>
+                <span class="hint">@T["How long a code works after it is issued. Leave it empty to follow the coupon's end; a code never works past it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Timing" class="ocat-label">@T["Issue the code"]</label>
+            <div class="ocat-end">
+                <select asp-for="Timing" class="form-select">
+                    @foreach (var (value, text) in timings)
+                    {
+                        <option value="@value" selected="@(Model.Timing == value)">@text</option>
+                    }
+                </select>
+                <span class="hint">@T["At sign-up on a list with confirmation, the confirmation e-mail carries the code. On a list without confirmation, a code that waits for verification is claimed through a link in the welcome e-mail. A code is shown on the web page only once the address is verified."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Delivery" class="ocat-label">@T["Delivered by"]</label>
+            <div class="ocat-end">
+                <select asp-for="Delivery" class="form-select">
+                    @foreach (var (value, text) in deliveries)
+                    {
+                        <option value="@value" selected="@(Model.Delivery == value)">@text</option>
+                    }
+                </select>
+                <span class="hint">@T["A provider that can't hold the code on the member's profile falls back to the site's e-mail."]</span>
+            </div>
+        </div>
+    </div>
+</div>

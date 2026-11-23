@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.PublicForms;
 using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Portal;
@@ -26,7 +27,7 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ICatalog<TicketDesk> _desks;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IEnumerable<ITicketFormChallenge> _challenges;
+    private readonly IEnumerable<IPublicFormChallenge> _challenges;
     private readonly IContentManager _contentManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -38,7 +39,7 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
         IContentDefinitionManager contentDefinitionManager,
         ICatalog<TicketDesk> desks,
         IHttpContextAccessor httpContextAccessor,
-        IEnumerable<ITicketFormChallenge> challenges,
+        IEnumerable<IPublicFormChallenge> challenges,
         IContentManager contentManager,
         IContentItemDisplayManager contentItemDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
@@ -65,7 +66,7 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
             model.WidgetId = part.ContentItem.ContentItemId;
             model.Ready = !string.IsNullOrEmpty(part.TicketType) && !string.IsNullOrEmpty(part.DeskId);
             model.SignedIn = _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated == true;
-            model.ShowChallenge = _challenges.FirstOrDefault()?.IsConfigured == true;
+            model.ShowChallenge = _challenges.Any(challenge => challenge.IsConfigured);
             model.SentNumber = forThisForm ? request.Query[TicketFormController.SentQueryName].ToString() : null;
             model.SuccessMessage = !string.IsNullOrWhiteSpace(part.SuccessMessage)
                 ? part.SuccessMessage
@@ -95,7 +96,7 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
             model.TicketType = part.TicketType;
             model.DeskId = part.DeskId;
             model.SuccessMessage = part.SuccessMessage;
-            model.ChallengeConfigured = _challenges.FirstOrDefault()?.IsConfigured == true;
+            model.ChallengeConfigured = _challenges.Any(challenge => challenge.IsConfigured);
             model.Types = [.. (await _contentDefinitionManager.ListTypeDefinitionsAsync())
                 .Where(type => type.Parts.Any(p => p.PartDefinition.Name == TicketsConstants.PartName))
                 .Select(type => new SelectListItem(type.DisplayName, type.Name, type.Name == part.TicketType))];

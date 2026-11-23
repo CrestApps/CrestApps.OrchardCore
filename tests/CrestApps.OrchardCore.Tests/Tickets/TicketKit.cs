@@ -100,6 +100,10 @@ internal sealed class TicketKit : IAsyncDisposable
                 services.AddScoped<ITicketObserver>(provider => new KitObserver(provider.GetRequiredService<KitObservers>(), provider));
                 services.AddScoped<ITicketService, DefaultTicketService>();
                 services.AddSingleton<global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender>(sender);
+                services.AddScoped<global::CrestApps.OrchardCore.Emails.ITemplatedEmailOutboxObserver, TicketEmailDeliveryObserver>();
+                services.AddScoped<global::CrestApps.OrchardCore.Emails.ITemplatedEmailOutbox>(provider => new SenderOutbox(
+                    provider.GetRequiredService<global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender>(),
+                    provider.GetServices<global::CrestApps.OrchardCore.Emails.ITemplatedEmailOutboxObserver>()));
                 services.AddScoped<TicketEmailOutbox>();
                 configureServices?.Invoke(services);
             },
@@ -208,6 +212,66 @@ internal sealed class TicketKit : IAsyncDisposable
     /// <summary>
     /// An e-mail sender that records what it sent, and fails or throws when a test says so.
     /// </summary>
+    /// <summary>
+    /// The templated e-mail outbox as the tickets see it, over an e-mail sender: an e-mail the sender takes is sent, one
+    /// it refuses or throws on waits for another try, and the outbox's observers hear of the first attempt. The real
+    /// outbox's retries are covered by its own tests.
+    /// </summary>
+    internal sealed class SenderOutbox : global::CrestApps.OrchardCore.Emails.ITemplatedEmailOutbox
+    {
+        private readonly global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender _sender;
+        private readonly global::CrestApps.OrchardCore.Emails.ITemplatedEmailOutboxObserver[] _observers;
+
+        public SenderOutbox(global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender sender, IEnumerable<global::CrestApps.OrchardCore.Emails.ITemplatedEmailOutboxObserver> observers = null)
+        {
+            _sender = sender;
+            _observers = observers?.ToArray() ?? [];
+        }
+
+        public async Task<global::CrestApps.OrchardCore.Emails.TemplatedEmailOutboxResult> SendAsync(global::CrestApps.OrchardCore.Emails.TemplatedEmail email, Func<CancellationToken, Task<global::CrestApps.OrchardCore.Emails.TemplatedEmailContent>> buildAsync, CancellationToken cancellationToken = default)
+        {
+            string error = null;
+
+            try
+            {
+                if (!await _sender.SendAsync(email, buildAsync, cancellationToken))
+                {
+                    error = "The e-mail service didn't take it.";
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                error = exception.Message;
+            }
+
+            var delivery = new global::CrestApps.OrchardCore.Emails.TemplatedEmailDelivery
+            {
+                ItemId = UniqueId.GenerateId(),
+                Kind = email.Kind,
+                To = email.To,
+                Reference = email.Reference,
+                Source = email.Source,
+                Properties = email.Properties,
+                Status = error is null ? global::CrestApps.OrchardCore.Emails.TemplatedEmailOutboxStatus.Sent : global::CrestApps.OrchardCore.Emails.TemplatedEmailOutboxStatus.Queued,
+                FailedAttempts = error is null ? 0 : 1,
+                LastError = error,
+            };
+
+            foreach (var observer in _observers)
+            {
+                await (error is null
+                    ? observer.DeliveredAsync(delivery, cancellationToken)
+                    : observer.RetryingAsync(delivery, cancellationToken));
+            }
+
+            return new global::CrestApps.OrchardCore.Emails.TemplatedEmailOutboxResult
+            {
+                ItemId = delivery.ItemId,
+                Status = delivery.Status,
+            };
+        }
+    }
+
     internal sealed class KitSender : global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender
     {
         public ConcurrentQueue<(global::CrestApps.OrchardCore.Emails.TemplatedEmail Email, global::CrestApps.OrchardCore.Emails.TemplatedEmailContent Content)> Sent { get; } = new();

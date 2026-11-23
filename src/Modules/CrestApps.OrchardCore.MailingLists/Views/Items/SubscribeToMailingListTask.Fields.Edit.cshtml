@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.MailingLists.Workflows
+
+@model SubscribeToMailingListTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="List" class="form-label">@T["Mailing list"]</label>
+    <input asp-for="List" class="form-control code" />
+    <span class="hint">@T["The list's id or technical name. Liquid is allowed."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Email" class="form-label">@T["E-mail"]</label>
+    <input asp-for="Email" class="form-control code" />
+    <span class="hint">@T["Liquid is allowed, such as {0}.", "{{ Request.Form.email }}"]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="PersonName" class="form-label">@T["Name"]</label>
+    <input asp-for="PersonName" class="form-control code" />
+    <span class="hint">@T["Optional. Liquid is allowed."]</span>
+</div>

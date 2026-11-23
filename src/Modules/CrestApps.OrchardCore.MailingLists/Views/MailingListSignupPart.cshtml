@@ -1,0 +1,126 @@
+@using CrestApps.OrchardCore.MailingLists.SignupWidget
+@using CrestApps.OrchardCore.PublicForms
+@model MailingListSignupViewModel
+
+@{
+    var formId = "mailing-list-signup-" + Model.WidgetId;
+}
+
+<section id="@formId" class="mailing-list-signup my-4">
+    @if (!string.IsNullOrWhiteSpace(Model.Heading))
+    {
+        <h2 class="h4">@Model.Heading</h2>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Text))
+    {
+        <p>@Model.Text</p>
+    }
+
+    @if (Model.Lists.Count == 0)
+    {
+        <p class="text-body-secondary">@T["This form isn't set up yet."]</p>
+    }
+    else
+    {
+        <div class="alert @(Model.Succeeded ? "alert-success" : "alert-warning") @(string.IsNullOrEmpty(Model.Message) ? "d-none" : null)" role="status" data-signup-message>@Model.Message</div>
+
+        @if (!Model.Succeeded)
+        {
+            <form method="post" asp-route="@MailingListsConstants.RouteNames.Subscribe" asp-route-widgetId="@Model.WidgetId" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path)" class="no-multisubmit" data-mailing-list-signup>
+                @if (Model.AskForName)
+                {
+                    <div class="mb-3">
+                        <label for="@formId-name" class="form-label">@T["Your name"]</label>
+                        <input id="@formId-name" name="name" class="form-control" maxlength="200" autocomplete="name" />
+                    </div>
+                }
+                <div class="mb-3">
+                    <label for="@formId-email" class="form-label">@T["Your e-mail"]</label>
+                    <input id="@formId-email" name="email" type="email" class="form-control" maxlength="254" autocomplete="email" value="@Model.Email" required />
+                </div>
+
+                @if (Model.Lists.Count == 1)
+                {
+                    var list = Model.Lists[0];
+
+                    <input type="hidden" name="listIds" value="@list.Id" />
+                    @if (!string.IsNullOrWhiteSpace(list.ConsentText))
+                    {
+                        <p class="small text-body-secondary">@list.ConsentText</p>
+                    }
+                }
+                else
+                {
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6">@T["Choose what you want to receive"]</legend>
+                        @foreach (var list in Model.Lists)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="listIds" value="@list.Id" id="@formId-@list.Id" />
+                                <label class="form-check-label" for="@formId-@list.Id">
+                                    @list.Name
+                                    @if (!string.IsNullOrWhiteSpace(list.Description))
+                                    {
+                                        <span class="d-block small text-body-secondary">@list.Description</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(list.ConsentText))
+                                    {
+                                        <span class="d-block small text-body-secondary">@list.ConsentText</span>
+                                    }
+                                </label>
+                            </div>
+                        }
+                    </fieldset>
+                }
+
+                @await DisplayAsync(await New.PublicFormTrap())
+                @await DisplayAsync(await New.PublicFormChallenge())
+
+                <button type="submit" class="btn btn-primary">@Model.ButtonLabel</button>
+            </form>
+        }
+    }
+</section>
+
+<script at="Foot">
+    (function () {
+        const section = document.getElementById('@formId');
+        const form = section ? section.querySelector('[data-mailing-list-signup]') : null;
+
+        if (!form || !window.fetch) {
+            return;
+        }
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const message = section.querySelector('[data-signup-message]');
+            const button = form.querySelector('button[type=submit]');
+
+            button.disabled = true;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                const result = await response.json();
+
+                message.textContent = result.message || '';
+                message.classList.toggle('alert-success', !!result.succeeded);
+                message.classList.toggle('alert-warning', !result.succeeded);
+                message.classList.toggle('d-none', !result.message);
+
+                if (result.succeeded) {
+                    form.remove();
+                }
+            } catch {
+                form.submit();
+            } finally {
+                button.disabled = false;
+            }
+        });
+    })();
+</script>

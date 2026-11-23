@@ -1,0 +1,17 @@
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MailingListsEdit" title="@T["Edit '{0}'", Model.DisplayName]">
+        <breadcrumb-item id="MailingListsIndex" action="Index" controller="MailingLists" area="CrestApps.OrchardCore.MailingLists" permission="@MailingListsPermissions.ViewMailingListMembers.Name">@T["Mailing lists"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

@@ -6,9 +6,6 @@ namespace CrestApps.OrchardCore.Checkout;
 public static class CheckoutConstants
 {
     /// <summary>
-    /// The YesSql collection the coupon catalog is stored in.
-    /// </summary>
-    /// <summary>
     /// The cookie a discount link keeps its code in until the buyer checks out.
     /// </summary>
     public const string DiscountLinkCookieName = "orchard-discount-code";
@@ -18,6 +15,19 @@ public static class CheckoutConstants
     /// </summary>
     public const int MaxGeneratedCodes = 5000;
 
+    /// <summary>
+    /// The longest text a generated coupon code may start with.
+    /// </summary>
+    public const int MaxCouponCodePrefixLength = 12;
+
+    /// <summary>
+    /// The longest idempotency key a code issued with <c>ICouponIssuer</c> may carry.
+    /// </summary>
+    public const int MaxCouponIdempotencyKeyLength = 256;
+
+    /// <summary>
+    /// The YesSql collection the coupon catalog is stored in.
+    /// </summary>
     public const string CouponCollectionName = "Coupon";
 
     /// <summary>

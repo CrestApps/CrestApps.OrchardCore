@@ -38,4 +38,10 @@ public sealed class ConsentQuery
     /// Gets the sources not to ask, by name, such as the do-not-call lists for a caller that screens them itself.
     /// </summary>
     public IReadOnlyCollection<string> ExcludedSources { get; init; } = [];
+
+    /// <summary>
+    /// Gets why the site wants to contact the person (see <see cref="ConsentPurposes"/>). Empty asks only whether every
+    /// purpose is blocked (a do-not-contact flag), which is what callers that predate purposes ask.
+    /// </summary>
+    public string Purpose { get; init; }
 }

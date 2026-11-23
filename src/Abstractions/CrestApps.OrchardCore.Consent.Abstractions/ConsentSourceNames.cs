@@ -20,4 +20,10 @@ public static class ConsentSourceNames
     /// A commerce customer's consent to marketing, which a campaign's unsubscribe link withdraws.
     /// </summary>
     public const string CustomerMarketing = "customer-marketing";
+
+    /// <summary>
+    /// The opt-outs for one purpose (such as marketing) recorded against an address, so a person who is neither a
+    /// customer nor a contact can still say "stop all marketing".
+    /// </summary>
+    public const string AddressOptOuts = "address-opt-outs";
 }

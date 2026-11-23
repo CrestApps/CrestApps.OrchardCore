@@ -372,6 +372,19 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Mailing Lists',
+            className: icon('messages-square'),
+            link: { type: 'doc', id: 'user-manual/mailing-lists/index' },
+            items: [
+                'user-manual/mailing-lists/members',
+                'user-manual/mailing-lists/signup-form',
+                'user-manual/mailing-lists/welcome-coupon',
+                'user-manual/mailing-lists/mailchimp',
+                'user-manual/mailing-lists/email-preferences',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Phone Tools',
             className: icon('phone'),
             items: [
@@ -791,6 +804,15 @@ const sidebars = {
                 'modules/tenant-hierarchy',
                 'modules/webhooks',
                 'modules/outreach',
+                'modules/consent',
+                {
+                    type: 'category',
+                    label: 'Mailing Lists',
+                    link: { type: 'doc', id: 'modules/mailing-lists' },
+                    items: [
+                        'modules/mailing-lists-mailchimp',
+                    ],
+                },
                 'modules/websockets',
                 'modules/time-zones',
                 'modules/users',

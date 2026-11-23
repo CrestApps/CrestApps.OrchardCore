@@ -9,6 +9,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Contents;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.RateLimits;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.KnowledgeBase.Controllers;
 
@@ -26,10 +27,10 @@ public sealed class HelpCenterController : Controller
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDistributedLock _locks;
-    private readonly YesSql.ISession _session;
+    private readonly ISession _session;
     private readonly KnowledgeArticleFeedbackService _feedback;
 
-    public HelpCenterController(KnowledgeArticleSearch search, KnowledgeBaseCategories categories, IContentManager contentManager, IAuthorizationService authorizationService, IDistributedLock locks, YesSql.ISession session, KnowledgeArticleFeedbackService feedback, KnowledgeBaseHelpCenter helpCenter)
+    public HelpCenterController(KnowledgeArticleSearch search, KnowledgeBaseCategories categories, IContentManager contentManager, IAuthorizationService authorizationService, IDistributedLock locks, ISession session, KnowledgeArticleFeedbackService feedback, KnowledgeBaseHelpCenter helpCenter)
     {
         _feedback = feedback;
         _helpCenter = helpCenter;

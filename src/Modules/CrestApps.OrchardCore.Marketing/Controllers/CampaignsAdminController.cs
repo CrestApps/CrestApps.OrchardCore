@@ -19,7 +19,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Marketing.Controllers;
 
 /// <summary>
-/// Commerce › Campaigns: emails to a segment's customers who accept marketing, sent now or at a time.
+/// Commerce › Campaigns: emails to a segment's customers who accept marketing, or, while the Mailing Lists feature is on,
+/// to a mailing list's subscribed members, sent now or at a time.
 /// </summary>
 [Admin("marketing/campaigns/{action}/{itemId?}", "Campaigns{action}")]
 public sealed class CampaignsAdminController : Controller
@@ -32,6 +33,7 @@ public sealed class CampaignsAdminController : Controller
 
     private readonly ICampaignStore _campaigns;
     private readonly ISegmentStore _segments;
+    private readonly ICampaignMailingLists _mailingLists;
     private readonly CampaignService _campaignService;
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
@@ -45,6 +47,7 @@ public sealed class CampaignsAdminController : Controller
     public CampaignsAdminController(
         ICampaignStore campaigns,
         ISegmentStore segments,
+        ICampaignMailingLists mailingLists,
         CampaignService campaignService,
         ISiteService siteService,
         IAuthorizationService authorizationService,
@@ -56,6 +59,7 @@ public sealed class CampaignsAdminController : Controller
     {
         _campaigns = campaigns;
         _segments = segments;
+        _mailingLists = mailingLists;
         _campaignService = campaignService;
         _siteService = siteService;
         _authorizationService = authorizationService;
@@ -140,7 +144,9 @@ public sealed class CampaignsAdminController : Controller
         return View(await PopulateAsync(new CampaignEditViewModel
         {
             Name = campaign.Name,
+            AudienceKind = CampaignAudienceKinds.IsMailingList(campaign.AudienceKind) ? CampaignAudienceKinds.MailingList : CampaignAudienceKinds.Segment,
             SegmentId = campaign.SegmentId,
+            MailingListId = campaign.MailingListId,
             Subject = campaign.Subject,
             Body = campaign.Body,
             ScheduledLocal = campaign.ScheduledUtc is { } scheduled ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(scheduled, DateTimeKind.Utc))).DateTime : null,
@@ -221,7 +227,7 @@ public sealed class CampaignsAdminController : Controller
     {
         if (submit == "test")
         {
-            if (await _campaignService.SendTestAsync(campaign, model.TestEmail, UnsubscribeUrl, HttpContext.RequestAborted))
+            if (await _campaignService.SendTestAsync(campaign, model.TestEmail, HttpContext.RequestAborted))
             {
                 await _notifier.SuccessAsync(H["A test was emailed to {0}.", model.TestEmail]);
             }
@@ -265,7 +271,21 @@ public sealed class CampaignsAdminController : Controller
             ModelState.AddModelError(nameof(model.Name), S["Name the campaign. Only staff see it."]);
         }
 
-        if (string.IsNullOrEmpty(model.SegmentId) || await _segments.FindByIdAsync(model.SegmentId) is null)
+        var toList = CampaignAudienceKinds.IsMailingList(model.AudienceKind);
+
+        if (toList)
+        {
+            // Only an enabled list, while the Mailing Lists feature is on, can be chosen.
+            if (!_mailingLists.IsAvailable)
+            {
+                ModelState.AddModelError(nameof(model.AudienceKind), S["Campaigns go to a mailing list only while the Mailing Lists feature is on. Choose a segment."]);
+            }
+            else if (string.IsNullOrEmpty(model.MailingListId) || await _mailingLists.FindAsync(model.MailingListId, HttpContext.RequestAborted) is not { IsEnabled: true })
+            {
+                ModelState.AddModelError(nameof(model.MailingListId), S["Choose the mailing list it goes to."]);
+            }
+        }
+        else if (string.IsNullOrEmpty(model.SegmentId) || await _segments.FindByIdAsync(model.SegmentId) is null)
         {
             ModelState.AddModelError(nameof(model.SegmentId), S["Choose the segment it goes to."]);
         }
@@ -286,7 +306,9 @@ public sealed class CampaignsAdminController : Controller
         }
 
         campaign.Name = model.Name.Trim();
-        campaign.SegmentId = model.SegmentId;
+        campaign.AudienceKind = toList ? CampaignAudienceKinds.MailingList : CampaignAudienceKinds.Segment;
+        campaign.SegmentId = toList ? null : model.SegmentId;
+        campaign.MailingListId = toList ? model.MailingListId : null;
         campaign.Subject = model.Subject.Trim();
         campaign.Body = model.Body;
         campaign.ScheduledUtc = model.ScheduledLocal is { } local ? (await _localClock.ConvertToUtcAsync(local)) : null;
@@ -301,10 +323,9 @@ public sealed class CampaignsAdminController : Controller
         model.CanEmail = await _campaignService.CanSendAsync();
         model.HasBaseUrl = !string.IsNullOrWhiteSpace((await _siteService.GetSiteSettingsAsync()).BaseUrl);
         model.Segments = [.. (await _segments.ListAllAsync(HttpContext.RequestAborted)).Select(segment => new SelectListItem(segment.Name, segment.ItemId, segment.ItemId == model.SegmentId))];
+        model.CanSendToMailingLists = _mailingLists.IsAvailable;
+        model.MailingLists = [.. (await _mailingLists.ListEnabledAsync(HttpContext.RequestAborted)).Select(list => new SelectListItem(list.DisplayText ?? list.Name, list.ItemId, list.ItemId == model.MailingListId))];
 
         return model;
     }
-
-    private string UnsubscribeUrl(string token)
-        => Url.RouteUrl(MarketingConstants.UnsubscribeRouteName, new { token }, Request.Scheme);
 }

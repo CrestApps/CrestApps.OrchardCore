@@ -1,6 +1,6 @@
 # Marketing
 
-Markets to the store's customers: what each has bought, segments of customers by it, such as lapsed buyers, and email campaigns to a segment's customers who accept marketing, with an unsubscribe link.
+Markets to the store's customers: what each has bought, segments of customers by it, such as lapsed buyers, and email campaigns to a segment's customers who accept marketing, with an unsubscribe link. While the [Mailing Lists](../CrestApps.OrchardCore.MailingLists) feature is on, a campaign can go to a mailing list's subscribed members instead; its unsubscribe link then unsubscribes that list.
 
 ## Features
 

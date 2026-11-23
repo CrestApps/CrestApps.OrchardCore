@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Records;
@@ -113,10 +114,16 @@ internal sealed class TicketPersonalDataContributor : IPersonalDataContributor
             }
 
             // The e-mails to the requester kept in the outbox hold their address and the replies; a pending one would
-            // still go out to someone who asked to be forgotten.
+            // still go out to someone who asked to be forgotten. An earlier version kept them in the service desk's
+            // collection; the ones not handed to the templated e-mail outbox yet are there.
             foreach (var email in await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.TicketId == ticket.ContentItemId, TicketsConstants.CollectionName).ListAsync(cancellationToken))
             {
                 _session.Delete(email, TicketsConstants.CollectionName);
+            }
+
+            if (_services.GetService<ITemplatedEmailOutboxStore>() is { } outbox)
+            {
+                await outbox.DeleteBySourceAsync(new RecordRef(TicketsConstants.RecordKind, ticket.ContentItemId), cancellationToken);
             }
 
             // What the requester shared under protection (their logins) goes too.

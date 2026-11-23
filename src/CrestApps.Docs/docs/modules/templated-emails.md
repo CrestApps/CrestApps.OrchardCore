@@ -34,6 +34,10 @@ await sender.SendAsync(
 
 The sender builds the content in the e-mail's culture, passes an e-mail with a kind through `ITemplatedEmailTemplates`, and sends it with Orchard Core's e-mail service when the Email feature is on. It returns whether the e-mail went; a send that fails is logged and never throws, so a mail server that's down never undoes what the e-mail is about. `CanSend` says whether the site can send e-mail at all.
 
+### Sending an e-mail that must not be lost
+
+`ITemplatedEmailSender` tries once. For an e-mail a person waits for (a confirmation link, a requester notice), use `ITemplatedEmailOutbox` instead: register it with `services.AddTemplatedEmailOutbox()` (safe to call from several features) and call `SendAsync` with the same arguments. The outbox renders the e-mail once with the site's template for its kind, stores it in the caller's unit of work and tries it at once; when the e-mail service does not take it, a background task tries again after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours, then gives it up. `TemplatedEmail.Source` (a `RecordRef`) and `Properties` travel with the stored e-mail, and an `ITemplatedEmailOutboxObserver` (`AddTemplatedEmailOutboxObserver<T>()`) hears when an e-mail is delivered, retried or given up. Return `null` from the build function to skip the e-mail. The first try happens before the caller commits, so send once the change the e-mail is about is sure to commit. For privacy erasure, `ITemplatedEmailOutboxStore` deletes stored e-mails by source or by recipient. Sent and given-up e-mails are removed after 30 days. Tickets and Mailing Lists send through it.
+
 ## Kinds, groups and sources
 
 A module lists the kinds of e-mail a site can write over, in a group named after it:

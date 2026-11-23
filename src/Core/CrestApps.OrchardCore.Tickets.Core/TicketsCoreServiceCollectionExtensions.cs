@@ -46,6 +46,11 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<TicketSettingsUsage>();
         services.TryAddScoped<TicketEmailOutbox>();
         services.TryAddScoped<TicketRatingRequests>();
+
+        // Requester e-mails go through the durable templated e-mail outbox; the reply an e-mail carries shows its delivery.
+        services.AddTemplatedEmailOutbox();
+        services.AddTemplatedEmailOutboxObserver<TicketEmailDeliveryObserver>();
+        services.AddResumableStep<TicketEmailHandOverStep>();
         services.AddResumableStep<TicketSettingsChangesStep>();
         services.AddResumableStep<TicketReindexStep>();
         services.AddResumableStep<TicketCategoryPathsStep>();

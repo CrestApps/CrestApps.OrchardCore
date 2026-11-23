@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Calendars;
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Checkout.Core;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
@@ -45,6 +46,8 @@ public sealed class CouponsAdminController : Controller
     private const string _optionsStatus = "Options.Status";
 
     private const int RecentUses = 25;
+
+    private const string ExportDateFormat = "yyyy-MM-dd HH:mm:ss";
 
     private readonly ICouponStore _couponStore;
     private readonly CouponEditor _editor;
@@ -430,7 +433,7 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
-        prefix = prefix?.Trim().ToUpperInvariant();
+        prefix = CouponCodeGenerator.NormalizePrefix(prefix);
 
         if (coupon.IsAutomatic)
         {
@@ -440,9 +443,9 @@ public sealed class CouponsAdminController : Controller
         {
             await _notifier.ErrorAsync(H["Generate between 1 and {0} codes at a time.", CheckoutConstants.MaxGeneratedCodes]);
         }
-        else if (!string.IsNullOrEmpty(prefix) && (prefix.Length > 12 || !prefix.All(character => char.IsAsciiLetterOrDigit(character) || character == '-')))
+        else if (!CouponCodeGenerator.IsValidPrefix(prefix))
         {
-            await _notifier.ErrorAsync(H["A prefix is up to 12 letters, digits or dashes."]);
+            await _notifier.ErrorAsync(H["A prefix is up to {0} letters, digits or dashes.", CheckoutConstants.MaxCouponCodePrefixLength]);
         }
         else if (usesPerCode is <= 0)
         {
@@ -459,10 +462,11 @@ public sealed class CouponsAdminController : Controller
     }
 
     /// <summary>
-    /// Downloads the coupon's generated codes as a CSV file, with how often each was used.
+    /// Downloads the coupon's generated codes as a CSV file, with how often each was used and, for a code issued to one
+    /// person, the e-mail address it is bound to, when it ends and the record it was issued for.
     /// </summary>
     /// <param name="itemId">The coupon identifier.</param>
-    /// <param name="localClock">The clock showing the created times in the site's time zone.</param>
+    /// <param name="localClock">The clock showing the created and end times in the site's time zone.</param>
     public async Task<IActionResult> ExportCodes(string itemId, [FromServices] ILocalClock localClock)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
@@ -479,17 +483,24 @@ public sealed class CouponsAdminController : Controller
 
         var csv = new StringBuilder();
 
-        CsvWriter.AppendRow(csv, "Code", "Uses", "Limit", "Created");
+        CsvWriter.AppendRow(csv, "Code", "Uses", "Limit", "Created", "Email", "Expires", "Source");
 
         foreach (var code in await _couponStore.ListGeneratedCodesAsync(coupon.ItemId, HttpContext.RequestAborted))
         {
             var created = await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(code.CreatedUtc, DateTimeKind.Utc));
 
+            // A code issued to one person carries the address it is bound to, its own end and the record it was issued
+            // for. Its end is in the site's time zone, like the created time, so the file never mixes zones.
+            var expires = await ToLocalAsync(code.ExpiresUtc, localClock);
+
             CsvWriter.AppendRow(csv,
                 code.Code,
                 code.RedemptionCount.ToString(CultureInfo.InvariantCulture),
                 code.MaxRedemptions?.ToString(CultureInfo.InvariantCulture),
-                created.DateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+                created.DateTime.ToString(ExportDateFormat, CultureInfo.InvariantCulture),
+                code.CustomerEmail,
+                expires?.ToString(ExportDateFormat, CultureInfo.InvariantCulture),
+                code.Source);
         }
 
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"{coupon.Code}-codes.csv");

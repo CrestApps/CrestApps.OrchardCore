@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Records;
@@ -40,10 +41,13 @@ public sealed class TicketPersonalDataAndAIToolTests
         attachments.Setup(service => service.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback((string id, CancellationToken _) => deleted.Add(id))
             .ReturnsAsync(true);
+        var templatedEmails = new Mock<ITemplatedEmailOutboxStore>();
+        templatedEmails.Setup(store => store.DeleteBySourceAsync(It.IsAny<RecordRef>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
         await using var harness = await CalendarTestHarness.CreateAsync(
             services =>
             {
                 services.AddSingleton<ITimelineService>(timeline);
+                services.AddSingleton(templatedEmails.Object);
                 services.AddScoped<IContentManager>(provider =>
                 {
                     var session = provider.GetRequiredService<ISession>();
@@ -105,6 +109,8 @@ public sealed class TicketPersonalDataAndAIToolTests
         Assert.Null(t2Index.RequesterEmail);
         Assert.Equal(["pats-photo"], deleted);
         Assert.Equal(["t3"], outbox.Select(email => email.TicketId));
+        templatedEmails.Verify(store => store.DeleteBySourceAsync(new RecordRef(TicketsConstants.RecordKind, "t2"), It.IsAny<CancellationToken>()), Times.Once);
+        templatedEmails.Verify(store => store.DeleteBySourceAsync(new RecordRef(TicketsConstants.RecordKind, "t3"), It.IsAny<CancellationToken>()), Times.Never);
         Assert.DoesNotContain("pat@example.com", timeline.Entries.Single(entry => entry.ItemId == "e1").Properties["Notice"].ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("pat@example.com", System.Text.Json.JsonSerializer.Serialize(t2), StringComparison.OrdinalIgnoreCase);
     }

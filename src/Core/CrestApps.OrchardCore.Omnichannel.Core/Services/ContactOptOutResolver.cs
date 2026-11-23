@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
@@ -199,7 +200,7 @@ public sealed class ContactOptOutResolver : IContactOptOutResolver
 
         if (channel != OmnichannelConstants.Channels.Phone && channel != OmnichannelConstants.Channels.Sms)
         {
-            return trimmed.ToLowerInvariant();
+            return EmailAddresses.Normalize(trimmed);
         }
 
         return PhoneNumber.TryFromE164(trimmed, out var phoneNumber) && phoneNumber.HasValue

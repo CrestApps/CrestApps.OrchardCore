@@ -81,7 +81,7 @@ internal static class CustomerAccountApiEndpoints
             CompanyName = request?.CompanyName,
             TaxId = request?.TaxId,
             Phone = request?.Phone,
-            AcceptsMarketing = request?.AcceptsMarketing == true,
+            AcceptsMarketing = request?.AcceptsMarketing ?? customer.AcceptsMarketing,
         };
         var modelState = new ModelStateDictionary();
 

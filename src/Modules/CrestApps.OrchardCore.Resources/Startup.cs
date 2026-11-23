@@ -1,10 +1,13 @@
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.PublicForms;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Resources.Endpoints;
+using CrestApps.OrchardCore.Resources.PublicForms;
 using CrestApps.OrchardCore.Resources.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Resources;
@@ -39,5 +42,19 @@ public sealed class ContentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecordSource<ContentItemRecordSource>();
+    }
+}
+
+/// <summary>
+/// Makes Orchard Core's ReCaptcha the challenge of every public form (<see cref="IPublicFormChallenge"/>), once its
+/// keys are set.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.ReCaptcha)]
+public sealed class ReCaptchaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPublicFormChallenge, ReCaptchaPublicFormChallenge>());
     }
 }

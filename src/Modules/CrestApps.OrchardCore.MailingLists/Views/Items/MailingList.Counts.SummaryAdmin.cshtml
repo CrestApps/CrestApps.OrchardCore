@@ -1,0 +1,11 @@
+@model MailingListCountsViewModel
+
+<span class="badge ta-badge fw-normal" title="@T["Subscribed members"]"><i class="fa-solid fa-user-check" aria-hidden="true"></i> @T["{0} subscribed", Model.Subscribed]</span>
+@if (Model.Pending > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Sign-ups waiting for a confirmation"]"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> @T["{0} pending", Model.Pending]</span>
+}
+@if (Model.NotSynced > 0)
+{
+    <span class="badge ta-badge fw-normal text-danger" title="@T["Members whose last change did not reach the provider"]"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @T["{0} not synced", Model.NotSynced]</span>
+}

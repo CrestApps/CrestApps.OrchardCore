@@ -89,6 +89,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, DiscountLinkCheckoutHandler>();
         services.AddScoped<ICouponRedemptionService, CouponRedemptionService>();
+        services.AddScoped<ICouponIssuer, DefaultCouponIssuer>();
         services.AddScoped<ICheckoutPaymentGate, CouponHoldPaymentGate>();
 
         // Balances such as gift cards and store credit pay after tax. The seam does nothing until a feature registers
@@ -139,6 +140,9 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ICommercePersonalDataContributor, CheckoutPersonalDataContributor>();
         services.AddScoped<ICommercePersonalDataContributor, CouponPersonalDataContributor>();
+
+        // The codes issued to one address (ICouponIssuer, such as a mailing list's welcome code) are that person's data.
+        services.AddScoped<ICommercePersonalDataContributor, IssuedCouponCodePersonalDataContributor>();
 
         // The public checkout experience: the flow chrome, the payment step, and the client resources.
         services.AddDisplayDriver<CheckoutFlow, DefaultCheckoutFlowDisplayDriver>();

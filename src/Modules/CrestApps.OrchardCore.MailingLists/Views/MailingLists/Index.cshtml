@@ -1,0 +1,47 @@
+@model ListCatalogEntryViewModel
+@inject IAuthorizationService AuthorizationService
+
+@{
+    var canManage = await AuthorizationService.AuthorizeAsync(User, MailingListsPermissions.ManageMailingLists);
+}
+
+<zone Name="Title">
+    <breadcrumb name="MailingListsIndex" title="@T["Mailing lists"]" />
+</zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (canManage)
+                {
+                    <div class="col-auto">
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add mailing list"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="MailingLists" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no mailing lists at the moment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Mailing list"]" />
+            <admin-list-column name="Settings" position="30" title="@T["Settings"]" width="auto" />
+            <admin-list-column name="Members" position="40" title="@T["Members"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

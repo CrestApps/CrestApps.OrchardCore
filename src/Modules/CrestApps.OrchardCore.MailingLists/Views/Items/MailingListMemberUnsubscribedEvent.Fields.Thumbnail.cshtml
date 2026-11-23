@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.MailingLists.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<MailingListMemberUnsubscribedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-user-minus" aria-hidden="true"></i> @T["Mailing List Member Unsubscribed"]</h4>
+<p>@T["Starts when a member of a mailing list is unsubscribed or cleaned. The input holds ListId, ListName, MemberId, Email, Name, Status and Source."]</p>

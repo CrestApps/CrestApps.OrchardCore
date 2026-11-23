@@ -1,0 +1,128 @@
+@model MailchimpMailingListViewModel
+
+@{
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var canAct = Model.IsConfigured && !string.IsNullOrEmpty(Model.AudienceId);
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Mailchimp"]</div>
+    <div class="card-body">
+        <input type="hidden" asp-for="Rendered" />
+
+        @if (!string.IsNullOrEmpty(Model.AudiencesError))
+        {
+            <div class="alert alert-warning">@Model.AudiencesError</div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="AudienceId">
+            <label asp-for="AudienceId" class="ocat-label">@T["Audience"]</label>
+            <div class="ocat-end">
+                @if (Model.Audiences.Count > 0)
+                {
+                    <select asp-for="AudienceId" asp-items="Model.Audiences" class="form-select">
+                        <option value="">@T["Choose an audience"]</option>
+                    </select>
+                }
+                else
+                {
+                    <input asp-for="AudienceId" class="form-control" maxlength="50" autocomplete="off" />
+                }
+                <span asp-validation-for="AudienceId" class="text-danger"></span>
+                <span class="hint">@T["The Mailchimp audience the list's members are kept in. Changing it forgets the list's webhook."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Tags">
+            <label asp-for="Tags" class="ocat-label">@T["Tags"]</label>
+            <div class="ocat-end">
+                <input asp-for="Tags" class="form-control" placeholder="website-signup" />
+                <span asp-validation-for="Tags" class="text-danger"></span>
+                <span class="hint">@T["Tags added to each member pushed to Mailchimp, separated by commas, such as website-signup. Mailchimp creates a tag that does not exist yet."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="SendNameMergeFields" type="checkbox" class="form-check-input" />
+                    <label asp-for="SendNameMergeFields" class="form-check-label">@T["Send the name in the FNAME and LNAME merge fields"]</label>
+                </div>
+                <span class="hint">@T["The first word of the name goes in FNAME and the rest in LNAME. Name changes made in Mailchimp come back to the site."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="CouponMergeTag">
+            <label asp-for="CouponMergeTag" class="ocat-label">@T["Coupon merge tag"]</label>
+            <div class="ocat-end">
+                <input asp-for="CouponMergeTag" class="form-control" maxlength="10" autocomplete="off" style="max-width: 12rem" />
+                <span asp-validation-for="CouponMergeTag" class="text-danger"></span>
+                <span class="hint">
+                    @if (Model.CouponDeliveredByProvider)
+                    {
+                        @T["The list's welcome coupon is delivered by the provider: each member's code is written to this text merge field, for your Mailchimp welcome automation to send. The audience must have the field."]
+                    }
+                    else
+                    {
+                        @T["Used only when the list's welcome coupon is delivered by the provider: each member's code is written to this text merge field."]
+                    }
+                </span>
+                @if (canAct)
+                {
+                    <button class="btn btn-sm btn-secondary mt-2" type="submit" formaction="@Url.Action("CreateMergeField", "MailchimpAdmin", new { area = MailchimpConstants.Features.Mailchimp, listId = Model.ListId, returnUrl })">@T["Create the merge field in Mailchimp"]</button>
+                }
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Confirmation e-mail"]</label>
+            <div class="ocat-end">
+                @if (Model.ProviderConfirms)
+                {
+                    <p class="mb-0">@T["Mailchimp sends its own confirmation e-mail: a new sign-up is sent to Mailchimp as pending, and Mailchimp's webhook reports the confirmation."]</p>
+                }
+                else
+                {
+                    <p class="mb-0">@T["The site confirms sign-ups as the Confirmation card says, and members reach Mailchimp once subscribed. To let Mailchimp send its own confirmation e-mail instead, set Confirm sign-ups to \"The provider sends its own confirmation e-mail\"."]</p>
+                }
+                <span class="hint">@T["A member who left the list in Mailchimp and signs up again is asked by Mailchimp to confirm before Mailchimp mails them again."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Webhook"]</label>
+            <div class="ocat-end">
+                @if (Model.WebhookRegistered)
+                {
+                    <p class="mb-0">
+                        @if (Model.WebhookRegisteredLocal.HasValue)
+                        {
+                            @T["Registered on {0}.", Model.WebhookRegisteredLocal.Value.ToString("g")]
+                        }
+                        else
+                        {
+                            @T["Registered."]
+                        }
+                        @if (Model.WebhookSigned)
+                        {
+                            @T["Mailchimp signs its requests, and the site checks each signature."]
+                        }
+                        else
+                        {
+                            @T["Mailchimp returned no signing secret; requests are checked by the secret in the webhook's address."]
+                        }
+                    </p>
+                }
+                else
+                {
+                    <p class="mb-0">@T["Not registered. Without the webhook, unsubscribes, bounces and confirmations made in Mailchimp reach the site only through the daily reconciliation."]</p>
+                }
+                <span class="hint">@T["Mailchimp must reach this site from the internet over HTTPS, at the site's base URL (Settings > General). Save the list before you register the webhook."]</span>
+                @if (canAct)
+                {
+                    <button class="btn btn-sm btn-secondary mt-2" type="submit" formaction="@Url.Action("RegisterWebhook", "MailchimpAdmin", new { area = MailchimpConstants.Features.Mailchimp, listId = Model.ListId, returnUrl })">@(Model.WebhookRegistered ? T["Register the webhook again"] : T["Register the webhook"])</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>

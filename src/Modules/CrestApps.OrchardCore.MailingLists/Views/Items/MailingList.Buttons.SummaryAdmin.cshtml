@@ -1,0 +1,8 @@
+@model ShapeViewModel<MailingList>
+@inject IAuthorizationService AuthorizationService
+
+<a asp-controller="MailingListMembers" asp-action="Index" asp-route-listId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Members"]</a>
+@if (await AuthorizationService.AuthorizeAsync(User, MailingListsPermissions.ManageMailingLists))
+{
+    <a asp-controller="MailingLists" asp-action="Edit" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}

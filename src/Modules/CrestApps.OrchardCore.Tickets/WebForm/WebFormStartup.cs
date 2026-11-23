@@ -8,7 +8,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tickets.WebForm;
 
 /// <summary>
-/// Registers the Ticket Form widget.
+/// Registers the Ticket Form widget. Its trap field and its challenge (ReCaptcha, when that feature is on) are the
+/// shared public form protection of the CrestApps Resources feature.
 /// </summary>
 [Feature(TicketsConstants.Features.WebForm)]
 public sealed class WebFormStartup : StartupBase
@@ -17,18 +18,6 @@ public sealed class WebFormStartup : StartupBase
     {
         services.AddContentPart<TicketFormPart>()
             .UseDisplayDriver<TicketFormPartDisplayDriver>();
-        services.AddSingleton<TicketFormGuard>();
         services.AddDataMigration<TicketFormMigrations>();
     }
-}
-
-/// <summary>
-/// Adds the ticket web form's challenge when Orchard Core's ReCaptcha is on.
-/// </summary>
-[Feature(TicketsConstants.Features.WebForm)]
-[RequireFeatures(OrchardCoreFeatureIds.ReCaptcha)]
-public sealed class WebFormReCaptchaStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<ITicketFormChallenge, ReCaptchaTicketFormChallenge>();
 }

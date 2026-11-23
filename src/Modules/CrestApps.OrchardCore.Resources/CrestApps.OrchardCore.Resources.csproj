@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.ReCaptcha.Core" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
   </ItemGroup>
 

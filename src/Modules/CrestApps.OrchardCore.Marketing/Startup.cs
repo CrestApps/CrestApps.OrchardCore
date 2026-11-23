@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -40,6 +41,9 @@ public sealed class Startup : StartupBase
         services.AddSignedLinks();
         services.AddScoped<CampaignService>();
         services.AddConsent();
+
+        // No mailing lists unless the Mailing Lists feature is on; MailingListsStartup replaces this default then.
+        services.TryAddScoped<ICampaignMailingLists, NullCampaignMailingLists>();
 
         // Campaigns are sent by the outreach engine: the segment is the audience, the campaign's Liquid the template,
         // and the run's progress is copied back onto the campaign. The e-mail sender comes with Orchard's e-mail feature.

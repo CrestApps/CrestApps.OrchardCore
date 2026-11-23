@@ -1,0 +1,128 @@
+@using CrestApps.OrchardCore.Timeline
+@model MailingListMemberDetailsViewModel
+
+@{
+    var member = Model.Member;
+    var status = member.Status switch
+    {
+        MailingListMemberStatus.Subscribed => T["Subscribed"],
+        MailingListMemberStatus.Unsubscribed => T["Unsubscribed"],
+        MailingListMemberStatus.Cleaned => T["Cleaned"],
+        _ => T["Pending"],
+    };
+    var sync = member.SyncState switch
+    {
+        MailingListSyncState.Pending => T["Waiting for the provider"],
+        MailingListSyncState.Failed => T["Not synced"],
+        _ => T["Synced"],
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="MailingListMembersDetails" title="@T["Member {0}", member.Contact?.Email ?? member.NormalizedEmail]">
+        <breadcrumb-item id="MailingListsIndex" action="Index" controller="MailingLists" area="CrestApps.OrchardCore.MailingLists" permission="@MailingListsPermissions.ViewMailingListMembers.Name">@T["Mailing lists"]</breadcrumb-item>
+        <breadcrumb-item id="MailingListMembersIndex" action="Index" controller="MailingListMembers" area="CrestApps.OrchardCore.MailingLists" route-listId="@Model.MailingList.ItemId" permission="@MailingListsPermissions.ViewMailingListMembers.Name">@Model.MailingList.DisplayText</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Membership"]</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["E-mail"]</dt>
+            <dd class="col-sm-9">@(member.Contact?.Email ?? member.NormalizedEmail)</dd>
+            <dt class="col-sm-3">@T["Name"]</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(member.Contact?.Name) ? "-" : member.Contact.Name)</dd>
+            <dt class="col-sm-3">@T["Status"]</dt>
+            <dd class="col-sm-9">@status</dd>
+            <dt class="col-sm-3">@T["Status since"]</dt>
+            <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(member.StatusChangedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+            <dt class="col-sm-3">@T["Address verified"]</dt>
+            <dd class="col-sm-9">
+                @if (member.EmailVerifiedUtc is { } verified)
+                {
+                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(verified, DateTimeKind.Utc), Format: "g"))
+                }
+                else
+                {
+                    @T["Not yet"]
+                }
+            </dd>
+            <dt class="col-sm-3">@T["Joined through"]</dt>
+            <dd class="col-sm-9">@(string.IsNullOrEmpty(member.Source) ? "-" : member.Source)</dd>
+            @if (member.SubscribedUtc is { } subscribed)
+            {
+                <dt class="col-sm-3">@T["Last subscribed"]</dt>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(subscribed, DateTimeKind.Utc), Format: "g"))</dd>
+            }
+            @if (member.UnsubscribedUtc is { } unsubscribed)
+            {
+                <dt class="col-sm-3">@T["Last unsubscribed"]</dt>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(unsubscribed, DateTimeKind.Utc), Format: "g"))@(string.IsNullOrWhiteSpace(member.UnsubscribeReason) ? null : " (" + member.UnsubscribeReason + ")")</dd>
+            }
+            @if (!string.IsNullOrEmpty(member.CouponCodeId))
+            {
+                <dt class="col-sm-3">@T["Welcome coupon"]</dt>
+                <dd class="col-sm-9">@T["Issued"]</dd>
+            }
+            <dt class="col-sm-3">@T["Provider"]</dt>
+            <dd class="col-sm-9">
+                @Model.ProviderName &middot; @sync
+                @if (member.SyncState == MailingListSyncState.Failed && !string.IsNullOrEmpty(member.SyncError))
+                {
+                    <div class="text-danger small">@member.SyncError</div>
+                }
+                else if (member.SyncState == MailingListSyncState.Pending && !string.IsNullOrEmpty(member.SyncError))
+                {
+                    <div class="text-warning small">@member.SyncError</div>
+                }
+            </dd>
+        </dl>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Evidence of consent"]</div>
+    <div class="card-body">
+        @if (member.Consent is null)
+        {
+            <p class="text-body-secondary mb-0">@T["No evidence was recorded, for example for a member the provider reported."]</p>
+        }
+        else
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-3">@T["Agreed"]</dt>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(member.Consent.AgreedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+                <dt class="col-sm-3">@T["Where"]</dt>
+                <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(member.Consent.Form) ? "-" : member.Consent.Form)</dd>
+                <dt class="col-sm-3">@T["From address"]</dt>
+                <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(member.Consent.ClientAddress) ? "-" : member.Consent.ClientAddress)</dd>
+                <dt class="col-sm-3">@T["Text agreed to"]</dt>
+                <dd class="col-sm-9" style="white-space: pre-line">@(string.IsNullOrWhiteSpace(member.Consent.Text) ? "-" : member.Consent.Text)</dd>
+            </dl>
+        }
+    </div>
+</div>
+
+@if (Model.ShowTimeline)
+{
+    @await Component.InvokeAsync("Timeline", new { subject = $"{MailingListsConstants.MemberRecordKind}:{member.ItemId}", title = T["History"].Value })
+}
+
+<form method="post" class="no-multisubmit">
+    <div class="action-bar-bottom">
+        @if (Model.CanManage)
+        {
+            @if (member.Status is MailingListMemberStatus.Pending || (member.Status == MailingListMemberStatus.Subscribed && member.EmailVerifiedUtc is null))
+            {
+                <button type="submit" class="btn btn-secondary" asp-action="Resend" asp-route-listId="@Model.MailingList.ItemId" asp-route-id="@member.ItemId">@T["Send a new link"]</button>
+            }
+            @if (member.Status is MailingListMemberStatus.Pending or MailingListMemberStatus.Subscribed)
+            {
+                <button type="submit" class="btn btn-warning" asp-action="Unsubscribe" asp-route-listId="@Model.MailingList.ItemId" asp-route-id="@member.ItemId">@T["Unsubscribe"]</button>
+            }
+            <button type="submit" class="btn btn-danger action-bar-secondary" asp-action="Erase" asp-route-listId="@Model.MailingList.ItemId" asp-route-id="@member.ItemId" data-confirm="@Model.EraseConfirmation" onclick="return confirm(this.dataset.confirm);">@T["Erase"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-listId="@Model.MailingList.ItemId">@T["Back"]</a>
+    </div>
+</form>

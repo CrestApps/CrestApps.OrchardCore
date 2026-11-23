@@ -25,4 +25,10 @@ public sealed class ConsentChange
     /// Gets the id of the record the person is, or <see langword="null"/> when no record holds the address.
     /// </summary>
     public string ContactId { get; init; }
+
+    /// <summary>
+    /// Gets the purpose the change is for (see <see cref="ConsentPurposes"/>). Empty means every purpose, which is what
+    /// callers that predate purposes record.
+    /// </summary>
+    public string Purpose { get; init; }
 }
