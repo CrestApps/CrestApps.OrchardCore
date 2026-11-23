@@ -1,0 +1,28 @@
+@model TaxReturnPaymentEntryViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Amount">
+    <label asp-for="Amount" class="ocat-label">@T["Amount"]</label>
+    <div class="ocat-end">
+        <input asp-for="Amount" class="form-control" inputmode="decimal" style="max-width: 12rem" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+        <span class="hint">@T["Amounts take a dot for decimals."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="PaidOn">
+    <label asp-for="PaidOn" class="ocat-label">@T["Paid on"]</label>
+    <div class="ocat-end">
+        <input asp-for="PaidOn" type="date" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Reference" class="ocat-label">@T["Reference"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reference" class="form-control" style="max-width: 20rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Method" class="ocat-label">@T["Method"]</label>
+    <div class="ocat-end">
+        <input asp-for="Method" class="form-control" style="max-width: 20rem" placeholder="@T["Such as ACH debit or check"]" />
+    </div>
+</div>

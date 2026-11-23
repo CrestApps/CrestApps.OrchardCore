@@ -104,6 +104,9 @@ internal sealed class FixedPlaidLinkSite : IPlaidLinkSite
             Language = "en",
             WebhookUrl = "https://example.com/plaid/webhook",
         });
+
+    public Task<string> GetWebhookUrlAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult("https://example.com/plaid/webhook");
 }
 
 /// <summary>

@@ -647,7 +647,7 @@ A `TaxReturn` (YesSql collection `TaxReturns`) has its registration, jurisdictio
 | --- | --- |
 | `PrepareAsync(registrationId, periodKey, annualReconciliation, user)` | A new draft, or the draft prepared again; refuses a ready or filed return |
 | `PrepareAgainAsync`, `MarkReadyAsync`, `ReopenAsync` | Draft only; draft to ready; ready back to draft |
-| `MarkFiledAsync(taxReturn, filedOn, confirmationNumber, channel, user)` | Works the boxes out again as filed that day, from the same lines, then marks it filed; the return it corrects becomes `Amended` |
+| `MarkFiledAsync(taxReturn, filedOn, confirmationNumber, channel, user)` | Refuses a day before the period ends (a return covers its whole period), works the boxes out again as filed that day, from the same lines, then marks it filed; the return it corrects becomes `Amended` |
 | `AmendAsync` | A new draft correcting a filed return |
 | `RecordPaymentAsync`, `RemovePaymentAsync` | Records or removes a payment (an id from the id generator); no money moves |
 
@@ -660,6 +660,37 @@ A draft past its due date is worked out as filed today (in the site's time zone)
 | `ITaxReturnDataProvider` (`Name`, `ContributeAsync(TaxReturnDataContext)`) | `services.AddTaxReturnDataProvider<T>()` | Adds a period's figures to `context.Lines` (and notes to `context.Notes`); every provider runs for every return. A line has a `Kind` (`TaxReturnLineKinds`: `GrossSales`, `ExemptSales`, `TaxableSales`, `UseTaxPurchases`, `Withholding`, `Credit`, `ExcessCollected`, or a form's own), `JurisdictionId`, `TaxType` (such as `UseTax`), `FormLine`, `Category`, `Amount` and `TaxAmount` |
 | `ITaxReturnForm` (`Name`, `DisplayName`, `ComputeAsync(TaxReturnFormContext)`) | `services.AddTaxReturnForm<T>()` | Works out the return's `Boxes` and `AmountDue` from its lines; `context.FiledOn` is the day it counts as filed (for discounts, penalties and interest). The built-in `Generic` form sums the lines by kind |
 | `ITaxReturnObserver` (`ChangedAsync(TaxReturnChange)`) | `services.AddTaxReturnObserver<T>()` | Hears `Prepared`, `Ready`, `Reopened`, `Filed`, `Amended`, `PaymentRecorded` and `PaymentRemoved`, after the change is saved in the session and before it is committed: post a filed return or a payment to the books, or record a payroll tax deposit for the withholding paid with it |
+
+**The payment form.** The **Payments** card's form is built through `IDisplayManager<TaxReturnPaymentEntry>`, from the return being paid (`Return`) and the `TaxReturnPayment` being recorded (`Payment`). Tax Returns' driver edits the amount, the day, the reference and the method; a pack adds a display driver that edits what its observer needs into `Payment.Properties`, such as the account the payment came from, and checks `entry.Return` (its jurisdiction or form) so its fields show only on its returns. A driver that adds a model error stops the payment.
+
+```csharp
+internal sealed class PaidFromDisplayDriver : DisplayDriver<TaxReturnPaymentEntry>
+{
+    public override IDisplayResult Edit(TaxReturnPaymentEntry entry, BuildEditorContext context)
+        => entry.Return?.JurisdictionId == "us-mi"
+            ? Initialize<PaidFromViewModel>("TaxReturnPaymentEntryPaidFrom_Edit", model => model.AccountId = entry.Payment.Properties.GetValueOrDefault("PaidFrom") as string).Location("Content:5")
+            : null;
+
+    public override async Task<IDisplayResult> UpdateAsync(TaxReturnPaymentEntry entry, UpdateEditorContext context)
+    {
+        if (entry.Return?.JurisdictionId != "us-mi")
+        {
+            return null;
+        }
+
+        var model = new PaidFromViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+        entry.Payment.Properties["PaidFrom"] = model.AccountId;
+
+        return Edit(entry, context);
+    }
+}
+
+// services.AddDisplayDriver<TaxReturnPaymentEntry, PaidFromDisplayDriver>();
+```
+
+**When an observer fails.** An observer runs before the change is committed. When one throws on a return's page (recording or removing a payment, marking filed, amending, recording an e-file answer), the session is cancelled, so nothing of the change is saved, the error is logged, and the person sees *The change was not saved* instead of an error page.
 
 A site that keeps its own ledger implements a data provider that reads its books for the registration's jurisdiction and period, and a form for each jurisdiction's return:
 
@@ -725,15 +756,19 @@ The `TaxReturns` step (entries `TaxReturns`) and the **Tax returns** deployment 
 
 ## E-filing
 
-The **Tax E-Filing** feature (`CrestApps.OrchardCore.Taxation.EFiling`) files documents electronically. An `EFileSubmission` (YesSql collection `TaxReturns`) is one attempt: the target (`TargetType`, `TargetId`), the format, the channel, the file built (base64 `Content`), its status (`Created`, `Submitted`, `Accepted`, `Rejected`, `Failed`), the agency's `ExternalId`, `ConfirmationNumber` and `Messages`.
+The **Tax E-Filing** feature (`CrestApps.OrchardCore.Taxation.EFiling`) files documents electronically. An `EFileSubmission` (YesSql collection `TaxReturns`) is one attempt: the target (`TargetType`, `TargetId`), the format, the channel, the file built (base64 `Content`), its status (`Created`, `Submitted`, `Accepted`, `Rejected`, `Failed`), whether it is a test (`IsTest`), the choices made when it was submitted (`Options`), the agency's `ExternalId`, `ConfirmationNumber` and `Messages`.
 
 | Interface | Registration | Responsibility |
 | --- | --- | --- |
-| `IEFileTargetProvider` (`TargetType`, `FindAsync`, `CanFileAsync`, `AcceptedAsync`) | `services.AddEFileTargetProvider<T>()` | Describes a kind of document as an `EFileTarget` (with `NotFileableReason` when it can't be filed now), checks who may file it, and marks it filed once accepted. Tax returns (`TaxReturn`) are built in: a return must be `Ready`, and needs `FileTaxReturns` |
-| `IEFileFormat` (`Name`, `DisplayName`, `CanWrite`, `WriteAsync`) | `services.AddEFileFormat<T>()` | Writes a target into an `EFilePayload`; its `Problems` stop the submission. `TaxReturnJson` writes any return as JSON and needs the registration number |
-| `IEFileTransport` (`Name`, `DisplayName`, `IsManual`, `CanSend`, `SendAsync`, `CheckAsync`) | `services.AddEFileTransport<T>()` | Sends the file and asks for the agency's answer. `Manual` hands over the file to download; the person records the answer |
+| `IEFileTargetProvider` (`TargetType`, `FindAsync`, `CanFileAsync`, `AcceptedAsync`) | `services.AddEFileTargetProvider<T>()` | Describes a kind of document as an `EFileTarget` (with `NotFileableReason` when it can't be filed now), checks who may file it, and marks it filed once accepted. Tax returns (`TaxReturn`) are built in: a return must be `Ready` and its period over (in the site's time zone), and needs `FileTaxReturns` |
+| `IEFileFormat` (`Name`, `DisplayName`, `CanWrite`, `WriteAsync(target, submission)`) | `services.AddEFileFormat<T>()` | Writes a target into an `EFilePayload`; its `Problems` stop the submission. The submission, not saved yet, carries the `Options` chosen and `IsTest`. `TaxReturnJson` writes any return as JSON and needs the registration number |
+| `IEFileTransport` (`Name`, `DisplayName`, `IsManual`, `SupportsTestSubmissions`, `CanSend`, `SendAsync`, `CheckAsync`) | `services.AddEFileTransport<T>()` | Sends the file and asks for the agency's answer. A channel with `SupportsTestSubmissions` sends a submission marked `IsTest` to the agency's test system. `Manual` hands over the file to download; the person records the answer |
 
-`IEFilingService.SubmitAsync(target, format, transport, user)` refuses a target already accepted or with a submission waiting, builds the file, sends it (a channel that throws leaves the submission `Failed`), and records the answer; `CheckAsync` asks a channel that is not manual; `RecordAnswerAsync(submission, accepted, confirmationNumber, filedOn, message, user)` records the answer to a manual submission. An accepted submission marks the document filed through its target provider (for a return, `MarkFiledAsync` with the confirmation number and the channel's name); when that fails, the submission stays `Submitted`. The **Tax e-filing acknowledgements** background task asks the channels for the answers to up to 50 submissions every 15 minutes.
+`IEFilingService.SubmitAsync(request, user)` takes an `EFileSubmissionRequest`: the `Target`, the `Format` and `Transport` names, `IsTest`, and the `Options` for the format and the channel, kept on the submission. The `SubmitAsync(target, format, transport, user)` extension sends no options and no test. It refuses a test through a channel that takes none, a target already accepted (a test's acceptance does not count) or with a submission waiting, builds the file, sends it (a channel that throws leaves the submission `Failed`), and records the answer; `CheckAsync` asks a channel that is not manual; `RecordAnswerAsync(submission, accepted, confirmationNumber, filedOn, message, user)` records the answer to a manual submission. An accepted submission marks the document filed through its target provider (for a return, `MarkFiledAsync` with the confirmation number and the channel's name); when that fails, the submission stays `Submitted`. The **Tax e-filing acknowledgements** background task asks the channels for the answers to up to 50 submissions every 15 minutes.
+
+**Test submissions.** An agency's acceptance testing (a state's ATS, for example) answers *accepted* without filing anything. A submission marked `IsTest`, asked for on the submit form or set by a channel whose `EFileTransportResult.IsTest` says it sent the file to a test system, is recorded with the agency's answer and confirmation number, but its acceptance never calls the target provider: the return stays ready to file, and a test the agency accepted does not stop the real submission.
+
+**The submit form.** The **Electronic filing** card's form is built through `IDisplayManager<EFileSubmissionRequest>`. E-Filing's driver edits the format and channel and, when a channel offered takes tests, the **Test submission** box; a pack adds a display driver that edits its own choices into `request.Options` (such as whether the agency debits the payment and on which day), checking `request.Target` so they show only for its documents. The format reads them in `WriteAsync` and the channel in `SendAsync`, from `submission.Options`.
 
 A state's own XML schema and gateway are a format and a transport in a pack; the `EFileSubmissions` step (entries `Submissions`) and the **E-file submissions** deployment step move submissions between sites.
 

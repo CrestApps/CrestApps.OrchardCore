@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using CrestApps.Core.Data.YesSql.Indexes;
@@ -565,6 +566,14 @@ public sealed class TaxReturnService : ITaxReturnService
         if (filedOn == default)
         {
             result.Errors.Add(S["Give the day the return was filed."]);
+
+            return result;
+        }
+
+        // A return covers its whole period, so it is filed once the period is over: an earlier day is a mistake.
+        if (filedOn < taxReturn.PeriodEnd)
+        {
+            result.Errors.Add(S["A return is filed once its period is over: give a day on or after {0}.", taxReturn.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)]);
 
             return result;
         }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -297,10 +298,12 @@ public sealed class EFilingService : IEFilingService
         => _transports.FirstOrDefault(transport => transport.Name == name);
 
     /// <inheritdoc />
-    public async Task<EFilingResult> SubmitAsync(EFileTarget target, string format, string transport, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    public async Task<EFilingResult> SubmitAsync(EFileSubmissionRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Target);
 
+        var target = request.Target;
         var result = new EFilingResult();
 
         if (!string.IsNullOrEmpty(target.NotFileableReason))
@@ -310,7 +313,7 @@ public sealed class EFilingService : IEFilingService
             return result;
         }
 
-        var option = GetOptions(target).FirstOrDefault(candidate => candidate.Format.Name == format && candidate.Transport.Name == transport);
+        var option = GetOptions(target).FirstOrDefault(candidate => candidate.Format.Name == request.Format && candidate.Transport.Name == request.Transport);
 
         if (option.Format is null)
         {
@@ -319,9 +322,17 @@ public sealed class EFilingService : IEFilingService
             return result;
         }
 
+        if (request.IsTest && !option.Transport.SupportsTestSubmissions)
+        {
+            result.Errors.Add(S["The filing channel chosen does not take test submissions."]);
+
+            return result;
+        }
+
         var earlier = await _submissions.ListAsync(target.Type, target.Id, cancellationToken);
 
-        if (earlier.Any(submission => submission.Status == EFileSubmissionStatus.Accepted))
+        // A test the agency accepted filed nothing, so the document can still be filed.
+        if (earlier.Any(submission => submission.Status == EFileSubmissionStatus.Accepted && !submission.IsTest))
         {
             result.Errors.Add(S["The document was accepted already."]);
 
@@ -335,7 +346,23 @@ public sealed class EFilingService : IEFilingService
             return result;
         }
 
-        var payload = await option.Format.WriteAsync(target, cancellationToken);
+        // The submission is made before the file, so the format reads the choices and the test flag; it is saved only once
+        // the file is sent.
+        var submission = await _submissions.NewAsync(cancellationToken: cancellationToken);
+
+        submission.TargetType = target.Type;
+        submission.TargetId = target.Id;
+        submission.TargetDisplayText = target.DisplayText;
+        submission.Format = option.Format.Name;
+        submission.Transport = option.Transport.Name;
+        submission.IsManual = option.Transport.IsManual;
+        submission.IsTest = request.IsTest;
+        submission.Options = request.Options
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && pair.Value is not null)
+            .ToDictionary(pair => pair.Key.Trim(), pair => pair.Value.Trim(), StringComparer.Ordinal);
+        submission.Status = EFileSubmissionStatus.Created;
+
+        var payload = await option.Format.WriteAsync(target, submission, cancellationToken);
 
         if (payload.Problems.Count > 0)
         {
@@ -347,15 +374,6 @@ public sealed class EFilingService : IEFilingService
             return result;
         }
 
-        var submission = await _submissions.NewAsync(cancellationToken: cancellationToken);
-
-        submission.TargetType = target.Type;
-        submission.TargetId = target.Id;
-        submission.TargetDisplayText = target.DisplayText;
-        submission.Format = option.Format.Name;
-        submission.Transport = option.Transport.Name;
-        submission.IsManual = option.Transport.IsManual;
-        submission.Status = EFileSubmissionStatus.Created;
         submission.FileName = payload.FileName;
         submission.ContentType = payload.ContentType;
         submission.Content = Convert.ToBase64String(payload.Content ?? []);
@@ -496,7 +514,7 @@ public sealed class EFilingService : IEFilingService
         => _targets.FirstOrDefault(provider => provider.TargetType == targetType);
 
     // Records what the channel or the person said; an accepted document is marked as filed through its provider, and
-    // stays submitted when that fails, so the acceptance can be recorded again.
+    // stays submitted when that fails, so the acceptance can be recorded again. A test's acceptance files nothing.
     private async Task<IReadOnlyList<string>> ApplyAsync(EFileSubmission submission, EFileTarget target, EFileTransportResult answer, ClaimsPrincipal user, CancellationToken cancellationToken)
     {
         foreach (var message in answer.Messages)
@@ -505,8 +523,13 @@ public sealed class EFilingService : IEFilingService
         }
 
         submission.ExternalId = answer.ExternalId ?? submission.ExternalId;
+        submission.IsTest |= answer.IsTest;
 
-        if (answer.Status == EFileSubmissionStatus.Accepted)
+        if (answer.Status == EFileSubmissionStatus.Accepted && submission.IsTest)
+        {
+            submission.ConfirmationNumber = answer.ConfirmationNumber ?? submission.ConfirmationNumber;
+        }
+        else if (answer.Status == EFileSubmissionStatus.Accepted)
         {
             if (target is null || ProviderOf(submission.TargetType) is not { } provider)
             {
@@ -577,6 +600,10 @@ public sealed class ManualEFileTransport : IEFileTransport
         => true;
 
     /// <inheritdoc />
+    public bool SupportsTestSubmissions
+        => false;
+
+    /// <inheritdoc />
     public bool CanSend(EFileTarget target, string format)
         => true;
 
@@ -603,6 +630,7 @@ public sealed class TaxReturnEFileTargetProvider : IEFileTargetProvider
     private readonly ITaxReturnManager _returns;
     private readonly IServiceProvider _services;
     private readonly IAuthorizationService _authorizationService;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -612,16 +640,19 @@ public sealed class TaxReturnEFileTargetProvider : IEFileTargetProvider
     /// <param name="returns">The returns.</param>
     /// <param name="services">The services, for the return service.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="localClock">The local clock, for the day a return is filed on.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TaxReturnEFileTargetProvider(
         ITaxReturnManager returns,
         IServiceProvider services,
         IAuthorizationService authorizationService,
+        ILocalClock localClock,
         IStringLocalizer<TaxReturnEFileTargetProvider> stringLocalizer)
     {
         _returns = returns;
         _services = services;
         _authorizationService = authorizationService;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -649,6 +680,8 @@ public sealed class TaxReturnEFileTargetProvider : IEFileTargetProvider
             NotFileableReason = taxReturn.Status switch
             {
                 TaxReturnStatus.Draft => S["Mark the return ready to file first."],
+                TaxReturnStatus.Ready when DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime) < taxReturn.PeriodEnd
+                    => S["The period ends on {0}: file the return once it is over.", taxReturn.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)],
                 TaxReturnStatus.Ready => null,
                 _ => S["The return is filed already."],
             },
@@ -721,7 +754,7 @@ public sealed class TaxReturnJsonEFileFormat : IEFileFormat
         => target?.Document is TaxReturn;
 
     /// <inheritdoc />
-    public Task<EFilePayload> WriteAsync(EFileTarget target, CancellationToken cancellationToken = default)
+    public Task<EFilePayload> WriteAsync(EFileTarget target, EFileSubmission submission, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(target);
 

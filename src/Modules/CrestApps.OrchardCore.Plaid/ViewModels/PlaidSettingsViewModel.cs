@@ -43,6 +43,12 @@ public class PlaidSettingsViewModel
     public string WebhookUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the host supplies the Plaid keys, so the settings on this page are not used.
+    /// </summary>
+    [BindNever]
+    public bool HostSuppliesKeys { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a client id and a secret are set.
     /// </summary>
     [BindNever]

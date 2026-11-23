@@ -182,6 +182,38 @@ public sealed class PlaidClientTests
     }
 
     [Fact]
+    public async Task UpdateItemWebhook_SendsTheAccessTokenAndTheNewUrl_AndReadsTheItem()
+    {
+        // Arrange
+        var context = new PlaidTestContext();
+        context.Handler.Answer("item/webhook/update", """{"item":{"item_id":"item-1","institution_id":"ins_1","webhook":"https://shop.example.com/plaid/webhook"},"request_id":"r"}""");
+
+        // Act
+        var item = await context.Client.UpdateItemWebhookAsync(FixedPlaidCredentials.Sandbox, "access-1", "https://shop.example.com/plaid/webhook", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("item-1", item.ItemId);
+        Assert.Equal("https://shop.example.com/plaid/webhook", item.Webhook);
+        var (_, request, body) = Assert.Single(context.Handler.Calls);
+        Assert.Equal("access-1", body["access_token"]!.GetValue<string>());
+        Assert.Equal("https://shop.example.com/plaid/webhook", body["webhook"]!.GetValue<string>());
+        Assert.True(request.Options.TryGetValue(PlaidClient.RetryableKey, out var retryable) && retryable);
+    }
+
+    [Theory]
+    [InlineData("plaid/webhook")]
+    [InlineData("ftp://shop.example.com/plaid/webhook")]
+    public async Task UpdateItemWebhook_RefusesAUrlThatIsNotAnAbsoluteWebAddress(string webhookUrl)
+    {
+        // Arrange
+        var context = new PlaidTestContext();
+
+        // Act and assert
+        await Assert.ThrowsAsync<ArgumentException>(() => context.Client.UpdateItemWebhookAsync(FixedPlaidCredentials.Sandbox, "access-1", webhookUrl, TestContext.Current.CancellationToken));
+        Assert.Empty(context.Handler.Calls);
+    }
+
+    [Fact]
     public async Task ExchangePublicToken_IsNeverMarkedRetryable()
     {
         // Arrange
