@@ -41,6 +41,30 @@ public sealed class SurveyOverrideStore : DocumentCatalog<SurveyOverride, Survey
     }
 
     /// <summary>
+    /// Lists the accommodations of a survey that may apply to a user: those granted to the user, and those granted to an
+    /// audience (whose membership the caller checks). The runner asks on every request, so other people's accommodations
+    /// are never read.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="userId">The user.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The accommodations.</returns>
+    public async Task<IReadOnlyList<SurveyOverride>> ListForUserAsync(string surveyId, string userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(surveyId) || string.IsNullOrEmpty(userId))
+        {
+            return [];
+        }
+
+        var items = await Session.Query<SurveyOverride, SurveyOverrideIndex>(
+                index => index.SurveyId == surveyId && (index.UserId == userId || (index.UserId == null && index.AudienceId != null)),
+                collection: SurveysConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return items.ToList();
+    }
+
+    /// <summary>
     /// Reads a page of the accommodations of a survey, newest first.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
