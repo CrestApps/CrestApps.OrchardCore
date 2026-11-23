@@ -29,6 +29,7 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
         services.AddGradingQueueSource<QuizResponseGradingQueueSource>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILearningSurveyItemResultProvider, QuizResultProvider>());
         services.AddSurveyAccessProvider<AssessmentsSurveyAccessProvider>();
+        services.AddSurveyScoreChangeCheck<AssessmentsScoreChangeCheck>();
         services.AddResumableStep<LegacyQuizUpgradeStep>();
 
         services.AddCourseItemKind(AssessmentsConstants.QuizKind, kind =>

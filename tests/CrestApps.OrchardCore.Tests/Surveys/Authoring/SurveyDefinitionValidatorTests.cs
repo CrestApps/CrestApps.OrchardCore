@@ -105,6 +105,35 @@ public sealed class SurveyDefinitionValidatorTests
         Assert.Contains("branch-backward", await CodesAsync(definition));
     }
 
+    [Theory]
+    [InlineData(BranchTargetKind.Page, true)]
+    [InlineData(BranchTargetKind.Ending, false)]
+    public async Task ValidateAsync_ShuffledPagesWithAPageBranch_WarnsThatTheOrderIsKept(BranchTargetKind targetKind, bool warns)
+    {
+        // Arrange: five pages set to shuffle; the first page branches to the fourth page, or to an ending.
+        var definition = AuthoringDefinitions.TwoPages();
+
+        for (var number = 3; number <= 5; number++)
+        {
+            definition.Pages.Add(new SurveyPage
+            {
+                Id = "p" + number,
+                Name = "page_" + number,
+                Questions = [new SurveyQuestion { Id = "q" + (number + 1), Name = "text_" + number, ControlType = AuthoringSurveyHarness.TextControl, Title = "Text" }],
+            });
+        }
+
+        definition.Presentation.PageOrder = QuestionOrder.Shuffle;
+        definition.Pages[0].Branches.Add(new SurveyBranch { Id = "b1", TargetKind = targetKind, TargetId = targetKind == BranchTargetKind.Page ? "p4" : "e1" });
+
+        // Act
+        var context = await Validator().ValidateAsync(null, definition, TestContext.Current.CancellationToken);
+
+        // Assert: a warning, never an error, and only for a branch to a page.
+        Assert.DoesNotContain(context.Messages, message => message.IsError);
+        Assert.Equal(warns, context.Messages.Any(message => message.Code == "shuffle-with-branches" && !message.IsError));
+    }
+
     [Fact]
     public async Task ValidateAsync_BranchToMissingEnding_IsAnError()
     {

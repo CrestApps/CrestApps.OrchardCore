@@ -28,6 +28,7 @@ public static class SurveysScoringServiceCollectionExtensions
         services.TryAddScoped<ISurveyScoringEngine, SurveyScoringEngine>();
         services.TryAddScoped<ISurveyGradingService, SurveyGradingService>();
         services.TryAddScoped<ISurveyGradingQueue, SurveyGradingQueue>();
+        services.TryAddScoped<SurveyScoreChangeChecks>();
         services.TryAddScoped<ISurveyOverrideService, SurveyOverrideService>();
 
         return services;

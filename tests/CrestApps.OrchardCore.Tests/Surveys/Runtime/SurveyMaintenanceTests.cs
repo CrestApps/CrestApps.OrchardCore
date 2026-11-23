@@ -173,6 +173,97 @@ public sealed class SurveyMaintenanceTests
     }
 
     [Fact]
+    public async Task Run_ReadsOnlyTheSurveysItsStepsNeed_AndASurveyIndexedBeforeTheUpkeepColumnsStillGetsRetention()
+    {
+        // Arrange: a survey with retention; one indexed before the upkeep columns existed (empty retention days) whose
+        // retention is only in the survey; and a survey without retention whose document can't be read. Upkeep used to
+        // read every survey each run, so that one document stopped all of it.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+        var kept = await harness.PublishAsync(definition, item => item.Retention = new SurveyRetentionSettings { Days = 30, Action = RetentionAction.Anonymize });
+        var legacy = await harness.PublishAsync(definition, item => item.Retention = new SurveyRetentionSettings { Days = 30, Action = RetentionAction.Anonymize });
+        var unreadable = await harness.PublishAsync(definition);
+        var first = (await harness.StartAsync(kept, "u1")).Response;
+        var second = (await harness.StartAsync(legacy, "u2")).Response;
+
+        await harness.PostAsync(first, new SurveyRespondentIdentity { UserId = "u1" }, SurveyPageDirection.Finish, ("q1", "a"));
+        await harness.PostAsync(second, new SurveyRespondentIdentity { UserId = "u2" }, SurveyPageDirection.Finish, ("q1", "b"));
+
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var configuration = session.Store.Configuration;
+            var dialect = configuration.SqlDialect;
+            var documents = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetDocumentTable(SurveysConstants.CollectionName), configuration.Schema);
+            var index = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetIndexTable(typeof(SurveyIndex), SurveysConstants.CollectionName), configuration.Schema);
+            var connection = await session.CreateConnectionAsync();
+
+            Assert.Equal(1, await connection.ExecuteAsync(
+                $"UPDATE {index} SET {dialect.QuoteForColumnName("RetentionDays")} = NULL WHERE {dialect.QuoteForColumnName("ItemId")} = @Id",
+                new { Id = legacy.ItemId }));
+            Assert.Equal(1, await connection.ExecuteAsync(
+                $"UPDATE {documents} SET {dialect.QuoteForColumnName("Content")} = @Content WHERE {dialect.QuoteForColumnName("Content")} LIKE @Match",
+                new { Content = "{ not json", Match = $"%\"ItemId\":\"{unreadable.ItemId}\"%" }));
+
+            return true;
+        });
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(40);
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        Assert.Null((await harness.FindAsync(first.ItemId)).UserId);
+        Assert.Null((await harness.FindAsync(second.ItemId)).UserId);
+    }
+
+    [Fact]
+    public async Task SurveyUpkeepReindexStep_FillsTheUpkeepColumnsOfSurveysIndexedBefore()
+    {
+        // Arrange: a survey whose index row predates the upkeep columns.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))), item =>
+        {
+            item.Retention = new SurveyRetentionSettings { Days = 90, Action = RetentionAction.Delete };
+            item.Access.Limits.Total = 2;
+        });
+
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var configuration = session.Store.Configuration;
+            var dialect = configuration.SqlDialect;
+            var index = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetIndexTable(typeof(SurveyIndex), SurveysConstants.CollectionName), configuration.Schema);
+            var connection = await session.CreateConnectionAsync();
+
+            await connection.ExecuteAsync(
+                $"UPDATE {index} SET {dialect.QuoteForColumnName("RetentionDays")} = NULL, {dialect.QuoteForColumnName("TotalLimit")} = NULL WHERE {dialect.QuoteForColumnName("ItemId")} = @Id",
+                new { Id = survey.ItemId });
+
+            return true;
+        });
+
+        // Act
+        var done = await harness.RunAsync(async services =>
+        {
+            var step = ActivatorUtilities.CreateInstance<CrestApps.OrchardCore.Surveys.Migrations.SurveyUpkeepReindexStep>(services);
+            var finished = await step.RunAsync(new CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext(), TestContext.Current.CancellationToken);
+            await services.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            return finished;
+        });
+
+        // Assert
+        var row = await harness.RunAsync(async services => await services.GetRequiredService<ISession>()
+            .QueryIndex<SurveyIndex>(index => index.ItemId == survey.ItemId, collection: SurveysConstants.CollectionName)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken));
+
+        Assert.True(done);
+        Assert.Equal(90, row.RetentionDays);
+        Assert.Equal(2, row.TotalLimit);
+    }
+
+    [Fact]
     public async Task Run_AnonymizedResponses_AreNotVisitedAgain_SoTheBatchReachesNewerOnes()
     {
         // Arrange: two old responses, a batch of one.

@@ -92,8 +92,9 @@ public sealed class SurveyPublisher : ISurveyPublisher
             return new SurveyPublishResult { Error = SurveyErrorCode.InvalidDefinition, Messages = messages };
         }
 
-        var versions = await _versionStore.ListBySurveyAsync(survey.ItemId, cancellationToken);
-        var number = Math.Max(survey.PublishedVersionNumber, versions.Count == 0 ? 0 : versions.Max(version => version.Number)) + 1;
+        // The numbers come from the version index: no earlier version is loaded to number the new one.
+        var numbers = await _versionStore.ListNumbersAsync(survey.ItemId, cancellationToken);
+        var number = Math.Max(survey.PublishedVersionNumber, numbers.Count == 0 ? 0 : numbers.Max()) + 1;
         var version = new SurveyVersion
         {
             ItemId = IdGenerator.GenerateId(),

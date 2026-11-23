@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -197,6 +198,11 @@ public sealed class SurveyGradingController : Controller
             return refused;
         }
 
+        if (SurveyScoreChangeChecks.GradingChangesGivenScores(response) && !await CanChangeScoresAsync(survey, response))
+        {
+            return Forbid();
+        }
+
         var scores = (model.Points ?? [])
             .Where(pair => pair.Value is not null)
             .ToDictionary(pair => pair.Key, pair => pair.Value.Value, StringComparer.Ordinal);
@@ -242,9 +248,16 @@ public sealed class SurveyGradingController : Controller
             return Forbid();
         }
 
-        if (await RefuseAsync(response, await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted)) is { } refused)
+        var survey = await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted);
+
+        if (await RefuseAsync(response, survey) is { } refused)
         {
             return refused;
+        }
+
+        if (!await CanChangeScoresAsync(survey, response))
+        {
+            return Forbid();
         }
 
         var result = model.NewScore is { } score
@@ -285,9 +298,16 @@ public sealed class SurveyGradingController : Controller
             return Forbid();
         }
 
-        if (await RefuseAsync(response, await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted)) is { } refused)
+        var survey = await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted);
+
+        if (await RefuseAsync(response, survey) is { } refused)
         {
             return refused;
+        }
+
+        if (!await CanChangeScoresAsync(survey, response))
+        {
+            return Forbid();
         }
 
         var result = await _grading.RegradeAsync(responseId, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted);
@@ -320,7 +340,7 @@ public sealed class SurveyGradingController : Controller
             return NotFound();
         }
 
-        if (!await CanGradeSurveyAsync(survey))
+        if (!await CanGradeSurveyAsync(survey) || !await CanChangeScoresAsync(survey, null))
         {
             return Forbid();
         }
@@ -346,7 +366,7 @@ public sealed class SurveyGradingController : Controller
             return NotFound();
         }
 
-        if (!await CanGradeSurveyAsync(survey))
+        if (!await CanGradeSurveyAsync(survey) || !await CanChangeScoresAsync(survey, null))
         {
             return Forbid();
         }
@@ -377,9 +397,16 @@ public sealed class SurveyGradingController : Controller
             return View(await BuildRegradeAsync(survey, model));
         }
 
-        var count = await _grading.RegradeVersionsAsync(surveyId, model.FromVersionIds, model.KeyVersionId, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted);
+        var result = await _grading.RegradeVersionsAsync(surveyId, model.FromVersionIds, model.KeyVersionId, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted);
 
-        await _notifier.SuccessAsync(H["{0} responses have been scored again.", count]);
+        await _notifier.SuccessAsync(H["{0} responses have been scored again.", result.Count]);
+
+        if (result.SkippedQuestions.Count > 0)
+        {
+            var skipped = string.Join(", ", result.SkippedQuestions.Select(question => H["{0} (version {1})", question.Title, question.VersionNumber].Value));
+
+            await _notifier.WarningAsync(H["These questions kept their scores because the key names choices their version does not have: {0}. Grade them by hand if they need a change.", skipped]);
+        }
 
         return RedirectToAction(nameof(Index), new { surveyId });
     }
@@ -388,7 +415,8 @@ public sealed class SurveyGradingController : Controller
     {
         model.SurveyId = survey.ItemId;
         model.SurveyTitle = survey.Title;
-        model.Versions = (await _versionCache.ListAsync(survey.ItemId, HttpContext.RequestAborted))
+        // The version index gives the ids and numbers; no version is loaded to fill the list.
+        model.Versions = (await HttpContext.RequestServices.GetRequiredService<SurveyVersionStore>().ListRowsAsync(survey.ItemId, HttpContext.RequestAborted))
             .Select(version => new SelectListItem(H["Version {0}", version.Number].Value, version.ItemId))
             .ToList();
         model.KeyVersionId ??= survey.PublishedVersionId;
@@ -402,6 +430,7 @@ public sealed class SurveyGradingController : Controller
         {
             Response = response,
             SurveyTitle = survey?.Title,
+            CanChangeScores = await CanChangeScoresAsync(survey, response),
             RespondentName = await RespondentNameAsync(response),
             Label = SurveyAnonymity.ResponseLabel(survey, response),
             IsAnonymous = survey is null || SurveyAnonymity.IsAnonymous(survey),
@@ -499,7 +528,7 @@ public sealed class SurveyGradingController : Controller
 
         var queries = HttpContext.RequestServices.GetRequiredService<ISurveyResponseQueries>();
 
-        foreach (var version in await _versionCache.ListAsync(survey.ItemId, HttpContext.RequestAborted))
+        foreach (var version in await HttpContext.RequestServices.GetRequiredService<SurveyVersionStore>().ListRowsAsync(survey.ItemId, HttpContext.RequestAborted))
         {
             if (!versionIds.Contains(version.ItemId, StringComparer.Ordinal))
             {
@@ -533,6 +562,11 @@ public sealed class SurveyGradingController : Controller
         return _surveyAuthorization.FirstOrDefault() is { } authorization
             && await authorization.AuthorizeAsync(User, survey, SurveyOperation.Grade, HttpContext.RequestAborted);
     }
+
+    // Changing given scores (the total, a regrade, grades of a graded response, another version's key) passes every
+    // registered score change check on top of the grading permission, such as Override grades on a course quiz.
+    private Task<bool> CanChangeScoresAsync(Survey survey, SurveyResponse response)
+        => HttpContext.RequestServices.GetRequiredService<SurveyScoreChangeChecks>().AllowAsync(User, survey, response, HttpContext.RequestAborted);
 
     // The shared respondent names: a grader sees who responded on an identified survey only (Guest or Deleted user
     // when there is no user), and Anonymous on an anonymous survey.

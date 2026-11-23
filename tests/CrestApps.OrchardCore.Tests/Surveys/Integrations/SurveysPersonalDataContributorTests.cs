@@ -227,6 +227,69 @@ public sealed class SurveysPersonalDataContributorTests
     }
 
     [Fact]
+    public async Task ExportAndErasure_WithInvitationUniqueness_FindTheSignedInInviteesParticipationThroughTheirResponse()
+    {
+        // Arrange: Uniqueness is Invitation, so a signed-in invitee counts by i:{invitation}. The invitation went to an
+        // address that is not on the person's account, so only their response leads to it.
+        const string userId = "user-learner1";
+        var responseId = IdGenerator.GenerateId();
+        var invitation = new SurveyInvitation { ItemId = IdGenerator.GenerateId(), SurveyId = "byinvite", Email = "team-inbox@example.com", Status = SurveyInvitationStatus.Completed };
+        string invitationKey = null;
+        await using var harness = await IntegrationsTestHarness.CreateAsync(services => services.AddScoped<SurveysPersonalDataContributor>());
+        await harness.RunAsync(async services =>
+        {
+            var survey = IntegrationsTestHarness.NewSurvey("byinvite", "byinvite");
+            survey.Access.Limits = new RespondentLimits { Uniqueness = UniquenessMode.Invitation };
+            await services.GetRequiredService<SurveyStore>().CreateAsync(survey);
+            invitationKey = SurveyRespondentKeys.For(survey, null, new SurveyRespondentIdentity { UserId = userId }, invitation);
+
+            await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(invitation);
+            await services.GetRequiredService<SurveyParticipationStore>().CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "byinvite", RespondentKey = invitationKey, Day = new DateOnly(2026, 11, 1), CompletedCount = 1 });
+            await services.GetRequiredService<SurveyResponseStore>().CreateAsync(new SurveyResponse
+            {
+                ItemId = responseId,
+                SurveyId = "byinvite",
+                Number = "R1",
+                UserId = userId,
+                InvitationId = invitation.ItemId,
+                Status = SurveyResponseStatus.Completed,
+            });
+        });
+
+        // Act
+        var export = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataExport();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().ExportAsync(new PersonalDataExportContext(new PersonalDataSubject(userId), result));
+
+            return result;
+        });
+
+        var erased = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataAnonymizeResult();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject(userId), "[removed]", result));
+
+            return result;
+        });
+
+        // Assert: the participation is exported and erased; the invitation, addressed to someone else, is neither.
+        Assert.Equal("i:" + invitation.ItemId, invitationKey);
+        var record = Assert.Single(export.Records, item => item.Kind == "SurveyParticipation");
+        Assert.Equal("byinvite", record.Fields["Survey"]);
+        Assert.Equal("1", record.Fields["Completed"]);
+        Assert.DoesNotContain(export.Records, item => item.Kind == "SurveyInvitation");
+        Assert.Equal(1, erased.Records["SurveyParticipation"]);
+        Assert.False(erased.Records.ContainsKey("SurveyInvitation"));
+        var (response, participationLeft) = await harness.RunAsync(async services => (
+            await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(responseId),
+            await services.GetRequiredService<SurveyParticipationStore>().GetAllAsync()));
+        Assert.Null(response.UserId);
+        Assert.Null(response.InvitationId);
+        Assert.Empty(participationLeft);
+    }
+
+    [Fact]
     public async Task Erasure_OfAResponseInProgress_ClearsItsKey_SoTheDeadlineCompletionWritesNoParticipationBack()
     {
         // Arrange: a timed survey the person started while signed in; the start is counted under u:{id}.

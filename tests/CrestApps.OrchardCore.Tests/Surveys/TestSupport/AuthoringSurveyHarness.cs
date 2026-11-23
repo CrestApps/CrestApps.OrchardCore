@@ -61,6 +61,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
                 new SurveyCollectorIndexProvider(),
                 new SurveyParticipationIndexProvider(),
                 new SurveyInvitationIndexProvider(),
+                new SurveyInvitationOptOutIndexProvider(),
                 new SurveyOverrideIndexProvider(),
                 new SurveyCounterIndexProvider(),
             ],
@@ -74,7 +75,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         await using var session = harness.Store.CreateSession();
         var transaction = await session.BeginTransactionAsync(cancellationToken);
 
-        Assert.Equal(8, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store, Mock.Of<ISession>(), Mock.Of<IClock>()) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
+        Assert.Equal(11, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store, Mock.Of<ISession>(), Mock.Of<IClock>()) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
 
         await SurveyCountersIndexSchema.CreateAsync(new SchemaBuilder(harness.Store.Configuration, transaction));
         await transaction.CommitAsync(cancellationToken);

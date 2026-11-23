@@ -106,14 +106,45 @@ public sealed class SurveyGradingServiceTests : IAsyncLifetime
         _versions.Versions["version2"] = new SurveyVersion { ItemId = "version2", SurveyId = "survey1", Number = 2, Definition = fixedKey };
 
         // Act
-        var count = await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version2", "lead", "Key fix"));
+        var result = await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version2", "lead", "Key fix"));
 
         // Assert
-        Assert.Equal(1, count);
+        Assert.Equal(1, result.Count);
+        Assert.Empty(result.SkippedQuestions);
 
         var response = await LoadAsync();
         Assert.Equal(14m, response.MaxScore);
         Assert.Equal(ScoreChangeKind.Regraded, response.ScoreHistory.Last().Kind);
+    }
+
+    [Fact]
+    public async Task RegradeVersionsAsync_KeyNamingChoicesTheVersionLacks_KeepsTheQuestionScore_AndReportsIt()
+    {
+        // Arrange: version 1's question has choices a and b; the key version's copy was imported again with new ids.
+        await RunAsync(service => service.GradeAsync("response1", new Dictionary<string, decimal> { ["essay"] = 4 }, null, null, "grader1"));
+        var ownQuestion = _versions.Versions["version1"].Definition.Pages[0].Questions[0];
+        ownQuestion.Title = "Capital city";
+        ownQuestion.Choices = [new SurveyChoice { Id = "a" }, new SurveyChoice { Id = "b" }];
+        var reimported = ScoringDefinitions.Quiz(("q1", 10m), ("essay", 8m));
+        reimported.Pages[0].Questions[0].Choices = [new SurveyChoice { Id = "x" }, new SurveyChoice { Id = "y" }];
+        reimported.Pages[0].Questions[0].Scoring.CorrectChoiceIds = ["x"];
+        _versions.Versions["version2"] = new SurveyVersion { ItemId = "version2", SurveyId = "survey1", Number = 2, Definition = reimported };
+
+        // Act
+        var result = await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version2", "lead", "Key fix"));
+
+        // Assert: q1 keeps its 2 of 2; the essay takes the new key's 8 points as its most and keeps the grader's 4.
+        Assert.Equal(1, result.Count);
+        var skipped = Assert.Single(result.SkippedQuestions);
+        Assert.Equal("q1", skipped.QuestionId);
+        Assert.Equal("Capital city", skipped.Title);
+        Assert.Equal(1, skipped.VersionNumber);
+
+        var response = await LoadAsync();
+        Assert.Equal(6m, response.Score);
+        Assert.Equal(10m, response.MaxScore);
+        Assert.Equal(2m, response.Answers["q1"].AutoScore);
+        Assert.Null(response.Answers["q1"].ManualScore);
     }
 
     private async Task<T> RunAsync<T>(Func<SurveyGradingService, Task<T>> operation)

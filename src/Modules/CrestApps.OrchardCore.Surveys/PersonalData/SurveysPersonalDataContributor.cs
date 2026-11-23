@@ -20,10 +20,11 @@ namespace CrestApps.OrchardCore.Surveys.PersonalData;
 /// results, and the key an in-progress response is counted under goes too), deletes the files they uploaded, their
 /// invitations, their accommodations (extra time or attempts, with the reason they were granted) and their participation
 /// counts. Accommodations a staff member granted to others keep that staff member as their actor: that is a record of
-/// staff work, not the staff member's personal data. Participation is found
-/// by the keys it is really stored under: <c>u:{id}</c> (or its hash when long) on identified surveys, the key of each of
-/// the person's invitations, and <c>a:{hmac}</c> on each anonymous survey, recomputed with that survey's protected
-/// secret.
+/// staff work, not the staff member's personal data. Participation is exported and erased by the keys it is really
+/// stored under: <c>u:{id}</c> (or its hash when long) on identified surveys, the key of each of the person's
+/// invitations and of the invitation each of their responses was started from (a signed-in invitee on a survey whose
+/// Uniqueness is Invitation counts by <c>i:{id}</c>), the key an in-progress response keeps, and <c>a:{hmac}</c> on
+/// each anonymous survey, recomputed with that survey's protected secret.
 /// </summary>
 internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
 {
@@ -72,8 +73,9 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         ArgumentNullException.ThrowIfNull(context);
 
         var invitations = await InvitationsAsync(context.Subject, cancellationToken);
+        var responses = await ResponsesAsync(context.Subject, invitations, cancellationToken);
 
-        foreach (var response in await ResponsesAsync(context.Subject, invitations, cancellationToken))
+        foreach (var response in responses)
         {
             var version = await _versions.GetAsync(response.SurveyVersionId, cancellationToken);
             var definition = version?.Definition;
@@ -133,6 +135,16 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             record.Fields["Closes"] = accommodation.ClosesUtc?.ToString("O", CultureInfo.InvariantCulture);
             record.Fields["Reason"] = accommodation.Reason;
         }
+
+        foreach (var participation in await ParticipationAsync(await ParticipationKeysAsync(context.Subject, invitations, responses, cancellationToken), cancellationToken))
+        {
+            var record = context.Add(ParticipationKind, participation.ItemId, participation.SurveyId, participation.LastCompletedUtc);
+
+            record.Fields["Survey"] = participation.SurveyId;
+            record.Fields["Day"] = participation.Day.ToString("O", CultureInfo.InvariantCulture);
+            record.Fields["Started"] = participation.StartedCount.ToString(CultureInfo.InvariantCulture);
+            record.Fields["Completed"] = participation.CompletedCount.ToString(CultureInfo.InvariantCulture);
+        }
     }
 
     /// <inheritdoc />
@@ -141,30 +153,13 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         ArgumentNullException.ThrowIfNull(context);
 
         var files = ActivatorUtilities.GetServiceOrCreateInstance<SurveyResponseFiles>(_serviceProvider);
-        // Only the anonymous surveys (whose secrets derive the respondent keys) and the surveys of the person's invitations
-        // are loaded, a chunk at a time, not every survey.
-        var anonymous = nameof(AnonymityMode.Anonymous);
-        var anonymousIds = (await _session.QueryIndex<SurveyIndex>(index => index.Anonymity == anonymous || index.Anonymity == null, collection: SurveysConstants.CollectionName)
-            .ListAsync(cancellationToken)).Select(row => row.ItemId);
-        var surveys = await LoadSurveysAsync(anonymousIds, cancellationToken);
-        var anonymousSecrets = new List<string>();
-
-        foreach (var survey in surveys.Values.Where(SurveyAnonymity.IsAnonymous))
-        {
-            if (await RevealAsync(survey, cancellationToken) is { } secret)
-            {
-                anonymousSecrets.Add(secret);
-            }
-        }
-
         var invitations = await InvitationsAsync(context.Subject, cancellationToken);
+        var responses = await ResponsesAsync(context.Subject, invitations, cancellationToken);
 
-        foreach (var (id, survey) in await LoadSurveysAsync(invitations.Select(invitation => invitation.SurveyId).Where(id => !string.IsNullOrEmpty(id) && !surveys.ContainsKey(id)), cancellationToken))
-        {
-            surveys[id] = survey;
-        }
+        // The keys are gathered before the responses lose the invitation and the key that lead to them.
+        var keys = await ParticipationKeysAsync(context.Subject, invitations, responses, cancellationToken);
 
-        foreach (var response in await ResponsesAsync(context.Subject, invitations, cancellationToken))
+        foreach (var response in responses)
         {
             // Every file the response owns goes, not only those its answers still refer to.
             var removedFiles = await files.DeleteAllAsync(response, cancellationToken);
@@ -197,23 +192,8 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             context.Result.Count(ResponseKind);
         }
 
-        var keys = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var userId in context.Subject.UserIds)
-        {
-            keys.UnionWith(SurveyRespondentKeys.ForUser(userId, anonymousSecrets));
-        }
-
         foreach (var invitation in invitations)
         {
-            // A participation counted by invitation (a guest who opened the personal link, the i: key, or its HMAC on an
-            // anonymous survey) is the person's too.
-            if (surveys.TryGetValue(invitation.SurveyId ?? string.Empty, out var survey)
-                && (!SurveyAnonymity.IsAnonymous(survey) || _secrets.CanReveal(survey)))
-            {
-                keys.Add(await _secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity(), invitation, cancellationToken));
-            }
-
             _session.Delete(invitation, SurveysConstants.CollectionName);
             context.Result.Count(InvitationKind);
         }
@@ -225,17 +205,94 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             context.Result.Count(OverrideKind);
         }
 
-        foreach (var batch in keys.Where(key => !string.IsNullOrEmpty(key)).Chunk(200))
+        foreach (var row in await ParticipationAsync(keys, cancellationToken))
         {
-            var participation = await _session.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.RespondentKey.IsIn(batch), collection: SurveysConstants.CollectionName)
-                .ListAsync(cancellationToken);
+            _session.Delete(row, SurveysConstants.CollectionName);
+            context.Result.Count(ParticipationKind);
+        }
+    }
 
-            foreach (var row in participation)
+    // Every key the person's participation is stored under: u:{id} (plain, and the HMAC of each anonymous survey whose
+    // secret this server can read), the key of each of the person's invitations, and that of the invitation each of
+    // their responses was started from. With Uniqueness set to Invitation a signed-in invitee counts by the invitation
+    // (i:{id}), and that invitation may have been sent to an address that is not on their account, so only their
+    // response leads to it. An in-progress response also keeps the key it is counted under.
+    private async Task<HashSet<string>> ParticipationKeysAsync(
+        PersonalDataSubject subject,
+        IReadOnlyList<SurveyInvitation> invitations,
+        IReadOnlyList<SurveyResponse> responses,
+        CancellationToken cancellationToken)
+    {
+        // Only the anonymous surveys (whose secrets derive the respondent keys) and the surveys of the invitations are
+        // loaded, a chunk at a time, not every survey.
+        var anonymous = nameof(AnonymityMode.Anonymous);
+        var anonymousIds = (await _session.QueryIndex<SurveyIndex>(index => index.Anonymity == anonymous || index.Anonymity == null, collection: SurveysConstants.CollectionName)
+            .ListAsync(cancellationToken)).Select(row => row.ItemId);
+        var surveys = await LoadSurveysAsync(anonymousIds, cancellationToken);
+        var anonymousSecrets = new List<string>();
+
+        foreach (var survey in surveys.Values.Where(SurveyAnonymity.IsAnonymous))
+        {
+            if (await RevealAsync(survey, cancellationToken) is { } secret)
             {
-                _session.Delete(row, SurveysConstants.CollectionName);
-                context.Result.Count(ParticipationKind);
+                anonymousSecrets.Add(secret);
             }
         }
+
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var userId in subject.UserIds.Where(id => !string.IsNullOrEmpty(id)))
+        {
+            keys.UnionWith(SurveyRespondentKeys.ForUser(userId, anonymousSecrets));
+        }
+
+        foreach (var response in responses)
+        {
+            if (!string.IsNullOrEmpty(response.RespondentKey))
+            {
+                keys.Add(response.RespondentKey);
+            }
+        }
+
+        var known = invitations.Select(invitation => invitation.ItemId).ToHashSet(StringComparer.Ordinal);
+        var allInvitations = invitations.ToList();
+
+        foreach (var batch in responses.Select(response => response.InvitationId).Where(id => !string.IsNullOrEmpty(id) && !known.Contains(id)).Distinct(StringComparer.Ordinal).Chunk(200))
+        {
+            allInvitations.AddRange(await _session.Query<SurveyInvitation, SurveyInvitationIndex>(index => index.ItemId.IsIn(batch), collection: SurveysConstants.CollectionName).ListAsync(cancellationToken));
+        }
+
+        foreach (var (id, survey) in await LoadSurveysAsync(allInvitations.Select(invitation => invitation.SurveyId).Where(id => !string.IsNullOrEmpty(id) && !surveys.ContainsKey(id)), cancellationToken))
+        {
+            surveys[id] = survey;
+        }
+
+        foreach (var invitation in allInvitations)
+        {
+            // A participation counted by invitation (a guest who opened the personal link, a signed-in invitee on a survey
+            // whose Uniqueness is Invitation: the i: key, or its HMAC on an anonymous survey) is the person's too.
+            if (surveys.TryGetValue(invitation.SurveyId ?? string.Empty, out var survey)
+                && (!SurveyAnonymity.IsAnonymous(survey) || _secrets.CanReveal(survey))
+                && await _secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity(), invitation, cancellationToken) is { Length: > 0 } key)
+            {
+                keys.Add(key);
+            }
+        }
+
+        return keys;
+    }
+
+    private async Task<IReadOnlyList<SurveyParticipation>> ParticipationAsync(IEnumerable<string> keys, CancellationToken cancellationToken)
+    {
+        var found = new List<SurveyParticipation>();
+
+        foreach (var batch in keys.Where(key => !string.IsNullOrEmpty(key)).Chunk(200))
+        {
+            found.AddRange(await _session.Query<SurveyParticipation, SurveyParticipationIndex>(index => index.RespondentKey.IsIn(batch), collection: SurveysConstants.CollectionName)
+                .ListAsync(cancellationToken));
+        }
+
+        return found;
     }
 
     // A secret this server can't read (missing Data Protection keys) can't recompute any key, so its survey is skipped

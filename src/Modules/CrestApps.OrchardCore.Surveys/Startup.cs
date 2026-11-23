@@ -45,6 +45,9 @@ public sealed class Startup : StartupBase
         services.AddResumableStep<SurveyContentSanitizingStep>();
         services.AddResumableStep<SurveysReindexStep>();
         services.AddResumableStep<SurveyInvitationRemindersStep>();
+        services.AddResumableStep<SurveyUpkeepReindexStep>();
+        services.AddResumableStep<SurveyInvitationOptOutMoveStep>();
+        services.AddResumableStep<SurveyVersionsReindexStep>();
         services.AddIndexProvider<SurveyIndexProvider>()
             .AddIndexProvider<SurveyTagIndexProvider>()
             .AddIndexProvider<SurveyTemplateIndexProvider>()
@@ -56,6 +59,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<SurveyResponseIndexProvider>()
             .AddIndexProvider<SurveyParticipationIndexProvider>()
             .AddIndexProvider<SurveyInvitationIndexProvider>()
+            .AddIndexProvider<SurveyInvitationOptOutIndexProvider>()
             .AddIndexProvider<SurveyOverrideIndexProvider>();
 
         services.AddPermissionProvider<SurveysPermissionProvider>();

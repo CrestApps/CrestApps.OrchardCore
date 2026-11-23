@@ -48,7 +48,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 8;
+        return 11;
     }
 
     /// <summary>
@@ -118,10 +118,6 @@ internal sealed class SurveysMigrations : DataMigration
         return 6;
     }
 
-    // ---------------------------------------------------------------------------------------------------------------
-    // Reminders read by the index (V-L8). Kept in its own step so another branch's step 6 can be renumbered around it.
-    // ---------------------------------------------------------------------------------------------------------------
-
     /// <summary>
     /// Adds the reminder columns of the invitation index (schema only), so the reminder task reads only the invitations
     /// due a reminder, and asks for the step that fills the reminder count of the invitations reminded before.
@@ -134,10 +130,6 @@ internal sealed class SurveysMigrations : DataMigration
 
         return 7;
     }
-
-    // ---------------------------------------------------------------------------------------------------------------
-    // The close step leaves surveys closed before the upgrade alone (V-L4).
-    // ---------------------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Records when the upkeep's close step started on this site (<see cref="SurveyCloseStepStart"/>), so it leaves alone
@@ -152,5 +144,44 @@ internal sealed class SurveysMigrations : DataMigration
         }
 
         return 8;
+    }
+
+    /// <summary>
+    /// Adds the upkeep columns of the survey index (retention days, closing date, total limit), so upkeep reads only the
+    /// surveys each of its steps needs, and asks for the step that fills them from each survey.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await SurveysIndexSchema.AddSurveyUpkeepColumnsAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveyUpkeepReindexStep.StepName);
+
+        return 9;
+    }
+
+    /// <summary>
+    /// Adds the index of the invitation opt-out records and asks for the step that moves the opt-outs of the old single
+    /// list into them.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom9Async()
+    {
+        await SurveysIndexSchema.CreateInvitationOptOutTableAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveyInvitationOptOutMoveStep.StepName);
+
+        return 10;
+    }
+
+    /// <summary>
+    /// Adds the publisher and notes columns of the version index, so the versions list loads no version, and asks for
+    /// the step that fills them.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom10Async()
+    {
+        await SurveysIndexSchema.AddVersionListColumnsAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveyVersionsReindexStep.StepName);
+
+        return 11;
     }
 }

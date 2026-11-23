@@ -72,7 +72,7 @@ Hidden variables take their value, in this order, from the consumer that starts 
 
 When a response starts, its plan is drawn with a seed and kept on the response, so refresh, back and resume show the same thing:
 
-- page order (shuffled pages keep the first and last in place; a survey with a branch to a page keeps its designed page order, because a branch skips the pages between it and its target);
+- page order (shuffled pages keep the first and last in place; a survey with a branch to a page keeps its designed page order, because a branch skips the pages between it and its target, and publishing warns about it with `shuffle-with-branches`);
 - per page, the pool draws, then the question shuffle (pinned questions keep their place);
 - per question, the choice order (pinned, other and clearing choices keep their place);
 - one question per screen when **Questions per screen** is 1.

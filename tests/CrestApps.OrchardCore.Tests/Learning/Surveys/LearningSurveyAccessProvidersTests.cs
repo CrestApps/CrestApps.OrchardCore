@@ -96,6 +96,25 @@ public sealed class LearningSurveyAccessProvidersTests
         }
     }
 
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, true)]
+    [InlineData(false, false, true)]
+    public async Task ChangingAGivenScore_OfASurveyACourseItemOwns_NeedsOverrideGrades(bool owned, bool canOverride, bool expected)
+    {
+        // Arrange: a grader who may grade every course; Override grades only when the case says so.
+        var check = new AssessmentsScoreChangeCheck(
+            Owned(owned).Object,
+            canOverride ? Authorization(AssessmentPermissions.GradeAssessments, AssessmentPermissions.OverrideGrades) : Authorization(AssessmentPermissions.GradeAssessments));
+        var survey = owned ? OwnedSurvey() : new Survey { ItemId = "hr" };
+
+        // Act
+        var allowed = await check.AllowsAsync(User(), survey, new SurveyResponse { ItemId = "r1", Grading = GradingStatus.Graded }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, allowed);
+    }
+
     [Fact]
     public void P4L2_TheLearningRolesRecipe_GrantsNoSiteWideSurveysPermission()
     {

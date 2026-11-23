@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -6,10 +7,14 @@ using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Localization;
+using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Surveys.Controllers;
 
@@ -65,7 +70,12 @@ public sealed class SurveyVersionsController : Controller
     /// <param name="id">The survey.</param>
     /// <returns>The page.</returns>
     [Admin("surveys/{id}/versions", "SurveysVersions")]
-    public async Task<IActionResult> Index(string id)
+    public async Task<IActionResult> Index(
+        string id,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] SurveyVersionStore versionStore)
     {
         var survey = await AuthorizeAsync(id, SurveyOperation.Manage);
 
@@ -74,12 +84,42 @@ public sealed class SurveyVersionsController : Controller
             return Forbid();
         }
 
+        // A page of the version index: the rows show the number, date, publisher and notes the index holds, so no
+        // version (and its whole definition) is loaded. A row indexed before those columns existed is read from its
+        // version until the reindex step reaches it.
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var (count, rows) = await versionStore.PageRowsAsync(id, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
+        var versions = new List<SurveyVersion>();
+
+        foreach (var row in rows)
+        {
+            versions.Add(row.PublishedBy is null
+                ? await _versionCache.GetAsync(row.ItemId, HttpContext.RequestAborted) ?? SummaryOf(row)
+                : SummaryOf(row));
+        }
+
         return View(new SurveyVersionsViewModel
         {
             Survey = survey,
-            List = new AdminListContext<SurveyVersion> { Source = await _versionCache.ListAsync(id, HttpContext.RequestAborted) },
+            List = new AdminListContext<SurveyVersion>
+            {
+                Source = versions,
+                Pager = await shapeFactory.PagerAsync(pager, count, new RouteValueDictionary { { "id", id } }),
+            },
         });
     }
+
+    // The fields of a version the list shows, from its index row; the definition is left out.
+    private static SurveyVersion SummaryOf(SurveyVersionIndex row)
+        => new()
+        {
+            ItemId = row.ItemId,
+            SurveyId = row.SurveyId,
+            Number = row.Number,
+            PublishedUtc = row.PublishedUtc,
+            PublishedBy = string.IsNullOrEmpty(row.PublishedBy) ? null : row.PublishedBy,
+            Notes = row.Notes,
+        };
 
     /// <summary>
     /// Shows a version, or the draft, read-only.

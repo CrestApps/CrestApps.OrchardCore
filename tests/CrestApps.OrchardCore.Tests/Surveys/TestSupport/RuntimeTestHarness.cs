@@ -72,6 +72,7 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
             new SurveyResponseIndexProvider(),
             new SurveyParticipationIndexProvider(),
             new SurveyInvitationIndexProvider(),
+            new SurveyInvitationOptOutIndexProvider(),
             new SurveyOverrideIndexProvider(),
             new QuestionBankIndexProvider(),
             new BankQuestionIndexProvider(),

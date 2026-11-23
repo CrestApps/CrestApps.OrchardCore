@@ -1,21 +1,26 @@
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Surveys.Invitations;
 
 /// <summary>
-/// Reads and changes the addresses that unsubscribed from survey invitations. Addresses are kept as HMACs keyed by a
-/// site key protected with ASP.NET Data Protection; plain SHA-256 hashes stored before the key existed are still
-/// honored. The document is saved with a concurrency check, so two unsubscribes at once never lose one of them: the
-/// later commit fails instead of overwriting the list (the unsubscribe page retries it). Two first-ever unsubscribes
-/// at the same moment can each insert a list; every list is read, changes go to the oldest, and an opt-in removes the
-/// address from all of them, so neither unsubscribe is lost. When a list's key can't be read (missing Data Protection
-/// keys), an address it might hold is <see cref="SurveyInvitationOptOutState.Unknown"/>: no survey invitation is sent
-/// to it and nothing is recorded as an opt-out, and the consent source answers <c>Unknown</c> to other sends.
+/// Reads and changes the addresses that unsubscribed from survey invitations. Each opt-out is its own record
+/// (<see cref="SurveyInvitationOptOut"/>), found by the hash of its address through the index, so a check reads only the
+/// records of the address it asks about, however many people unsubscribed, and two unsubscribes never write the same
+/// record. Addresses are kept as HMACs keyed by a site key protected with ASP.NET Data Protection, which the small
+/// <see cref="SurveyInvitationOptOutDocument"/> holds; plain SHA-256 hashes stored before the key existed are still
+/// honored. Two first-ever unsubscribes at the same moment can each make a key: every key is tried, so neither is lost.
+/// Hashes the old single list still holds (until <c>SurveyInvitationOptOutMoveStep</c> moves them into records) are
+/// honored and removed the same way. When a key can't be read (missing Data Protection keys), an address it might hold
+/// is <see cref="SurveyInvitationOptOutState.Unknown"/>: no survey invitation is sent to it and nothing is recorded as an
+/// opt-out, and the consent source answers <c>Unknown</c> to other sends.
 /// </summary>
 internal sealed class SurveyInvitationOptOutStore
 {
@@ -86,39 +91,26 @@ internal sealed class SurveyInvitationOptOutStore
             return SurveyInvitationOptOutState.NotOptedOut;
         }
 
-        var legacy = HashOf(address);
-        var unknown = false;
+        var (hashes, unknown) = await HashesAsync(address, cancellationToken);
 
         foreach (var document in await LoadAsync(cancellationToken))
         {
-            if (document.AddressHashes.Contains(legacy))
+            if (document.AddressHashes.Overlaps(hashes))
             {
                 return SurveyInvitationOptOutState.OptedOut;
             }
+        }
 
-            if (document.ProtectedKey is null)
-            {
-                continue;
-            }
-
-            if (Key(document) is not { } key)
-            {
-                unknown = true;
-
-                continue;
-            }
-
-            if (document.AddressHashes.Contains(KeyedHashOf(key, address)))
-            {
-                return SurveyInvitationOptOutState.OptedOut;
-            }
+        if ((await RecordsAsync(hashes, cancellationToken)).Count > 0)
+        {
+            return SurveyInvitationOptOutState.OptedOut;
         }
 
         return unknown ? SurveyInvitationOptOutState.Unknown : SurveyInvitationOptOutState.NotOptedOut;
     }
 
     /// <summary>
-    /// Adds or removes an address. The change is saved with a concurrency check when the session commits.
+    /// Adds or removes an address. The change is saved when the session commits.
     /// </summary>
     /// <param name="address">The e-mail address.</param>
     /// <param name="optedOut">Whether the address opted out.</param>
@@ -133,58 +125,117 @@ internal sealed class SurveyInvitationOptOutStore
 
         var documents = await LoadAsync(cancellationToken);
         var legacy = HashOf(address);
-        var changed = new HashSet<SurveyInvitationOptOutDocument>();
-
-        if (documents.Count == 0)
-        {
-            documents.Add(new SurveyInvitationOptOutDocument());
-        }
-
-        // Changes go to the oldest list; another list exists only when two first unsubscribes raced.
-        var primary = documents[0];
-
-        if (primary.ProtectedKey is null)
-        {
-            primary.ProtectedKey = _protector.Protect(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
-            changed.Add(primary);
-        }
 
         if (optedOut)
         {
-            var key = Key(primary);
+            if (documents.Count == 0)
+            {
+                documents.Add(new SurveyInvitationOptOutDocument());
+            }
+
+            // New opt-outs are keyed with the oldest key; another key exists only when two first unsubscribes raced.
+            var primary = documents[0];
+
+            var newKey = primary.ProtectedKey is null;
+
+            if (newKey)
+            {
+                primary.ProtectedKey = _protector.Protect(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+            }
 
             // Without the key the address is kept under its plain hash, so the opt-out is still honored.
-            if (key is null ? primary.AddressHashes.Add(legacy) : primary.AddressHashes.Add(KeyedHashOf(key, address)) | primary.AddressHashes.Remove(legacy))
+            var key = Key(primary);
+            var hash = key is null ? legacy : KeyedHashOf(key, address);
+            var existing = await RecordsAsync([hash, legacy], cancellationToken);
+
+            // Saved after the reads, so this session writes nothing before it commits.
+            if (newKey)
             {
-                changed.Add(primary);
+                await _session.SaveAsync(primary, checkConcurrency: true, cancellationToken: cancellationToken);
             }
-        }
-        else
-        {
-            foreach (var document in documents)
+
+            if (!existing.Any(record => string.Equals(record.AddressHash, hash, StringComparison.Ordinal)))
             {
-                var removed = document.AddressHashes.Remove(legacy);
+                await _session.SaveAsync(new SurveyInvitationOptOut { AddressHash = hash }, collection: SurveysConstants.CollectionName, cancellationToken: cancellationToken);
+            }
 
-                if (document.ProtectedKey is not null && Key(document) is { } key)
+            if (key is not null)
+            {
+                foreach (var record in existing.Where(record => string.Equals(record.AddressHash, legacy, StringComparison.Ordinal)))
                 {
-                    removed |= document.AddressHashes.Remove(KeyedHashOf(key, address));
-                }
-
-                if (removed)
-                {
-                    changed.Add(document);
+                    _session.Delete(record, SurveysConstants.CollectionName);
                 }
             }
+
+            return;
         }
 
-        foreach (var document in changed)
+        var (hashes, _) = await HashesAsync(address, cancellationToken);
+
+        foreach (var record in await RecordsAsync(hashes, cancellationToken))
         {
-            await _session.SaveAsync(document, checkConcurrency: true, cancellationToken: cancellationToken);
+            _session.Delete(record, SurveysConstants.CollectionName);
+        }
+
+        // An address the old single list still holds is removed from it too.
+        foreach (var document in documents)
+        {
+            var removed = false;
+
+            foreach (var hash in hashes)
+            {
+                removed |= document.AddressHashes.Remove(hash);
+            }
+
+            if (removed)
+            {
+                await _session.SaveAsync(document, checkConcurrency: true, cancellationToken: cancellationToken);
+            }
         }
     }
 
     private static string Normalize(string address)
         => address.Trim().ToLowerInvariant();
+
+    // Every hash the address may be kept under: its plain hash, and its keyed hash under each key that can be read.
+    // Unknown is set when a key can't be read.
+    private async Task<(HashSet<string> Hashes, bool Unknown)> HashesAsync(string address, CancellationToken cancellationToken)
+    {
+        var hashes = new HashSet<string>(StringComparer.Ordinal) { HashOf(address) };
+        var unknown = false;
+
+        foreach (var document in await LoadAsync(cancellationToken))
+        {
+            if (document.ProtectedKey is null)
+            {
+                continue;
+            }
+
+            if (Key(document) is { } key)
+            {
+                hashes.Add(KeyedHashOf(key, address));
+            }
+            else
+            {
+                unknown = true;
+            }
+        }
+
+        return (hashes, unknown);
+    }
+
+    private async Task<IReadOnlyList<SurveyInvitationOptOut>> RecordsAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
+    {
+        var values = hashes.Where(hash => !string.IsNullOrEmpty(hash)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (values.Length == 0)
+        {
+            return [];
+        }
+
+        return (await _session.Query<SurveyInvitationOptOut, SurveyInvitationOptOutIndex>(index => index.AddressHash.IsIn(values), collection: SurveysConstants.CollectionName)
+            .ListAsync(cancellationToken)).ToList();
+    }
 
     private byte[] Key(SurveyInvitationOptOutDocument document)
     {
@@ -211,6 +262,8 @@ internal sealed class SurveyInvitationOptOutStore
         return key;
     }
 
+    // The key documents: one, or two when two first unsubscribes raced. They hold the keys, and the hashes of the old
+    // single list until the move step empties them, so they stay small.
     private async Task<List<SurveyInvitationOptOutDocument>> LoadAsync(CancellationToken cancellationToken)
         => _documents ??= [.. (await _session.Query<SurveyInvitationOptOutDocument>().ListAsync(cancellationToken)).OrderBy(document => document.Id)];
 }

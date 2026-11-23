@@ -166,6 +166,65 @@ public sealed class SurveysMigrationsSqlTests
         });
     }
 
+    [Fact]
+    public async Task UpdateFrom8_OnSqlite_AddsTheSurveyUpkeepColumns_AndAsksForTheUpkeepReindexStep()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var database = SqliteDatabase.Create();
+        var store = database.Store;
+        var pending = new ResumableStepsDocument();
+        var documents = new Mock<IDocumentManager<ResumableStepsDocument>>();
+        documents.Setup(manager => manager.GetOrCreateMutableAsync(It.IsAny<Func<Task<ResumableStepsDocument>>>())).ReturnsAsync(pending);
+
+        await store.InitializeAsync(cancellationToken);
+        await store.InitializeCollectionAsync(SurveysConstants.CollectionName, cancellationToken);
+
+        // The survey index as version 8 made it, with a row in it.
+        await InTransactionAsync(store, builder => builder.CreateMapIndexTableAsync<SurveyIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.Nullable().WithLength(100))
+            .Column<string>("Title", column => column.Nullable().WithLength(255))
+            .Column<string>("Kind", column => column.Nullable().WithLength(50))
+            .Column<string>("Status", column => column.Nullable().WithLength(20))
+            .Column<string>("OwnerRef", column => column.Nullable().WithLength(255))
+            .Column<int>("PublishedVersionNumber")
+            .Column<DateTime?>("ModifiedUtc", column => column.Nullable())
+            .Column<string>("OwnerId", column => column.Nullable().WithLength(26))
+            .Column<string>("Anonymity", column => column.Nullable().WithLength(20))
+            .Column<int?>("MinimumGroupSize", column => column.Nullable()),
+            collection: SurveysConstants.CollectionName));
+
+        await InTransactionAsync(store, builder => builder.Connection.ExecuteAsync(
+            $"INSERT INTO {SurveyIndexTable(builder)} ({builder.Dialect.QuoteForColumnName("DocumentId")}, {builder.Dialect.QuoteForColumnName("ItemId")}, {builder.Dialect.QuoteForColumnName("PublishedVersionNumber")}) VALUES (1, 's1', 0)",
+            transaction: builder.Transaction));
+
+        // Act
+        var version = 0;
+
+        await InTransactionAsync(store, async builder =>
+        {
+            version = await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(documents.Object), store, Mock.Of<ISession>(), Mock.Of<global::OrchardCore.Modules.IClock>()) { SchemaBuilder = builder }.UpdateFrom8Async();
+        });
+
+        // Assert
+        Assert.Equal(9, version);
+        Assert.True(pending.Pending.ContainsKey(SurveyUpkeepReindexStep.StepName));
+
+        await InTransactionAsync(store, async builder =>
+        {
+            var dialect = builder.Dialect;
+            var row = (IDictionary<string, object>)await builder.Connection.QuerySingleAsync(
+                $"SELECT {dialect.QuoteForColumnName("RetentionDays")} AS RetentionDays, {dialect.QuoteForColumnName("ClosesUtc")} AS ClosesUtc, {dialect.QuoteForColumnName("TotalLimit")} AS TotalLimit FROM {SurveyIndexTable(builder)}",
+                transaction: builder.Transaction);
+
+            // The existing row reads no retention days, so upkeep reads the survey itself until the step indexes it again.
+            Assert.Null(row["RetentionDays"]);
+            Assert.Null(row["ClosesUtc"]);
+            Assert.Null(row["TotalLimit"]);
+        });
+    }
+
     private static string InvitationIndexTable(ISchemaBuilder builder)
         => builder.Dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetIndexTable(typeof(SurveyInvitationIndex), SurveysConstants.CollectionName), null);
 

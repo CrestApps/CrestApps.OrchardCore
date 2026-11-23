@@ -53,6 +53,52 @@ public sealed class SurveyVersionStore : DocumentCatalog<SurveyVersion, SurveyVe
     }
 
     /// <summary>
+    /// Reads a page of the index rows of a survey's versions, newest first, and how many versions it has; no version
+    /// is loaded.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="skip">How many to skip.</param>
+    /// <param name="take">How many to read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The count and the rows.</returns>
+    public async Task<(int Count, IReadOnlyList<SurveyVersionIndex> Rows)> PageRowsAsync(string surveyId, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(surveyId))
+        {
+            return (0, []);
+        }
+
+        var query = Session.QueryIndex<SurveyVersionIndex>(index => index.SurveyId == surveyId, collection: SurveysConstants.CollectionName);
+        var count = await query.CountAsync(cancellationToken);
+        var rows = await Session.QueryIndex<SurveyVersionIndex>(index => index.SurveyId == surveyId, collection: SurveysConstants.CollectionName)
+            .OrderByDescending(index => index.Number)
+            .ThenByDescending(index => index.Id)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Max(1, take))
+            .ListAsync(cancellationToken);
+
+        return (count, rows.ToList());
+    }
+
+    /// <summary>
+    /// Lists the index rows of a survey's versions (id and number), newest first; no version is loaded.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The rows.</returns>
+    public async Task<IReadOnlyList<SurveyVersionIndex>> ListRowsAsync(string surveyId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(surveyId))
+        {
+            return [];
+        }
+
+        return (await Session.QueryIndex<SurveyVersionIndex>(index => index.SurveyId == surveyId, collection: SurveysConstants.CollectionName)
+            .OrderByDescending(index => index.Number)
+            .ListAsync(cancellationToken)).ToList();
+    }
+
+    /// <summary>
     /// Lists the numbers of the versions of a survey, newest first, from the version index (no version is loaded).
     /// </summary>
     /// <param name="surveyId">The survey.</param>

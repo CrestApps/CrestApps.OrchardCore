@@ -63,6 +63,28 @@ public sealed class SurveyOverrideServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListForUserAsync_ReadsOnlyTheUsersOwnAndAudienceAccommodations_OfThatSurvey()
+    {
+        // Arrange
+        await RunAsync(service => service.GrantAsync(new SurveyOverride { SurveyId = "s1", UserId = "u1", ExtraMinutes = 15, Reason = "Mine" }));
+        await RunAsync(service => service.GrantAsync(new SurveyOverride { SurveyId = "s1", AudienceId = "extra-time", ExtraMinutes = 30, Reason = "Audience" }));
+        await RunAsync(service => service.GrantAsync(new SurveyOverride { SurveyId = "s1", UserId = "u2", ExtraMinutes = 45, Reason = "Theirs" }));
+        await RunAsync(service => service.GrantAsync(new SurveyOverride { SurveyId = "s2", UserId = "u1", ExtraMinutes = 60, Reason = "Other survey" }));
+
+        // Act
+        await using var session = _store.Store.CreateSession();
+        var store = new SurveyOverrideStore(session);
+        var mine = await store.ListForUserAsync("s1", "u1", TestContext.Current.CancellationToken);
+        var guest = await store.ListForUserAsync("s1", null, TestContext.Current.CancellationToken);
+
+        // Assert: the runner never reads another person's accommodation, and a guest reads none.
+        Assert.Equal(["Audience", "Mine"], mine.Select(item => item.Reason).Order(StringComparer.Ordinal));
+        Assert.Empty(guest);
+        Assert.Null(await RunAsync(service => service.FindEffectiveAsync("s1", null, null)));
+        Assert.Equal(30, (await RunAsync(service => service.FindEffectiveAsync("s1", "u1", null))).ExtraMinutes);
+    }
+
+    [Fact]
     public async Task RevokeAsync_RemovesTheAccommodation()
     {
         // Arrange

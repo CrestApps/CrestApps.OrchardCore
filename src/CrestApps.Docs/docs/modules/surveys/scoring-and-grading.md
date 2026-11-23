@@ -53,10 +53,12 @@ A response whose deadline and grace passed is submitted with what was saved in t
 | `GradeAsync` | Scores questions by hand with comments and overall feedback |
 | `RecordScoringHelpAsync` | Marks that a grader used AI help on a question |
 | `RegradeAsync` | Scores a response again with its version's key; grader scores are kept |
-| `RegradeVersionsAsync` | Scores responses of older versions with another version's key, only for questions whose type did not change |
+| `RegradeVersionsAsync` | Scores responses of older versions with another version's key, only for questions whose type did not change; a question whose key names choices or rows its version lacks keeps its scores and is listed in `SurveyRegradeResult.SkippedQuestions` |
 | `ChangeScoreAsync` | Sets the total score; a reason is required |
 
 Every change adds an entry to the response's score history (who, when, from, to, why) and raises `GradedAsync` or `ScoreChangedAsync`.
+
+Changing a score that is given (**Change score**, **Score again**, saving grades of a graded response, and **Regrade versions**) also asks every `ISurveyScoreChangeCheck` (registered with `services.AddSurveyScoreChangeCheck<T>()`), on top of being allowed to grade the survey; all must allow it. A grader who is refused sees a graded response without the save button and without the change score card. Learning Assessments adds one that requires **Override grades** on the surveys course items own.
 
 The grading queue (`admin/surveys/grading`) lists responses waiting for a grader in the surveys the user may grade: the global permission, `ISurveyGradingScope` implementations (Learning adds course staff) and `ISurveyAuthorizationService`.
 

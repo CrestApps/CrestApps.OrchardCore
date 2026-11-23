@@ -77,7 +77,9 @@ public sealed class SurveyOverrideService : ISurveyOverrideService
     /// <inheritdoc />
     public async Task<SurveyOverride> FindEffectiveAsync(string surveyId, string userId, RecordRef? context, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(surveyId))
+        // Accommodations are granted to users and audiences of users, so a guest has none. Only the respondent's own
+        // records and the audience ones are read: the runner asks on every request.
+        if (string.IsNullOrEmpty(surveyId) || string.IsNullOrEmpty(userId))
         {
             return null;
         }
@@ -85,7 +87,7 @@ public sealed class SurveyOverrideService : ISurveyOverrideService
         var audience = _audiences.FirstOrDefault();
         var applicable = new List<SurveyOverride>();
 
-        foreach (var candidate in await _store.ListBySurveyAsync(surveyId, cancellationToken))
+        foreach (var candidate in await _store.ListForUserAsync(surveyId, userId, cancellationToken))
         {
             if (candidate.Context is { } scope && (context is null || !scope.Equals(context.Value)))
             {
