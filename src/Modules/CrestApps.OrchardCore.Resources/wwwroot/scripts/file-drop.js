@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/file-drop.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/file-drop.js
 	(function() {
 		"use strict";
 		const initializedAttribute = "data-file-drop-initialized";
@@ -201,5 +201,4 @@
 		};
 		ready(() => initializeAll(document));
 	})();
-	//#endregion
 })();

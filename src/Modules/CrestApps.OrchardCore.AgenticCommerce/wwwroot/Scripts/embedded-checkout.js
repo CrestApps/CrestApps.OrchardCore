@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.AgenticCommerce/Assets/js/embedded-checkout.js
+	// src/Modules/CrestApps.OrchardCore.AgenticCommerce/Assets/js/embedded-checkout.js
 	(function() {
 		"use strict";
 		var CONFIG_ID = "agent-embedded-checkout-config";
@@ -402,5 +402,4 @@
 		};
 		if (typeof document !== "undefined" && document.getElementById(CONFIG_ID)) start(window, document);
 	})();
-	//#endregion
 })();

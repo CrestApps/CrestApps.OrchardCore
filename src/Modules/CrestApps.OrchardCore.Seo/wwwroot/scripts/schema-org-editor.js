@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Seo/Assets/js/schema-org-editor.js
+	// src/Modules/CrestApps.OrchardCore.Seo/Assets/js/schema-org-editor.js
 	(function() {
 		"use strict";
 		var AUTOMATIC = {
@@ -831,5 +831,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAll);
 		else initAll();
 	})();
-	//#endregion
 })();
