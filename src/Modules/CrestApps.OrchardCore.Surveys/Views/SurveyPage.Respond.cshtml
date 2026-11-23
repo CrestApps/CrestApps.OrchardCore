@@ -63,7 +63,9 @@
           data-server-rules="@string.Join(" ", screen.ServerRuleKeys)"
           data-confirm-message="@(Model.ConfirmBeforeSubmit ? T["Submit your answers? You cannot change them afterwards."].Value : string.Empty)"
           data-time-warning="@T["{0} minutes left."].Value"
-          data-time-up="@T["Your time is up."].Value">
+          data-time-up="@T["Your time is up."].Value"
+          data-retry-message="@T["The survey is busy right now. Your answers are kept on this page and sent again in a moment."].Value"
+          data-retry-failed="@T["Your answers could not be sent. They are still on this page: try again in a moment."].Value">
         @Html.AntiForgeryToken()
         <input type="hidden" name="pageId" value="@screen.Id" />
         <script type="application/json" data-survey-rules>@Html.Raw(ViewData["SurveyClientRules"] ?? "{}")</script>
@@ -82,6 +84,8 @@
         {
             @await DisplayAsync(question)
         }
+
+        <div class="alert alert-warning mt-4" role="status" data-survey-retry hidden></div>
 
         <div class="survey-navigation d-flex gap-2 mt-4">
             @if (screen.CanGoBack)

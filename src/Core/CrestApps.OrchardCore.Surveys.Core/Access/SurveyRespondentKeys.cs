@@ -34,11 +34,19 @@ public static class SurveyRespondentKeys
     {
         ArgumentNullException.ThrowIfNull(survey);
 
-        var raw = !string.IsNullOrEmpty(identity?.UserId)
-            ? "u:" + identity.UserId
-            : invitation is not null
-                ? "i:" + invitation.ItemId
-                : !string.IsNullOrEmpty(identity?.BrowserKey) ? "b:" + identity.BrowserKey : null;
+        var user = !string.IsNullOrEmpty(identity?.UserId) ? "u:" + identity.UserId : null;
+        var invited = invitation is not null ? "i:" + invitation.ItemId : null;
+
+        // The survey's Uniqueness setting says how a respondent is recognized: by their invitation first (a signed-in
+        // invitee counts by the invitation), by a browser cookie for guests, or by the signed-in user only. A signed-in
+        // user is always recognized, so their limits apply whatever the setting.
+        var raw = (survey.Access?.Limits?.Uniqueness ?? UniquenessMode.SignedInUser) switch
+        {
+            UniquenessMode.Invitation => invited ?? user,
+            UniquenessMode.Cookie => user ?? invited ?? (!string.IsNullOrEmpty(identity?.BrowserKey) ? "b:" + identity.BrowserKey : null),
+            UniquenessMode.None => user,
+            _ => user ?? invited,
+        };
 
         if (raw is null)
         {

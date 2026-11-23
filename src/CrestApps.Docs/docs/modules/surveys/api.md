@@ -6,7 +6,7 @@ user_manual:
   - user-manual/surveys/share-and-invite
 ---
 
-With **Surveys API** on, these endpoints are under `/api/surveys` on the `Api` authentication scheme. Refusals of the access rules, validation errors and the unavailable secret below are Problem Details responses; a survey or response that isn't found answers a bare `404`, and a missing permission a bare `403`. Answer keys never leave the server. Every response carries `Cache-Control: no-store`, so no browser or shared proxy keeps answers, pages or responses. An anonymous survey whose secret this server can't read (Data Protection keys that aren't shared) answers `503` with the problem type `surveyunavailable`. When the Orchard Core **Rate Limits** feature is on, every endpoint is in the `Surveys.Respond` rate-limit group, like the runner (120 requests a minute per IP address).
+With **Surveys API** on, these endpoints are under `/api/surveys` on the `Api` authentication scheme. Refusals of the access rules, validation errors and the unavailable secret below are Problem Details responses; a survey or response that isn't found answers a bare `404`, and a missing permission a bare `403`. Answer keys never leave the server. Every response carries `Cache-Control: no-store`, so no browser or shared proxy keeps answers, pages or responses. An anonymous survey whose secret this server can't read (Data Protection keys that aren't shared) answers `503` with the problem type `surveyunavailable`. When the Orchard Core **Rate Limits** feature is on, every endpoint is in the `Surveys.Respond` rate-limit group (120 requests a minute per signed-in caller). A client that gets `429` sends the same call again after the `Retry-After` time; nothing of a refused call was done.
 
 | Endpoint | Permission | Does |
 | --- | --- | --- |
@@ -29,6 +29,8 @@ Start a response:
   "Culture": "en-US"
 }
 ```
+
+The start answers with the page and, for a response that names no user (an anonymous survey's, whose responses never keep who answered), a `resumeToken`. That token is the only proof the response is the caller's: keep it, and send it in the `X-Survey-Resume-Token` header with every call about the response (its page, its answers, its completion, and the definition with `responseId`). Send it with a later start too: the start then resumes that response instead of starting another one, which would leave the first in progress and, with a limit that counts started responses, use up an attempt. A response of a signed-in user on an identified survey needs no token, and a later start finds it by the user. A resumed response keeps its token, so `resumeToken` is only set when a new one is issued.
 
 Answer a page (answers by question id, in the shape each question type reads; `Direction` is `Next`, `Back` or `Finish`):
 

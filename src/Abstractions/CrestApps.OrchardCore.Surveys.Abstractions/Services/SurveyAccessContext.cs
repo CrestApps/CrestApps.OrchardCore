@@ -68,4 +68,12 @@ public sealed class SurveyAccessContext
     /// Gets or sets whether this is a test response; limits and windows do not apply to it.
     /// </summary>
     public bool IsTest { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the response is being submitted for the respondent, at its deadline or once the survey closed,
+    /// with the answers it had saved before. The survey's status and window don't refuse such a completion, since it
+    /// takes no new answers; every other completion rule still decides. Without a request of the respondent's (the
+    /// deadline task), <see cref="Identity"/> carries only the response's own user.
+    /// </summary>
+    public bool AutoSubmitted { get; set; }
 }

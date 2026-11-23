@@ -107,31 +107,35 @@ public sealed partial class SurveyRespondingTests
         Assert.Contains(result.StatusCode, new[] { HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden });
     }
 
-    private Task<(string SurveyId, string QuestionId, string Token)> PublishAsync(string title)
+    private Task<(string SurveyId, string QuestionId, string Token)> PublishAsync(string title, Action<SurveyDefinition> configure = null)
         => _fixture.InTenantAsync(async services =>
         {
             var manager = services.GetRequiredService<ISurveyManager>();
+            var definition = new SurveyDefinition
+            {
+                Title = title,
+                Pages =
+                [
+                    new SurveyPage
+                    {
+                        Id = "p1",
+                        Name = "page_1",
+                        Title = "Page 1",
+                        Questions =
+                        [
+                            new SurveyQuestion { Id = "q1", Name = "comment", ControlType = SurveyControlNames.ShortText, Title = "What did you think?", Required = true },
+                        ],
+                    },
+                ],
+                Endings = [new SurveyEnding { Id = "e1", Name = "thanks", Title = "Thanks", Message = "Thank you!", IsDefault = true }],
+            };
+
+            configure?.Invoke(definition);
+
             var survey = await manager.CreateSurveyAsync(new SurveyCreateRequest
             {
                 Title = title,
-                Definition = new SurveyDefinition
-                {
-                    Title = title,
-                    Pages =
-                    [
-                        new SurveyPage
-                        {
-                            Id = "p1",
-                            Name = "page_1",
-                            Title = "Page 1",
-                            Questions =
-                            [
-                                new SurveyQuestion { Id = "q1", Name = "comment", ControlType = SurveyControlNames.ShortText, Title = "What did you think?", Required = true },
-                            ],
-                        },
-                    ],
-                    Endings = [new SurveyEnding { Id = "e1", Name = "thanks", Title = "Thanks", Message = "Thank you!", IsDefault = true }],
-                },
+                Definition = definition,
             });
 
             var published = await services.GetRequiredService<ISurveyPublisher>().PublishAsync(survey.ItemId, "First version", "admin");

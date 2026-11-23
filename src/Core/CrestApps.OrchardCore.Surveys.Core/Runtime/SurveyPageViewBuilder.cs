@@ -72,7 +72,8 @@ public sealed class SurveyPageViewBuilder
         var view = new SurveyPageView
         {
             Id = screenId,
-            Title = _piping.Render(page.Title, definition, response, hiddenQuestions),
+            // A page title is plain text (the page encodes it); its description is HTML, so piped values are encoded.
+            Title = _piping.Render(page.Title, definition, response, hiddenQuestions, encode: false),
             Description = _piping.Render(page.Description, definition, response, hiddenQuestions),
             Position = position,
             PageCount = Math.Max(showing.Count, 1),
@@ -93,7 +94,9 @@ public sealed class SurveyPageViewBuilder
 
             var descriptor = _registry.GetControl(question.ControlType);
             var answerable = descriptor?.Has(SurveyControlCapabilities.Answerable) ?? true;
-            var hidden = state.HiddenQuestionIds.Contains(question.Id);
+            // A carried-forward question with nothing carried forward has no option to pick: it is hidden (and not required),
+            // rather than a required question with no options that blocks the page for good.
+            var hidden = state.HiddenQuestionIds.Contains(question.Id) || NothingCarriedForward(definition, question, response, state);
 
             if (hidden)
             {
@@ -170,7 +173,10 @@ public sealed class SurveyPageViewBuilder
             .Select(choice => choice.Id)
             .ToList();
 
-        var view = _projector.Project(question, definition, response.Plan, hiddenChoices, (_, text) => _piping.Render(text, definition, response, hiddenQuestions));
+        // A title and a description are HTML (shown sanitized), so piped values are HTML-encoded in them. Choice and row
+        // texts and placeholders are plain text that the page encodes itself: encoding the values there too would show
+        // O'Brien as O&#39;Brien.
+        var view = _projector.Project(question, definition, response.Plan, hiddenChoices, (key, text) => _piping.Render(text, definition, response, hiddenQuestions, encode: IsHtmlText(key)));
 
         view.Number = number;
         view.Required = state?.RequiredQuestionIds.Contains(question.Id) ?? question.Required;
@@ -205,6 +211,29 @@ public sealed class SurveyPageViewBuilder
 
         return SurveyChoiceSource.FilterCarriedForward(question, shown, sourceAnswer);
     }
+
+    /// <summary>
+    /// Gets whether a question carries its choices forward from another answer and nothing is carried forward, so it has
+    /// no option to pick: it is hidden and its requirement doesn't apply.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="question">The question.</param>
+    /// <param name="response">The response.</param>
+    /// <param name="state">The logic state.</param>
+    /// <returns><see langword="true"/> when nothing is carried forward.</returns>
+    public static bool NothingCarriedForward(SurveyDefinition definition, SurveyQuestion question, SurveyResponse response, SurveyLogicState state)
+        => !string.IsNullOrEmpty(question?.ChoicesFrom)
+            && question.ChoicesFromMode != ChoicesFromMode.All
+            && AllowedChoices(definition, question, response, state).Count == 0;
+
+    /// <summary>
+    /// Gets whether a text of a question is HTML, by its text key: its title and its description. Choice texts, row
+    /// texts and placeholders are plain text.
+    /// </summary>
+    /// <param name=key>The text key, such as <c>title:{id}</c>.</param>
+    /// <returns><see langword="true"/> for an HTML text.</returns>
+    public static bool IsHtmlText(string key)
+        => key is not null && (key.StartsWith("title:", StringComparison.Ordinal) || key.StartsWith("description:", StringComparison.Ordinal));
 
     private static void AddClientRule(SurveyPageView view, string key, SurveyVisibility visibility, HashSet<string> onScreen)
     {

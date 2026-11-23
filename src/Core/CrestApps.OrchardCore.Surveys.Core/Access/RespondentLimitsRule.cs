@@ -64,7 +64,7 @@ public sealed class RespondentLimitsRule : ISurveyAccessRule
             return SurveyAccessDecision.Allow;
         }
 
-        var (counts, used, usedTotal) = await CountUsedAsync(context, countStarted);
+        var (counts, used, usedTotal) = await CountUsedAsync(context, countStarted, limits.Total is not null);
 
         if (limits.Total is { } total && usedTotal >= total + (context.Override?.ExtraAttempts ?? 0))
         {
@@ -103,21 +103,29 @@ public sealed class RespondentLimitsRule : ISurveyAccessRule
             return null;
         }
 
-        var (_, _, usedTotal) = await CountUsedAsync(context, limits.Counts == LimitCount.Started);
+        var (_, _, usedTotal) = await CountUsedAsync(context, limits.Counts == LimitCount.Started, hasTotalLimit: true);
 
         return Math.Max(total + (context.Override?.ExtraAttempts ?? 0) - usedTotal, 0);
     }
 
-    private async Task<(SurveyParticipationCounts Counts, SurveyParticipationWindowCounts Used, int UsedTotal)> CountUsedAsync(SurveyAccessContext context, bool countStarted)
+    private async Task<(SurveyParticipationCounts Counts, SurveyParticipationWindowCounts Used, int UsedTotal)> CountUsedAsync(SurveyAccessContext context, bool countStarted, bool hasTotalLimit)
     {
         var counts = await _participation.CountAsync(context.Survey, context.RespondentKey, context.Context, context.UtcNow);
         var used = countStarted ? counts.Started : counts.Completed;
+
+        // The total never expires: participation records of a survey with a total limit are kept (upkeep deletes only
+        // the others), so "once per person" holds for as long as the survey runs.
         var usedTotal = used.Total;
 
-        // Attempt limits of identified respondents count every response kept, not only the participation window.
-        if (countStarted && context.Survey.Access?.Anonymity != AnonymityMode.Anonymous && !string.IsNullOrEmpty(context.Identity?.UserId))
+        // The total of an identified respondent counts the responses kept (started ones, or completed ones), so a
+        // response staff delete gives the attempt back, as it does for the attempt number.
+        var userId = context.Response?.UserId ?? context.Identity?.UserId;
+
+        if (hasTotalLimit && context.Survey.Access?.Anonymity != AnonymityMode.Anonymous && !string.IsNullOrEmpty(userId))
         {
-            usedTotal = await _counter.CountForUserAsync(context.Survey.ItemId, context.Identity.UserId, context.Context?.ToString());
+            usedTotal = countStarted
+                ? await _counter.CountForUserAsync(context.Survey.ItemId, userId, context.Context?.ToString())
+                : await _counter.CountCompletedForUserAsync(context.Survey.ItemId, userId, context.Context?.ToString());
         }
 
         return (counts, used, usedTotal);

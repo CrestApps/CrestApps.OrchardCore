@@ -62,7 +62,7 @@ Formulas use Orchard Core's formula language (see the Data Pipelines formula ref
 | `COUNTSELECTED([question])` | How many choices are chosen |
 | `ANSWERED([question])` | Whether the question has an answer |
 | `SCORE('question name')` | The question's score |
-| `AGE([date])` | Whole years since a date |
+| `AGE([date])` | Whole years since a date, on the site's calendar (`NOW()` and `TODAY()` are the site's date and time too, never UTC) |
 
 A module adds functions for survey formulas with an `ISurveyExpressionFunctionProvider` in `Surveys.Core`. Compiled formulas are cached per version. Calculated variables are computed after every page post in dependency order; a cycle is a publish error. A failing formula logs a warning and reads as missing; it never fails the respondent's page.
 
@@ -72,7 +72,7 @@ Hidden variables take their value, in this order, from the consumer that starts 
 
 When a response starts, its plan is drawn with a seed and kept on the response, so refresh, back and resume show the same thing:
 
-- page order (shuffled pages keep the first and last in place);
+- page order (shuffled pages keep the first and last in place; a survey with a branch to a page keeps its designed page order, because a branch skips the pages between it and its target);
 - per page, the pool draws, then the question shuffle (pinned questions keep their place);
 - per question, the choice order (pinned, other and clearing choices keep their place);
 - one question per screen when **Questions per screen** is 1.

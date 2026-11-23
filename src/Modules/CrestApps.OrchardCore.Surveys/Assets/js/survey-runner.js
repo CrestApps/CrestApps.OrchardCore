@@ -5,10 +5,49 @@
 // feedback, and keeps a page from being submitted twice. The server decides everything again when the page is posted,
 // and the page works without this script.
 
-import { debounce, evaluateRules, formatTimeLeft, isQuestionHidden, lockAttribute, readAnswers } from './survey-runner-logic.js';
+import { debounce, evaluateRules, formatTimeLeft, isQuestionHidden, isRetryable, lockAttribute, readAnswers, retryDelay } from './survey-runner-logic.js';
 
 const autosaveDelay = 10000;
 const evaluateDelay = 300;
+const maxAttempts = 5;
+
+/**
+ * @param {number} milliseconds
+ * @returns {Promise<void>}
+ */
+function sleep(milliseconds) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+/**
+ * Sends a request, and sends it again while the server answers that it is too busy (429) or unavailable (503): such a
+ * request was not handled, so sending it again is safe. Returns the last response, or null when the network failed.
+ * @param {string} url
+ * @param {RequestInit} init
+ * @param {(waiting: boolean) => void} [onRetry] told when a retry is waiting and when it is over
+ * @returns {Promise<Response | null>}
+ */
+async function send(url, init, onRetry) {
+    for (let attempt = 1; ; attempt++) {
+        /** @type {Response} */
+        let response;
+
+        try {
+            response = await fetch(url, init);
+        } catch {
+            return null;
+        }
+
+        if (!isRetryable(response.status) || attempt >= maxAttempts) {
+            onRetry?.(false);
+
+            return response;
+        }
+
+        onRetry?.(true);
+        await sleep(retryDelay(response.headers.get('Retry-After'), attempt));
+    }
+}
 
 /**
  * @param {HTMLFormElement} form
@@ -39,14 +78,40 @@ async function post(form, url) {
         body.delete(/** @type {HTMLInputElement} */ (input).name);
     }
 
-    const response = await fetch(url, {
+    const response = await send(url, {
         method: 'POST',
         body,
         credentials: 'same-origin',
         headers: { RequestVerificationToken: antiforgery(form) },
     });
 
-    return response.ok ? response.json() : null;
+    return response?.ok ? response.json() : null;
+}
+
+/**
+ * Puts markup the server sanitized into an element: parsed as an inert document (no script runs), then moved in.
+ * @param {Element} target
+ * @param {string} html
+ */
+function setMarkup(target, html) {
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+
+    target.replaceChildren(...Array.from(parsed.body.childNodes));
+}
+
+/**
+ * Updates a piped text of the page: a title and a description are sanitized HTML, as the page first showed them; other
+ * texts are plain.
+ * @param {Element} target
+ * @param {string} key
+ * @param {string} text
+ */
+function setText(target, key, text) {
+    if (key.startsWith('title:') || key.startsWith('description:')) {
+        setMarkup(target, text);
+    } else {
+        target.textContent = text;
+    }
 }
 
 /**
@@ -152,7 +217,7 @@ function initForm(form) {
             const target = form.querySelector(`[data-survey-text="${CSS.escape(key)}"]`);
 
             if (target) {
-                target.textContent = /** @type {string} */ (text);
+                setText(target, key, /** @type {string} */ (text ?? ''));
             }
         }
     }, evaluateDelay);
@@ -165,8 +230,16 @@ function initForm(form) {
         dirty = false;
         const result = await post(form, form.dataset.saveUrl);
 
+        if (!result) {
+            // The save didn't reach the server (the network, or still too busy after retries): the answers are still
+            // on the page, and the next change or leaving the page saves them again.
+            dirty = true;
+
+            return;
+        }
+
         // A refused save kept nothing: say why on the answers that caused it.
-        if (result && !result.ok && result.errors && Object.keys(result.errors).length > 0) {
+        if (!result.ok && result.errors && Object.keys(result.errors).length > 0) {
             showLockErrors(result.errors);
         }
     };
@@ -208,7 +281,57 @@ function initForm(form) {
 
         submitting = true;
         form.querySelectorAll('button[type="submit"]').forEach((button) => button.setAttribute('aria-disabled', 'true'));
+
+        // The page is posted from here, so a post the server refuses as too busy (many respondents behind one network)
+        // is sent again and the answers stay on the page; without this script the form posts as usual.
+        event.preventDefault();
+        submitPage(submitter);
     });
+
+    const retryStatus = /** @type {HTMLElement | null} */ (form.querySelector('[data-survey-retry]'));
+
+    const showRetry = (/** @type {string} */ text) => {
+        if (retryStatus) {
+            retryStatus.textContent = text;
+            retryStatus.hidden = !text;
+        }
+
+        if (text) {
+            announce(text);
+        }
+    };
+
+    const submitPage = async (/** @type {HTMLButtonElement | null} */ submitter) => {
+        const body = new FormData(form);
+
+        if (submitter?.name) {
+            body.set(submitter.name, submitter.value);
+        }
+
+        const response = await send(form.action, {
+            method: 'POST',
+            body,
+            credentials: 'same-origin',
+            headers: { RequestVerificationToken: antiforgery(form), 'X-Survey-Fetch': '1' },
+        }, (waiting) => showRetry(waiting ? form.dataset.retryMessage ?? '' : ''));
+
+        if (response && !isRetryable(response.status)) {
+            const result = response.ok && (response.headers.get('Content-Type') ?? '').includes('json')
+                ? await response.json().catch(() => null)
+                : null;
+
+            // The server says where to go: the next page, this page with its errors, or the ending. Anything else
+            // (the response is gone, a form token that expired) reloads the page as the server has it now.
+            window.location.assign(result?.redirect ?? form.action);
+
+            return;
+        }
+
+        // Not sent: the answers are still on the page, and the respondent can send them again.
+        submitting = false;
+        form.querySelectorAll('button[type="submit"]').forEach((button) => button.removeAttribute('aria-disabled'));
+        showRetry(form.dataset.retryFailed ?? '');
+    };
 
     for (const button of form.querySelectorAll('[data-survey-check]')) {
         button.addEventListener('click', async () => {
@@ -235,10 +358,6 @@ function initForm(form) {
                     parts.push(result.feedback.rightAnswer);
                 }
 
-                if (result.feedback?.feedback) {
-                    parts.push(result.feedback.feedback);
-                }
-
                 button.remove();
 
                 const question = form.querySelector(`[data-question-id="${CSS.escape(questionId)}"]`);
@@ -256,7 +375,17 @@ function initForm(form) {
                 });
             }
 
+            // The feedback is the author's HTML, sanitized by the server; the rest is plain text.
             output.textContent = parts.filter((part) => part).join(' ');
+
+            for (const html of result.ok ? [result.feedback?.feedback, result.feedback?.generalFeedback] : []) {
+                if (html) {
+                    const block = document.createElement('div');
+                    setMarkup(block, html);
+                    output.append(block);
+                }
+            }
+
             announce(output.textContent ?? '');
         });
     }
@@ -323,4 +452,33 @@ function initTimer(form, announce) {
     tick();
 }
 
+/**
+ * A kiosk response page left without input goes back to the landing page, which forgets the response, so the next
+ * person at the device never sees the previous person's answers.
+ * @param {HTMLElement} container
+ */
+function initKioskIdle(container) {
+    const url = container.dataset.surveyKioskIdleUrl;
+    const seconds = Number.parseInt(container.dataset.surveyKioskIdleSeconds ?? '', 10);
+
+    if (!url || !Number.isFinite(seconds) || seconds <= 0) {
+        return;
+    }
+
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+
+    const reset = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => window.location.assign(url), seconds * 1000);
+    };
+
+    for (const type of ['input', 'change', 'keydown', 'pointerdown', 'scroll']) {
+        document.addEventListener(type, reset, { passive: true, capture: true });
+    }
+
+    reset();
+}
+
 document.querySelectorAll('form[data-survey-form]').forEach((form) => initForm(/** @type {HTMLFormElement} */ (form)));
+document.querySelectorAll('[data-survey-kiosk-idle-url]').forEach((container) => initKioskIdle(/** @type {HTMLElement} */ (container)));

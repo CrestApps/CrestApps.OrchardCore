@@ -180,6 +180,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         ArgumentNullException.ThrowIfNull(request);
 
         var identity = request.Identity ?? new SurveyRespondentIdentity();
+        await _formulas.PrepareAsync();
         SurveyCollector collector = null;
         Survey survey = null;
 
@@ -245,6 +246,12 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 {
                     // The respondent's own call: the completion counts toward their limits like any other.
                     await SubmitAtDeadlineCoreAsync(existing.ItemId, identity, cancellationToken);
+                }
+                else if (await ClosedForAsync(survey, existing, identity, now, cancellationToken))
+                {
+                    // The survey closed while the response was in progress: it takes no new answers, so it is submitted
+                    // as it was saved, and the start below is refused as closed.
+                    await SubmitAtCloseCoreAsync(existing.ItemId, identity, cancellationToken);
                 }
                 else if (await _access.CheckResumeAsync(new SurveyAccessContext
                 {
@@ -491,6 +498,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
     {
         ArgumentNullException.ThrowIfNull(response);
 
+        await _formulas.PrepareAsync();
         var survey = await _surveyStore.FindByIdAsync(response.SurveyId, cancellationToken);
         var version = await _versions.GetAsync(survey, response, cancellationToken);
 
@@ -766,6 +774,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             return new SurveyEvaluateResult { Error = SurveyErrorCode.NotFound };
         }
 
+        await _formulas.PrepareAsync();
         var survey = await _surveyStore.FindByIdAsync(stored.SurveyId, cancellationToken);
         var version = await _versions.GetAsync(survey, stored, cancellationToken);
 
@@ -934,10 +943,61 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 return new SurveyResponseResult { Error = SurveyErrorCode.InvalidState, Response = response };
             }
 
-            await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken);
+            var error = await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken);
 
-            return new SurveyResponseResult { Response = response };
+            return new SurveyResponseResult { Error = error, Response = response };
         }, cancellationToken);
+
+    /// <summary>
+    /// Submits a response left in progress on a survey that closed, as it was saved before the close, for the upkeep
+    /// task. The completion rules still decide: a response they refuse is abandoned rather than completed.
+    /// </summary>
+    /// <param name="responseId">The response.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result; <see cref="SurveyErrorCode.InvalidState"/> when the response ended or the survey is still
+    /// open to its respondent (an accommodation that closes later).</returns>
+    public Task<SurveyResponseResult> SubmitAtCloseAsync(string responseId, CancellationToken cancellationToken = default)
+        => SubmitAtCloseCoreAsync(responseId, identity: null, cancellationToken);
+
+    private Task<SurveyResponseResult> SubmitAtCloseCoreAsync(string responseId, SurveyRespondentIdentity identity, CancellationToken cancellationToken)
+        => WriteAsync<SurveyResponseResult>(responseId, () => new SurveyResponseResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
+        {
+            if (response.Status != SurveyResponseStatus.InProgress || !await ClosedForAsync(survey, response, identity, _clock.UtcNow, cancellationToken))
+            {
+                return new SurveyResponseResult { Error = SurveyErrorCode.InvalidState, Response = response };
+            }
+
+            var error = await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken);
+
+            return new SurveyResponseResult { Error = error, Response = response };
+        }, cancellationToken);
+
+    // Whether the survey is closed to the respondent of a response: staff closed the survey or its link, or the closing
+    // date passed (the respondent's accommodation's, else the survey's, and the link's). A test response never closes.
+    private async Task<bool> ClosedForAsync(Survey survey, SurveyResponse response, SurveyRespondentIdentity identity, DateTime utcNow, CancellationToken cancellationToken)
+    {
+        if (response.IsTest)
+        {
+            return false;
+        }
+
+        var collector = string.IsNullOrEmpty(response.CollectorId) ? null : await _collectorStore.FindByIdAsync(response.CollectorId, cancellationToken);
+
+        if (SurveyAvailability.IsClosedByStatus(survey, collector))
+        {
+            return true;
+        }
+
+        // An accommodation moves the survey's closing date, so it is read only when the survey has one.
+        SurveyOverride surveyOverride = null;
+
+        if (survey.Access?.ClosesUtc is not null && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides)
+        {
+            surveyOverride = await overrides.FindEffectiveAsync(survey.ItemId, response.UserId ?? identity?.UserId, response.Context, cancellationToken);
+        }
+
+        return SurveyAvailability.IsClosed(survey, surveyOverride, collector, utcNow);
+    }
 
     /// <inheritdoc />
     public Task<SurveyResponseResult> ReopenAsync(string responseId, SurveyRespondentIdentity identity, CancellationToken cancellationToken = default)
@@ -949,6 +1009,15 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 || survey.Status != SurveyStatus.Open && !response.IsTest)
             {
                 return new SurveyResponseResult { Error = SurveyErrorCode.InvalidState, Response = response };
+            }
+
+            // Once the survey closes (its closing date included, the moment the review after close may show the right
+            // answers), no response is reopened to change. The survey's own closing date counts even for a respondent
+            // whose accommodation closes later: the review after close follows the survey's date.
+            if (!response.IsTest && SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, _clock.UtcNow)
+                || await ClosedForAsync(survey, response, identity, _clock.UtcNow, cancellationToken))
+            {
+                return new SurveyResponseResult { Error = SurveyErrorCode.Closed, Response = response };
             }
 
             // The counts the completion added are taken back under the completion lock, so completing again counts once.
@@ -1221,6 +1290,21 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
     private async Task<SurveyResponse> FindOpenAsync(Survey survey, StartResponseRequest request, SurveyRespondentIdentity identity, SurveyInvitation invitation, bool anonymous, bool isTest, CancellationToken cancellationToken)
     {
+        // Opened through a personal invitation, only a response of that invitation resumes: a response the same browser or
+        // user started through the public link stays apart, so the invitation completes with its own response.
+        string seal = null;
+
+        if (invitation is not null && anonymous && !isTest)
+        {
+            seal = SurveyRespondentKeys.InvitationSeal(await Secrets.RevealAsync(survey, cancellationToken), invitation.ItemId);
+        }
+
+        bool OfInvitation(SurveyResponse response)
+            => invitation is null
+                || (anonymous
+                    ? string.Equals(response.InvitationSeal, seal, StringComparison.Ordinal)
+                    : string.Equals(response.InvitationId, invitation.ItemId, StringComparison.Ordinal));
+
         if (!string.IsNullOrEmpty(identity.ResumeToken))
         {
             var byToken = await FindForRespondentAsync(SurveyResumeTokens.ResponseIdOf(identity.ResumeToken), identity, cancellationToken);
@@ -1228,14 +1312,16 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             if (byToken is { Status: SurveyResponseStatus.InProgress }
                 && string.Equals(byToken.SurveyId, survey.ItemId, StringComparison.Ordinal)
                 && byToken.IsTest == isTest
-                && Nullable.Equals(byToken.Context, StoredContext(survey, request.Context)))
+                && Nullable.Equals(byToken.Context, StoredContext(survey, request.Context))
+                && (isTest || OfInvitation(byToken)))
             {
                 return byToken;
             }
         }
 
         if (!anonymous && !isTest && !string.IsNullOrEmpty(identity.UserId)
-            && await _counter.FindInProgressAsync(survey.ItemId, identity.UserId, request.Context?.ToString()) is { } byUser)
+            && await _counter.FindInProgressAsync(survey.ItemId, identity.UserId, request.Context?.ToString()) is { } byUser
+            && OfInvitation(byUser))
         {
             return byUser;
         }
@@ -1454,7 +1540,9 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             }
 
             response.Answers.TryGetValue(questionId, out var answer);
-            var required = state.RequiredQuestionIds.Contains(questionId);
+
+            // A carried-forward question with nothing carried forward shows no option, so it can't be required.
+            var required = state.RequiredQuestionIds.Contains(questionId) && !SurveyPageViewBuilder.NothingCarriedForward(definition, question, response, state);
             var context = new SurveyAnswerValidationContext
             {
                 Question = question,
@@ -1604,28 +1692,39 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             var respondentKey = await CompletionRespondentKeyAsync(survey, response, identity, invitation, cancellationToken);
 
-            if (!autoSubmitted)
+            // The same completion rules decide on every path: a respondent's submit, and a submission for them at the
+            // deadline or once the survey closed. Without the respondent's request (the deadline task) the identity is
+            // the response's own user, so a rule about who responds still decides.
+            var overrides = _serviceProvider.GetService<ISurveyOverrideService>();
+            var decision = await _access.CheckCompleteAsync(new SurveyAccessContext
             {
-                var overrides = _serviceProvider.GetService<ISurveyOverrideService>();
-                var decision = await _access.CheckCompleteAsync(new SurveyAccessContext
-                {
-                    Survey = survey,
-                    Version = version,
-                    Collector = string.IsNullOrEmpty(response.CollectorId) ? null : await _collectorStore.FindByIdAsync(response.CollectorId, cancellationToken),
-                    Invitation = invitation,
-                    Identity = identity ?? new SurveyRespondentIdentity(),
-                    RespondentKey = respondentKey,
-                    Context = response.Context,
-                    Response = response,
-                    Override = overrides is null || response.IsTest ? null : await overrides.FindEffectiveAsync(survey.ItemId, response.UserId, response.Context, cancellationToken),
-                    UtcNow = now,
-                    IsTest = response.IsTest,
-                });
+                Survey = survey,
+                Version = version,
+                Collector = string.IsNullOrEmpty(response.CollectorId) ? null : await _collectorStore.FindByIdAsync(response.CollectorId, cancellationToken),
+                Invitation = invitation,
+                Identity = identity ?? new SurveyRespondentIdentity { UserId = response.UserId },
+                RespondentKey = respondentKey,
+                Context = response.Context,
+                Response = response,
+                Override = overrides is null || response.IsTest ? null : await overrides.FindEffectiveAsync(survey.ItemId, response.UserId ?? identity?.UserId, response.Context, cancellationToken),
+                UtcNow = now,
+                IsTest = response.IsTest,
+                AutoSubmitted = autoSubmitted,
+            });
 
-                if (!decision.IsAllowed)
+            if (!decision.IsAllowed)
+            {
+                if (!autoSubmitted)
                 {
+                    // The respondent's submit is refused and the response stays in progress, with the reason shown.
                     return decision.Error;
                 }
+
+                // Nobody is there to be told why, and the response can't stay in progress past its deadline or the close:
+                // it ends abandoned, neither scored nor counted, with its answers kept for staff.
+                await AbandonRefusedAsync(survey, version, response, now, notifications, cancellationToken);
+
+                return SurveyErrorCode.None;
             }
 
             LeaveScreen(response, now);
@@ -1768,7 +1867,28 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         return await Secrets.RespondentKeyAsync(survey, new SurveyRespondentIdentity { UserId = response.UserId }, invitation, cancellationToken);
     }
 
-    private async Task SubmitExpiredAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyRespondentIdentity identity, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    // Ends a response whose submission for the respondent the completion rules refused (a limit reached, the most
+    // responses taken, a used invitation, a full quota that closes the survey, a learner withdrawn): it is abandoned,
+    // not scored and not counted, and its answers stay for staff. Runs under the completion lock.
+    private async Task AbandonRefusedAsync(Survey survey, SurveyVersion version, SurveyResponse response, DateTime now, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    {
+        LeaveScreen(response, now);
+
+        response.Status = SurveyResponseStatus.Abandoned;
+        response.AutoSubmitted = true;
+        response.RespondentKey = null;
+        response.ModifiedUtc = now;
+        await _responseStore.UpdateAsync(response, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+        Files.MarkCommitted();
+
+        var context = new SurveyResponseEventContext { Survey = survey, Version = version, Response = response };
+        notifications.Add(() => NotifyAsync(observer => observer.AbandonedAsync(context)));
+    }
+
+    // Submits a response for its respondent, at its deadline or once its survey closed, with the answers it had saved.
+    // Returns Busy when the completion lock was held (nothing changed), else None.
+    private async Task<SurveyErrorCode> SubmitExpiredAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyRespondentIdentity identity, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
         var definition = version.Definition;
         var cacheKey = SurveyRuntimeVersions.CacheKey(version);
@@ -1786,7 +1906,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         }
 
         // The completion chooses the ending once the response is scored.
-        await CompleteCoreAsync(survey, version, response, ending: null, autoSubmitted: true, identity, notifications, cancellationToken);
+        return await CompleteCoreAsync(survey, version, response, ending: null, autoSubmitted: true, identity, notifications, cancellationToken);
     }
 
     // Takes back what completing a response counted: the respondent's participation and the quotas it matched. Runs
@@ -1863,8 +1983,9 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         }
     }
 
-    // Refuses a write to a response that ended, and submits one whose deadline and grace passed. The identity is the
-    // respondent's own, so a late completion still counts toward their limits.
+    // Refuses a write to a response that ended, and submits one whose deadline and grace passed, or whose survey closed,
+    // with the answers saved before: nothing posted now is read. The identity is the respondent's own, so a late
+    // completion still counts toward their limits.
     private async Task<SurveyErrorCode?> RefuseClosedAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyRespondentIdentity identity, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
         if (response.Status != SurveyResponseStatus.InProgress)
@@ -1873,12 +1994,20 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         }
 
         var grace = Math.Max(version.Definition.Timing?.GraceSeconds ?? 5, 0);
+        var now = _clock.UtcNow;
 
-        if (response.DeadlineUtc is { } deadline && _clock.UtcNow >= deadline.AddSeconds(grace))
+        if (response.DeadlineUtc is { } deadline && now >= deadline.AddSeconds(grace))
         {
-            await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken);
+            return await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken) == SurveyErrorCode.Busy
+                ? SurveyErrorCode.Busy
+                : SurveyErrorCode.DeadlinePassed;
+        }
 
-            return SurveyErrorCode.DeadlinePassed;
+        if (await ClosedForAsync(survey, response, identity, now, cancellationToken))
+        {
+            return await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken) == SurveyErrorCode.Busy
+                ? SurveyErrorCode.Busy
+                : SurveyErrorCode.Closed;
         }
 
         return null;
@@ -1956,6 +2085,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 return new T { Error = SurveyErrorCode.NotFound };
             }
 
+            await _formulas.PrepareAsync();
             var survey = await _surveyStore.FindByIdAsync(response.SurveyId, cancellationToken);
             var version = await _versions.GetAsync(survey, response, cancellationToken);
 

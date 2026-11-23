@@ -28,6 +28,13 @@ internal static class SurveysApiEndpoints
 {
     public const string RoutePrefix = "api/surveys";
 
+    /// <summary>
+    /// The header that carries a response's resume token. An anonymous survey's response names no user, so the token the
+    /// start returns (<c>resumeToken</c>) is what proves the response is the caller's: send it with every call about the
+    /// response, and with a later start, which then resumes the response instead of starting another.
+    /// </summary>
+    public const string ResumeTokenHeader = "X-Survey-Resume-Token";
+
     public static IEndpointRouteBuilder MapSurveysApi(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup(RoutePrefix)
@@ -154,7 +161,7 @@ internal static class SurveysApiEndpoints
             return Results.NotFound();
         }
 
-        var identity = new SurveyRespondentIdentity { UserId = UserId(httpContext.User) };
+        var identity = Identity(httpContext);
         SurveyVersion version;
         SurveyResponsePlan plan;
         var fromResponse = !string.IsNullOrWhiteSpace(responseId);
@@ -339,7 +346,7 @@ internal static class SurveysApiEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["surveyId"] = ["Give the survey id or a collector token."] });
         }
 
-        var identity = new SurveyRespondentIdentity { UserId = UserId(httpContext.User) };
+        var identity = Identity(httpContext);
         RecordRef? context = null;
 
         if (!string.IsNullOrWhiteSpace(input.Context))
@@ -388,7 +395,9 @@ internal static class SurveysApiEndpoints
 
         var page = await responses.GetPageAsync(result.Response, httpContext.RequestAborted);
 
-        return Results.Ok(PageResult(page, result.Resumed, httpContext));
+        // A response with no user (an anonymous survey's) is the caller's only through its resume token, so a new token
+        // goes back to the caller; a response resumed with the caller's token keeps that token.
+        return Results.Ok(PageResult(page, result.Resumed, httpContext, result.ResumeToken));
     }
 
     internal static async Task<IResult> GetPageAsync(string responseId, HttpContext httpContext, IAuthorizationService authorizationService, ISurveyResponseService responses)
@@ -398,7 +407,7 @@ internal static class SurveysApiEndpoints
             return Results.Forbid();
         }
 
-        var response = await responses.FindForRespondentAsync(responseId, new SurveyRespondentIdentity { UserId = UserId(httpContext.User) }, httpContext.RequestAborted);
+        var response = await responses.FindForRespondentAsync(responseId, Identity(httpContext), httpContext.RequestAborted);
 
         if (response is null)
         {
@@ -426,7 +435,7 @@ internal static class SurveysApiEndpoints
             ResponseId = responseId,
             PageId = pageId,
             Direction = direction,
-            Identity = new SurveyRespondentIdentity { UserId = UserId(httpContext.User) },
+            Identity = Identity(httpContext),
             Answers = input?.Answers ?? [],
         }, httpContext.RequestAborted);
 
@@ -438,13 +447,14 @@ internal static class SurveysApiEndpoints
         return result.Succeeded ? Results.Ok(PageResult(result, resumed: false, httpContext)) : Problem(result.Error);
     }
 
-    private static object PageResult(SurveyPageResult result, bool resumed, HttpContext httpContext)
+    private static object PageResult(SurveyPageResult result, bool resumed, HttpContext httpContext, string resumeToken = null)
     {
         var sanitizer = httpContext?.RequestServices?.GetService<SurveyContentSanitizer>();
 
         return new
         {
             responseId = result.Response?.ItemId,
+            resumeToken,
             number = result.Response?.Number,
             status = result.Response?.Status.ToString(),
             resumed,
@@ -503,6 +513,18 @@ internal static class SurveysApiEndpoints
         }
 
         return view;
+    }
+
+    // The caller: the signed-in user, and the resume token of an anonymous survey's response when the call carries one.
+    internal static SurveyRespondentIdentity Identity(HttpContext httpContext)
+    {
+        var token = httpContext.Request.Headers[ResumeTokenHeader].ToString().Trim();
+
+        return new SurveyRespondentIdentity
+        {
+            UserId = UserId(httpContext.User),
+            ResumeToken = token.Length is > 0 and <= 512 ? token : null,
+        };
     }
 
     private static string UserId(ClaimsPrincipal user)

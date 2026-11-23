@@ -135,6 +135,31 @@ export function formatTimeLeft(milliseconds) {
 }
 
 /**
+ * Works out how long the runner waits before it sends a request again after the server refused it as too many
+ * (status 429) or unavailable (503): the server's Retry-After seconds when it sends them, else a delay that doubles
+ * with each attempt, never under one second nor over thirty.
+ * @param {string | null} retryAfter the Retry-After header, or null
+ * @param {number} attempt the attempt that was refused, from 1
+ * @returns {number} the delay in milliseconds
+ */
+export function retryDelay(retryAfter, attempt) {
+    const seconds = Number.parseInt(retryAfter ?? '', 10);
+    const delay = Number.isFinite(seconds) && seconds >= 0 ? seconds : 2 ** Math.max(attempt, 1);
+
+    return Math.min(Math.max(delay, 1), 30) * 1000;
+}
+
+/**
+ * Gets whether a response status means the request was not handled and may be sent again as it is: too many requests
+ * (429) or the server is unavailable (503).
+ * @param {number} status the status
+ * @returns {boolean} whether to retry
+ */
+export function isRetryable(status) {
+    return status === 429 || status === 503;
+}
+
+/**
  * Returns a debounced function that runs the last call after a quiet time.
  * @template {(...args: any[]) => void} T
  * @param {T} work the function

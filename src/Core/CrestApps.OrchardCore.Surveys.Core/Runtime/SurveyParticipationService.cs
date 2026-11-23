@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
@@ -24,9 +25,13 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 public sealed class SurveyParticipationService
 {
     /// <summary>
-    /// How long participation records are kept: longer than the largest limit window.
+    /// How long participation records are kept: longer than the largest limit window. The records of a survey with a
+    /// total limit are kept for as long as it has one, so its total never forgets an old response.
     /// </summary>
     public const int RetentionDays = 45;
+
+    // The most survey ids one query leaves out, well under SQL Server's limit of 2,100 parameters.
+    private const int MaxKeptSurveysInQuery = 1000;
 
     private readonly SurveyParticipationStore _store;
     private readonly ISiteService _siteService;
@@ -99,9 +104,11 @@ public sealed class SurveyParticipationService
         var firstDay = await _weekStart.GetFirstDayOfWeekAsync();
         var weekStart = today.AddDays(-(((int)today.DayOfWeek - (int)firstDay + 7) % 7));
         var monthStart = new DateOnly(today.Year, today.Month, 1);
-        var from = today.AddDays(-RetentionDays);
         var contextKey = ContextKey(survey, context);
-        var rows = (await _store.ListAsync(survey.ItemId, respondentKey, from))
+
+        // Every record kept counts toward the total: the records of a survey with a total limit never expire, and the
+        // others are gone after the retention, which is longer than any window.
+        var rows = (await _store.ListAsync(survey.ItemId, respondentKey, DateOnly.MinValue))
             .Where(row => string.Equals(row.ContextKey ?? string.Empty, contextKey, StringComparison.Ordinal))
             .ToList();
 
@@ -196,23 +203,45 @@ public sealed class SurveyParticipationService
 
     /// <summary>
     /// Lists the index rows of participation records older than the retention, a batch at a time in the order of their
-    /// index ids, so a cleanup can read past a record it could not delete.
+    /// index ids, so a cleanup can read past a record it could not delete. The records of the surveys whose records are
+    /// kept (<see cref="KeepsRecords(Survey)"/>) are left out of the query when there are few enough of them; the caller
+    /// leaves them out of what it deletes in any case.
     /// </summary>
     /// <param name="utcNow">The current time, in UTC.</param>
     /// <param name="afterId">The index id of the last row of the previous batch, or 0 for the first batch.</param>
     /// <param name="batchSize">The most rows to list.</param>
+    /// <param name="keptSurveyIds">The surveys whose records are kept, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The rows.</returns>
-    public async Task<IReadOnlyList<SurveyParticipationIndex>> ListExpiredAsync(DateTime utcNow, long afterId, int batchSize, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SurveyParticipationIndex>> ListExpiredAsync(DateTime utcNow, long afterId, int batchSize, IReadOnlyCollection<string> keptSurveyIds = null, CancellationToken cancellationToken = default)
     {
         var before = (await TodayAsync(utcNow)).AddDays(-RetentionDays).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-        var rows = await _store.YesSqlSession.QueryIndex<SurveyParticipationIndex>(index => index.Day < before && index.Id > afterId, collection: SurveysConstants.CollectionName)
+        var query = _store.YesSqlSession.QueryIndex<SurveyParticipationIndex>(index => index.Day < before && index.Id > afterId, collection: SurveysConstants.CollectionName);
+
+        if (keptSurveyIds is { Count: > 0 and <= MaxKeptSurveysInQuery })
+        {
+            var kept = keptSurveyIds.ToArray();
+
+            query = query.Where(index => index.SurveyId.IsNotIn(kept));
+        }
+
+        var rows = await query
             .OrderBy(index => index.Id)
             .Take(batchSize)
             .ListAsync(cancellationToken);
 
         return rows.ToList();
     }
+
+    /// <summary>
+    /// Gets whether a survey's participation records are kept past the retention: while it has a total limit, so the
+    /// total counts every response for as long as the survey runs. Those records keep no more than the others: a day, a
+    /// respondent key (a pseudonym on an anonymous survey) and no response id.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <returns><see langword="true"/> when its records are kept.</returns>
+    public static bool KeepsRecords(Survey survey)
+        => survey?.Access?.Limits?.Total is not null;
 
     /// <summary>
     /// Deletes participation records.
