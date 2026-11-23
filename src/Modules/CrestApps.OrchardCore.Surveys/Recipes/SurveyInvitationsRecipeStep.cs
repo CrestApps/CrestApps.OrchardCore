@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -17,27 +16,24 @@ internal sealed class SurveyInvitationsRecipeStep : NamedRecipeStepHandler
 {
     private readonly SurveyInvitationStore _invitationStore;
     private readonly SurveyStore _surveyStore;
-    private readonly IServiceProvider _serviceProvider;
-    private ISurveyUserLookup _users;
+    private readonly ISurveyUserLookup _userLookup;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationsRecipeStep"/> class.
     /// </summary>
     /// <param name="invitationStore">The invitation store.</param>
     /// <param name="surveyStore">The survey store.</param>
-    /// <param name="serviceProvider">The service provider. The user lookup is resolved from it only when a record names a person, so a missing optional service never breaks recipe execution.</param>
+    /// <param name="userLookup">The user lookup, which turns user ids into user names and back.</param>
     public SurveyInvitationsRecipeStep(
         SurveyInvitationStore invitationStore,
         SurveyStore surveyStore,
-        IServiceProvider serviceProvider)
+        ISurveyUserLookup userLookup)
         : base(SurveysRecipeSteps.Invitations)
     {
         _invitationStore = invitationStore;
         _surveyStore = surveyStore;
-        _serviceProvider = serviceProvider;
+        _userLookup = userLookup;
     }
-
-    private ISurveyUserLookup UserLookup => _users ??= _serviceProvider.GetRequiredService<ISurveyUserLookup>();
 
     /// <inheritdoc />
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -66,7 +62,7 @@ internal sealed class SurveyInvitationsRecipeStep : NamedRecipeStepHandler
 
             if (userName is not null)
             {
-                invitation.UserId = await UserLookup.FindUserIdAsync(userName);
+                invitation.UserId = await _userLookup.FindUserIdAsync(userName);
 
                 if (invitation.UserId is null)
                 {

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Migrations;
 using CrestApps.OrchardCore.Surveys.Navigation;
 using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -36,6 +37,11 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<SurveysMigrations>();
         services.AddDataMigration<SurveyAnonymityMigrations>();
         services.AddDataMigration<SurveyContentSanitizingMigrations>();
+
+        // Data the migrations change on existing records is upgraded in the background, a page at a time.
+        services.AddResumableStep<SurveyInvitationsReindexStep>();
+        services.AddResumableStep<SurveyAnonymityUpgradeStep>();
+        services.AddResumableStep<SurveyContentSanitizingStep>();
         services.AddIndexProvider<SurveyIndexProvider>()
             .AddIndexProvider<SurveyTemplateIndexProvider>()
             .AddIndexProvider<SurveyVersionIndexProvider>()

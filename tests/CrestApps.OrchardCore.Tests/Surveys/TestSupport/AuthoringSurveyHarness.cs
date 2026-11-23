@@ -6,10 +6,12 @@ using CrestApps.OrchardCore.Surveys.Migrations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -70,7 +72,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         await using var session = harness.Store.CreateSession();
         var transaction = await session.BeginTransactionAsync(cancellationToken);
 
-        Assert.Equal(3, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new SurveyInvitationStore(session), session) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
+        Assert.Equal(4, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
 
         await transaction.CommitAsync(cancellationToken);
 

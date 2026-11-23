@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
-using CrestApps.OrchardCore.Surveys.Core.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.Data.Migration;
 using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
@@ -8,29 +8,31 @@ using YesSql;
 namespace CrestApps.OrchardCore.Surveys.Migrations;
 
 /// <summary>
-/// Creates the index tables of Surveys and seeds the default survey templates.
+/// Creates the index tables of Surveys and seeds the default survey templates. A new site gets the final tables at once
+/// and runs no update step; the update steps only change the schema of a site made with an earlier version of the
+/// tables, and ask for a resumable step for any data that has to follow, so the tenant's activation never waits on it.
 /// </summary>
 internal sealed class SurveysMigrations : DataMigration
 {
     private readonly IRecipeMigrator _recipeMigrator;
-    private readonly SurveyInvitationStore _invitationStore;
-    private readonly ISession _session;
+    private readonly ResumableSteps _steps;
+    private readonly IStore _store;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysMigrations"/> class.
     /// </summary>
     /// <param name="recipeMigrator">The recipe migrator.</param>
-    /// <param name="invitationStore">The invitation store, to index existing invitations again.</param>
-    /// <param name="session">The YesSql session.</param>
-    public SurveysMigrations(IRecipeMigrator recipeMigrator, SurveyInvitationStore invitationStore, ISession session)
+    /// <param name="steps">The resumable upgrade steps.</param>
+    /// <param name="store">The YesSql store, for the database schema of the tenant's tables.</param>
+    public SurveysMigrations(IRecipeMigrator recipeMigrator, ResumableSteps steps, IStore store)
     {
         _recipeMigrator = recipeMigrator;
-        _invitationStore = invitationStore;
-        _session = session;
+        _steps = steps;
+        _store = store;
     }
 
     /// <summary>
-    /// Creates the index tables and runs the recipe of the default templates.
+    /// Creates the final index tables and runs the recipe of the default templates.
     /// </summary>
     /// <returns>The migration version.</returns>
     public async Task<int> CreateAsync()
@@ -38,26 +40,27 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
     /// Adds the seal lookup and e-mail columns of the invitation index (one indexed query finds the invitation of an
-    /// anonymous response, and personal data export and erasure find guest invitations by e-mail), then indexes the
-    /// existing invitations again, a page at a time, so their e-mail column is filled.
+    /// anonymous response, and personal data export and erasure find guest invitations by e-mail), and asks for the
+    /// step that indexes the existing invitations again so their columns are filled.
     /// </summary>
     /// <returns>The migration version.</returns>
     public async Task<int> UpdateFrom1Async()
     {
         await SurveysIndexSchema.AddInvitationLookupColumnsAsync(SchemaBuilder);
-        await SurveyMigrationPages.ForEachAsync(_session, _invitationStore, SurveysConstants.CollectionName, _ => true);
+        await _steps.RequestAsync(SurveyInvitationsReindexStep.StepName);
 
         return 2;
     }
 
     /// <summary>
-    /// Adds the upkeep columns of the response index (anonymized by retention, and failed upkeep runs). Existing rows
-    /// start at not anonymized and no failures; retention marks a response it anonymized before on its next visit.
+    /// Adds the upkeep columns of the response index (anonymized by retention, and failed upkeep runs). They are not
+    /// nullable, so existing rows start at not anonymized and no failures on every database; retention marks a response
+    /// it anonymized before on its next visit.
     /// </summary>
     /// <returns>The migration version.</returns>
     public async Task<int> UpdateFrom2Async()
@@ -65,5 +68,17 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.AddResponseUpkeepColumnsAsync(SchemaBuilder);
 
         return 3;
+    }
+
+    /// <summary>
+    /// Sets the upkeep columns to their defaults where they are empty: an earlier version of <see cref="UpdateFrom2Async"/>
+    /// added them as nullable, which left the rows already there empty on SQL Server, so upkeep skipped them.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SurveysIndexSchema.FillResponseUpkeepColumnsAsync(SchemaBuilder, _store.Configuration.Schema);
+
+        return 4;
     }
 }

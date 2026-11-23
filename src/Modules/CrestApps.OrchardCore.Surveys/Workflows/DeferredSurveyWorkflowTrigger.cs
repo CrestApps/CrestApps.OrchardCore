@@ -11,8 +11,9 @@ namespace CrestApps.OrchardCore.Surveys.Workflows;
 /// <summary>
 /// Starts Surveys workflow events in a deferred task, after the change that raised them is committed. An event of an
 /// anonymous survey's response runs detached from the respondent's request: the workflow sees a background context of
-/// the tenant with no user, no headers, no cookies and no query string, so Liquid such as <c>{{ User.Identity.Name }}</c>
-/// or <c>{{ Request.Headers }}</c> can't write the respondent's identity into the response or a webhook.
+/// the tenant with no user, no headers, no cookies and no query string (only the request's scheme, host and path base,
+/// for links), so Liquid such as <c>{{ User.Identity.Name }}</c> or <c>{{ Request.Headers }}</c> can't write the
+/// respondent's identity into the response or a webhook.
 /// </summary>
 internal sealed class DeferredSurveyWorkflowTrigger : ISurveyWorkflowTrigger
 {
@@ -42,11 +43,15 @@ internal sealed class DeferredSurveyWorkflowTrigger : ISurveyWorkflowTrigger
 
         // The workflow runs on its own async flow that doesn't inherit the request's: replacing the HTTP context on the
         // request's flow would clear it for the rest of the request. The flow gets the shell scope back, the culture, and
-        // a background context of the tenant, as Orchard's own background tasks get: the site's scheme, host and path
-        // base for links, and nothing of the respondent's request.
+        // a background context of the tenant, as Orchard's own background tasks get. Only the request's scheme, host and
+        // path base are copied into it, so links in e-mails and webhooks point where the respondent was (the tenant's
+        // background context alone may say localhost); nothing else of the respondent's request goes along.
         var scope = ShellScope.Current;
         var culture = CultureInfo.CurrentCulture;
         var uiCulture = CultureInfo.CurrentUICulture;
+        var origin = accessor.HttpContext?.Request is { Host.HasValue: true } request
+            ? (request.Scheme, request.Host, request.PathBase)
+            : default((string Scheme, HostString Host, PathString PathBase)?);
         Task run;
 
         using (ExecutionContext.SuppressFlow())
@@ -58,6 +63,13 @@ internal sealed class DeferredSurveyWorkflowTrigger : ISurveyWorkflowTrigger
                 CultureInfo.CurrentUICulture = uiCulture;
 
                 var detached = scope?.ShellContext.CreateHttpContext() ?? new DefaultHttpContext();
+
+                if (origin is { } from)
+                {
+                    detached.Request.Scheme = from.Scheme;
+                    detached.Request.Host = from.Host;
+                    detached.Request.PathBase = from.PathBase;
+                }
 
                 detached.RequestServices = services;
                 detached.User = new ClaimsPrincipal(new ClaimsIdentity());

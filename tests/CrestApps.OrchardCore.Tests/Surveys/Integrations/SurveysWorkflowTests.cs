@@ -207,6 +207,45 @@ public sealed class SurveysWorkflowTests
         Assert.Same(request, accessor.HttpContext);
     }
 
+    [Fact]
+    public async Task AnAnonymousSurveysEvent_KeepsOnlyTheRequestsSchemeHostAndPathBase_ForLinks()
+    {
+        // Arrange: the respondent's request to a tenant on its own host and prefix.
+        var request = new DefaultHttpContext();
+        request.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "pat")], "test"));
+        request.Request.Scheme = "https";
+        request.Request.Host = new HostString("surveys.example.com", 8443);
+        request.Request.PathBase = "/tenant";
+        request.Request.Path = "/s/abc";
+        request.Request.Headers.UserAgent = "Respondent browser";
+        request.Request.Headers.Cookie = "sr_g=abc";
+        request.Request.QueryString = new QueryString("?email=pat@example.com");
+
+        var accessor = new HttpContextAccessor { HttpContext = request };
+        (string Scheme, HostString Host, PathString PathBase, PathString Path, int Headers)? seen = null;
+        var manager = new Mock<IWorkflowManager>();
+        manager
+            .Setup(candidate => candidate.TriggerEventAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback(() => seen = (accessor.HttpContext.Request.Scheme, accessor.HttpContext.Request.Host, accessor.HttpContext.Request.PathBase, accessor.HttpContext.Request.Path, accessor.HttpContext.Request.Headers.Count(header => header.Key != "Host")))
+            .ReturnsAsync([]);
+
+        var services = new ServiceCollection()
+            .AddSingleton<IHttpContextAccessor>(accessor)
+            .AddSingleton(manager.Object)
+            .BuildServiceProvider();
+
+        // Act
+        await DeferredSurveyWorkflowTrigger.RunAsync(services, nameof(SurveyResponseCompletedEvent), new Dictionary<string, object> { [SurveyWorkflowInput.Anonymous] = true }, "r1");
+
+        // Assert
+        Assert.NotNull(seen);
+        Assert.Equal("https", seen.Value.Scheme);
+        Assert.Equal(new HostString("surveys.example.com", 8443), seen.Value.Host);
+        Assert.Equal(new PathString("/tenant"), seen.Value.PathBase);
+        Assert.NotEqual(new PathString("/s/abc"), seen.Value.Path);
+        Assert.Equal(0, seen.Value.Headers);
+    }
+
     private static SurveyResponseEventContext CompletedContext(AnonymityMode anonymity, string choiceId)
         => new()
         {

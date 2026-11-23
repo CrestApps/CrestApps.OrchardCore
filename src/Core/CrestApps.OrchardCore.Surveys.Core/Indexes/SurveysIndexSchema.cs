@@ -1,4 +1,6 @@
+using Dapper;
 using YesSql.Sql;
+using YesSql.Sql.Schema;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Indexes;
 
@@ -151,8 +153,8 @@ public static class SurveysIndexSchema
             .Column<decimal>("Percent", column => column.Nullable())
             .Column<bool?>("Passed", column => column.Nullable())
             .Column<DateTime>("ModifiedUtc")
-            .Column<bool>("Anonymized", column => column.WithDefault(false))
-            .Column<int>("UpkeepFailures", column => column.WithDefault(0)),
+            .Column<bool>("Anonymized", column => column.NotNull().WithDefault(false))
+            .Column<int>("UpkeepFailures", column => column.NotNull().WithDefault(0)),
             collection: responses);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyResponseIndex>(table =>
@@ -251,7 +253,8 @@ public static class SurveysIndexSchema
 
     /// <summary>
     /// Adds the upkeep columns of the response index: whether retention anonymized a response, and how many times in a
-    /// row upkeep failed on it, so upkeep skips both without reading them.
+    /// row upkeep failed on it, so upkeep skips both without reading them. The columns are not nullable, so every
+    /// database (SQL Server included) fills the rows already in the table with the default.
     /// </summary>
     /// <param name="schemaBuilder">The schema builder.</param>
     /// <returns>A task.</returns>
@@ -259,10 +262,43 @@ public static class SurveysIndexSchema
     {
         ArgumentNullException.ThrowIfNull(schemaBuilder);
 
-        await schemaBuilder.AlterIndexTableAsync<SurveyResponseIndex>(table =>
+        await schemaBuilder.AlterIndexTableAsync<SurveyResponseIndex>(AddResponseUpkeepColumns, collection: SurveysConstants.ResponsesCollectionName);
+    }
+
+    /// <summary>
+    /// Sets the upkeep columns of the response index to their defaults where they are empty. A site whose columns were
+    /// added as nullable on SQL Server has empty values in the rows that were there before, which upkeep's filters on
+    /// them never match.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <param name="schema">The database schema of the tenant's tables, or <see langword="null"/>.</param>
+    /// <returns>How many values were set.</returns>
+    public static async Task<int> FillResponseUpkeepColumnsAsync(ISchemaBuilder schemaBuilder, string schema)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        var dialect = schemaBuilder.Dialect;
+        var table = dialect.QuoteForTableName(
+            schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(SurveyResponseIndex), SurveysConstants.ResponsesCollectionName),
+            schema);
+        var filled = 0;
+
+        foreach (var (column, value) in new (string Column, object Value)[] { ("Anonymized", false), ("UpkeepFailures", 0) })
         {
-            table.AddColumn<bool>("Anonymized", column => column.WithDefault(false));
-            table.AddColumn<int>("UpkeepFailures", column => column.WithDefault(0));
-        }, collection: SurveysConstants.ResponsesCollectionName);
+            var quoted = dialect.QuoteForColumnName(column);
+
+            filled += await schemaBuilder.Connection.ExecuteAsync(
+                $"UPDATE {table} SET {quoted} = @Value WHERE {quoted} IS NULL",
+                new { Value = value },
+                schemaBuilder.Transaction);
+        }
+
+        return filled;
+    }
+
+    internal static void AddResponseUpkeepColumns(IAlterTableCommand table)
+    {
+        table.AddColumn<bool>("Anonymized", column => column.NotNull().WithDefault(false));
+        table.AddColumn<int>("UpkeepFailures", column => column.NotNull().WithDefault(0));
     }
 }
