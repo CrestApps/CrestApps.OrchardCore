@@ -1,0 +1,17 @@
+@model TaxReturnDetailViewModel
+@using System.Globalization
+
+<div class="card mb-3">
+    <div class="card-header">@T["Boxes of the return"]</div>
+    <div class="card-body">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>@T["Box"]</th><th class="text-end">@T["Amount"]</th></tr></thead>
+            <tbody>
+                @foreach (var (box, amount) in Model.Return.Boxes)
+                {
+                    <tr><td>@box</td><td class="text-end">@amount.ToString("N2", CultureInfo.CurrentCulture)</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

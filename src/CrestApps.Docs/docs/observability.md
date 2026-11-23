@@ -222,7 +222,7 @@ Designed report runs:
 | `crestapps.report.reads.shared.miss` | Counter | `{read}` | data source, `reason` (`disabled`, `join_key`, `conditions`, `too_many_rows`) | Reads of a data set several queries read that the rows kept could not serve |
 | `crestapps.report.limit.hits` | Counter | `{hit}` | `crestapps.report.limit` (`rows_per_dataset`, `joined_rows`, `result_rows`, `join_keys`, `shared_read_rows`), source | Runs that reached a limit of [Configuration](modules/report-builder/index.md#configuration) |
 | `crestapps.report.aggregate.pushdown` | Counter | `{query}` | `outcome` (`used`, `fallback`), `reason` (`multiple_data_sets`, `joins`, `row_calculations`, `not_supported`, `filter`, `dimension`, `measure`, `too_many_buckets`, `declined`), data source | Grouped queries the data source grouped, or why they read every row |
-| `crestapps.report.aggregate.index` | Counter | `{statement}` | `result` (`built`, `unbuildable`, `too_many_groups`), `crestapps.report.index` | `ReportIndexAggregator` statements over a YesSql index |
+| `crestapps.report.aggregate.index` | Counter | `{statement}` | `result` (`built`, `unbuildable`, `too_many_groups`, `inexact_sum`), `crestapps.report.index` | `ReportIndexAggregator` statements over a YesSql index |
 | `crestapps.report.calc.errors` | Counter | `{error}` | source | Calculated field values that failed and were left empty, added once per query |
 | `crestapps.report.spills` | Counter | `{file}` | source | Temporary files a query wrote because its rows didn't fit in `MemoryLimitMegabytes` |
 | `crestapps.report.gate.wait` | Histogram | s | source | Time runs waited for `MaxConcurrentRuns` |

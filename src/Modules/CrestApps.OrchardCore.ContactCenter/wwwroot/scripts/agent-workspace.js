@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js
 	var NO_ACTIVE_INTERACTION = "none";
 	function escape(value) {
 		return String(value === null || value === void 0 ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -54,8 +54,7 @@
 		}));
 		return html;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/coalesced-refresh.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/coalesced-refresh.js
 	function coalesceRefresh(run) {
 		var inFlight = null;
 		var trailing = null;
@@ -83,8 +82,7 @@
 			return trailing;
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
 	var STATUS_NAMES = [
 		"Offline",
 		"Available",
@@ -216,8 +214,7 @@
 		presence = presence || {};
 		return presence.hasActiveReservation === true || WORKING_STATES[normalizePresenceStatus(presence.status)] === true ? text$1(labels, "requestBreak", "Request break") : text$1(labels, "break", "Break");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js
 	var OFFER_ACCEPT_TIMEOUT_MS = 2e4;
 	function text(labels, key, fallback) {
 		return labels && labels[key] || fallback;
@@ -280,8 +277,7 @@
 			});
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/agent-workspace.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/agent-workspace.js
 	(function(window, document) {
 		"use strict";
 		function parseConfig(root) {
@@ -828,5 +824,4 @@
 		else boot();
 		window.contactCenterWorkspace = { init };
 	})(window, document);
-	//#endregion
 })();

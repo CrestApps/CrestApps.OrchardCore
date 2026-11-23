@@ -28,4 +28,17 @@ public static class CheckStatuses
     /// </summary>
     public static TransitionTable<CheckStatus> Transitions
         => _transitions;
+
+    /// <summary>
+    /// Gets whether a check can still be edited (<see cref="Services.ICheckService.UpdateAsync"/>): it waits to print,
+    /// queued without a number or issued with one, and it is neither history nor a spoiled sheet.
+    /// </summary>
+    /// <param name="check">The check.</param>
+    /// <returns><see langword="true"/> when its payee, amount, date, memo and address can still change.</returns>
+    public static bool CanEdit(CheckRecord check)
+    {
+        ArgumentNullException.ThrowIfNull(check);
+
+        return !check.IsHistorical && !check.IsSpoiled && check.Status is CheckStatus.Queued or CheckStatus.Issued;
+    }
 }

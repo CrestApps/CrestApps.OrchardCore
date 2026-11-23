@@ -51,4 +51,10 @@ public sealed class CheckChange
     /// recorded as paid before, for <see cref="CheckChangeKind.Uncleared"/>.
     /// </summary>
     public DateOnly? ClearedOn { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the check was before it was edited, for <see cref="CheckChangeKind.Updated"/>:
+    /// <see cref="Check"/> holds what it is now.
+    /// </summary>
+    public CheckDetails PreviousDetails { get; set; }
 }

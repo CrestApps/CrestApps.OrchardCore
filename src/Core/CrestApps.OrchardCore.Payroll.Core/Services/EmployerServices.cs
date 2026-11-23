@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Services;
 /// <summary>
 /// Stores employers in the Payroll collection. An employer a module still uses is not deleted.
 /// </summary>
-public sealed class EmployerStore : DocumentCatalog<Employer, EmployerIndex>
+public sealed class EmployerStore : DocumentCatalog<Employer, PayrollEmployerIndex>
 {
     private readonly IEnumerable<IEmployerUsage> _usages;
     private readonly IStringLocalizer S;
@@ -49,7 +49,7 @@ public sealed class EmployerStore : DocumentCatalog<Employer, EmployerIndex>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The employers.</returns>
     public async Task<IReadOnlyList<Employer>> ListAsync(CancellationToken cancellationToken = default)
-        => (await Session.Query<Employer, EmployerIndex>(collection: CollectionName).OrderBy(index => index.Name).ListAsync(cancellationToken)).ToList();
+        => (await Session.Query<Employer, PayrollEmployerIndex>(collection: CollectionName).OrderBy(index => index.Name).ListAsync(cancellationToken)).ToList();
 
     /// <summary>
     /// Finds an employer by name.
@@ -61,7 +61,7 @@ public sealed class EmployerStore : DocumentCatalog<Employer, EmployerIndex>
     {
         var trimmed = name?.Trim();
 
-        return Session.Query<Employer, EmployerIndex>(index => index.Name == trimmed, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
+        return Session.Query<Employer, PayrollEmployerIndex>(index => index.Name == trimmed, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc />

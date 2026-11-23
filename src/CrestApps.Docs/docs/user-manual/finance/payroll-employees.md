@@ -29,7 +29,7 @@ Pay profiles live on the staff member: there is no separate list of employees. O
 The yellow box at the top lists what keeps the person from being paid, and goes green (**Ready to pay.**) once nothing is missing:
 
 - **Tax id**: type it under **New tax id**. Only its last characters show afterwards. When the same number is on file for someone else, the page says who.
-- **Tax elections**: add one for each jurisdiction the box names, with the day it starts. To change an election, add a new one from the day it changes: the old one stays in the history.
+- **Tax elections**: add one for each jurisdiction the box names, with the day it starts. The box names only the places whose tax reads an election today: a city with no income tax of its own, or whose tax uses the state's certificate, asks for none. To change an election, add a new one from the day it changes: the old one stays in the history.
 - **Net pay**: choose how net pay is paid, in order. A deposit needs a bank account the person owns under **Banking** (their staff record's or their user's; anyone else's account is refused, and is checked again when the deposit is made); the last row takes what is left.
 - **Pay rate**: enter the rate or salary on the staff member's **Pay** card.
 - **Home address**: for taxes and forms.

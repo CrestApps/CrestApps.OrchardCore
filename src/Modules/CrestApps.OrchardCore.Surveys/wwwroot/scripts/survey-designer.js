@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/designer/repeater.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/designer/repeater.js
 	/**
 	* @param {string} value The text to escape.
 	* @returns {string} The text, safe inside a regular expression.
@@ -110,8 +110,7 @@
 			});
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/designer/rule-builder.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/designer/rule-builder.js
 	/**
 	* @typedef {{ id: string, text: string }} Option
 	* @typedef {{ id: string, label: string, choices: Option[], rows: Option[] }} Source
@@ -417,8 +416,7 @@
 			}, 0);
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-designer.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-designer.js
 	/**
 	* @param {string} id The id of a JSON script element.
 	* @param {any} fallback The value when it is missing.
@@ -757,5 +755,4 @@
 		wire(document);
 		settingsBaseline = settingsForm ? snapshot(settingsForm) : "";
 	}
-	//#endregion
 })();

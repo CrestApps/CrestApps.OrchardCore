@@ -1,0 +1,40 @@
+name: Prepare the Aspire CLI bundle
+description: Extracts the Aspire CLI bundle that CrestApps.Aspire.AppHost needs, before the solution is built.
+
+# Since Aspire 17 a C# AppHost needs the Aspire CLI bundle (DCP and the dashboard). When the bundle is missing, the
+# AppHost build downloads the Aspire CLI with dnx and extracts it, with a two minute limit and no retry. On a slow
+# runner that download sometimes runs out of time and the whole build fails with ASPIRE009 ("the bundle could not be
+# resolved"), although nothing in the code changed.
+#
+# This step runs the same command ahead of the build, with retries, into the Aspire home the build looks in. The build
+# then finds the bundle and downloads nothing. The CLI version follows Aspire.Hosting.AppHost in
+# Directory.Packages.props, so the bundle always matches the AppHost packages.
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare the Aspire CLI bundle
+      shell: pwsh
+      run: |
+        [xml]$props = Get-Content Directory.Packages.props
+        $version = ($props.Project.ItemGroup.PackageVersion | Where-Object Include -eq 'Aspire.Hosting.AppHost').Version
+
+        if (-not $version) {
+          Write-Error 'Aspire.Hosting.AppHost has no version in Directory.Packages.props.'
+          exit 1
+        }
+
+        $aspireHome = Join-Path $HOME '.aspire'
+
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+          dnx --yes "aspire.cli@$version" -- setup --install-path $aspireHome
+
+          if ($LASTEXITCODE -eq 0) {
+            exit 0
+          }
+
+          Write-Warning "Preparing the Aspire CLI bundle $version failed (attempt $attempt of 3)."
+          Start-Sleep -Seconds (15 * $attempt)
+        }
+
+        exit 1

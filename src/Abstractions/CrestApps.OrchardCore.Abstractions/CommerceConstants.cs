@@ -23,7 +23,7 @@ public static class CommerceConstants
         /// top-level Commerce admin menu and its icon, the customer account (<c>/account</c> and its menu), the helpers
         /// of the commerce admin lists, customers' access to the admin pages of their own data, and the export and
         /// anonymization of a person's commerce data. It is enabled by dependency only; a building block that adds to
-        /// the Commerce menu or the account without being part of a store, such as transactions, taxation, exchange
+        /// the Commerce menu or the account without being part of a store, such as transactions, exchange
         /// rates or customers, depends on it rather than on <see cref="Area"/>.
         /// </summary>
         public const string Foundation = "CrestApps.OrchardCore.Commerce.Foundation";

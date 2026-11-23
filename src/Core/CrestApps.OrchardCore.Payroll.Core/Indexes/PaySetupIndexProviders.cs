@@ -4,7 +4,7 @@ using YesSql.Indexes;
 namespace CrestApps.OrchardCore.Payroll.Core.Indexes;
 
 /// <summary>
-/// Maps pay schedules to <see cref="PayScheduleIndex"/> rows.
+/// Maps pay schedules to <see cref="PayrollPayScheduleIndex"/> rows.
 /// </summary>
 public sealed class PayScheduleIndexProvider : IndexProvider<PaySchedule>
 {
@@ -20,10 +20,10 @@ public sealed class PayScheduleIndexProvider : IndexProvider<PaySchedule>
     public override void Describe(DescribeContext<PaySchedule> context)
     {
         context
-            .For<PayScheduleIndex>()
+            .For<PayrollPayScheduleIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(item => new PayScheduleIndex
+            .Map(item => new PayrollPayScheduleIndex
             {
                 ItemId = item.ItemId,
                 Name = item.Name,
@@ -33,7 +33,7 @@ public sealed class PayScheduleIndexProvider : IndexProvider<PaySchedule>
 }
 
 /// <summary>
-/// Maps pay codes to <see cref="PayCodeIndex"/> rows.
+/// Maps pay codes to <see cref="PayrollPayCodeIndex"/> rows.
 /// </summary>
 public sealed class PayCodeIndexProvider : IndexProvider<PayCode>
 {
@@ -49,10 +49,10 @@ public sealed class PayCodeIndexProvider : IndexProvider<PayCode>
     public override void Describe(DescribeContext<PayCode> context)
     {
         context
-            .For<PayCodeIndex>()
+            .For<PayrollPayCodeIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(item => new PayCodeIndex
+            .Map(item => new PayrollPayCodeIndex
             {
                 ItemId = item.ItemId,
                 Code = item.Code,

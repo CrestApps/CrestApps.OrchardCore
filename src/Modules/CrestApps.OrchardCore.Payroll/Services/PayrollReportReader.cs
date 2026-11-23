@@ -89,8 +89,8 @@ public sealed class PayrollReportReader
         }
 
         var draft = nameof(PayStatementStatus.Draft);
-        var fromDay = from is { } start ? PayStatementLineIndex.DayNumber(start) : int.MinValue;
-        var toDay = to is { } end ? PayStatementLineIndex.DayNumber(end) : int.MaxValue;
+        var fromDay = from is { } start ? PayrollPayStatementLineIndex.DayNumber(start) : int.MinValue;
+        var toDay = to is { } end ? PayrollPayStatementLineIndex.DayNumber(end) : int.MaxValue;
         var employers = scope.EmployerIds.ToArray();
 
         return scope.All

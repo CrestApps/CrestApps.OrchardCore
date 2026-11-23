@@ -42,7 +42,7 @@ public static class ChecksServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a handler asked before a check is voided, reissued, cleared or un-cleared, which may refuse the change.
+    /// Registers a handler asked before a check is voided, reissued, cleared, un-cleared or edited, which may refuse the change.
     /// </summary>
     /// <typeparam name="THandler">The handler.</typeparam>
     /// <param name="services">The services.</param>
@@ -53,6 +53,23 @@ public static class ChecksServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICheckChangeHandler, THandler>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a handler that takes part in writing a check: it may complete or refuse the request before the check is
+    /// saved, and do its own work, such as posting the payment, after it is saved in the same unit of work.
+    /// </summary>
+    /// <typeparam name="THandler">The handler.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddCheckWriteHandler<THandler>(this IServiceCollection services)
+        where THandler : class, ICheckWriteHandler
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICheckWriteHandler, THandler>());
 
         return services;
     }

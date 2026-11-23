@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/conditions.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/conditions.js
 	/**
 	* The browser mirror of the server's Conditions evaluator (CrestApps.OrchardCore.Conditions.ConditionEvaluator and
 	* ConditionalVisibility). Scripts that show and hide questions or fields import it so the browser and the server decide
@@ -273,8 +273,7 @@
 		for (const key of Object.keys(rules)) if (!shows(key)) hidden.add(key);
 		return hidden;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/conditional-fields.js
+	// src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/conditional-fields.js
 	/**
 	* Shows and hides the fields of a content editor whose settings say "Show this field when". The server makes the
 	* same decision when the form is posted, drops what a hidden field holds and ignores its validation; this script
@@ -424,5 +423,4 @@
 		hiddenKeys: getHidden,
 		startAll
 	};
-	//#endregion
 })();

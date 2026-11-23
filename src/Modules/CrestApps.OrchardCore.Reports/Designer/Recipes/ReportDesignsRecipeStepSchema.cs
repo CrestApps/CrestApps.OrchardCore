@@ -21,6 +21,8 @@ internal sealed class ReportDesignsRecipeStepSchema : RecipeStepSchemaBase
         => RecipeStepSchemaBuilders.BuildNamedStep(
             Name,
             [
+                (ReportDesignsRecipeStep.DefaultOwnerUserNameProperty, RecipeStepSchemaBuilders.String().Description("The user name of the user who owns the views and reports that name no owner the site knows. A name that is not a user of the site is skipped.")),
+                (ReportDesignsRecipeStep.OwnedBySuperUserProperty, RecipeStepSchemaBuilders.Boolean().Description("Whether the site's super user owns the views and reports that name no owner the site knows, when DefaultOwnerUserName names none. During setup, this is the super user setup is creating.")),
                 ("Groups", RecipeStepSchemaBuilders.Array(Group()).Description("The report groups, imported before the views and reports. A group is matched by its itemId and replaced, or created under that identifier. A group whose parent is missing once every group is in moves to the top level.")),
                 ("Views", RecipeStepSchemaBuilders.Array(View()).Description("The reusable views (saved queries that other reports and views read as the 'ReportViews' data source), imported before the reports. A view is matched by its itemId and replaced, or created under that identifier.")),
                 ("Reports", RecipeStepSchemaBuilders.Array(Report()).Description("The designed reports. A report is matched by its itemId and replaced, or created under that identifier. Share links are never imported.")),
@@ -77,7 +79,7 @@ internal sealed class ReportDesignsRecipeStepSchema : RecipeStepSchemaBase
     private static IEnumerable<(string Name, JsonSchemaBuilder Schema)> Ownership(string noun)
     {
         yield return ("ownerId", NullableText($"The user id of the {noun}'s owner, whose access the {noun} runs with. Used when OwnerUserName names no user of the site."));
-        yield return ("OwnerUserName", NullableText($"The user name of the {noun}'s owner, written by a deployment plan so the owner is found on a site where they have another user id. When neither this nor ownerId names an owner, the person who runs the recipe owns the {noun}."));
+        yield return ("OwnerUserName", NullableText($"The user name of the {noun}'s owner, written by a deployment plan so the owner is found on a site where they have another user id. When neither this nor ownerId names an owner, the owner the step's DefaultOwnerUserName or OwnedBySuperUser names owns the {noun}, else the person who runs the recipe."));
         yield return ("author", NullableText($"The name of the person who created the {noun}."));
         yield return ("createdUtc", Timestamp($"The time the {noun} was created."));
         yield return ("modifiedUtc", NullableTimestamp($"The time the {noun} was last changed. Set to the import time."));

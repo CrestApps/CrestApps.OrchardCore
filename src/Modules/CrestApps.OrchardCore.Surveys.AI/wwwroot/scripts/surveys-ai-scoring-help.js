@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Surveys.AI/Assets/js/surveys-ai-scoring-help.js
+	// src/Modules/CrestApps.OrchardCore.Surveys.AI/Assets/js/surveys-ai-scoring-help.js
 	var antiforgeryToken = () => document.querySelector("input[name=\"__RequestVerificationToken\"]")?.value ?? "";
 	var fill = (questionId, data) => {
 		const points = document.getElementById(`points-${questionId}`);
@@ -47,5 +47,4 @@
 			ask(button);
 		}
 	});
-	//#endregion
 })();

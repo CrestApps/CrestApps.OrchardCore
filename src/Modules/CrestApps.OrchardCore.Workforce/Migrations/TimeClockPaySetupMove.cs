@@ -91,7 +91,7 @@ internal static class TimeClockPaySetupMove
             }
         }
 
-        var existingSchedules = (await session.QueryIndex<PayScheduleIndex>(collection: PayrollConstants.CollectionName).ListAsync())
+        var existingSchedules = (await session.QueryIndex<PayrollPayScheduleIndex>(collection: PayrollConstants.CollectionName).ListAsync())
             .Select(index => index.ItemId)
             .ToHashSet(StringComparer.Ordinal);
 
@@ -265,7 +265,7 @@ internal static class TimeClockPaySetupMove
     {
         var dialect = schemaBuilder.Dialect;
         var table = dialect.QuoteForTableName(
-            schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(PayCodeIndex), PayrollConstants.CollectionName),
+            schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(PayrollPayCodeIndex), PayrollConstants.CollectionName),
             store.Configuration.Schema);
         var rows = new List<(long DocumentId, string ItemId, string Code)>();
 

@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/conditions.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/conditions.js
 	/**
 	* The browser mirror of the server's Conditions evaluator (CrestApps.OrchardCore.Conditions.ConditionEvaluator and
 	* ConditionalVisibility). Scripts that show and hide questions or fields import it so the browser and the server decide
@@ -273,8 +273,7 @@
 		for (const key of Object.keys(rules)) if (!shows(key)) hidden.add(key);
 		return hidden;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner-logic.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner-logic.js
 	/**
 	* @typedef {import('../../../CrestApps.OrchardCore.Resources/Assets/js/conditions.js').Rule} Rule
 	*/
@@ -356,8 +355,7 @@
 			timer = setTimeout(() => work(...args), delay);
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner.js
 	var autosaveDelay = 1e4;
 	var evaluateDelay = 300;
 	/**
@@ -527,5 +525,4 @@
 		tick();
 	}
 	document.querySelectorAll("form[data-survey-form]").forEach((form) => initForm(form));
-	//#endregion
 })();

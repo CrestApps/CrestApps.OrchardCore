@@ -19,7 +19,8 @@ namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 /// values the engine keeps apart;</description></item>
 /// <item><description>the smallest or largest value of a text column (the engine orders text without regard to case,
 /// which no database collation matches);</description></item>
-/// <item><description>more groups than <see cref="DataAggregateQuery.MaxGroups"/>.</description></item>
+/// <item><description>more groups than <see cref="DataAggregateQuery.MaxGroups"/>;</description></item>
+/// <item><description>a sum of a <see cref="decimal"/> column on SQLite that could not be made exact (see below).</description></item>
 /// </list>
 /// Text is grouped by the column itself. The engine groups the rows it gets back again, ignoring case, so a database
 /// may keep values that differ only in case apart (PostgreSQL, or non-ASCII letters on SQLite) but must not merge
@@ -27,9 +28,24 @@ namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 /// Enum columns, which YesSql stores as numbers, are compared and grouped by name. Date buckets are written as a
 /// <c>CASE</c> expression over UTC boundaries, which every database understands. The statement runs in the session's
 /// own transaction.
+/// <para>
+/// SQLite has no exact decimal type: it keeps a <see cref="decimal"/> column as a whole or a floating-point number, so
+/// its <c>SUM</c> comes back as a <see cref="double"/> that can differ from the exact sum by a fraction of a cent. On
+/// SQLite the statement therefore also reads, per group, the most decimal places a value has, the sum of the absolute
+/// values and the count, and the sum is rounded to those places. The rounded sum is the exact decimal sum whenever the
+/// worst floating-point error those figures allow is under half of the last place; otherwise the aggregator declines
+/// and the engine adds up the exact values of the records. SQL Server, PostgreSQL and MySQL add up their exact decimal
+/// columns themselves, so their statements are unchanged.
+/// </para>
 /// </summary>
 public static class ReportIndexAggregator
 {
+    // The most decimal places a sum is rounded to, the scale a decimal holds.
+    private const int MaxDecimalPlaces = 28;
+
+    // The relative error of rounding a number to the nearest double, 2^-53.
+    private const double DoubleUnitRoundoff = 1.1102230246251565E-16;
+
     /// <summary>
     /// Groups and aggregates the rows of an index table.
     /// </summary>
@@ -89,7 +105,16 @@ public static class ReportIndexAggregator
                 return null;
             }
 
-            rows.Add(ReadRow(reader, statement));
+            var row = ReadRow(reader, statement);
+
+            if (row is null)
+            {
+                ReportTelemetry.RecordIndexAggregate(typeof(TIndex), "inexact_sum");
+
+                return null;
+            }
+
+            rows.Add(row);
         }
 
         ReportTelemetry.RecordIndexAggregate(typeof(TIndex), "built");
@@ -141,6 +166,7 @@ public static class ReportIndexAggregator
         var table = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetIndexTable(typeof(TIndex), collection), configuration.Schema);
         var statement = new ReportIndexStatement();
         var selects = new List<string>();
+        var exactSums = new List<(int Column, string Expression)>();
         var groups = new List<string>();
         var wheres = new List<string>();
 
@@ -225,6 +251,11 @@ public static class ReportIndexAggregator
                 return null;
             }
 
+            if (measure.Function == DataAggregate.Sum && type == typeof(decimal) && IsSqlite(dialect))
+            {
+                exactSums.Add((selects.Count, column));
+            }
+
             selects.Add(measure.Function switch
             {
                 DataAggregate.Count => $"COUNT({column})",
@@ -244,6 +275,15 @@ public static class ReportIndexAggregator
             }
 
             wheres.Add(where);
+        }
+
+        // The figures that make each SQLite decimal sum exact follow the columns of the result.
+        foreach (var (position, column) in exactSums)
+        {
+            statement.DecimalSums.Add(new ReportIndexDecimalSum(position, selects.Count));
+            selects.Add(DecimalPlaces(column));
+            selects.Add($"SUM(ABS({column}))");
+            selects.Add($"COUNT({column})");
         }
 
         var sql = new StringBuilder("SELECT ")
@@ -431,6 +471,21 @@ public static class ReportIndexAggregator
         };
     }
 
+    // The most decimal places a value of a column has, as SQLite writes the value as text (at most 15 significant digits,
+    // so a value read from a decimal reads as that decimal). A value written with an exponent counts as more places than
+    // a decimal holds, so the sum is left to the engine.
+    private static string DecimalPlaces(string column)
+    {
+        var text = $"CAST({column} AS TEXT)";
+
+        return $"MAX(CASE WHEN {text} LIKE '%e%' THEN {MaxDecimalPlaces + 1} WHEN INSTR({text}, '.') > 0 THEN LENGTH({text}) - INSTR({text}, '.') ELSE 0 END)";
+    }
+
+    private static bool IsSqlite(ISqlDialect dialect)
+    {
+        return string.Equals(dialect.Name, "Sqlite", StringComparison.OrdinalIgnoreCase);
+    }
+
     // SQL Server adds up an int or smallint column as an int, which overflows past about two billion, such as the tokens
     // of a busy month; the other databases widen the sum of whole numbers themselves.
     private static string Widen(ISqlDialect dialect, string column, Type type)
@@ -440,9 +495,11 @@ public static class ReportIndexAggregator
             : column;
     }
 
+    // A row of the result, or null when a SQLite decimal sum in it cannot be made exact.
     private static object[] ReadRow(DbDataReader reader, ReportIndexStatement statement)
     {
-        var row = new object[reader.FieldCount];
+        var width = statement.DecimalSums.Count == 0 ? reader.FieldCount : statement.Columns.Count;
+        var row = new object[width];
 
         for (var index = 0; index < row.Length; index++)
         {
@@ -452,7 +509,72 @@ public static class ReportIndexAggregator
             row[index] = Normalize(value, type);
         }
 
+        foreach (var sum in statement.DecimalSums)
+        {
+            var value = reader.IsDBNull(sum.Column) ? null : reader.GetValue(sum.Column);
+
+            if (value is null or long or int)
+            {
+                // SQLite adds up whole numbers exactly.
+                continue;
+            }
+
+            if (!TryExactSum(
+                Convert.ToDouble(value, CultureInfo.InvariantCulture),
+                reader.IsDBNull(sum.DecimalPlacesColumn) ? 0 : Convert.ToInt64(reader.GetValue(sum.DecimalPlacesColumn), CultureInfo.InvariantCulture),
+                reader.IsDBNull(sum.MagnitudeColumn) ? 0d : Convert.ToDouble(reader.GetValue(sum.MagnitudeColumn), CultureInfo.InvariantCulture),
+                reader.IsDBNull(sum.CountColumn) ? 0 : Convert.ToInt64(reader.GetValue(sum.CountColumn), CultureInfo.InvariantCulture),
+                out var exact))
+            {
+                return null;
+            }
+
+            row[sum.Column] = exact;
+        }
+
         return row;
+    }
+
+    /// <summary>
+    /// Turns the floating-point sum of decimal values, as SQLite returns it, into the exact decimal sum: the values have at
+    /// most <paramref name="decimalPlaces"/> places, so their exact sum has no more, and the floating-point sum is rounded
+    /// to them. Each value was rounded to the nearest double when stored, and each of the <paramref name="count"/>
+    /// additions may round again, so the floating-point sum is within <c>(count + 1)</c> units in the last place of the
+    /// double (2<sup>-53</sup>) of <paramref name="magnitude"/>, the sum of the absolute values, of the exact sum. The
+    /// rounding gives the exact sum when twice that bound is under half of the last decimal place. Public for tests.
+    /// </summary>
+    /// <param name="sum">The floating-point sum.</param>
+    /// <param name="decimalPlaces">The most decimal places a value has.</param>
+    /// <param name="magnitude">The sum of the absolute values.</param>
+    /// <param name="count">The number of values added up.</param>
+    /// <param name="exact">The exact sum, when it can be told.</param>
+    /// <returns><see langword="true"/> when <paramref name="exact"/> is the exact sum.</returns>
+    public static bool TryExactSum(double sum, long decimalPlaces, double magnitude, long count, out decimal exact)
+    {
+        exact = 0m;
+
+        if (!double.IsFinite(sum) || !double.IsFinite(magnitude) || decimalPlaces is < 0 or > MaxDecimalPlaces || count < 0)
+        {
+            return false;
+        }
+
+        var bound = 2d * (count + 1) * Math.Abs(magnitude) * DoubleUnitRoundoff;
+
+        if (bound >= 0.5d * Math.Pow(10, -decimalPlaces))
+        {
+            return false;
+        }
+
+        try
+        {
+            exact = Math.Round(DecimalConversion.FromDouble(sum), (int)decimalPlaces, MidpointRounding.AwayFromZero);
+        }
+        catch (OverflowException)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     // Databases return a column in their own type, such as a boolean or a date as a number or text on SQLite, so each
@@ -514,7 +636,33 @@ public sealed class ReportIndexStatement
     public IList<(string Name, object Value)> Parameters { get; } = [];
 
     /// <summary>
-    /// Gets the CLR type of each selected column, so numbers stored for enums are read back as their names.
+    /// Gets the CLR type of each column of the result, so numbers stored for enums are read back as their names.
     /// </summary>
     public IList<Type> Columns { get; } = [];
+
+    /// <summary>
+    /// Gets the sums of decimal columns that are made exact after they are read (on SQLite), with the columns that
+    /// follow those of the result and hold what makes each exact.
+    /// </summary>
+    public IList<ReportIndexDecimalSum> DecimalSums { get; } = [];
+}
+
+/// <summary>
+/// A sum of a decimal column that the aggregator makes exact after it is read, and the columns of the statement that
+/// hold the figures it needs: the most decimal places a value has, the sum of the absolute values, and the count.
+/// </summary>
+/// <param name="Column">The column of the result that holds the sum.</param>
+/// <param name="DecimalPlacesColumn">The column that holds the most decimal places a value has; the sum of the absolute
+/// values and the count follow it.</param>
+public sealed record ReportIndexDecimalSum(int Column, int DecimalPlacesColumn)
+{
+    /// <summary>
+    /// Gets the column that holds the sum of the absolute values.
+    /// </summary>
+    public int MagnitudeColumn => DecimalPlacesColumn + 1;
+
+    /// <summary>
+    /// Gets the column that holds the number of values added up.
+    /// </summary>
+    public int CountColumn => DecimalPlacesColumn + 2;
 }

@@ -44,4 +44,16 @@ internal static partial class ReportsModuleLog
         Level = LogLevel.Information,
         Message = "The report designs deployment step exported {DesignCount} reports, {ViewCount} views and {GroupCount} groups.")]
     public static partial void DeploymentStepExported(ILogger logger, int designCount, int viewCount, int groupCount);
+
+    [LoggerMessage(
+        EventId = CrestAppsEventIds.Reports + 113,
+        Level = LogLevel.Warning,
+        Message = "The report designs recipe step names the default owner '{UserName}', who is not a user of the site; the items that name no owner go to the next owner the step allows.")]
+    public static partial void RecipeStepDefaultOwnerMissing(ILogger logger, string userName);
+
+    [LoggerMessage(
+        EventId = CrestAppsEventIds.Reports + 114,
+        Level = LogLevel.Warning,
+        Message = "The report designs recipe step asks for the super user to own the items that name no owner, but the site has no enabled super user.")]
+    public static partial void RecipeStepSuperUserMissing(ILogger logger);
 }

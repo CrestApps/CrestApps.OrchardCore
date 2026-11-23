@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-admin.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-admin.js
 	/**
 	* Submits the form a filter select belongs to through its filter button, so the list keeps its other values.
 	* @param {HTMLSelectElement} select The filter.
@@ -40,5 +40,4 @@
 			copy(button);
 		}
 	});
-	//#endregion
 })();

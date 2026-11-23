@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 var CrestAppsConditions = (function() {
-	//#region \0rolldown/runtime.js
+	// \0rolldown/runtime.js
 	var __defProp = Object.defineProperty;
 	var __exportAll = (all, no_symbols) => {
 		let target = {};
@@ -14,8 +14,7 @@ var CrestAppsConditions = (function() {
 		if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 		return target;
 	};
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/conditions.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/conditions.js
 	var conditions_exports = /* @__PURE__ */ __exportAll({
 		getCyclic: () => getCyclic,
 		getHidden: () => getHidden,
@@ -297,6 +296,5 @@ var CrestAppsConditions = (function() {
 		for (const key of Object.keys(rules)) if (!shows(key)) hidden.add(key);
 		return hidden;
 	}
-	//#endregion
 	return conditions_exports;
 })();

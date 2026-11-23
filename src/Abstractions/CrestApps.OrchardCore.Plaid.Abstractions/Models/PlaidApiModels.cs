@@ -26,6 +26,38 @@ public sealed class PlaidLinkTokenRequest
     /// Gets or sets the absolute URL Plaid sends webhooks to, or <see langword="null"/>.
     /// </summary>
     public string WebhookUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Plaid products Link asks for, such as <c>auth</c> or <c>transactions</c>. Ignored in update
+    /// mode (when <see cref="AccessToken"/> is set).
+    /// </summary>
+    public IList<string> Products { get; set; } = ["auth"];
+
+    /// <summary>
+    /// Gets or sets the account subtypes Link offers, by account type (such as <c>depository</c>: <c>checking</c>,
+    /// <c>savings</c>). Empty offers every account the products support. Ignored in update mode.
+    /// </summary>
+    public IDictionary<string, IList<string>> AccountFilters { get; set; } = new Dictionary<string, IList<string>>(StringComparer.Ordinal)
+    {
+        ["depository"] = ["checking", "savings"],
+    };
+
+    /// <summary>
+    /// Gets or sets the two-letter country codes of the banks Link offers.
+    /// </summary>
+    public IList<string> CountryCodes { get; set; } = ["US"];
+
+    /// <summary>
+    /// Gets or sets how many days of transaction history to ask for (1 to 730), or <see langword="null"/> for Plaid's
+    /// default. Used only when <see cref="Products"/> holds <c>transactions</c>.
+    /// </summary>
+    public int? TransactionsDaysRequested { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access token of an existing item, to open Link in update mode (the person signs in again, or
+    /// adds accounts), or <see langword="null"/> for a new item. Never log it.
+    /// </summary>
+    public string AccessToken { get; set; }
 }
 
 /// <summary>
@@ -128,6 +160,12 @@ public sealed class PlaidAccount
     public string Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the bank's official name of the account, or <see langword="null"/>.
+    /// </summary>
+    [JsonPropertyName("official_name")]
+    public string OfficialName { get; set; }
+
+    /// <summary>
     /// Gets or sets the type, such as <c>depository</c>.
     /// </summary>
     [JsonPropertyName("type")]
@@ -144,6 +182,12 @@ public sealed class PlaidAccount
     /// </summary>
     [JsonPropertyName("verification_status")]
     public string VerificationStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the balances, when the call returns them.
+    /// </summary>
+    [JsonPropertyName("balances")]
+    public PlaidBalances Balances { get; set; }
 }
 
 /// <summary>
@@ -335,4 +379,22 @@ public sealed class PlaidWebhook
     /// </summary>
     [JsonPropertyName("error")]
     public PlaidError Error { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many new transactions there are, for some <c>TRANSACTIONS</c> webhooks.
+    /// </summary>
+    [JsonPropertyName("new_transactions")]
+    public int? NewTransactions { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the first 30 days of transactions are ready, for <c>TRANSACTIONS: SYNC_UPDATES_AVAILABLE</c>.
+    /// </summary>
+    [JsonPropertyName("initial_update_complete")]
+    public bool? InitialUpdateComplete { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the whole history is ready, for <c>TRANSACTIONS: SYNC_UPDATES_AVAILABLE</c>.
+    /// </summary>
+    [JsonPropertyName("historical_update_complete")]
+    public bool? HistoricalUpdateComplete { get; set; }
 }

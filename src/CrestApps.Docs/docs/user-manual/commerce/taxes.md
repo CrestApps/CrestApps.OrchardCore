@@ -10,7 +10,7 @@ The **Taxation** screens decide which taxes your site charges and how much. You 
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > Categories, Types, Jurisdictions, Rules and Tables |
+| **Menu** | Commerce > Taxation > Categories, Types, Jurisdictions, Rules, Tables and Tax registrations |
 | **Permission** | Manage taxation |
 | **Feature** | Taxation |
 
@@ -131,6 +131,10 @@ The list shows each rule's tax type, method, rate or amount, and priority.
 :::caution[Jurisdictions at checkout]
 A rule tied to a **Jurisdiction** only charges buyers whose address is in that jurisdiction. The checkout taxes an order where it ships to, or, when nothing ships, where the buyer is billed. Until the buyer has given an address, only rules set to **Any jurisdiction** apply. See the [Taxation technical page](../../modules/taxation.md#tax-sourcing).
 :::
+
+## Tax registrations
+
+Under **Commerce > Taxation > Tax registrations**, record each jurisdiction where your business is registered to collect a tax, with the number the agency gave. Once you add a registration, only the jurisdictions and tax types you are registered for collect tax; with none, every rule collects. With Tax Returns on, a registration also says how often you file and when returns are due; see [Tax returns](../finance/tax-returns.md).
 
 ## Where you sell from
 

@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/constant-sum.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/constant-sum.js
 	function initConstantSums(root) {
 		for (const control of root.querySelectorAll("[data-survey-constant-sum]")) {
 			const total = Number(control.dataset.total);
@@ -25,16 +25,14 @@
 			update();
 		}
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/survey-change.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/survey-change.js
 	function notifyChange(element, questionId) {
 		element.dispatchEvent(new CustomEvent("survey:change", {
 			bubbles: true,
 			detail: { questionId }
 		}));
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/ranking.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/ranking.js
 	function renumber(list) {
 		list.querySelectorAll("[data-ranking-position]").forEach((position, index) => {
 			position.textContent = String(index + 1);
@@ -70,8 +68,7 @@
 			renumber(list);
 		}
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/signature.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/signature.js
 	function initSignatures(root) {
 		for (const control of root.querySelectorAll("[data-survey-signature]")) {
 			const canvas = control.querySelector("canvas");
@@ -133,8 +130,7 @@
 			resize();
 		}
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/slider.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/slider.js
 	function initSliders(root) {
 		for (const control of root.querySelectorAll("[data-survey-slider]")) {
 			const range = control.querySelector("input[type=\"range\"]");
@@ -153,8 +149,7 @@
 			update();
 		}
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/survey-controls.js
+	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/controls/survey-controls.js
 	function init(root) {
 		initRanking(root);
 		initSliders(root);
@@ -164,5 +159,4 @@
 	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => init(document));
 	else init(document);
 	document.addEventListener("survey:page-loaded", (event) => init(event.target instanceof Element ? event.target : document));
-	//#endregion
 })();

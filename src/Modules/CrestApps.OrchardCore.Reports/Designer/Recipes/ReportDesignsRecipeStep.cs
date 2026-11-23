@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
@@ -14,7 +16,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Settings;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Recipes;
 
@@ -22,9 +26,10 @@ namespace CrestApps.OrchardCore.Reports.Designer.Recipes;
 /// Imports designed reports and views from the <c>ReportDesigns</c> recipe step. Items are matched by
 /// <c>ItemId</c> and replaced, or created with that identifier. An item's owner is matched by the
 /// <c>OwnerUserName</c> the export wrote, so a report keeps running on a site where its owner has another user id; an
-/// item that names no owner the site knows, and has no owner id, is owned by the person who runs the recipe.
-/// Share links are never imported. Report groups are imported first, from <c>Groups</c>, matched by <c>ItemId</c> the
-/// same way. A report names its group by <c>GroupId</c>, or by <c>Group</c>, a path of names such as
+/// item that names no owner the site knows, and has no owner id, is owned by the step's default owner: the user the step
+/// names in <c>DefaultOwnerUserName</c>, else the site's super user when the step sets <c>OwnedBySuperUser</c> (during
+/// setup, the super user setup is creating), else the person who runs the recipe. Share links are never imported.
+/// Report groups are imported first, from <c>Groups</c>, matched by <c>ItemId</c> the same way. A report names its group by <c>GroupId</c>, or by <c>Group</c>, a path of names such as
 /// <c>Sales / Regional</c> whose missing groups are created; a <c>Category</c> written before report groups names a
 /// top-level group the same way.
 /// </summary>
@@ -35,11 +40,27 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     /// </summary>
     public const string Name = "ReportDesigns";
 
+    /// <summary>
+    /// The step property that names, by user name, the user who owns the items that name no owner.
+    /// </summary>
+    public const string DefaultOwnerUserNameProperty = "DefaultOwnerUserName";
+
+    /// <summary>
+    /// The step property that, when <see langword="true"/>, gives the items that name no owner to the site's super user.
+    /// </summary>
+    public const string OwnedBySuperUserProperty = "OwnedBySuperUser";
+
+    // The recipe environment values Orchard Core's setup sets before it runs the setup recipe, which it runs before it
+    // creates the super user with that id.
+    private const string SetupAdminUserId = "AdminUserId";
+    private const string SetupAdminUserName = "AdminUsername";
+
     private readonly ICatalog<ReportDesign> _designs;
     private readonly ICatalog<ReportView> _views;
     private readonly ReportGroupService _groupService;
     private readonly ReportViewSnapshotStore _snapshots;
     private readonly UserManager<IUser> _userManager;
+    private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -54,6 +75,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     /// report names.</param>
     /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="userManager">The user manager used to match owners by user name.</param>
+    /// <param name="siteService">The site service, which names the site's super user.</param>
     /// <param name="httpContextAccessor">The accessor of the request that runs the recipe, whose user owns the items
     /// that name no owner.</param>
     /// <param name="clock">The clock.</param>
@@ -65,6 +87,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         ReportGroupService groupService,
         ReportViewSnapshotStore snapshots,
         UserManager<IUser> userManager,
+        ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<ReportDesignsRecipeStep> stringLocalizer,
@@ -76,6 +99,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         _groupService = groupService;
         _snapshots = snapshots;
         _userManager = userManager;
+        _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         S = stringLocalizer;
@@ -86,6 +110,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
         var groupCount = await ImportGroupsAsync(context);
+        var defaultOwner = new Lazy<Task<ReportOwner>>(() => ResolveDefaultOwnerAsync(context));
         var viewCount = 0;
         var designCount = 0;
 
@@ -100,7 +125,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
 
             view.Query = ReportDesignNormalizer.Normalize(view.Query);
             view.RefreshIntervalMinutes = ReportViewRefreshIntervals.Normalize(view.RefreshIntervalMinutes);
-            view.OwnerId = await ResolveOwnerAsync(node, view.OwnerId);
+            (view.OwnerId, view.Author) = await ResolveOwnerAsync(node, view.OwnerId, view.Author, defaultOwner);
 
             var existing = await _views.FindByIdAsync(view.ItemId);
             var previousQuery = existing is null ? null : ReportDesignService.SerializeQuery(existing.Query);
@@ -135,7 +160,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
             design.Queries = ReportDesignNormalizer.Normalize(design.Queries);
             design.SharedUserNames ??= [];
             design.SharedRoles ??= [];
-            design.OwnerId = await ResolveOwnerAsync(node, design.OwnerId);
+            (design.OwnerId, design.Author) = await ResolveOwnerAsync(node, design.OwnerId, design.Author, defaultOwner);
             design.GroupId = await ResolveGroupAsync(node, design);
 
             if (await SaveAsync(_designs, design, design.DisplayText, context))
@@ -262,37 +287,120 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         }
     }
 
-    private async Task<string> ResolveOwnerAsync(JsonNode node, string ownerId)
+    private async Task<(string OwnerId, string Author)> ResolveOwnerAsync(JsonNode node, string ownerId, string author, Lazy<Task<ReportOwner>> defaultOwner)
     {
-        var userName = node?["OwnerUserName"]?.GetValue<string>();
+        var userName = ReadString(node, "OwnerUserName");
 
-        if (!string.IsNullOrWhiteSpace(userName))
+        if (userName is not null)
         {
             var user = await _userManager.FindByNameAsync(userName);
 
             if (user is not null)
             {
-                return await _userManager.GetUserIdAsync(user);
+                return (await _userManager.GetUserIdAsync(user), author);
             }
         }
 
         if (!string.IsNullOrEmpty(ownerId))
         {
-            return ownerId;
+            return (ownerId, author);
         }
 
-        // A report a recipe ships for any site, such as a module's ready-made reports, names no owner: the person who
-        // runs the recipe owns it, so it runs with their access. A recipe run without a signed-in person, such as at
-        // setup, leaves it without an owner.
+        // A report a recipe ships for any site, such as a module's ready-made reports, names no owner: the step's default
+        // owner owns it, so it runs with their access. A recipe run without one, such as at setup when the step neither
+        // names a user nor asks for the super user, leaves it without an owner.
+        var owner = await defaultOwner.Value;
+
+        if (owner is not null)
+        {
+            return (owner.UserId, string.IsNullOrWhiteSpace(author) ? owner.UserName : author);
+        }
+
+        return (ownerId, author);
+    }
+
+    // The owner of the items that name no owner: the user DefaultOwnerUserName names, else the super user when the step
+    // sets OwnedBySuperUser, else the signed-in person who runs the recipe; null when there is none.
+    private async Task<ReportOwner> ResolveDefaultOwnerAsync(RecipeExecutionContext context)
+    {
+        if (ReadString(context.Step, DefaultOwnerUserNameProperty) is { } userName)
+        {
+            if (await _userManager.FindByNameAsync(userName) is { } named)
+            {
+                return new ReportOwner(await _userManager.GetUserIdAsync(named), named.UserName ?? userName);
+            }
+
+            ReportsModuleLog.RecipeStepDefaultOwnerMissing(_logger, userName.SanitizeLogValue());
+        }
+
+        if (ReadBoolean(context.Step, OwnedBySuperUserProperty) && await ResolveSuperUserAsync(context) is { } superUser)
+        {
+            return superUser;
+        }
+
         var principal = _httpContextAccessor.HttpContext?.User;
 
         if (principal?.Identity?.IsAuthenticated == true &&
             await _userManager.GetUserAsync(principal) is { } importer)
         {
-            return await _userManager.GetUserIdAsync(importer);
+            return new ReportOwner(await _userManager.GetUserIdAsync(importer), importer.UserName);
         }
 
-        return ownerId;
+        return null;
+    }
+
+    // The site's super user. Orchard Core's setup runs the setup recipe before it creates the super user, but it puts
+    // the user's id and user name in the recipe environment first, so a step that setup runs reads them there.
+    // Otherwise the site settings name the super user, who owns the items only while the account exists and is enabled.
+    private async Task<ReportOwner> ResolveSuperUserAsync(RecipeExecutionContext context)
+    {
+        if (context.Environment is IDictionary<string, object> environment &&
+            environment.TryGetValue(SetupAdminUserId, out var setupUserId) &&
+            Convert.ToString(setupUserId, CultureInfo.InvariantCulture) is { Length: > 0 } adminUserId)
+        {
+            environment.TryGetValue(SetupAdminUserName, out var setupUserName);
+
+            return new ReportOwner(adminUserId, Convert.ToString(setupUserName, CultureInfo.InvariantCulture));
+        }
+
+        var site = await _siteService.GetSiteSettingsAsync();
+
+        if (string.IsNullOrEmpty(site?.SuperUser) ||
+            await _userManager.FindByIdAsync(site.SuperUser) is not { } superUser ||
+            superUser is User { IsEnabled: false })
+        {
+            ReportsModuleLog.RecipeStepSuperUserMissing(_logger);
+
+            return null;
+        }
+
+        return new ReportOwner(await _userManager.GetUserIdAsync(superUser), superUser.UserName);
+    }
+
+    // A boolean property of the step, whichever case its name is written in, given as true or "true".
+    private static bool ReadBoolean(JsonNode node, string name)
+    {
+        if (node is not JsonObject item)
+        {
+            return false;
+        }
+
+        foreach (var (key, value) in item)
+        {
+            if (!string.Equals(key, name, StringComparison.OrdinalIgnoreCase) || value is not JsonValue flag)
+            {
+                continue;
+            }
+
+            if (flag.TryGetValue<bool>(out var result))
+            {
+                return result;
+            }
+
+            return flag.TryGetValue<string>(out var text) && bool.TryParse(text, out result) && result;
+        }
+
+        return false;
     }
 
     private async Task<bool> SaveAsync<T>(ICatalog<T> catalog, T item, string displayText, RecipeExecutionContext context)
@@ -321,4 +429,6 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
 
         return true;
     }
+
+    private sealed record ReportOwner(string UserId, string UserName);
 }
