@@ -82,7 +82,8 @@ public sealed class PlaidItemCleaner
     }
 
     /// <summary>
-    /// Removes a kept item at Plaid and from the site.
+    /// Removes a kept item from the site, and at Plaid unless another bank account is still linked to an account of the
+    /// same item.
     /// </summary>
     /// <param name="item">The item.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -90,13 +91,21 @@ public sealed class PlaidItemCleaner
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        if (_protector.TryUnprotect(PlaidConstants.AccessTokenPurpose, item.AccessToken, out var accessToken))
+        var kept = await _store.ListByItemIdAsync(item.ItemId, cancellationToken);
+
+        // Another bank account linked to an account of the same item still needs its access token.
+        var shared = kept.Any(other => !string.Equals(other.BankAccountId, item.BankAccountId, StringComparison.Ordinal));
+
+        if (!shared)
         {
-            await RemoveAtPlaidAsync(accessToken, item.ItemId, cancellationToken);
-        }
-        else
-        {
-            _logger.LogWarning("The access token of the Plaid item {ItemId} can't be read with this site's keys, so it could not be removed at Plaid. Remove it from the Plaid dashboard.", item.ItemId);
+            if (_protector.TryUnprotect(PlaidConstants.AccessTokenPurpose, item.AccessToken, out var accessToken))
+            {
+                await RemoveAtPlaidAsync(accessToken, item.ItemId, cancellationToken);
+            }
+            else
+            {
+                _logger.LogWarning("The access token of the Plaid item {ItemId} can't be read with this site's keys, so it could not be removed at Plaid. Remove it from the Plaid dashboard.", item.ItemId);
+            }
         }
 
         await _store.DeleteAsync(item, cancellationToken);

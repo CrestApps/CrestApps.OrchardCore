@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Plaid</RootNamespace>
+    <Title>CrestApps OrchardCore Plaid Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for Plaid, so other modules share one Plaid setup per tenant: the Plaid client that uses the
+      tenant's credentials (link tokens, public token exchange, accounts, transactions sync, item removal), the
+      credentials provider a host can replace, and the webhook handlers every verified Plaid webhook is handed to.
+    </Description>
+    <PackageTags>$(PackageTags) Plaid Banking BankAccounts BankFeeds Abstractions</PackageTags>
+  </PropertyGroup>
+
+</Project>
