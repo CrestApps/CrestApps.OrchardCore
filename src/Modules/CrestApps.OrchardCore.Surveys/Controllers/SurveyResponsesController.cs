@@ -223,7 +223,9 @@ public sealed class SurveyResponsesController : Controller
         }
 
         options.UpkeepStoppedCount = await CountUpkeepStoppedAsync(surveyId);
-        options.CanRetryUpkeep = options.UpkeepStoppedCount > 0 && await AuthorizeAsync(survey, SurveyOperation.DeleteResponses);
+        // The permission is checked first, so it never depends on the stuck count.
+        var canRetryUpkeep = await AuthorizeAsync(survey, SurveyOperation.DeleteResponses);
+        options.CanRetryUpkeep = canRetryUpkeep && options.UpkeepStoppedCount > 0;
 
         options.StatusOptions =
         [
