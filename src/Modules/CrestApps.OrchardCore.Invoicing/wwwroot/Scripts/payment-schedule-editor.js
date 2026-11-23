@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Invoicing/Assets/js/payment-schedule-editor.js
+	// src/Modules/CrestApps.OrchardCore.Invoicing/Assets/js/payment-schedule-editor.js
 	(function() {
 		"use strict";
 		function round(amount, decimals) {
@@ -152,5 +152,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})();
-	//#endregion
 })();

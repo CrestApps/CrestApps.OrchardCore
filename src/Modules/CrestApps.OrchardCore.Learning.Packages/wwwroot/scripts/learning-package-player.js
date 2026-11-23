@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-frame-messages.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-frame-messages.js
 	/**
 	* Gets the origin the frame of a launch posts from.
 	* @param {{ contentOrigin?: string|null }} session The launch.
@@ -50,8 +50,7 @@
 		const data = event.data;
 		return !!data && data.protocol === windowProtocol && data.type === "finished" && data.itemId === itemId;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-runtime-queue.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-runtime-queue.js
 	var defaultAttempts = 5;
 	var defaultRetryDelay = 250;
 	function wait(milliseconds) {
@@ -100,8 +99,7 @@
 			}
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/learning-package-player.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/learning-package-player.js
 	var defaultProtocol = "crestapps-scorm12";
 	var frameName = "crestapps-package-frame";
 	var strictSandbox = "allow-scripts allow-forms allow-popups";
@@ -326,5 +324,4 @@
 		}));
 	}
 	document.querySelectorAll("[data-learning-package]").forEach((root) => root.dataset.cmi5LaunchUrl ? startCmi5(root) : start(root));
-	//#endregion
 })();

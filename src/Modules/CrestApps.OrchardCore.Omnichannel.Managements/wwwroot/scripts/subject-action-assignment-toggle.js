@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Assets/js/subject-action-assignment-toggle.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Assets/js/subject-action-assignment-toggle.js
 	(function() {
 		var selector = "[data-subject-action-assignment-toggle]";
 		function initializeToggle(assignmentTypeSelect) {
@@ -50,5 +50,4 @@
 		initialize();
 		observeDynamicAdditions();
 	})();
-	//#endregion
 })();

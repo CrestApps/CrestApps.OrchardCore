@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Stripe/Assets/js/stripe-checkout-payment.js
+	// src/Modules/CrestApps.OrchardCore.Stripe/Assets/js/stripe-checkout-payment.js
 	(function() {
 		"use strict";
 		function initialize(options) {
@@ -149,5 +149,4 @@
 		}
 		window.stripeCheckoutPayment = { initialize };
 	})();
-	//#endregion
 })();

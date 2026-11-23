@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-external-transfer-settings.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-external-transfer-settings.js
 	(function(window, document) {
 		"use strict";
 		function parseConfig(root) {
@@ -70,5 +70,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
 		else boot();
 	})(window, document);
-	//#endregion
 })();
