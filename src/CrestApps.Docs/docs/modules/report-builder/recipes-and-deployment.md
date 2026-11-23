@@ -20,7 +20,7 @@ Each item is written with its owner's user name, and share links are never expor
 
 To import a file that holds the step, open **Tools > Deployments > JSON Import** and paste the JSON, or **Package Import** and choose the file (a `.json` or `.zip` file). Importing the same file again replaces the same reports.
 
-The `ReportDesigns` recipe step imports them: report groups first (`Groups`), then views, then reports. Items are matched by `itemId` and replaced, or created with that id, and the owner is matched by `OwnerUserName` when a user with that name exists. An item that names no owner the site knows, and has no `ownerId`, belongs to the person who runs the recipe, so a recipe can ship ready-made reports for any site; run at setup, with nobody signed in, it has no owner. An item without a valid `itemId` or a title is reported as a recipe error. Designs are not checked against the target site's data sources on import.
+The `ReportDesigns` recipe step imports them: report groups first (`Groups`), then views, then reports. Items are matched by `itemId` and replaced, or created with that id, and the owner is matched by `OwnerUserName` when a user with that name exists. An item that names no owner the site knows, and has no `ownerId`, belongs to the step's default owner (see [Owner of the imported items](#owner-of-the-imported-items)), so a recipe can ship ready-made reports for any site. An item without a valid `itemId` or a title is reported as a recipe error. Designs are not checked against the target site's data sources on import.
 
 ```json
 {
@@ -55,6 +55,42 @@ The `ReportDesigns` recipe step imports them: report groups first (`Groups`), th
   ]
 }
 ```
+
+### Owner of the imported items
+
+A designed report reads data with its owner's access, so a report without an owner cannot run. An item that names no owner the site knows (no `OwnerUserName` of a user on the site, and no `ownerId`) is given the first owner the step allows, in this order:
+
+| Step property | Owner |
+| --- | --- |
+| `DefaultOwnerUserName` | The user with that user name, when the site has one. A name that is not a user is logged as a warning and the next owner is used. |
+| `OwnedBySuperUser` (`true`) | The site's super user. During setup, the super user setup is creating: Orchard Core runs the setup recipe before it creates that user, but it names the user's id and user name first, and the step uses them. After setup, the super user the site settings name, while that account exists and is enabled. |
+| (none) | The person who runs the recipe, when someone is signed in. |
+
+An item that gets none of these, such as one a setup recipe imports without `OwnedBySuperUser`, has no owner. An item given a default owner and no `author` gets the owner's user name as its author. Items that name their own owner keep it.
+
+A setup recipe that ships starter reports owned by the super user it creates:
+
+```json
+{
+  "steps": [
+    {
+      "name": "ReportDesigns",
+      "OwnedBySuperUser": true,
+      "Reports": [
+        {
+          "itemId": "sales-by-month",
+          "displayText": "Sales by month",
+          "group": "Starter reports",
+          "query": { "dataSets": [], "columns": [] },
+          "visuals": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+Code that seeds reports after setup, outside a request (for example from a feature-enabled handler), runs the step with no one signed in, so it names the owner with `DefaultOwnerUserName` or `OwnedBySuperUser` instead of writing `ownerId` and `author` into each item.
 
 A group is matched by `itemId` like the other items. Its `parentId` may name a group that comes later in the step; a group whose parent is missing, or whose parents lead back to itself, is imported at the top level. A report names its group in one of three ways:
 

@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Identity;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
+using OrchardCore.Settings;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module.ReportDesignerPrincipals;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
@@ -137,6 +139,135 @@ public sealed class ReportDesignsRecipeStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_GivesTheItemsThatNameNoOwnerToTheDefaultOwnerTheStepNames()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        var views = Catalog<ReportView>();
+        var step = Step(designs, views, User("importer-id", "importer"));
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            [ReportDesignsRecipeStep.DefaultOwnerUserNameProperty] = "alice",
+            ["Views"] = new JsonArray(new JsonObject { ["itemId"] = "starter-view", ["displayText"] = "Starter view" }),
+            ["Reports"] = new JsonArray(
+                new JsonObject { ["itemId"] = "starter", ["displayText"] = "Starter" },
+                new JsonObject { ["itemId"] = "signed", ["displayText"] = "Signed", ["author"] = "Finance team" },
+                new JsonObject { ["itemId"] = "kept", ["displayText"] = "Kept", ["ownerId"] = "kept-id" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        var starter = await designs.FindByIdAsync("starter", TestContext.Current.CancellationToken);
+        Assert.Equal("alice-id", starter.OwnerId);
+        Assert.Equal("alice", starter.Author);
+
+        var signed = await designs.FindByIdAsync("signed", TestContext.Current.CancellationToken);
+        Assert.Equal("alice-id", signed.OwnerId);
+        Assert.Equal("Finance team", signed.Author);
+
+        Assert.Equal("kept-id", (await designs.FindByIdAsync("kept", TestContext.Current.CancellationToken)).OwnerId);
+        Assert.Equal("alice-id", (await views.FindByIdAsync("starter-view", TestContext.Current.CancellationToken)).OwnerId);
+        Assert.Empty(context.Errors);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheDefaultOwnerIsNotAUser_FallsBackToThePersonWhoRunsTheRecipe()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        var step = Step(designs, Catalog<ReportView>(), User("importer-id", "importer"));
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            [ReportDesignsRecipeStep.DefaultOwnerUserNameProperty] = "nobody",
+            ["Reports"] = new JsonArray(new JsonObject { ["itemId"] = "starter", ["displayText"] = "Starter" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Equal("importer-id", (await designs.FindByIdAsync("starter", TestContext.Current.CancellationToken)).OwnerId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DuringSetup_GivesTheItemsThatNameNoOwnerToTheSuperUserSetupCreates()
+    {
+        // Arrange: Orchard Core's setup runs the recipe before it creates the super user, with the id it will have in
+        // the recipe environment; no one is signed in and the site names no super user yet.
+        var designs = Catalog<ReportDesign>();
+        var step = Step(designs, Catalog<ReportView>());
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            [ReportDesignsRecipeStep.OwnedBySuperUserProperty] = true,
+            ["Reports"] = new JsonArray(
+                new JsonObject { ["itemId"] = "starter", ["displayText"] = "Starter" },
+                new JsonObject { ["itemId"] = "owned", ["displayText"] = "Owned", ["OwnerUserName"] = "alice" }),
+        });
+
+        context.Environment = new Dictionary<string, object>
+        {
+            ["AdminUserId"] = "setup-admin-id",
+            ["AdminUsername"] = "admin",
+        };
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        var starter = await designs.FindByIdAsync("starter", TestContext.Current.CancellationToken);
+        Assert.Equal("setup-admin-id", starter.OwnerId);
+        Assert.Equal("admin", starter.Author);
+        Assert.Equal("alice-id", (await designs.FindByIdAsync("owned", TestContext.Current.CancellationToken)).OwnerId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AfterSetup_GivesTheItemsThatNameNoOwnerToTheSiteSuperUser()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        var step = Step(designs, Catalog<ReportView>(), User("importer-id", "importer"), superUser: new User { UserId = "super-id", UserName = "owner", IsEnabled = true });
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            [ReportDesignsRecipeStep.OwnedBySuperUserProperty] = "true",
+            ["Reports"] = new JsonArray(new JsonObject { ["itemId"] = "starter", ["displayText"] = "Starter" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        var starter = await designs.FindByIdAsync("starter", TestContext.Current.CancellationToken);
+        Assert.Equal("super-id", starter.OwnerId);
+        Assert.Equal("owner", starter.Author);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheSuperUserIsDisabled_LeavesTheItemsToThePersonWhoRunsTheRecipe()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        var step = Step(designs, Catalog<ReportView>(), User("importer-id", "importer"), superUser: new User { UserId = "super-id", UserName = "owner", IsEnabled = false });
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            [ReportDesignsRecipeStep.OwnedBySuperUserProperty] = true,
+            ["Reports"] = new JsonArray(new JsonObject { ["itemId"] = "starter", ["displayText"] = "Starter" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Equal("importer-id", (await designs.FindByIdAsync("starter", TestContext.Current.CancellationToken)).OwnerId);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ImportsGroups_AndPlacesEachReportInTheGroupItNames()
     {
         // Arrange
@@ -185,16 +316,29 @@ public sealed class ReportDesignsRecipeStepTests
         CrestApps.Core.Services.ICatalog<ReportDesign> designs,
         CrestApps.Core.Services.ICatalog<ReportView> views,
         System.Security.Claims.ClaimsPrincipal importer = null,
-        CrestApps.Core.Services.ICatalog<ReportGroup> groups = null)
+        CrestApps.Core.Services.ICatalog<ReportGroup> groups = null,
+        User superUser = null)
     {
-        var alice = Mock.Of<IUser>();
-        var importerUser = Mock.Of<IUser>();
+        var alice = new User { UserName = "alice" };
+        var importerUser = new User { UserName = "importer" };
         var userManager = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null);
 
         userManager.Setup(manager => manager.FindByNameAsync("alice")).ReturnsAsync(alice);
         userManager.Setup(manager => manager.GetUserIdAsync(alice)).ReturnsAsync("alice-id");
         userManager.Setup(manager => manager.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>())).ReturnsAsync(importerUser);
         userManager.Setup(manager => manager.GetUserIdAsync(importerUser)).ReturnsAsync("importer-id");
+
+        var site = new Mock<ISite>();
+
+        if (superUser is not null)
+        {
+            site.SetupGet(value => value.SuperUser).Returns(superUser.UserId);
+            userManager.Setup(manager => manager.FindByIdAsync(superUser.UserId)).ReturnsAsync(superUser);
+            userManager.Setup(manager => manager.GetUserIdAsync(superUser)).ReturnsAsync(superUser.UserId);
+        }
+
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc));
@@ -206,7 +350,7 @@ public sealed class ReportDesignsRecipeStepTests
 
         var groupService = new ReportGroupService(groups ?? Catalog<ReportGroup>(), designs, clock.Object, new PassThroughStringLocalizer<ReportGroupService>());
 
-        return new ReportDesignsRecipeStep(designs, views, groupService, NoSnapshots(), userManager.Object, httpContextAccessor, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
+        return new ReportDesignsRecipeStep(designs, views, groupService, NoSnapshots(), userManager.Object, siteService.Object, httpContextAccessor, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
     }
 
     private static RecipeExecutionContext Context(JsonObject step)
