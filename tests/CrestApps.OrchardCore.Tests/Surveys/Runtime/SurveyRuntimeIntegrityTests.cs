@@ -309,7 +309,7 @@ public sealed class SurveyRuntimeIntegrityTests
 
         // Act
         harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(10);
-        await harness.RunAsync(async services =>
+        await harness.RunInShellAsync(async services =>
         {
             await services.GetRequiredService<SurveyMaintenanceService>().RunAsync(cancellationToken: TestContext.Current.CancellationToken);
 

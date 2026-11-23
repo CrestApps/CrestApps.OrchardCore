@@ -33,3 +33,12 @@
         <option value="true" selected="@vm.IncludeTest">@T["With test responses"]</option>
     </select>
 </div>
+@if (vm.UpkeepStoppedCount > 0 || vm.UpkeepStopped)
+{
+    <div class="btn-group filter">
+        <select name="UpkeepStopped" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Background upkeep"]" data-dropdown-align-right="auto" aria-label="@T["Background upkeep"]" onchange="this.form.querySelector('#submitFilter').click()">
+            <option value="false" selected="@(!vm.UpkeepStopped)">@T["Any upkeep state"]</option>
+            <option value="true" selected="@vm.UpkeepStopped">@T["Upkeep stopped"]</option>
+        </select>
+    </div>
+}

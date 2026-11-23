@@ -82,4 +82,29 @@ public class SurveyResponsesIndexViewModel
     /// </summary>
     [BindNever]
     public int HiddenBelow { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether only the responses background upkeep stopped trying are listed.
+    /// </summary>
+    public bool UpkeepStopped { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many responses of the survey background upkeep stopped trying, after they failed too many runs
+    /// in a row.
+    /// </summary>
+    [BindNever]
+    public int UpkeepStoppedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the current user may have upkeep try those responses again.
+    /// </summary>
+    [BindNever]
+    public bool CanRetryUpkeep { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether rows of some statuses are hidden because, on an anonymous survey, too few responses have
+    /// that status.
+    /// </summary>
+    [BindNever]
+    public bool HidesSmallStatusGroups { get; set; }
 }
