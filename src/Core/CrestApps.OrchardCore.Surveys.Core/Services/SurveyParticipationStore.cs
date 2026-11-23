@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -18,6 +19,19 @@ public sealed class SurveyParticipationStore : DocumentCatalog<SurveyParticipati
         : base(session)
     {
         CollectionName = SurveysConstants.CollectionName;
+    }
+
+    /// <inheritdoc />
+    protected override ValueTask SavingAsync(SurveyParticipation record)
+    {
+        // An anonymous respondent's record keeps the day only, never the exact time: every save clears it, so a record
+        // written before that rule loses it on any save, not only through the upgrade step.
+        if (record is not null && SurveyRespondentKeys.IsAnonymous(record.RespondentKey))
+        {
+            record.LastCompletedUtc = null;
+        }
+
+        return base.SavingAsync(record);
     }
 
     /// <summary>

@@ -10,7 +10,9 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// still stored in plain text with ASP.NET Data Protection (keeping its value, so limits and invitation links keep
 /// working), gives a secret to any survey without one, and clears the exact times kept on the participation records of
 /// anonymous surveys, which keep the day only. <see cref="SurveyAnonymityMigrations"/> asks for it. Secrets not reached
-/// yet are still read, and new ones are always protected.
+/// yet are still read. The survey and participation stores make the same change on every save, and both walks are
+/// idempotent, so they have no upper bound: they also reach the records saved while they run, such as the surveys the
+/// sanitizing step saves in the same pass.
 /// </summary>
 internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
 {
@@ -19,7 +21,7 @@ internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
     /// </summary>
     public const string StepName = "Surveys.AnonymityUpgrade";
 
-    private const string AnonymousKeyPrefix = "a:";
+    private const string AnonymousKeyPrefix = SurveyRespondentKeys.AnonymousPrefix;
 
     private readonly ISession _session;
     private readonly SurveyStore _surveyStore;
@@ -52,7 +54,7 @@ internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
     public Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
         => SurveyUpgradePages.RunAsync(
             context,
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _secrets.EnsureProtected, cancellationToken: cancellationToken),
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _secrets.EnsureProtected, idempotent: true, cancellationToken: cancellationToken),
             cursor => SurveyUpgradePages.VisitPageAsync(
                 _session,
                 _participationStore,
@@ -70,5 +72,6 @@ internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
                     return true;
                 },
                 index => index.RespondentKey.StartsWith(AnonymousKeyPrefix),
+                idempotent: true,
                 cancellationToken: cancellationToken));
 }

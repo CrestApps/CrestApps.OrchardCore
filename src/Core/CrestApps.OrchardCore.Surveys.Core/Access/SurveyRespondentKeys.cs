@@ -18,6 +18,11 @@ public static class SurveyRespondentKeys
     public const int MaxLength = 64;
 
     /// <summary>
+    /// The prefix of the key of an anonymous survey's respondent.
+    /// </summary>
+    public const string AnonymousPrefix = "a:";
+
+    /// <summary>
     /// Gets the respondent key, or <see langword="null"/> when the respondent cannot be recognized.
     /// </summary>
     /// <param name="survey">The survey.</param>
@@ -118,6 +123,14 @@ public static class SurveyRespondentKeys
     public static string Hash(string value)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value ?? string.Empty))).ToLowerInvariant();
 
+    /// <summary>
+    /// Gets whether a respondent key is an anonymous survey's, which never names the respondent.
+    /// </summary>
+    /// <param name="respondentKey">The key.</param>
+    /// <returns><see langword="true"/> when it is an anonymous key.</returns>
+    public static bool IsAnonymous(string respondentKey)
+        => respondentKey?.StartsWith(AnonymousPrefix, StringComparison.Ordinal) == true;
+
     private static string Plain(string raw)
         => raw.Length <= MaxLength ? raw : Hash(raw);
 
@@ -130,6 +143,6 @@ public static class SurveyRespondentKeys
 
         var mac = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(raw));
 
-        return "a:" + Convert.ToHexString(mac).Substring(0, 62).ToLowerInvariant();
+        return AnonymousPrefix + Convert.ToHexString(mac).Substring(0, 62).ToLowerInvariant();
     }
 }

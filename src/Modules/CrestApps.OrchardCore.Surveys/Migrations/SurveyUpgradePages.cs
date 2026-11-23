@@ -70,6 +70,10 @@ internal static class SurveyUpgradePages
     /// <param name="visit">The visit; returns <see langword="true"/> when it changed the record.</param>
     /// <param name="filter">Which index rows to visit, or <see langword="null"/> for all of them.</param>
     /// <param name="pageSize">The number of records read.</param>
+    /// <param name="idempotent">Whether a second visit of a record the visit changed changes nothing more. Such a walk
+    /// has no upper bound, so it also reaches the records saved while it runs (whose index rows are written again under
+    /// new ids); a record it saved is read once more and left as it is. Otherwise the walk stops at the last index row
+    /// there when it began, which is safe only when a normal save applies the same change.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The cursor of the next page, or <see langword="null"/> when the walk is done.</returns>
     public static async Task<string> VisitPageAsync<T, TIndex>(
@@ -80,6 +84,7 @@ internal static class SurveyUpgradePages
         Func<T, bool> visit,
         Expression<Func<TIndex, bool>> filter = null,
         int pageSize = PageSize,
+        bool idempotent = false,
         CancellationToken cancellationToken = default)
         where T : CatalogItem
         where TIndex : CatalogItemIndex
@@ -91,7 +96,11 @@ internal static class SurveyUpgradePages
 
         var (afterId, upToId) = ReadRange(cursor);
 
-        if (upToId == 0)
+        if (idempotent)
+        {
+            upToId = long.MaxValue;
+        }
+        else if (upToId == 0)
         {
             // Saving a record can write its index row again under a new id, so the walk stops at the last row that was
             // there when it began: a saved record is never visited twice.
