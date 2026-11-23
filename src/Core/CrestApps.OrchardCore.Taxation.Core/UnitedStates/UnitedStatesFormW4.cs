@@ -15,6 +15,12 @@ public static class UnitedStatesIncomeTax
     /// <summary>The withholding method's stored name.</summary>
     public const string FormW4Method = "UnitedStatesFormW4";
 
+    /// <summary>
+    /// The stored name of the state withholding certificate method and of its kind of rule (the annualized method of
+    /// a state's withholding guide).
+    /// </summary>
+    public const string StateCertificateMethod = "UnitedStatesStateCertificate";
+
     /// <summary>The election fields of Form W-4.</summary>
     public static class Fields
     {
@@ -44,6 +50,12 @@ public static class UnitedStatesIncomeTax
 
         /// <summary>Exempt from withholding.</summary>
         public const string Exempt = "Exempt";
+
+        /// <summary>
+        /// A nonresident alien (true or false): Publication 15-T adds an amount to the year's wages before withholding
+        /// (the rule's <see cref="NonresidentAlienAddition"/> parameter).
+        /// </summary>
+        public const string NonresidentAlien = "NonresidentAlien";
     }
 
     /// <summary>The filing statuses (the tables' keys).</summary>
@@ -67,6 +79,12 @@ public static class UnitedStatesIncomeTax
 
     /// <summary>The parameter Worksheet 1A line 1g takes for the other statuses.</summary>
     public const string Adjustment = "Adjustment";
+
+    /// <summary>
+    /// The parameter of the amount Publication 15-T adds to a nonresident alien's year of wages (a form from 2020 or
+    /// later), from the year's publication.
+    /// </summary>
+    public const string NonresidentAlienAddition = "NonresidentAlienAddition";
 }
 
 /// <summary>
@@ -110,6 +128,7 @@ public static class UnitedStatesElectionFields
         set.Fields.Add(new ElectionField(UnitedStatesIncomeTax.Fields.ExtraWithholding, LocalizationSource.Create("Extra withholding each pay period (Step 4c)", typeof(UnitedStatesElectionFields)), ElectionFieldKind.Amount));
         set.Fields.Add(new ElectionField(UnitedStatesIncomeTax.Fields.Allowances, LocalizationSource.Create("Allowances (form from 2019 or earlier)", typeof(UnitedStatesElectionFields)), ElectionFieldKind.Integer));
         set.Fields.Add(new ElectionField(UnitedStatesIncomeTax.Fields.Exempt, LocalizationSource.Create("Exempt from withholding", typeof(UnitedStatesElectionFields)), ElectionFieldKind.Boolean));
+        set.Fields.Add(new ElectionField(UnitedStatesIncomeTax.Fields.NonresidentAlien, LocalizationSource.Create("Nonresident alien", typeof(UnitedStatesElectionFields)), ElectionFieldKind.Boolean));
 
         return set;
     }
@@ -121,7 +140,8 @@ public static class UnitedStatesElectionFields
 /// deductions and, when the Step 2 box is not checked, the line 1g adjustment; the annual table of the filing status
 /// (the Step 2 table when the box is checked); divided by the periods, less the dependents credit for a period. A form
 /// from 2019 or earlier: the year's wages less the allowances, on the standard table of single or married filing
-/// jointly. A person with no election is withheld as single with no adjustments. Extra withholding, exemption and the
+/// jointly. A nonresident alien's year of wages (a form from 2020 or later) has the rule's nonresident alien amount
+/// added. A person with no election is withheld as single with no adjustments. Extra withholding, exemption and the
 /// supplemental rates are the rule's, applied by the provider.
 /// </summary>
 public sealed class UnitedStatesFormW4WithholdingMethod : IIncomeTaxWithholdingMethod
@@ -142,6 +162,7 @@ public sealed class UnitedStatesFormW4WithholdingMethod : IIncomeTaxWithholdingM
     [
         new(UnitedStatesIncomeTax.AdjustmentMarriedFilingJointly, LocalizationSource.Create<UnitedStatesFormW4WithholdingMethod>("Line 1g adjustment, married filing jointly")),
         new(UnitedStatesIncomeTax.Adjustment, LocalizationSource.Create<UnitedStatesFormW4WithholdingMethod>("Line 1g adjustment, other statuses")),
+        new(UnitedStatesIncomeTax.NonresidentAlienAddition, LocalizationSource.Create<UnitedStatesFormW4WithholdingMethod>("Amount added to a nonresident alien's year of wages"), Required: false),
     ];
 
     /// <inheritdoc />
@@ -182,8 +203,13 @@ public sealed class UnitedStatesFormW4WithholdingMethod : IIncomeTaxWithholdingM
 
         var multipleJobs = context.Value(UnitedStatesIncomeTax.Fields.MultipleJobs) == "true";
 
-        // Lines 1d to 1i.
+        // Lines 1d to 1i, with the amount added to a nonresident alien's wages (Publication 15-T, nonresident aliens).
         annual += Math.Max(0, context.Amount(UnitedStatesIncomeTax.Fields.OtherIncome)) - Math.Max(0, context.Amount(UnitedStatesIncomeTax.Fields.Deductions));
+
+        if (context.Value(UnitedStatesIncomeTax.Fields.NonresidentAlien) == "true")
+        {
+            annual += Math.Max(0, context.Parameter(UnitedStatesIncomeTax.NonresidentAlienAddition));
+        }
 
         if (!multipleJobs)
         {

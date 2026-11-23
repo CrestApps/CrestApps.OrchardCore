@@ -28,7 +28,7 @@
         {
           "PipelineId": "checkspositivepayfile00001",
           "Name": "Positive pay file",
-          "Description": "Every check issued, printed, voided, stopped or reissued since the last successful run, for the bank's positive pay service. A check whose Void column is true must be refused by the bank.",
+          "Description": "Every check issued, printed, voided, stopped or reissued since the last successful run, for the bank's positive pay service. A check whose Void column is true must be refused by the bank. Checks still waiting for a print run on pre-printed stock have no number yet and are left out until they print.",
           "IsEnabled": true,
           "Definition": {
             "Steps": [
@@ -52,7 +52,10 @@
                       "Status",
                       "ModifiedUtc"
                     ],
-                    "IncrementalField": "ModifiedUtc"
+                    "IncrementalField": "ModifiedUtc",
+                    "Filters": [
+                      { "Field": "Status", "Operator": "NotEquals", "Values": [ "Queued" ] }
+                    ]
                   }
                 }
               },

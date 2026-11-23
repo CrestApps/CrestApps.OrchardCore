@@ -33,6 +33,7 @@ public static class ChecksCoreServiceCollectionExtensions
         services.TryAddScoped<ICheckManager, CheckManager>();
         services.TryAddScoped<ICatalogManager<CheckRecord>>(serviceProvider => serviceProvider.GetRequiredService<ICheckManager>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<CheckRecord>, CheckRecordHandler>());
+        services.TryAddScoped<ICheckCommitter, YesSqlCheckCommitter>();
         services.TryAddScoped<ICheckService, CheckService>();
         services.AddSourceAccessService();
         services.AddBankAccountUsage<CheckBankAccountUsage>();

@@ -28,6 +28,7 @@ internal sealed class EmployersRecipeStepSchema : IRecipeStep
                 ("Agency", Text("The tax agency.")),
                 ("AccountId", Text("The employer's account id with the agency.")),
                 ("DepositFrequency", Text("How often taxes are deposited, such as Monthly or SemiWeekly.")),
+                ("Categories", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The tax categories the registration covers when the employer has several in one jurisdiction, such as IncomeTax or Unemployment; empty for any.")),
                 ("Rates", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(rate).Description("The rates the agency assigned, each from a day on.")))
             .Required("Jurisdiction");
 
@@ -55,6 +56,7 @@ internal sealed class EmployersRecipeStepSchema : IRecipeStep
                             ("ContactEmail", Text("The payroll contact's email.")),
                             ("ContactPhone", Text("The payroll contact's phone.")),
                             ("Registrations", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(registration).Description("The employer's tax registrations.")),
+                            ("WorkJurisdictions", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The tax jurisdictions where the employer's people work when their pay profile names no work site team (or the team has none), such as US-MI and US-MI-DETROIT.")),
                             ("Status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Active", "Inactive").Description("Whether the employer runs payroll.")))
                         .Required("Name")
                         .AdditionalProperties(true))

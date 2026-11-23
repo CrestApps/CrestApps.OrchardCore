@@ -803,6 +803,7 @@ const sidebars = {
                 'modules/phone-number-verifications-abstractapi',
                 'modules/phone-number-verifications-veriphone',
                 'modules/phone-number-verifications-twilio',
+                'modules/protected-files',
                 'modules/recipes',
                 'modules/reports',
                 'modules/advanced-seo',

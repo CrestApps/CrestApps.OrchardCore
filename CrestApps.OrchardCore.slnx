@@ -207,6 +207,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer.Azure/CrestApps.OrchardCore.ContentTransfer.Azure.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.ProtectedFiles.Azure/CrestApps.OrchardCore.ProtectedFiles.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer.OpenXml/CrestApps.OrchardCore.ContentTransfer.OpenXml.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Downloads/CrestApps.OrchardCore.Downloads.csproj" />

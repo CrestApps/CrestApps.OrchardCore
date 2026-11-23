@@ -75,6 +75,7 @@ public sealed class ImsContentPackageTests
         // Arrange
         var services = new ServiceCollection();
         services.AddLearningPackagesCore();
+        CrestApps.OrchardCore.Tests.Learning.Scorm.PackageArchiveCacheTestServices.Use(services);
 
         // Act
         var kind = services.BuildServiceProvider().GetRequiredService<IOptions<CourseItemKindOptions>>().Value.Find(PackagesConstants.PackageKind);

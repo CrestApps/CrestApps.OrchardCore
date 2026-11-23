@@ -11,7 +11,8 @@ namespace CrestApps.OrchardCore.Banking.Recipes;
 /// <summary>
 /// Imports bank accounts. An account is matched by its id and created when none matches. Numbers are read in clear
 /// text, checked and protected with this site's keys; an account without numbers is imported as unverified, as a
-/// deployment without sensitive data writes it. <c>Properties</c> carries what other features keep on the account, such
+/// deployment without sensitive data writes it, and may carry the last digits it is known by
+/// (<c>AccountNumberLastFour</c>). <c>Properties</c> carries what other features keep on the account, such
 /// as the Bank file (ACH) settings (<c>NachaOriginSettings</c>) of one of the business's own accounts.
 /// </summary>
 internal sealed class BankAccountsRecipeStep : NamedRecipeStepHandler
@@ -92,6 +93,12 @@ internal sealed class BankAccountsRecipeStep : NamedRecipeStepHandler
                 context.Errors.Add($"{BankingConstants.RecipeStepName}: '{account.Name}' wasn't imported: {string.Join(" ", errors.Select(error => error.Message))}");
 
                 continue;
+            }
+
+            // An account another system knew only by its last digits keeps them; the full number, when given, wins.
+            if (account.AccountNumber is not { HasValue: true } && node.ContainsKey(nameof(BankAccount.AccountNumberLastFour)))
+            {
+                account.AccountNumberLastFour = Text(node, nameof(BankAccount.AccountNumberLastFour));
             }
 
             // A status travels only with the numbers it was given for: without them the account must be checked again.

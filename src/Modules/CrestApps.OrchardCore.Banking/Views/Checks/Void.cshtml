@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Currencies
+@model CheckVoidViewModel
+
+@{
+    var check = Model.Check;
+    var name = check.Number > 0 ? T["Void check {0}", check.Number] : T["Void the check to {0}", check.PayeeName];
+}
+
+<zone Name="Title">
+    <breadcrumb name="ChecksVoid" title="@name">
+        <breadcrumb-item id="Checks" action="Index" controller="Checks" area="CrestApps.OrchardCore.Banking" permission="@ChecksPermissions.ViewCheckRegister.Name">@T["Checks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="alert alert-warning">
+    @T["The check to {0} for {1} {2}, dated {3}, can't be paid or printed again once it is voided. It keeps its number.", check.PayeeName, CurrencyScale.FormatForDisplay(check.Amount, check.Currency), check.Currency, check.CheckDate.ToString("d")]
+</div>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <div class="card mb-3">
+        <div class="card-header">@T["Void"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="VoidedOn">
+                <label asp-for="VoidedOn" class="ocat-label ocat-label-required">@T["Void date"]</label>
+                <div class="ocat-end">
+                    <input asp-for="VoidedOn" class="form-control" type="date" />
+                    <span asp-validation-for="VoidedOn" class="text-danger"></span>
+                    <span class="hint">@T["What the check paid is reversed on this date, such as a bill that is owed again. It can't be before the check's date, and the feature the check pays may refuse a date in a closed period."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="Reason">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reason" class="form-control" maxlength="500" />
+                    <span class="hint">@T["Such as a wrong amount or a lost check."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-danger" type="submit">@T["Void"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

@@ -92,6 +92,7 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
         employer.ContactPhone = model.ContactPhone;
         employer.Status = model.Active ? EmployerStatus.Active : EmployerStatus.Inactive;
         employer.Registrations = ReadRegistrations(model.Registrations, context);
+        employer.WorkJurisdictions = [.. (model.WorkJurisdictions ?? string.Empty).Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
         var address = new EmployerAddressViewModel();
 
@@ -147,6 +148,7 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
                     Agency = row.Agency?.Trim(),
                     AccountId = row.AccountId?.Trim(),
                     DepositFrequency = string.IsNullOrWhiteSpace(row.DepositFrequency) ? null : row.DepositFrequency.Trim(),
+                    Categories = [.. (row.Categories ?? string.Empty).Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)],
                 };
                 registrations.Add(registration);
             }
@@ -185,6 +187,7 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
             model.ContactEmail = employer.ContactEmail;
             model.ContactPhone = employer.ContactPhone;
             model.Active = employer.Status == EmployerStatus.Active;
+            model.WorkJurisdictions = string.Join(", ", employer.WorkJurisdictions ?? []);
 
             foreach (var registration in employer.Registrations)
             {
@@ -198,6 +201,7 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
                         Agency = registration.Agency,
                         AccountId = registration.AccountId,
                         DepositFrequency = registration.DepositFrequency,
+                        Categories = string.Join(", ", registration.Categories ?? []),
                         Rate = rate?.Rate.ToString("0.####", CultureInfo.InvariantCulture),
                         RateFrom = rate?.EffectiveFrom,
                     });

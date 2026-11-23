@@ -42,6 +42,22 @@ public static class ChecksServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a handler asked before a check is voided, reissued, cleared or un-cleared, which may refuse the change.
+    /// </summary>
+    /// <typeparam name="THandler">The handler.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddCheckChangeHandler<THandler>(this IServiceCollection services)
+        where THandler : class, ICheckChangeHandler
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICheckChangeHandler, THandler>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers the check line format of one country.
     /// </summary>
     /// <typeparam name="TFormat">The format.</typeparam>

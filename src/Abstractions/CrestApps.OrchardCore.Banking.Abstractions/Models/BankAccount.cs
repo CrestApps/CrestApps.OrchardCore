@@ -31,7 +31,8 @@ public sealed class BankAccount : CatalogItem, INameAwareModel, IModifiedUtcAwar
     public string HolderName { get; set; }
 
     /// <summary>
-    /// Gets or sets whether it is a checking or a savings account.
+    /// Gets or sets the kind of account, such as checking, savings or a credit card. <see cref="BankAccountKinds"/> says
+    /// what each kind can be used for.
     /// </summary>
     public BankAccountKind Kind { get; set; }
 
@@ -55,6 +56,14 @@ public sealed class BankAccount : CatalogItem, INameAwareModel, IModifiedUtcAwar
     /// Gets or sets the account number, protected, with its last digits as the hint.
     /// </summary>
     public ProtectedValue AccountNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last digits (four at most) of an account number the site doesn't hold, such as for an account
+    /// imported from another system that knew only them. It only tells people which account it is: nothing is paid or
+    /// printed from it, and the site never makes up the rest. Storing the full number with
+    /// <see cref="Services.IBankAccountService.ApplyNumbers"/> clears it.
+    /// </summary>
+    public string AccountNumberLastFour { get; set; }
 
     /// <summary>
     /// Gets or sets the bank's name.

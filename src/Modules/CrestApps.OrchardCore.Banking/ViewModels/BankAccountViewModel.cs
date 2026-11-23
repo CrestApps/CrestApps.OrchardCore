@@ -25,7 +25,7 @@ public class BankAccountViewModel
     public string HolderName { get; set; }
 
     /// <summary>
-    /// Gets or sets whether it is a checking or a savings account.
+    /// Gets or sets the kind of account, such as checking, savings or a credit card.
     /// </summary>
     public BankAccountKind Kind { get; set; }
 
@@ -53,6 +53,11 @@ public class BankAccountViewModel
     /// Gets or sets a new account number; blank keeps the stored one. It is never sent back to the browser.
     /// </summary>
     public string AccountNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last digits of an account number the site doesn't hold, such as for an imported account.
+    /// </summary>
+    public string AccountNumberLastFour { get; set; }
 
     /// <summary>
     /// Gets or sets the status.

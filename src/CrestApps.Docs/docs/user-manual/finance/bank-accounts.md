@@ -27,12 +27,19 @@ Bank accounts hold the accounts money is sent from and sent to: the business's o
 | **Name** | The name the account is listed by, such as Payroll funding. |
 | **Owner** | Who the account belongs to: a staff member, a user, a customer account or another kind of owner. Leave it empty for one of the business's own accounts. |
 | **Account holder** | The name on the account, as the bank knows it. |
-| **Account type** | Checking or Savings. |
+| **Account type** | Checking, Savings, Credit card, Line of credit, Cash or Other. Only checking and savings accounts send or receive bank files (ACH), and checks are drawn only on them. |
 | **Bank name**, **Country**, **Currency** | The bank, its two-letter country code (such as US) and the account's currency (such as USD). |
 | **Routing number** | The bank's number. A United States routing number has nine digits, and a number with a wrong digit is refused. |
 | **Account number** | Stored protected. After you save, only its last digits show, such as ••••6789. To change it, type the new number; leave it empty to keep it. |
+| **Last four digits** | Shown while no account number is stored. When you don't have the full number, such as for an account brought over from another system, enter its last digits so people can tell which account it is. Nothing is paid or printed from them, and entering the full number replaces them. |
+
+A payee's account (one with an **Owner**) needs both numbers. One of the business's own accounts can be saved without them, such as a credit card or petty cash, or a bank account whose numbers you don't have yet. You can still write checks on it. You must enter the numbers before you print the check line on blank checks, send a bank file from it, or send money from or to it.
 
 A new account is **Unverified**: no payment goes to it until it is checked.
+
+### Checks card
+
+One of the business's own accounts has a **Checks** card when the Checks feature is on. **Default check layout** is the layout the account's checks print with when you don't choose one, such as the layout of the pre-printed checks you load for it. See [Checks](./checks.md).
 
 ## Check an account
 

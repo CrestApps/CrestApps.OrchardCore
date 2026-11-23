@@ -130,6 +130,7 @@ public sealed class CompletionRulesTests
         // Arrange
         var services = new ServiceCollection();
         services.AddLearningPackagesCore();
+        CrestApps.OrchardCore.Tests.Learning.Scorm.PackageArchiveCacheTestServices.Use(services);
 
         // Act
         var kind = services.BuildServiceProvider().GetRequiredService<Microsoft.Extensions.Options.IOptions<CourseItemKindOptions>>().Value.Find(CrestApps.OrchardCore.Learning.Packages.PackagesConstants.PackageKind);

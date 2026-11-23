@@ -39,4 +39,10 @@ public enum CheckStatus
     /// Too old for the bank to pay.
     /// </summary>
     Stale,
+
+    /// <summary>
+    /// Written without a number, waiting to be printed on pre-printed stock: the print run gives it the number of the
+    /// sheet it prints on (<see cref="CheckNumbering.AtPrint"/>). Its <see cref="CheckRecord.Number"/> is 0 until then.
+    /// </summary>
+    Queued,
 }
