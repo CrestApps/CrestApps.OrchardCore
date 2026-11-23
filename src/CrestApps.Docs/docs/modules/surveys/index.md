@@ -102,7 +102,7 @@ Other checks:
 - A template copies a survey's draft, answer keys included, only from a survey the user may edit.
 - Uploaded files of a response open for staff with View or Void and delete responses, for the respondent, and for anyone the survey authorization service lets view or grade the survey's responses (the owner, course graders); managing them follows Void and delete responses the same way. Nobody opens the files of a deleted response.
 
-Checks on one survey go through `ISurveyAuthorizationService`: the global permission, then the owner (`Survey.OwnerId`) for the *own* permissions, then every `ISurveyAccessProvider` ([Extending](./extending.md)).
+Checks on one survey go through `ISurveyAuthorizationService`: the global permission, then the owner (`Survey.OwnerId`) for the *own* permissions, then every `ISurveyAccessProvider` ([Extending](./extending.md)). Pages that list the surveys a user may read or manage (the reports' survey filter, the Surveys data sets, the template picker) work out the same rules once with `SurveyAccessScopes`: the global permission skips the survey filter, owned surveys are read from the survey index, and each provider lists its grants with `ListGrantsAsync`, so no survey is loaded. The survey list, its tag filter and `GET /api/surveys` filter and page in the database.
 
 ## Site settings
 

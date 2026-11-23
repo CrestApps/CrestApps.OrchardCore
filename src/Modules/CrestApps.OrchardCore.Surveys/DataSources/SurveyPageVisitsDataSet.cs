@@ -58,5 +58,7 @@ internal sealed class SurveyPageVisitsDataSet : SurveyResponseChildDataSet
     }
 
     protected override IQueryIndex<SurveyResponseIndex> OfSurveys(IQueryIndex<SurveyResponseIndex> rows, string[] surveyIds)
-        => rows.Where(index => index.SurveyId.IsIn(surveyIds) && !index.IsTest);
+        => surveyIds is null
+            ? rows.Where(index => !index.IsTest)
+            : rows.Where(index => index.SurveyId.IsIn(surveyIds) && !index.IsTest);
 }

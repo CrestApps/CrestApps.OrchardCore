@@ -36,6 +36,8 @@ public sealed class SurveyTemplatesController : Controller
     private readonly INotifier _notifier;
     private readonly IClock _clock;
     private readonly PagerOptions _pagerOptions;
+    private readonly SurveyAccessScopes _scopes;
+    private readonly SurveyIndexReader _reader;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -53,6 +55,8 @@ public sealed class SurveyTemplatesController : Controller
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="scopes">Works out the surveys a user may manage.</param>
+    /// <param name="reader">Reads surveys from the survey index.</param>
     public SurveyTemplatesController(
         SurveyTemplateStore store,
         SurveyStore surveys,
@@ -63,7 +67,9 @@ public sealed class SurveyTemplatesController : Controller
         IClock clock,
         IOptions<PagerOptions> pagerOptions,
         IHtmlLocalizer<SurveyTemplatesController> htmlLocalizer,
-        IStringLocalizer<SurveyTemplatesController> stringLocalizer)
+        IStringLocalizer<SurveyTemplatesController> stringLocalizer,
+        SurveyAccessScopes scopes,
+        SurveyIndexReader reader)
     {
         _store = store;
         _surveys = surveys;
@@ -73,6 +79,8 @@ public sealed class SurveyTemplatesController : Controller
         _notifier = notifier;
         _clock = clock;
         _pagerOptions = pagerOptions.Value;
+        _scopes = scopes;
+        _reader = reader;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -385,14 +393,13 @@ public sealed class SurveyTemplatesController : Controller
         {
             model.Surveys = [new SelectListItem(S["No survey: start empty"], string.Empty)];
 
-            foreach (var survey in (await _surveys.GetAllAsync(HttpContext.RequestAborted)).Where(survey => survey.Owner is null).OrderBy(survey => survey.Title, StringComparer.CurrentCulture))
-            {
-                // A template copies the draft with its answer keys, so only surveys the user may edit are offered.
-                if (!await _surveyAuthorization.AuthorizeAsync(User, survey, SurveyOperation.Manage, HttpContext.RequestAborted))
-                {
-                    continue;
-                }
+            // A template copies the draft with its answer keys, so only surveys the user may edit are offered. They are read
+            // from the survey index; the survey copied is loaded and checked again when the template is saved.
+            var scope = await _scopes.ResolveAsync(User, SurveyOperation.Manage, HttpContext.RequestAborted);
+            IReadOnlyList<Survey> surveys = scope.IsEmpty ? [] : await _reader.ListAsync(scope.All ? null : scope.SurveyIds, publishedOnly: false, HttpContext.RequestAborted);
 
+            foreach (var survey in surveys.Where(survey => survey.Owner is null).OrderBy(survey => survey.Title, StringComparer.CurrentCulture))
+            {
                 model.Surveys.Add(new SelectListItem(survey.Title, survey.ItemId, survey.ItemId == model.FromSurveyId));
             }
         }

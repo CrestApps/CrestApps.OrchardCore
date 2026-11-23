@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
+using Dapper;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Services;
@@ -21,7 +23,12 @@ public sealed class SurveyListService
     }
 
     /// <summary>
-    /// Reads a page of surveys, last changed first.
+    /// The most tags the tag filter lists.
+    /// </summary>
+    public const int MaxTags = 500;
+
+    /// <summary>
+    /// Reads a page of surveys, last changed first. Every filter and the page are applied in the database.
     /// </summary>
     /// <param name="query">The filters.</param>
     /// <param name="skip">How many to skip.</param>
@@ -32,7 +39,15 @@ public sealed class SurveyListService
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var q = _session.Query<Survey, SurveyIndex>(collection: SurveysConstants.CollectionName);
+        IQuery<Survey> root = _session.Query<Survey>(collection: SurveysConstants.CollectionName);
+
+        if (!string.IsNullOrWhiteSpace(query.Tag))
+        {
+            var tag = SurveyTagIndexProvider.Normalize(query.Tag);
+            root = root.With<SurveyTagIndex>(index => index.Tag == tag);
+        }
+
+        var q = root.With<SurveyIndex>();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -62,28 +77,53 @@ public sealed class SurveyListService
             q = q.Where(index => index.OwnerRef == null || index.OwnerRef == string.Empty);
         }
 
-        var items = (await q.ListAsync(cancellationToken))
-            .OrderByDescending(survey => survey.ModifiedUtc ?? survey.CreatedUtc)
-            .ToList();
+        if (!string.IsNullOrEmpty(query.OwnerId))
+        {
+            var ownerId = query.OwnerId;
+            q = q.Where(index => index.OwnerId == ownerId);
+        }
 
-        // Owner and tag filters are applied to the documents: owners are not indexed, and tags are free text.
-        var filtered = items
-            .Where(survey => string.IsNullOrEmpty(query.OwnerId) || survey.OwnerId == query.OwnerId)
-            .Where(survey => string.IsNullOrEmpty(query.Tag) || survey.Tags.Contains(query.Tag, StringComparer.OrdinalIgnoreCase))
-            .ToList();
+        var count = await q.CountAsync(cancellationToken);
+        var items = await q
+            .OrderByDescending(index => index.ModifiedUtc)
+            .ThenByDescending(index => index.Id)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Max(1, take))
+            .ListAsync(cancellationToken);
 
-        return (filtered.Count, filtered.Skip(Math.Max(0, skip)).Take(Math.Max(1, take)).ToList());
+        return (count, items.ToList());
     }
 
     /// <summary>
-    /// Lists the tags in use, for the tag filter.
+    /// Lists the tags in use, for the tag filter: of every survey, or of the surveys a user owns.
     /// </summary>
+    /// <param name="ownerId">The id of the user whose surveys' tags are listed, or <see langword="null"/> for every survey.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The tags, sorted.</returns>
-    public async Task<IReadOnlyList<string>> ListTagsAsync(CancellationToken cancellationToken = default)
+    /// <returns>The tags, sorted; at most <see cref="MaxTags"/>.</returns>
+    public async Task<IReadOnlyList<string>> ListTagsAsync(string ownerId, CancellationToken cancellationToken = default)
     {
-        var items = await _session.Query<Survey, SurveyIndex>(collection: SurveysConstants.CollectionName).ListAsync(cancellationToken);
+        var sql = new SurveyIndexSql(_session);
+        var builder = sql.Builder<SurveyTagIndex>(SurveysConstants.CollectionName);
+        var parameters = new DynamicParameters();
+        var tag = sql.Column(nameof(SurveyTagIndex.Tag));
 
-        return items.SelectMany(survey => survey.Tags ?? []).Where(tag => !string.IsNullOrWhiteSpace(tag)).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+        builder.GroupBy(tag);
+        builder.Selector(tag);
+
+        if (!string.IsNullOrEmpty(ownerId))
+        {
+            builder.WhereAnd($"{sql.Column(nameof(SurveyTagIndex.OwnerId))} = @OwnerId");
+            parameters.Add("OwnerId", ownerId);
+        }
+
+        builder.OrderBy(tag);
+        builder.Take(SurveyIndexSql.Number(MaxTags));
+
+        return (await sql.QueryAsync(builder, parameters, cancellationToken))
+            .Select(row => row.Values.FirstOrDefault() as string)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

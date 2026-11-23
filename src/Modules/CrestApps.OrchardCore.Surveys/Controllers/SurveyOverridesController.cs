@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
@@ -11,9 +12,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Surveys.Controllers;
@@ -73,10 +78,19 @@ public sealed class SurveyOverridesController : Controller
     /// Lists the accommodations of a survey.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
+    /// <param name="pagerParameters">The page.</param>
+    /// <param name="store">The accommodation store.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The page.</returns>
     [HttpGet]
     [Admin("surveys/{surveyId}/overrides", "SurveyOverridesIndex")]
-    public async Task<IActionResult> Index(string surveyId)
+    public async Task<IActionResult> Index(
+        string surveyId,
+        PagerParameters pagerParameters,
+        [FromServices] SurveyOverrideStore store,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         var survey = await _surveys.FindByIdAsync(surveyId, HttpContext.RequestAborted);
 
@@ -90,19 +104,24 @@ public sealed class SurveyOverridesController : Controller
             return Forbid();
         }
 
-        var rows = new List<SurveyOverrideListItem>();
+        // A page at a time, and each user named on it is looked up once.
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var (count, items) = await store.PageBySurveyAsync(surveyId, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
+        var userNames = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var item in await _overrides.ListAsync(surveyId, HttpContext.RequestAborted))
+        foreach (var userId in items.SelectMany(item => new[] { item.UserId, item.Actor }).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
         {
-            rows.Add(new SurveyOverrideListItem
-            {
-                Override = item,
-                AppliesTo = !string.IsNullOrEmpty(item.UserId)
-                    ? (await _userManager.FindByIdAsync(item.UserId))?.UserName ?? item.UserId
-                    : H["Audience {0}", item.AudienceId].Value,
-                GrantedBy = string.IsNullOrEmpty(item.Actor) ? null : (await _userManager.FindByIdAsync(item.Actor))?.UserName,
-            });
+            userNames[userId] = (await _userManager.FindByIdAsync(userId))?.UserName;
         }
+
+        var rows = items.Select(item => new SurveyOverrideListItem
+        {
+            Override = item,
+            AppliesTo = !string.IsNullOrEmpty(item.UserId)
+                ? userNames.GetValueOrDefault(item.UserId) ?? item.UserId
+                : H["Audience {0}", item.AudienceId].Value,
+            GrantedBy = string.IsNullOrEmpty(item.Actor) ? null : userNames.GetValueOrDefault(item.Actor),
+        }).ToList();
 
         return View(new SurveyOverridesViewModel
         {
@@ -112,6 +131,7 @@ public sealed class SurveyOverridesController : Controller
             List = new AdminListContext<SurveyOverrideListItem>
             {
                 Source = rows,
+                Pager = await shapeFactory.PagerAsync(pager, count, new RouteValueDictionary { { "surveyId", surveyId } }),
             },
         });
     }
@@ -243,7 +263,7 @@ public sealed class SurveyOverridesController : Controller
     /// <returns>The list.</returns>
     [HttpPost]
     [Admin("surveys/{surveyId}/overrides/{overrideId}/revoke", "SurveyOverridesRevoke")]
-    public async Task<IActionResult> Revoke(string surveyId, string overrideId, [FromServices] ISurveyAuditTrail auditTrail)
+    public async Task<IActionResult> Revoke(string surveyId, string overrideId, [FromServices] ISurveyAuditTrail auditTrail, [FromServices] SurveyOverrideStore store)
     {
         var survey = await _surveys.FindByIdAsync(surveyId, HttpContext.RequestAborted);
 
@@ -257,7 +277,12 @@ public sealed class SurveyOverridesController : Controller
             return Forbid();
         }
 
-        var existing = (await _overrides.ListAsync(surveyId, HttpContext.RequestAborted)).FirstOrDefault(item => item.ItemId == overrideId);
+        var existing = string.IsNullOrEmpty(overrideId) ? null : await store.FindByIdAsync(overrideId, HttpContext.RequestAborted);
+
+        if (existing is not null && !string.Equals(existing.SurveyId, survey.ItemId, StringComparison.Ordinal))
+        {
+            existing = null;
+        }
 
         if (existing is not null && await _overrides.RevokeAsync(overrideId, HttpContext.RequestAborted))
         {

@@ -43,7 +43,9 @@ public sealed class Startup : StartupBase
         services.AddResumableStep<SurveyInvitationHoldsStep>();
         services.AddResumableStep<SurveyAnonymityUpgradeStep>();
         services.AddResumableStep<SurveyContentSanitizingStep>();
+        services.AddResumableStep<SurveysReindexStep>();
         services.AddIndexProvider<SurveyIndexProvider>()
+            .AddIndexProvider<SurveyTagIndexProvider>()
             .AddIndexProvider<SurveyTemplateIndexProvider>()
             .AddIndexProvider<SurveyVersionIndexProvider>()
             .AddIndexProvider<QuestionBankIndexProvider>()

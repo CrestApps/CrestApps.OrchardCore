@@ -111,21 +111,81 @@ public sealed class BankQuestionStore : DocumentCatalog<BankQuestion, BankQuesti
     }
 
     /// <summary>
-    /// Lists questions by id.
+    /// Lists questions by id, a chunk of ids at a time (<see cref="SurveyIdChunks"/>), so a long list never passes SQL
+    /// Server's limit of 2,100 parameters.
     /// </summary>
     /// <param name="ids">The ids.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The questions.</returns>
     public async Task<IReadOnlyList<BankQuestion>> ListByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
     {
-        if (ids is null || ids.Count == 0)
+        var items = new List<BankQuestion>();
+
+        foreach (var chunk in SurveyIdChunks.Of(ids))
+        {
+            items.AddRange(await Session.Query<BankQuestion, BankQuestionIndex>(index => index.ItemId.IsIn(chunk), collection: SurveysConstants.CollectionName)
+                .ListAsync(cancellationToken));
+        }
+
+        return items;
+    }
+
+    /// <summary>
+    /// Lists the first questions a bank draw can take, by id: the bank's questions that aren't retired, of the difficulty
+    /// when one is given, and among the given ids when there are any. Only <paramref name="take"/> questions are read,
+    /// however many match.
+    /// </summary>
+    /// <param name="bankId">The bank.</param>
+    /// <param name="ids">The ids the questions must be among (such as those with the draw's tags), or <see langword="null"/>
+    /// for any question of the bank.</param>
+    /// <param name="difficulty">The difficulty, or <see langword="null"/> for any.</param>
+    /// <param name="take">How many questions to read at most.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The questions, by id.</returns>
+    public async Task<IReadOnlyList<BankQuestion>> ListDrawCandidatesAsync(string bankId, IReadOnlyCollection<string> ids, int? difficulty, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(bankId) || take <= 0 || ids is { Count: 0 })
         {
             return [];
         }
 
-        var items = await Session.Query<BankQuestion, BankQuestionIndex>(index => index.ItemId.IsIn(ids), collection: SurveysConstants.CollectionName)
-            .ListAsync(cancellationToken);
+        if (ids is null)
+        {
+            return (await Candidates(bankId, null, difficulty).OrderBy(index => index.ItemId).Take(take).ListAsync(cancellationToken))
+                .OrderBy(question => question.ItemId, StringComparer.Ordinal)
+                .ToList();
+        }
 
-        return items.ToList();
+        // The ids are read in order, a chunk at a time, until enough match: the first ids hold the first candidates.
+        var result = new List<BankQuestion>();
+
+        foreach (var chunk in SurveyIdChunks.Of(ids.Order(StringComparer.Ordinal)))
+        {
+            result.AddRange(await Candidates(bankId, chunk, difficulty).OrderBy(index => index.ItemId).Take(take - result.Count).ListAsync(cancellationToken));
+
+            if (result.Count >= take)
+            {
+                break;
+            }
+        }
+
+        return result.OrderBy(question => question.ItemId, StringComparer.Ordinal).ToList();
+    }
+
+    private IQuery<BankQuestion, BankQuestionIndex> Candidates(string bankId, string[] ids, int? difficulty)
+    {
+        var query = Session.Query<BankQuestion, BankQuestionIndex>(index => index.BankId == bankId && !index.Retired, collection: SurveysConstants.CollectionName);
+
+        if (ids is not null)
+        {
+            query = query.Where(index => index.ItemId.IsIn(ids));
+        }
+
+        if (difficulty is { } value)
+        {
+            query = query.Where(index => index.Difficulty == value);
+        }
+
+        return query;
     }
 }

@@ -66,8 +66,11 @@ public sealed class SurveyBankDrawResolver
             {
                 foreach (var draw in pool.BankDraws.Where(draw => !string.IsNullOrEmpty(draw.BankId)))
                 {
-                    var candidates = await CandidatesAsync(draw, cancellationToken);
                     var limit = Math.Clamp(draw.MaxCandidates ?? DefaultMaxCandidates, 1, HardMaxCandidates);
+
+                    // One more than the limit tells that more match; the questions already in the definition are skipped,
+                    // so as many more are read.
+                    var candidates = await CandidatesAsync(draw, limit + 1 + usedIds.Count, cancellationToken);
                     var added = 0;
 
                     foreach (var bankQuestion in candidates)
@@ -119,19 +122,14 @@ public sealed class SurveyBankDrawResolver
         }
     }
 
-    private async Task<IReadOnlyList<BankQuestion>> CandidatesAsync(BankDraw draw, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<BankQuestion>> CandidatesAsync(BankDraw draw, int take, CancellationToken cancellationToken)
     {
-        IReadOnlyList<BankQuestion> questions;
+        // The candidates are paged in the database by id; a draw never reads the whole bank.
+        var ids = draw.Tags is { Count: > 0 }
+            ? await _bankQuestionStore.ListIdsWithTagsAsync(draw.BankId, draw.Tags, cancellationToken)
+            : null;
 
-        if (draw.Tags is { Count: > 0 })
-        {
-            var ids = await _bankQuestionStore.ListIdsWithTagsAsync(draw.BankId, draw.Tags, cancellationToken);
-            questions = await _bankQuestionStore.ListByIdsAsync(ids, cancellationToken);
-        }
-        else
-        {
-            questions = await _bankQuestionStore.ListByBankAsync(draw.BankId, includeRetired: false, cancellationToken);
-        }
+        var questions = await _bankQuestionStore.ListDrawCandidatesAsync(draw.BankId, ids, draw.Difficulty, take, cancellationToken);
 
         return questions
             .Where(question => !question.Retired && question.BankId == draw.BankId && question.Question is not null)

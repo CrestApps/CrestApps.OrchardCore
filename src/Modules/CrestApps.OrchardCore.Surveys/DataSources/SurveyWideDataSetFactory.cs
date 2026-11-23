@@ -57,26 +57,23 @@ internal sealed class SurveyWideDataSetFactory
         => Prefix + survey.Name;
 
     /// <summary>
-    /// Lists the data sets of the published surveys the principal of a run may read.
+    /// Describes the data sets of the published surveys the principal of a run may read. The surveys are read from the
+    /// survey index and no version is loaded: a data set's fields are built only when it is opened.
     /// </summary>
     /// <param name="context">The context of the run.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The data sets.</returns>
-    public async Task<IReadOnlyList<IRecordDataSet>> ListAsync(DataSourceContext context, CancellationToken cancellationToken)
+    /// <returns>The descriptors.</returns>
+    public async Task<IReadOnlyList<DataSetDescriptor>> DescribeAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         if (context?.User is null || !await _authorizationService.AuthorizeAsync(context.User, SurveysPermissions.ViewOwnSurveyResponses))
         {
             return [];
         }
 
-        var dataSets = new List<IRecordDataSet>();
-
-        foreach (var survey in (await _access.ReadableAsync(context, cancellationToken)).Values.Where(survey => survey.PublishedVersionNumber > 0 && !string.IsNullOrEmpty(survey.Name)))
-        {
-            dataSets.Add(await BuildAsync(survey, cancellationToken));
-        }
-
-        return dataSets;
+        return (await _access.ReadablePublishedAsync(context, cancellationToken))
+            .Where(survey => !string.IsNullOrEmpty(survey.Name))
+            .Select(survey => SurveyWideDataSet.Describe(survey, S))
+            .ToList();
     }
 
     /// <summary>
@@ -95,7 +92,7 @@ internal sealed class SurveyWideDataSetFactory
 
         var survey = await _surveys.FindByNameAsync(name.Substring(Prefix.Length), cancellationToken);
 
-        if (survey is null || survey.PublishedVersionNumber <= 0 || !(await _access.ReadableAsync(context, cancellationToken)).ContainsKey(survey.ItemId))
+        if (survey is null || survey.PublishedVersionNumber <= 0 || !await _access.CanReadAsync(context, survey.ItemId, cancellationToken))
         {
             return null;
         }

@@ -239,10 +239,11 @@ public sealed class SurveyResponsesController : Controller
 
         options.VersionOptions = [new SelectListItem(S["All versions"], string.Empty, string.IsNullOrEmpty(options.Version))];
 
-        foreach (var version in await _versionCache.ListAsync(survey.ItemId))
+        // The version numbers come from the version index: the filter never loads the versions' definitions.
+        foreach (var published in await _serviceProvider.GetRequiredService<SurveyVersionStore>().ListNumbersAsync(survey.ItemId, HttpContext.RequestAborted))
         {
-            var number = version.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            options.VersionOptions.Add(new SelectListItem(S["Version {0}", version.Number], number, options.Version == number));
+            var number = published.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            options.VersionOptions.Add(new SelectListItem(S["Version {0}", published], number, options.Version == number));
         }
 
         options.CollectorOptions = [new SelectListItem(S["All collectors"], string.Empty, string.IsNullOrEmpty(options.Collector))];

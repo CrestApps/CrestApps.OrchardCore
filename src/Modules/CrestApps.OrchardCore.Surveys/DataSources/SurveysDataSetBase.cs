@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore.DataSources;
@@ -57,12 +58,33 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     protected override bool CanAggregate => false;
 
     /// <summary>
-    /// Narrows the index rows read to those of the given surveys.
+    /// Narrows the index rows read to those of the given surveys, and to the rows the data set reads at all (such as
+    /// completed responses only).
     /// </summary>
     /// <param name="rows">The index rows.</param>
-    /// <param name="surveyIds">The survey ids.</param>
+    /// <param name="surveyIds">The survey ids, at most <see cref="SurveyIdChunks.Size"/> of them; or <see langword="null"/>
+    /// to read every survey's rows, when the principal may read every survey or more surveys than one <c>IN</c> list holds
+    /// (each row is then checked against <see cref="Surveys"/>).</param>
     /// <returns>The narrowed rows.</returns>
     protected abstract IQueryIndex<TIndex> OfSurveys(IQueryIndex<TIndex> rows, string[] surveyIds);
+
+    /// <summary>
+    /// Gets the survey a row belongs to. By default, the survey of <see cref="ResponseOf"/>.
+    /// </summary>
+    /// <param name="row">The row.</param>
+    /// <returns>The survey id, or <see langword="null"/>.</returns>
+    protected virtual string SurveyIdOf(TRow row)
+        => ResponseOf(row)?.SurveyId;
+
+    /// <summary>
+    /// Lists the surveys the principal of a read may read, and whether that is every survey. By default, from
+    /// <see cref="SurveyDataSetAccess.ReadableAsync"/>.
+    /// </summary>
+    /// <param name="context">The context of the read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether every survey is readable, and the readable surveys, by id.</returns>
+    private protected virtual Task<(bool All, IReadOnlyDictionary<string, Survey> Surveys)> ReadableAsync(DataSourceContext context, CancellationToken cancellationToken)
+        => _access.ReadableAsync(context, cancellationToken);
 
     /// <summary>
     /// Gets the response a row belongs to, so the minimum group size of anonymous surveys can count responses, or
@@ -76,7 +98,9 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     /// <inheritdoc />
     protected override async Task<Func<IQueryIndex<TIndex>, IQueryIndex<TIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        Surveys = await _access.ReadableAsync(context, cancellationToken);
+        var (all, surveys) = await ReadableAsync(context, cancellationToken);
+
+        Surveys = surveys;
         (Settings, TimeZone) = await _access.AnonymityAsync();
 
         if (Surveys.Count == 0)
@@ -84,7 +108,10 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
             return null;
         }
 
-        var ids = Surveys.Keys.ToArray();
+        // SQL Server refuses a statement with more than 2,100 parameters, so the read names the surveys only when they fit
+        // in one IN list. Otherwise (and when every survey is readable) it reads every survey's rows, and LoadAsync keeps
+        // the rows of the readable surveys only.
+        var ids = !all && SurveyIdChunks.FitsOneList(Surveys.Count) ? Surveys.Keys.ToArray() : null;
 
         return rows => OfSurveys(rows, ids);
     }
@@ -100,6 +127,11 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
 
         await foreach (var row in base.LoadAsync(query, cancellationToken))
         {
+            if (!Surveys.ContainsKey(SurveyIdOf(row) ?? string.Empty))
+            {
+                continue;
+            }
+
             var response = ResponseOf(row);
             var surveyId = response?.SurveyId ?? string.Empty;
             var minimum = response is null ? 0 : SurveyAnonymity.MinimumGroupSize(Surveys.GetValueOrDefault(surveyId), Settings);

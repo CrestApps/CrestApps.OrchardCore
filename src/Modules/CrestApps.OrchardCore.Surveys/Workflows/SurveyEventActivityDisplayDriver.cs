@@ -1,9 +1,12 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Conditions;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Surveys.Workflows;
 
@@ -20,15 +23,17 @@ public sealed class SurveyEventActivityDisplayDriver<TActivity> : ActivityDispla
         WriteIndented = true,
     };
 
-    private readonly SurveyStore _surveyStore;
+    private const int MaxSurveyOptions = 500;
+
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyEventActivityDisplayDriver{TActivity}"/> class.
     /// </summary>
-    /// <param name="surveyStore">The survey store.</param>
-    public SurveyEventActivityDisplayDriver(SurveyStore surveyStore)
+    /// <param name="session">The YesSql session.</param>
+    public SurveyEventActivityDisplayDriver(ISession session)
     {
-        _surveyStore = surveyStore;
+        _session = session;
     }
 
     /// <inheritdoc />
@@ -67,12 +72,22 @@ public sealed class SurveyEventActivityDisplayDriver<TActivity> : ActivityDispla
 
         model.SurveyIds = surveyIds.ToArray();
 
-        var surveys = await _surveyStore.GetAllAsync();
+        // The first surveys by title, and the surveys the event names, read from the survey index (no survey is loaded).
+        var rows = (await _session.QueryIndex<SurveyIndex>(collection: SurveysConstants.CollectionName)
+            .OrderBy(index => index.Title)
+            .ThenBy(index => index.Id)
+            .Take(MaxSurveyOptions)
+            .ListAsync()).ToList();
+        var missing = model.SurveyIds.Except(rows.Select(row => row.ItemId), StringComparer.Ordinal).ToArray();
 
-        model.SurveyOptions = surveys
-            .OrderBy(survey => survey.Title ?? survey.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Take(500)
-            .Select(survey => new SelectListItem(survey.Title ?? survey.Name, survey.ItemId, model.SurveyIds.Contains(survey.ItemId)))
+        foreach (var chunk in SurveyIdChunks.Of(missing))
+        {
+            rows.AddRange(await _session.QueryIndex<SurveyIndex>(index => index.ItemId.IsIn(chunk), collection: SurveysConstants.CollectionName).ListAsync());
+        }
+
+        model.SurveyOptions = rows
+            .OrderBy(row => row.Title ?? row.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(row => new SelectListItem(row.Title ?? row.Name, row.ItemId, model.SurveyIds.Contains(row.ItemId)))
             .ToList();
     }
 

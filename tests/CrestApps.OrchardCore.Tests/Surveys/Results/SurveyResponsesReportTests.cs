@@ -190,7 +190,9 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
             services,
             new FixedOffsetLocalClock(() => _day, TimeSpan.FromHours(-10)),
             names,
-            RecipeRoundTrip.Localizer<SurveyReportData>());
+            RecipeRoundTrip.Localizer<SurveyReportData>(),
+            new SurveyAccessScopes(authorization, [], new SurveyIndexReader(session, new SurveyStore(session))),
+            new SurveyIndexReader(session, new SurveyStore(session)));
         var options = new SurveyControlOptions();
         options.Controls[ResultsTestControlHandler.Name] = new SurveyControlDescriptor
         {

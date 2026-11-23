@@ -40,7 +40,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -94,5 +94,19 @@ internal sealed class SurveysMigrations : DataMigration
         await _steps.RequestAsync(SurveyInvitationHoldsStep.StepName);
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the user owner and anonymity columns of the survey index and the survey tag index (schema only), so the
+    /// survey list, the reports and the data sets read surveys from the index instead of loading every survey, and asks
+    /// for the step that indexes the existing surveys again so the columns are filled.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SurveysIndexSchema.AddSurveyListColumnsAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveysReindexStep.StepName);
+
+        return 6;
     }
 }

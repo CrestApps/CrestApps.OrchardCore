@@ -69,13 +69,46 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
             return false;
         }
 
-        var roles = operation switch
+        var roles = RolesFor(operation);
+
+        return roles.Length > 0 && await _courseStructure.IsCourseStaffAsync(userId, courseId, roles);
+    }
+
+    /// <inheritdoc />
+    public async Task<SurveyAccessGrants> ListGrantsAsync(ClaimsPrincipal user, SurveyOperation operation, CancellationToken cancellationToken = default)
+    {
+        var userId = LearningSurveyUsers.GetUserId(user);
+        var roles = RolesFor(operation);
+
+        if (string.IsNullOrEmpty(userId) || roles.Length == 0 || !await _authorizationService.AuthorizeAsync(user, LearningPermissions.ManageOwnCourses))
+        {
+            return SurveyAccessGrants.None;
+        }
+
+        // The surveys of the items of the courses the user is staff on, by their owners: no survey is loaded.
+        var courseIds = await _courseStructure.GetStaffCourseIdsAsync(userId, roles);
+
+        if (courseIds.Count == 0)
+        {
+            return SurveyAccessGrants.None;
+        }
+
+        return new SurveyAccessGrants
+        {
+            Owners = (await _courseStructure.GetContainedItemsAsync(courseIds) ?? [])
+                .Where(item => item is not null && !string.IsNullOrEmpty(item.ContentItemId))
+                .Select(item => item.ContentItemId)
+                .Distinct(StringComparer.Ordinal)
+                .Select(LearningSurveyContexts.Owner)
+                .ToList(),
+        };
+    }
+
+    private static string[] RolesFor(SurveyOperation operation)
+        => operation switch
         {
             SurveyOperation.Grade or SurveyOperation.ViewResponses => _gradingRoles,
             SurveyOperation.ExportResponses or SurveyOperation.ManageInvitations => [],
             _ => _editingRoles,
         };
-
-        return roles.Length > 0 && await _courseStructure.IsCourseStaffAsync(userId, courseId, roles);
-    }
 }

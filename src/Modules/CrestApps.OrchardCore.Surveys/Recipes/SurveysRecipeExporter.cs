@@ -229,9 +229,17 @@ internal sealed class SurveysRecipeExporter
 
     private async Task<Dictionary<string, string>> SurveyNamesAsync(IEnumerable<string> surveyIds)
     {
-        var ids = surveyIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
-        IReadOnlyCollection<Survey> surveys = ids.Length == 0 ? [] : await _surveyStore.GetAsync(ids);
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        return surveys.ToDictionary(survey => survey.ItemId, survey => survey.Name, StringComparer.Ordinal);
+        // A chunk of surveys at a time, so an export across many surveys never passes SQL Server's 2,100 parameters.
+        foreach (var chunk in SurveyIdChunks.Of(surveyIds))
+        {
+            foreach (var survey in await _surveyStore.GetAsync(chunk))
+            {
+                names[survey.ItemId] = survey.Name;
+            }
+        }
+
+        return names;
     }
 }

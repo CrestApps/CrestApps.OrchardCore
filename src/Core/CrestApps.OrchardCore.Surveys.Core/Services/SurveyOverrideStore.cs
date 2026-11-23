@@ -39,4 +39,31 @@ public sealed class SurveyOverrideStore : DocumentCatalog<SurveyOverride, Survey
 
         return items.ToList();
     }
+
+    /// <summary>
+    /// Reads a page of the accommodations of a survey, newest first.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="skip">How many to skip.</param>
+    /// <param name="take">How many to read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The total count and the page.</returns>
+    public async Task<(int Count, IReadOnlyList<SurveyOverride> Items)> PageBySurveyAsync(string surveyId, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(surveyId))
+        {
+            return (0, []);
+        }
+
+        var query = Session.Query<SurveyOverride, SurveyOverrideIndex>(index => index.SurveyId == surveyId, collection: SurveysConstants.CollectionName);
+        var count = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(index => index.CreatedUtc)
+            .ThenByDescending(index => index.Id)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Clamp(take, 1, SurveysConstants.PageSize))
+            .ListAsync(cancellationToken);
+
+        return (count, items.ToList());
+    }
 }
