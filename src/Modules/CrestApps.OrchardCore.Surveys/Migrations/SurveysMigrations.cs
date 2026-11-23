@@ -138,10 +138,8 @@ internal sealed class SurveysMigrations : DataMigration
     /// <returns>The migration version.</returns>
     public async Task<int> UpdateFrom7Async()
     {
-        if (await _session.Query<SurveyCloseStepStart>(SurveysConstants.CollectionName).FirstOrDefaultAsync() is null)
-        {
-            await _session.SaveAsync(new SurveyCloseStepStart { StartedUtc = _clock.UtcNow }, false, SurveysConstants.CollectionName);
-        }
+        // A migration step runs once per site, so the document is written once.
+        await _session.SaveAsync(new SurveyCloseStepStart { StartedUtc = _clock.UtcNow }, false, SurveysConstants.CollectionName);
 
         return 8;
     }

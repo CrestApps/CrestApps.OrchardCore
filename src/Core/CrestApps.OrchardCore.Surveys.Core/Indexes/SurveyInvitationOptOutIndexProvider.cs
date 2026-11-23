@@ -19,6 +19,8 @@ public sealed class SurveyInvitationOptOutIndexProvider : IndexProvider<SurveyIn
     /// <inheritdoc />
     public override void Describe(DescribeContext<SurveyInvitationOptOut> context)
         => context.For<SurveyInvitationOptOutIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new SurveyInvitationOptOutIndex
             {
                 AddressHash = item.AddressHash,

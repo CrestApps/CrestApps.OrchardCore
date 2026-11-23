@@ -53,14 +53,16 @@ public sealed class AssessmentAdminFormsTests
             return (quiz.ContentItemId, surveyId, survey);
         });
 
-        var afterRemoving = await _fixture.InTenantAsync(async services =>
+        await _fixture.InTenantAsync(async services =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
             var quiz = await contentManager.GetAsync(quizId, VersionOptions.Latest);
             await contentManager.RemoveAsync(quiz);
-
-            return await services.GetRequiredService<ISurveyManager>().ListByOwnerAsync(new RecordRef(RecordKinds.ContentItem, quizId));
         });
+
+        // The survey is removed after the removing request commits (a deferred task), so it is read in a scope of its own.
+        var afterRemoving = await _fixture.InTenantAsync(services =>
+            services.GetRequiredService<ISurveyManager>().ListByOwnerAsync(new RecordRef(RecordKinds.ContentItem, quizId)));
 
         // Assert
         Assert.False(string.IsNullOrEmpty(surveyId));
