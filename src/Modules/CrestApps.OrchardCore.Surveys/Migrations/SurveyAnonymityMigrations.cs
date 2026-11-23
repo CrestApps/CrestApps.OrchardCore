@@ -1,56 +1,33 @@
-using CrestApps.OrchardCore.Surveys.Core.Access;
-using CrestApps.OrchardCore.Surveys.Core.Services;
-using CrestApps.OrchardCore.Surveys.Models;
-using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.Data.Migration;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Migrations;
 
 /// <summary>
-/// Upgrades the anonymity data of sites made before it was hardened: protects every anonymity secret still stored in
-/// plain text with ASP.NET Data Protection (keeping its value, so limits and invitation links keep working), gives a
-/// secret to any survey without one, and clears the exact times kept on the participation records of anonymous surveys,
-/// which keep the day only. It is registered after <see cref="SurveysMigrations"/>, whose tables it reads; on a new
-/// site there is nothing to upgrade. Secrets missed here are still read, and new ones are always protected.
+/// Asks, once, for the <see cref="SurveyAnonymityUpgradeStep"/>, which protects the anonymity secrets of sites made
+/// before they were hardened and clears the exact participation times of anonymous surveys. The step runs in the
+/// background, so the walk never holds up the tenant's activation; on a new site it finds nothing to upgrade.
 /// </summary>
 internal sealed class SurveyAnonymityMigrations : DataMigration
 {
-    private readonly SurveyStore _surveyStore;
-    private readonly SurveyAnonymitySecrets _secrets;
-    private readonly ISession _session;
+    private readonly ResumableSteps _steps;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyAnonymityMigrations"/> class.
     /// </summary>
-    /// <param name="surveyStore">The survey store.</param>
-    /// <param name="secrets">The anonymity secrets.</param>
-    /// <param name="session">The YesSql session.</param>
-    public SurveyAnonymityMigrations(
-        SurveyStore surveyStore,
-        SurveyAnonymitySecrets secrets,
-        ISession session)
+    /// <param name="steps">The resumable upgrade steps.</param>
+    public SurveyAnonymityMigrations(ResumableSteps steps)
     {
-        _surveyStore = surveyStore;
-        _secrets = secrets;
-        _session = session;
+        _steps = steps;
     }
 
     /// <summary>
-    /// Protects the secrets and clears the exact participation times of anonymous surveys.
+    /// Asks for the anonymity upgrade step.
     /// </summary>
     /// <returns>The migration version.</returns>
     public async Task<int> CreateAsync()
     {
-        foreach (var survey in await _surveyStore.GetAllAsync())
-        {
-            if (_secrets.EnsureProtected(survey))
-            {
-                await _surveyStore.UpdateAsync(survey);
-            }
-        }
-
-        await SurveyParticipationTimesUpgrade.ClearAnonymousCompletionTimesAsync(_session);
+        await _steps.RequestAsync(SurveyAnonymityUpgradeStep.StepName);
 
         return 1;
     }

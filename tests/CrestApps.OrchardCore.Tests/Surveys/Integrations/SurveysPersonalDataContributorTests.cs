@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.PersonalData;
+using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.PersonalData;
@@ -33,7 +35,8 @@ public sealed class SurveysPersonalDataContributorTests
                 Respondent = new PartyRef(PartyKinds.User, "user-learner1"),
                 IpAddress = "10.0.0.1",
                 ResumeTokenHash = "hash",
-                Status = SurveyResponseStatus.Completed,
+                RespondentKey = "u:user-learner1",
+                Status = SurveyResponseStatus.InProgress,
                 Answers = { ["q1"] = new SurveyAnswer { Values = ["c1"] } },
             });
             await responses.CreateAsync(new SurveyResponse { ItemId = otherId, SurveyId = "s1", UserId = "user-other" });
@@ -74,6 +77,7 @@ public sealed class SurveysPersonalDataContributorTests
         Assert.Null(response.Respondent);
         Assert.Null(response.IpAddress);
         Assert.Null(response.ResumeTokenHash);
+        Assert.Null(response.RespondentKey);
         Assert.Equal(["c1"], response.Answers["q1"].Values);
         Assert.Equal("user-other", other.UserId);
         Assert.Empty(invitations);
@@ -220,5 +224,47 @@ public sealed class SurveysPersonalDataContributorTests
         Assert.Equal(["c1"], response.Answers["q1"].Values);
         Assert.Equal(otherInvitationId, Assert.Single(invitationsLeft).ItemId);
         Assert.Empty(participationLeft);
+    }
+
+    [Fact]
+    public async Task Erasure_OfAResponseInProgress_ClearsItsKey_SoTheDeadlineCompletionWritesNoParticipationBack()
+    {
+        // Arrange: a timed survey the person started while signed in; the start is counted under u:{id}.
+        await using var harness = await RuntimeTestHarness.CreateAsync(services => services.AddScoped<SurveysPersonalDataContributor>());
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+        definition.Timing.TimeLimitMinutes = 1;
+
+        var survey = await harness.PublishAsync(definition);
+        var started = (await harness.StartAsync(survey, "user-learner1")).Response;
+        var keyBefore = (await harness.FindAsync(started.ItemId)).RespondentKey;
+
+        // Act: the person's data is erased, then the deadline passes and upkeep submits the response.
+        await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject("user-learner1"), "[removed]", new PersonalDataAnonymizeResult()));
+
+            return true;
+        });
+
+        var erased = await harness.FindAsync(started.ItemId);
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(10);
+        await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyMaintenanceService>().RunAsync(SurveysConstants.PageSize, TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+        // Assert
+        var (completed, participation) = await harness.RunAsync(async services => (
+            await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(started.ItemId),
+            await services.GetRequiredService<SurveyParticipationStore>().GetAllAsync()));
+
+        Assert.Equal("u:user-learner1", keyBefore);
+        Assert.Null(erased.RespondentKey);
+        Assert.Null(erased.UserId);
+        Assert.Equal(SurveyResponseStatus.Completed, completed.Status);
+        Assert.Empty(participation);
     }
 }

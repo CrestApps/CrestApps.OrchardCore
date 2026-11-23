@@ -17,7 +17,8 @@ namespace CrestApps.OrchardCore.Surveys.PersonalData;
 /// Exports a person's identified survey responses, with their answers, and their invitations (to their user account,
 /// or guest invitations to one of their e-mail addresses, with the responses linked to them); erasure removes who gave
 /// the responses and everything that could point back to them (context, variables and properties; the answers stay for
-/// results), deletes the files they uploaded, their invitations and their participation counts. Participation is found
+/// results, and the key an in-progress response is counted under goes too), deletes the files they uploaded, their
+/// invitations and their participation counts. Participation is found
 /// by the keys it is really stored under: <c>u:{id}</c> (or its hash when long) on identified surveys, the key of each of
 /// the person's invitations, and <c>a:{hmac}</c> on each anonymous survey, recomputed with that survey's protected
 /// secret.
@@ -160,6 +161,10 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             response.InvitationId = null;
             response.InvitationSeal = null;
             response.ResumeTokenHash = null;
+
+            // The key the response is counted under names the person on an identified survey (u:{id} or i:{id}); left
+            // in place, a later deadline completion would count it again and write back the participation erased below.
+            response.RespondentKey = null;
             response.Context = null;
             response.Variables.Clear();
             response.Properties.Clear();

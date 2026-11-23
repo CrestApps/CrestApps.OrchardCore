@@ -261,6 +261,7 @@ public sealed class SurveysRecipeRoundTripTests
                 Respondent = new PartyRef(PartyKinds.User, "user-learner1"),
                 GradedBy = "user-grader1",
                 ResumeTokenHash = "do-not-export",
+                RespondentKey = "u:do-not-export-key",
                 Answers = { ["q1"] = new SurveyAnswer { Values = ["c2"] } },
             });
         });
@@ -288,6 +289,7 @@ public sealed class SurveysRecipeRoundTripTests
 
         // Assert
         Assert.DoesNotContain("do-not-export", step.ToJsonString(), StringComparison.Ordinal);
+        Assert.False(step["Responses"]![0]!.AsObject().ContainsKey("RespondentKey"));
         Assert.Equal("learner1", step["Responses"]![0]!["UserName"]!.GetValue<string>());
         Assert.Empty(errors);
         Assert.Single(ghostErrors);
@@ -333,6 +335,39 @@ public sealed class SurveysRecipeRoundTripTests
         Assert.Null(response.UserId);
         Assert.Null(response.Respondent);
         Assert.Null(response.IpAddress);
+    }
+
+    [Fact]
+    public async Task Responses_Import_IgnoresTheRespondentKeyInTheFile()
+    {
+        // Arrange: a hand-written in-progress response that carries a respondent key naming a person.
+        await using var target = await IntegrationsTestHarness.CreateAsync();
+        await target.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyStore>().CreateAsync(IntegrationsTestHarness.NewSurvey(SurveyId, "pulse"));
+            await services.GetRequiredService<SurveyVersionStore>().CreateAsync(new SurveyVersion { ItemId = Version1Id, SurveyId = SurveyId, Number = 1, Definition = new SurveyDefinition() });
+        });
+
+        var step = new JsonObject
+        {
+            ["name"] = SurveysRecipeSteps.Responses,
+            ["Responses"] = new JsonArray(new JsonObject
+            {
+                ["ItemId"] = ResponseId,
+                ["SurveyName"] = "pulse",
+                ["VersionNumber"] = 1,
+                ["Status"] = "InProgress",
+                ["RespondentKey"] = "u:user-learner1",
+            }),
+        };
+
+        // Act
+        var errors = await target.ImportAsync<SurveyResponsesRecipeStep>(step);
+
+        // Assert
+        Assert.Empty(errors);
+        var response = Assert.Single(await target.RunAsync(async services => await services.GetRequiredService<SurveyResponseStore>().GetAllAsync()));
+        Assert.Null(response.RespondentKey);
     }
 
     [Fact]

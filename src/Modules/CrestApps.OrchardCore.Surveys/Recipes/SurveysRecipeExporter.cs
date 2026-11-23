@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Surveys.Recipes;
 
@@ -17,8 +16,7 @@ internal sealed class SurveysRecipeExporter
     private readonly SurveyCollectorStore _collectorStore;
     private readonly BankQuestionStore _bankQuestionStore;
     private readonly SurveyStore _surveyStore;
-    private readonly IServiceProvider _serviceProvider;
-    private ISurveyUserLookup _users;
+    private readonly ISurveyUserLookup _userLookup;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysRecipeExporter"/> class.
@@ -27,22 +25,20 @@ internal sealed class SurveysRecipeExporter
     /// <param name="collectorStore">The collector store.</param>
     /// <param name="bankQuestionStore">The bank question store.</param>
     /// <param name="surveyStore">The survey store.</param>
-    /// <param name="serviceProvider">The service provider. The user lookup is resolved from it only when a record names a person, so a missing optional service never breaks recipe execution.</param>
+    /// <param name="userLookup">The user lookup, which turns user ids into user names and back.</param>
     public SurveysRecipeExporter(
         SurveyVersionStore versionStore,
         SurveyCollectorStore collectorStore,
         BankQuestionStore bankQuestionStore,
         SurveyStore surveyStore,
-        IServiceProvider serviceProvider)
+        ISurveyUserLookup userLookup)
     {
         _versionStore = versionStore;
         _collectorStore = collectorStore;
         _bankQuestionStore = bankQuestionStore;
         _surveyStore = surveyStore;
-        _serviceProvider = serviceProvider;
+        _userLookup = userLookup;
     }
-
-    private ISurveyUserLookup UserLookup => _users ??= _serviceProvider.GetRequiredService<ISurveyUserLookup>();
 
     /// <summary>
     /// Writes a survey with its versions and collectors. The anonymity secret is never written; collector tokens and
@@ -58,7 +54,7 @@ internal sealed class SurveysRecipeExporter
 
         var node = SurveysRecipeJson.Write(survey, nameof(Survey.AnonymitySecret), nameof(Survey.PublishedVersionId));
         var versions = (await _versionStore.ListBySurveyAsync(survey.ItemId, cancellationToken)).OrderBy(version => version.Number).ToList();
-        var names = await UserLookup.GetUserNamesAsync(versions.Select(version => version.PublishedBy));
+        var names = await _userLookup.GetUserNamesAsync(versions.Select(version => version.PublishedBy));
         var versionArray = new JsonArray();
 
         foreach (var version in versions)
@@ -122,7 +118,7 @@ internal sealed class SurveysRecipeExporter
         ArgumentNullException.ThrowIfNull(responses);
 
         var surveyNames = await SurveyNamesAsync(responses.Select(response => response.SurveyId));
-        var names = await UserLookup.GetUserNamesAsync(responses.SelectMany(response => new[] { response.UserId, response.GradedBy }));
+        var names = await _userLookup.GetUserNamesAsync(responses.SelectMany(response => new[] { response.UserId, response.GradedBy }));
         var array = new JsonArray();
 
         foreach (var response in responses)
@@ -134,6 +130,7 @@ internal sealed class SurveysRecipeExporter
                 nameof(SurveyResponse.SurveyId),
                 nameof(SurveyResponse.SurveyVersionId),
                 nameof(SurveyResponse.ResumeTokenHash),
+                nameof(SurveyResponse.RespondentKey),
                 nameof(SurveyResponse.UpkeepFailures));
 
             node["SurveyName"] = surveyNames.GetValueOrDefault(response.SurveyId);
@@ -170,7 +167,7 @@ internal sealed class SurveysRecipeExporter
         ArgumentNullException.ThrowIfNull(overrides);
 
         var surveyNames = await SurveyNamesAsync(overrides.Select(entry => entry.SurveyId));
-        var names = await UserLookup.GetUserNamesAsync(overrides.SelectMany(entry => new[] { entry.UserId, entry.Actor }));
+        var names = await _userLookup.GetUserNamesAsync(overrides.SelectMany(entry => new[] { entry.UserId, entry.Actor }));
         var array = new JsonArray();
 
         foreach (var entry in overrides)
@@ -205,7 +202,7 @@ internal sealed class SurveysRecipeExporter
         ArgumentNullException.ThrowIfNull(invitations);
 
         var surveyNames = await SurveyNamesAsync(invitations.Select(entry => entry.SurveyId));
-        var names = await UserLookup.GetUserNamesAsync(invitations.Select(entry => entry.UserId));
+        var names = await _userLookup.GetUserNamesAsync(invitations.Select(entry => entry.UserId));
         var array = new JsonArray();
 
         foreach (var invitation in invitations)

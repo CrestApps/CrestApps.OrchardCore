@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -19,8 +18,7 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
     private readonly SurveyResponseStore _responseStore;
     private readonly SurveyStore _surveyStore;
     private readonly SurveyVersionStore _versionStore;
-    private readonly IServiceProvider _serviceProvider;
-    private ISurveyUserLookup _users;
+    private readonly ISurveyUserLookup _userLookup;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyResponsesRecipeStep"/> class.
@@ -28,21 +26,19 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
     /// <param name="responseStore">The response store.</param>
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="versionStore">The version store.</param>
-    /// <param name="serviceProvider">The service provider. The user lookup is resolved from it only when a record names a person, so a missing optional service never breaks recipe execution.</param>
+    /// <param name="userLookup">The user lookup, which turns user ids into user names and back.</param>
     public SurveyResponsesRecipeStep(
         SurveyResponseStore responseStore,
         SurveyStore surveyStore,
         SurveyVersionStore versionStore,
-        IServiceProvider serviceProvider)
+        ISurveyUserLookup userLookup)
         : base(SurveysRecipeSteps.Responses)
     {
         _responseStore = responseStore;
         _surveyStore = surveyStore;
         _versionStore = versionStore;
-        _serviceProvider = serviceProvider;
+        _userLookup = userLookup;
     }
-
-    private ISurveyUserLookup UserLookup => _users ??= _serviceProvider.GetRequiredService<ISurveyUserLookup>();
 
     /// <inheritdoc />
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -75,11 +71,11 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
             }
 
             var existing = string.IsNullOrEmpty(id) ? null : await _responseStore.FindByIdAsync(id);
-            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.UpkeepFailures));
+            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
 
             if (existing is not null)
             {
-                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.ResumeTokenHash), nameof(SurveyResponse.UpkeepFailures));
+                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", nameof(SurveyResponse.ResumeTokenHash), nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
             }
 
             var version = await _versionStore.FindByNumberAsync(survey.ItemId, response.VersionNumber);
@@ -95,7 +91,7 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
 
             if (userName is not null)
             {
-                var userId = await UserLookup.FindUserIdAsync(userName);
+                var userId = await _userLookup.FindUserIdAsync(userName);
 
                 if (userId is null)
                 {
@@ -111,7 +107,7 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
             {
                 // A raw user id from the file is kept only when it names a user of this site; ids from another site
                 // would point the response at someone else, or at nobody.
-                var names = await UserLookup.GetUserNamesAsync([response.UserId]);
+                var names = await _userLookup.GetUserNamesAsync([response.UserId]);
 
                 if (names is null || !names.ContainsKey(response.UserId))
                 {
@@ -126,7 +122,7 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
                 }
             }
 
-            response.GradedBy = await UserLookup.FindUserIdAsync(SurveysRecipeJson.String(token, "GradedByUserName"));
+            response.GradedBy = await _userLookup.FindUserIdAsync(SurveysRecipeJson.String(token, "GradedByUserName"));
             response.SurveyId = survey.ItemId;
             response.SurveyVersionId = version.ItemId;
 

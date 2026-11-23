@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
@@ -22,10 +21,9 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
     private readonly SurveyStore _surveyStore;
     private readonly SurveyVersionStore _versionStore;
     private readonly SurveyCollectorStore _collectorStore;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ISurveyUserLookup _userLookup;
     private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
-    private ISurveyUserLookup _users;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysRecipeStep"/> class.
@@ -33,14 +31,14 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="versionStore">The version store.</param>
     /// <param name="collectorStore">The collector store.</param>
-    /// <param name="serviceProvider">The service provider. The user lookup is resolved from it only when a record names a person, so a missing optional service never breaks recipe execution.</param>
+    /// <param name="userLookup">The user lookup, which turns user ids into user names and back.</param>
     /// <param name="secrets">The anonymity secrets.</param>
     /// <param name="clock">The clock.</param>
     public SurveysRecipeStep(
         SurveyStore surveyStore,
         SurveyVersionStore versionStore,
         SurveyCollectorStore collectorStore,
-        IServiceProvider serviceProvider,
+        ISurveyUserLookup userLookup,
         SurveyAnonymitySecrets secrets,
         IClock clock)
         : base(SurveysRecipeSteps.Surveys)
@@ -48,12 +46,10 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
         _surveyStore = surveyStore;
         _versionStore = versionStore;
         _collectorStore = collectorStore;
-        _serviceProvider = serviceProvider;
+        _userLookup = userLookup;
         _secrets = secrets;
         _clock = clock;
     }
-
-    private ISurveyUserLookup UserLookup => _users ??= _serviceProvider.GetRequiredService<ISurveyUserLookup>();
 
     /// <inheritdoc />
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -163,7 +159,7 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
                 continue;
             }
 
-            version.PublishedBy = await UserLookup.FindUserIdAsync(SurveysRecipeJson.String(node, "PublishedByUserName"));
+            version.PublishedBy = await _userLookup.FindUserIdAsync(SurveysRecipeJson.String(node, "PublishedByUserName"));
 
             if (version.PublishedUtc == default)
             {
