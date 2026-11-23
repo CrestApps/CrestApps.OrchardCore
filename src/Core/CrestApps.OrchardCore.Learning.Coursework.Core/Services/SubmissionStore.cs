@@ -103,11 +103,18 @@ public sealed class SubmissionStore : DocumentCatalog<Submission, SubmissionInde
     /// <param name="courseIds">The courses, or <see langword="null"/> for every course.</param>
     /// <param name="skip">How many to skip.</param>
     /// <param name="take">The page size.</param>
+    /// <param name="excludedUserId">A user whose own submissions are left out, such as the grader, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count and the page.</returns>
-    public async Task<(int Count, IReadOnlyList<Submission> Items)> PageWaitingAsync(IReadOnlyCollection<string> courseIds, int skip, int take, CancellationToken cancellationToken = default)
+    public async Task<(int Count, IReadOnlyList<Submission> Items)> PageWaitingAsync(IReadOnlyCollection<string> courseIds, int skip, int take, string excludedUserId = null, CancellationToken cancellationToken = default)
     {
         var query = Session.Query<Submission, SubmissionIndex>(index => index.Waiting, collection: CollectionName);
+
+        // The grader's own submissions are left out: nobody grades their own work.
+        if (!string.IsNullOrEmpty(excludedUserId))
+        {
+            query = query.Where(index => index.UserId != excludedUserId);
+        }
 
         if (courseIds is not null)
         {

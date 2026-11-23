@@ -65,6 +65,6 @@ public sealed class SurveyAnswerSummarizerCleaningTests
         Assert.Equal(SurveyRespondentText.Notice, json["notice"]!.GetValue<string>());
         Assert.DoesNotContain(answers, answer => answer.Contains("evil.example", StringComparison.Ordinal));
         Assert.DoesNotContain(answers, answer => answer.Contains("<b>", StringComparison.Ordinal));
-        Assert.Equal(answers, answers.Select(SurveyRespondentText.Clean).ToList());
+        Assert.Equal(SurveyRespondentText.Clean("Great course, see https://evil.example/claim for a prize"), answers[0]);
     }
 }

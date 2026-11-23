@@ -585,7 +585,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         => _store.PageByCourseworkAsync(courseworkId, skip, take, cancellationToken);
 
     public Task<(int Count, IReadOnlyList<Submission> Items)> ListWaitingAsync(IReadOnlyCollection<string> courseIds, int skip, int take, CancellationToken cancellationToken = default)
-        => _store.PageWaitingAsync(courseIds, skip, take, cancellationToken);
+        => _store.PageWaitingAsync(courseIds, skip, take, cancellationToken: cancellationToken);
 
     /// <summary>
     /// Gets the lock key of the submissions of a learner's enrollment on a coursework item.

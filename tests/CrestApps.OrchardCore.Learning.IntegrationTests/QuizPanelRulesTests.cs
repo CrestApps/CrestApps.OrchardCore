@@ -279,6 +279,30 @@ public sealed class QuizPanelRulesTests
         Assert.Contains(survey.Draft.Pages.SelectMany(page => page.Questions), question => question.Title == "Was the pace right?");
     }
 
+    [Fact]
+    public async Task TheSurveyActivityCounts_ComeGroupedBySurvey_InOneRead()
+    {
+        // Arrange: a quiz answered once.
+        var setup = await CreateQuizCourseAsync(definition => { }, survey => { });
+        using var learner = await _fixture.CreateClientAsync("learner1");
+        var player = await learner.GetStringAsync($"learning/courses/{setup.CourseId}/play/{setup.QuizId}", TestContext.Current.CancellationToken);
+
+        await LearningSurveyTestSupport.AnswerOverHttpAsync(learner, $"learning/quizzes/{setup.QuizId}/start", player, new Dictionary<string, string>
+        {
+            ["q.planet"] = "mars",
+        });
+
+        // Act
+        var counts = await _fixture.InTenantAsync(services =>
+            new global::CrestApps.OrchardCore.Surveys.Core.Results.SurveyActivityCounts(services.GetRequiredService<ISession>())
+                .CountBySurveyAsync(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.True(counts.TryGetValue(setup.SurveyId, out var quiz));
+        Assert.Equal(1, quiz.Completed);
+        Assert.Equal(0, quiz.Pending);
+    }
+
     private static SurveyDefinition Feedback()
         => LearningSurveyTestSupport.Definition("Course feedback", LearningSurveyTestSupport.SingleChoice("again", "Would you take it again?", ("yes", "Yes"), ("no", "No")));
 
