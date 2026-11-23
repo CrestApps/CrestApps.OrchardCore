@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-realtime.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-realtime.js
 	(function(window) {
 		"use strict";
 		var DEFAULT_HEARTBEAT_INTERVAL_MS = 3e4;
@@ -126,5 +126,4 @@
 		}
 		window.contactCenterRealTime = { connect };
 	})(window);
-	//#endregion
 })();

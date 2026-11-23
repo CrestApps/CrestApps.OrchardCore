@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
+	// src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
 	/**
 	* Returns the browser's IANA time zone, or an empty string when it is unknown.
 	* @returns {string}
@@ -59,8 +59,7 @@
 	function instantToCalendarDate(instant, timeZone) {
 		return toCalendarDate(toWallClock(instant, timeZone));
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-widget.js
+	// src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-widget.js
 	/**
 	* Returns a same-origin URL, or an empty string for any other URL.
 	* @param {string} candidate
@@ -161,5 +160,4 @@
 	}
 	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
 	else initialize();
-	//#endregion
 })();

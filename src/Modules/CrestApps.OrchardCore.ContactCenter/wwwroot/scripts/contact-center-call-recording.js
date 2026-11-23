@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-call-recording.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-call-recording.js
 	(function(window, document) {
 		"use strict";
 		var activeClass = "bg-primary-subtle";
@@ -179,5 +179,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})(window, document);
-	//#endregion
 })();

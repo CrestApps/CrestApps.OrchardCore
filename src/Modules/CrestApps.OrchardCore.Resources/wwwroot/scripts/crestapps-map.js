@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/crestapps-map.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/crestapps-map.js
 	window.crestappsMap = (function() {
 		"use strict";
 		const number = (value, fallback) => {
@@ -177,5 +177,4 @@
 			editShapes
 		};
 	})();
-	//#endregion
 })();

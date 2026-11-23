@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Products/Assets/js/product-listing.js
+	// src/Modules/CrestApps.OrchardCore.Products/Assets/js/product-listing.js
 	(function() {
 		"use strict";
 		var wideScreen = window.matchMedia("(min-width: 992px)");
@@ -184,5 +184,4 @@
 		});
 		document.querySelectorAll("[data-product-listing]").forEach(enhance);
 	})();
-	//#endregion
 })();

@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/flatpickr-culture.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/flatpickr-culture.js
 	window.flatpickrCulture = function() {
 		var machineDateFormat = "Y-m-d";
 		var machineDateTimeFormat = "Y-m-d\\TH:i";
@@ -84,5 +84,4 @@
 			formatMachineDateTime
 		};
 	}();
-	//#endregion
 })();

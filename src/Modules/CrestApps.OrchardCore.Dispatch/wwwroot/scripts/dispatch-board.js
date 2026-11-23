@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Dispatch/Assets/js/dispatch-board.js
+	// src/Modules/CrestApps.OrchardCore.Dispatch/Assets/js/dispatch-board.js
 	(function() {
 		"use strict";
 		const root = document.getElementById("dispatch-board");
@@ -439,5 +439,4 @@
 		load();
 		connect();
 	})();
-	//#endregion
 })();

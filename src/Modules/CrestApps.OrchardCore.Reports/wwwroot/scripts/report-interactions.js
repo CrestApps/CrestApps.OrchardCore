@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-interactions.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-interactions.js
 	(function(root) {
 		"use strict";
 		var SECTION = "[data-report-selectable]";
@@ -194,5 +194,4 @@
 			else start();
 		}
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
 })();

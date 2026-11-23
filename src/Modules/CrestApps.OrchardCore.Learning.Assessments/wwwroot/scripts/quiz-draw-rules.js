@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-draw-summary.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-draw-summary.js
 	/**
 	* @typedef {{ tags?: string[], difficulty?: number }} QuestionSummary
 	*/
@@ -48,8 +48,7 @@
 			});
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-draw-rules.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-draw-rules.js
 	var summaries = /* @__PURE__ */ new Map();
 	function picker(select) {
 		if (!select || !window.Selectpicker) return null;
@@ -154,5 +153,4 @@
 	}
 	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAll);
 	else initAll();
-	//#endregion
 })();
