@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -212,6 +213,9 @@ public sealed class TaxReturnsController : Controller
         var entry = new TaxReturnPaymentEntry { Return = taxReturn };
 
         await _paymentDisplayManager.UpdateEditorAsync(entry, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        // Recording the payment saves the return, so the return's own rules run first, as for any other write.
+        await CatalogEntryValidation.ValidateAsync(_returns, taxReturn, _updateModelAccessor.ModelUpdater, nameof(TaxReturn), HttpContext.RequestAborted);
 
         if (!ModelState.IsValid)
         {
