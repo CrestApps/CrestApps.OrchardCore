@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Taxation.Core;
@@ -8,6 +9,7 @@ using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Recipes;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.BackgroundTasks;
@@ -33,6 +35,7 @@ public sealed class TaxReturnsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTaxReturnsCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxReturn>, TaxReturnHandler>());
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TaxationConstants.TaxReturnsCollectionName));
         services.AddDataMigration<TaxReturnsMigrations>()
             .AddIndexProvider<TaxReturnIndexProvider>();
@@ -94,6 +97,7 @@ public sealed class EFilingStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddEFilingCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EFileSubmission>, EFileSubmissionHandler>());
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TaxationConstants.TaxReturnsCollectionName));
         services.AddDataMigration<EFilingMigrations>()
             .AddIndexProvider<EFileSubmissionIndexProvider>();

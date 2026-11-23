@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Core.Services;
@@ -323,6 +324,8 @@ public sealed class TaxReturnsTests
                 services.AddSingleton<ILocalClock>(new FixedOffsetLocalClock(() => CalendarTestHarness.Now, TimeSpan.FromHours(-5)));
                 services.AddTaxReturnsCore();
                 services.AddEFilingCore();
+                services.AddScoped<ICatalogEntryHandler<TaxReturn>, TaxReturnHandler>();
+                services.AddScoped<ICatalogEntryHandler<EFileSubmission>, EFileSubmissionHandler>();
                 services.AddSingleton<FixedDataProvider>();
                 services.AddSingleton<ITaxReturnDataProvider>(provider => provider.GetRequiredService<FixedDataProvider>());
                 services.AddSingleton<RecordingObserver>();

@@ -841,7 +841,8 @@ public sealed class TaxReturnService : ITaxReturnService
 public static class TaxReturnsCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the returns, their service and the generic form. The registrations they file under come from Sales Tax
+    /// Registers the returns, their service and the generic form; the feature that imports returns registers
+    /// <see cref="TaxReturnHandler"/>. The registrations they file under come from Sales Tax
     /// (<c>AddTaxationCore</c>). Calling it twice adds nothing twice.
     /// </summary>
     /// <param name="services">The services.</param>
@@ -853,7 +854,6 @@ public static class TaxReturnsCoreServiceCollectionExtensions
         services.TryAddScoped<TaxReturnStore>();
         services.TryAddScoped<ITaxReturnManager, TaxReturnManager>();
         services.TryAddScoped<ICatalogManager<TaxReturn>>(serviceProvider => serviceProvider.GetRequiredService<ITaxReturnManager>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxReturn>, TaxReturnHandler>());
         services.TryAddScoped<ITaxReturnService, TaxReturnService>();
         services.AddTaxReturnForm<GenericTaxReturnForm>();
 

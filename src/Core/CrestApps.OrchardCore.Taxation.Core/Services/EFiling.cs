@@ -785,7 +785,8 @@ public static class EFilingCoreServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the submissions, the e-filing service, the manual channel, and tax returns as targets with their JSON
-    /// format. Calling it twice adds nothing twice.
+    /// format; the feature that imports submissions registers <see cref="EFileSubmissionHandler"/>. Calling it twice adds
+    /// nothing twice.
     /// </summary>
     /// <param name="services">The services.</param>
     /// <returns>The services.</returns>
@@ -796,7 +797,6 @@ public static class EFilingCoreServiceCollectionExtensions
         services.TryAddScoped<EFileSubmissionStore>();
         services.TryAddScoped<IEFileSubmissionManager, EFileSubmissionManager>();
         services.TryAddScoped<ICatalogManager<EFileSubmission>>(serviceProvider => serviceProvider.GetRequiredService<IEFileSubmissionManager>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EFileSubmission>, EFileSubmissionHandler>());
         services.TryAddScoped<IEFilingService, EFilingService>();
         services.AddEFileTransport<ManualEFileTransport>();
         services.AddEFileTargetProvider<TaxReturnEFileTargetProvider>();
