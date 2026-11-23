@@ -414,6 +414,56 @@ public sealed class SurveysRecipeRoundTripTests
         Assert.Equal("user-learner1", invitation.UserId);
     }
 
+    [Fact]
+    public async Task ImportedInvitations_JoinTheTargetSitesInvitationList_ByName_NotTheSourceSitesId()
+    {
+        // Arrange: on each site the survey has its own "Personal links" list, with a different id.
+        await using var source = await IntegrationsTestHarness.CreateAsync();
+        await SeedSurveyAsync(source);
+
+        // The survey was deployed before its list was made, so each site makes its own.
+        var surveys = await ExportSurveysAsync(source, includeSecrets: false);
+        var sourceListId = IdGenerator.GenerateId();
+        await source.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyCollectorStore>().CreateAsync(new SurveyCollector { ItemId = sourceListId, SurveyId = SurveyId, Name = "Personal links", Kind = SurveyCollectorKinds.Invitation, Token = "sourcetokensourcetoken1" });
+            await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(new SurveyInvitation { ItemId = InvitationId, SurveyId = SurveyId, CollectorId = sourceListId, Email = "guest@example.com", TokenHash = "abc123", Status = SurveyInvitationStatus.Sent });
+        });
+
+        var invitations = await source.RunAsync(async services => new JsonObject
+        {
+            ["name"] = SurveysRecipeSteps.Invitations,
+            ["Invitations"] = await services.GetRequiredService<SurveysRecipeExporter>().ExportInvitationsAsync((await services.GetRequiredService<SurveyInvitationStore>().GetAllAsync()).ToList()),
+        });
+
+        await using var target = await IntegrationsTestHarness.CreateAsync();
+        await target.ImportAsync<SurveysRecipeStep>(surveys);
+        var targetSurveyId = (await target.RunAsync(async services => await services.GetRequiredService<SurveyStore>().FindByNameAsync("csat"))).ItemId;
+        var targetListId = IdGenerator.GenerateId();
+        await target.RunAsync(async services => await services.GetRequiredService<SurveyCollectorStore>().CreateAsync(new SurveyCollector { ItemId = targetListId, SurveyId = targetSurveyId, Name = "Personal links", Kind = SurveyCollectorKinds.Invitation, Token = "targettokentargettoken1" }));
+
+        // A third site where the survey has no invitation list at all.
+        await using var bare = await IntegrationsTestHarness.CreateAsync();
+        await bare.ImportAsync<SurveysRecipeStep>(surveys);
+
+        // Act
+        var errors = await target.ImportAsync<SurveyInvitationsRecipeStep>(invitations);
+        var bareErrors = await bare.ImportAsync<SurveyInvitationsRecipeStep>(invitations);
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.Empty(bareErrors);
+        Assert.Equal("Personal links", invitations["Invitations"]![0]!["CollectorName"]!.GetValue<string>());
+        Assert.Equal(targetListId, Assert.Single(await target.RunAsync(async services => await services.GetRequiredService<SurveyInvitationStore>().GetAllAsync())).CollectorId);
+
+        var (bareInvitation, bareLists) = await bare.RunAsync(async services => (
+            Assert.Single(await services.GetRequiredService<SurveyInvitationStore>().GetAllAsync()),
+            (await services.GetRequiredService<SurveyCollectorStore>().GetAllAsync()).Where(collector => collector.Kind == SurveyCollectorKinds.Invitation).ToList()));
+        var bareList = Assert.Single(bareLists);
+        Assert.Equal(bareList.ItemId, bareInvitation.CollectorId);
+        Assert.NotEqual(sourceListId, bareInvitation.CollectorId);
+    }
+
     internal static Task SeedSurveyAsync(IntegrationsTestHarness harness)
         => harness.RunAsync(async services =>
         {

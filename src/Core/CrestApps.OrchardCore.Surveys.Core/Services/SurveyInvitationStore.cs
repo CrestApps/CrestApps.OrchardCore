@@ -209,6 +209,67 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
+    /// Visits every invitation of a collector in some statuses, oldest first, a page at a time: each page's changes are
+    /// written and let go of before the next is read, so a large list is never held in memory at once and no invitation
+    /// hides the ones after it. The walk stops at the last row there when it began, so a saved invitation (whose index
+    /// row is written again under a new id) is never visited twice.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="statuses">The statuses visited.</param>
+    /// <param name="visit">The visit, which saves what it changes through this store.</param>
+    /// <param name="pageSize">The number of invitations read at a time.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task VisitByCollectorAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, Func<SurveyInvitation, Task> visit, int pageSize = 500, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+        ArgumentNullException.ThrowIfNull(visit);
+
+        if (string.IsNullOrEmpty(collectorId) || statuses.Count == 0)
+        {
+            return;
+        }
+
+        var names = statuses.Select(status => status.ToString()).ToArray();
+        var last = await Session.QueryIndex<SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Status.IsIn(names), collection: CollectionName)
+            .OrderByDescending(index => index.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        var upToId = last?.Id ?? 0;
+        var afterId = 0L;
+
+        while (afterId < upToId)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var rows = (await Session.QueryIndex<SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Status.IsIn(names) && index.Id > afterId && index.Id <= upToId, collection: CollectionName)
+                .OrderBy(index => index.Id)
+                .Take(Math.Max(1, pageSize))
+                .ListAsync(cancellationToken)).ToList();
+
+            if (rows.Count == 0)
+            {
+                break;
+            }
+
+            afterId = rows[^1].Id;
+
+            var invitations = await GetAsync(rows.Select(row => row.ItemId).ToArray(), cancellationToken);
+
+            foreach (var invitation in invitations)
+            {
+                await visit(invitation);
+            }
+
+            await Session.FlushAsync(cancellationToken);
+
+            foreach (var invitation in invitations)
+            {
+                Session.Detach(invitation, CollectionName);
+            }
+        }
+    }
+
+    /// <summary>
     /// Lists the invitations of a survey, oldest first.
     /// </summary>
     /// <param name="surveyId">The survey.</param>

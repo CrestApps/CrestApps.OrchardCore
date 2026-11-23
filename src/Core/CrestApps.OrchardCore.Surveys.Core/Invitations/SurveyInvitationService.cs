@@ -231,6 +231,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             invitation.Status = SurveyInvitationStatus.Pending;
         }
 
+        // Inviting again retries an invitation that bounced or whose address had opted out: it is pending again, and the
+        // sender and the opt-out checks decide again when it is sent.
+        if (invitation.Status is SurveyInvitationStatus.Bounced or SurveyInvitationStatus.OptedOut)
+        {
+            invitation.Status = SurveyInvitationStatus.Pending;
+            invitation.Properties.Remove(nameof(SurveyInvitationHold));
+        }
+
         if (request.Context is { IsEmpty: false } context)
         {
             invitation.Put(new SurveyInvitationContext { Context = context.ToString() });
@@ -312,11 +320,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         var now = _clock.UtcNow;
 
-        foreach (var invitation in await _invitationStore.ListByCollectorAsync(collector.ItemId, _remindable, SurveysConstants.PageSize, cancellationToken))
+        // Every open invitation of the list is visited, a page at a time, so invitations that used up their reminders
+        // never hide the ones after them; expiry is checked before the due check, so an expired invitation leaves the
+        // open ones even when no reminder is due.
+        await _invitationStore.VisitByCollectorAsync(collector.ItemId, _remindable, async invitation =>
         {
-            if (justSent.Contains(invitation.ItemId) || (!force && !IsReminderDue(invitation, settings, now)))
+            if (justSent.Contains(invitation.ItemId))
             {
-                continue;
+                return;
             }
 
             if (invitation.ExpiresUtc is { } expires && expires <= now)
@@ -324,7 +335,12 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 invitation.Status = SurveyInvitationStatus.Expired;
                 await _invitationStore.UpdateAsync(invitation, cancellationToken);
 
-                continue;
+                return;
+            }
+
+            if (!force && !IsReminderDue(invitation, settings, now))
+            {
+                return;
             }
 
             // An anonymous response never names its invitation, so its completion is read from the participation
@@ -334,7 +350,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 invitation.Status = SurveyInvitationStatus.Completed;
                 await _invitationStore.UpdateAsync(invitation, cancellationToken);
 
-                continue;
+                return;
             }
 
             var link = await _links.BuildAsync(await ReissueTokenAsync(survey, invitation, cancellationToken));
@@ -343,7 +359,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             {
                 sent++;
             }
-        }
+        }, SurveysConstants.PageSize, cancellationToken);
 
         return sent;
     }
@@ -418,21 +434,30 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return collector;
         }
 
-        collector = new SurveyCollector
-        {
-            ItemId = IdGenerator.GenerateId(),
-            SurveyId = survey.ItemId,
-            Name = "Personal links",
-            Kind = SurveyCollectorKinds.Invitation,
-            Token = SurveyNames.NewToken(),
-            Status = CollectorStatus.Open,
-            CreatedUtc = _clock.UtcNow,
-        };
+        collector = NewPersonalLinksCollector(survey.ItemId, _clock.UtcNow);
 
         await _collectorStore.CreateAsync(collector, cancellationToken);
 
         return collector;
     }
+
+    /// <summary>
+    /// Makes (without saving) a survey's collector for personal links, the invitation list a survey gets when it has none.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <returns>The collector.</returns>
+    public static SurveyCollector NewPersonalLinksCollector(string surveyId, DateTime utcNow)
+        => new()
+        {
+            ItemId = IdGenerator.GenerateId(),
+            SurveyId = surveyId,
+            Name = "Personal links",
+            Kind = SurveyCollectorKinds.Invitation,
+            Token = SurveyNames.NewToken(),
+            Status = CollectorStatus.Open,
+            CreatedUtc = utcNow,
+        };
 
     /// <summary>
     /// Re-issues the stored token hash and seal lookup value of every invitation of a survey, after its anonymity secret
@@ -516,7 +541,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         // Once the scope's e-mails are held (the daily limit's lock was busy, its sending window passed, or today's
         // limit is reached), an e-mail is held right away, without asking the opt-out checks; they are asked when it is
         // sent. So a batch that stopped sending has only holds left before its save.
-        if (isEmail && _emailLimit.IsClosed)
+        // Without an e-mail service (the Email feature is off) an e-mail is held the same way, and the daily limit's lock
+        // isn't taken for it.
+        if (isEmail && (_emailLimit.IsClosed || !sender.CanSendEmail))
         {
             await HoldAsync(invitation, isReminder, cancellationToken);
 
@@ -553,12 +580,22 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return false;
         }
 
-        var delivered = await sender.SendAsync(survey, collector, invitation, link, isReminder, cancellationToken);
+        var delivery = await sender.SendAsync(survey, collector, invitation, link, isReminder, cancellationToken);
         var now = _clock.UtcNow;
+
+        // A send that may work later (the mail server failed or is down) keeps a first send pending and held, for the
+        // hourly reminder task; one that failed MaxSendAttempts times is marked bounced, so it stops filling the task's
+        // held reads. A reminder simply stays due.
+        if (delivery == SurveyInvitationDelivery.RetryLater)
+        {
+            await FailAsync(invitation, isReminder, cancellationToken);
+
+            return false;
+        }
 
         invitation.Properties.Remove(nameof(SurveyInvitationHold));
 
-        if (!delivered)
+        if (delivery != SurveyInvitationDelivery.Delivered)
         {
             if (!isReminder)
             {
@@ -604,7 +641,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         // Held invitations are e-mails; while today's limit is still reached (or its lock is busy) they all wait for
         // another run.
-        if (held.Count == 0 || !await _emailLimit.CanSendAsync(cancellationToken))
+        if (held.Count == 0 || _senders.LastOrDefault() is not { CanSendEmail: true } || !await _emailLimit.CanSendAsync(cancellationToken))
         {
             return 0;
         }
@@ -641,6 +678,30 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         }
 
         invitation.Put(new SurveyInvitationHold { HeldUtc = _clock.UtcNow });
+        await _invitationStore.UpdateAsync(invitation, cancellationToken);
+    }
+
+    private async Task FailAsync(SurveyInvitation invitation, bool isReminder, CancellationToken cancellationToken)
+    {
+        if (isReminder || invitation.Status != SurveyInvitationStatus.Pending)
+        {
+            return;
+        }
+
+        var hold = invitation.TryGet<SurveyInvitationHold>(out var held) && held is not null ? held : new SurveyInvitationHold { HeldUtc = _clock.UtcNow };
+
+        hold.FailedAttempts++;
+
+        if (hold.FailedAttempts >= SurveyInvitationHold.MaxSendAttempts)
+        {
+            invitation.Status = SurveyInvitationStatus.Bounced;
+            invitation.Properties.Remove(nameof(SurveyInvitationHold));
+        }
+        else
+        {
+            invitation.Put(hold);
+        }
+
         await _invitationStore.UpdateAsync(invitation, cancellationToken);
     }
 

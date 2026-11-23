@@ -203,6 +203,9 @@ internal sealed class SurveysRecipeExporter
 
         var surveyNames = await SurveyNamesAsync(invitations.Select(entry => entry.SurveyId));
         var names = await _userLookup.GetUserNamesAsync(invitations.Select(entry => entry.UserId));
+        var collectorIds = invitations.Select(entry => entry.CollectorId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        IReadOnlyCollection<SurveyCollector> collectors = collectorIds.Length == 0 ? [] : await _collectorStore.GetAsync(collectorIds);
+        var collectorNames = collectors.ToDictionary(collector => collector.ItemId, collector => collector.Name, StringComparer.Ordinal);
         var array = new JsonArray();
 
         foreach (var invitation in invitations)
@@ -210,6 +213,10 @@ internal sealed class SurveysRecipeExporter
             var node = SurveysRecipeJson.Write(invitation, nameof(SurveyInvitation.UserId), nameof(SurveyInvitation.SurveyId));
 
             node["SurveyName"] = surveyNames.GetValueOrDefault(invitation.SurveyId);
+
+            // Collector ids differ between sites (the "Personal links" list gets a new id on each), so the list travels
+            // by name too.
+            node["CollectorName"] = collectorNames.GetValueOrDefault(invitation.CollectorId ?? string.Empty);
 
             if (!string.IsNullOrEmpty(invitation.UserId) && names.TryGetValue(invitation.UserId, out var userName))
             {

@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
 public interface ISurveyInvitationSender
 {
     /// <summary>
+    /// Gets whether e-mail can be sent at all (an e-mail service is turned on); without it, e-mail invitations are held.
+    /// </summary>
+    bool CanSendEmail { get; }
+
+    /// <summary>
     /// Delivers an invitation or a reminder.
     /// </summary>
     /// <param name="survey">The survey.</param>
@@ -16,6 +21,6 @@ public interface ISurveyInvitationSender
     /// <param name="link">The personal link.</param>
     /// <param name="isReminder">Whether this is a reminder.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns><see langword="true"/> when it was delivered.</returns>
-    Task<bool> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default);
+    /// <returns>Whether it was delivered, may be tried again later, or can never be delivered.</returns>
+    Task<SurveyInvitationDelivery> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default);
 }

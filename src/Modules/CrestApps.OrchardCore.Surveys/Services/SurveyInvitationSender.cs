@@ -56,7 +56,11 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
     }
 
     /// <inheritdoc />
-    public async Task<bool> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default)
+    public bool CanSendEmail
+        => _emails.CanSend;
+
+    /// <inheritdoc />
+    public async Task<SurveyInvitationDelivery> SendAsync(Survey survey, SurveyCollector collector, SurveyInvitation invitation, string link, bool isReminder, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(survey);
         ArgumentNullException.ThrowIfNull(invitation);
@@ -77,7 +81,7 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
         {
             if (await _users.GetUserByUniqueIdAsync(invitation.UserId) is not { } user)
             {
-                return false;
+                return SurveyInvitationDelivery.Undeliverable;
             }
 
             await _notifications.SendAsync(user, new NotificationMessage
@@ -90,17 +94,24 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
                 Url = link,
             }, cancellationToken);
 
-            return true;
+            return SurveyInvitationDelivery.Delivered;
         }
 
         if (string.IsNullOrWhiteSpace(invitation.Email))
         {
-            return false;
+            return SurveyInvitationDelivery.Undeliverable;
+        }
+
+        // Without an e-mail service (the Email feature is off) nothing is wrong with the address: the invitation waits.
+        if (!_emails.CanSend)
+        {
+            return SurveyInvitationDelivery.RetryLater;
         }
 
         // Every invitation e-mail carries an unsubscribe link, whatever the collector's message says.
         message += Environment.NewLine + Environment.NewLine + S["To stop getting survey invitations and reminders, open {0}", UnsubscribeLink(link)].Value;
 
+        // A failed send (the mail server refused or is down) is tried again later, not marked bounced.
         return await _emails.SendAsync(new TemplatedEmail
         {
             To = invitation.Email,
@@ -109,7 +120,7 @@ internal sealed class SurveyInvitationSender : ISurveyInvitationSender
         {
             Subject = subject,
             Text = message,
-        }), cancellationToken);
+        }), cancellationToken) ? SurveyInvitationDelivery.Delivered : SurveyInvitationDelivery.RetryLater;
     }
 
     /// <summary>
