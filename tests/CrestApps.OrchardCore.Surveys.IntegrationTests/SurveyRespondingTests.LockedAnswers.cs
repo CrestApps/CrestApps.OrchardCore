@@ -109,7 +109,7 @@ public sealed partial class SurveyRespondingTests
         Assert.Equal(4m, completed.MaxScore);
     }
 
-    private async Task<(string ResponsePath, string Page)> StartQuizAsync(HttpClient http, string token)
+    private static async Task<(string ResponsePath, string Page)> StartQuizAsync(HttpClient http, string token)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var landing = await http.GetStringAsync($"s/{token}", cancellationToken);
