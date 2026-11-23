@@ -77,7 +77,7 @@ Add an OpenAI connection under `OrchardCore:CrestApps:AI:Connections`:
 
 `ClientName` ties a deployment to its provider and `ConnectionName` to the connection it authenticates with.
 `Features` declares what the model can do; which deployment serves chat, utility, embedding and the rest is
-decided by the deployment slots under **Configuration** -> **Artificial Intelligence** -> **Settings**, so one
+decided by the deployment slots under **Configuration** → **Artificial Intelligence** → **Settings**, so one
 deployment can back several slots. See [Model capabilities](../model-capabilities.md) for the full list of
 features and slots.
 
@@ -152,7 +152,7 @@ Use `AIProviderConnections` to create the connection and `AIDeployment` to creat
 
 ## Selecting deployments
 
-Choose deployments explicitly on AI profiles, templates, or chat interactions when you need provider-specific model selection. For tenant-wide fallbacks, configure **Settings -> Artificial Intelligence -> Default Deployments**.
+Choose deployments explicitly on AI profiles, templates, or chat interactions when you need provider-specific model selection. For tenant-wide fallbacks, configure **Settings** → **Artificial Intelligence** → **Default Deployments**.
 
 ## Other OpenAI-compatible providers
 

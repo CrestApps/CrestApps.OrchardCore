@@ -32,7 +32,7 @@ The AI does not read your files whole. It splits them into passages and stores t
 | --- | --- |
 | A search service (Elasticsearch or Azure AI Search) for the knowledge indexes | IT; see the [AI documents](../../ai/documents/index.md) and [AI data sources](../../ai/data-sources/index.md) technical pages |
 | An AI connection with a chat deployment, and one that can create the search data (embeddings) | Your administrator or AI content manager; see [AI connections](../ai/connections.md) |
-| For documents: **AI Documents for Profiles**, the indexing feature for your search service (**AI Documents indexing using Elasticsearch** or **AI Documents indexing using Azure AI Search**), and **AI Documents (PDF)** or **AI Documents (OpenXml)** for PDF, Word and PowerPoint files | Your administrator, in **Tools > Features** |
+| For documents: **AI Documents for Profiles**, the indexing feature for your search service (**AI Documents indexing using Elasticsearch** or **AI Documents indexing using Azure AI Search**), and **AI Documents (PDF)** or **AI Documents (OpenXml)** for PDF, Word and PowerPoint files | Your administrator, in **Tools** → **Features** |
 | For data sources: the data source feature for your search service (**AI Data Sources - Elasticsearch** or **AI Data Sources - Azure AI Search**; **AI Data Sources - PostgreSQL** for a database), and **AI Web Crawlers** or **AI File Sources** if the knowledge lives on a website or a file server | Your administrator |
 | Permission to manage AI profiles and AI data sources | Your administrator; see [Roles and permissions](../getting-started/roles-and-permissions.md) |
 
@@ -40,10 +40,10 @@ The AI does not read your files whole. It splits them into passages and stores t
 
 ## Steps
 
-1. **Set up the knowledge indexes.** The administrator adds the indexes under **Search > Indexing** and picks the default document index under **Settings > Artificial Intelligence**. See [Knowledge](../ai/knowledge.md).
-2. **Pick the profile.** Create or open the AI profile that should use the knowledge, under **Artificial Intelligence > Profiles**. See [AI profiles](../ai/profiles.md).
+1. **Set up the knowledge indexes.** The administrator adds the indexes under **Search** → **Indexing** and picks the default document index under **Settings** → **Artificial Intelligence**. See [Knowledge](../ai/knowledge.md).
+2. **Pick the profile.** Create or open the AI profile that should use the knowledge, under **Artificial Intelligence** → **Profiles**. See [AI profiles](../ai/profiles.md).
 3. **Upload documents.** On the profile's **Knowledge** tab, upload your files: text, Markdown, HTML, PDF, Word or PowerPoint, depending on the features that are on. They become background knowledge for every conversation with the profile. See [Knowledge](../ai/knowledge.md).
-4. **Connect larger or changing knowledge as a data source.** For your site's own content, a search index, a database table, or a website, add a data source under **Artificial Intelligence > Data Sources** with **Add Data Source**. Website pages are collected by a web crawler under **Artificial Intelligence > Web Crawlers**. Data sources keep themselves up to date as the source changes. See [Knowledge](../ai/knowledge.md).
+4. **Connect larger or changing knowledge as a data source.** For your site's own content, a search index, a database table, or a website, add a data source under **Artificial Intelligence** → **Data Sources** with **Add Data Source**. Website pages are collected by a web crawler under **Artificial Intelligence** → **Web Crawlers**. Data sources keep themselves up to date as the source changes. See [Knowledge](../ai/knowledge.md).
 5. **Attach the data source to the profile.** Pick the data source on the profile's **Knowledge** tab.
 6. **Decide how strict it is.** Tick **Restrict answers to retrieved data only** if the assistant must not answer from general knowledge. Leave it off if your knowledge should come first but the AI may fill gaps. See [Knowledge](../ai/knowledge.md).
 7. **Test and refine.** Chat with the profile and ask questions your documents answer. Check the references under each answer. See [AI chat](../ai/chat.md).
@@ -63,5 +63,5 @@ The AI does not read your files whole. It splits them into passages and stores t
 - Remove a document from the profile when it is replaced, and upload the new one.
 - Spreadsheets cannot be uploaded as profile knowledge; they are for data analysis in chat, not for answering questions.
 - If the assistant ignores a document you uploaded to the profile, check that the **AI Documents** index has an **Embedding deployment**. The field is on the index form when **AI Documents for Chat Interactions** is enabled; a document index without one is not searched, so the assistant answers as if the document were not there. Also remove any tools or connections the profile does not need: with them, the assistant may call tools instead of looking in your knowledge first.
-- If the profile shows a warning that the index is not configured, ask your administrator to pick the document index under **Settings > Artificial Intelligence**.
+- If the profile shows a warning that the index is not configured, ask your administrator to pick the document index under **Settings** → **Artificial Intelligence**.
 - To let people upload their own files during a chat, see [Chat interactions](../ai/chat-interactions.md).

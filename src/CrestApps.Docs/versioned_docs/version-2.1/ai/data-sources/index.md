@@ -29,7 +29,7 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 
 ## Getting Started
 
-1. **Create a Knowledge Base Index** — In the admin menu go to **Search > Indexing**, click **Add Index**, then select one of:
+1. **Create a Knowledge Base Index** — In the admin menu go to **Search** → **Indexing**, click **Add Index**, then select one of:
    - **AI Knowledge Base Index (Elasticsearch)**
    - **AI Knowledge Base Index (Azure AI Search)**
 2. **Add a Data Source** — Click **Add Data Source**, choose a source type from the modal, then configure the shared destination index and field mappings plus any source-specific connection settings.
@@ -55,7 +55,7 @@ Existing data sources keep working without manual changes. Older records that di
 
 ### Site Settings
 
-Navigate to **Settings > Artificial Intelligence** to configure global data source defaults:
+Navigate to **Settings** → **Artificial Intelligence** to configure global data source defaults:
 
 - **Top N Documents** — Default number of documents to retrieve (1–50).
 - **Strictness** — Default strictness level for search relevance (1–5).
@@ -179,7 +179,7 @@ This means the default synchronization flow is:
 3. The Orchard queue batches the work for the current request and schedules `HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(...)` from a deferred task.
 4. The background job resolves the Orchard-specific `IAIDataSourceIndexingService` implementation, reindexes the mapped knowledge-base documents, and the nightly alignment task still repairs any drift that remains.
 
-Synchronizing a **source** index profile from **Search > Indexing** also queues a full re-sync for every AI data source whose **Source Index** matches that profile. This is the expected recovery path when you rebuild Orchard's built-in **Content** index and want the mapped `ai_knowledge_base_warehouse` documents regenerated from the rebuilt source index.
+Synchronizing a **source** index profile from **Search** → **Indexing** also queues a full re-sync for every AI data source whose **Source Index** matches that profile. This is the expected recovery path when you rebuild Orchard's built-in **Content** index and want the mapped `ai_knowledge_base_warehouse` documents regenerated from the rebuilt source index.
 
 For manual recovery or one-off reprocessing of a single mapping, use the **Sync** action in the Data Sources admin UI.
 
@@ -198,19 +198,19 @@ Each data source requires a **Knowledge Base Index** that stores chunked documen
 To populate the index correctly:
 
 1. **Configure an AI provider connection with an embedding deployment:**
-   - Navigate to **Artificial Intelligence > Connections** in the admin dashboard.
+   - Navigate to **Artificial Intelligence** → **Connections** in the admin dashboard.
    - Edit or create a connection (for example Azure OpenAI or OpenAI).
    - Set the embedding deployment to your embedding model (for example `text-embedding-ada-002` or `text-embedding-3-small`).
    - Save the connection.
 
 2. **Configure the AI Knowledge Base Warehouse index:**
-   - Navigate to **Search > Indexing** in the admin dashboard.
+   - Navigate to **Search** → **Indexing** in the admin dashboard.
    - Find the **AI Knowledge Base Warehouse** index.
    - Edit it and select the embedding connection.
    - Save the index.
 
 3. **Trigger a sync:**
-   - Go to **Artificial Intelligence > Data Sources**.
+   - Go to **Artificial Intelligence** → **Data Sources**.
    - Click **Sync** on each data source to index documents with embeddings.
 
 :::note

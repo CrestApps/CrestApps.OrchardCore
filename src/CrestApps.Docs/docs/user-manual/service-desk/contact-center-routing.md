@@ -10,7 +10,7 @@ A desk can hand its new tickets to a Contact Center queue, so the queue's routin
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Desks, then a desk |
+| **Menu** | **Service Desk** → **Desks**, then a desk |
 | **Permission** | Manage ticket settings |
 | **Feature** | Tickets for Contact Center |
 
@@ -18,8 +18,8 @@ A desk can hand its new tickets to a Contact Center queue, so the queue's routin
 
 ## Set it up
 
-1. Turn on **Tickets for Contact Center** under **Tools > Features**.
-2. Go to **Service Desk > Desks** and edit a desk.
+1. Turn on **Tickets for Contact Center** under **Tools** → **Features**.
+2. Go to **Service Desk** → **Desks** and edit a desk.
 3. Choose its **Contact Center queue** and select **Save**.
 
 ## What happens

@@ -12,7 +12,7 @@ The **Messaging workspace** is a shared inbox for text conversations with custom
 
 | | |
 | --- | --- |
-| **Menu** | Messaging > Inbox, Messaging > Broadcasts, Messaging > Templates |
+| **Menu** | **Messaging** → **Inbox**, **Messaging** → **Broadcasts**, **Messaging** → **Templates** |
 | **Permissions** | Use the messaging workspace, plus one of: View your own messaging conversations; View your own and your queues' unclaimed messaging conversations (agents); View all messaging conversations (supervisors). Send group messages (broadcasts); Manage the messaging workspace (templates) |
 | **Features** | Omnichannel Messaging Workspace and SMS Messaging Channel |
 
@@ -22,12 +22,12 @@ The **Messaging workspace** is a shared inbox for text conversations with custom
 
 <YouTube video="messaging-setup" title="Video of setting up text messages from the features to a test text" />
 
-1. Enable **SMS Messaging Channel** under **Tools > Features**. It turns on the Omnichannel Messaging Workspace and everything it needs. Without a channel such as SMS, the inbox has nothing to send or receive on.
-2. Set up the SMS provider under **Settings > Communication > SMS** (see [Phone and SMS setup](telephony-settings.md)). Each enabled provider adds a tab; **Default SMS provider** on the **Providers** tab chooses the one used by numbers that name none. Send a test text from **Tools > Testing > SMS Test** before your team relies on it.
-3. Add each SMS number under **Interaction Center > Management > Omnichannel Addresses** with **Text messages (SMS)** ticked (see [Omnichannel addresses](channel-endpoints.md)), then add a **Text messages** entry point under **Interaction Center > Management > Inbound Entry Points** that sends its texts to an agent or a queue. See [Text entry points](entry-points-and-ivr.md#text-entry-points).
+1. Enable **SMS Messaging Channel** under **Tools** → **Features**. It turns on the Omnichannel Messaging Workspace and everything it needs. Without a channel such as SMS, the inbox has nothing to send or receive on.
+2. Set up the SMS provider under **Settings** → **Communication** → **SMS** (see [Phone and SMS setup](telephony-settings.md)). Each enabled provider adds a tab; **Default SMS provider** on the **Providers** tab chooses the one used by numbers that name none. Send a test text from **Tools** → **Testing** → **SMS Test** before your team relies on it.
+3. Add each SMS number under **Interaction Center** → **Management** → **Omnichannel Addresses** with **Text messages (SMS)** ticked (see [Omnichannel addresses](channel-endpoints.md)), then add a **Text messages** entry point under **Interaction Center** → **Management** → **Inbound Entry Points** that sends its texts to an agent or a queue. See [Text entry points](entry-points-and-ivr.md#text-entry-points).
 4. Give the roles that staff the inbox the permissions in the table above. The permissions cover every channel; there is no separate permission per channel.
 
-Your administrator also connects the SMS provider to the site, so that customers' texts and delivery receipts reach the inbox. For Twilio, the address to give Twilio shows as **Webhook URL** on the Twilio tab of **Settings > Communication > SMS**. The [technical manual](../omnichannel/messaging-workspace.md#setting-up-sms) has the details.
+Your administrator also connects the SMS provider to the site, so that customers' texts and delivery receipts reach the inbox. For Twilio, the address to give Twilio shows as **Webhook URL** on the Twilio tab of **Settings** → **Communication** → **SMS**. The [technical manual](../omnichannel/messaging-workspace.md#setting-up-sms) has the details.
 
 ## Work the inbox
 
@@ -37,7 +37,7 @@ The video covers why a shared inbox helps, how the page is laid out, and how to 
 
 <YouTube video="messaging-inbox" title="Video of searching, filtering and answering a conversation" start={82} end={180} />
 
-Open **Messaging > Inbox**. The left side lists your customers, most recent first; the right side shows the conversation you open. A customer who wrote on several channels appears only once, with the unread messages of all their channels added together and an icon for each channel they used.
+Open **Messaging** → **Inbox**. The left side lists your customers, most recent first; the right side shows the conversation you open. A customer who wrote on several channels appears only once, with the unread messages of all their channels added together and an icon for each channel they used.
 
 | Control | What it does |
 | --- | --- |
@@ -74,9 +74,9 @@ A banner above the composer warns you during the customer's **quiet hours**: out
 
 You do not have to keep the inbox open to hear about new work.
 
-- The **Messaging > Inbox** menu item shows how many conversations are waiting for you: the unread open conversations assigned to you, plus the unread open conversations nobody has taken yet in the queues you serve. The **Messaging** menu icon turns red while that number is above zero, so a collapsed menu still shows that something is waiting. The number drops as soon as you open the conversation.
+- The **Messaging** → **Inbox** menu item shows how many conversations are waiting for you: the unread open conversations assigned to you, plus the unread open conversations nobody has taken yet in the queues you serve. The **Messaging** menu icon turns red while that number is above zero, so a collapsed menu still shows that something is waiting. The number drops as soon as you open the conversation.
 - On any other admin page, a notice pops up at the bottom right when a customer writes on a conversation you can see (*New message from* the customer's number), when a conversation is transferred to you, and when one is sent back to a queue you serve. Click the notice to open the conversation. It closes on its own after a few seconds.
-- The notices and the count start once you have opened **Messaging > Inbox** for the first time, because that first visit ties you to your queues.
+- The notices and the count start once you have opened **Messaging** → **Inbox** for the first time, because that first visit ties you to your queues.
 - New messages appear in the open conversation as they arrive, and the customer moves to the top of the list. If your connection drops, the conversation catches up within seconds and the list within half a minute.
 
 Browsing other admin pages does not count as being at the inbox: queues set to routed distribution only hand new conversations to agents whose **Inbox** is open.
@@ -148,7 +148,7 @@ You can also click the **Send SMS** button beside any phone field on admin pages
 
 Templates are canned responses agents insert into a reply. Use them for answers you give often, such as your opening hours.
 
-1. Open **Messaging > Templates** and click **Add template**.
+1. Open **Messaging** → **Templates** and click **Add template**.
 2. Enter a **Name** agents will recognize and the **Body** text, then click **Save**. Write `{{ Contact.DisplayName }}` where the contact's name goes, such as `Hi {{ Contact.DisplayName }}`; it's filled in when an agent inserts the template. If the placeholders are mistyped, the template isn't saved and the message says what's wrong. **Fill in placeholders** is selected for a new template; to insert braces as they are, clear it. Templates from before placeholders existed have it cleared, so select it to use placeholders in one.
 
 In the inbox, the list **Insert a canned response...** above the message box shows the templates. Pick one and its text fills the message box as a draft, which you can change before you send it. Anyone who can use the messaging workspace can insert a template; adding and changing them needs the **Manage the messaging workspace** permission.
@@ -161,7 +161,7 @@ Your administrator can copy templates to another site through a deployment plan.
 
 A broadcast sends the same message to many people; each recipient gets their own one-to-one thread and cannot see the others, and replies come back to the inbox.
 
-1. Open **Messaging > Broadcasts** and click **New broadcast**.
+1. Open **Messaging** → **Broadcasts** and click **New broadcast**.
 2. Enter a **Name**, pick **Send from** (the address decides the channel), choose **Recipients** (search your contacts and leads by name or number; only people with an address on that channel are offered) and add **Additional addresses** for numbers that are not in your contacts (one per line or comma-separated, in international format such as `+12015550123`).
 3. Type the **Message** and click **Queue broadcast**.
 

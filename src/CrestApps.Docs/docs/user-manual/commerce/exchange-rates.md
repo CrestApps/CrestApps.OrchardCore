@@ -10,13 +10,13 @@ If you bill customers in more than one currency, keep exchange rates so every in
 
 ## Set the reporting currency
 
-1. Go to **Settings > Commerce > Exchange Rates**.
+1. Go to **Settings** → **Commerce** → **Exchange Rates**.
 2. Enter your **Reporting currency**, such as USD.
 3. Click **Save**.
 
 ## Add a rate
 
-1. Go to **Commerce > Exchange Rates** and click **Add exchange rate**.
+1. Go to **Commerce** → **Exchange Rates** and click **Add exchange rate**.
 2. Enter the **Currency** (such as EUR), what it **Converts to** (your reporting currency), the **Rate** (what one unit is worth, such as 1.08) and the day it holds **From**.
 3. Click **Save**.
 

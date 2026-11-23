@@ -11,7 +11,7 @@ Time you spend on tickets is part of your day in **My time**, with no second tim
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Tickets, then a ticket's **Time** panel |
+| **Menu** | **Service Desk** → **Tickets**, then a ticket's **Time** panel |
 | **Permission** | **Reply to tickets** on the ticket's desk |
 | **Feature** | Tickets and Time Tracker |
 

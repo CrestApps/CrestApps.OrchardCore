@@ -11,7 +11,7 @@ A **gift card** is a code with money on it. A buyer types the code at checkout a
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Gift Cards |
+| **Menu** | **Commerce** → **Gift Cards** |
 | **Permission** | **Manage gift cards** |
 | **Feature** | Gift Cards (it needs Orders) |
 
@@ -29,19 +29,19 @@ A gift card pays like a second way to pay, not like a discount: tax is worked ou
 
 Turning on the feature creates a **Gift card** content type, ready to sell. It is a digital product, so it is never shipped.
 
-1. Open **Content > Content Items**, and create a new **Gift card**.
+1. Open **Content** → **Content Items**, and create a new **Gift card**.
 2. Give it a title, such as *Gift card $50*, and a **Price** of 50. The price is what each card holds.
 3. Publish it, and add it to your shop as you would any product.
 
 The product's editor says *This product is a gift card. Each one bought issues a gift card worth its price, emailed to the buyer once the order is paid; a discount on the order doesn't make the card worth less.* To sell several amounts, create one gift card item per amount, such as $25, $50 and $100.
 
-To make another product type sell gift cards, add the **Gift card** part to it under **Design > Content Definition > Content Types**.
+To make another product type sell gift cards, add the **Gift card** part to it under **Design** → **Content Definition** → **Content Types**.
 
 When an order with gift cards is paid:
 
 - One card is issued for each gift card bought: an order of two $50 cards issues two cards worth $50 each. Each card is worth the item's price, in the order's currency, with a new 16-character code.
 - Each card is emailed to the buyer, at the email on the order. The buyer passes it on to whoever it's for.
-- Each card is listed under **Commerce > Gift Cards**, linked to its order, and the order's **Notes** say *Issued gift card ending 4F2K worth $50 and emailed it to …*. When the email couldn't be sent, the note says so: send the card from its page.
+- Each card is listed under **Commerce** → **Gift Cards**, linked to its order, and the order's **Notes** say *Issued gift card ending 4F2K worth $50 and emailed it to …*. When the email couldn't be sent, the note says so: send the card from its page.
 
 An order paid offline, such as by bank transfer, is placed before the money arrives. Its cards are issued **turned off**, with the note *Turn it on when the order is paid in full, then email it.*, so nobody can spend a card that isn't paid for yet. When the money arrives, open each card, tick **Enabled**, save, and click **Send**.
 
@@ -54,7 +54,7 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 <YouTube video="gift-cards" title="Issuing a gift card by hand" start={130} end={171} />
 <YouTube video="orders" title="Video of issuing a gift card by hand" start={292} end={331} />
 
-1. Open **Commerce > Gift Cards** and click **Issue gift card**.
+1. Open **Commerce** → **Gift Cards** and click **Issue gift card**.
 2. Enter the **Amount**, and check the **Currency** (it starts with your checkout currency).
 3. Fill in the recipient and the other fields you need (below).
 4. Leave **Email the card** ticked to send it to the recipient now.
@@ -78,7 +78,7 @@ A gift card is sold like any product, and your [tax setup](taxes.md) applies to 
 
 <YouTube video="gift-cards" title="Finding gift cards" start={273} end={311} />
 
-**Commerce > Gift Cards** lists the cards, newest first.
+**Commerce** → **Gift Cards** lists the cards, newest first.
 
 - **Search by code, its last 4 characters, or email** at the top: type the whole code, its last four characters, or part of the recipient's email, and press Enter.
 - The status filter in the list header (**Filter by status**) shows **Any status**, **Active**, **Used up**, **Expired** or **Disabled** cards.

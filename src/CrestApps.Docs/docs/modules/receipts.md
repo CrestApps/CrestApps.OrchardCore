@@ -107,7 +107,7 @@ The view maps the receipt, applies the [document template](business-documents#do
 
 ## Settings
 
-Enable the **Receipts** feature, then browse to **Settings → Commerce → Receipts** to configure the issuer branding that appears on every receipt. Access requires the **Manage receipt settings** permission.
+Enable the **Receipts** feature, then browse to **Settings** → **Commerce** → **Receipts** to configure the issuer branding that appears on every receipt. Access requires the **Manage receipt settings** permission.
 
 | Setting | Description |
 | --- | --- |

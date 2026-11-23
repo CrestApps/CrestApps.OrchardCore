@@ -10,7 +10,7 @@ Workflows let a report work for you without anyone opening it. Email a report to
 
 | | |
 | --- | --- |
-| **Menu** | Design > Workflows |
+| **Menu** | **Design** → **Workflows** |
 | **Permission** | Manage workflows |
 | **Feature** | Report Builder, with Workflows. Emailing needs Email, with a configured provider. Saving files needs Media. |
 
@@ -59,7 +59,7 @@ To find a filter's ID, run the report, set the filter and click **Show**: the ad
 
 This is the way to email a report you built in the Report Builder. **Report Subscriptions** (see [Reports](../reports.md#email-a-report-on-a-schedule)) cover the reports under **Reports** that modules provide, and cannot be used for a Report Builder report.
 
-1. Go to **Design > Workflows** and click **Create Workflow**. Name it, for example *Daily sales*, and save.
+1. Go to **Design** → **Workflows** and click **Create Workflow**. Name it, for example *Daily sales*, and save.
 2. Add the **Timer Event** from the **Background** category as the start activity. Set its schedule, such as `0 7 * * *` for 7:00 every day.
 3. Add **Email Report**. Choose the report, and enter the recipients in **To**. Leave **Subject** empty to use the report's title.
 4. Write a **Message** if you want one. Keep **Attachment** on **CSV**, or choose **Excel (.xlsx)** or **PDF** (each when its feature is on), or **No attachment** to send only the tables.
@@ -97,7 +97,7 @@ The task keeps the link for the next activities, read in Liquid as `{{ Workflow.
 | `Recipients` | The user names of the recipients. |
 | `Notified` | The recipients the email was sent to. |
 
-The link appears on the report's **Sharing** tab with your note, and under **Tools > Shared Links**, where you can revoke it like any other link. Set the site's base URL under **Settings > General** so links created on a timer are complete.
+The link appears on the report's **Sharing** tab with your note, and under **Tools** → **Shared Links**, where you can revoke it like any other link. Set the site's base URL under **Settings** → **General** so links created on a timer are complete.
 
 ## React when a report is run
 

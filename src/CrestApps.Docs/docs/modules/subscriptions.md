@@ -58,8 +58,8 @@ Each content item of that type becomes a purchasable plan, editable and securabl
 
 Plans are listed by the [Product Listing](products#product-listing) feature, like any other product. There is no built-in plans page. To publish one:
 
-1. Enable **Product Listing** under **Tools → Features**.
-2. Create a **Product Listing** content item (**Commerce → Product Listings** or **Content → New → Product Listing**), give it a title and a permalink such as `plans`, choose **Only these product types** and tick your plan content types.
+1. Enable **Product Listing** under **Tools** → **Features**.
+2. Create a **Product Listing** content item (**Commerce** → **Product Listings** or **Content** → **New** → **Product Listing**), give it a title and a permalink such as `plans`, choose **Only these product types** and tick your plan content types.
 3. Choose its default sort. **Recommended** orders the plans by the **Position** on their **Product** part (or their `Sort` value when they have none); *Price: low to high* is the other common choice.
 4. Plans rarely need filters, so untick **Show filters** and **Let visitors change the sort**, then publish it.
 
@@ -148,7 +148,7 @@ Subscription state is edited from four directions at once: a gateway webhook, a 
 | Expire | Ends the agreement when the grace window elapses or the agreed cycles are all billed. |
 | Sync from provider | Adopts the gateway's period, pending cancellation, and status. It will not revive an agreement cancelled locally, because that would start billing a customer who already left. |
 
-The dunning grace period is 7 days by default. It is not a field of **Settings > Subscriptions**, which has only **Allow guest sign-up**, **Currency** and the roles a plan may give. A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
+The dunning grace period is 7 days by default. It is not a field of **Settings** → **Subscriptions**, which has only **Allow guest sign-up**, **Currency** and the roles a plan may give. A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
 
 A background sweep runs every thirty minutes. It expires agreements whose grace window has elapsed and closes those that have billed every cycle they were sold for. It never charges anyone: a gateway-backed agreement is billed by the gateway, and an offline one is invoiced by its own provider's renewal path.
 
@@ -242,7 +242,7 @@ nothing, so a customer is not told their payment failed every time something tou
 
 ## Getting started quickly
 
-The **Commerce starter** recipe (under **Configuration → Recipes**) enables the suite, creates a `Member`
+The **Commerce starter** recipe (under **Configuration** → **Recipes**) enables the suite, creates a `Member`
 role, defines a **Membership Plan** content type carrying a price and an entitlement, publishes a `$10`
 monthly plan that grants the `Member` role, and publishes a **Plans** page at `/plans` that lists it. It is a
 starting point to edit rather than a production configuration: pick your own currency, price, and roles before
@@ -276,7 +276,7 @@ Instead the checkout only records a **provisioning job**, and a sweep builds the
 
 ### The database new sites are created on
 
-Every site sold is created on the database configured under **Subscriptions → Tenant onboarding**. The buyer
+Every site sold is created on the database configured under **Subscriptions** → **Tenant onboarding**. The buyer
 never chooses it and setup refuses to run without one, so it is a site-wide decision the operator makes once.
 
 Leave it empty and sites are created on **Sqlite**, which needs no server and gives each site its own file
@@ -286,7 +286,7 @@ from its name, so the sites stay apart without anybody inventing a prefix per pu
 
 The providers offered are the ones Orchard Core registers (`IEnumerable<DatabaseProvider>`). The editor needs **Manage subscriptions settings** (`ManageSubscriptionSettings`). The connection string is stored protected with ASP.NET Core data protection (purpose `SubscriptionOnboardingConnectionString`, in `SubscriptionOnboardingSettings.ProtectedConnectionString`) and is never sent back to the browser: leaving the field blank keeps the stored one, as long as the provider doesn't change. Choosing a provider that needs no connection string drops the stored one.
 
-Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site Provisioning**, including the abandoned ones. A waiting or failed job can be retried once the cause is fixed. An abandoned job has already dropped the administrator password, so it can't be retried: the administrator creates the site by hand and closes the job with **Mark as created** (`TenantProvisioningAdminController.MarkCreated`). That sets it to `Succeeded`, optionally with the site's URL. `TenantProvisioningJobActions` holds the rules for both buttons, and the screen and the actions share them.
+Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions** → **Site Provisioning**, including the abandoned ones. A waiting or failed job can be retried once the cause is fixed. An abandoned job has already dropped the administrator password, so it can't be retried: the administrator creates the site by hand and closes the job with **Mark as created** (`TenantProvisioningAdminController.MarkCreated`). That sets it to `Succeeded`, optionally with the site's URL. `TenantProvisioningJobActions` holds the rules for both buttons, and the screen and the actions share them.
 
 A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
 
@@ -324,7 +324,7 @@ Beyond the always-on throttle above, the sensitive front-end routes advertise **
 | `checkout` | Starting a subscription and every checkout step. |
 | `checkout-payment` | The payment endpoints that begin a payment and report its status. |
 
-Both groups are owned by the [Checkout](checkout) module, because that is where a subscription purchase actually runs. To enable it, turn on the **Rate Limiting** feature, then under **Configuration → Rate Limiting** create a policy targeting either group. Requests exceeding the configured limit receive an HTTP `429`.
+Both groups are owned by the [Checkout](checkout) module, because that is where a subscription purchase actually runs. To enable it, turn on the **Rate Limiting** feature, then under **Configuration** → **Rate Limiting** create a policy targeting either group. Requests exceeding the configured limit receive an HTTP `429`.
 
 ## Taxation
 
@@ -445,7 +445,7 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 dotnet add package CrestApps.OrchardCore.Subscriptions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and at least one payment module — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings → Payments → Stripe**.
+Then, in the **Orchard Core Admin Dashboard** under **Tools** → **Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and at least one payment module — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings** → **Payments** → **Stripe**.
 
 ## Related modules
 

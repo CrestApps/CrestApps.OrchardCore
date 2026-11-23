@@ -10,7 +10,7 @@ Some requests need a yes before work starts, such as a manager's and then financ
 
 | | |
 | --- | --- |
-| **Menu** | Design > Content Definition > Content Types, then the ticket type's **Ticket** part |
+| **Menu** | **Design** → **Content Definition** → **Content Types**, then the ticket type's **Ticket** part |
 | **Permission** | Edit content types; **Cancel ticket approvals** to call one off |
 | **Feature** | Ticket Approvals |
 
@@ -18,8 +18,8 @@ Some requests need a yes before work starts, such as a manager's and then financ
 
 ## Set it up
 
-1. Turn on **Ticket Approvals** under **Tools > Features**.
-2. Under **Service Desk > Statuses**, add a status such as *Waiting for approval*, in the **Pending** or **On hold** category.
+1. Turn on **Ticket Approvals** under **Tools** → **Features**.
+2. Under **Service Desk** → **Statuses**, add a status such as *Waiting for approval*, in the **Pending** or **On hold** category.
 3. Under **Content Definition**, edit the ticket type's **Ticket** part and fill in **Approval**: up to three steps, each with a name (such as *Manager* or *Finance*) and its approvers, or **The requester's manager** (from the requester's staff record, with Staff on).
 4. Choose the **Status while waiting**, such as *Waiting for approval*.
 5. Save.

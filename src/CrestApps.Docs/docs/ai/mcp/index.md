@@ -30,9 +30,9 @@ CrestApps provides both **client** and **server** MCP support:
 
 When the relevant features are enabled, Orchard adds these MCP screens under **Artificial Intelligence**:
 
-- **Model Context Protocol -> MCP Hosts** (MCP Client feature)
-- **Model Context Protocol -> Prompts** (MCP Server feature)
-- **Model Context Protocol -> Resources** (MCP Server feature)
+- **Model Context Protocol** → **MCP Hosts** (MCP Client feature)
+- **Model Context Protocol** → **Prompts** (MCP Server feature)
+- **Model Context Protocol** → **Resources** (MCP Server feature)
 
 Using these screens is described in the User Manual under [Model Context Protocol (MCP)](../../user-manual/ai/mcp.md).
 

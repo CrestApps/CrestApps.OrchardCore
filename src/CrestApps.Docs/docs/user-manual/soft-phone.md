@@ -104,7 +104,7 @@ Wherever the soft phone is on the page, a phone number field gets a **dial** but
 
 <YouTube video="telephony-soft-phone-administration" title="Video of the phone on the page and its Diagnostics tab" start={102} end={142} />
 
-Under **Settings > Communication > Telephony**, the **Soft Phone** tab holds:
+Under **Settings** → **Communication** → **Telephony**, the **Soft Phone** tab holds:
 
 | Field | What it does |
 | --- | --- |

@@ -73,7 +73,7 @@ Write for someone who has never seen the screen and has never written code.
 
 Rules:
 
-- Use the labels exactly as the screen shows them, in **bold**, and write menu paths as **Interaction Center > Management > Queues**. Check labels against the code (`S["..."]` strings in views, `AdminMenu*.cs`).
+- Use the labels exactly as the screen shows them, in **bold**, and write menu paths with → between the labels, each label in bold: **Interaction Center** → **Management** → **Queues**. A placeholder such as *a report* stays in italics. Use → for menu paths only; a taxonomy or breadcrumb example (Hardware > Laptop) keeps its own separator. Check labels against the code (`S["..."]` strings in views, `AdminMenu*.cs`).
 - Use the feature **name** shown in **Tools > Features** (the `Name` in the module's `Manifest.cs`) and the permission name shown in the role editor. Never write a feature ID (`CrestApps.OrchardCore.X`) or a permission key.
 - No code blocks, configuration files, JSON, recipes or command lines. Link to the Technical Manual page instead.
 - Describe only what the product does today. Never mention test projects, test runs or internal plans. Use made-up names in examples ("John Smith", "Contoso").

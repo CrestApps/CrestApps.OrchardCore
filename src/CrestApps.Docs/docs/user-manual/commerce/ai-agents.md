@@ -12,7 +12,7 @@ The business that runs the agents is called an **agent platform**, such as Googl
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > AI Agents for the platforms, and Settings > Commerce > Agentic Commerce for the settings |
+| **Menu** | **Commerce** → **AI Agents for the platforms**, and **Settings** → **Commerce** → **Agentic Commerce for the settings** |
 | **Permission** | **Manage AI agent platforms** for the platforms, and **Manage agentic commerce settings** for the settings |
 | **Feature** | Agentic Commerce, with Universal Commerce Protocol (for Google's agents) and Agentic Commerce Protocol (for ChatGPT) |
 
@@ -34,8 +34,8 @@ Sometimes only the buyer can finish a purchase: their bank asks them to approve 
 
 Platforms ask for a few things before their agents may buy:
 
-1. Set your site's base URL under **Settings > General**, so links to your store work outside it.
-2. Fill in **Website and policies** under **Settings > Commerce > Store** (below). Google and OpenAI ask for your terms of service and your privacy policy.
+1. Set your site's base URL under **Settings** → **General**, so links to your store work outside it.
+2. Fill in **Website and policies** under **Settings** → **Commerce** → **Store** (below). Google and OpenAI ask for your terms of service and your privacy policy.
 3. Connect your payment provider. Agents pay through Stripe; see [Payment providers](payment-providers.md#connect-stripe).
 4. Choose which products agents may show and buy, in your product feed's settings and on each product. See [Product listings](product-listings.md#feeds-for-ai-agents).
 
@@ -43,7 +43,7 @@ Platforms ask for a few things before their agents may buy:
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Store |
+| **Menu** | **Settings** → **Commerce** → **Store** |
 | **Permission** | Manage the store profile |
 | **Feature** | Store Profile |
 
@@ -66,12 +66,12 @@ Click **Save**. Agents show these links to the buyer with every checkout.
 
 ## Add an agent platform
 
-1. Open **Commerce > AI Agents** and click **Add platform**.
+1. Open **Commerce** → **AI Agents** and click **Add platform**.
 2. Fill in the fields (below). You need at least a **Name** and one **Protocol**.
 3. Click **Save**.
 4. Open the platform again and give it an API key (see [Give the platform its API key](#give-the-platform-its-api-key)).
 
-**Commerce > AI Agents** lists your platforms with their protocols and when they were last changed. A **Test mode** tag shows a platform in test mode, and **Disabled** one whose agents may not buy. Click **Edit** to change a platform.
+**Commerce** → **AI Agents** lists your platforms with their protocols and when they were last changed. A **Test mode** tag shows a platform in test mode, and **Disabled** one whose agents may not buy. Click **Edit** to change a platform.
 
 ### The platform
 
@@ -88,7 +88,7 @@ Click **Save**. Agents show these links to the buyer with every checkout.
 | Field | What it does |
 | --- | --- |
 | **API key** | The key the platform sends with each request. Shown after the first save. See [Give the platform its API key](#give-the-platform-its-api-key). |
-| **OAuth client ID** | For a platform that signs in through your site's OpenID Connect server instead of with an API key, and for buyers who link their store account to an agent. Your administrator creates the application under **Security > OpenID Connect > Applications** and gives you its client ID. |
+| **OAuth client ID** | For a platform that signs in through your site's OpenID Connect server instead of with an API key, and for buyers who link their store account to an agent. Your administrator creates the application under **Security** → **OpenID Connect** → **Applications** and gives you its client ID. |
 | **UCP profile** | The address of the platform's UCP profile, such as *https://platform.example/.well-known/ucp*. The platform gives it to you. Your store checks the platform's signed requests with the keys in it. |
 | **Allowed IP addresses** | One address, or one range such as *203.0.113.0/24*, per line. Requests from other addresses are refused. Leave it empty to allow any address. OpenAI asks stores to allow only the address ranges it publishes. |
 
@@ -121,7 +121,7 @@ Some ACP platforms sign each request with their own private key, so your store c
 
 ## Give the platform its API key
 
-1. Open the platform under **Commerce > AI Agents**.
+1. Open the platform under **Commerce** → **AI Agents**.
 2. In **How it signs in**, click **New API key**, and confirm.
 3. A message shows the new key, which starts with *agk_*. Copy it now and give it to the platform in a safe way: it isn't shown again.
 
@@ -131,7 +131,7 @@ Afterwards, the platform's page only shows the key's last four characters, so yo
 
 ACP platforms check that order updates really come from your store with a shared secret.
 
-1. Open the platform under **Commerce > AI Agents**.
+1. Open the platform under **Commerce** → **AI Agents**.
 2. In **Payments and order updates**, click **New secret**.
 3. A message shows the secret, which starts with *whsec_*. Copy it now and give it to the platform: it isn't shown again.
 
@@ -141,13 +141,13 @@ Until the platform has both an **Order updates address** and a signing secret, n
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Agentic Commerce |
+| **Menu** | **Settings** → **Commerce** → **Agentic Commerce** |
 | **Permission** | Manage agentic commerce settings |
 | **Feature** | Agentic Commerce |
 
 <AskYourAdmin />
 
-Open **Settings > Commerce > Agentic Commerce**, change what you need, and click **Save**.
+Open **Settings** → **Commerce** → **Agentic Commerce**, change what you need, and click **Save**.
 
 ### Agent checkouts
 
@@ -203,7 +203,7 @@ Only a platform in test mode may pay with test credentials. A platform that isn'
 
 ## Orders from AI agents
 
-An agent's order is an ordinary order in **Commerce > Orders**: you fulfill, ship, cancel and refund it as usual, and its stock, tax and receipts work as for any order. To see only agent orders, choose **AI agents** in the order list's channel filter.
+An agent's order is an ordinary order in **Commerce** → **Orders**: you fulfill, ship, cancel and refund it as usual, and its stock, tax and receipts work as for any order. To see only agent orders, choose **AI agents** in the order list's channel filter.
 
 - An agent's order is held as a draft while the agent's checkout is open, and is paid when the agent completes it. A checkout that is canceled, or that expires after the **Checkout lifetime**, releases the stock it held.
 - When the agent changes the items, the store replaces the draft order with a new one, as it does when a buyer changes their cart.
@@ -215,8 +215,8 @@ An agent's order is an ordinary order in **Commerce > Orders**: you fulfill, shi
 Some UCP platforms can show your checkout inside their own page instead of sending the buyer to your site (UCP calls it embedded checkout). The buyer sees your checkout, with your prices, shipping and payment methods, and finishes it there; the platform hears when the order is placed.
 
 1. Ask the platform for the addresses of the pages that show checkouts, such as *https://agent.example*.
-2. Open the platform under **Commerce > AI Agents**, enter them in **Embedding origins** and click **Save**.
-3. Open **Settings > Commerce > Agentic Commerce**, tick **Allow embedded checkout** and click **Save**.
+2. Open the platform under **Commerce** → **AI Agents**, enter them in **Embedding origins** and click **Save**.
+3. Open **Settings** → **Commerce** → **Agentic Commerce**, tick **Allow embedded checkout** and click **Save**.
 
 Your store then tells the platform it can embed its checkouts. Your checkout only works inside the platform's page when your site uses *https://*. If the platform signs in with an OpenID Connect application, it can also prove it is the platform when it shows the checkout. To stop it, untick **Allow embedded checkout** or empty the platform's **Embedding origins**; the buyer then gets the ordinary link to your checkout.
 
@@ -234,7 +234,7 @@ Some platforms send their agent to talk to an agent of your store, instead of ca
 
 ## Product feeds and your own AI assistant
 
-AI agents also read your products from feeds. **Settings > Commerce > Agent Feeds** publishes them in OpenAI's format for ChatGPT and pushes them to the platforms that host a feed. See [Product listings](product-listings.md#feeds-for-ai-agents).
+AI agents also read your products from feeds. **Settings** → **Commerce** → **Agent Feeds** publishes them in OpenAI's format for ChatGPT and pushes them to the platforms that host a feed. See [Product listings](product-listings.md#feeds-for-ai-agents).
 
 Some agents use the Model Context Protocol (MCP) instead of plain web requests. Your administrator turns on **UCP over MCP** or **ACP over MCP** for them. Nothing changes on the platform: it signs in with the same key.
 
@@ -251,7 +251,7 @@ A shopper's own browser assistant can use the same tools on your store's pages, 
 
 | Problem | What to check |
 | --- | --- |
-| **Commerce > AI Agents** isn't in the menu | You need **Manage AI agent platforms**, and the Agentic Commerce feature must be on. Ask your administrator. |
+| **Commerce** → **AI Agents** isn't in the menu | You need **Manage AI agent platforms**, and the Agentic Commerce feature must be on. Ask your administrator. |
 | A platform's agents can't reach the store with a protocol | Your administrator must turn on that protocol's feature, and the protocol must be ticked on the platform. |
 | The platform says the store refused its key | Check that you gave it the latest key, that **Its agents may buy** is ticked, and that its address is in **Allowed IP addresses**. Give it a new key if you aren't sure. |
 | An agent can't pay | Check that Stripe is connected and, for Google's agents, that **Stripe business profile** is filled in. A platform in **Test mode** can only pay with test credentials. A **Payment handlers** list that isn't empty limits how its agents pay. |

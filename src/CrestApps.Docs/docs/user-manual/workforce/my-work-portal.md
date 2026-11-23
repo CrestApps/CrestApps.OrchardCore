@@ -10,13 +10,13 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | My Work > Home, Schedule, Timesheet, Time Off, Shifts, Availability, Settings; Approvals and Who's Working for managers |
+| **Menu** | **My Work** → **Home**, Schedule, Timesheet, Time Off, Shifts, Availability, Settings; Approvals and Who's Working for managers |
 | **Permission** | Use the My Work portal; Request time off for the time off page |
 | **Feature** | Workforce My Work Portal (it needs Workforce) |
 
 <AskYourAdmin />
 
-A user gets My Work once a manager links their user account to their worker under **Workforce > Workers** (the **User** field). Workers sign in as usual and land in the admin, where they see the **My Work** menu and only the other pages their roles allow: a worker who isn't terminated and has **Use the My Work portal** may open the admin without the **Access admin panel** permission. Addresses from before My Work moved into the admin (**/my-work/...**, such as links in older notifications) open the same page in the admin.
+A user gets My Work once a manager links their user account to their worker under **Workforce** → **Workers** (the **User** field). Workers sign in as usual and land in the admin, where they see the **My Work** menu and only the other pages their roles allow: a worker who isn't terminated and has **Use the My Work portal** may open the admin without the **Access admin panel** permission. Addresses from before My Work moved into the admin (**/my-work/...**, such as links in older notifications) open the same page in the admin.
 
 ## Pages for workers
 
@@ -43,7 +43,7 @@ Workers hear about:
 - a trade offered to them, and their own trades being accepted, turned down or declined;
 - a shift of theirs about to start, an hour before by default.
 
-Every notification goes to the **My Work** inbox on the home page. Under **Settings > What I hear about**, a worker chooses which other ways to use (**Push notifications**, and **Email** when the site sends email) and which topics to hear about. Topics turned off still show in the inbox.
+Every notification goes to the **My Work** inbox on the home page. Under **Settings** → **What I hear about**, a worker chooses which other ways to use (**Push notifications**, and **Email** when the site sends email) and which topics to hear about. Topics turned off still show in the inbox.
 
 Under **Reminders**, choose how long before a shift to be reminded of it, or **Never**. Under **Quiet hours**, enter the hours when nothing should be pushed to the phone or emailed, such as 22:00 to 07:00; everything still shows in the inbox, and the hours are in the worker's time zone.
 
@@ -53,7 +53,7 @@ Under **Settings**, choose **Turn on** and allow notifications when the browser 
 
 ## Calendar feed
 
-**Settings > My calendar app** shows a private address to subscribe to in Google Calendar, Outlook or a phone's calendar. The calendar shows the worker's shifts from four weeks ago to twelve weeks ahead, and their approved time off. Anyone with the address can see the schedule, so **Replace this address** makes a new one and stops the old one working.
+**Settings** → **My calendar app** shows a private address to subscribe to in Google Calendar, Outlook or a phone's calendar. The calendar shows the worker's shifts from four weeks ago to twelve weeks ahead, and their approved time off. Anyone with the address can see the schedule, so **Replace this address** makes a new one and stops the old one working.
 
 ## Pages for managers
 
@@ -66,4 +66,4 @@ A user who manages teams also sees:
 
 ## Notifications on this device
 
-My Work works in any browser. Under **My Work > Settings**, turn on push notifications to get them on this phone or computer; the site's service worker shows them and opens their page when you tap one. Without a connection, a My Work page shows a message saying it needs one, except the pages that work offline, such as **Field**.
+My Work works in any browser. Under **My Work** → **Settings**, turn on push notifications to get them on this phone or computer; the site's service worker shows them and opens their page when you tap one. Without a connection, a My Work page shows a message saying it needs one, except the pages that work offline, such as **Field**.

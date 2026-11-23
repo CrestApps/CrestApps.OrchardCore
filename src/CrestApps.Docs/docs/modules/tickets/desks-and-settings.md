@@ -1,7 +1,7 @@
 ---
 sidebar_label: Desks and settings
 title: Desks and settings records
-description: "The service desk's settings records: desks and what each one decides, statuses and their categories, priorities and the priority matrix, saved views, and the site settings under Settings > Service Desk."
+description: "The service desk's settings records: desks and what each one decides, statuses and their categories, priorities and the priority matrix, saved views, and the site settings under Settings → Service Desk."
 user_manual:
   - user-manual/service-desk/desks
   - user-manual/service-desk/statuses-and-priorities
@@ -9,7 +9,7 @@ user_manual:
   - user-manual/service-desk/notification-templates
 ---
 
-The service desk is set up with records under the **Service Desk** menu (**Desks**, **Statuses**, **Priorities** and **Views**), managed with `ManageTicketSettings`, and with site settings under **Settings > Service Desk**. Desks, statuses, priorities, saved views and boards are catalog records (`TicketDesk`, `TicketStatus`, `TicketPriority`, `TicketView`, `TicketBoard`), each read and written through its `ICatalog<T>` and `ICatalogManager<T>`; where they are kept is described in [Storage](./storage), and how they travel between sites in [Recipes and deployment](./recipes-and-deployment).
+The service desk is set up with records under the **Service Desk** menu (**Desks**, **Statuses**, **Priorities** and **Views**), managed with `ManageTicketSettings`, and with site settings under **Settings** → **Service Desk**. Desks, statuses, priorities, saved views and boards are catalog records (`TicketDesk`, `TicketStatus`, `TicketPriority`, `TicketView`, `TicketBoard`), each read and written through its `ICatalog<T>` and `ICatalogManager<T>`; where they are kept is described in [Storage](./storage), and how they travel between sites in [Recipes and deployment](./recipes-and-deployment).
 
 ## Desks
 
@@ -35,8 +35,8 @@ Priorities are kept in their order. A desk's **Priority matrix** (`TicketDesk.Pr
 
 ## Saved views
 
-A saved view (`TicketView`) keeps a `TicketQuery` of the ticket list. Shared views are managed under **Service Desk > Views**; a personal view belongs to its owner.
+A saved view (`TicketView`) keeps a `TicketQuery` of the ticket list. Shared views are managed under **Service Desk** → **Views**; a personal view belongs to its owner.
 
-## Settings > Service Desk
+## **Settings** → **Service Desk**
 
-**Settings > Service Desk** holds the site settings of the service desk: the **Notification templates** of the requester messages (see [E-mails and notifications](./emails-and-notifications)) and, with AI on, the **AI profile for replies** (see [AI tools and assistant](./ai)).
+**Settings** → **Service Desk** holds the site settings of the service desk: the **Notification templates** of the requester messages (see [E-mails and notifications](./emails-and-notifications)) and, with AI on, the **AI profile for replies** (see [AI tools and assistant](./ai)).

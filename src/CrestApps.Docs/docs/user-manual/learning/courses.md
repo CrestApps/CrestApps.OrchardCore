@@ -10,7 +10,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
 
 | | |
 | --- | --- |
-| **Menu** | Learning > Courses |
+| **Menu** | **Learning** → **Courses** |
 | **Permission** | Manage courses; Manage the courses you teach for a course's instructors and assistants |
 | **Feature** | Learning; Secure Media to protect lesson files |
 
@@ -18,7 +18,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
 
 ## Create a course
 
-1. Go to **Learning > Courses** and create a **Course**.
+1. Go to **Learning** → **Courses** and create a **Course**.
 2. Enter the **Title**, a description in the body and, if you like, a **Cover** picture.
 3. On the **Course** card, set a **Course code** such as *SAFE-101*, a **Summary** shown in the catalog, a **Level** and the **Estimated effort (minutes)**.
 4. Choose **How learners enroll**:
@@ -29,7 +29,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
 5. On the **Dates** card, set when the course **Starts** and **Ends**, in your time zone, or leave them empty. Before the start, learners see the course and may enroll, but cannot open its lessons; the course page tells them when it starts. The end date does not close the course, as in Moodle: learners keep their access, and the course is shown as ended (**Ended on**) on its card on **My learning**.
 6. Set **Access length (days)** to end a self enrollment's access that many days after enrolling, or leave it empty for no end. Choose the **Prerequisite courses** people must have completed first: type part of a course's title to find it.
 7. Under **Completion and grade**, set the **Pass mark (%)** of the course grade, then the rules a learner must meet besides completing every required item: a **Minimum course grade (%)**, a **Minimum time (minutes)**, a **Final assessment to pass**, or that a member of the course staff approves each completion.
-8. With **Course Categories** on, choose the course's **Category**. Categories come from the **Course categories** taxonomy under **Content > Taxonomies**, where you build the tree of categories and sub-categories. The list of courses filters by category with its **Course categories** filter.
+8. With **Course Categories** on, choose the course's **Category**. Categories come from the **Course categories** taxonomy under **Content** → **Taxonomies**, where you build the tree of categories and sub-categories. The list of courses filters by category with its **Course categories** filter.
 9. Select **Publish**.
 
 ## Add lessons
@@ -96,5 +96,5 @@ Under **Completion and grade**, after ticking that a member of the course staff 
 
 ## Open an item only to some people
 
-On a lesson's **Who can open it** card, choose **People** or an **Audience** (from **Content > User Audiences**, for example everyone of a team or with a profile value). Only those people, and the course staff, open the item; others see that it is open only to some learners.
+On a lesson's **Who can open it** card, choose **People** or an **Audience** (from **Content** → **User Audiences**, for example everyone of a team or with a profile value). Only those people, and the course staff, open the item; others see that it is open only to some learners.
 

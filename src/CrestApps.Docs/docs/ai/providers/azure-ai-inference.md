@@ -56,7 +56,7 @@ Add the following settings to `appsettings.json`:
 ```
 
 `Features` declares what the model can do; which deployment serves chat, utility, embedding and the rest is
-decided by the deployment slots under **Configuration** -> **Artificial Intelligence** -> **Settings**, so one
+decided by the deployment slots under **Configuration** → **Artificial Intelligence** → **Settings**, so one
 deployment can back several slots. See [Model capabilities](../model-capabilities.md) for the full list of features and slots.
 
 `AuthenticationType` can be `Default`, `ManagedIdentity`, or `ApiKey`. When using `ApiKey`, the `ApiKey` field is required.

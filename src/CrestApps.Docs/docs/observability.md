@@ -43,7 +43,7 @@ builder.Services
 - `HasOtlpEndpoint()` is true when `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_{SIGNAL}_ENDPOINT` or `OrchardCore:OpenTelemetry:Otlp:Endpoint` is set.
 - `AddOpenTelemetry()` collects Orchard Core, ASP.NET Core, HttpClient and runtime telemetry, tags spans and logs with their tenant, and exports them over OTLP.
 - `CrestApps.Core` and `CrestApps.Core.*` collect the framework; `CrestApps.OrchardCore.*` (`CrestAppsOrchardCoreTelemetry.SourceNameWildcard`) collects every CrestApps module. The OpenTelemetry SDK matches the wildcards itself; `X.*` does not match `X`, so both are listed.
-- `AICompletionService` is the source the AI chat clients report their `gen_ai.*` spans and metrics on, only while the AI **Enable OpenTelemetry** setting is on (**Settings → Artificial Intelligence → General**).
+- `AICompletionService` is the source the AI chat clients report their `gen_ai.*` spans and metrics on, only while the AI **Enable OpenTelemetry** setting is on (**Settings** → **Artificial Intelligence** → **General**).
 - Other libraries' telemetry, such as the OpenAI SDK's, SignalR's, the MCP and A2A SDKs', Npgsql's or Polly's, is not collected by default. Add their source or meter names to `OrchardCore:OpenTelemetry:Tracing:Sources` or `Metrics:Meters` to collect it.
 
 Every OpenTelemetry package comes from Orchard Core (1.19.1), so no version needs pinning.

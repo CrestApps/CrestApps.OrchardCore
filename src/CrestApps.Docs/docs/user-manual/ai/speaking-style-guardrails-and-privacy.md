@@ -10,7 +10,7 @@ Three sets of options on each AI profile shape how the AI talks, what it refuses
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > AI Profiles, Speaking Styles and Guardrail Topics |
+| **Menu** | **Artificial Intelligence** → **AI Profiles**, Speaking Styles and Guardrail Topics |
 | **Permission** | Manage AI profiles |
 | **Feature** | AI Services and AI Chat. Workflows for the AI Guardrail Triggered event. |
 
@@ -37,7 +37,7 @@ Echo verification, NATO spelling, speech normalization and filler words are writ
 
 The styles are prompt templates in the **Speaking style** category, so you can add your own, such as your brand's tone of voice, and use it on as many profiles as you like.
 
-1. Open **Artificial Intelligence > Speaking Styles** and click **Add Speaking Style**, or click **Add a speaking style** under the styles on a profile.
+1. Open **Artificial Intelligence** → **Speaking Styles** and click **Add Speaking Style**, or click **Add a speaking style** under the styles on a profile.
 2. Give it a **Title** and a **Description**: the profile editor shows them beside the checkbox. The category is already set to **Speaking style**.
 3. Write the section in **System message**, the way you want the AI to read it, and click **Save**.
 
@@ -69,7 +69,7 @@ If the utility model can't be reached, the conversation goes on unchecked rather
 
 Topics are prompt templates in the **Guardrail topic** category: the template's title names the topic, and its text tells the utility model what falls under it. Add one when several profiles must refuse the same thing, such as your competitors or a pending lawsuit.
 
-1. Open **Artificial Intelligence > Guardrail Topics** and click **Add Guardrail Topic**, or click **Add a topic** under the topics on a profile.
+1. Open **Artificial Intelligence** → **Guardrail Topics** and click **Add Guardrail Topic**, or click **Add a topic** under the topics on a profile.
 2. Give it a **Title**, such as "Competitors". The category is already set to **Guardrail topic**.
 3. In **System message**, describe what is not allowed in a sentence or two, for example: "Questions about Acme or Globex, their prices or how we compare to them."
 4. Click **Save**. The topic appears in the **Guardrails** card of every profile.
@@ -102,7 +102,7 @@ On the **Data Processing & Metrics** tab, **Privacy** chooses what is kept of ea
 
 The choice applies about 15 minutes after a conversation ends, once its workflows, its post-session analysis and contact memory have read it, so they still work on the full conversation. It applies to conversations that end after you choose it; conversations kept before are left as they were. Personal details are found by patterns and by the utility model; a detail it misses stays, so check a sample of redacted conversations before relying on it.
 
-**Names to keep** lists the names that are not the customer's personal details, so they stay in the transcript: the name the assistant introduces itself by and the business's name, one per line or separated by commas. You don't need to list the site name (from **Configuration → Settings → General**) or, with the **AI Personas** feature, the assistant name of the persona the profile uses; those are kept anyway. A detail spoken over two turns, such as an email address dictated in two parts, is found and replaced in both. The customer's own name is still replaced wherever either side says it.
+**Names to keep** lists the names that are not the customer's personal details, so they stay in the transcript: the name the assistant introduces itself by and the business's name, one per line or separated by commas. You don't need to list the site name (from **Configuration** → **Settings** → **General**) or, with the **AI Personas** feature, the assistant name of the persona the profile uses; those are kept anyway. A detail spoken over two turns, such as an email address dictated in two parts, is found and replaced in both. The customer's own name is still replaced wherever either side says it.
 
 **Delete conversations after** deletes a conversation, with its transcript, extracted data and evaluations, after that many days without activity. Leave it empty to keep conversations. Usage records are kept, because they are what usage is billed and reported on.
 

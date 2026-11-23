@@ -24,7 +24,7 @@ Extensions are a provider-neutral, tenant-scoped map from a dialed **number** to
 the system of record: providers translate the resolved user into their own live endpoint, so the same
 extension keeps working if you switch providers.
 
-Manage extensions under **Interaction Center > Management > Extensions** (requires the **Manage telephony
+Manage extensions under **Interaction Center** → **Management** → **Extensions** (requires the **Manage telephony
 extensions** permission, key `ManageTelephonyExtensions`). The screen and its fields (**Extension number**, unique per
 tenant; **User**, picked with the searchable user picker, which searches users on the server instead of listing every user; and an optional **Display name**) are described step by step in
 [Extensions](../user-manual/extensions.md) in the user manual.

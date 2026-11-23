@@ -19,13 +19,13 @@ This video shows the product screens in the admin:
 
 <YouTube video="products" title="Video overview of products, prices and listings" />
 
-The **Products** module turns any Orchard Core content type into a purchasable product by attaching a reusable **`ProductPart`**. It provides the shared pricing and product-type metadata that other modules — most notably [Subscriptions](subscriptions) — build on top of, without prescribing how a product is sold. It also manages the shared **Commerce → Currencies** catalog that product and subscription editors use for currency dropdowns.
+The **Products** module turns any Orchard Core content type into a purchasable product by attaching a reusable **`ProductPart`**. It provides the shared pricing and product-type metadata that other modules — most notably [Subscriptions](subscriptions) — build on top of, without prescribing how a product is sold. It also manages the shared **Commerce** → **Currencies** catalog that product and subscription editors use for currency dropdowns.
 
 ## Overview
 
 Once enabled, the module registers an attachable content part named **Product** (`ProductPart`). Attach it to a content type and every content item of that type gains a **Price** value and the **Currency** that price is sold in, plus a design-time **Type** setting that classifies the product as a *Good*, *Service*, or *Digital* item and a **Default currency** applied when an item does not set its own.
 
-The available currencies come from the managed **Commerce → Currencies** catalog. Editors choose from a friendly dropdown (for example **US Dollar (USD)**) instead of typing free-form codes, which keeps product pricing, product defaults, and subscription checkout settings aligned on the same managed list.
+The available currencies come from the managed **Commerce** → **Currencies** catalog. Editors choose from a friendly dropdown (for example **US Dollar (USD)**) instead of typing free-form codes, which keeps product pricing, product defaults, and subscription checkout settings aligned on the same managed list.
 
 Because the part is a normal Orchard Core content part, products participate in the full CMS pipeline: they can be listed, queried, localized, versioned, indexed for search, and secured with the same permissions and workflows as any other content item.
 
@@ -56,7 +56,7 @@ The part's behavior is configured per content type through **`ProductPartSetting
 
 ## Attaching the Product part
 
-You can attach the part from the admin UI (**Design → Content Definition → Content Types → *your type* → Add Parts → Product**) or in a migration:
+You can attach the part from the admin UI (**Design** → **Content Definition** → **Content Types** → ***your type*** → **Add Parts** → **Product**) or in a migration:
 
 ```csharp
 internal sealed class ProductContentTypeMigrations : DataMigration
@@ -279,7 +279,7 @@ Both are Orchard Core's content list narrowed to those types. The type names are
 
 ### Adding a listing page
 
-Create a **Product Listing** content item, from **Commerce → Product Listings** or **Content → New**. Its editor sets:
+Create a **Product Listing** content item, from **Commerce** → **Product Listings** or **Content** → **New**. Its editor sets:
 
 - the product types it lists: **Every product type**, which also lists types added later, or **Only these product types** with at least one ticked. The filters, the sorts and the default sort's options are grouped by type: what every product has (the price, the type, whether it can be bought online), then each type's own fields, then fields several types share. Only the groups of the listed types show, and saving drops the filters and sorts of types that are not listed, so a vehicle listing shows the vehicle's filters and not the property's;
 - **Show filters**: turn it off to list the products without filters, for example a short list of plans. A listing without filters and without keyword search has no filters panel, and its results take the full width;
@@ -372,7 +372,7 @@ Every part of a listing page and a product page is a shape, so a theme overrides
 | `Content` (display type `ProductAction`) | The actions modules add, on the product's card and page | `Content-{ContentType}.ProductAction` |
 | `ProductSpecifications` | The specification table | |
 
-The listing shapes' model has a `Listing` property with everything the page shows, and the product page shapes' model has a `Product` property. The view models are registered for Liquid, so a template such as this one, saved as `ProductCard` in **Design → Templates**, replaces every product card:
+The listing shapes' model has a `Listing` property with everything the page shows, and the product page shapes' model has a `Product` property. The view models are registered for Liquid, so a template such as this one, saved as `ProductCard` in **Design** → **Templates**, replaces every product card:
 
 ```liquid
 <article class="product-card card h-100">
@@ -451,7 +451,7 @@ A listing can search an index held by Elasticsearch, Lucene or Azure AI Search i
 | Product Search (Lucene) | `CrestApps.OrchardCore.Products.Lucene` | `OrchardCore.Lucene` |
 | Product Search (Azure AI Search) | `CrestApps.OrchardCore.Products.AzureAI` | `OrchardCore.AzureAI` |
 
-Each registers a `ProductSearch` index type, so **Search > Indexes** offers *Products (Elasticsearch)* and the like. How it works:
+Each registers a `ProductSearch` index type, so **Search** → **Indexes** offers *Products (Elasticsearch)* and the like. How it works:
 
 - **One record, every index.** The database record is built once. `ProductSearchIndexer` raises `IProductSearchIndexHandler` after it writes, removes or rebuilds records; while Orchard Core Indexing is enabled the Product Listing feature writes the same records to every index profile of the `ProductSearch` type through the provider's keyed `IDocumentIndexManager`. A created, reset or rebuilt index is filled from the records. When product types or their attributes change, each profile is saved again (so a provider that declares its fields up front declares the new ones), rebuilt and filled.
 - **Shared fields.** `ProductSearchIndexFields` writes a record as the same fields for every provider: key, type, culture (`neutral` when not localized), title, a lower-case title for sorting, SKU, keywords, price, featured, position, published date and a sequence number. Each attribute gets fields under a safe name such as `a_vehicle_year_1a2b3c4d`: its values (`_v`) for filters, facet tokens (`_f`) that carry the level, label and order next to the value, its numbers (`_n`), its smallest and largest number (`_sn`, `_nx`) and a sort text (`_st`). Values longer than 256 characters are searched but not filtered.
@@ -500,7 +500,7 @@ Both take `?currency=` (a market's currency, converted with `IShopperCurrency`) 
 | `color`, `size` | A variant's options named Color or Size, or a text field named Color. |
 | `shipping_weight`, `shipping_length`, `shipping_width`, `shipping_height` | The Shipping part's weight and size, when they are known (see below). |
 
-`ProductFeedValidator` checks each item against Merchant Center's rules: the lengths, absolute links, a photo, an availability and condition it knows, a price above zero, a sale price below it, and a GTIN's check digit. An item that fails is left out and listed. **Settings > Commerce > Product Feeds** (`ManageProductFeeds`) shows the feed addresses, the items in and why the others aren't, and the defaults.
+`ProductFeedValidator` checks each item against Merchant Center's rules: the lengths, absolute links, a photo, an availability and condition it knows, a price above zero, a sale price below it, and a GTIN's check digit. An item that fails is left out and listed. **Settings** → **Commerce** → **Product Feeds** (`ManageProductFeeds`) shows the feed addresses, the items in and why the others aren't, and the defaults.
 
 The attachable **Product Feed** part (`ProductFeedPart`: `Brand`, `Gtin`, `VariantGtins`, `Mpn`, `Condition`, `GoogleProductCategory`, `ExcludeFromFeeds`, `ShowToAgents`, `AgentCheckout`) goes on the product types that need them.
 
@@ -683,7 +683,7 @@ When the same feature is enabled, JSON Schema is also contributed for the manage
 dotnet add package CrestApps.OrchardCore.Products
 ```
 
-Then enable **Products** in the **Orchard Core Admin Dashboard** under **Tools → Features**. Enable **Product Listing** too to list products on the front end. To search a search server, add and enable `CrestApps.OrchardCore.Products.Elasticsearch`, `CrestApps.OrchardCore.Products.Lucene` or `CrestApps.OrchardCore.Products.AzureAI`.
+Then enable **Products** in the **Orchard Core Admin Dashboard** under **Tools** → **Features**. Enable **Product Listing** too to list products on the front end. To search a search server, add and enable `CrestApps.OrchardCore.Products.Elasticsearch`, `CrestApps.OrchardCore.Products.Lucene` or `CrestApps.OrchardCore.Products.AzureAI`.
 
 ## Related modules
 

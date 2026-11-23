@@ -9,7 +9,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Tickets, then a ticket |
+| **Menu** | **Service Desk** → **Tickets**, then a ticket |
 | **Permission** | **Merge tickets** to merge; **Edit tickets** to link, on the ticket's desk |
 | **Feature** | Tickets |
 

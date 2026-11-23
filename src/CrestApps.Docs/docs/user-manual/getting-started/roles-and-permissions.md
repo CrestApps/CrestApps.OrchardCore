@@ -24,7 +24,7 @@ A screen also needs its **feature** to be turned on. A feature is one part of th
 
 Two people at the same company see different menus because:
 
-1. **Their roles differ.** An agent sees **My workspace** and **Activities**; a manager also sees **Interaction Center > Management**; an administrator also sees **Settings** and **Tools**.
+1. **Their roles differ.** An agent sees **My workspace** and **Activities**; a manager also sees **Interaction Center** → **Management**; an administrator also sees **Settings** and **Tools**.
 2. **Features differ by site.** A site that does not use the CRM has no **Leads** menu, and a site without the dialer has no **Dialer Profiles**.
 3. **Some screens also need a setup record.** The [live dashboard](../live-dashboard.md) and [shared voicemail](../voicemail.md) show only the queues on your own [agent entitlement](../skills-and-entitlements.md) record. Without one, the page opens but is empty, even for an administrator. A supervisor needs one too, with the queues they oversee.
 
@@ -60,7 +60,7 @@ Agents take and place calls, work their activities and answer text messages.
 
 Agents usually also need, added by the administrator:
 
-- **Use the telephony soft phone**, to open the soft phone in the [phone apps](../phone-apps.md). The Agent role does not get it automatically: open **Access Control > Roles**, edit the Agent role, find the permission with **Search permissions**, tick it and save, and every agent has the soft phone.
+- **Use the telephony soft phone**, to open the soft phone in the [phone apps](../phone-apps.md). The Agent role does not get it automatically: open **Access Control** → **Roles**, edit the Agent role, find the permission with **Search permissions**, tick it and save, and every agent has the soft phone.
 - The content permissions for your contact type, such as **List content items**, to see and edit [contacts](../contacts.md).
 
 ### Supervisor
@@ -81,7 +81,7 @@ The Supervisor role does not include signing in to queues. A supervisor who also
 
 ### Administrator
 
-The Administrator role can see and change everything, including **Settings**, **Tools > Features**, users and roles. Keep it for the few people who run the site.
+The Administrator role can see and change everything, including **Settings**, **Tools** → **Features**, users and roles. Keep it for the few people who run the site.
 
 Some permissions go to the Administrator role only, so nobody else has them until an administrator gives them: **Delete call recordings**, **Manage Contact Center queue groups**, **Manage Contact Center queues**, **Manage Contact Center agents**, **Manage Contact Center skills**, **Manage Contact Center business hours**, **Manage the Contact Center dialer**, **Manage the Contact Center voice media library**, **Manage interactions**, **Manage the Contact Center**, **Manage telephony settings**, **Manage telephony extensions** and **Use the telephony soft phone**.
 
@@ -123,35 +123,35 @@ A settings page under **Settings** opens for anyone who has the permission liste
 
 | Settings page | Permission that opens it |
 | --- | --- |
-| **Settings > Payments > Stripe** | Manage Stripe Settings |
-| **Settings > Commerce > Transactions** | Manage transaction settings |
-| **Settings > Commerce > Offline Payments** | Manage transaction settings |
-| **Settings > Commerce > Receipts** | Manage receipt settings |
-| **Settings > Commerce > Orders**, **Emails** and **Returns** | Manage orders |
-| **Settings > Commerce > Checkout** | Manage checkout settings |
-| **Settings > Commerce > Customers**, **Rewards** and **Referrals** | Manage customers |
-| **Settings > Commerce > Inventory** | Manage inventory |
-| **Settings > Commerce > Downloads** | Manage digital files and downloads |
-| **Settings > Commerce > Reviews** | Moderate product reviews |
-| **Settings > Commerce > Product Feeds** | Manage product feeds |
-| **Settings > Commerce > Fundraising** | Manage fundraising |
-| **Settings > Commerce > Marketplace** | Manage the marketplace |
-| **Settings > Address Suggestions** | Manage address suggestions |
-| **Settings > Subscriptions** | Manage subscriptions settings |
-| **Settings > Communication > Telephony** | Manage telephony settings |
-| **Settings > Communication > SMS** (the Telnyx section, when Telnyx SMS is on) | Manage SMS Settings |
-| **Settings > Contact Center** | Manage the Contact Center |
-| **Settings > Artificial Intelligence** | Manage AI profiles. A person with only Manage chat interaction settings, Edit any chat interactions, Manage Copilot Settings, Manage Claude Settings, Manage the MCP Server settings or Manage the WebMCP settings can open the page too, and sees only the sections that permission covers. |
-| **Settings > DNC Registries** and **Settings > Content Import** | Manage DNC registry settings |
-| **Settings > Phone Number Verifications** | Manage phone number verification settings |
-| **Settings > User Display Name** | Manage the user display name settings. |
-| **Settings > User Avatars** | Manage the avatar settings. |
+| **Settings** → **Payments** → **Stripe** | Manage Stripe Settings |
+| **Settings** → **Commerce** → **Transactions** | Manage transaction settings |
+| **Settings** → **Commerce** → **Offline Payments** | Manage transaction settings |
+| **Settings** → **Commerce** → **Receipts** | Manage receipt settings |
+| **Settings** → **Commerce** → **Orders**, **Emails** and **Returns** | Manage orders |
+| **Settings** → **Commerce** → **Checkout** | Manage checkout settings |
+| **Settings** → **Commerce** → **Customers**, **Rewards** and **Referrals** | Manage customers |
+| **Settings** → **Commerce** → **Inventory** | Manage inventory |
+| **Settings** → **Commerce** → **Downloads** | Manage digital files and downloads |
+| **Settings** → **Commerce** → **Reviews** | Moderate product reviews |
+| **Settings** → **Commerce** → **Product Feeds** | Manage product feeds |
+| **Settings** → **Commerce** → **Fundraising** | Manage fundraising |
+| **Settings** → **Commerce** → **Marketplace** | Manage the marketplace |
+| **Settings** → **Address Suggestions** | Manage address suggestions |
+| **Settings** → **Subscriptions** | Manage subscriptions settings |
+| **Settings** → **Communication** → **Telephony** | Manage telephony settings |
+| **Settings** → **Communication** → **SMS** (the Telnyx section, when Telnyx SMS is on) | Manage SMS Settings |
+| **Settings** → **Contact Center** | Manage the Contact Center |
+| **Settings** → **Artificial Intelligence** | Manage AI profiles. A person with only Manage chat interaction settings, Edit any chat interactions, Manage Copilot Settings, Manage Claude Settings, Manage the MCP Server settings or Manage the WebMCP settings can open the page too, and sees only the sections that permission covers. |
+| **Settings** → **DNC Registries** and **Settings** → **Content Import** | Manage DNC registry settings |
+| **Settings** → **Phone Number Verifications** | Manage phone number verification settings |
+| **Settings** → **User Display Name** | Manage the user display name settings. |
+| **Settings** → **User Avatars** | Manage the avatar settings. |
 
-On a page that several features share, such as **Settings > Artificial Intelligence**, each section is shown only to people who have that section's permission. The menu item itself follows the permission shown in the table, so someone who has only one of the other permissions may need the page's address from the administrator.
+On a page that several features share, such as **Settings** → **Artificial Intelligence**, each section is shown only to people who have that section's permission. The menu item itself follows the permission shown in the table, so someone who has only one of the other permissions may need the page's address from the administrator.
 
 ### Give the roles to users
 
-Open **Access Control > Users**, edit a user, tick the roles in the **Roles** section and save. A team lead who also takes calls gets both the Agent and the Supervisor role.
+Open **Access Control** → **Users**, edit a user, tick the roles in the **Roles** section and save. A team lead who also takes calls gets both the Agent and the Supervisor role.
 
 <YouTube video="contact-center-roles-and-permissions" title="Video of giving roles to users" start={173} end={192} />
 
@@ -173,7 +173,7 @@ When a menu, a page or a button is missing, look up the page for that task in th
 
 > Hi,
 >
-> I need access to **[screen or task, for example: Interaction Center > Management > Queues]** for my work on **[what you need to do]**.
+> I need access to **[screen or task, for example: Interaction Center → Management → Queues]** for my work on **[what you need to do]**.
 >
 > According to the User Manual, this needs:
 >

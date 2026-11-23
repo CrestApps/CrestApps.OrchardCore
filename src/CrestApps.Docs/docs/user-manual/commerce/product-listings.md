@@ -11,7 +11,7 @@ A **product listing** is a page of your site that lists products: a shop, a page
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Product Listings for the listing pages, and Commerce > Products for the products themselves |
+| **Menu** | **Commerce** → **Product Listings for the listing pages**, and **Commerce** → **Products for the products themselves** |
 | **Permission** | The content permissions of the types involved: listing, creating, editing and publishing **Product Listing** items, and your product types' items |
 | **Feature** | Product Listing (it turns on Products). Turn on SEO as well to control how listings appear in search engines. |
 
@@ -29,7 +29,7 @@ Setting up a listing takes three steps: decide which of your products' fields vi
 
 Filters come from the fields of your product types: a car's year and mileage, a home's bedrooms, a shirt's color and size. You choose which fields take part in the field's own settings.
 
-1. Open **Design > Content Definition > Content Types** and edit a product type, that is, a type with the **Product** part.
+1. Open **Design** → **Content Definition** → **Content Types** and edit a product type, that is, a type with the **Product** part.
 2. Click **Edit** next to a field.
 3. In the **Product listing** section, tick what the field is for, and save.
 
@@ -54,7 +54,7 @@ The price, the product's type, whether it can be bought online and whether it is
 <YouTube video="product-listings-and-attributes" title="Setting up the listing page" start={160} end={211} />
 <YouTube video="products" title="Video of a product listing page's settings and the shop" start={331} end={387} />
 
-1. Open **Commerce > Product Listings** and click **New**.
+1. Open **Commerce** → **Product Listings** and click **New**.
 2. Enter a **Title**, and a **Permalink** such as *shop* or *homes* for the page's address.
 3. Fill in the listing settings below, and click **Publish**.
 
@@ -116,7 +116,7 @@ Leave **Offer the standard sorts and every sortable field** ticked to offer **Re
 
 Each product can have its own page with its images, price, highlights and actions, and its specification table.
 
-1. Open **Design > Content Definition > Content Types** and edit the product type.
+1. Open **Design** → **Content Definition** → **Content Types** and edit the product type.
 2. Click **Edit** next to the **Product** part.
 3. Tick **Show product details on the product page**.
 4. For products that cannot be bought online, fill in **Inquiry button**, such as *Schedule a viewing*, and **Inquiry link**, where the button leads. In the link, `{id}` and `{title}` are replaced with the product's identifier and title.
@@ -169,8 +169,8 @@ Watch the video for the three steps: the feature, the index and the listing.
 
 Listings search your database by default, which suits most catalogs. A large catalog, or one where keyword search should rank the best matches first, can search a search server instead.
 
-1. Turn on one of **Product Search (Elasticsearch)**, **Product Search (Lucene)** or **Product Search (Azure AI Search)** under **Configuration > Features**. Elasticsearch and Azure AI Search need their connection set up first; Lucene keeps its index on your server and needs nothing else.
-2. Open **Search > Indexes**, click **Add** next to **Products (Elasticsearch)**, **Products (Lucene)** or **Products (Azure AI Search)**, enter a name, and save. The index fills with your products in the background.
+1. Turn on one of **Product Search (Elasticsearch)**, **Product Search (Lucene)** or **Product Search (Azure AI Search)** under **Configuration** → **Features**. Elasticsearch and Azure AI Search need their connection set up first; Lucene keeps its index on your server and needs nothing else.
+2. Open **Search** → **Indexes**, click **Add** next to **Products (Elasticsearch)**, **Products (Lucene)** or **Products (Azure AI Search)**, enter a name, and save. The index fills with your products in the background.
 3. Edit a listing, pick the index under **Search index**, and publish.
 
 Visitors see the same filters, counts, sorts and pages as before. Keyword search matches the start of words, such as *fo* for *Ford*, and ranks the best matches first. Each change to a product reaches the index when it is published, and the index rebuilds itself when you change your product types or their fields. If the search server cannot be reached, the listing searches the database instead, so it keeps working.
@@ -185,8 +185,8 @@ With the SEO feature on, add the **SEO** part to the **Product Listing** type an
 
 With **Product Feeds** on, your products are published as a feed for Google Merchant Center, Meta (Facebook and Instagram shops) and TikTok, so they show in shopping ads and shops.
 
-1. Set your site's base URL under **Settings > General**: the feed's links and photos need it.
-2. Open **Settings > Commerce > Product Feeds**. It shows the feed's address, how many products are in it, and why any are left out, such as a product with no photo.
+1. Set your site's base URL under **Settings** → **General**: the feed's links and photos need it.
+2. Open **Settings** → **Commerce** → **Product Feeds**. It shows the feed's address, how many products are in it, and why any are left out, such as a product with no photo.
 3. Give Google Merchant Center, Meta Commerce Manager or TikTok the feed's address as a scheduled feed. Add a market's currency, such as *?currency=EUR*, for a feed in it.
 
 Each product you sell online is in the feed with its price, sale price, photos and whether it's in stock; a product sold in variants is in it once for each variant. To give a product a brand, a GTIN (the barcode's number) or an MPN, add the **Product Feed** part to its content type, or set the store's **Brand** under the feed's settings. Products whose brand is in a taxonomy named for brands get it from there. Tick **Leave it out of shopping feeds** on a product to keep it out.
@@ -199,16 +199,16 @@ The feed also tells AI agents, such as ChatGPT, which products they may show buy
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Agent Feeds |
+| **Menu** | **Settings** → **Commerce** → **Agent Feeds** |
 | **Permission** | Manage agent product feeds |
 | **Feature** | Agent Product Feeds (it turns on Agentic Commerce and Product Feeds) |
 
 <AskYourAdmin />
 
-AI agents read your products from feeds too. **Settings > Commerce > Agent Feeds** publishes them in OpenAI's format for ChatGPT, pushes them to the agent platforms you sell through, and shows how the last pushes went. It uses the products, prices, photos and stock of the shopping feed, the store's name, website and policy links from **Settings > Commerce > Store**, the shipping rates and the return settings.
+AI agents read your products from feeds too. **Settings** → **Commerce** → **Agent Feeds** publishes them in OpenAI's format for ChatGPT, pushes them to the agent platforms you sell through, and shows how the last pushes went. It uses the products, prices, photos and stock of the shopping feed, the store's name, website and policy links from **Settings** → **Commerce** → **Store**, the shipping rates and the return settings.
 
-1. Set your site's base URL under **Settings > General**, and the links to your terms of service and privacy policy under **Settings > Commerce > Store**: agents can only check out products whose feed has both.
-2. Open **Settings > Commerce > Agent Feeds**. The **OpenAI product feed** card shows the feed's addresses, how many products are in it, and why any are left out, such as a product with no brand.
+1. Set your site's base URL under **Settings** → **General**, and the links to your terms of service and privacy policy under **Settings** → **Commerce** → **Store**: agents can only check out products whose feed has both.
+2. Open **Settings** → **Commerce** → **Agent Feeds**. The **OpenAI product feed** card shows the feed's addresses, how many products are in it, and why any are left out, such as a product with no brand.
 3. Enter the **Target countries** you sell to through agents, such as *US, CA*, or leave it empty for the store's own country.
 4. Set up the push your agent platform asks for, and choose **Save**.
 
@@ -237,20 +237,20 @@ The store pushes every product once a day, and pushes a product again after it i
 
 ## Find your products and listings
 
-**Commerce > Products** lists every product of every product type, including subscription plans, with a filter by type; its **New** button offers only product types. **Commerce > Product Listings** lists your listing pages.
+**Commerce** → **Products** lists every product of every product type, including subscription plans, with a filter by type; its **New** button offers only product types. **Commerce** → **Product Listings** lists your listing pages.
 
 ## Try a sample
 
-Three recipes under **Configuration > Recipes** set up a complete example you can explore and adapt:
+Three recipes under **Configuration** → **Recipes** set up a complete example you can explore and adapt:
 
 | Recipe | Creates |
 | --- | --- |
-| **Product listing: online store sample** | 30 products sold online with categories, brands, colors and sizes, a **Shop** page at */shop*, orders, stock (a few products running low and one sold out) under **Commerce > Inventory**, shipping zones for the United States, Canada and the rest of the world under **Commerce > Shipping**, two sample customers with addresses under **Commerce > Customers**, product reviews, and the coupons WELCOME10 and FREESHIP75 |
+| **Product listing: online store sample** | 30 products sold online with categories, brands, colors and sizes, a **Shop** page at */shop*, orders, stock (a few products running low and one sold out) under **Commerce** → **Inventory**, shipping zones for the United States, Canada and the rest of the world under **Commerce** → **Shipping**, two sample customers with addresses under **Commerce** → **Customers**, product reviews, and the coupons WELCOME10 and FREESHIP75 |
 | **Product listing: real estate sample** | 20 homes that are listed but not sold online, some with the price on request and a *Schedule a viewing* button, and a **Homes for sale** page at */homes* |
 | **Product listing: vehicle dealership sample** | 28 vehicles, some sold online and the rest listed, filtered by make, model, year, mileage and more, and a **Vehicles** page at */vehicles* |
 
 Run a sample on a test site first: each one adds content types, taxonomies and content items.
 
 :::note[Your site needs a theme]
-Listing pages are styled by your site's theme, which must be built on Bootstrap 5, as **TheTheme** and **The Blog Theme** are. A site set up with the **Blank** recipe has no front-end theme, so its listings show unstyled. Choose one under **Design > Themes** with **Make Current**.
+Listing pages are styled by your site's theme, which must be built on Bootstrap 5, as **TheTheme** and **The Blog Theme** are. A site set up with the **Blank** recipe has no front-end theme, so its listings show unstyled. Choose one under **Design** → **Themes** with **Make Current**.
 :::

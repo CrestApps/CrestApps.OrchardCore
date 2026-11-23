@@ -7,11 +7,11 @@ technical_manual:
   - omnichannel/management
 ---
 
-An **activity** is one piece of work for one contact: a call to make, a text to send, or an inbound call to log. Agents work their activities from **Interaction Center > Activities** and from each contact's page.
+An **activity** is one piece of work for one contact: a call to make, a text to send, or an inbound call to log. Agents work their activities from **Interaction Center** → **Activities** and from each contact's page.
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Activities |
+| **Menu** | **Interaction Center** → **Activities** |
 | **Permissions** | List activities, List Contact activities, Complete own activity, and Create and edit activities for **Add Activity** and **Edit**. The *Agent* role has them by default. Complete activity lets you complete other people's activities; Purge activity adds **Purge**. Manage activities includes Create and edit activities and Purge activity. |
 | **Feature** | Omnichannel Management |
 
@@ -23,7 +23,7 @@ An **activity** is one piece of work for one contact: a call to make, a text to 
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of an agent opening their activity list, completing an activity and picking a disposition" start={532} end={555} />
 
-**Interaction Center > Activities** lists the manual activities assigned to you that are not started yet, with the activity scheduled furthest ahead first. Each row shows the contact, the number or address, the channel, the attempt number, when it is scheduled, and the contact's **current local time**, so you know whether it is a good time to call. From the second attempt on, it also shows the disposition the previous attempt ended with, such as **No Answer**. Hover over the local time to see the contact's full local date and time zone.
+**Interaction Center** → **Activities** lists the manual activities assigned to you that are not started yet, with the activity scheduled furthest ahead first. Each row shows the contact, the number or address, the channel, the attempt number, when it is scheduled, and the contact's **current local time**, so you know whether it is a good time to call. From the second attempt on, it also shows the disposition the previous attempt ended with, such as **No Answer**. Hover over the local time to see the contact's full local date and time zone.
 
 Each row also says who will handle the activity: whether it is **Manual** or **Automated (AI)** work and where it came from (for example *Automatic*, *Preview dialer*, *Callback* or *Inbound*), the **AI profile** that will hold an automated conversation, the **dialer profile** that will dial it, its **campaign**, and the user it is **assigned to**. Badges only appear when the activity has that information. Hover over a badge to see what it stands for.
 
@@ -56,7 +56,7 @@ If the activity is already finished, you are sent back to where you came from wi
 
 ## Create activities by hand from a contact
 
-Open the contact (**Interaction Center > Contacts**, then **List Activities**) and use **Add Activity**. This screencast schedules an outbound call and then logs an inbound call for the same contact:
+Open the contact (**Interaction Center** → **Contacts**, then **List Activities**) and use **Add Activity**. This screencast schedules an outbound call and then logs an inbound call for the same contact:
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of opening a contact, scheduling an outbound activity and logging an inbound call whose disposition schedules a follow-up" start={424} end={475} />
 
@@ -64,7 +64,7 @@ Open the contact (**Interaction Center > Contacts**, then **List Activities**) a
 
 <YouTube video="omnichannel-activities" title="Video of scheduling an outbound activity from a contact" start={138} end={174} />
 
-1. Click **Add Activity > Outbound**.
+1. Click **Add Activity** → **Outbound**.
 2. Pick the **Subject content type**, the **Schedule at** time, the **User to assign activity to**, the **Urgency level** and any **Instructions**. The subject's own fields are filled in later, by whoever completes the activity. Only outbound subjects are listed; when there is only one, it is picked for you.
 3. Click **Save**. The activity appears under **Scheduled Activities** on the contact, and in that user's activity list.
 
@@ -76,8 +76,8 @@ If no outbound subject exists yet, the page says so and you cannot schedule an a
 
 When a customer calls you directly:
 
-1. Search **Interaction Center > Contacts** for their number, for example `phone:7025550108`, and open the contact.
-2. Click **Add Activity > Inbound** and pick the **Inbound subject**. When there is only one, it is picked for you. The page reloads with that subject's fields, right under the subject, and its dispositions.
+1. Search **Interaction Center** → **Contacts** for their number, for example `phone:7025550108`, and open the contact.
+2. Click **Add Activity** → **Inbound** and pick the **Inbound subject**. When there is only one, it is picked for you. The page reloads with that subject's fields, right under the subject, and its dispositions.
 3. Check the contact details, fill in the subject's fields, add **Notes** and pick the **Disposition**. Only the dispositions the subject flow has an action for are listed.
 4. Check **Workflow Results**: it previews what the disposition does next, for example a follow-up activity with its **Schedule at** time. Change the time or add **Preparation notes** if you need to.
 5. Click **Log Activity**.

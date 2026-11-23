@@ -12,7 +12,7 @@ Some jobs are best done by a specialist. An **Agent** is an AI profile with one 
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Profiles (create agents, and choose them on the **Capabilities** tab); Artificial Intelligence > Agent to Agent Hosts |
+| **Menu** | **Artificial Intelligence** → **Profiles (create agents**, and choose them on the **Capabilities** tab); **Artificial Intelligence** → **Agent to Agent Hosts** |
 | **Permission** | Manage AI profiles; Manage Agent-to-Agent Connections; Access the A2A Host (for callers of your agents) |
 | **Feature** | Agent-to-Agent (A2A) Client; Agent-to-Agent (A2A) Host |
 
@@ -28,7 +28,7 @@ Each part is its own feature, so you only see the menus of the features that are
 
 <YouTube video="ai-a2a" title="Video of creating an agent" start={91} end={141} />
 
-1. Open **Artificial Intelligence > Profiles** and click **Add Profile**.
+1. Open **Artificial Intelligence** → **Profiles** and click **Add Profile**.
 2. In the **New AI Profile** window, click **Start** on **Blank profile**. The other cards are ready-made profiles, including agents you can start from.
 3. Enter a **Title**, and set the **Profile type** to **Agent**. The **Description** and **Availability** appear.
 4. Write the **Description** for the other assistants. It says exactly what the agent does and when to call it, and it is how they decide.
@@ -49,7 +49,7 @@ With the **Agent-to-Agent (A2A) Host** feature on, your site offers every **Agen
 
 <YouTube video="ai-a2a" title="Video of adding an A2A connection" start={185} end={234} />
 
-1. Open **Artificial Intelligence > Agent to Agent Hosts** and click **Add Connection**.
+1. Open **Artificial Intelligence** → **Agent to Agent Hosts** and click **Add Connection**.
 2. Enter a **Title** and the **Endpoint**, the address of the other system's A2A host. The host of a CrestApps site answers at the site's address followed by `/a2a`.
 3. Choose the **Authentication**. The options are the same as for an [MCP connection](mcp.md#choose-how-to-sign-in): **Anonymous (No Authentication)**, **API Key**, **Basic Authentication**, three **OAuth 2.0** options and **Custom Headers (Advanced)**. **Anonymous** suits an open host or a test.
 4. Click **Save**.
@@ -60,7 +60,7 @@ The site reads the agent card of the host when an assistant first uses the conne
 
 <YouTube video="ai-a2a" title="Video of giving an assistant the agents" start={234} end={262} />
 
-1. Open **Artificial Intelligence > Profiles**, edit the profile of the assistant, and open the **Capabilities** tab.
+1. Open **Artificial Intelligence** → **Profiles**, edit the profile of the assistant, and open the **Capabilities** tab.
 2. Under **A2A Connections**, tick the connection. Each agent that the host offers becomes something the assistant can call.
 3. Under **Agents**, tick the agents of this site that the assistant may call. Always-available agents are already included, and the tab says how many there are.
 4. Click **Save**.

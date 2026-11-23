@@ -10,7 +10,7 @@ Requesters sometimes need to give a login or another secret. Instead of writing 
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Tickets, then a ticket |
+| **Menu** | **Service Desk** → **Tickets**, then a ticket |
 | **Permission** | **View protected information** on the ticket's desk to show and remove it; **Add internal notes to tickets** to add it |
 | **Feature** | Tickets |
 
@@ -20,7 +20,7 @@ Requesters sometimes need to give a login or another secret. Instead of writing 
 
 - A ticket that holds some shows **Contains protected information** at the top, and a **Protected** badge in the ticket list.
 - The **Protected information** card on the ticket lists the labels; the secrets stay hidden. To see them, type your own password and select **Show**. They show for 5 minutes, or until you select **Hide**, and then they're hidden again.
-- Only people with **View protected information** on the ticket's desk get **Show**, and the remove buttons. Administrators have it on a new site; on a site that existed before, give it to the roles that need it under **Users > Roles**.
+- Only people with **View protected information** on the ticket's desk get **Show**, and the remove buttons. Administrators have it on a new site; on a site that existed before, give it to the roles that need it under **Users** → **Roles**.
 - If you sign in to the site without a password of your own (only through an outside sign-in), you can't show protected information: ask an administrator to set a password on your account.
 - Each time someone shows the secrets, gives a wrong password, adds or removes one, it's noted in the ticket's **History**, with who and when but never the secret. Too many wrong passwords lock the account for a while, as at sign-in.
 

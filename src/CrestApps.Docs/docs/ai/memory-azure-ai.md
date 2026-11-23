@@ -35,9 +35,9 @@ This module depends on:
 
 1. Enable **AI Memory indexing using Azure AI Search**.
 2. Enable the Orchard Core Azure AI Search feature that provides search indexes.
-3. Open **Search -> Indexing** and create an **AI Memory (Azure AI Search)** index.
+3. Open **Search** → **Indexing** and create an **AI Memory (Azure AI Search)** index.
 4. Select the embedding deployment that should be used for memory embeddings and queries.
-5. Go to **Settings -> Artificial Intelligence -> Memory** and choose that index as the **Index profile**.
+5. Go to **Settings** → **Artificial Intelligence** → **Memory** and choose that index as the **Index profile**.
 
 ## Operational notes
 

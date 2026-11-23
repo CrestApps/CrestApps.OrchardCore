@@ -97,7 +97,7 @@ Each list shows 25 rows; the **Records** tab lists everything. A tab shows only 
 
 ## Leads list count
 
-**Interaction Center > Leads** is the Content Admin list of the lead types with `converted:false`. Content Admin counts its items with the query that lists them, which joins the document table, `ContentItemIndex` and `LeadIndex` and counts the distinct documents. On a large tenant that count outlived the command timeout.
+**Interaction Center** → **Leads** is the Content Admin list of the lead types with `converted:false`. Content Admin counts its items with the query that lists them, which joins the document table, `ContentItemIndex` and `LeadIndex` and counts the distinct documents. On a large tenant that count outlived the command timeout.
 
 The CRM feature wraps the registered `IContentsAdminListQueryService` with `LeadContentsAdminListQueryService`. When `LeadListCountQueryFactory` can count the same leads from `LeadIndex` alone, the list query is returned as a `LeadListQuery`: the list rows come from the Content Admin query, and the count from a `count(*)` on `LeadIndex` that seeks `IDX_LeadIndex_ContentType_Converted`. The lead index count is used only when all of these are true; otherwise the list keeps its own count:
 

@@ -11,7 +11,7 @@ Workflows can react to contact center events and act on them without code. For e
 
 | | |
 | --- | --- |
-| **Menu** | Design > Workflows |
+| **Menu** | **Design** → **Workflows** |
 | **Permission** | Manage workflows |
 | **Features** | Workflows, plus the Contact Center features each task needs (see [Contact Center activities](#contact-center-activities)) |
 
@@ -25,7 +25,7 @@ The steps below build a workflow that starts recording every call as soon as it 
 
 <YouTube video="omnichannel-workflows" title="Video of creating a workflow and opening the event picker" start={35} end={68} />
 
-1. Open **Design > Workflows** and click **Create Workflow**. Enter a **Name** such as *Record connected calls* and click **Save**.
+1. Open **Design** → **Workflows** and click **Create Workflow**. Enter a **Name** such as *Record connected calls* and click **Save**.
 2. Click **Add Event**, find **Contact Center Event** and click its **Add** button.
 3. Pick the **Event type** to react to, for example **Call connected** (leave *Any event type* to react to every event), and click **Save**.
 4. Click **Add Task**, open the **Contact Center** category (the contact center tasks, including **Send Text Message**) or **Omnichannel CRM** (**Convert Lead**), find a task such as **Start Call Recording**, and click **Add**. Fill in its fields; for the interaction, use `{{ Workflow.Input.InteractionId }}` to take it from the event. Click **Save**.
@@ -136,7 +136,7 @@ Use **Update Contact** here rather than **Update Content Item**. Update Content 
 
 Open the workflow's editor and click **Instances** (at the top right) to list its runs. Each run shows its status, such as **Finished**, and when it ran. Click a run to see the path it took through the workflow: **Restart** runs it again and **Delete** removes it. The workflow's **Properties** hold **Enabled**, **Single instance** and **Delete successfully completed workflows**.
 
-Every contact center event starts a run of each workflow that begins with a **Contact Center Event**, so a busy contact center produces many runs. A run for an event of another type ends at the **Ignored** outcome and does nothing. To keep the list short, tick **Delete successfully completed workflows** in the workflow's **Properties**, or open **Settings > Workflow Trimming**: **Statuses** picks which runs to remove once they pass the **Retention period** (90 days by default), and **Disable** turns the trimming off.
+Every contact center event starts a run of each workflow that begins with a **Contact Center Event**, so a busy contact center produces many runs. A run for an event of another type ends at the **Ignored** outcome and does nothing. To keep the list short, tick **Delete successfully completed workflows** in the workflow's **Properties**, or open **Settings** → **Workflow Trimming**: **Statuses** picks which runs to remove once they pass the **Retention period** (90 days by default), and **Disable** turns the trimming off.
 
 ## Contact Center activities
 

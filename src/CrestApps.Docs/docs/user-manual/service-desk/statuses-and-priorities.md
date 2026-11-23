@@ -8,7 +8,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Statuses, Service Desk > Priorities |
+| **Menu** | **Service Desk** → **Statuses**, **Service Desk** → **Priorities** |
 | **Permission** | Manage ticket settings |
 | **Feature** | Tickets |
 
@@ -16,7 +16,7 @@ technical_manual:
 
 ## Statuses
 
-A status is where a ticket stands, such as **Open** or **Waiting for the requester**. Go to **Service Desk > Statuses** and select **Add ticket status**, or a status to edit it.
+A status is where a ticket stands, such as **Open** or **Waiting for the requester**. Go to **Service Desk** → **Statuses** and select **Add ticket status**, or a status to edit it.
 
 | Field | What it does |
 | --- | --- |
@@ -29,7 +29,7 @@ A status is where a ticket stands, such as **Open** or **Waiting for the request
 
 ## Priorities
 
-Go to **Service Desk > Priorities** and select **Add ticket priority**, or a priority to edit it.
+Go to **Service Desk** → **Priorities** and select **Add ticket priority**, or a priority to edit it.
 
 | Field | What it does |
 | --- | --- |

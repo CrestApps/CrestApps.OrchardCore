@@ -98,7 +98,7 @@ The session keeps the list in `CheckoutSession.References`; its `ReferenceType` 
 - **What is checked.** Every transaction must exist, still have something to pay and still be collectable, and all of them must belong to one customer (the same owner kind and owner id, or the same guest email when there is no owner id) and be in one currency. Otherwise `StartAsync` throws `CheckoutRejectedException` and nothing is saved; its `Errors` say why, in words a customer can read. Check that the signed-in customer owns the transactions before you start the checkout, as the single *Pay* action does.
 - **What the customer sees.** The concealed `TransactionSettlement` step carries one line per transaction, at what it still owes, so the checkout summary lists each one. No promotion code is offered: the session sets `SettlesExistingBalance` and leaves `AcceptsDiscountsOnBalance` off, as described in [Coupons on a checkout that settles an existing balance](checkout.md#coupons-on-a-checkout-that-settles-an-existing-balance). Installments are not offered either; they apply to a checkout for one transaction.
 - **How the payment is applied.** The customer pays once, so the payment ledger has one payment attempt. Its `ReferenceType` is `Transaction` and its `ReferenceId` is empty. When the checkout completes, the confirmed amount is split across the transactions in the order they were listed, each up to what the checkout asked for it and what it still owes, through `ITransactionSettlementService.ApplyShareAsync`. Each transaction records its share as a payment of its own that names the attempt, so its status, its receipt, the payment handlers and the lifecycle events work as for a transaction paid on its own. When the gateway confirms less than was asked, the first transactions are paid in full and the rest are left partly paid. Completing the checkout again applies nothing twice.
-- **Refunds stay per transaction.** **Refund** on a transaction gives back only that transaction's share of the payment, less what was already refunded for it. The refund names the transaction (`PaymentRefund.ReferenceType` and `ReferenceId`), so it is recorded on that one only. A refund of the whole payment, started from **Commerce → Payments** or at the gateway, names no transaction: it is split back over the transactions in the order they were listed, each up to its share.
+- **Refunds stay per transaction.** **Refund** on a transaction gives back only that transaction's share of the payment, less what was already refunded for it. The refund names the transaction (`PaymentRefund.ReferenceType` and `ReferenceId`), so it is recorded on that one only. A refund of the whole payment, started from **Commerce** → **Payments** or at the gateway, names no transaction: it is split back over the transactions in the order they were listed, each up to its share.
 - **Debts paid through a page of their own.** A transaction an `ITransactionPayUrlProvider` sends elsewhere (an order's invoice, paid through the order's checkout) is refused by the ledger's checkout, on its own or with others, so it is never settled without the page that owns its payment hearing of it.
 - **One checkout's payment shared by debts of the same checkout.** A purchase checkout's payment can also be applied, by shares, to other transactions that record the same checkout (`CheckoutSessionId`), such as an invoice and the debit note for the shipping its order's checkout added. A refund found by the checkout and obligation goes to that transaction up to its share of the payment, and the rest to the others that took a share (`ITransactionStore.GetByCheckoutSessionAsync`), so none gives back more than it was paid.
 
@@ -370,7 +370,7 @@ services.AddScoped<ITransactionEventHandler, RegistrationPaymentStatusHandler>()
 
 ### Message templates
 
-Every message about a transaction has a kind, so a store writes its own template of each one under **Settings → Commerce → Emails** without changing the others. Each template reads the transaction as `{{ Transaction }}` and these values:
+Every message about a transaction has a kind, so a store writes its own template of each one under **Settings** → **Commerce** → **Emails** without changing the others. Each template reads the transaction as `{{ Transaction }}` and these values:
 
 | Kind | Sent when | Feature |
 | --- | --- | --- |
@@ -420,7 +420,7 @@ The same statement, and the customer's invoices and receipts, are also available
 
 ### Administrator report and console
 
-Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
+Users with the **Manage transactions** permission get a **Commerce** → **Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
 
 - **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
 - **Record payment** — record a full or partial payment received offline, with an optional reference, how it arrived and when. The payment method field suggests the common methods; one picked or typed by its label or key is stored as its stable key from `TransactionsConstants.OfflinePaymentMethods` (`cash`, `check`, `bank-transfer`, `card-terminal`, `other`), so reports and webhooks group payments the same in every language, and any other text is kept as typed. The timeline shows the localized label.
@@ -545,7 +545,7 @@ A module can also set it in code with `services.Configure<TransactionCustomerPag
 
 ## Payment terms
 
-The **Payment Terms** feature (`CrestApps.OrchardCore.Transactions.PaymentTerms`) keeps the store's payment terms, a small catalog that invoices, account terms, pay-later purchases and work orders read instead of storing a bare number of days. Staff keep it under **Commerce > Payment Terms** (permission **Manage payment terms**).
+The **Payment Terms** feature (`CrestApps.OrchardCore.Transactions.PaymentTerms`) keeps the store's payment terms, a small catalog that invoices, account terms, pay-later purchases and work orders read instead of storing a bare number of days. Staff keep it under **Commerce** → **Payment Terms** (permission **Manage payment terms**).
 
 A `PaymentTerm` (`CrestApps.OrchardCore.Transactions.Abstractions`, namespace `CrestApps.OrchardCore.Transactions.Models`) has a `Name`, a `Kind` and its numbers, an optional early-payment discount and `Enabled`:
 
@@ -626,7 +626,7 @@ The `name` must match the value the provider assigns to `Transaction.Source`. Re
 
 ## Configuring reminders
 
-Reminder settings appear only when the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`) is enabled. Under **Settings → Commerce → Transactions** (requires the **Manage transaction settings** permission) you can configure the scheduled reminder sweep:
+Reminder settings appear only when the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`) is enabled. Under **Settings** → **Commerce** → **Transactions** (requires the **Manage transaction settings** permission) you can configure the scheduled reminder sweep:
 
 | Setting | Purpose | Default |
 | --- | --- | --- |
@@ -640,13 +640,13 @@ The background task runs the sweep on a schedule and sends a reminder only when 
 
 ## Payments and refunds
 
-With [Checkout](checkout) enabled, **Commerce → Payments** lists every payment the suite has attempted, filtered by state and payment method, showing what was expected, what actually settled, and the gateway's own transaction reference. It answers "did this customer actually pay?" without reading the database.
+With [Checkout](checkout) enabled, **Commerce** → **Payments** lists every payment the suite has attempted, filtered by state and payment method, showing what was expected, what actually settled, and the gateway's own transaction reference. It answers "did this customer actually pay?" without reading the database.
 
 It is also the only place a refund starts. **Refund** isn't offered on a payment from a provider that defers payment (`PaymentProviderCapabilities.DefersPayment`, such as Pay Later), since nothing was collected to give back. A refund the service refuses, because another refund for the same payment holds the lock, an earlier one still needs manual settlement, or the checkout is gone, comes back as a message rather than an error page. The form shows what was collected and what has already been given back, refuses an amount above what is still refundable, and issues the refund through the refund service so the durable ledger, the original payment's tax allocation, and the over-refund protection all apply. Counting an in-flight refund against the remaining amount is deliberate: ignoring one would let an operator start a second refund for money already on its way back.
 
-**Commerce → Refunds** lists what came of them. A refund against a payment method that has no executable refund operation is recorded as **needing manual settlement** rather than silently dropped, and this screen is where an operator records the reference once they have moved the money by hand. Only a refund in that state can be closed this way; marking a failed gateway refund as done would tell the ledger the customer was paid when they were not.
+**Commerce** → **Refunds** lists what came of them. A refund against a payment method that has no executable refund operation is recorded as **needing manual settlement** rather than silently dropped, and this screen is where an operator records the reference once they have moved the money by hand. Only a refund in that state can be closed this way; marking a failed gateway refund as done would tell the ledger the customer was paid when they were not.
 
-**Commerce → Payment Issues** (`ManageRefunds`) lists the money operations that failed and must be finished by hand, open ones first: a refund the checkout could not issue while undoing a checkout it could not complete, a cancel, pause or resume the payment provider refused for a subscription (so the customer may still be billed), and a promotion code whose use was not counted after a settled payment. Each row says what to do, why it failed, the provider and its reference; **Mark resolved** records what the operator did. The code that hits the failure still logs it.
+**Commerce** → **Payment Issues** (`ManageRefunds`) lists the money operations that failed and must be finished by hand, open ones first: a refund the checkout could not issue while undoing a checkout it could not complete, a cancel, pause or resume the payment provider refused for a subscription (so the customer may still be billed), and a promotion code whose use was not counted after a settled payment. Each row says what to do, why it failed, the provider and its reference; **Mark resolved** records what the operator did. The code that hits the failure still logs it.
 
 A module records its own issue through `IPaymentIssueRecorder.RecordAsync(PaymentIssue)` (`Transactions.Abstractions`; `services.AddPaymentIssues()` in `Transactions.Core`, registered by Checkout). The kind is an open string; the built-in kinds are in `PaymentIssueKinds`. Recording never throws, so it is safe inside a failure handler.
 
@@ -738,7 +738,7 @@ Add the package to your Orchard Core project:
 dotnet add package CrestApps.OrchardCore.Transactions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enabling it also enables the **[Commerce Foundation](commerce#the-commerce-foundation-and-commerce-features)** feature it depends on, which owns the shared Commerce admin menu and icon; it does not turn on the store's setup guide.
+Then, in the **Orchard Core Admin Dashboard** under **Tools** → **Features**, enable **Transactions**. Enabling it also enables the **[Commerce Foundation](commerce#the-commerce-foundation-and-commerce-features)** feature it depends on, which owns the shared Commerce admin menu and icon; it does not turn on the store's setup guide.
 
 Enable **[Checkout](checkout)** as well if you want customers to settle outstanding balances online. To send manual and scheduled payment reminders, enable the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`); it depends on the OrchardCore **[Notifications](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)** feature, which is enabled automatically as a dependency.
 

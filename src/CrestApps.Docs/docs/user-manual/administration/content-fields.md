@@ -13,7 +13,7 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 | | |
 | --- | --- |
-| **Menu** | Design > Content Definition > Content Types |
+| **Menu** | **Design** → **Content Definition** → **Content Types** |
 | **Permission** | Edit content types |
 | **Feature** | CrestApps Content Fields (Phone Field), Address Field, Conditional Fields |
 
@@ -25,11 +25,11 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 ## Add a phone field to a content type
 
-1. Open **Design > Content Definition > Content Types** and edit the content type.
+1. Open **Design** → **Content Definition** → **Content Types** and edit the content type.
 <YouTube video="content-fields" title="Video of adding a phone field to a content type" start={104} end={156} />
 
 
-1. Open **Content > Content Definition > Content Types** and edit the content type.
+1. Open **Content** → **Content Definition** → **Content Types** and edit the content type.
 2. Click **Add Field**.
 3. Enter the display name editors will see, for example *Main phone*. Orchard Core fills in the **Technical Name** for you.
 4. Choose **PhoneField** as the field type and save.
@@ -71,7 +71,7 @@ If the number is not a valid phone number, the item is not saved and the form sh
 
 Turn on the **Address Field** feature first. It also turns on **Addresses**.
 
-1. Open **Design > Content Definition > Content Types** and edit the content type.
+1. Open **Design** → **Content Definition** → **Content Types** and edit the content type.
 2. Click **Add Field**, enter the display name editors will see, for example *Location* or *Home address*, choose **AddressField** and save.
 3. On the field's settings page, set the options below and save.
 
@@ -101,7 +101,7 @@ On the saved item, the address is shown the way its country's post writes it.
 
 When the **Address Countries** feature is on, each country the address field can offer is a content item of the type **Country**. They are added the first time the feature is turned on, from the standard list of countries.
 
-1. Open **Content > Content Items**, open the **Content Type** menu and choose **Country**.
+1. Open **Content** → **Content Items**, open the **Content Type** menu and choose **Country**.
 2. Type a name in the search box to find a country. The list shows only the items of that type.
 3. Click **Edit** to rename a country, **New** and **Country** to add one, or use **Actions** to delete one.
 
@@ -111,7 +111,7 @@ Address fields offer only the countries that are published here, so deleting the
 
 When the **Address Suggestions (Google Places)** feature is on, people typing a street in an address get suggestions, and the rest of the address fills in from the one they pick. Suggestions come from Google Places, which bills your site for each session, so they are off until you give the site a key.
 
-1. Open **Settings > Address Suggestions**. You need the **Manage address suggestions** permission.
+1. Open **Settings** → **Address Suggestions**. You need the **Manage address suggestions** permission.
 2. Paste the **Google Places API key** and save. Create the key for the *Places API (New)* in the Google Cloud console, and restrict it to that API.
 
 The site keeps the key on the server and never shows it again: leave the box blank to keep the saved key, tick **Remove the key** to stop suggesting addresses. Without a key, people type their address themselves.
@@ -120,7 +120,7 @@ The site keeps the key on the server and never shows it again: leave the box bla
 
 With the **Conditional Fields** feature on, any field of a content type can show only when other answers say so: ask "Laptop model" only for laptop problems, or "Who else is affected?" only when someone ticked "Is this an outage?". People then see only the questions that apply to them, and the form stays short.
 
-1. Open **Design > Content Definition > Content Types**, edit the content type and click **Edit** on the field that should show only sometimes.
+1. Open **Design** → **Content Definition** → **Content Types**, edit the content type and click **Edit** on the field that should show only sometimes.
 2. Under **Show this field when**, choose another field (or a value such as a ticket's category), a condition (**is**, **is not**, **is one of**, **is or is under**, **has an answer** and so on) and the value. Fields with a list of choices, yes-or-no fields and categories offer their choices; for other fields, type the values, one per line.
 3. Add more conditions on the next rows and choose whether **all** of them must be met or **any** one. Leave every row empty to always show the field.
 4. Save the field.

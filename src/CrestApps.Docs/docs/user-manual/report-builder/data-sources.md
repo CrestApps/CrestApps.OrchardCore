@@ -17,7 +17,7 @@ Watch the short video, then read about each data source below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder > *a report* > Add data set |
+| **Menu** | **Reports** → **Report Builder** → *a report* → **Add data set** |
 | **Permission** | Build reports and manage own custom reports and views, and the permission each data source asks for below |
 | **Feature** | Report Builder, and the feature that stores each kind of data |
 
@@ -100,7 +100,7 @@ These data sets read the newest records first and narrow the read to the period 
 
 ## Reusable views
 
-The **Report views** data source lists the views saved under **Reports > Report Views**. A view's columns are its fields. See [Reusable views](views.md).
+The **Report views** data source lists the views saved under **Reports** → **Report Views**. A view's columns are its fields. See [Reusable views](views.md).
 
 ## More data sources
 

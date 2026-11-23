@@ -10,7 +10,7 @@ A **payment term** says when a bill is due after the day it is issued, such as *
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Payment Terms |
+| **Menu** | **Commerce** → **Payment Terms** |
 | **Permission** | Manage payment terms |
 | **Feature** | Payment Terms |
 
@@ -18,7 +18,7 @@ A **payment term** says when a bill is due after the day it is issued, such as *
 
 ## The list of terms
 
-Open **Commerce > Payment Terms**. Each row shows the name, when the bill is due, the early-payment discount if there is one, and **Turned off** for a term that can no longer be chosen. Type part of a name in **Search** and press Enter to find a term. The list follows the layout chosen for admin lists, as a list or as a grid.
+Open **Commerce** → **Payment Terms**. Each row shows the name, when the bill is due, the early-payment discount if there is one, and **Turned off** for a term that can no longer be chosen. Type part of a name in **Search** and press Enter to find a term. The list follows the layout chosen for admin lists, as a list or as a grid.
 
 ## Add a term
 

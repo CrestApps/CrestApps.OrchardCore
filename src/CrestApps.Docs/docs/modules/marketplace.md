@@ -25,7 +25,7 @@ Vendors, earnings and payouts live in the `Marketplace` collection:
 - **`VendorEarning`** (`IVendorEarningStore`): one per vendor line of a paid order, or per refund. It holds `Gross`, `Commission` and `Net`, its kind (Sale or Refund), its `VendorEarningStatus` (Held, Available or PaidOut), `HoldUntilUtc`, `AwaitsFulfillment` for goods, and the payout that paid it.
 - **`VendorPayout`** (`IVendorPayoutStore`): an amount sent to a vendor for one order's earnings, with its status and the provider's reference.
 
-`MarketplaceSettings` (**Settings > Commerce > Marketplace**, `ManageMarketplace`) holds the commission (10%), the days a sale is held (7), whether goods wait for fulfillment, whether payouts run by themselves, the payout provider when more than one is enabled, and the country a vendor's Stripe account is made in.
+`MarketplaceSettings` (**Settings** → **Commerce** → **Marketplace**, `ManageMarketplace`) holds the commission (10%), the days a sale is held (7), whether goods wait for fulfillment, whether payouts run by themselves, the payout provider when more than one is enabled, and the country a vendor's Stripe account is made in.
 
 ## The ledger
 
@@ -46,7 +46,7 @@ Vendors, earnings and payouts live in the `Marketplace` collection:
 
 ## Stripe Connect
 
-The **Marketplace payouts with Stripe Connect** feature (it depends on Disbursements) fills the payout seam. `IVendorPayoutProvider` is a Disbursements provider (`IDisbursementProvider`) that can pay a vendor, so payouts appear under **Banking > Disbursements** and **Disbursement Batches**, in the Disbursements data set and in the Disbursement workflow events:
+The **Marketplace payouts with Stripe Connect** feature (it depends on Disbursements) fills the payout seam. `IVendorPayoutProvider` is a Disbursements provider (`IDisbursementProvider`) that can pay a vendor, so payouts appear under **Banking** → **Disbursements** and **Disbursement Batches**, in the Disbursements data set and in the Disbursement workflow events:
 
 - `StripeConnectVendorService` makes an Express account for a vendor and an onboarding link. The vendor's page refreshes whether its details are submitted and transfers are active.
 - `StripeConnectPayoutProvider` (provider and method `StripeConnect`, **Stripe Connect transfer**) creates a Transfer to the vendor's account for each disbursement of a batch, with the order's charge as its `SourceTransaction`, so the money moves when the charge's funds are available. A transfer that goes through settles the disbursement with the transfer id as its trace; one Stripe refuses fails it with Stripe's reason. The disbursement's idempotency key is the transfer's.
@@ -55,7 +55,7 @@ The store's Stripe account must have Connect turned on in the Stripe dashboard. 
 
 ## Pages
 
-**Commerce > Vendors** (`ManageMarketplace`) lists vendors on the admin list. A vendor's page shows what it has earned (held, ready and paid out), its sales and payouts, **Release now** for an order, and **Pay out what's ready**. The storefront account's **Vendor** page (`account/vendor`, the `VendorDashboard` shape) shows the same to the people who run the vendor, with **Set up payouts** for Stripe.
+**Commerce** → **Vendors** (`ManageMarketplace`) lists vendors on the admin list. A vendor's page shows what it has earned (held, ready and paid out), its sales and payouts, **Release now** for an order, and **Pay out what's ready**. The storefront account's **Vendor** page (`account/vendor`, the `VendorDashboard` shape) shows the same to the people who run the vendor, with **Set up payouts** for Stripe.
 
 ## Recipes and deployment
 
@@ -72,7 +72,7 @@ The `Vendors` recipe step (`VendorsStep`) creates or updates vendors. A vendor i
 
 ## Report Builder data source
 
-With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, the Marketplace feature adds the **Marketplace** data source (`Marketplace`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage the marketplace** (`ManageMarketplace`), the permission of **Commerce > Vendors**. The Stripe Connect feature adds no data set. A vendor's Stripe account, the key used to make it, the provider's reference for a transfer and its error messages are never exposed.
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, the Marketplace feature adds the **Marketplace** data source (`Marketplace`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage the marketplace** (`ManageMarketplace`), the permission of **Commerce** → **Vendors**. The Stripe Connect feature adds no data set. A vendor's Stripe account, the key used to make it, the provider's reference for a transfer and its error messages are never exposed.
 
 The **Vendors** data set (`Vendors`) has one row per vendor, newest first by when it was added; it has no default date. Joins on the vendor ID and status filters are applied in the database, and simple groups and totals of the vendor ID and status are counted there too.
 

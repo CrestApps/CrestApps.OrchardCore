@@ -34,7 +34,7 @@ Every request but `about` needs `X-Experience-API-Version` with a 1.0 version. A
 
 The LRS takes only these credentials. The sign-in cookie never opens it, even for an administrator: a request that has only the cookie gets 401.
 
-- **An OpenID application.** Create an application under **Security → OpenID Connect → Management → Applications** (OpenID Management Interface) and give it a role that holds the LRS permissions below. The application is the LRS client:
+- **An OpenID application.** Create an application under **Security** → **OpenID Connect** → **Management** → **Applications** (OpenID Management Interface) and give it a role that holds the LRS permissions below. The application is the LRS client:
   - with a bearer token of Orchard Core's `Api` scheme: enable the OpenID Authorization Server and Token Validation features, allow the client credentials flow on the application, and send `Authorization: Bearer <token>`;
   - with HTTP Basic: the application must be confidential; send `Authorization: Basic base64(client id:client secret)`. The LRS checks the secret with OpenIddict's application manager, on the same application records.
 - **A launch token.** A module that launches content for a learner (cmi5) makes a token that opens the LRS for one actor, one registration and one activity, until it expires. It is sent with HTTP Basic and the user name `xapi-launch`.
@@ -73,7 +73,7 @@ State, activity profile and agent profile documents are stored by PUT, joined by
 
 ## In the admin
 
-**Learning → Learning Statements** lists the statements, newest first, with voided ones marked. Search by actor (a user name, an e-mail address or an account name); filter by verb, activity IRI, registration and the days they were stored, in your time zone. A statement's page shows its facts, the times in your time zone, and the statement as stored.
+**Learning** → **Learning Statements** lists the statements, newest first, with voided ones marked. Search by actor (a user name, an e-mail address or an account name); filter by verb, activity IRI, registration and the days they were stored, in your time zone. A statement's page shows its facts, the times in your time zone, and the statement as stored.
 
 ## Learner records
 

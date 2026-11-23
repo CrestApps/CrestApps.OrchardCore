@@ -24,11 +24,11 @@ The video shows the speech deployments, a **Cascaded Realtime** deployment, the 
 ## Prerequisites
 
 1. **A realtime deployment.** Either of:
-   - **A provider's own speech-to-speech model.** Create a deployment under **Artificial Intelligence → Deployments** whose model supports speech-to-speech and, on its **Model capabilities** card, enable the **Realtime (speech-to-speech)** feature. See [Model Capabilities](model-capabilities.md).
+   - **A provider's own speech-to-speech model.** Create a deployment under **Artificial Intelligence** → **Deployments** whose model supports speech-to-speech and, on its **Model capabilities** card, enable the **Realtime (speech-to-speech)** feature. See [Model Capabilities](model-capabilities.md).
    - **A cascaded realtime deployment**, when no provider you use ships a speech-to-speech model. See [Cascaded realtime](#cascaded-realtime-when-no-provider-speaks) below.
 
-   Optionally set the site's default realtime deployment under **Settings → Artificial Intelligence → Default
-   Deployments**.
+   Optionally set the site's default realtime deployment under **Settings** → **Artificial Intelligence** →
+   **Default Deployments**.
 2. **A surface in conversation mode.**
    - **AI Chat session** — set the profile's **Chat mode** to **Conversation**. The profile's **Conversation
      deployment** names the model; leave it empty to use the site's default realtime deployment. The same field
@@ -114,7 +114,7 @@ providers — transcribe with one, reason with another, speak with a third.
      continuously, not file-at-a-time),
    - a **chat** deployment,
    - a **text-to-speech** deployment.
-2. Go to **Artificial Intelligence → Deployments**, click **Add Deployment** and choose the **Cascaded Realtime** provider.
+2. Go to **Artificial Intelligence** → **Deployments**, click **Add Deployment** and choose the **Cascaded Realtime** provider.
 3. Enter the **Model name** (required) and a **Technical name**, then pick the three deployments on the **Cascaded realtime** card. Each list offers only the deployments that fit its role.
 
 The deployment declares the **Realtime** feature for you — a cascade is realtime by construction — so it
@@ -258,9 +258,9 @@ Realtime turns are dispatched through `IRealtimeOrchestrator` rather than the st
 
 ## Voice library
 
-Under **Artificial Intelligence → Voice Library**, choose a text-to-speech deployment whose provider has a voice library (ElevenLabs or Cartesia) to search its voices by name and language, hear a sample, and copy a voice's id to a profile's or persona's voice. Where the provider clones voices, **Clone a voice** makes a new voice from a recording of one speaker that you have the right to use; the provider keeps it.
+Under **Artificial Intelligence** → **Voice Library**, choose a text-to-speech deployment whose provider has a voice library (ElevenLabs or Cartesia) to search its voices by name and language, hear a sample, and copy a voice's id to a profile's or persona's voice. Where the provider clones voices, **Clone a voice** makes a new voice from a recording of one speaker that you have the right to use; the provider keeps it.
 
-To add an ElevenLabs or Cartesia deployment, enable the provider's feature. Then go to **Artificial Intelligence → Deployments → Add Deployment** and pick **ElevenLabs** or **Cartesia**. Give the model name (for example `eleven_flash_v2_5` or `sonic-2`) and the account's API key; the key is stored encrypted, and leaving the field blank later keeps it. Fill in the endpoint only for a regional endpoint, such as ElevenLabs' `https://api.eu.residency.elevenlabs.io`.
+To add an ElevenLabs or Cartesia deployment, enable the provider's feature. Then go to **Artificial Intelligence** → **Deployments** → **Add Deployment** and pick **ElevenLabs** or **Cartesia**. Give the model name (for example `eleven_flash_v2_5` or `sonic-2`) and the account's API key; the key is stored encrypted, and leaving the field blank later keeps it. Fill in the endpoint only for a regional endpoint, such as ElevenLabs' `https://api.eu.residency.elevenlabs.io`.
 
 ## Switching profiles during a call
 

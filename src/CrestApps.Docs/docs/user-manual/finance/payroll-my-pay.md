@@ -10,7 +10,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Staff > My Profile > **My pay** (opens the **Pay** section of your profile) |
+| **Menu** | **Staff** → **My Profile** → **My pay** (opens the **Pay** section of your profile) |
 | **Permission** | View own pay; Manage own pay details to change your elections and where your pay goes |
 | **Feature** | My Pay |
 

@@ -10,7 +10,7 @@ A work order is a job done for a customer, such as a repair or an installation. 
 
 | | |
 | --- | --- |
-| **Menu** | Field Service > Work Orders, Work Order Types, Checklists, Service Levels, Sub-Statuses |
+| **Menu** | **Field Service** → **Work Orders**, Work Order Types, Checklists, Service Levels, Sub-Statuses |
 | **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists and sub-statuses; Manage service level policies for the service levels |
 | **Feature** | Work Orders (it turns on Service Levels and Business Hours); Service Agreements for recurring visits; Inventory for parts, Invoicing (or Transactions) for invoices, Geo for territories, Assets for equipment |
 
@@ -18,9 +18,9 @@ A work order is a job done for a customer, such as a repair or an installation. 
 
 ## Set up a service level
 
-A service level policy says how fast work orders are responded to and resolved, at each priority. Work order policies are kept with every other policy, such as the ticket policies, in **Content > Service Levels**.
+A service level policy says how fast work orders are responded to and resolved, at each priority. Work order policies are kept with every other policy, such as the ticket policies, in **Content** → **Service Levels**.
 
-1. Go to **Content > Service Levels** and select **Add Policy**, then **Add** on **Work orders**.
+1. Go to **Content** → **Service Levels** and select **Add Policy**, then **Add** on **Work orders**.
 2. Enter a name and choose in **Counted on** the business hours to count in, or **Around the clock**. See [Business Hours Schedules](../administration/business-hours-schedules.md).
 3. Under **Targets**, enter the minutes to respond and to resolve for each priority. Responding means making it ready, scheduling it or starting it; resolving means completing it.
 4. Choose when the warning comes, such as at 80% of a target.
@@ -31,7 +31,7 @@ See [Service Levels](../administration/service-levels.md) for every field.
 
 ## Make a checklist
 
-1. Go to **Field Service > Checklists** and select **Add checklist**.
+1. Go to **Field Service** → **Checklists** and select **Add checklist**.
 2. Enter a name, then a row for each question: its section, the question, the kind of answer, whether it is required, and the choices (one per line), the range and the unit where they apply.
 3. To ask a question only after a given answer, such as a photo of the damage only when a check fails, choose the earlier question under **Shown when** and type the answer, such as `Fail`. A new question can be chosen there once the checklist is saved.
 4. Select **Save**.
@@ -40,7 +40,7 @@ A required question must be answered before the work order is completed.
 
 ## Add a work order type
 
-1. Go to **Field Service > Work Order Types** and select **Add work order type**.
+1. Go to **Field Service** → **Work Order Types** and select **Add work order type**.
 2. Enter a name, such as *Furnace repair*, the usual duration, how many people it takes and the usual priority, and choose its service level.
 3. Under **Billing**, choose whether it isn't billed, is billed at a fixed price, or is billed for the time and materials used.
 4. Under **Finishing the job**, choose whether the customer must sign and how many photos are needed.
@@ -48,11 +48,11 @@ A required question must be answered before the work order is completed.
 6. Tick its checklists, and list the lines every work order starts with, such as an hour of labor or a filter. With Inventory on, choose the stock item a part comes from.
 7. Select **Save**.
 
-Sub-statuses, under **Field Service > Sub-Statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level timers.
+Sub-statuses, under **Field Service** → **Sub-Statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level timers.
 
 ## Create a work order
 
-1. Go to **Field Service > Work Orders**, select **Add work order** and choose its type.
+1. Go to **Field Service** → **Work Orders**, select **Add work order** and choose its type.
 2. Enter a summary, such as *No heat upstairs*, and change the priority if you need to.
 3. Choose the customer, account or CRM contact it is for (a contact in an account brings the account with it), when those can be picked, then enter the contact, the address and how to get in. A CRM contact chosen with no contact name typed fills in the name. With Geo on, click the map to place the job or drag the pin; without a pin, the address is placed on the map in the background. The place gives the work order its territory.
 4. Choose when the visit can be, the assets it is for, and change the lines if this job needs others.
@@ -70,7 +70,7 @@ On a work order's page:
 - **Record signature** with the name of who signed.
 - Add a note. The history shows every change, newest first.
 
-When the work order is in progress, select **Complete**. If something is missing, such as a required answer or the signature, the page says what. A billed work order then gets its invoice, linked under **About**. With Invoicing on, it is a numbered invoice with the work order's labor and parts, under **Commerce > Invoices**.
+When the work order is in progress, select **Complete**. If something is missing, such as a required answer or the signature, the page says what. A billed work order then gets its invoice, linked under **About**. With Invoicing on, it is a numbered invoice with the work order's labor and parts, under **Commerce** → **Invoices**.
 
 To come back for more work, enter what it is for under **Follow-up** and select **Create follow-up**. The new work order is for the same customer, place and assets, and links back to this one.
 
@@ -85,7 +85,7 @@ To come back for more work, enter what it is for under **Follow-up** and select 
 
 A service agreement makes the work orders of a customer's recurring visits, such as a furnace service every six months.
 
-1. Go to **Field Service > Service Agreements** (the **Agreements** list) and select **Add agreement**, or select **New agreement** on the account's page.
+1. Go to **Field Service** → **Service Agreements** (the **Agreements** list) and select **Add agreement**, or select **New agreement** on the account's page.
 2. Enter a name, the account, the days it starts and ends, and the notice you want before the end. If the agreement also covers hours of work, set them under **Covered hours**.
 3. Under **Visits**, add a row for each recurring visit: its name, the work order type, how often it repeats, how many days ahead its work order is made, and, when the visit is for only some of the assets covered, those assets. For anything else, choose **Custom rule** and enter an iCalendar rule, such as `FREQ=MONTHLY;BYDAY=2SU` for the second Sunday of each month.
 4. Under **Pricing**, choose whether the visits are included, so their work orders aren't invoiced, or invoiced at a price per visit.

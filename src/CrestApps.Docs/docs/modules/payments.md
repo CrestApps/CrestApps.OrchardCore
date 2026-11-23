@@ -58,7 +58,7 @@ Every method takes a `CancellationToken`, which the Stripe webhook endpoint thre
 
 <YouTube video="commerce" title="Narrated video of connecting Stripe and choosing currencies" start={100} end={131} />
 
-The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Providers*) implements the framework against Stripe. Configure it under **Settings → Payments → Stripe**.
+The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Providers*) implements the framework against Stripe. Configure it under **Settings** → **Payments** → **Stripe**.
 
 ### Connecting an account
 
@@ -217,7 +217,7 @@ To exercise the webhook pipeline on your machine, forward Stripe events to your 
    ```
 
    `--skip-verify` is required when forwarding to an HTTPS address that uses the ASP.NET Core development certificate; alternatively, forward to the plain HTTP endpoint (`http://localhost:your-port/stripe/webhook`) and omit the flag.
-5. Copy the temporary signing secret the CLI prints (it starts with `whsec_`) into the **Test Webhook Signing Secret** field (under *Advanced*) on **Settings → Payments → Stripe**, with **Enable Production** left off, and **Save**.
+5. Copy the temporary signing secret the CLI prints (it starts with `whsec_`) into the **Test Webhook Signing Secret** field (under *Advanced*) on **Settings** → **Payments** → **Stripe**, with **Enable Production** left off, and **Save**.
 6. Trigger a sample event to confirm the pipeline end to end:
 
    ```sh
@@ -294,7 +294,7 @@ alone.
   (an installment plan, a subscription) is kept the same way. Only wallets that produce a card are offered; Link,
   PayPal, Amazon Pay and Klarna are turned off.
 - Stripe offers a wallet only on a domain registered with the account. **Connect** registers the site's own domain
-  for you; a site served from another domain too can add it under *Settings → Payment method domains* in the Stripe
+  for you; a site served from another domain too can add it under **Settings** → **Payment method domains** in the Stripe
   Dashboard. Wallets need HTTPS.
 - Samsung Pay is not a separate button: on a Samsung phone the payer pays through Google Pay, which can hold the
   same cards.
@@ -327,7 +327,7 @@ With the [Point of Sale](point-of-sale) feature on, the Stripe module adds `Stri
 
 <YouTube video="commerce" title="Narrated video of the Payments list, a partial refund, and the Refunds list" start={500} end={534} />
 
-The same provider implements **`ICheckoutPaymentRefundProvider`**, so a settled Stripe payment can be refunded through the checkout's durable refund ledger (`ICheckoutRefundService`) rather than by calling Stripe directly. Refunds are recorded before Stripe is contacted, carry the refund's idempotency key so a retry never double-refunds, and allocate tax from the original payment's immutable snapshot. See [Checkout → Refunds](checkout#refunds--the-durable-refund-ledger) for the full model. The refund itself runs through the `IStripeRefundService`, which converts the major-unit amount to the currency's minor units with `StripeCurrency`.
+The same provider implements **`ICheckoutPaymentRefundProvider`**, so a settled Stripe payment can be refunded through the checkout's durable refund ledger (`ICheckoutRefundService`) rather than by calling Stripe directly. Refunds are recorded before Stripe is contacted, carry the refund's idempotency key so a retry never double-refunds, and allocate tax from the original payment's immutable snapshot. See [**Checkout** → **Refunds**](checkout#refunds--the-durable-refund-ledger) for the full model. The refund itself runs through the `IStripeRefundService`, which converts the major-unit amount to the currency's minor units with `StripeCurrency`.
 
 ## Adding another payment provider
 
@@ -355,7 +355,7 @@ Payment providers are **tax-agnostic**. They receive the final amount already de
 dotnet add package CrestApps.OrchardCore.Stripe
 ```
 
-Then enable **Stripe** in the **Orchard Core Admin Dashboard** under **Tools → Features** and configure it under **Settings → Payments → Stripe**.
+Then enable **Stripe** in the **Orchard Core Admin Dashboard** under **Tools** → **Features** and configure it under **Settings** → **Payments** → **Stripe**.
 
 ## Related modules
 

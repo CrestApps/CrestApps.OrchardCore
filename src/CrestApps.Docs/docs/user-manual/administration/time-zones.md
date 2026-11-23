@@ -10,7 +10,7 @@ Time zone menus normally list hundreds of technical names such as *America/New_Y
 
 | | |
 | --- | --- |
-| **Menu** | Tools > Time Zones; Settings > General (site default) |
+| **Menu** | **Tools** → **Time Zones**; **Settings** → **General (site default)** |
 | **Permission** | Manage time zone maps; Manage settings (site default) |
 | **Feature** | Time Zones; User Time Zone (Orchard Core) for a time zone per person |
 
@@ -22,9 +22,9 @@ Time zone menus normally list hundreds of technical names such as *America/New_Y
 
 ## How the list works
 
-Each entry on **Tools > Time Zones** is a **time zone map**: a friendly name linked to one real time zone. When the feature is on, the time zone menus show **only** the names on this list, in alphabetical order. That includes:
+Each entry on **Tools** → **Time Zones** is a **time zone map**: a friendly name linked to one real time zone. When the feature is on, the time zone menus show **only** the names on this list, in alphabetical order. That includes:
 
-- **Default Time Zone** under **Settings > General**.
+- **Default Time Zone** under **Settings** → **General**.
 - A person's own time zone, when **User Time Zone** is on.
 - The time zone of a contact, and the time zone menus on activity screens.
 
@@ -39,7 +39,7 @@ Add a map for it. A time zone that has no map on the list cannot be picked anywh
 <YouTube video="time-zones" title="Video of browsing the time zone list and adding a time zone map" start={105} end={157} />
 
 
-1. Open **Tools > Time Zones** and click **Add Time Zone Map**.
+1. Open **Tools** → **Time Zones** and click **Add Time Zone Map**.
 2. Enter the **Name** people will see, for example *Mexico City Time*.
 3. Pick the **Time zone** it stands for, for example *America/Mexico_City*.
 4. Click **Save**.
@@ -55,7 +55,7 @@ The list shows each map's name, its time zone, when it was last changed and who 
 
 The site's time zone is used to show dates and times to everyone who has not picked their own.
 
-1. Open **Settings > General**.
+1. Open **Settings** → **General**.
 2. Pick a name from **Default Time Zone**.
 3. Click **Save**.
 
@@ -64,4 +64,4 @@ The site's time zone is used to show dates and times to everyone who has not pic
 <YouTube video="time-zones" title="Video of choosing a time zone for one person" start={177} end={210} />
 
 
-When your administrator turns on the Orchard Core **User Time Zone** feature, the edit page of each user (**Access Control > Users**, then **Edit**) gets a **Default Time Zone** menu. It lists the same friendly names, plus **Use site's time zone**. Choose one and save, and dates and times are shown to that person in that zone. People who keep **Use site's time zone** see the site's time zone. See the [Orchard Core Users documentation](https://docs.orchardcore.net/en/latest/reference/modules/Users/) for the details.
+When your administrator turns on the Orchard Core **User Time Zone** feature, the edit page of each user (**Access Control** → **Users**, then **Edit**) gets a **Default Time Zone** menu. It lists the same friendly names, plus **Use site's time zone**. Choose one and save, and dates and times are shown to that person in that zone. People who keep **Use site's time zone** see the site's time zone. See the [Orchard Core Users documentation](https://docs.orchardcore.net/en/latest/reference/modules/Users/) for the details.

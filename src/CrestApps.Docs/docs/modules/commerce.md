@@ -24,7 +24,7 @@ This video walks through the commerce modules, their screens, configuration and 
 | Checkout | Checkout | The checkout engine: sessions, steps, the durable payment and refund ledgers, coupons, and the public checkout. | [Checkout](checkout) |
 | Stripe | Stripe | The Stripe payment provider: cards, saved cards, Apple Pay and Google Pay, Connect, webhooks. | [Payments](payments) |
 | Pay Later | Pay Later | An offline "pay later" payment option that records the balance as a transaction. | [Pay Later](pay-later) |
-| Inventory | Inventory | How many units of each product and variant are on hand, with a ledger of every change and a Commerce > Inventory screen. | [Inventory](inventory) |
+| Inventory | Inventory | How many units of each product and variant are on hand, with a ledger of every change and a **Commerce** → **Inventory** screen. | [Inventory](inventory) |
 | Shipping | Shipping | Shipping zones by country and region, their methods with flat, table and free rates, and product weights and shipping classes. | [Shipping](shipping) |
 | Customers | Customers | A record for everyone who buys, a person or a business, with an account or as a guest, linked to their Orchard Core user. | [Customers](customers) |
 | Transactions | Transactions, Transaction Reminders, Send Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
@@ -68,7 +68,7 @@ The Commerce module has two features. Neither is enabled directly: each is enabl
 | **Category** | Commerce | Commerce |
 | **Enabled** | By dependency only | By dependency only |
 | **Depends on** | Nothing | Commerce Foundation |
-| **What it gives** | What billing and the store share: the **Commerce** admin menu and its icon, the storefront account (**Account** in the user menu), the shared admin list UI, customers' access to their own admin pages, and personal data requests | The store layer: **Commerce › Set Up Your Store** (the store's setup guide), its **Set up the store** permission and the roles it adds for a store's staff |
+| **What it gives** | What billing and the store share: the **Commerce** admin menu and its icon, the storefront account (**Account** in the user menu), the shared admin list UI, customers' access to their own admin pages, and personal data requests | The store layer: **Commerce** → **Set Up Your Store** (the store's setup guide), its **Set up the store** permission and the roles it adds for a store's staff |
 | **Turned on by** | Transactions, Taxation, Exchange Rates, Customers, so Invoicing and the rest of billing | The store modules: Products, Carts, Checkout, Orders, Shipping, Inventory and the others that sell |
 
 So a site that only bills, with Invoicing and its features, has the Commerce menu and the account without the store's setup guide. A store has both. A site that had Commerce before keeps it, and Commerce Foundation is loaded with it as its dependency.
@@ -257,7 +257,7 @@ Commerce is a composition shell, not a domain:
 | **Category** | Commerce |
 | **Depends on** | Commerce, Addresses |
 
-**Settings > Commerce > Store** (`Admin/Settings/store-profile`, the **Manage the store profile** permission, granted to administrators and store managers; module `CrestApps.OrchardCore.Commerce.StoreProfile`) keeps who the store is in one place: its name (the site's name when empty), logo, tax ID, e-mail, phone (kept in E.164 form when it parses) and address (the Addresses module's editor, laid out for the address's country). The settings are `StoreProfileSettings` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Stores`), exported by the **Store profile** deployment step and imported by Orchard Core's Settings recipe step. The online store recipe enables the feature.
+**Settings** → **Commerce** → **Store** (`Admin/Settings/store-profile`, the **Manage the store profile** permission, granted to administrators and store managers; module `CrestApps.OrchardCore.Commerce.StoreProfile`) keeps who the store is in one place: its name (the site's name when empty), logo, tax ID, e-mail, phone (kept in E.164 form when it parses) and address (the Addresses module's editor, laid out for the address's country). The settings are `StoreProfileSettings` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Stores`), exported by the **Store profile** deployment step and imported by Orchard Core's Settings recipe step. The online store recipe enables the feature.
 
 The **Website and policies** card keeps the store's `Website` (when it isn't this site) and its policy links in `StoreProfileSettings.Policies` (`StorePolicyLinks`): `TermsOfService`, `PrivacyPolicy`, `ReturnPolicy`, `ShippingPolicy`, `Faq`, `Contact` and `About`. Each is a full `http` or `https` address or a path on this site, such as `/terms`; a path is made absolute with the site's base URL where it leaves the site. The [product feeds](products.md#feed-items-for-ai-agents) give the seller's website and the terms, privacy and return links to Google and the AI agent feeds, and [Agentic Commerce](agentic-commerce.md) sends every link that is set to agents with each checkout (`links`). Google and OpenAI ask for the terms of service and the privacy policy before agents may check out.
 

@@ -15,9 +15,9 @@ Reports show what happened in your contact center over a period you choose: call
 
 | | |
 | --- | --- |
-| **Menu** | Reports > *category* > *report* |
+| **Menu** | **Reports** → *category* → *report* |
 | **Permissions** | View Contact Center reports (supervisors and administrators have it by default); View Omnichannel reports for the CRM and campaign reports (administrators and supervisors have it by default) |
-| **Permissions** | Each report has the permission of the module that provides it. **View Contact Center reports** opens the Contact Center reports (supervisors and administrators have it by default). **View Omnichannel reports** opens the CRM and campaign reports (administrators have it by default, and so does anyone who may manage activities). A report with its own permission, such as **Run 'Phone Number Verifications' Report**, needs that one. **Manage report subscriptions** opens **Reports > Subscriptions** (administrators have it by default). |
+| **Permissions** | Each report has the permission of the module that provides it. **View Contact Center reports** opens the Contact Center reports (supervisors and administrators have it by default). **View Omnichannel reports** opens the CRM and campaign reports (administrators have it by default, and so does anyone who may manage activities). A report with its own permission, such as **Run 'Phone Number Verifications' Report**, needs that one. **Manage report subscriptions** opens **Reports** → **Subscriptions** (administrators have it by default). |
 | **Features** | Reports, for CSV export; Reports (OpenXml) adds Excel export, and Reports (PDF) adds PDF export. Contact Center reports appear when Contact Center Work Distribution is also on; the CRM reports come with Omnichannel Management and Omnichannel CRM. |
 
 <AskYourAdmin />
@@ -96,19 +96,19 @@ The cards at the top of **Executive performance dashboard**, **Call insights** a
 
 ## Email a report on a schedule
 
-With **Report Subscriptions** on, a report can be emailed every day, week or month, such as your queue service level every Monday morning. It is a feature under **Tools > Features**, in the *Reporting* category, and it needs the **Reports** feature and the **Email** feature, which it turns on with it. Report Subscriptions adds **Reports > Subscriptions**, and **Manage report subscriptions** is the permission that opens it (administrators have it by default). A person can only choose a report they may open.
+With **Report Subscriptions** on, a report can be emailed every day, week or month, such as your queue service level every Monday morning. It is a feature under **Tools** → **Features**, in the *Reporting* category, and it needs the **Reports** feature and the **Email** feature, which it turns on with it. Report Subscriptions adds **Reports** → **Subscriptions**, and **Manage report subscriptions** is the permission that opens it (administrators have it by default). A person can only choose a report they may open.
 
 <YouTube video="report-subscriptions" title="Video overview of report subscriptions" />
 
 <YouTube video="report-subscriptions" title="Video of turning on Report Subscriptions and its permission" start={59} end={111} />
 
-**Email must be set up first.** A subscription goes out through your site's email provider. Under **Settings > Email**, the site says *No email providers are currently enabled* until you enable a provider feature, such as the SMTP provider, and enter its settings (sender address, host name, port and, when the server asks for them, credentials). Until then a subscription can be saved, but each send fails, and the list tells you why.
+**Email must be set up first.** A subscription goes out through your site's email provider. Under **Settings** → **Email**, the site says *No email providers are currently enabled* until you enable a provider feature, such as the SMTP provider, and enter its settings (sender address, host name, port and, when the server asks for them, credentials). Until then a subscription can be saved, but each send fails, and the list tells you why.
 
 <YouTube video="report-subscriptions" title="Video of setting up the email provider that subscriptions need" start={111} end={164} />
 
 <YouTube video="report-subscriptions" title="Video of adding a subscription" start={164} end={229} />
 
-1. On **Reports > Subscriptions**, click **Add subscription**.
+1. On **Reports** → **Subscriptions**, click **Add subscription**.
 2. Choose the **Report**, listed by category. **Name** is optional; the report's name is used when it is blank.
 3. Choose when to **Send** it: *Every day, for the day before*, *Every week, for the 7 days before*, or *Every month, for the month before*.
 4. Choose the **Day of the week** (for a weekly report) or the **Day of the month**, from 1 to 28 (for a monthly one), and the **Hour**, from 0 to 23, in your site's time zone.
@@ -125,7 +125,7 @@ Reports you build yourself in the [Report Builder](report-builder/index.md) cann
 
 ## Show a report on the dashboard
 
-With the **Admin Dashboard** feature on (under **Tools > Features**), any report you may view can be a widget on the admin dashboard: its figures, tables and charts for a period that moves with the clock, so the numbers are there without opening the report. The **Report** widget shows any report on this page. The **Custom Report** widget, which comes with the Report Builder, shows a report you built (see [Show a report on the dashboard](report-builder/share-and-run.md#show-a-report-on-the-dashboard)).
+With the **Admin Dashboard** feature on (under **Tools** → **Features**), any report you may view can be a widget on the admin dashboard: its figures, tables and charts for a period that moves with the clock, so the numbers are there without opening the report. The **Report** widget shows any report on this page. The **Custom Report** widget, which comes with the Report Builder, shows a report you built (see [Show a report on the dashboard](report-builder/share-and-run.md#show-a-report-on-the-dashboard)).
 
 <YouTube video="reports-dashboard-widgets" title="Video overview of report widgets on the dashboard" />
 
@@ -182,8 +182,8 @@ The button always shows the range you picked in words, for example *From Jan 1, 
 
 With **Contact Center Interval Statistics** turned on, the site keeps the numbers of every queue and agent in 15-minute intervals: how much work was offered and answered, the service level, waits and handle time, and how long each agent was signed in and in each state. Workforce planning uses them, and you can build your own reports on them.
 
-1. Go to **Interaction Center > Management > Interval Statistics** to see how far they are computed and today's totals so far. Days are UTC days.
-2. In **Reports > Report Builder**, add the **Queue intervals** or **Agent intervals** data set. Group by **Half hour** or **Hour** to see longer intervals.
+1. Go to **Interaction Center** → **Management** → **Interval Statistics** to see how far they are computed and today's totals so far. Days are UTC days.
+2. In **Reports** → **Report Builder**, add the **Queue intervals** or **Agent intervals** data set. Group by **Half hour** or **Hour** to see longer intervals.
 3. After changing a queue's service level threshold, enter a range of days under **Rebuild** and select **Rebuild**. A few days are computed again every five minutes.
 
 :::note[New sites]
@@ -432,7 +432,7 @@ The *Workforce & Payroll* reports, such as **Agent time summary**, count an agen
 
 ### Find out why an agent is not getting calls
 
-1. Open **Reports > Queue & Routing > Agent availability and wait time**, pick the **Agent** and click **Show**.
+1. Open **Reports** → **Queue & Routing** → **Agent availability and wait time**, pick the **Agent** and click **Show**.
 2. In **Agents**, check **Presence**, **Live session** and **Stale-state flags**. A red flag usually is the answer: use **Free agent** on the live dashboard, or ask the agent to reload their workspace.
 3. In **Why each queue or campaign is or is not giving work**, find the queue or campaign that has work **Waiting** and read **Why not eligible** and **Routing detail**.
 4. If **On live dashboard** says *No*, the row says why the board does not show the agent.
@@ -568,7 +568,7 @@ The **Why pending records are not dialing** table lists every reason a campaign'
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Queue & Routing > Dialer decision log |
+| **Menu** | **Reports** → **Queue & Routing** → **Dialer decision log** |
 | **Permission** | View Contact Center reports |
 | **Feature** | Contact Center Work Distribution and Reports. Suppressions are listed when the Contact Center Outbound Dialer is on. |
 
@@ -576,7 +576,7 @@ The **Why pending records are not dialing** table lists every reason a campaign'
 
 ### See the decisions made about one record or one agent
 
-1. Open **Reports > Queue & Routing > Dialer decision log**.
+1. Open **Reports** → **Queue & Routing** → **Dialer decision log**.
 2. Set the **Date range**.
 3. To see one record, type its activity ID in **Activity ID**. You find the ID in the address of the activity's page.
 4. To see one agent, pick them in **Agent**. The report then lists every routing decision that considered or chose the agent, and every dialer refusal of a call that was reserved for them.

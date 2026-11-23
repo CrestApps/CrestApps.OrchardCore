@@ -2,7 +2,7 @@
 sidebar_label: Features & Settings
 sidebar_position: 4
 title: Features and Settings (for Administrators)
-description: Turn a feature on in Tools > Features, find the site-wide settings screens, and look up which User Manual page covers each feature.
+description: Turn a feature on in Tools → Features, find the site-wide settings screens, and look up which User Manual page covers each feature.
 technical_manual:
   - feature-reference
 ---
@@ -11,7 +11,7 @@ This page is for **administrators**. The product is made of **features**: parts 
 
 ## Turn a feature on
 
-1. Open **Tools > Features**.
+1. Open **Tools** → **Features**.
 2. Type part of the feature's name in the search box, for example *Dialer*.
 3. Click **Enable** next to the feature.
 
@@ -25,7 +25,7 @@ Every feature adds menus, permissions and screens. Turn on the features for the 
 
 After a feature is on, give the right roles its permissions. The roles named Agent and Supervisor receive their default permissions automatically; see [Roles and permissions](roles-and-permissions.md).
 
-Some features are also set up in one step by a ready-made **recipe** under **Tools > Recipes**, such as **Omnichannel CRM starter**, which turns on the CRM and adds lead, contact and opportunity types. See [Leads, accounts and opportunities](../leads-accounts-opportunities.md).
+Some features are also set up in one step by a ready-made **recipe** under **Tools** → **Recipes**, such as **Omnichannel CRM starter**, which turns on the CRM and adds lead, contact and opportunity types. See [Leads, accounts and opportunities](../leads-accounts-opportunities.md).
 
 ## Where the settings are
 
@@ -33,25 +33,25 @@ Site-wide settings live under **Settings** and **Tools**. Each screen appears wh
 
 | Menu | What you set there | Learn more |
 | --- | --- | --- |
-| **Settings > General** | The site name and the site's default time zone. | |
-| **Settings > Contact Center** | Call recording rules, default phone and SMS numbers, approved outside transfer numbers, and secure data capture. | [Contact Center settings](../contact-center-settings.md) |
-| **Settings > Communication > Telephony** | The phone provider (for example Telnyx), the default provider and the soft phone options. | [Phone and SMS setup](../telephony-settings.md) |
-| **Settings > Communication > SMS** | The SMS provider (Twilio or Telnyx). | [Phone and SMS setup](../telephony-settings.md) |
-| **Settings > Artificial Intelligence** | AI defaults, the admin chat widget, prompt security and the knowledge indexes. | [AI Assistant](../ai/index.md) |
-| **Settings > DNC Registries** | The national do-not-call registries, such as the USA FTC and Canada LNNTE-DNCL registries. | [Do-not-call lists](../administration/do-not-call-lists.md) |
-| **Settings > Content Import** | Which do-not-call registries every contact import checks. | [Do-not-call lists](../administration/do-not-call-lists.md) |
-| **Settings > Phone Number Verifications** | The phone number lookup provider. | [Phone number verification](../administration/phone-number-verification.md) |
-| **Settings > User Display Name**, **Settings > User Avatars** | How people's names and pictures are shown. | [Users](../administration/users.md) |
-| **Tools > Features** | Turn features on and off. | This page |
-| **Tools > Recipes** | Run ready-made setups. | [CrestApps Recipes](../../modules/recipes.md) |
-| **Tools > Time Zones** | The friendly time zone names people pick from. | [Time zones](../administration/time-zones.md) |
-| **Tools > Phone Verifications Queue** | The numbers waiting to be checked. | [Phone number verification](../administration/phone-number-verification.md) |
+| **Settings** → **General** | The site name and the site's default time zone. | |
+| **Settings** → **Contact Center** | Call recording rules, default phone and SMS numbers, approved outside transfer numbers, and secure data capture. | [Contact Center settings](../contact-center-settings.md) |
+| **Settings** → **Communication** → **Telephony** | The phone provider (for example Telnyx), the default provider and the soft phone options. | [Phone and SMS setup](../telephony-settings.md) |
+| **Settings** → **Communication** → **SMS** | The SMS provider (Twilio or Telnyx). | [Phone and SMS setup](../telephony-settings.md) |
+| **Settings** → **Artificial Intelligence** | AI defaults, the admin chat widget, prompt security and the knowledge indexes. | [AI Assistant](../ai/index.md) |
+| **Settings** → **DNC Registries** | The national do-not-call registries, such as the USA FTC and Canada LNNTE-DNCL registries. | [Do-not-call lists](../administration/do-not-call-lists.md) |
+| **Settings** → **Content Import** | Which do-not-call registries every contact import checks. | [Do-not-call lists](../administration/do-not-call-lists.md) |
+| **Settings** → **Phone Number Verifications** | The phone number lookup provider. | [Phone number verification](../administration/phone-number-verification.md) |
+| **Settings** → **User Display Name**, **Settings** → **User Avatars** | How people's names and pictures are shown. | [Users](../administration/users.md) |
+| **Tools** → **Features** | Turn features on and off. | This page |
+| **Tools** → **Recipes** | Run ready-made setups. | [CrestApps Recipes](../../modules/recipes.md) |
+| **Tools** → **Time Zones** | The friendly time zone names people pick from. | [Time zones](../administration/time-zones.md) |
+| **Tools** → **Phone Verifications Queue** | The numbers waiting to be checked. | [Phone number verification](../administration/phone-number-verification.md) |
 
 Things that need a server, a configuration file or the hosting environment, such as connection strings, are set up by IT. See the [Technical Manual](../../getting-started.md).
 
 ## Which page covers each feature
 
-Find the feature by the name shown in **Tools > Features**. The [feature reference](../../feature-reference.md) in the Technical Manual lists the technical IDs.
+Find the feature by the name shown in **Tools** → **Features**. The [feature reference](../../feature-reference.md) in the Technical Manual lists the technical IDs.
 
 ### CRM and outreach
 

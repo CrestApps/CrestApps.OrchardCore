@@ -26,7 +26,7 @@ Creating agent profiles and giving profiles tools in the admin, with a screencas
 
 ## How to use it in Orchard
 
-Enable **Orchard Core AI Agent** (listed under **Artificial Intelligence** in **Tools → Features**) together with the base AI features. Its tools then appear, grouped by category, in the **Tools** section of the **Capabilities** tab of AI profiles, profile templates and chat interactions. The **Agent** profile type itself (with its **Description** and **Availability** fields) comes from the base AI module. Enable the related Orchard features if you want additional tool categories to appear.
+Enable **Orchard Core AI Agent** (listed under **Artificial Intelligence** in **Tools** → **Features**) together with the base AI features. Its tools then appear, grouped by category, in the **Tools** section of the **Capabilities** tab of AI profiles, profile templates and chat interactions. The **Agent** profile type itself (with its **Description** and **Availability** fields) comes from the base AI module. Enable the related Orchard features if you want additional tool categories to appear.
 
 The exact tool set available to agents depends on which Orchard modules are enabled. For example, tenant-management tools only light up when Orchard tenants support is enabled, and recipe tools depend on Orchard recipes support.
 

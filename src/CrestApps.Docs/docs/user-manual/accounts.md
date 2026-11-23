@@ -14,7 +14,7 @@ every part of the site uses that same account.
 ## Finding your accounts
 
 Open **Accounts** in the admin menu to list them. On a site with the CRM, the list is under
-**Interaction Center > Accounts** instead.
+**Interaction Center** → **Accounts** instead.
 
 Search the list by name, and open an account with **View** to see its page.
 
@@ -97,15 +97,15 @@ location's fields to remove it.
 
 ## Moving accounts to another site
 
-To copy accounts to another site, add the **Accounts** step to a deployment plan under **Configuration > Import/Export >
-Deployment Plans**. Leave **Also export the records the accounts hold** ticked to bring their contacts and
+To copy accounts to another site, add the **Accounts** step to a deployment plan under **Configuration** → **Import/Export** →
+**Deployment Plans**. Leave **Also export the records the accounts hold** ticked to bring their contacts and
 opportunities too. Every account comes with its members, locations and business buying settings. Import the file on the
 other site as you would any deployment package. Importing the same file again updates the accounts instead of copying
 them.
 
 ## Deleting an account
 
-Use **Actions > Delete** on the account's row and confirm. The contacts and other records it held are kept, now
+Use **Actions** → **Delete** on the account's row and confirm. The contacts and other records it held are kept, now
 outside any account.
 
 ## Importing contacts into accounts

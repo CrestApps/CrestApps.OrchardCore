@@ -28,15 +28,15 @@ This video walks through connecting Stripe, the offline methods, transactions, r
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Payments > Stripe |
+| **Menu** | **Settings** → **Payments** → **Stripe** |
 | **Permission** | Manage Stripe Settings |
 | **Feature** | Stripe |
 
 <AskYourAdmin />
 
-You need a Stripe account. Your keys are on the Stripe dashboard under **Developers > API Keys**; the **Test mode** switch on that page chooses between test keys and live keys. Each environment (test and production) has its own keys and its own connection, so you can connect the test account first and switch to production when you are ready.
+You need a Stripe account. Your keys are on the Stripe dashboard under **Developers** → **API Keys**; the **Test mode** switch on that page chooses between test keys and live keys. Each environment (test and production) has its own keys and its own connection, so you can connect the test account first and switch to production when you are ready.
 
-1. Open **Settings > Payments > Stripe**.
+1. Open **Settings** → **Payments** → **Stripe**.
 2. Leave **Enable Production** cleared to set up the test environment, or tick it to set up production. The fields below change to match.
 3. Paste the **Publishable Key** and the **Secret Key** for that environment.
 4. Click **Save**. Saving a change reloads the site's settings.
@@ -94,13 +94,13 @@ There is nothing to turn on. After a successful **Connect** on a public domain, 
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Offline Payments |
+| **Menu** | **Settings** → **Commerce** → **Offline Payments** |
 | **Permission** | Manage transaction settings |
 | **Feature** | Pay Later |
 
 <AskYourAdmin />
 
-The **Pay Later** feature adds three ways to buy now and pay afterwards. None of them takes money at checkout: each records what the buyer owes as a **transaction** with an outstanding balance, which you mark paid when the money arrives. Turn each on or off under **Settings > Commerce > Offline Payments**.
+The **Pay Later** feature adds three ways to buy now and pay afterwards. None of them takes money at checkout: each records what the buyer owes as a **transaction** with an outstanding balance, which you mark paid when the money arrives. Turn each on or off under **Settings** → **Commerce** → **Offline Payments**.
 
 | Method | Offered | What the buyer is told |
 | --- | --- | --- |
@@ -125,7 +125,7 @@ When the buyer clicks **Place order** with Pay Later selected:
 
 ### Set up the offline methods
 
-Open **Settings > Commerce > Offline Payments**, change what you need, and click **Save**.
+Open **Settings** → **Commerce** → **Offline Payments**, change what you need, and click **Save**.
 
 | Field | What it does |
 | --- | --- |
@@ -171,9 +171,9 @@ A charge that doesn't go through, because the card was declined or the bank aske
 
 **Test payment** lets you and your team go through a whole purchase, pay it, refund it and check what happens afterwards, without a Stripe account and without any money changing hands. It is meant for development and test sites. On a live site it does not appear, even when the feature is turned on, unless your developer has deliberately allowed it.
 
-When the feature is on, the **Payment** step offers **Test payment**. When you pick it, the payment step shows *Test payment: no money moves, and the payment is confirmed at once.* Click **Pay now** and the purchase is confirmed straight away, exactly as a card payment would be: the confirmation page opens, an outstanding balance you paid is marked paid, and the payment appears under **Commerce > Payments**.
+When the feature is on, the **Payment** step offers **Test payment**. When you pick it, the payment step shows *Test payment: no money moves, and the payment is confirmed at once.* Click **Pay now** and the purchase is confirmed straight away, exactly as a card payment would be: the confirmation page opens, an outstanding balance you paid is marked paid, and the payment appears under **Commerce** → **Payments**.
 
-You can refund a test payment from **Commerce > Payments** like any other payment (see [Payments and refunds](payments-and-refunds.md)). The refund succeeds at once and shows on the transaction.
+You can refund a test payment from **Commerce** → **Payments** like any other payment (see [Payments and refunds](payments-and-refunds.md)). The refund succeeds at once and shows on the transaction.
 
 The amount being paid decides what happens, so you can also try out what a buyer sees when something goes wrong:
 

@@ -58,7 +58,7 @@ Your site may show other items too, depending on what it uses.
 | **Local DNC Registry** | Your company's own do-not-call list. | [Do-not-call lists](../administration/do-not-call-lists.md) |
 | **Management** | The setup screens, listed below. | |
 
-**Interaction Center > Management** holds the screens managers use to build the contact center:
+**Interaction Center** → **Management** holds the screens managers use to build the contact center:
 
 | Area | Items |
 | --- | --- |
@@ -88,7 +88,7 @@ The user menu at the top right of the admin pages has your own options:
 | **Change Password** | Changes your password. You enter your current password first. |
 | **Log off** | Signs you out of the site. |
 
-Your **extension** number, the **queues** you may sign in to and your **roles** are set by your manager or administrator, not on your profile. You can record your own [voicemail greeting](../voicemail.md) under **Interaction Center > My Voicemail Greeting**.
+Your **extension** number, the **queues** you may sign in to and your **roles** are set by your manager or administrator, not on your profile. You can record your own [voicemail greeting](../voicemail.md) under **Interaction Center** → **My Voicemail Greeting**.
 
 ## Search the manual
 

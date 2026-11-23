@@ -50,7 +50,7 @@ Every admin screen is documented step by step, with screencasts, in the User Man
 ### Omnichannel address
 An **omnichannel address** (stored as `OmnichannelChannelEndpoint`) is an address the business owns, most commonly a phone number, that the platform sends from and receives on. Each address has an **address type** (`OmnichannelAddressTypes.PhoneNumber` today), its normalized value (numbers are stored as international `+<country code><number>`), and a list of **capabilities**: what the address is used for, named by channel (`Phone` for calls, `SMS` for texts). A number used for calls and texts is one address with both capabilities. Capability settings are attached to the address, for example the SMS provider, the [Messaging Workspace](messaging-workspace.md) inbound routing and the agents who dial out from the number.
 
-Addresses are administered under **Interaction Center > Management > Omnichannel Addresses** (requires the **Manage omnichannel addresses** permission, `ManageChannelEndpoints`); see [Omnichannel Addresses](../user-manual/channel-endpoints.md) in the User Manual. This administration is provided by a small **dependency-only** feature:
+Addresses are administered under **Interaction Center** → **Management** → **Omnichannel Addresses** (requires the **Manage omnichannel addresses** permission, `ManageChannelEndpoints`); see [Omnichannel Addresses](../user-manual/channel-endpoints.md) in the User Manual. This administration is provided by a small **dependency-only** feature:
 
 | | |
 | --- | --- |
@@ -159,13 +159,13 @@ Omnichannel contact imports and exports integrate with **Content Transfer**. The
 - channel endpoints normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
 - contact publish and update operations keep the omnichannel contact indexes in sync automatically
 
-Use **Settings** -> **Content Import** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry.md) for setup details, credential requirements, and extension guidance.
+Use **Settings** → **Content Import** to enforce DNC checks globally for imports, and use **Settings** → **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry.md) for setup details, credential requirements, and extension guidance.
 
 The **Lead country** picker is required, so phone normalization always has region context. It mirrors the Local DNC country list and shows each option as `Country (+calling code)`. Files for content types with `OmnichannelContactPart` should contain leads from one country per file unless every phone number is already expressed in E.164.
 
 #### Export contacts with their last activity
 
-When a contact content type is exported through **Content** -> **Export**, the form shows a **CRM last activity** section that enriches each exported contact with their most recent **completed** activity of a chosen subject. The options are described in [Export contacts with their last activity](../user-manual/contacts.md#export-contacts-with-their-last-activity).
+When a contact content type is exported through **Content** → **Export**, the form shows a **CRM last activity** section that enriches each exported contact with their most recent **completed** activity of a chosen subject. The options are described in [Export contacts with their last activity](../user-manual/contacts.md#export-contacts-with-their-last-activity).
 
 With the option enabled, the export appends these export-only columns to each contact row:
 
@@ -204,7 +204,7 @@ Campaigns do not define the interaction type, channel, channel endpoint, or disp
 Campaign groups let reporting users combine multiple related campaigns without changing activity execution. Activities continue to store the campaign identifier, and reports resolve the campaign's current group when they run. Moving a campaign to another group therefore changes the group used for historical aggregation.
 
 ### Subject Flow
-A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` behaves. The stable configuration of a subject lives in the **content-type part settings** of `OmnichannelSubjectPart`, edited from the standard Orchard Core content type editor (the same place you attach the part), following the pattern used by parts such as `TitlePart`. There is no separate configure screen; volatile per-run values (campaign, channel, channel endpoint, and interaction type) are chosen when an activity batch is loaded. The **Interaction Center > Management > Subject Flows** list is a read-only overview with shortcuts (**Edit Content Type**, **Edit Settings**, **Manage Flow**); see [Subjects](../user-manual/subjects.md) and [Subject flows](../user-manual/subject-flows.md).
+A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` behaves. The stable configuration of a subject lives in the **content-type part settings** of `OmnichannelSubjectPart`, edited from the standard Orchard Core content type editor (the same place you attach the part), following the pattern used by parts such as `TitlePart`. There is no separate configure screen; volatile per-run values (campaign, channel, channel endpoint, and interaction type) are chosen when an activity batch is loaded. The **Interaction Center** → **Management** → **Subject Flows** list is a read-only overview with shortcuts (**Edit Content Type**, **Edit Settings**, **Manage Flow**); see [Subjects](../user-manual/subjects.md) and [Subject flows](../user-manual/subject-flows.md).
 
 The base part settings store:
 
@@ -280,7 +280,7 @@ When an activity is completed, the user selects a disposition and is shown a pre
 
 Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
 
-On a contact's **Activities** page, **Add Activity > Outbound** creates a *scheduled* activity for an **outbound** subject, and **Add Activity > Inbound** logs a *completed* activity for an **inbound** subject: it is stored as completed by the current user and the subject flow runs immediately. Each selector lists only subjects of its direction, auto-selects the subject when exactly one exists, and blocks the screen with a warning when none is configured. The agent-side steps, with screencasts, are in [Working activities](../user-manual/activities.md).
+On a contact's **Activities** page, **Add Activity** → **Outbound** creates a *scheduled* activity for an **outbound** subject, and **Add Activity** → **Inbound** logs a *completed* activity for an **inbound** subject: it is stored as completed by the current user and the subject flow runs immediately. Each selector lists only subjects of its direction, auto-selects the subject when exactly one exists, and blocks the screen with a warning when none is configured. The agent-side steps, with screencasts, are in [Working activities](../user-manual/activities.md).
 
 When an automated AI conversation completes, the activity stores the AI session identifier, appends the generated call summary as disposition notes, and applies the AI-selected disposition through the same subject-action lifecycle used by agents. Authorized administrators can open **Review AI conversation** from the activity actions to inspect the full transcript.
 
@@ -291,7 +291,7 @@ An automated voice call whose live (speech-to-speech) session is lost partway th
 <YouTube video="contact-center-numbers-not-in-service" title="Video of numbers not in service" />
 A **Load Activities** definition (an activity batch) stores filters to find contacts and then **loads activities in the background**.
 
-The loader runs as a background process to avoid overloading the system and to allow large loads to run safely. A load does not start on save; **Actions > Load activities** or the form's **Save & Load activities** button starts it, and **Actions > Clone** copies a load's settings into a new one. The **Load Activities** list is ordered by creation date with the newest activity loads first, is paged, and supports the standard admin bulk-selection controls. The form, the three sources (**Manual**, **Automatic**, **Dialer**) and the load report are described in [Load activities](../user-manual/load-inventory.md); automatic AI loads in [Automated AI SMS and voice](../user-manual/automated-ai.md).
+The loader runs as a background process to avoid overloading the system and to allow large loads to run safely. A load does not start on save; **Actions** → **Load activities** or the form's **Save & Load activities** button starts it, and **Actions** → **Clone** copies a load's settings into a new one. The **Load Activities** list is ordered by creation date with the newest activity loads first, is paged, and supports the standard admin bulk-selection controls. The form, the three sources (**Manual**, **Automatic**, **Dialer**) and the load report are described in [Load activities](../user-manual/load-inventory.md); automatic AI loads in [Automated AI SMS and voice](../user-manual/automated-ai.md).
 
 Each created activity resolves its campaign, channel, channel endpoint, and interaction type from the batch selections, falling back to the subject's part settings. The interaction type is derived from the source: the **Automatic** source creates **Automated** activities, while other sources create **Manual** activities. Manual activity loads assign each created activity to a selected user. Dialer activity loads use the phone channel, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode before dialers reserve them later. The campaign on a dialer-loaded activity comes from the load, falling back to the subject flow's default campaign; the dialer profile never sets it.
 
@@ -301,7 +301,7 @@ The **Automatic** source dispatches work through a channel processor (such as SM
 
 ## Getting started
 
-Enable the features in **Tools > Features**:
+Enable the features in **Tools** → **Features**:
 
 - `Omnichannel` (`CrestApps.OrchardCore.Omnichannel`)
 - `Omnichannel Management` (`CrestApps.OrchardCore.Omnichannel.Managements`), which also enables `Omnichannel Activities` and `Omnichannel Channel Endpoints`
@@ -346,13 +346,13 @@ When an activity load is started, the `IActivityBatchLoadCoordinator` transition
 
 ## Scheduled activities list
 
-**Interaction Center > Activities** (`Admin/omnichannel/activities`, permission `ListActivities`) lists the current user's own **Not started** manual activities, newest first, with filters for urgency, subject, channel, attempt, time zone and a scheduled date range. Rows show the contact's current local time when a time zone is stored. See [Working activities](../user-manual/activities.md#your-activity-list).
+**Interaction Center** → **Activities** (`Admin/omnichannel/activities`, permission `ListActivities`) lists the current user's own **Not started** manual activities, newest first, with filters for urgency, subject, channel, attempt, time zone and a scheduled date range. Rows show the contact's current local time when a time zone is stored. See [Working activities](../user-manual/activities.md#your-activity-list).
 
 The **Purge** action (permission `PurgeActivity`, implied by `ManageActivities`) is irreversible: it changes the activity status to `Purged`, records the UTC purge time and the current user's identifier and username for auditing, and clears any reservation state while preserving assignment. Every activity in one bulk purge records the same purge time and actor.
 
 ## Contacts list
 
-The **Interaction Center > Contacts** menu item opens the standard Orchard Core content list restricted to your Omnichannel contact content types. It links to the content `List` action and passes every content type that has `OmnichannelContactPart` attached as a comma-separated `contentTypeId`, so the resulting screen only shows contact items and only offers contact types when creating new content. With the **Omnichannel CRM** feature, lead types are listed on their own menu item and left out of this one.
+The **Interaction Center** → **Contacts** menu item opens the standard Orchard Core content list restricted to your Omnichannel contact content types. It links to the content `List` action and passes every content type that has `OmnichannelContactPart` attached as a comma-separated `contentTypeId`, so the resulting screen only shows contact items and only offers contact types when creating new content. With the **Omnichannel CRM** feature, lead types are listed on their own menu item and left out of this one.
 
 The contact content types are read from the cached `OmnichannelContentTypeProvider` that tracks which types attach `OmnichannelContactPart`, so the menu stays in sync as you attach or detach the part without scanning every content definition on each request. The menu item is available to users with the **List content items** permission (`ListContent`).
 
@@ -391,7 +391,7 @@ Phone filters in **Load Activities**, **Manage Activities**, and the Content Adm
 - Content Admin evaluates the displayed content version. Load Activities uses published or latest contact values according to **Only published records**, while Manage Activities uses the latest saved contact values.
 - The shared contact index stores primary Cell and Home numbers as national digits for national searches, while the corresponding normalized values remain in E.164 format.
 
-The named terms are registered by `OmnichannelContactPhoneContentsAdminListFilterProvider`, an `IContentsAdminListFilterProvider`. When the content list is scoped exclusively to contact content types — the **Interaction Center > Contacts** menu item, or any Content Admin URL whose `contentTypeId` lists only types that attach `OmnichannelContactPart` — the provider also overrides the default text term. An entry written like a phone number (digits, spaces, `-`, `(`, `)`, `.` and an optional leading `+`, with at least three digits) matches a number of the record that **begins with** the digits, and is not compared with the Display Text, whose `LIKE '%…%'` no index can answer; an entry with letters in it matches the Display Text only. `OmnichannelContactListFilterParser` keeps such an entry together, so `(702) 555-0104` is one number rather than the search syntax's grouping. The number is compared in a subquery (`DocumentId IN (SELECT DocumentId ...)`) on `OmnichannelContactPhoneNumberIndex`, which holds every number of the record in E.164, seeking `IDX_OCPhone_NumberDocument` (`NormalizedPhoneNumber`, `DocumentId`); a national entry is read in country code `1`, so `702555` and `1702555` both find `+17025550104`. Until the phone number backfill has finished, the subquery reads the primary Cell and Home columns of `OmnichannelContactIndex` instead, as every phone lookup does. The `phone:` term still matches any part of the number. On any other content list the search box behaves exactly as the framework default and matches Display Text only. On those contact-scoped lists a **Phone** card also appears in the Content Admin **Filters** popover.
+The named terms are registered by `OmnichannelContactPhoneContentsAdminListFilterProvider`, an `IContentsAdminListFilterProvider`. When the content list is scoped exclusively to contact content types — the **Interaction Center** → **Contacts** menu item, or any Content Admin URL whose `contentTypeId` lists only types that attach `OmnichannelContactPart` — the provider also overrides the default text term. An entry written like a phone number (digits, spaces, `-`, `(`, `)`, `.` and an optional leading `+`, with at least three digits) matches a number of the record that **begins with** the digits, and is not compared with the Display Text, whose `LIKE '%…%'` no index can answer; an entry with letters in it matches the Display Text only. `OmnichannelContactListFilterParser` keeps such an entry together, so `(702) 555-0104` is one number rather than the search syntax's grouping. The number is compared in a subquery (`DocumentId IN (SELECT DocumentId ...)`) on `OmnichannelContactPhoneNumberIndex`, which holds every number of the record in E.164, seeking `IDX_OCPhone_NumberDocument` (`NormalizedPhoneNumber`, `DocumentId`); a national entry is read in country code `1`, so `702555` and `1702555` both find `+17025550104`. Until the phone number backfill has finished, the subquery reads the primary Cell and Home columns of `OmnichannelContactIndex` instead, as every phone lookup does. The `phone:` term still matches any part of the number. On any other content list the search box behaves exactly as the framework default and matches Display Text only. On those contact-scoped lists a **Phone** card also appears in the Content Admin **Filters** popover.
 
 On the same contact-scoped lists, the free words of a search are read as one phrase: `John Smith` matches a record whose Display Text contains `John Smith`, and `702 555 0104` is compared with phone numbers as one number. The framework joins free words with `or` and matches each word through its own join of the content item index, which no index can answer, so on a large tenant a name search read every record of the list. Named terms such as `converted:false` are kept as typed, and a search that uses the search syntax itself (quotes, parentheses, `AND`, `OR`, `NOT` or a leading `-`) is parsed as typed. `OmnichannelContactListFilterParser` replaces the `IContentsAdminListFilterParser` to do this and builds its parser from the same filter providers.
 
@@ -401,7 +401,7 @@ The **Manage Activities** page provides a centralized interface for managing act
 
 ### Accessing the page
 
-**Interaction Center > Management > Manage Activities**, available to users with the **Manage activities** permission (`ManageActivities`).
+**Interaction Center** → **Management** → **Manage Activities**, available to users with the **Manage activities** permission (`ManageActivities`).
 
 Route: `Admin/omnichannel/manage-activities`
 
@@ -475,7 +475,7 @@ The headless **Omnichannel Activities** feature registers these permissions (`Pe
 
 | Key | Name shown in the role editor | Notes |
 | --- | --- | --- |
-| `ListActivities` | List activities | Agent. Opens **Interaction Center > Activities**. |
+| `ListActivities` | List activities | Agent. Opens **Interaction Center** → **Activities**. |
 | `ListContactActivities` | List Contact activities | Agent. Opens a contact's **Activities** page. Implied by `ListActivities`. |
 | `CompleteActivity` | Complete activity | Completes any activity. |
 | `CompleteOwnActivity` | Complete own activity | Agent. Completes activities assigned to the user. |
@@ -507,7 +507,7 @@ Each configurable entity has its own deployment step and a matching recipe step:
 | Re-engagement cadences | Omnichannel Cadences | `OmnichannelCadence` |
 | Subject actions | Omnichannel Subject Actions | `OmnichannelSubjectAction` |
 
-To export, open **Configuration -> Import/Export -> Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
+To export, open **Configuration** → **Import/Export** → **Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
 
 On import, entries are matched by their identifier: an entry that already exists is updated in place, and a new entry is created with its original identifier preserved. Because identifiers are preserved, cross-references (for example a campaign that points at a campaign group, or a subject action that points at a disposition) keep working after the import.
 

@@ -10,7 +10,7 @@ A business you sell to is an [account](../accounts.md), the same account your sa
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > B2B Accounts, Commerce > Price Lists |
+| **Menu** | **Commerce** → **B2B Accounts**, **Commerce** → **Price Lists** |
 | **Permission** | Manage B2B accounts |
 | **Feature** | Accounts B2B (it needs Accounts and Orders) |
 
@@ -24,7 +24,7 @@ A business you sell to is an [account](../accounts.md), the same account your sa
 4. Fill in **Payment terms** and the other sections below, and click **Publish**.
 5. Once the members are saved, give a buyer an **Order limit** under **Buyers** if their bigger orders need approval.
 
-**Commerce > B2B Accounts** lists the accounts that buy as a business. A user is a member of one account, and buys for it. Switch **This account buys as a business** off to let its buyers buy for themselves again; its orders keep the account.
+**Commerce** → **B2B Accounts** lists the accounts that buy as a business. A user is a member of one account, and buys for it. Switch **This account buys as a business** off to let its buyers buy for themselves again; its orders keep the account.
 
 When a buyer's email is the email of one of the account's contacts, the buyer is linked to that contact, and the account's page shows a **Contact** link next to them.
 
@@ -43,7 +43,7 @@ Open the account with **View**. With business buying on, its page has a **Busine
 
 At checkout, a buyer gets a **Business account** step after shipping, where they enter the purchase order number. The payment step then has a **Pay on account** box: *Pay a 20% deposit now, and $316 on Northwind Traders's terms, due in 30 days.* Click **Pay on account**, and the order shows what is on account and what is **Due now**; pay that as usual.
 
-When the account pays its invoice, open it under **Commerce > Transactions** and enter the amount under **Record an offline payment**.
+When the account pays its invoice, open it under **Commerce** → **Transactions** and enter the amount under **Record an offline payment**.
 
 The invoice is the transaction *on account*, with its purchase order number, due in net days; the deposit is its own transaction. What the account owes shows on the account's page, on the **Business account** page in the buyer's own account, and in [Transactions](transactions.md).
 
@@ -55,7 +55,7 @@ The account's **Locations** are the places it has orders shipped to. At checkout
 
 A **price list** gives the accounts on it their own prices.
 
-1. On **Commerce > Price Lists**, click **Add price list**.
+1. On **Commerce** → **Price Lists**, click **Add price list**.
 2. Name it, such as *Wholesale*. Only staff see the name.
 3. Enter a **Percentage off everything else** if you like, such as 10.
 4. Under **Prices by SKU**, enter a SKU and its price for each unit on each line, apart by a comma, such as *HAT-22069, 24.50*. Paste them from a spreadsheet if you have many. A variant's own SKU prices that variant.

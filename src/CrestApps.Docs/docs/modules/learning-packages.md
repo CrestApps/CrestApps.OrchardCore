@@ -125,7 +125,7 @@ Package content is untrusted script. Without a [package content host](#the-packa
 
 Some packages run in several frames that must reach each other. Articulate Rise and Storyline 360 packages load Articulate's SCORM Driver (`scormdriver/scormdriver.js`) in one frame, which looks for `window.API` by walking `window.parent` and `window.opener`, and the content in another frame, which calls the driver in its parent. In strict mode every page and frame gets an opaque origin of its own, so these calls fail with a `SecurityError` ("Error grabbing 1.2 API ... LMS Initialize Failed") and the content stays blank. Packages that run in a single frame work in strict mode.
 
-Such packages need a **package content host**: a host name of its own that serves only package files, set per tenant under **Settings › Learning Packages** (`LearningPackageContentHostSettings.BaseUrl`, permission **Manage learning package settings**, `ManageLearningPackageSettings`, given to administrators). The value is an origin: `http` or `https`, a host name and an optional port, and nothing after it, such as `https://packages.example.com`. It cannot be the host you use for the site. The `Settings` recipe step sets it:
+Such packages need a **package content host**: a host name of its own that serves only package files, set per tenant under **Settings** → **Learning Packages** (`LearningPackageContentHostSettings.BaseUrl`, permission **Manage learning package settings**, `ManageLearningPackageSettings`, given to administrators). The value is an origin: `http` or `https`, a host name and an optional port, and nothing after it, such as `https://packages.example.com`. It cannot be the host you use for the site. The `Settings` recipe step sets it:
 
 ```json
 {
@@ -156,7 +156,7 @@ All packages of the tenant share the content host's origin, so a package can rea
 4. **TLS.** Give the content host a certificate (a certificate for both names, or one of its own). Use `https` for both the site and the content host: a page on `https` cannot frame an `http` content host.
 5. **Reverse proxy.** When the site runs behind a proxy, forward the original `Host` (or configure Orchard Core's reverse proxy feature for `X-Forwarded-Host`) so the content host is recognized.
 6. **The site's own policy.** If the site sends a `Content-Security-Policy` with `frame-src` or `child-src`, add the content host to it.
-7. Set **Settings › Learning Packages › Package content host** to `https://packages.example.com`, then launch a package and check that it shows.
+7. Set **Settings** → **Learning Packages** → **Package content host** to `https://packages.example.com`, then launch a package and check that it shows.
 
 For local testing, `http://127.0.0.1:<port>` as the content host of a site browsed at `http://localhost:<port>` behaves like production: the two are different origins and the site's cookies are host-only.
 

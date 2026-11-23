@@ -25,11 +25,11 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=client_credentials&client_id=qa-pipeline&client_secret=YOUR-CLIENT-SECRET
 ```
 
-A client with no `ai.` scope may call every area its roles allow, as before. To narrow it, add the scopes below on the OpenID server (**Security → OpenID Connect → Scopes**), give the client the ones it needs and request them with the token; it may then call only those areas.
+A client with no `ai.` scope may call every area its roles allow, as before. To narrow it, add the scopes below on the OpenID server (**Security** → **OpenID Connect** → **Scopes**), give the client the ones it needs and request them with the token; it may then call only those areas.
 
 ### API keys
 
-Under **Artificial Intelligence → API Keys**, an admin with **Manage AI API keys** makes two kinds of key:
+Under **Artificial Intelligence** → **API Keys**, an admin with **Manage AI API keys** makes two kinds of key:
 
 - A **server key** (`cak_...`) is secret. It acts with the permissions of the roles you choose, in the areas (scopes) you tick, and can expire. It is shown once, when it is made; the list shows only its start and when it was last used.
 - A **browser key** (`cpk_...`) is public, for a web page. It may only chat with the profiles you choose through `POST /api/ai/completion/chat`, only from the web sites (origins) you list; a request from another site, or with no `Origin` header, is refused. Allow the same sites in a CORS policy (Orchard Core's **CORS** feature) so browsers may call the API.

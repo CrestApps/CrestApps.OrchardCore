@@ -16,7 +16,7 @@ A digital credential is not a Staff badge (the staff member's employee number an
 
 ## Credential definitions
 
-A credential definition is a content item of the type **Credential definition** (`CredentialDefinition`), made by the feature's migration, so it gets drafts, versions, the content list and the `Content` recipe step. **Learning → Credential Definitions** opens the content list filtered to the type. Holders of **Manage credential definitions** (`ManageCredentialDefinitions`) get the content permissions on definitions; the type is also securable.
+A credential definition is a content item of the type **Credential definition** (`CredentialDefinition`), made by the feature's migration, so it gets drafts, versions, the content list and the `Content` recipe step. **Learning** → **Credential Definitions** opens the content list filtered to the type. Holders of **Manage credential definitions** (`ManageCredentialDefinitions`) get the content permissions on definitions; the type is also securable.
 
 | Field | What it is |
 | --- | --- |
@@ -40,7 +40,7 @@ The part is `CredentialDefinitionPart`. Rule kinds are open strings registered w
 | `QuizPassed` | A quiz attempt passes, scored by the site, in an enrollment that counts as evidence. | Learning Assessments |
 | `LearningPathCompleted` | A learning path completes, and its rule still holds counting only the courses whose completion supports issuing (`CompletionEvidence.SupportsIssuing`: completed, not failed, not under review, not resting on a browser result). A path completed through any other course earns nothing, though it is completed for the learner (`ILearningPathService.SupportsIssuingAsync`). | Learning Paths |
 | `CertificationIssued` | A Skills certificate is issued or renewed for a user, or for a staff member with a user account. | Learning Certifications |
-| `Manual` | Staff with **Award and revoke digital credentials** award it under **Learning → Credential Awards → Award a credential**. | |
+| `Manual` | Staff with **Award and revoke digital credentials** award it under **Learning** → **Credential Awards** → **Award a credential**. | |
 | `Workflow` | The **Award Credential** workflow task runs. | Workflows |
 
 The rules hear the owners' observers only (`IEnrollmentObserver`, `IAttemptObserver`, `ILearningPathObserver`, `ICertificationRecordObserver`). They queue the award; it runs as a deferred task after the triggering request is saved, so it reads what was saved and a failure never undoes the learner's change (it is logged).
@@ -93,7 +93,7 @@ The base address is the site's **Base URL**. Without it nothing is awarded (`NoI
 
 - **My credentials** (`/learning/credentials`, permission Access learning): the learner's awards with downloads of the JSON-LD and the JWT, the share link (the verification page) and **Show my name** / **Hide my name**. It is an entry of the storefront account menu, or of the user menu when the storefront account is off. Both entries are registered only when Learner Pages (`CrestApps.OrchardCore.Learning.LearnerPages`) is on (`LearnerPagesStartup`, `[RequireFeatures]`); without it, no menu links to the page.
 - **The course completion panel** (Learning's `ICourseCompletionLinkProvider`): a course completion lists *Your credential: ...* for each award, not revoked, whose source is that enrollment, linking to My credentials.
-- **Learning → Credential Awards** (permission **View digital credential awards**, `ViewCredentialAwards`, implied by **Award and revoke digital credentials**, `AwardCredentials`, security critical): an admin list with search by the recipient's user name and filters by credential, status and issue dates (days in your time zone); an award's page with the check and the credential as issued; **Award a credential** (by hand, with a reason) and **Revoke** (with a reason). A revocation shows on the verification page and in the status list at once.
+- **Learning** → **Credential Awards** (permission **View digital credential awards**, `ViewCredentialAwards`, implied by **Award and revoke digital credentials**, `AwardCredentials`, security critical): an admin list with search by the recipient's user name and filters by credential, status and issue dates (days in your time zone); an award's page with the check and the credential as issued; **Award a credential** (by hand, with a reason) and **Revoke** (with a reason). A revocation shows on the verification page and in the status list at once.
 
 ## Data portability, personal data and integrations
 

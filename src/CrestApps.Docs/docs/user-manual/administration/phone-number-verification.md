@@ -13,7 +13,7 @@ Phone number verification asks an outside service whether a contact's phone numb
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Phone Number Verifications; Tools > Phone Verifications Queue; Reports > General > Phone Number Verifications |
+| **Menu** | **Settings** → **Phone Number Verifications**; **Tools** → **Phone Verifications Queue**; **Reports** → **General** → **Phone Number Verifications** |
 | **Permission** | Manage phone number verification settings (settings); Run 'Phone Number Verifications' Report (queue and report); Verify phone numbers (retrying checks) |
 | **Feature** | AbstractAPI Phone Number Verification, Veriphone Phone Number Verification, or Twilio Phone Number Verification. Each one turns on Phone Number Verifications. |
 
@@ -39,7 +39,7 @@ The services charge per check, so a number is only checked when it is new, chang
 
 Your administrator first turns on the feature for the service your company has an account with. Then:
 
-1. Open **Settings > Phone Number Verifications**.
+1. Open **Settings** → **Phone Number Verifications**.
 2. Open the provider's tab (**AbstractAPI**, **Veriphone** or **Twilio**).
 3. Switch on **Enable this provider**. Its account fields appear.
 4. Enter the account details from the provider (see the tables below) and click **Save**.
@@ -99,14 +99,14 @@ On a contact type that has the **Phone Number Verification** part, the item also
 
 <YouTube video="phone-number-verification" title="Video of working the verification queue" start={250} end={330} />
 
-Open **Tools > Phone Verifications Queue** to see every number that has verification data.
+Open **Tools** → **Phone Verifications Queue** to see every number that has verification data.
 
 - Click a tile (**All**, **Verified**, **Invalid**, **Failed**, **Pending** or **Needs attention**) to show only those records. The tiles never overlap and always add up to the total.
   - **Pending**: waiting to be checked.
   - **Failed**: the last check failed, and the site will try again by itself.
   - **Needs attention**: failed **Maximum verification attempts** times in a row, so the site stopped trying. The latest error is shown in red.
 - Use **Search by phone number** and **Sort by** (**Recently attempted**, **Least recently attempted**, **Recently created**, **Oldest created**) to find a record.
-- Click **Retry now** on a failed or needs-attention record, or open the **Actions** menu of a verified or invalid record and click **Verify again**. Tick records (or **Select all on this page**) and choose **Actions > Retry** to retry them together, or click **Retry all failed** to retry every failed and needs-attention record on every page that matches your search.
+- Click **Retry now** on a failed or needs-attention record, or open the **Actions** menu of a verified or invalid record and click **Verify again**. Tick records (or **Select all on this page**) and choose **Actions** → **Retry** to retry them together, or click **Retry all failed** to retry every failed and needs-attention record on every page that matches your search.
 
 Retries need the **Verify phone numbers** permission. They are queued, not instant: the records show **Pending** right away and are checked shortly after, spaced out by the **Request delay**.
 
@@ -114,7 +114,7 @@ Retries need the **Verify phone numbers** permission. They are queued, not insta
 
 <YouTube video="phone-number-verification" title="Video of reading the report" start={330} end={368} />
 
-Open **Reports > General > Phone Number Verifications**.
+Open **Reports** → **General** → **Phone Number Verifications**.
 
 ![Phone Number Verifications report](/img/docs/phone-number-verifications-report.png)
 

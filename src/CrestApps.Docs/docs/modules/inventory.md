@@ -34,7 +34,7 @@ All of these live in the `Inventory` YesSql collection.
 - **`InventoryPart`** (attachable): `TrackInventory` (default true), `AllowBackorder`, `LowStockThreshold` (null for the site default), `ReleaseDateUtc` (the **Ships from** date, kept as noon UTC on the day so it reads as the same day in any time zone).
 - **`StockReservation`**: `StockItemId`, `OrderId`, `LocationId`, `Quantity`, `ReturnedQuantity` (units of the sale returned so far), `Status` (`Held`, `Committed`, `Released`), `ExpiresUtc`, `ReleaseReason`. `StockReservationIndex` maps the stock item, order, status and expiry. A committed reservation is also what keeps an order's sale from being recorded twice.
 - **`StockLocation`**: a place stock is kept. Its `ItemId` is the location id; `Name`, `Address` for staff, `Position` (the order orders take units from the site's locations), and `OwnerKind` and `OwnerId` for a location another record owns, such as a van (`Asset`). `StockLocationStore.FindByOwnerAsync` finds an owner's location.
-- **`InventorySettings`** (Settings › Commerce › Inventory): `DefaultLowStockThreshold` (5) and `HoldMinutes` (60). Its `Locations` list is from before locations had a store: a migration step moves them into the store with their ids and order, and the settings page edits the site's own locations (up to 50) in the store.
+- **`InventorySettings`** (**Settings** → **Commerce** → **Inventory**): `DefaultLowStockThreshold` (5) and `HoldMinutes` (60). Its `Locations` list is from before locations had a store: a migration step moves them into the store with their ids and order, and the settings page edits the site's own locations (up to 50) in the store.
 
 ## Services
 
@@ -127,7 +127,7 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 
 ## Reports
 
-With the [Reports](reports) feature on, **Stock on hand** (under **Reports > Commerce**, permission `ViewInventory`) lists every counted item with its units on hand, held and available, out of stock and low first, with totals. It shows stock as it is when it runs.
+With the [Reports](reports) feature on, **Stock on hand** (under **Reports** → **Commerce**, permission `ViewInventory`) lists every counted item with its units on hand, held and available, out of stock and low first, with totals. It shows stock as it is when it runs.
 
 ## Report Builder data source
 
@@ -284,7 +284,7 @@ See [Commerce API](commerce-api.md) for the endpoints, the conventions they shar
 
 ## Admin
 
-- **Commerce > Inventory** (`inventory`, `InventoryAdminController`) lists stock items, fewest available first.
+- **Commerce** → **Inventory** (`inventory`, `InventoryAdminController`) lists stock items, fewest available first.
   - Search matches the start of the SKU or title. Filters: *Low stock*, *Out of stock*, *Backordered*.
   - Each item's page (`inventory/{stockItemId}`) shows its counts and paged movement history, with forms to receive or adjust, count, and recount from history. With more than one location it shows the units by location, the receive, adjust and count forms ask for a location, and `inventory/{stockItemId}/transfer` moves units between them.
   - **Export CSV** and **Import CSV** download and apply counts.
@@ -310,7 +310,7 @@ The **Back-in-Stock Alerts** feature (`CrestApps.OrchardCore.Inventory.StockAler
 
 ## Purchase orders
 
-The **Purchase Orders** feature (`CrestApps.OrchardCore.Inventory.PurchaseOrders`) adds **Commerce > Purchase Orders**. A `PurchaseOrder` (`Inventory` collection, `PurchaseOrderIndex` on number, supplier, status, location and dates) has a `Number` (such as `PO-261019-K3QZ7`: the date and five characters made from the purchase order's place in the `Inventory.PurchaseOrder` series of the shared `INumberSequence`, so two purchase orders never share a number), `Supplier`, `SupplierEmail`, the `LocationId` received at, `Currency`, `ExpectedUtc`, `Note`, `Lines` (`PurchaseOrderLine`: `StockItemId`, title, SKU, `Ordered`, `Received`, `UnitCost`) and a `Status`: `Draft`, `Ordered`, `PartiallyReceived`, `Received` or `Canceled`.
+The **Purchase Orders** feature (`CrestApps.OrchardCore.Inventory.PurchaseOrders`) adds **Commerce** → **Purchase Orders**. A `PurchaseOrder` (`Inventory` collection, `PurchaseOrderIndex` on number, supplier, status, location and dates) has a `Number` (such as `PO-261019-K3QZ7`: the date and five characters made from the purchase order's place in the `Inventory.PurchaseOrder` series of the shared `INumberSequence`, so two purchase orders never share a number), `Supplier`, `SupplierEmail`, the `LocationId` received at, `Currency`, `ExpectedUtc`, `Note`, `Lines` (`PurchaseOrderLine`: `StockItemId`, title, SKU, `Ordered`, `Received`, `UnitCost`) and a `Status`: `Draft`, `Ordered`, `PartiallyReceived`, `Received` or `Canceled`.
 
 - `PurchaseOrdersAdminController` (`purchase-orders`, viewing with `ViewInventory`, changes with `ManageInventory`) lists them through an `AdminList` with a status filter and search by number or supplier, and creates (optionally from the location's low-stock items, each up to twice its threshold), edits, marks ordered, receives, cancels and deletes drafts. Lines can be added and removed only while it's a draft. Items are found through `Admin/api/crestapps/inventory/stock-items/search`.
 - `PurchaseOrderReceiver.ReceiveAsync(order, quantities, actor)` receives units of its lines at its location through `IInventoryService.ReceiveAsync`, never more than are still to come, with the order's number as the movement's reason, and marks it received once nothing is.

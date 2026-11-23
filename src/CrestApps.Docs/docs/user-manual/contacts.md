@@ -13,7 +13,7 @@ A **contact** is the person you call or text. Contacts are ordinary content item
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Contacts |
+| **Menu** | **Interaction Center** → **Contacts** |
 | **Permission** | List content items (to see contacts); the content edit and publish permissions, such as Edit own content, for the contact type (to add and change them) |
 | **Feature** | Omnichannel Management |
 
@@ -30,7 +30,7 @@ A **contact** is the person you call or text. Contacts are ordinary content item
 
 An administrator with the **Edit content types** permission usually does this once, when the site is set up. One contact type is usually all you need. Create more than one only when you want to keep different kinds of people apart, for example *Customer* and *Employee*.
 
-1. Open **Design > Content Definition > Content Types** and create a type named *Contact* (or edit your existing one).
+1. Open **Design** → **Content Definition** → **Content Types** and create a type named *Contact* (or edit your existing one).
 2. Add the **Omnichannel Contact** part and any fields your business needs, such as a title for the person's name.
 3. Open the part's settings to choose what the contact editor shows:
 
@@ -53,8 +53,8 @@ The screencast below creates a *Lead* type with the **Omnichannel Contact** and 
 <YouTube video="omnichannel-contacts" title="Video of creating a contact" start={103} end={152} />
 
 
-1. Open **Interaction Center > Contacts** and click **New** followed by the contact type's name (for example **New Contact**).
-2. Fill in the name and other fields. Under **Contact Methods**, click **Add Item > Phone Number**, type the number and pick its **Type** (for example *Cell*). Pick the **Contact time zone**, or leave *Timezone (Automatic)* to detect it from the number.
+1. Open **Interaction Center** → **Contacts** and click **New** followed by the contact type's name (for example **New Contact**).
+2. Fill in the name and other fields. Under **Contact Methods**, click **Add Item** → **Phone Number**, type the number and pick its **Type** (for example *Cell*). Pick the **Contact time zone**, or leave *Timezone (Automatic)* to detect it from the number.
 3. Tick **Do not call** (and **Do not SMS** or **Do not email**, when the contact type shows them) if the person asked not to be contacted that way. Dialers, loads and automated messages skip them.
 4. Click **Publish**.
 
@@ -63,7 +63,7 @@ The screencast below creates a *Lead* type with the **Omnichannel Contact** and 
 <YouTube video="omnichannel-contacts" title="Video of finding a contact by name or phone number" start={152} end={192} />
 
 
-On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A number of three digits or more finds contacts with a number, of any type, that **begins with** those digits, for example `702555` or `(702) 555-0104`. A search written like a number matches numbers only, not names. To find digits anywhere in the number, such as the last four, use `phone:` or `phone-ends:` below. A search with letters in it, such as `John 2`, matches names only. This only happens on the Contacts list; on other content lists the search box matches names only.
+On **Interaction Center** → **Contacts**, the search box matches a name **or** a phone number, so you can type either one. A number of three digits or more finds contacts with a number, of any type, that **begins with** those digits, for example `702555` or `(702) 555-0104`. A search written like a number matches numbers only, not names. To find digits anywhere in the number, such as the last four, use `phone:` or `phone-ends:` below. A search with letters in it, such as `John 2`, matches names only. This only happens on the Contacts list; on other content lists the search box matches names only.
 
 You can also use these search terms. The **Filter syntax** entry of the list's **Filters** menu shows them on a **Phone** card.
 
@@ -88,8 +88,8 @@ Tips:
 On a saved contact, the buttons at the top lead to its work:
 
 - **List Activities** shows the contact's scheduled and completed activities.
-- **Add Activity > Outbound** schedules a call or message to the contact.
-- **Add Activity > Inbound** logs a call or message the contact started.
+- **Add Activity** → **Outbound** schedules a call or message to the contact.
+- **Add Activity** → **Inbound** logs a call or message the contact started.
 
 See [Activities](activities.md).
 
@@ -97,7 +97,7 @@ See [Activities](activities.md).
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of exporting contacts to CSV, then importing a file of leads that skips a number on the Local Do Not Call Registry" start={373} end={421} />
 
-Use **Content > Export** to download contacts as CSV or Excel, and **Content > Import** to load a file of leads. See [Import and export](administration/import-and-export.md) for the general steps.
+Use **Content** → **Export** to download contacts as CSV or Excel, and **Content** → **Import** to load a file of leads. See [Import and export](administration/import-and-export.md) for the general steps.
 
 ### Import options for contacts
 

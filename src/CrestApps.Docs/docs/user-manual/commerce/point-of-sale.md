@@ -15,7 +15,7 @@ At each store you set up one or more **registers**. A member of staff opens a **
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Point of Sale > Web Register; Registers; Shifts; Departments |
+| **Menu** | **Commerce** → **Point of Sale** → **Web Register**; Registers; Shifts; Departments |
 | **Permission** | **Sell at a register** for staff at the till; **Manage registers and shifts** to set up registers and departments, and read every shift |
 | **Feature** | Point of Sale (it needs Orders, Inventory and the Checkout API). Point of Sale Web Register, to sell in the browser. Receipts, to print and email branded receipts. Stripe, to take cards on Stripe Terminal readers. |
 
@@ -28,7 +28,7 @@ This video shows why a store sells at the counter with the same system, the regi
 ## Before you start
 
 1. Turn on **Point of Sale**; **Point of Sale Web Register** to sell in the browser; and **Receipts** if you'll email receipts or print them branded.
-2. Add a location for each store under **Settings > Commerce > Inventory**: a register sells from one of them. See [Inventory](inventory.md).
+2. Add a location for each store under **Settings** → **Commerce** → **Inventory**: a register sells from one of them. See [Inventory](inventory.md).
 3. Give staff who sell at the counter a role with **Sell at a register**. Give whoever manages the stores **Manage registers and shifts**, which includes selling.
 4. For the web register, give those roles **Access admin panel** too: the web register is a page of the admin.
 5. For a till app, set up its sign-in, as an app people sign in to with the authorization code flow, and include the `roles` scope so registers can check staff roles. See [Set up sign-in](headless-api.md#set-up-sign-in).
@@ -39,7 +39,7 @@ Staff sign in with their own accounts, so every shift, sale and cash movement sa
 
 <YouTube video="point-of-sale" title="Video of setting up a register" start={135} end={206} />
 
-1. Open **Commerce > Point of Sale > Registers** and click **Add register**.
+1. Open **Commerce** → **Point of Sale** → **Registers** and click **Add register**.
 2. Fill in the fields (below), and click **Save**.
 
 *The register was added. Staff who may sell at registers can open a shift at it from the web register or a till app.* confirms it.
@@ -58,7 +58,7 @@ Staff sign in with their own accounts, so every shift, sale and cash movement sa
 
 A department is what a register rings an amount up in when there's no item to track, such as *Grocery*, *Candy* or *Lottery*. Its sales are counted toward it, on the shift report and in the shift's page, and taxed by its tax category. Departments are only for the registers: they never show in your online store.
 
-1. Open **Commerce > Point of Sale > Departments** and click **Add department**.
+1. Open **Commerce** → **Point of Sale** → **Departments** and click **Add department**.
 2. Fill in the fields (below), and click **Save**.
 
 | Field | What it does |
@@ -75,7 +75,7 @@ A department is what a register rings an amount up in when there's no item to tr
 
 ### Program the department keys
 
-Each register shows a key for every department that's on, in their order, until you program its keys. To choose its keys, open the register under **Commerce > Point of Sale > Registers**, and in **Department keys**:
+Each register shows a key for every department that's on, in their order, until you program its keys. To choose its keys, open the register under **Commerce** → **Point of Sale** → **Registers**, and in **Department keys**:
 
 1. Click **Add key**, and choose its department.
 2. Optionally, change what the key reads, and give it a **Preset amount**: a key with one rings that amount up when nothing is keyed in, such as *1.00* for a coffee.
@@ -84,7 +84,7 @@ Each register shows a key for every department that's on, in their order, until 
 
 ## The web register
 
-With **Point of Sale Web Register** on, staff sell in the browser at **Commerce > Point of Sale > Web Register**. Staff who may sell at more than one register pick theirs first.
+With **Point of Sale Web Register** on, staff sell in the browser at **Commerce** → **Point of Sale** → **Web Register**. Staff who may sell at more than one register pick theirs first.
 
 1. **Open the shift.** Enter the cash you put in the drawer, and click **Open shift**.
 2. **Ring up.** Key in an amount on the keypad or the keyboard, cents first, so *1 0 0 0* is 10.00, and press a department. A key with a preset amount rings it up alone. To ring up several, key in how many, press **×**, then the amount and the department: *3 × 1 5 0* then **Candy** is three at 1.50. To sell an item, scan its barcode, or type its SKU and press Enter. Click a line and **Void line** to take it off, or **Void ticket** to start again.
@@ -195,7 +195,7 @@ That's the **expected** cash. At the close, the counted cash less the expected c
 
 <YouTube video="point-of-sale" title="Video of reading a shift" start={279} end={342} />
 
-**Commerce > Point of Sale > Shifts** lists every shift, newest first, each **Open** or **Closed**, with when it opened and who opened it, and for a closed one its difference. The **Filter by register** list in the header shows one register's shifts. **Shifts**, on a register in the registers list, opens the same.
+**Commerce** → **Point of Sale** → **Shifts** lists every shift, newest first, each **Open** or **Closed**, with when it opened and who opened it, and for a closed one its difference. The **Filter by register** list in the header shows one register's shifts. **Shifts**, on a register in the registers list, opens the same.
 
 Click **View** to open a shift:
 
@@ -221,7 +221,7 @@ Click **View** to open a shift:
 
 <YouTube video="point-of-sale-till" title="Video of register sales and returns as orders" start={170} end={199} />
 
-A register sale is an order, like an online one, so it's under **Commerce > Orders**, in your reports, and in the buyer's account when you named a customer with an account. It differs in these ways:
+A register sale is an order, like an online one, so it's under **Commerce** → **Orders**, in your reports, and in the buyer's account when you named a customer with an account. It differs in these ways:
 
 - Its **channel** is *Point of sale*. The orders list filters by channel (**Every channel**, **Online**, **Point of sale**, **Drafts sent by staff**, **AI agents**), and its CSV export follows the filter. A register sale shows a badge with its register.
 - Its **location** is the register's store: its stock is held and sold there. When that store has none of an item, the stock comes off your main location.

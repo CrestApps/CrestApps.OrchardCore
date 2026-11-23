@@ -18,11 +18,11 @@ A speaking style is a System Prompt template (`AIProfileTemplate` with the `Syst
 
 The `AISystemPromptTemplateDefaultsMigrations` migration of the AI module runs `IAISystemPromptTemplateSeeder.SeedAsync()` once per tenant. It saves each default speaking style and guardrail topic that no saved template has the name of yet, so an admin can edit or delete them. They are seeded only there, so a deleted default stays deleted.
 
-The **Speaking Style** card of the profile editor (`AIProfileSpeakingStyleDisplayDriver`) lists the category's templates with `ITemplateService.ListOptionsByCategoryAsync` and saves the chosen identifiers in `AIProfileSpeakingStyleSettings.Styles`. **Artificial Intelligence > Speaking Styles** lists the category's templates.
+The **Speaking Style** card of the profile editor (`AIProfileSpeakingStyleDisplayDriver`) lists the category's templates with `ITemplateService.ListOptionsByCategoryAsync` and saves the chosen identifiers in `AIProfileSpeakingStyleSettings.Styles`. **Artificial Intelligence** → **Speaking Styles** lists the category's templates.
 
 ## Guardrails
 
-The AI module calls `AddCoreAIGuardrails()`, which registers Core's `AIGuardrailService` and its eight default topics. The **Guardrails** card of the profile editor (`AIProfileGuardrailDisplayDriver`, in AI Chat) edits `AIProfileGuardrailSettings`. **Artificial Intelligence > Guardrail Topics** lists the topic templates.
+The AI module calls `AddCoreAIGuardrails()`, which registers Core's `AIGuardrailService` and its eight default topics. The **Guardrails** card of the profile editor (`AIProfileGuardrailDisplayDriver`, in AI Chat) edits `AIProfileGuardrailSettings`. **Artificial Intelligence** → **Guardrail Topics** lists the topic templates.
 
 Every verdict is passed to each `IAIGuardrailHandler`. The AI module's `WorkflowAIGuardrailHandler` starts the **AI Guardrail Triggered** event with the verdict as `Guardrail` and its fields, plus the conversation input when an `AIConversationScope` is current.
 

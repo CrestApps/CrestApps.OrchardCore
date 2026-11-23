@@ -11,7 +11,7 @@ The ticket list shows the tickets you may see, latest change first. Which ticket
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Tickets |
+| **Menu** | **Service Desk** → **Tickets** |
 | **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support** |
 | **Feature** | Tickets |
 
@@ -19,7 +19,7 @@ The ticket list shows the tickets you may see, latest change first. Which ticket
 
 ## Find tickets
 
-Go to **Service Desk > Tickets**.
+Go to **Service Desk** → **Tickets**.
 
 - Pick a **saved view** above the list, such as **My open tickets** or **Unassigned**. See [Saved views](./views.md) to make your own.
 - Search by ticket number or words of the subject.

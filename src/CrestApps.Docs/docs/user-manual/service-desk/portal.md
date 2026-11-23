@@ -10,7 +10,7 @@ With the **Tickets Portal**, the people you serve send requests from their accou
 
 | | |
 | --- | --- |
-| **Menu** | For requesters: **My account > Requests**; to set up: Design > Content Definition > Content Types and Service Desk > Desks |
+| **Menu** | For requesters: **My account** → **Requests**; to set up: **Design** → **Content Definition** → **Content Types and Service Desk** → **Desks** |
 | **Permission** | Edit content types and Manage ticket settings to set it up; requesters need nothing but an account |
 | **Feature** | Tickets Portal |
 
@@ -18,10 +18,10 @@ With the **Tickets Portal**, the people you serve send requests from their accou
 
 ## Set it up
 
-1. Turn on **Tickets Portal** under **Tools > Features**.
+1. Turn on **Tickets Portal** under **Tools** → **Features**.
 2. Under **Content Definition**, edit the ticket type's **Ticket** part and tick **Customers can submit it**. Add a **Description for customers** so they can tell types apart.
 3. In each field's settings, tick **Customers fill this in** for the fields customers should answer. Customers see the subject and only those fields; every other field stays your agents' own. See [Ticket types, fields and categories](./ticket-types-and-categories.md).
-4. Make sure a desk **Serves** customers (**Service Desk > Desks**). Customers can only open requests on those desks. With Staff on, members of staff also see the desks that serve people inside the organization, so employees can ask IT or HR from the same page.
+4. Make sure a desk **Serves** customers (**Service Desk** → **Desks**). Customers can only open requests on those desks. With Staff on, members of staff also see the desks that serve people inside the organization, so employees can ask IT or HR from the same page.
 
 ## What requesters do
 
