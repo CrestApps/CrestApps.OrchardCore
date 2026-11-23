@@ -58,6 +58,8 @@ A response whose deadline and grace passed is submitted with what was saved in t
 
 Every change adds an entry to the response's score history (who, when, from, to, why) and raises `GradedAsync` or `ScoreChangedAsync`.
 
+Changing a score that is given (**Change score**, **Score again**, saving grades of a graded response, and **Regrade versions**) also asks every `ISurveyScoreChangeCheck` (registered with `services.AddSurveyScoreChangeCheck<T>()`), on top of being allowed to grade the survey; all must allow it. A grader who is refused sees a graded response without the save button and without the change score card. Learning Assessments adds one that requires **Override grades** on the surveys course items own.
+
 The grading queue (`admin/surveys/grading`) lists responses waiting for a grader in the surveys the user may grade: the global permission, `ISurveyGradingScope` implementations (Learning adds course staff) and `ISurveyAuthorizationService`.
 
 Nobody grades their own work (`SurveyOwnWork`): the queue leaves out the grader's own responses, and the Grade page, its posts (grades, change score, score again), **Regrade versions** (refused when the grader has a response in a chosen version), AI scoring help, and void and delete on the responses pages all refuse a response whose `UserId` is the current user.

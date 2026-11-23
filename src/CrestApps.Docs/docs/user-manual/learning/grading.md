@@ -26,6 +26,7 @@ Most quiz questions are scored automatically. Essays and coursework need a perso
 
 - **Score again** scores the attempt with the key of its version, such as after a key was found wrong. Give the reason.
 - **Change score** sets the total score, with a reason.
+- **Score again**, **Change score**, changing the grades of an attempt that is already graded, and **Regrade versions** (in the survey's menu) need **Override grades**. Without it you see a graded attempt without these buttons.
 - To void an attempt, open the survey's **Responses**, choose the response and void it with a reason. A voided attempt does not count in the quiz grade.
 
 Each change is kept in the attempt's score history and the Audit Trail. If the course was already completed and the change lowers the result, the enrollment stays completed and shows **Needs review**: a training manager opens it, decides what follows and clears the review with a note.

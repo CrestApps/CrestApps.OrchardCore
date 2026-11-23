@@ -167,6 +167,16 @@ public static class SurveysServiceCollectionExtensions
         => services.AddEnumerable<ISurveyAccessProvider, TProvider>();
 
     /// <summary>
+    /// Registers a check that every change of a given score must pass.
+    /// </summary>
+    /// <typeparam name="TCheck">The check type.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddSurveyScoreChangeCheck<TCheck>(this IServiceCollection services)
+        where TCheck : class, ISurveyScoreChangeCheck
+        => services.AddEnumerable<ISurveyScoreChangeCheck, TCheck>();
+
+    /// <summary>
     /// Registers a provider of context condition sources.
     /// </summary>
     /// <typeparam name="TProvider">The provider type.</typeparam>

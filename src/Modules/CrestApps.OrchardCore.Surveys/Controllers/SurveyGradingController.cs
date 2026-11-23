@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -197,6 +198,11 @@ public sealed class SurveyGradingController : Controller
             return refused;
         }
 
+        if (SurveyScoreChangeChecks.GradingChangesGivenScores(response) && !await CanChangeScoresAsync(survey, response))
+        {
+            return Forbid();
+        }
+
         var scores = (model.Points ?? [])
             .Where(pair => pair.Value is not null)
             .ToDictionary(pair => pair.Key, pair => pair.Value.Value, StringComparer.Ordinal);
@@ -242,9 +248,16 @@ public sealed class SurveyGradingController : Controller
             return Forbid();
         }
 
-        if (await RefuseAsync(response, await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted)) is { } refused)
+        var survey = await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted);
+
+        if (await RefuseAsync(response, survey) is { } refused)
         {
             return refused;
+        }
+
+        if (!await CanChangeScoresAsync(survey, response))
+        {
+            return Forbid();
         }
 
         var result = model.NewScore is { } score
@@ -285,9 +298,16 @@ public sealed class SurveyGradingController : Controller
             return Forbid();
         }
 
-        if (await RefuseAsync(response, await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted)) is { } refused)
+        var survey = await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted);
+
+        if (await RefuseAsync(response, survey) is { } refused)
         {
             return refused;
+        }
+
+        if (!await CanChangeScoresAsync(survey, response))
+        {
+            return Forbid();
         }
 
         var result = await _grading.RegradeAsync(responseId, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted);
@@ -320,7 +340,7 @@ public sealed class SurveyGradingController : Controller
             return NotFound();
         }
 
-        if (!await CanGradeSurveyAsync(survey))
+        if (!await CanGradeSurveyAsync(survey) || !await CanChangeScoresAsync(survey, null))
         {
             return Forbid();
         }
@@ -346,7 +366,7 @@ public sealed class SurveyGradingController : Controller
             return NotFound();
         }
 
-        if (!await CanGradeSurveyAsync(survey))
+        if (!await CanGradeSurveyAsync(survey) || !await CanChangeScoresAsync(survey, null))
         {
             return Forbid();
         }
@@ -409,6 +429,7 @@ public sealed class SurveyGradingController : Controller
         {
             Response = response,
             SurveyTitle = survey?.Title,
+            CanChangeScores = await CanChangeScoresAsync(survey, response),
             RespondentName = await RespondentNameAsync(response),
             Label = SurveyAnonymity.ResponseLabel(survey, response),
             IsAnonymous = survey is null || SurveyAnonymity.IsAnonymous(survey),
@@ -540,6 +561,11 @@ public sealed class SurveyGradingController : Controller
         return _surveyAuthorization.FirstOrDefault() is { } authorization
             && await authorization.AuthorizeAsync(User, survey, SurveyOperation.Grade, HttpContext.RequestAborted);
     }
+
+    // Changing given scores (the total, a regrade, grades of a graded response, another version's key) passes every
+    // registered score change check on top of the grading permission, such as Override grades on a course quiz.
+    private Task<bool> CanChangeScoresAsync(Survey survey, SurveyResponse response)
+        => HttpContext.RequestServices.GetRequiredService<SurveyScoreChangeChecks>().AllowAsync(User, survey, response, HttpContext.RequestAborted);
 
     // The shared respondent names: a grader sees who responded on an identified survey only (Guest or Deleted user
     // when there is no user), and Anonymous on an anonymous survey.

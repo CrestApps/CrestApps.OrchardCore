@@ -98,52 +98,63 @@
         </div>
     </div>
 
+    @if (Model.Response.Grading == GradingStatus.Graded && !Model.CanChangeScores)
+    {
+        <div class="alert alert-info">@T["This response is graded. Changing its grades needs a permission you don't have."]</div>
+    }
+
     <div class="action-bar-bottom">
-        <button type="submit" class="btn btn-primary">@T["Save grades"]</button>
+        @if (Model.Response.Grading != GradingStatus.Graded || Model.CanChangeScores)
+        {
+            <button type="submit" class="btn btn-primary">@T["Save grades"]</button>
+        }
         <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-surveyId="@Model.Response.SurveyId">@T["Back"]</a>
     </div>
 </form>
 
-<div class="card mb-3">
-    <div class="card-header">@T["Change the total score"]</div>
-    <div class="card-body">
-        <form asp-action="ChangeScore" asp-route-responseId="@Model.Response.ItemId" method="post">
-            <div class="ocat-wrapper">
-                <label asp-for="NewScore" class="ocat-label">@T["New score"]</label>
-                <div class="ocat-end">
-                    <input asp-for="NewScore" type="number" min="0" max="@Model.Response.MaxScore" step="any" class="form-control" />
+@if (Model.CanChangeScores)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Change the total score"]</div>
+        <div class="card-body">
+            <form asp-action="ChangeScore" asp-route-responseId="@Model.Response.ItemId" method="post">
+                <div class="ocat-wrapper">
+                    <label asp-for="NewScore" class="ocat-label">@T["New score"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="NewScore" type="number" min="0" max="@Model.Response.MaxScore" step="any" class="form-control" />
+                    </div>
                 </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label for="change-reason" class="ocat-label">@T["Reason"]</label>
-                <div class="ocat-end">
-                    <input id="change-reason" name="Reason" class="form-control" required />
-                    <span class="hint">@T["The reason is kept in the score history."]</span>
+                <div class="ocat-wrapper">
+                    <label for="change-reason" class="ocat-label">@T["Reason"]</label>
+                    <div class="ocat-end">
+                        <input id="change-reason" name="Reason" class="form-control" required />
+                        <span class="hint">@T["The reason is kept in the score history."]</span>
+                    </div>
                 </div>
-            </div>
-            <div class="ocat-wrapper">
-                <div class="ocat-end-offset">
-                    <button type="submit" class="btn btn-secondary">@T["Change score"]</button>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-secondary">@T["Change score"]</button>
+                    </div>
                 </div>
-            </div>
-        </form>
-        <hr />
-        <form asp-action="Regrade" asp-route-responseId="@Model.Response.ItemId" method="post">
-            <div class="ocat-wrapper">
-                <label for="regrade-reason" class="ocat-label">@T["Reason"]</label>
-                <div class="ocat-end">
-                    <input id="regrade-reason" name="Reason" class="form-control" />
-                    <span class="hint">@T["Scores the response again with the key of its version. Grader scores are kept."]</span>
+            </form>
+            <hr />
+            <form asp-action="Regrade" asp-route-responseId="@Model.Response.ItemId" method="post">
+                <div class="ocat-wrapper">
+                    <label for="regrade-reason" class="ocat-label">@T["Reason"]</label>
+                    <div class="ocat-end">
+                        <input id="regrade-reason" name="Reason" class="form-control" />
+                        <span class="hint">@T["Scores the response again with the key of its version. Grader scores are kept."]</span>
+                    </div>
                 </div>
-            </div>
-            <div class="ocat-wrapper">
-                <div class="ocat-end-offset">
-                    <button type="submit" class="btn btn-secondary">@T["Score again"]</button>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-secondary">@T["Score again"]</button>
+                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
+}
 
 @if (Model.Response.ScoreHistory.Count > 0)
 {

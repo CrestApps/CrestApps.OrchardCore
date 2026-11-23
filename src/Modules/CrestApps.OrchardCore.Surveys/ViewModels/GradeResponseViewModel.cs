@@ -18,6 +18,12 @@ public class GradeResponseViewModel
     public string SurveyTitle { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the grader may change given scores (change the total, score again, grade a graded response
+    /// again), which every <see cref="Services.ISurveyScoreChangeCheck"/> must allow.
+    /// </summary>
+    public bool CanChangeScores { get; set; }
+
+    /// <summary>
     /// Gets or sets the respondent's name, or <see langword="null"/> for an anonymous response.
     /// </summary>
     public string RespondentName { get; set; }

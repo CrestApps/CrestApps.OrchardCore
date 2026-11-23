@@ -94,7 +94,7 @@ The course grade stored on an enrollment is computed again when the learner's pr
 | Permission | Lets a person |
 | --- | --- |
 | Grade the work of every course (`GradeAssessments`) | Use the grading list for every course, and grade and read the responses of every survey a course item owns (quiz attempts and course surveys), through `AssessmentsSurveyAccessProvider`. It gives nothing on other surveys. |
-| Override grades | Change a graded coursework score, and void and delete the responses of every survey a course item owns. A quiz score is changed on the Surveys grading page (**Change score**, a new grade or a regrade, each with a reason and recorded in the score history), which anyone who may grade the quiz can do; this permission does not govern it. |
+| Override grades | Change a graded coursework score; change a given score of a survey a course item owns on the Surveys grading page (**Change score**, **Score again**, saving grades of a graded quiz attempt, and **Regrade versions**, through `AssessmentsScoreChangeCheck`, an `ISurveyScoreChangeCheck`); and void and delete the responses of every survey a course item owns. Grading a quiz attempt that waits for a grader needs only the right to grade it. |
 | Manage grade scales | Create and edit grade scales. |
 
 ## Moodle import
