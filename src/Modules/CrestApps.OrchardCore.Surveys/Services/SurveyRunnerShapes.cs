@@ -164,46 +164,56 @@ public sealed class SurveyRunnerShapes
         var shapes = new List<IShape>();
         var screens = response.PagePath.Count > 0 ? response.PagePath : response.Plan.PageOrder;
 
-        foreach (var screen in screens.Distinct(StringComparer.Ordinal))
+        // The questions on the respondent's path that logic did not hide, then each locked answer (checked with immediate
+        // feedback) that a later branch or visibility rule took off the path or hid: the respondent saw it graded and it
+        // counts toward the score, so the review shows it too.
+        var listed = new HashSet<string>(StringComparer.Ordinal);
+        var questionIds = screens
+            .Distinct(StringComparer.Ordinal)
+            .SelectMany(screen => SurveyPlanNavigator.QuestionsOf(response.Plan, screen))
+            .Where(questionId => !state.HiddenQuestionIds.Contains(questionId) || response.Answers.GetValueOrDefault(questionId)?.IsLocked == true)
+            .Concat(response.Plan.PageOrder
+                .SelectMany(screen => SurveyPlanNavigator.QuestionsOf(response.Plan, screen))
+                .Where(questionId => response.Answers.GetValueOrDefault(questionId)?.IsLocked == true))
+            .Where(listed.Add)
+            .ToList();
+
+        foreach (var questionId in questionIds)
         {
-            foreach (var questionId in SurveyPlanNavigator.QuestionsOf(response.Plan, screen))
+            var question = Find(definition, questionId);
+            var handler = question is null ? null : _registry.GetHandler(question.ControlType);
+
+            if (handler is null
+                || (forRespondent && _registry.GetControl(question.ControlType)?.Has(SurveyControlCapabilities.NotShownToRespondents) == true))
             {
-                var question = Find(definition, questionId);
-                var handler = question is null ? null : _registry.GetHandler(question.ControlType);
-
-                if (handler is null
-                    || state.HiddenQuestionIds.Contains(questionId)
-                    || (forRespondent && _registry.GetControl(question.ControlType)?.Has(SurveyControlCapabilities.NotShownToRespondents) == true))
-                {
-                    continue;
-                }
-
-                response.Answers.TryGetValue(questionId, out var answer);
-
-                var view = _pageViews.Project(definition, response, state, question, handler, null, state.HiddenQuestionIds);
-                var feedback = Feedback(question, answer, shows);
-                var showsAnswer = (shows & ReviewShows.Responses) != 0 && answer is not null;
-
-                // The review templates of text-like types show the answer as the type itself formats it.
-                var answerText = showsAnswer
-                    ? handler.FormatAnswer(question, answer, new SurveyFormatContext { Culture = CultureInfo.CurrentCulture, Definition = definition })
-                    : null;
-
-                shapes.Add(await BuildQuestionAsync(
-                    survey,
-                    question,
-                    view,
-                    (shows & ReviewShows.Responses) != 0 ? answer : null,
-                    [],
-                    hidden: false,
-                    readOnly: true,
-                    Review,
-                    hiddenChoiceIds: null,
-                    canCheck: false,
-                    culture: response.Culture,
-                    feedback: feedback,
-                    answerText: answerText));
+                continue;
             }
+
+            response.Answers.TryGetValue(questionId, out var answer);
+
+            var view = _pageViews.Project(definition, response, state, question, handler, null, state.HiddenQuestionIds);
+            var feedback = Feedback(question, answer, shows);
+            var showsAnswer = (shows & ReviewShows.Responses) != 0 && answer is not null;
+
+            // The review templates of text-like types show the answer as the type itself formats it.
+            var answerText = showsAnswer
+                ? handler.FormatAnswer(question, answer, new SurveyFormatContext { Culture = CultureInfo.CurrentCulture, Definition = definition })
+                : null;
+
+            shapes.Add(await BuildQuestionAsync(
+                survey,
+                question,
+                view,
+                (shows & ReviewShows.Responses) != 0 ? answer : null,
+                [],
+                hidden: false,
+                readOnly: true,
+                Review,
+                hiddenChoiceIds: null,
+                canCheck: false,
+                culture: response.Culture,
+                feedback: feedback,
+                answerText: answerText));
         }
 
         return shapes;

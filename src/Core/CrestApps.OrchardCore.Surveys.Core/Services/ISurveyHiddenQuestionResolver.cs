@@ -3,8 +3,8 @@ using CrestApps.OrchardCore.Surveys.Models;
 namespace CrestApps.OrchardCore.Surveys.Core.Services;
 
 /// <summary>
-/// Tells which questions of a response were hidden by logic, so scoring leaves them out of the most points. The default
-/// hides nothing; the logic engine replaces it.
+/// Tells which questions of a response were hidden by logic, so scoring leaves them out of the most points (a locked
+/// answer, checked with immediate feedback, still counts). The default hides nothing; the logic engine replaces it.
 /// </summary>
 public interface ISurveyHiddenQuestionResolver
 {

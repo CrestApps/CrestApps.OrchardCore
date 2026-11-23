@@ -47,33 +47,30 @@ public sealed class LearningSurveyGradingScope : ISurveyGradingScope
             return [];
         }
 
-        var surveyIds = new HashSet<string>(StringComparer.Ordinal);
+        // The courses the user grades decide the scope. Their items are the latest version of every item they contain,
+        // published or not (a draft quiz or a quiz of a course that was unpublished keeps its attempts gradable), and the
+        // surveys those items own are looked up at once.
+        var courseIds = await _courseStructure.GetStaffCourseIdsAsync(userId, _gradingRoles);
 
-        foreach (var courseId in await _courseStructure.GetStaffCourseIdsAsync(userId, _gradingRoles))
+        if (courseIds.Count == 0)
         {
-            var course = await _courseStructure.GetCourseAsync(courseId);
-
-            if (course is null)
-            {
-                continue;
-            }
-
-            var outline = await _courseStructure.GetOutlineAsync(course);
-
-            foreach (var entry in outline.Entries)
-            {
-                if (entry.Item is null)
-                {
-                    continue;
-                }
-
-                foreach (var survey in await _surveyManager.ListByOwnerAsync(LearningSurveyContexts.Owner(entry.Item.ContentItemId), cancellationToken))
-                {
-                    surveyIds.Add(survey.ItemId);
-                }
-            }
+            return [];
         }
 
-        return surveyIds;
+        var owners = (await _courseStructure.GetContainedItemsAsync(courseIds) ?? [])
+            .Where(item => item is not null)
+            .Select(item => item.ContentItemId)
+            .Distinct(StringComparer.Ordinal)
+            .Select(LearningSurveyContexts.Owner)
+            .ToArray();
+
+        if (owners.Length == 0)
+        {
+            return [];
+        }
+
+        return (await _surveyManager.ListByOwnersAsync(owners, cancellationToken) ?? [])
+            .Select(survey => survey.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
     }
 }
