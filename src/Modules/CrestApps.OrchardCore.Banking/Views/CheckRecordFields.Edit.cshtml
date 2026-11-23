@@ -3,29 +3,48 @@
 <div class="card mb-3">
     <div class="card-header">@T["The check"]</div>
     <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="BankAccountId">
-            <label asp-for="BankAccountId" class="ocat-label ocat-label-required">@T["Bank account"]</label>
-            <div class="ocat-end">
-                <select asp-for="BankAccountId" asp-items="Model.BankAccountOptions" class="form-select"></select>
-                <span asp-validation-for="BankAccountId" class="text-danger"></span>
-                <span class="hint">@T["One of the business's own checking or savings accounts."]</span>
+        @if (Model.IsNew)
+        {
+            <div class="ocat-wrapper" asp-validation-class-for="BankAccountId">
+                <label asp-for="BankAccountId" class="ocat-label ocat-label-required">@T["Bank account"]</label>
+                <div class="ocat-end">
+                    <select asp-for="BankAccountId" asp-items="Model.BankAccountOptions" class="form-select"></select>
+                    <span asp-validation-for="BankAccountId" class="text-danger"></span>
+                    <span class="hint">@T["One of the business's own checking or savings accounts."]</span>
+                </div>
             </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Numbering">
-            <label asp-for="Numbering" class="ocat-label">@T["Check number"]</label>
-            <div class="ocat-end">
-                <select asp-for="Numbering" asp-items="Model.NumberingOptions" class="form-select" data-check-numbering></select>
-                <span class="hint">@T["The account's next number now; no number until it prints on pre-printed checks, which carry their own numbers; or the number of a check you already wrote by hand."]</span>
+            <div class="ocat-wrapper" asp-validation-class-for="Numbering">
+                <label asp-for="Numbering" class="ocat-label">@T["Check number"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Numbering" asp-items="Model.NumberingOptions" class="form-select" data-check-numbering></select>
+                    <span class="hint">@T["The account's next number now; no number until it prints on pre-printed checks, which carry their own numbers; or the number of a check you already wrote by hand."]</span>
+                </div>
             </div>
-        </div>
-        <div class="ocat-wrapper @(Model.Numbering == CheckNumbering.Handwritten ? null : "d-none")" asp-validation-class-for="Number" data-check-number>
-            <label asp-for="Number" class="ocat-label ocat-label-required">@T["Number written on the check"]</label>
-            <div class="ocat-end">
-                <input asp-for="Number" class="form-control" inputmode="numeric" />
-                <span asp-validation-for="Number" class="text-danger"></span>
-                <span class="hint">@T["The check is recorded as printed. A number another check of the account has is refused."]</span>
+            <div class="ocat-wrapper @(Model.Numbering == CheckNumbering.Handwritten ? null : "d-none")" asp-validation-class-for="Number" data-check-number>
+                <label asp-for="Number" class="ocat-label ocat-label-required">@T["Number written on the check"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Number" class="form-control" inputmode="numeric" />
+                    <span asp-validation-for="Number" class="text-danger"></span>
+                    <span class="hint">@T["The check is recorded as printed. A number another check of the account has is refused."]</span>
+                </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Bank account"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext">@Model.BankAccountName</p>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Check number"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext">@(Model.CheckNumber > 0 ? Model.CheckNumber.ToString(System.Globalization.CultureInfo.CurrentCulture) : T["Given when it prints"].Value)</p>
+                    <span class="hint">@T["The bank account and the number don't change. To use another account, void the check and write a new one."]</span>
+                </div>
+            </div>
+        }
         <div class="ocat-wrapper" asp-validation-class-for="PayeeName">
             <label asp-for="PayeeName" class="ocat-label ocat-label-required">@T["Pay to the order of"]</label>
             <div class="ocat-end">

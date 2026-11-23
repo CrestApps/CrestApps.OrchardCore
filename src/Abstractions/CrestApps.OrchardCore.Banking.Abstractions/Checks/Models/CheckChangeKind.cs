@@ -56,4 +56,11 @@ public enum CheckChangeKind
     /// (<see cref="CheckRecord.IsSpoiled"/>), and the check it was printed for waits to print again.
     /// </summary>
     Spoiled,
+
+    /// <summary>
+    /// A check waiting to print (<see cref="CheckStatus.Queued"/> or <see cref="CheckStatus.Issued"/>) was edited: its
+    /// payee, address, amount, date, memo or the extension data of the record it pays changed.
+    /// <see cref="CheckChange.PreviousDetails"/> holds what it was.
+    /// </summary>
+    Updated,
 }

@@ -4,8 +4,9 @@ namespace CrestApps.OrchardCore.Banking.Checks.Services;
 
 /// <summary>
 /// The rules of checks: numbering per bank account, the status table, print runs, voids, reissues and who is told. It
-/// asks the <see cref="ICheckChangeHandler"/>s before a void, reissue, clear or un-clear is saved, and tells the
-/// <see cref="ICheckObserver"/>s after every change. It checks no permission; the caller does.
+/// asks the <see cref="ICheckWriteHandler"/>s before and after a check is written, the <see cref="ICheckChangeHandler"/>s
+/// before a void, reissue, clear, un-clear or edit is saved, and tells the <see cref="ICheckObserver"/>s after every
+/// change. It checks no permission; the caller does.
 /// </summary>
 public interface ICheckService
 {
@@ -14,12 +15,27 @@ public interface ICheckService
     /// <see cref="CheckIssueRequest.Numbering"/> says: the next number of its bank account (skipping a number a check
     /// written by hand already took), no number until a print run on pre-printed stock numbers it
     /// (<see cref="CheckStatus.Queued"/>), or the typed number of a check written by hand, recorded as
-    /// <see cref="CheckStatus.Printed"/>. The account needs no routing or account number for this.
+    /// <see cref="CheckStatus.Printed"/>. The account needs no routing or account number for this. The
+    /// <see cref="ICheckWriteHandler"/>s may complete or refuse the request first, and do their own work once the check
+    /// is saved.
     /// </summary>
     /// <param name="request">What the check pays.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The check, or why it was refused.</returns>
     Task<CheckResult> IssueAsync(CheckIssueRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Edits a check that waits to print (<see cref="CheckStatuses.CanEdit"/>): its payee, address, amount, date, memo
+    /// and properties. The bank account, the number and the source stay. The <see cref="ICheckChangeHandler"/>s are asked
+    /// first (<see cref="CheckChangeKind.Updated"/>), so the module the check pays can refuse, and the
+    /// <see cref="ICheckObserver"/>s are told after it is saved, with what it was, so that module can follow.
+    /// </summary>
+    /// <param name="check">The check.</param>
+    /// <param name="details">What the check becomes.</param>
+    /// <param name="reason">Why, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The check, or why it was refused.</returns>
+    Task<CheckResult> UpdateAsync(CheckRecord check, CheckDetails details, string reason = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the number the next check of a bank account gets.

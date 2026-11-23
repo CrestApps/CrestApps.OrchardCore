@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Banking.Checks.AuditTrail;
 using CrestApps.OrchardCore.Banking.Checks.Core.Handlers;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CrestApps.Core.Services;
@@ -21,6 +22,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
@@ -65,7 +67,22 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Starts workflows when checks are issued, printed, voided, cleared and un-cleared.
+/// Writes edits of checks waiting to print to the Audit Trail.
+/// </summary>
+[Feature(ChecksConstants.Features.Checks)]
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
+public sealed class AuditTrailStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<IConfigureOptions<AuditTrailOptions>, ChecksAuditTrailEvents>();
+        services.AddCheckObserver<AuditTrailCheckObserver>();
+    }
+}
+
+/// <summary>
+/// Starts workflows when checks are issued, edited, printed, voided, cleared and un-cleared.
 /// </summary>
 [Feature(ChecksConstants.Features.Checks)]
 [RequireFeatures(OrchardCoreFeatureIds.Workflows)]
@@ -75,6 +92,7 @@ public sealed class WorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<CheckIssuedEvent, CheckEventActivityDisplayDriver<CheckIssuedEvent>>();
+        services.AddActivity<CheckUpdatedEvent, CheckEventActivityDisplayDriver<CheckUpdatedEvent>>();
         services.AddActivity<CheckPrintedEvent, CheckEventActivityDisplayDriver<CheckPrintedEvent>>();
         services.AddActivity<CheckVoidedEvent, CheckEventActivityDisplayDriver<CheckVoidedEvent>>();
         services.AddActivity<CheckClearedEvent, CheckEventActivityDisplayDriver<CheckClearedEvent>>();
@@ -99,6 +117,7 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
     {
         services
             .AddWorkflowActivitySchema<CheckIssuedEventSchema>()
+            .AddWorkflowActivitySchema<CheckUpdatedEventSchema>()
             .AddWorkflowActivitySchema<CheckPrintedEventSchema>()
             .AddWorkflowActivitySchema<CheckVoidedEventSchema>()
             .AddWorkflowActivitySchema<CheckClearedEventSchema>()

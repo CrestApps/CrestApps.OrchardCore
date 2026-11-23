@@ -28,7 +28,8 @@ using OrchardCore.Routing;
 namespace CrestApps.OrchardCore.Banking.Checks.Controllers;
 
 /// <summary>
-/// Banking › Checks: the check register, checks written in the admin (numbered now, at print, or by hand), printing,
+/// Banking › Checks: the check register, checks written in the admin (numbered now, at print, or by hand), edits of
+/// checks that wait to print, printing,
 /// print runs of queued checks on pre-printed stock, voids on a date, reissues, stops, cleared and un-cleared checks,
 /// and the next check number of each bank account.
 /// </summary>
@@ -202,16 +203,30 @@ public sealed class ChecksController : Controller
         var draft = await _manager.NewAsync();
         var editor = await _displayManager.UpdateEditorAsync(draft, _updateModelAccessor.ModelUpdater, isNew: true);
 
+        // Another module's editor may write the check for one of its own records; the user must be allowed to act on it.
+        if (!string.IsNullOrEmpty(draft.SourceKind)
+            && !await _access.CanAccessAsync(User, draft.SourceKind, draft.AccessScope, SourceAccessLevel.Manage, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
         if (ModelState.IsValid)
         {
+            // What other modules' drivers put on the draft (the party paid, their source, their own data) goes with it;
+            // their ICheckWriteHandler completes, refuses or posts it.
             var result = await _checkService.IssueAsync(new CheckIssueRequest
             {
                 BankAccountId = draft.BankAccountId,
+                Payee = draft.Payee,
                 PayeeName = draft.PayeeName,
                 PayeeAddress = draft.PayeeAddress,
                 Amount = draft.Amount,
                 CheckDate = draft.CheckDate,
                 Memo = draft.Memo,
+                SourceKind = string.IsNullOrEmpty(draft.SourceKind) ? null : draft.SourceKind,
+                SourceId = string.IsNullOrEmpty(draft.SourceId) ? null : draft.SourceId,
+                AccessScope = draft.AccessScope,
+                Properties = draft.Properties,
                 Numbering = draft.Numbering,
                 Number = draft.Numbering == CheckNumbering.Handwritten ? draft.Number : null,
             });
@@ -235,6 +250,103 @@ public sealed class ChecksController : Controller
         }
 
         return View(new EditCatalogEntryViewModel { Editor = editor });
+    }
+
+    /// <summary>
+    /// Shows the editor of a check that waits to print: its payee, address, amount, date and memo, and what other
+    /// modules' drivers add.
+    /// </summary>
+    /// <param name="id">The check.</param>
+    [Admin("banking/checks/edit/{id}", "ChecksEdit")]
+    public async Task<IActionResult> Edit(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ChecksPermissions.ManageChecks))
+        {
+            return Forbid();
+        }
+
+        if (await FindManagedAsync(id) is not { } check)
+        {
+            return NotFound();
+        }
+
+        if (!CheckStatuses.CanEdit(check))
+        {
+            await _notifier.ErrorAsync(H["Only a check that waits to print can be edited. Void it and write a new check instead."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(new CheckEditViewModel
+        {
+            Check = check,
+            Editor = await _displayManager.BuildEditorAsync(DraftOf(check), _updateModelAccessor.ModelUpdater, isNew: false),
+        });
+    }
+
+    /// <summary>
+    /// Saves a check that waits to print. The module the check pays may refuse the change, or follow it.
+    /// </summary>
+    /// <param name="id">The check.</param>
+    /// <param name="model">Why it changes.</param>
+    [HttpPost]
+    [ActionName(nameof(Edit))]
+    [Admin("banking/checks/edit/{id}", "ChecksEdit")]
+    public async Task<IActionResult> EditPost(string id, CheckEditViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ChecksPermissions.ManageChecks))
+        {
+            return Forbid();
+        }
+
+        if (await FindManagedAsync(id) is not { } check)
+        {
+            return NotFound();
+        }
+
+        if (!CheckStatuses.CanEdit(check))
+        {
+            await _notifier.ErrorAsync(H["Only a check that waits to print can be edited. Void it and write a new check instead."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // The editors change a copy; the check rules save it, or say why not.
+        var draft = DraftOf(check);
+        var editor = await _displayManager.UpdateEditorAsync(draft, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        if (ModelState.IsValid)
+        {
+            var result = await _checkService.UpdateAsync(
+                check,
+                new CheckDetails
+                {
+                    Payee = draft.Payee,
+                    PayeeName = draft.PayeeName,
+                    PayeeAddress = draft.PayeeAddress,
+                    Amount = draft.Amount,
+                    CheckDate = draft.CheckDate,
+                    Memo = draft.Memo,
+                    Properties = draft.Properties,
+                },
+                string.IsNullOrWhiteSpace(model?.Reason) ? null : model.Reason.Trim());
+
+            if (result.Succeeded)
+            {
+                await _notifier.SuccessAsync(check.Number > 0
+                    ? H["Check {0} has been saved.", check.Number]
+                    : H["The check to {0} has been saved.", check.PayeeName]);
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error);
+            }
+        }
+
+        return View(nameof(Edit), new CheckEditViewModel { Check = check, Editor = editor, Reason = model?.Reason });
     }
 
     /// <summary>
@@ -758,6 +870,31 @@ public sealed class ChecksController : Controller
 
         return RedirectToAction(nameof(NextNumber));
     }
+
+    // A copy of a check for its editors, so a refused or invalid edit leaves the check as it is.
+    private static CheckRecord DraftOf(CheckRecord check)
+        => new()
+        {
+            ItemId = check.ItemId,
+            BankAccountId = check.BankAccountId,
+            BankAccountName = check.BankAccountName,
+            Number = check.Number,
+            Numbering = check.Numbering,
+            Payee = check.Payee,
+            PayeeName = check.PayeeName,
+            PayeeAddress = check.PayeeAddress,
+            Amount = check.Amount,
+            Currency = check.Currency,
+            CheckDate = check.CheckDate,
+            Memo = check.Memo,
+            SourceKind = check.SourceKind,
+            SourceId = check.SourceId,
+            AccessScope = check.AccessScope,
+            Status = check.Status,
+            IssuedUtc = check.IssuedUtc,
+            IdempotencyKey = check.IdempotencyKey,
+            Properties = new Dictionary<string, object>(check.Properties, StringComparer.OrdinalIgnoreCase),
+        };
 
     private async Task<IActionResult> ChangeAsync(string id, Func<CheckRecord, Task<CheckResult>> change, LocalizedHtmlString success)
     {
