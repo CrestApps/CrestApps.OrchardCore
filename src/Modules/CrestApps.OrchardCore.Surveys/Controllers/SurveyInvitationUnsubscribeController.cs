@@ -25,6 +25,10 @@ public sealed class SurveyInvitationUnsubscribeController : Controller
     // A save that loses a concurrency race (another unsubscribe changed the opt-out list) is tried again this often.
     private const int Attempts = 3;
 
+    // The invitation link pages' message view. A module's views live under its area (the module id), so an absolute
+    // path names the area; "~/Views/..." is not found.
+    private const string MessageView = "~/Areas/" + SurveysConstants.Features.Surveys + "/Views/SurveyInvitationLink/Message.cshtml";
+
     private readonly SurveyInvitationStore _invitationStore;
     private readonly SurveyStore _surveyStore;
     private readonly ISession _session;
@@ -171,7 +175,7 @@ public sealed class SurveyInvitationUnsubscribeController : Controller
     {
         Response.StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status404NotFound;
 
-        return View("~/Views/SurveyInvitationLink/Message.cshtml", new SurveyMessageViewModel
+        return View(MessageView, new SurveyMessageViewModel
         {
             Title = S["Survey not found"],
             Message = S["This link does not work. It may have been replaced by a newer one."],

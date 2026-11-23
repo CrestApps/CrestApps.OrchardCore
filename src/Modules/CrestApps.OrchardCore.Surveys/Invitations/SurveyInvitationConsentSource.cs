@@ -30,24 +30,33 @@ internal sealed class SurveyInvitationConsentSource : IConsentSource
         => SourceName;
 
     /// <inheritdoc />
-    /// <exception cref="SurveyInvitationOptOutUnavailableException">The opt-out list's key can't be read, so the source
-    /// can't tell. The consent contract has no "unknown" answer, so the source fails the question rather than saying the
-    /// person opted out (which would block every e-mail on the site) or did not (which could mail someone who
-    /// unsubscribed); the send that asked fails and is retried later.</exception>
+    /// <remarks>
+    /// <see langword="false"/> when the opt-out list's key can't be read; <see cref="GetAnswerAsync"/> tells that apart.
+    /// </remarks>
     public async Task<bool> HasOptedOutAsync(ConsentQuery query, CancellationToken cancellationToken = default)
+        => await GetAnswerAsync(query, cancellationToken) == ConsentAnswer.OptedOut;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <see cref="ConsentAnswer.Unknown"/> when the opt-out list's key can't be read, rather than saying the person
+    /// opted out (which would block every e-mail on the site) or did not (which could mail someone who unsubscribed).
+    /// Each caller decides: the survey invitation policy holds the invitation, and Outreach campaigns let the other
+    /// sources decide.
+    /// </remarks>
+    public async Task<ConsentAnswer> GetAnswerAsync(ConsentQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
 
         if (!string.Equals(query.Channel, ConsentChannels.Email, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(query.Address))
         {
-            return false;
+            return ConsentAnswer.NotOptedOut;
         }
 
         return await _store.GetStateAsync(query.Address, cancellationToken) switch
         {
-            SurveyInvitationOptOutState.OptedOut => true,
-            SurveyInvitationOptOutState.Unknown => throw new SurveyInvitationOptOutUnavailableException(),
-            _ => false,
+            SurveyInvitationOptOutState.OptedOut => ConsentAnswer.OptedOut,
+            SurveyInvitationOptOutState.Unknown => ConsentAnswer.Unknown,
+            _ => ConsentAnswer.NotOptedOut,
         };
     }
 

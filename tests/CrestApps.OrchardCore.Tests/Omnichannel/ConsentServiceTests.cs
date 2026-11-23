@@ -34,8 +34,49 @@ public sealed class ConsentServiceTests
         Assert.True(status.HasOptedOut);
         Assert.Equal("second", status.Source);
         Assert.False(excluded.HasOptedOut);
-        third.Verify(source => source.HasOptedOutAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>()), Times.Never());
-        second.Verify(source => source.HasOptedOutAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>()), Times.Once());
+        third.Verify(source => source.GetAnswerAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>()), Times.Never());
+        second.Verify(source => source.GetAnswerAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    [Fact]
+    public async Task ASourceThatCantTell_IsNamedAsUnknown_AndTheOtherSourcesStillAnswer()
+    {
+        // R4-M3: a source whose store can't be read answers Unknown instead of failing the question.
+        var unknown = Source("unreadable", ConsentAnswer.Unknown);
+        var after = Source("after", ConsentAnswer.NotOptedOut);
+        var consent = new DefaultConsentService([unknown.Object, after.Object]);
+
+        var status = await consent.GetAsync(ConsentChannels.Email, "sam@example.com", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(status.HasOptedOut);
+        Assert.True(status.IsUnknown);
+        Assert.Equal(["unreadable"], status.UnknownSources);
+        after.Verify(source => source.GetAnswerAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    [Fact]
+    public async Task AnOptOut_WinsOverASourceThatCantTell()
+    {
+        var consent = new DefaultConsentService([Source("unreadable", ConsentAnswer.Unknown).Object, Source("crm", ConsentAnswer.OptedOut).Object]);
+
+        var status = await consent.GetAsync(ConsentChannels.Email, "sam@example.com", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(status.HasOptedOut);
+        Assert.False(status.IsUnknown);
+        Assert.Equal("crm", status.Source);
+    }
+
+    [Fact]
+    public async Task ASourceThatOnlyAnswersYesOrNo_IsAskedThroughTheDefaultAnswer()
+    {
+        // A source written before unknown answers existed implements HasOptedOutAsync alone.
+        var consent = new DefaultConsentService([new YesNoSource("legacy", optedOut: true)]);
+
+        var status = await consent.GetAsync(ConsentChannels.Sms, "+17025550100", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(status.HasOptedOut);
+        Assert.Equal("legacy", status.Source);
+        Assert.Empty(status.UnknownSources);
     }
 
     [Fact]
@@ -152,10 +193,14 @@ public sealed class ConsentServiceTests
     }
 
     private static Mock<IConsentSource> Source(string name, bool optedOut)
+        => Source(name, optedOut ? ConsentAnswer.OptedOut : ConsentAnswer.NotOptedOut);
+
+    private static Mock<IConsentSource> Source(string name, ConsentAnswer answer)
     {
         var source = new Mock<IConsentSource>();
         source.SetupGet(value => value.Name).Returns(name);
-        source.Setup(value => value.HasOptedOutAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync(optedOut);
+        source.Setup(value => value.HasOptedOutAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync(answer == ConsentAnswer.OptedOut);
+        source.Setup(value => value.GetAnswerAsync(It.IsAny<ConsentQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync(answer);
 
         return source;
     }
@@ -175,5 +220,24 @@ public sealed class ConsentServiceTests
         clock.SetupGet(value => value.UtcNow).Returns(_now);
 
         return clock.Object;
+    }
+
+    private sealed class YesNoSource : IConsentSource
+    {
+        private readonly bool _optedOut;
+
+        public YesNoSource(string name, bool optedOut)
+        {
+            Name = name;
+            _optedOut = optedOut;
+        }
+
+        public string Name { get; }
+
+        public Task<bool> HasOptedOutAsync(ConsentQuery query, CancellationToken cancellationToken = default)
+            => Task.FromResult(_optedOut);
+
+        public Task RecordAsync(string channel, string address, ConsentChange change, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }

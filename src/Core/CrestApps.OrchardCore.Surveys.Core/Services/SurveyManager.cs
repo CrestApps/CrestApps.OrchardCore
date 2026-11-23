@@ -244,6 +244,10 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     public Task<IReadOnlyList<Survey>> ListByOwnerAsync(RecordRef owner, CancellationToken cancellationToken = default)
         => _store.ListByOwnerAsync(owner.ToString(), cancellationToken);
 
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Survey>> ListByOwnersAsync(IReadOnlyCollection<RecordRef> owners, CancellationToken cancellationToken = default)
+        => _store.ListByOwnersAsync((owners ?? []).Where(owner => !owner.IsEmpty).Select(owner => owner.ToString()).ToArray(), cancellationToken);
+
     private async Task<SurveyDefinition> BuildFromTemplateAsync(string template, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(template))

@@ -12,7 +12,9 @@ namespace CrestApps.OrchardCore.Tests.Learning.Assessments;
 
 /// <summary>
 /// R3-H3: the quiz attempts of a course stay in the grading list however many attempts wait elsewhere on the site.
-/// The course's surveys filter the query, the source pages past one read, and the count is the real total.
+/// The course's surveys filter the query, the source pages past one read, and the count is the real total. R4-L5:
+/// attempts of unpublished courses and items stay listed, the surveys are looked up in one query, the survey ids are
+/// read in chunks under SQL Server's parameter limit, and a deep page doesn't read every waiting attempt.
 /// </summary>
 public sealed class QuizResponseGradingQueueSourceTests
 {
@@ -65,17 +67,96 @@ public sealed class QuizResponseGradingQueueSourceTests
         Assert.Equal(direct.Items.OrderBy(item => item.SubmittedUtc).Select(item => item.Id), direct.Items.Select(item => item.Id));
     }
 
-    private static async Task<AssessmentTestHarness> CreateAsync()
+    [Fact]
+    public async Task AttemptsOfAnUnpublishedCourseAndItem_StayInTheCoursesList()
     {
+        // Arrange: a course and its quiz were unpublished (or never published) after a learner's attempt.
+        await using var h = await CreateAsync();
+        h.Courses.AddCourse("course3").Published = false;
+        h.AddQuiz("course3", "quiz3", null).Published = false;
+        await AddAsync(h, "draft-attempt", "survey3", "course3", LearningTestHarness.Now.AddDays(-1));
+
+        // Act
+        var page = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course3"], 1, 10, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(1, page.Count);
+        Assert.Equal("draft-attempt", Assert.Single(page.Items).Id);
+    }
+
+    [Fact]
+    public async Task ACourseWithMoreSurveysThanOneInList_IsReadInChunks_LookedUpOnce_AndMergedOldestFirst()
+    {
+        // Arrange: one course whose items own more surveys than one IN list holds, with attempts in the first and the
+        // last chunk.
+        var surveyManager = SurveyManager();
+        await using var h = await CreateAsync(surveyManager);
+        h.Courses.AddCourse("big");
+        var surveys = QuizResponseGradingQueueSource.SurveysPerQuery + 200;
+
+        for (var i = 0; i < surveys; i++)
+        {
+            h.AddQuiz("big", "quiz-big-" + i, null);
+        }
+
+        await AddAsync(h, "newer", "survey-big-5", "big", LearningTestHarness.Now.AddMinutes(10));
+        await AddAsync(h, "older", "survey-big-" + (surveys - 1), "big", LearningTestHarness.Now);
+
+        // Act
+        var page = await h.RunAsync(services => Source(services).ListWaitingAsync(new GradingQueueQuery { CourseIds = ["big"], Take = 10 }, TestContext.Current.CancellationToken));
+        var queries = await h.RunAsync(services => Task.FromResult(services.GetRequiredService<InMemorySurveyResponses>().Queries));
+
+        // Assert
+        Assert.Equal(2, page.Count);
+        Assert.Equal(["older", "newer"], page.Items.Select(item => item.Id));
+        Assert.True(queries.Count >= 2);
+        Assert.All(queries, query => Assert.InRange(query.SurveyIds.Count, 1, QuizResponseGradingQueueSource.SurveysPerQuery));
+        surveyManager.Verify(manager => manager.ListByOwnersAsync(It.IsAny<IReadOnlyCollection<RecordRef>>(), It.IsAny<CancellationToken>()), Times.Once());
+        surveyManager.Verify(manager => manager.ListByOwnerAsync(It.IsAny<RecordRef>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    [Fact]
+    public async Task AVeryDeepPage_ReadsNoMoreThanTheCap()
+    {
+        // Arrange: more waiting attempts than the cap.
+        await using var h = await CreateAsync();
+        var total = QuizResponseGradingQueueSource.MaxTake + 50;
+
+        for (var i = 0; i < total; i++)
+        {
+            await AddAsync(h, "attempt-" + i.ToString("D4", System.Globalization.CultureInfo.InvariantCulture), "survey1", "course1", LearningTestHarness.Now.AddMinutes(i));
+        }
+
+        // Act: page 100,000 of 50.
+        var page = await h.RunAsync(services => Source(services).ListWaitingAsync(new GradingQueueQuery { CourseIds = ["course1"], Take = 100_000 * 50 }, TestContext.Current.CancellationToken));
+        var queries = await h.RunAsync(services => Task.FromResult(services.GetRequiredService<InMemorySurveyResponses>().Queries));
+
+        // Assert: the count is still the real total, but only the cap was read.
+        Assert.Equal(total, page.Count);
+        Assert.Equal(QuizResponseGradingQueueSource.MaxTake, page.Items.Count);
+        Assert.InRange(queries.Max(query => query.Skip + query.Take), 1, QuizResponseGradingQueueSource.MaxTake);
+    }
+
+    private static QuizResponseGradingQueueSource Source(IServiceProvider services)
+        => services.GetServices<IGradingQueueSource>().OfType<QuizResponseGradingQueueSource>().Single();
+
+    private static Mock<ISurveyManager> SurveyManager()
+    {
+        // Each quiz owns one survey: quiz1 owns survey1, quiz-big-7 owns survey-big-7.
         var surveyManager = new Mock<ISurveyManager>();
         surveyManager
-            .Setup(manager => manager.ListByOwnerAsync(It.IsAny<RecordRef>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((RecordRef owner, CancellationToken _) => owner.Id switch
-            {
-                "quiz1" => [new Survey { ItemId = "survey1", Kind = SurveyKinds.Quiz, Owner = owner }],
-                "quiz2" => [new Survey { ItemId = "survey2", Kind = SurveyKinds.Quiz, Owner = owner }],
-                _ => [],
-            });
+            .Setup(manager => manager.ListByOwnersAsync(It.IsAny<IReadOnlyCollection<RecordRef>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<RecordRef> owners, CancellationToken _) => owners
+                .Where(owner => owner.Id.StartsWith("quiz", StringComparison.Ordinal))
+                .Select(owner => new Survey { ItemId = string.Concat("survey", owner.Id.AsSpan("quiz".Length)), Kind = SurveyKinds.Quiz, Owner = owner })
+                .ToArray());
+
+        return surveyManager;
+    }
+
+    private static async Task<AssessmentTestHarness> CreateAsync(Mock<ISurveyManager> surveyManager = null)
+    {
+        surveyManager ??= SurveyManager();
 
         var h = await AssessmentTestHarness.CreateAsync(services => services.AddSingleton(surveyManager.Object));
         h.Courses.AddCourse("course1");

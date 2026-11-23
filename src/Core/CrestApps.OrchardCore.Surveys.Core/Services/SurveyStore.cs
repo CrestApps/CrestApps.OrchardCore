@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Services;
 
@@ -11,6 +12,9 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 /// </summary>
 public sealed class SurveyStore : DocumentCatalog<Survey, SurveyIndex>, INamedCatalog<Survey>
 {
+    // Owners per IN list, well under SQL Server's limit of 2,100 parameters.
+    private const int OwnersPerQuery = 1000;
+
     private readonly SurveyContentSanitizer _sanitizer;
 
     /// <summary>
@@ -64,5 +68,26 @@ public sealed class SurveyStore : DocumentCatalog<Survey, SurveyIndex>, INamedCa
             .ListAsync(cancellationToken);
 
         return items.ToList();
+    }
+
+    /// <summary>
+    /// Lists the surveys any of several records own. The owners are read a thousand at a time, so the <c>IN</c> list
+    /// stays under SQL Server's limit of 2,100 parameters.
+    /// </summary>
+    /// <param name="ownerRefs">The owners as Kind:Id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The surveys.</returns>
+    public async Task<IReadOnlyList<Survey>> ListByOwnersAsync(IReadOnlyCollection<string> ownerRefs, CancellationToken cancellationToken = default)
+    {
+        var refs = (ownerRefs ?? []).Where(ownerRef => !string.IsNullOrEmpty(ownerRef)).Distinct(StringComparer.Ordinal).ToArray();
+        var surveys = new List<Survey>();
+
+        foreach (var chunk in refs.Chunk(OwnersPerQuery))
+        {
+            surveys.AddRange(await Session.Query<Survey, SurveyIndex>(index => index.OwnerRef.IsIn(chunk), collection: SurveysConstants.CollectionName)
+                .ListAsync(cancellationToken));
+        }
+
+        return surveys;
     }
 }

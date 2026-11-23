@@ -63,3 +63,5 @@ Each question type also has its own settings card, such as the lowest and highes
 ## Survey settings
 
 Select **Survey settings** to change the whole survey: **General** (the title and introduction respondents see), **Presentation** (numbers, page titles, progress bar, **Questions per screen**, **Page order**), **Navigation** (going back, resuming, changing a finished response), **Variables**, **Endings**, **Score categories** and **Score bands**, **Scoring**, **Time limit** and **Quotas**.
+
+A guest who answers without signing in comes back to a finished response in the same browser. While they may still change it, or see their answers later, the browser remembers the response for 30 days. Otherwise it remembers it for one day after the ending shows.

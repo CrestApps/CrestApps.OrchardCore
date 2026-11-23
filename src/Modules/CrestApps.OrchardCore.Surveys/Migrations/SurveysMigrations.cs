@@ -38,7 +38,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -65,5 +65,16 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.AddResponseUpkeepColumnsAsync(SchemaBuilder);
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds the hold column of the invitation index (schema only), so the reminder task reads held first sends directly.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SurveysIndexSchema.AddInvitationHoldColumnAsync(SchemaBuilder);
+
+        return 4;
     }
 }

@@ -10,11 +10,24 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 
 /// <summary>
 /// Lists the quiz attempts of learners that wait for a grader, for the Learning grading page; each opens on the Surveys
-/// grading page. The courses are turned into the surveys their course items own, so the query itself keeps only those
+/// grading page. The courses are turned into the surveys their course items own (the latest version of every item the
+/// courses contain, so attempts of unpublished courses and items stay listed), so the query itself keeps only those
 /// courses' attempts, oldest first, and the count is the count of all of them.
 /// </summary>
 public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
 {
+    /// <summary>
+    /// The most attempts read for one page of the grading list (the items before the page and the page itself): a page
+    /// deeper than this shows nothing rather than reading every waiting attempt.
+    /// </summary>
+    public const int MaxTake = 1000;
+
+    /// <summary>
+    /// The most survey ids in one query's <c>IN</c> list, well under SQL Server's limit of 2,100 parameters; more are
+    /// read in several queries and merged.
+    /// </summary>
+    public const int SurveysPerQuery = 1000;
+
     private readonly ISurveyResponseQueries _responseQueries;
     private readonly ISurveyManager _surveyManager;
     private readonly IContentManager _contentManager;
@@ -49,45 +62,60 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
             return new GradingQueuePage();
         }
 
-        List<string> surveyIds = [];
+        var titles = new Dictionary<string, string>(StringComparer.Ordinal);
+        var take = Math.Clamp(query.Take, 1, MaxTake);
+        int count;
+        List<SurveyResponse> responses;
 
-        if (query.CourseIds is not null)
+        if (query.CourseIds is null)
         {
-            surveyIds = await GetCourseSurveyIdsAsync(query.CourseIds, cancellationToken);
+            (count, responses) = await ReadOldestAsync([], take, cancellationToken);
+        }
+        else
+        {
+            var surveys = await GetCourseSurveysAsync(query.CourseIds, cancellationToken);
 
-            if (surveyIds.Count == 0)
+            if (surveys.Count == 0)
             {
                 return new GradingQueuePage();
             }
-        }
 
-        var take = Math.Max(query.Take, 1);
-        var count = 0;
-        var responses = new List<SurveyResponse>();
-
-        // The grading list asks for the items before its page and the page itself, which can be more than one read
-        // returns; read the oldest pages until there are enough.
-        while (responses.Count < take)
-        {
-            var (total, page) = await _responseQueries.ListAsync(new SurveyResponseQuery
+            foreach (var survey in surveys)
             {
-                SurveyIds = surveyIds,
-                Statuses = [SurveyResponseStatus.Completed],
-                Grading = GradingStatus.Pending,
-                ContextKinds = [LearningSurveyContexts.EnrollmentKind],
-                OldestFirst = true,
-                Skip = responses.Count,
-                Take = Math.Min(take - responses.Count, SurveysConstants.PageSize),
-            }, cancellationToken);
-
-            count = total;
-            responses.AddRange(page);
-
-            if (page.Count == 0 || responses.Count >= total)
-            {
-                break;
+                titles[survey.ItemId] = survey.Title;
             }
+
+            // Each read names at most SurveysPerQuery surveys. The oldest `take` attempts of all of them are among the
+            // oldest `take` of each read, so those are merged and cut again.
+            count = 0;
+            responses = [];
+
+            foreach (var chunk in surveys.Select(survey => survey.ItemId).Distinct(StringComparer.Ordinal).Chunk(SurveysPerQuery))
+            {
+                var (total, page) = await ReadOldestAsync([.. chunk], take, cancellationToken);
+
+                count += total;
+                responses.AddRange(page);
+            }
+
+            responses = [.. responses
+                .OrderBy(response => response.CompletedUtc)
+                .ThenBy(response => response.StartedUtc)
+                .ThenBy(response => response.ItemId, StringComparer.Ordinal)
+                .Take(take)];
         }
+
+        var itemIds = responses
+            .Select(response => SurveyResponseProperties.ReadString(response, LearningSurveyContexts.CourseItemIdProperty))
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var itemTitles = itemIds.Length == 0
+            ? new Dictionary<string, string>(StringComparer.Ordinal)
+            : (await _contentManager.GetAsync(itemIds, VersionOptions.Latest) ?? [])
+                .Where(item => item is not null)
+                .GroupBy(item => item.ContentItemId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First().DisplayText, StringComparer.Ordinal);
 
         var items = new List<GradingQueueItem>(responses.Count);
 
@@ -95,9 +123,13 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
         {
             var courseId = SurveyResponseProperties.ReadString(response, LearningSurveyContexts.CourseIdProperty);
             var itemId = SurveyResponseProperties.ReadString(response, LearningSurveyContexts.CourseItemIdProperty);
-            var title = string.IsNullOrEmpty(itemId) ? null : (await _contentManager.GetAsync(itemId, VersionOptions.Latest))?.DisplayText;
+            var title = string.IsNullOrEmpty(itemId) ? null : itemTitles.GetValueOrDefault(itemId);
 
-            title ??= (await _surveyManager.FindByIdAsync(response.SurveyId, cancellationToken))?.Title;
+            if (title is null && !titles.TryGetValue(response.SurveyId, out title))
+            {
+                title = (await _surveyManager.FindByIdAsync(response.SurveyId, cancellationToken))?.Title;
+                titles[response.SurveyId] = title;
+            }
 
             items.Add(new GradingQueueItem
             {
@@ -127,37 +159,49 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
         };
     }
 
-    private async Task<List<string>> GetCourseSurveyIdsAsync(IReadOnlyCollection<string> courseIds, CancellationToken cancellationToken)
+    // Reads the oldest `take` waiting attempts of some surveys (all surveys when none are named), a read at a time, and
+    // the count of all of them.
+    private async Task<(int Count, List<SurveyResponse> Responses)> ReadOldestAsync(List<string> surveyIds, int take, CancellationToken cancellationToken)
     {
-        var surveyIds = new HashSet<string>(StringComparer.Ordinal);
+        var count = 0;
+        var responses = new List<SurveyResponse>();
 
-        foreach (var courseId in courseIds)
+        while (responses.Count < take)
         {
-            var course = await _courseStructure.GetCourseAsync(courseId);
-
-            if (course is null)
+            var (total, page) = await _responseQueries.ListAsync(new SurveyResponseQuery
             {
-                continue;
-            }
+                SurveyIds = surveyIds,
+                Statuses = [SurveyResponseStatus.Completed],
+                Grading = GradingStatus.Pending,
+                ContextKinds = [LearningSurveyContexts.EnrollmentKind],
+                OldestFirst = true,
+                Skip = responses.Count,
+                Take = Math.Min(take - responses.Count, SurveysConstants.PageSize),
+            }, cancellationToken);
 
-            var outline = await _courseStructure.GetOutlineAsync(course);
+            count = total;
+            responses.AddRange(page);
 
-            foreach (var entry in outline.Entries)
+            if (page.Count == 0 || responses.Count >= total)
             {
-                if (entry.Item is null)
-                {
-                    continue;
-                }
-
-                var surveys = await _surveyManager.ListByOwnerAsync(LearningSurveyContexts.Owner(entry.Item.ContentItemId), cancellationToken);
-
-                foreach (var survey in surveys ?? [])
-                {
-                    surveyIds.Add(survey.ItemId);
-                }
+                break;
             }
         }
 
-        return [.. surveyIds];
+        return (count, responses);
+    }
+
+    private async Task<IReadOnlyList<Survey>> GetCourseSurveysAsync(IReadOnlyCollection<string> courseIds, CancellationToken cancellationToken)
+    {
+        var owners = (await _courseStructure.GetContainedItemsAsync(courseIds))
+            .Where(item => item is not null)
+            .Select(item => item.ContentItemId)
+            .Distinct(StringComparer.Ordinal)
+            .Select(LearningSurveyContexts.Owner)
+            .ToArray();
+
+        return owners.Length == 0
+            ? []
+            : await _surveyManager.ListByOwnersAsync(owners, cancellationToken) ?? [];
     }
 }

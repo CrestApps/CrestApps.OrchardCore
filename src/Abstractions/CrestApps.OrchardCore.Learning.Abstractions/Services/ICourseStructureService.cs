@@ -29,6 +29,15 @@ public interface ICourseStructureService
     Task<CourseOutline> GetOutlineAsync(ContentItem course);
 
     /// <summary>
+    /// Lists the latest versions of the course items several courses contain, published or not, whether or not the
+    /// courses are published. Unlike <see cref="GetOutlineAsync"/>, which shows what learners see, this is for course
+    /// staff's views of work already done, such as the grading list.
+    /// </summary>
+    /// <param name="courseIds">The content item ids of the courses.</param>
+    /// <returns>The course items, in no particular order.</returns>
+    Task<IReadOnlyList<ContentItem>> GetContainedItemsAsync(IReadOnlyCollection<string> courseIds);
+
+    /// <summary>
     /// Lists the courses where a user is on the course staff, optionally in some roles only.
     /// </summary>
     /// <param name="userId">The user.</param>

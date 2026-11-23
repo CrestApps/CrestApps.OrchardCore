@@ -1,3 +1,5 @@
+using CrestApps.Core;
+using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Models;
 using YesSql.Indexes;
 
@@ -35,7 +37,11 @@ public sealed class SurveyInvitationIndexProvider : IndexProvider<SurveyInvitati
                 LastReminderUtc = item.LastReminderUtc,
                 SentUtc = item.SentUtc,
                 ExpiresUtc = item.ExpiresUtc,
+                Held = IsHeld(item),
             });
+
+    private static bool IsHeld(SurveyInvitation item)
+        => item.Status == SurveyInvitationStatus.Pending && item.TryGet<SurveyInvitationHold>(out var hold) && hold is not null;
 
     private static string Cut(string value, int length)
         => value is not null && value.Length > length ? value.Substring(0, length) : value;

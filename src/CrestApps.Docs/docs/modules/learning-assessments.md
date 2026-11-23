@@ -48,7 +48,7 @@ Version 4 of `AssessmentsMigrations` upgrades a site whose Learning Assessments 
 
 ## The grading list
 
-The **Grading** page (`/Admin/learning/grading`) lists all the work that waits for a grader in the courses the person grades, oldest first. Quiz responses waiting for a grader (from the Surveys grading queue, through `QuizResponseGradingQueueSource`, opening the Surveys grading page) are one source; other modules add theirs through the grading list's extension point in `Learning.Assessments.Abstractions`:
+The **Grading** page (`/Admin/learning/grading`) lists all the work that waits for a grader in the courses the person grades, oldest first. Quiz responses waiting for a grader (from the Surveys grading queue, through `QuizResponseGradingQueueSource`, opening the Surveys grading page) are one source. It finds a course's quizzes from the latest version of every item the course contains (`ICourseStructureService.GetContainedItemsAsync`), so attempts of an unpublished course or quiz stay listed, looks up their surveys in one query (`ISurveyManager.ListByOwnersAsync`), and reads the attempts with at most 1,000 survey ids in each query, under SQL Server's parameter limit. It reads at most the 1,000 oldest attempts for a page, so a page past those shows nothing while the count stays the real total; other modules add theirs through the grading list's extension point in `Learning.Assessments.Abstractions`:
 
 ```csharp
 public interface IGradingQueueSource
