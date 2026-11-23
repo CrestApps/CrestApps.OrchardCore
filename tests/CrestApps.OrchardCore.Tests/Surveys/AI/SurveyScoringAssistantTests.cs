@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.AI;
 using CrestApps.OrchardCore.Surveys.AI.Services;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Moq;
@@ -114,6 +116,6 @@ public sealed class SurveyScoringAssistantTests
         public Mock<ISurveyGradingService> Grading { get; } = new();
 
         public SurveyScoringAssistant Create()
-            => new(Completer.Object, Responses.Object, Versions.Object, Surveys.Object, Authorization.Object, Registry.Object, Grading.Object);
+            => new(Completer.Object, Responses.Object, Versions.Object, Surveys.Object, Authorization.Object, Registry.Object, Grading.Object, new SurveyAnonymousGroups(new SurveyResultsQueries(new Mock<global::YesSql.ISession> { DefaultValue = DefaultValue.Mock }.Object), Mock.Of<IServiceProvider>()));
     }
 }

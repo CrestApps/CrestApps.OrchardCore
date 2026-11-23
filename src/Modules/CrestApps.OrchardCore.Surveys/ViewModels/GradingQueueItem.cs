@@ -26,4 +26,14 @@ public class GradingQueueItem
     /// Gets or sets how many questions need a grader.
     /// </summary>
     public int PendingQuestions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the label staff see for the response: its number, or on an anonymous survey the start of its id.
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the survey is anonymous, so times show the day only.
+    /// </summary>
+    public bool IsAnonymous { get; set; }
 }

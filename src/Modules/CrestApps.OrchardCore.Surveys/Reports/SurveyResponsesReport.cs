@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Controls.Rating;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Services;
@@ -18,8 +19,9 @@ namespace CrestApps.OrchardCore.Surveys.Reports;
 /// <summary>
 /// The responses of a survey, one row each, with a column per question across the versions read (joined by question id,
 /// named as in the newest version). The screen shows one page, chosen in the filter; the export holds every response.
-/// Completed responses are listed unless the filter asks for other statuses. An anonymous survey shows nothing until
-/// the completed, non-test responses the filters select reach its minimum group size, and shows its times by the day only. Scores below the pass mark,
+/// Completed responses are listed unless the filter asks for other statuses. An anonymous survey follows the shared
+/// small-group rule of <see cref="SurveyGroupGate"/> (as the responses list does), labels its rows with no response
+/// number, reads them in random-id order and shows its times by the day only. Scores below the pass mark,
 /// failed responses and Net Promoter Score answers are colored with the shared report colorizer.
 /// </summary>
 internal sealed class SurveyResponsesReport : IReport
@@ -33,6 +35,7 @@ internal sealed class SurveyResponsesReport : IReport
     private readonly SurveyResultsQueries _queries;
     private readonly ISurveyControlRegistry _registry;
     private readonly SurveyRespondentNames _names;
+    private readonly SurveyAnonymousGroups _groups;
 
     internal readonly IStringLocalizer S;
 
@@ -41,12 +44,14 @@ internal sealed class SurveyResponsesReport : IReport
         SurveyResultsQueries queries,
         ISurveyControlRegistry registry,
         SurveyRespondentNames names,
+        SurveyAnonymousGroups groups,
         IStringLocalizer<SurveyResponsesReport> stringLocalizer)
     {
         _data = data;
         _queries = queries;
         _registry = registry;
         _names = names;
+        _groups = groups;
         S = stringLocalizer;
     }
 
@@ -89,13 +94,26 @@ internal sealed class SurveyResponsesReport : IReport
 
         scope.ResultsScope.Statuses = StatusesOf(context.Filter.GetOrDefault<string>(SurveyReportKeys.Status));
 
-        var total = await _queries.CountAsync(scope.ResultsScope, cancellationToken);
-
-        // The threshold counts completed, non-test responses only, so test rows or unfinished ones never pad the group.
-        if (scope.IsAnonymous && scope.IsTooSmall(await _queries.CountAsync(scope.GroupSizeScope(), cancellationToken)))
+        // The shared small-group rule of the responses list (SurveyGroupGate), counted on the narrowing filters: nothing
+        // shows until the completed, non-test responses reach the minimum group size, and a status too few real responses
+        // share is left out (all of the report when it is the status filtered to), so filtering to Abandoned, or reading
+        // every status, can't single out the one person who gave up.
+        if (scope.IsAnonymous)
         {
-            return _data.TooFewResponses(scope);
+            var decision = await _groups.DecideAsync(scope.Survey, scope.ResultsScope, scope.ResultsScope.Statuses, cancellationToken);
+
+            if (decision.HidesAll)
+            {
+                return _data.TooFewResponses(scope);
+            }
+
+            scope.ResultsScope.ExcludedStatuses = decision.HiddenStatuses.ToList();
+
+            // The order rows were stored in follows when people started, so an anonymous survey reads by random id.
+            scope.ResultsScope.OrderById = true;
         }
+
+        var total = await _queries.CountAsync(scope.ResultsScope, cancellationToken);
 
         var export = context.Mode == ReportRunMode.Export;
         var pages = Math.Max(1, (total + ScreenPageSize - 1) / ScreenPageSize);
@@ -145,7 +163,7 @@ internal sealed class SurveyResponsesReport : IReport
         {
             var cells = new List<string>
             {
-                response.Number ?? response.ItemId,
+                SurveyAnonymity.ResponseLabel(scope.Survey, response),
                 Status(response.Status),
             };
 
@@ -240,7 +258,12 @@ internal sealed class SurveyResponsesReport : IReport
 
         if (scope.IsAnonymous)
         {
-            notes.Add(S["This survey is anonymous: nobody is named, and times show the day only."].Value);
+            notes.Add(S["This survey is anonymous: nobody is named, responses show a code instead of a number, and times show the day only."].Value);
+
+            if (scope.ResultsScope.ExcludedStatuses.Count > 0)
+            {
+                notes.Add(S["Responses of a status fewer than {0} responses share are left out so no one can be recognized.", scope.MinimumGroupSize].Value);
+            }
         }
 
         if (columns.MissingQuestions.Count > 0)

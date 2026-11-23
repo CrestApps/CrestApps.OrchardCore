@@ -165,10 +165,11 @@ public sealed class SurveyResponsesController : Controller
             query = query.Where(index => !index.IsTest);
         }
 
+        var anonymous = SurveyAnonymity.IsAnonymous(survey);
+
         if (!string.IsNullOrWhiteSpace(options.Search))
         {
-            var search = options.Search.Trim();
-            query = query.Where(index => index.Number.Contains(search));
+            query = Search(query, options.Search, anonymous);
         }
 
         if (options.UpkeepStopped)
@@ -179,47 +180,36 @@ public sealed class SurveyResponsesController : Controller
         IEnumerable<SurveyResponse> items;
         var count = 0;
 
-        // An anonymous survey lists nothing until the completed, non-test responses the narrowing filters (version,
-        // collector, search, upkeep) select reach its minimum group size. Test and in-progress rows never count, so
-        // previews can't pad the group. A status filter can't open a smaller group either: the rows it selects (test
-        // rows left out) must reach the minimum too, or filtering to Abandoned could single out the one person who gave
-        // up. With no status filter, each status with fewer rows than the minimum is left out, for the same reason.
+        // The shared small-group rule (SurveyGroupGate), counted on the narrowing filters (version, collector, search,
+        // upkeep) without the status filter: nothing lists until the completed, non-test responses reach the minimum
+        // group size, and a status too few real responses share is left out (all of the list when it is the status
+        // filtered to), so filtering to Abandoned can't single out the one person who gave up.
         var filtersStatus = Enum.TryParse<SurveyResponseStatus>(options.Status, out var shown);
-        var anonymous = SurveyAnonymity.IsAnonymous(survey);
+        var decision = await SurveyGroupGate.DecideAsync(survey, await SettingsAsync(), filtersStatus ? [shown] : [], async other => await CountRealAsync(surveyId, versionNumber, options, other, anonymous));
 
-        if (anonymous
-            && (SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options, SurveyResponseStatus.Completed))
-                || (filtersStatus && SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options, shown)))))
+        if (decision.HidesAll)
         {
-            options.HiddenBelow = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
+            options.HiddenBelow = decision.MinimumGroupSize;
             items = [];
         }
         else
         {
-            if (anonymous && !filtersStatus)
+            if (decision.HiddenStatuses.Count > 0)
             {
-                var hidden = new List<string>();
+                var hidden = decision.HiddenStatuses.Select(value => value.ToString()).ToArray();
 
-                foreach (var other in Enum.GetValues<SurveyResponseStatus>().Where(value => value != SurveyResponseStatus.Completed))
-                {
-                    var rows = await CountRealAsync(surveyId, versionNumber, options, other);
-
-                    if (rows > 0 && SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), rows))
-                    {
-                        hidden.Add(other.ToString());
-                    }
-                }
-
-                if (hidden.Count > 0)
-                {
-                    // Test rows are previews by staff, not people, so they stay.
-                    query = query.Where(index => index.Status.IsNotIn(hidden) || index.IsTest);
-                    options.HidesSmallStatusGroups = true;
-                }
+                // Test rows are previews by staff, not people, so they stay.
+                query = query.Where(index => index.Status.IsNotIn(hidden) || index.IsTest);
+                options.HidesSmallStatusGroups = true;
             }
 
             count = await query.CountAsync();
-            items = await query.OrderByDescending(index => index.StartedUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync();
+
+            // Response numbers and start times order the responses of the whole site, so an anonymous survey lists by
+            // its random ids instead, which order nothing.
+            items = anonymous
+                ? await query.OrderBy(index => index.ItemId).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync()
+                : await query.OrderByDescending(index => index.StartedUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync();
         }
 
         options.UpkeepStoppedCount = await CountUpkeepStoppedAsync(surveyId);
@@ -310,7 +300,8 @@ public sealed class SurveyResponsesController : Controller
         {
             var response = await _responseStore.FindByIdAsync(responseId);
 
-            if (response is null || response.SurveyId != survey.ItemId)
+            // Nobody voids or deletes their own response, which would give a failed attempt back.
+            if (response is null || response.SurveyId != survey.ItemId || SurveyOwnWork.IsOwn(User, response))
             {
                 continue;
             }
@@ -376,13 +367,19 @@ public sealed class SurveyResponsesController : Controller
             return Forbid();
         }
 
-        // One response of an anonymous survey shows only once the survey's completed responses reach its minimum
-        // group size, so a single answer can't be read before there is a crowd to hide in.
-        if (!response.IsTest && await IsTooFewAsync(survey))
+        // One response of an anonymous survey opens under the list's rule (SurveyGroupGate): only once the survey's
+        // completed responses reach its minimum group size, and only when enough responses share its status, so the one
+        // abandoned response can't be read by its id.
+        if (!response.IsTest && SurveyAnonymity.IsAnonymous(survey))
         {
-            await _notifier.WarningAsync(H["This survey is anonymous, and it has fewer than {0} completed responses. Its responses are hidden so no one can be recognized.", SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync())]);
+            var decision = await _serviceProvider.GetRequiredService<SurveyAnonymousGroups>().DecideAsync(survey, null, [response.Status], HttpContext.RequestAborted);
 
-            return RedirectToAction(nameof(Index), new { id = survey.ItemId });
+            if (!decision.Shows(response.Status, response.IsTest))
+            {
+                await _notifier.WarningAsync(H["This survey is anonymous, and too few of its responses are completed or share this response's status. It is hidden so no one can be recognized (the minimum is {0}).", decision.MinimumGroupSize]);
+
+                return RedirectToAction(nameof(Index), new { id = survey.ItemId });
+            }
         }
 
         var version = await _versions.GetAsync(survey, response);
@@ -438,6 +435,13 @@ public sealed class SurveyResponsesController : Controller
             return Forbid();
         }
 
+        if (SurveyOwnWork.IsOwn(User, response))
+        {
+            await _notifier.ErrorAsync(H["You can't void your own response. Someone else must."]);
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         var result = await _responses.VoidAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier), reason);
 
         if (result.Succeeded)
@@ -472,6 +476,13 @@ public sealed class SurveyResponsesController : Controller
         if (!await AuthorizeAsync(survey, SurveyOperation.DeleteResponses))
         {
             return Forbid();
+        }
+
+        if (SurveyOwnWork.IsOwn(User, response))
+        {
+            await _notifier.ErrorAsync(H["You can't delete your own response. Someone else must."]);
+
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         await _responses.DeleteAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -646,7 +657,7 @@ public sealed class SurveyResponsesController : Controller
     private async Task<SurveySettings> SettingsAsync()
         => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
 
-    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options, SurveyResponseStatus status)
+    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options, SurveyResponseStatus status, bool anonymous)
     {
         var statusName = status.ToString();
         var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == statusName && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
@@ -664,8 +675,7 @@ public sealed class SurveyResponsesController : Controller
 
         if (!string.IsNullOrWhiteSpace(options.Search))
         {
-            var search = options.Search.Trim();
-            query = query.Where(index => index.Number.Contains(search));
+            query = Search(query, options.Search, anonymous);
         }
 
         if (options.UpkeepStopped)
@@ -676,24 +686,24 @@ public sealed class SurveyResponsesController : Controller
         return await query.CountAsync(HttpContext.RequestAborted);
     }
 
+    // An anonymous survey shows no response number (see SurveyAnonymity.ResponseLabel), so it can't be searched by one
+    // either: searching another survey's number would tell whether that person's next response is here. It searches
+    // the label it shows, the start of the random id.
+    private static IQuery<SurveyResponse, SurveyResponseIndex> Search(IQuery<SurveyResponse, SurveyResponseIndex> query, string text, bool anonymous)
+    {
+        var search = text.Trim();
+
+        if (anonymous)
+        {
+            return query.Where(index => index.ItemId.StartsWith(search));
+        }
+
+        return query.Where(index => index.Number.Contains(search));
+    }
+
     private Task<int> CountUpkeepStoppedAsync(string surveyId)
         => _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures, collection: SurveysConstants.ResponsesCollectionName)
             .CountAsync(HttpContext.RequestAborted);
-
-    private async Task<bool> IsTooFewAsync(Survey survey)
-    {
-        if (!SurveyAnonymity.IsAnonymous(survey))
-        {
-            return false;
-        }
-
-        var surveyId = survey.ItemId;
-        var completed = nameof(SurveyResponseStatus.Completed);
-        var count = await _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == completed && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName)
-            .CountAsync(HttpContext.RequestAborted);
-
-        return SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), count);
-    }
 
     private async Task<bool> AuthorizeAsync(Survey survey, SurveyOperation operation)
     {

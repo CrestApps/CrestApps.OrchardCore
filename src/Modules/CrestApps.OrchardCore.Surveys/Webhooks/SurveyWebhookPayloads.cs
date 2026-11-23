@@ -22,7 +22,8 @@ internal static class SurveyWebhookPayloads
         return new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["responseId"] = response.ItemId,
-            ["number"] = response.Number,
+            // No site-wide response number on an anonymous survey: it would sit next to a named response's number.
+            ["number"] = anonymous ? null : response.Number,
             ["surveyId"] = response.SurveyId,
             ["surveyName"] = survey?.Name,
             ["kind"] = survey?.Kind,

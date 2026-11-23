@@ -168,6 +168,20 @@ public sealed class SurveyRespondentNames
         return survey is null || SurveyAnonymity.IsAnonymous(survey);
     }
 
+    /// <summary>
+    /// Gets the label staff see for a response (see <see cref="SurveyAnonymity.ResponseLabel"/>): its number, or on an
+    /// anonymous (or unknown) survey the start of its random id.
+    /// </summary>
+    /// <param name="response">The response.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The label.</returns>
+    public async Task<string> GetLabelAsync(SurveyResponse response, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return SurveyAnonymity.ResponseLabel(await SurveyOfAsync(response.SurveyId, cancellationToken), response);
+    }
+
     private async Task<Survey> SurveyOfAsync(string surveyId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(surveyId))

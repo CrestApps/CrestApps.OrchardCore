@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -119,6 +120,8 @@ public sealed class SurveyGradingController : Controller
                 Response = response,
                 SurveyTitle = titles.GetValueOrDefault(response.SurveyId ?? string.Empty),
                 RespondentName = await RespondentNameAsync(response),
+                Label = await HttpContext.RequestServices.GetRequiredService<SurveyRespondentNames>().GetLabelAsync(response, HttpContext.RequestAborted),
+                IsAnonymous = await HttpContext.RequestServices.GetRequiredService<SurveyRespondentNames>().IsAnonymousAsync(response, HttpContext.RequestAborted),
                 PendingQuestions = response.Answers?.Values.Count(answer => answer is not null && answer.ManualScore is null && answer.AutoScore is null && answer.MaxPoints is not null) ?? 0,
             });
         }
@@ -158,6 +161,11 @@ public sealed class SurveyGradingController : Controller
             return Forbid();
         }
 
+        if (await RefuseAsync(response, survey) is { } refused)
+        {
+            return refused;
+        }
+
         return View(await BuildAsync(response, survey, definition));
     }
 
@@ -182,6 +190,11 @@ public sealed class SurveyGradingController : Controller
         if (!await _queue.CanGradeAsync(User, response.SurveyId, HttpContext.RequestAborted))
         {
             return Forbid();
+        }
+
+        if (await RefuseAsync(response, survey) is { } refused)
+        {
+            return refused;
         }
 
         var scores = (model.Points ?? [])
@@ -229,6 +242,11 @@ public sealed class SurveyGradingController : Controller
             return Forbid();
         }
 
+        if (await RefuseAsync(response, await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted)) is { } refused)
+        {
+            return refused;
+        }
+
         var result = model.NewScore is { } score
             ? await _grading.ChangeScoreAsync(responseId, score, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted)
             : new SurveyResponseResult { Error = SurveyErrorCode.InvalidAnswer };
@@ -265,6 +283,11 @@ public sealed class SurveyGradingController : Controller
         if (!await _queue.CanGradeAsync(User, response.SurveyId, HttpContext.RequestAborted))
         {
             return Forbid();
+        }
+
+        if (await RefuseAsync(response, await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted)) is { } refused)
+        {
+            return refused;
         }
 
         var result = await _grading.RegradeAsync(responseId, _userManager.GetUserId(User), model.Reason, HttpContext.RequestAborted);
@@ -343,6 +366,12 @@ public sealed class SurveyGradingController : Controller
             ModelState.AddModelError(nameof(model.Reason), H["Say why the responses are scored again."].Value);
         }
 
+        if (ModelState.IsValid && await HasOwnResponseAsync(survey, model.FromVersionIds))
+        {
+            // Nobody regrades their own work, so a grader who answered one of these versions leaves the regrade to someone else.
+            ModelState.AddModelError(nameof(model.FromVersionIds), H["You have a response in one of these versions. Someone else must score them again."].Value);
+        }
+
         if (!ModelState.IsValid)
         {
             return View(await BuildRegradeAsync(survey, model));
@@ -374,6 +403,8 @@ public sealed class SurveyGradingController : Controller
             Response = response,
             SurveyTitle = survey?.Title,
             RespondentName = await RespondentNameAsync(response),
+            Label = SurveyAnonymity.ResponseLabel(survey, response),
+            IsAnonymous = survey is null || SurveyAnonymity.IsAnonymous(survey),
             Feedback = response.Feedback,
         };
 
@@ -426,6 +457,70 @@ public sealed class SurveyGradingController : Controller
         var version = await _versionCache.GetAsync(response.SurveyVersionId, HttpContext.RequestAborted);
 
         return (response, survey, version?.Definition ?? survey?.Draft);
+    }
+
+    // Every grading path of one response: nobody grades, rescores or regrades their own work, and a real response of an
+    // anonymous survey opens under the shared small-group rule (as Details does), so a grader can't read the first
+    // answers one at a time before there is a crowd to hide in.
+    private async Task<IActionResult> RefuseAsync(SurveyResponse response, Survey survey)
+    {
+        if (SurveyOwnWork.IsOwn(User, response))
+        {
+            await _notifier.ErrorAsync(H["You can't grade your own response. Someone else must grade it."]);
+
+            return RedirectToAction(nameof(Index), new { surveyId = response.SurveyId });
+        }
+
+        if (survey is null || !SurveyAnonymity.IsAnonymous(survey) || response.IsTest)
+        {
+            return null;
+        }
+
+        var decision = await HttpContext.RequestServices.GetRequiredService<SurveyAnonymousGroups>().DecideAsync(survey, null, [response.Status], HttpContext.RequestAborted);
+
+        if (decision.Shows(response.Status, response.IsTest))
+        {
+            return null;
+        }
+
+        await _notifier.WarningAsync(H["This survey is anonymous, and it has fewer than {0} completed responses. Its responses can be graded once there are enough, so no one can be recognized.", decision.MinimumGroupSize]);
+
+        return RedirectToAction(nameof(Index), new { surveyId = response.SurveyId });
+    }
+
+    private async Task<bool> HasOwnResponseAsync(Survey survey, IReadOnlyCollection<string> versionIds)
+    {
+        var userId = SurveyOwnWork.UserIdOf(User);
+
+        if (string.IsNullOrEmpty(userId) || versionIds is not { Count: > 0 })
+        {
+            return false;
+        }
+
+        var queries = HttpContext.RequestServices.GetRequiredService<ISurveyResponseQueries>();
+
+        foreach (var version in await _versionCache.ListAsync(survey.ItemId, HttpContext.RequestAborted))
+        {
+            if (!versionIds.Contains(version.ItemId, StringComparer.Ordinal))
+            {
+                continue;
+            }
+
+            var (count, _) = await queries.ListAsync(new SurveyResponseQuery
+            {
+                SurveyIds = [survey.ItemId],
+                UserId = userId,
+                VersionNumber = version.Number,
+                Take = 1,
+            }, HttpContext.RequestAborted);
+
+            if (count > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<bool> CanGradeSurveyAsync(Survey survey)

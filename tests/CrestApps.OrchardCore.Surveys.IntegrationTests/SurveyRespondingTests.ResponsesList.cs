@@ -7,8 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CrestApps.OrchardCore.Surveys.IntegrationTests;
 
 /// <summary>
-/// The admin responses list: an anonymous survey never lists a status too few responses share (R4-L7), and responses
-/// upkeep stopped trying are shown and can be tried again (R4-M2).
+/// The admin responses list: an anonymous survey never lists a status too few responses share (R4-L7) and shows no
+/// site-wide response number (P2-H1), and responses upkeep stopped trying are shown and can be tried again (R4-M2).
 /// </summary>
 public sealed partial class SurveyRespondingTests
 {
@@ -18,8 +18,9 @@ public sealed partial class SurveyRespondingTests
         // Arrange: an anonymous survey with five completed responses (the site's floor) and one abandoned response.
         var (surveyId, _, _) = await PublishAsync("Anonymous list check");
         var tag = Guid.NewGuid().ToString("N")[..8];
+        var completedIds = new List<string>();
 
-        await _fixture.InTenantAsync(async services =>
+        var abandonedId = await _fixture.InTenantAsync(async services =>
         {
             var surveys = services.GetRequiredService<SurveyStore>();
             var survey = await surveys.FindByIdAsync(surveyId);
@@ -30,10 +31,10 @@ public sealed partial class SurveyRespondingTests
 
             for (var index = 0; index < SurveySettings.DefaultMinimumGroupSizeFloor; index++)
             {
-                await CreateResponseAsync(services, survey, $"C{tag}{index}", SurveyResponseStatus.Completed);
+                completedIds.Add(await CreateResponseAsync(services, survey, $"C{tag}{index}", SurveyResponseStatus.Completed));
             }
 
-            await CreateResponseAsync(services, survey, $"A{tag}", SurveyResponseStatus.Abandoned);
+            return await CreateResponseAsync(services, survey, $"A{tag}", SurveyResponseStatus.Abandoned);
         });
 
         using var admin = await _fixture.CreateClientAsync("admin");
@@ -41,10 +42,15 @@ public sealed partial class SurveyRespondingTests
 
         // Act
         var page = await admin.GetStringAsync($"Admin/surveys/{surveyId}/responses", cancellationToken);
+        var abandoned = await admin.GetAsync($"Admin/surveys/responses/{abandonedId}", cancellationToken);
 
-        // Assert
-        Assert.Contains($"C{tag}0", page, StringComparison.Ordinal);
+        // Assert: the completed responses are listed by their random ids, the lone abandoned one is not listed and can't
+        // be opened by its id, and no response number (one sequence for the whole site) shows.
+        Assert.All(completedIds, id => Assert.Contains(id, page, StringComparison.Ordinal));
+        Assert.DoesNotContain(abandonedId, page, StringComparison.Ordinal);
+        Assert.DoesNotContain($"C{tag}", page, StringComparison.Ordinal);
         Assert.DoesNotContain($"A{tag}", page, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Redirect, abandoned.StatusCode);
     }
 
     [Fact]

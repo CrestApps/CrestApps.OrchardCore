@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Localization;
@@ -71,7 +72,9 @@ internal sealed class SurveysNotificationObserver : ISurveyResponseObserver
         var response = context?.Response;
         var ownerId = context?.Survey?.OwnerId;
 
-        if (response is null || response.IsTest || string.IsNullOrEmpty(ownerId))
+        // An anonymous survey sends no notice per response: its time, to the second, would tell the owner when that
+        // person handed in (the queue and Grade page show the day only). Its responses wait in the grading queue.
+        if (response is null || response.IsTest || string.IsNullOrEmpty(ownerId) || SurveyAnonymity.IsAnonymous(context.Survey))
         {
             return;
         }

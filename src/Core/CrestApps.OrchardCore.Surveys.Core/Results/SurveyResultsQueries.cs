@@ -101,7 +101,9 @@ public sealed class SurveyResultsQueries
         for (var offset = Math.Max(0, skip); read < take; offset += SurveysConstants.PageSize)
         {
             var size = (int)Math.Min(SurveysConstants.PageSize, (long)take - read);
-            var page = (await Filter(scope).OrderBy(index => index.Id).Skip(offset).Take(size).ListAsync(cancellationToken)).ToList();
+            var filtered = Filter(scope);
+            var ordered = scope.OrderById ? filtered.OrderBy(index => index.ItemId) : filtered.OrderBy(index => index.Id);
+            var page = (await ordered.Skip(offset).Take(size).ListAsync(cancellationToken)).ToList();
 
             foreach (var response in page)
             {
@@ -128,6 +130,36 @@ public sealed class SurveyResultsQueries
         ArgumentNullException.ThrowIfNull(scope);
 
         return Filter(scope).CountAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Counts the responses of a scope by status with one grouped query, without loading a document.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The count of each status that has responses.</returns>
+    public async Task<IReadOnlyDictionary<SurveyResponseStatus, long>> CountByStatusAsync(SurveyResultsScope scope, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        var status = _sql.Column(nameof(SurveyResponseIndex.Status));
+        var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
+        var parameters = new DynamicParameters();
+        builder.Selector($"{status} AS Status, COUNT(*) AS Total");
+        Where(builder, parameters, scope);
+        builder.GroupBy(status);
+
+        var counts = new Dictionary<SurveyResponseStatus, long>();
+
+        foreach (var item in await _sql.QueryAsync(builder, parameters, cancellationToken))
+        {
+            if (Enum.TryParse<SurveyResponseStatus>(SurveyIndexSql.Text(item["Status"]), out var value))
+            {
+                counts[value] = counts.GetValueOrDefault(value) + SurveyIndexSql.Long(item["Total"]);
+            }
+        }
+
+        return counts;
     }
 
     /// <summary>
@@ -214,6 +246,31 @@ public sealed class SurveyResultsQueries
             .CountAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Lists the surveys that have completed, non-test responses waiting for a grader, without loading a document.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The survey ids.</returns>
+    public async Task<IReadOnlyList<string>> ListSurveysPendingGradingAsync(CancellationToken cancellationToken = default)
+    {
+        var surveyId = _sql.Column(nameof(SurveyResponseIndex.SurveyId));
+        var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
+        var parameters = new DynamicParameters();
+        builder.Selector($"{surveyId} AS SurveyId");
+        builder.Distinct();
+        builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Grading))} = @Grading");
+        builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Status))} = @Status");
+        builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.IsTest))} = @IsTest");
+        parameters.Add("Grading", nameof(GradingStatus.Pending));
+        parameters.Add("Status", nameof(SurveyResponseStatus.Completed));
+        parameters.Add("IsTest", false);
+
+        return (await _sql.QueryAsync(builder, parameters, cancellationToken))
+            .Select(item => SurveyIndexSql.Text(item["SurveyId"]))
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToList();
+    }
+
     private IQuery<SurveyResponse, SurveyResponseIndex> Filter(SurveyResultsScope scope)
     {
         var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == scope.SurveyId, collection: SurveysConstants.ResponsesCollectionName);
@@ -233,6 +290,12 @@ public sealed class SurveyResultsQueries
         {
             var statuses = scope.Statuses.Select(status => status.ToString()).ToArray();
             query = query.Where(index => index.Status.IsIn(statuses));
+        }
+
+        if (scope.ExcludedStatuses is { Count: > 0 })
+        {
+            var excluded = scope.ExcludedStatuses.Select(status => status.ToString()).ToArray();
+            query = query.Where(index => index.Status.IsNotIn(excluded) || index.IsTest);
         }
 
         if (scope.VersionNumbers is { Count: > 0 })
@@ -287,6 +350,13 @@ public sealed class SurveyResultsQueries
         {
             builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Status))} IN @Statuses");
             parameters.Add("Statuses", scope.Statuses.Select(status => status.ToString()).ToArray());
+        }
+
+        if (scope.ExcludedStatuses is { Count: > 0 })
+        {
+            builder.WhereAnd($"({_sql.Column(nameof(SurveyResponseIndex.Status))} NOT IN @ExcludedStatuses OR {_sql.Column(nameof(SurveyResponseIndex.IsTest))} = @ExcludedTest)");
+            parameters.Add("ExcludedStatuses", scope.ExcludedStatuses.Select(status => status.ToString()).ToArray());
+            parameters.Add("ExcludedTest", true);
         }
 
         if (scope.VersionNumbers is { Count: > 0 })

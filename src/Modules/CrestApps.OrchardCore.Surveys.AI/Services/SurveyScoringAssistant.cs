@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 
@@ -20,6 +21,7 @@ public sealed class SurveyScoringAssistant
     private readonly ISurveyAuthorizationService _authorization;
     private readonly ISurveyControlRegistry _registry;
     private readonly ISurveyGradingService _grading;
+    private readonly SurveyAnonymousGroups _groups;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyScoringAssistant"/> class.
@@ -31,6 +33,7 @@ public sealed class SurveyScoringAssistant
     /// <param name="authorization">The survey authorization service.</param>
     /// <param name="registry">The question type registry.</param>
     /// <param name="grading">The grading service.</param>
+    /// <param name="groups">The small-group rule of anonymous surveys.</param>
     public SurveyScoringAssistant(
         ISurveysAICompleter completer,
         ISurveyResponseQueries responses,
@@ -38,8 +41,10 @@ public sealed class SurveyScoringAssistant
         ISurveyManager surveys,
         ISurveyAuthorizationService authorization,
         ISurveyControlRegistry registry,
-        ISurveyGradingService grading)
+        ISurveyGradingService grading,
+        SurveyAnonymousGroups groups)
     {
+        _groups = groups;
         _completer = completer;
         _responses = responses;
         _versions = versions;
@@ -65,7 +70,11 @@ public sealed class SurveyScoringAssistant
         if (survey is null ||
             response.Status != SurveyResponseStatus.Completed ||
             user?.Identity?.IsAuthenticated != true ||
-            !await _authorization.AuthorizeAsync(user, survey, SurveyOperation.Grade, cancellationToken))
+            !await _authorization.AuthorizeAsync(user, survey, SurveyOperation.Grade, cancellationToken) ||
+            // The Grade page's rules: nobody gets help grading their own work, and an anonymous survey's answers are read
+            // one at a time only once its completed responses reach the minimum group size.
+            SurveyOwnWork.IsOwn(user, response) ||
+            !await _groups.ShowsAsync(survey, response, cancellationToken))
         {
             return new SurveyScoringHelpResult { Error = SurveyScoringHelpResult.NotFound };
         }
