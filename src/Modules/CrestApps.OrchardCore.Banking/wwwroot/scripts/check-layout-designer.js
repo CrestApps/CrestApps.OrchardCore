@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Banking/Assets/js/check-layout-designer.js
+	// src/Modules/CrestApps.OrchardCore.Banking/Assets/js/check-layout-designer.js
 	(function() {
 		"use strict";
 		var CHECK_WIDTH = 612;
@@ -429,5 +429,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();
 	})();
-	//#endregion
 })();

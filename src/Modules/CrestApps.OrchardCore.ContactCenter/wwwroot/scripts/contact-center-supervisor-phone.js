@@ -3,12 +3,11 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
 	function escapeHtml(value) {
 		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
 	var MONITOR_MODES = [
 		"Monitor",
 		"Whisper",
@@ -102,8 +101,7 @@
 		if (!engagement || engagement.phase !== PHASES.ended || engagement.reason !== "supervisor-unreachable") return "";
 		return text(labels, "phoneUnreachable", "Your soft phone did not answer. Close and reopen it, wait until it says it is ready, then try again.");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-supervisor-phone.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-supervisor-phone.js
 	(function(window, document) {
 		"use strict";
 		function readStrings(banner) {
@@ -238,5 +236,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
 		else initialize();
 	})(window, document);
-	//#endregion
 })();

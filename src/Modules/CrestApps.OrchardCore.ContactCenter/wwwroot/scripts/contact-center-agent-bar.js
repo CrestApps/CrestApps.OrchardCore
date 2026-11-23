@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/coalesced-refresh.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/coalesced-refresh.js
 	function coalesceRefresh(run) {
 		var inFlight = null;
 		var trailing = null;
@@ -31,8 +31,7 @@
 			return trailing;
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
 	var STATUS_NAMES = [
 		"Offline",
 		"Available",
@@ -148,8 +147,7 @@
 		if (phase && (status === "Reserved" || status === "Busy")) return phase;
 		return presenceLabel(presence, labels);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js
 	var OFFER_ACCEPT_TIMEOUT_MS = 2e4;
 	function text(labels, key, fallback) {
 		return labels && labels[key] || fallback;
@@ -212,8 +210,7 @@
 			});
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-bar-work.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-bar-work.js
 	function autoOpenWorkKey(state) {
 		var offer = state && state.offer;
 		if (offer && offer.reservationId) return "offer:" + offer.reservationId;
@@ -263,13 +260,11 @@
 			if (storage) storage.setItem(POPPED_STORAGE_KEY, JSON.stringify(Object.keys(poppedActivityIds)));
 		} catch (error) {}
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
 	function escapeHtml(value) {
 		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-agent-bar.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-agent-bar.js
 	(function(window, document) {
 		"use strict";
 		var formatDuration = (window.telephonyClient || {}).formatDuration;
@@ -853,5 +848,4 @@
 		else boot();
 		window.contactCenterAgentBar = { init };
 	})(window, document);
-	//#endregion
 })();

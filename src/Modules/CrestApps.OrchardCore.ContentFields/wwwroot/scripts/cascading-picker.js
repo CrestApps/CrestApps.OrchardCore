@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/cascading-picker.js
+	// src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/cascading-picker.js
 	/**
 	* Turns the indented list of the TaxonomyCascadingPicker shape into one list per level: Category, then Sub-category,
 	* each filled from the choice above it. The original list stays in the form, hidden, and holds the answer, so the
@@ -105,5 +105,4 @@
 		pathTo,
 		startAll
 	};
-	//#endregion
 })();

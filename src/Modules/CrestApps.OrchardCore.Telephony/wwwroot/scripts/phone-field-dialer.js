@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/phone-field-dialer.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/phone-field-dialer.js
 	(function() {
 		"use strict";
 		function getConfig() {
@@ -75,5 +75,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", enhanceAll);
 		else enhanceAll();
 	})();
-	//#endregion
 })();

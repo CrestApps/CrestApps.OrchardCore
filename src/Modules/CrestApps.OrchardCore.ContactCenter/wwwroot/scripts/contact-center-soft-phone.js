@@ -8,8 +8,7 @@
 			return !!id;
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
 	var STATUS_NAMES = [
 		"Offline",
 		"Available",
@@ -96,8 +95,7 @@
 		if (!source || !source.dialHoldReservationId || !source.userId || !ownUserId) return "";
 		return String(source.userId) === String(ownUserId) ? String(source.dialHoldReservationId) : "";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
 	function escapeHtml(value) {
 		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
@@ -115,8 +113,7 @@
 		var from = notification.fromName ? format(text(labels, "messageFrom", "Message from {0}"), notification.fromName) : text(labels, "messageFromSupervisor", "Message from your supervisor");
 		return "<div class=\"alert alert-info alert-dismissible py-2 small mb-2\" role=\"alert\" data-cc-supervisor-message=\"" + escapeHtml(notification.messageId || "") + "\"><strong>" + escapeHtml(from) + "</strong><div>" + escapeHtml(notification.text) + "</div><button type=\"button\" class=\"btn-close\" data-cc-dismiss-message aria-label=\"" + escapeHtml(text(labels, "dismiss", "Dismiss")) + "\"></button></div>";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-soft-phone.js
+	// src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-soft-phone.js
 	(function(window, document) {
 		"use strict";
 		var CAMPAIGN_QUEUE_PREFIX = "__campaign-queue__";
@@ -594,5 +591,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
 		else initialize();
 	})(window, document);
-	//#endregion
 })();

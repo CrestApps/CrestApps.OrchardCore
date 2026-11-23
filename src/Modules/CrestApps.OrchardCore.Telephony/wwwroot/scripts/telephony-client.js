@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js
 	function pad(value) {
 		return value < 10 ? "0" + value : String(value);
 	}
@@ -14,8 +14,7 @@
 		var hours = Math.floor(totalSeconds / 3600);
 		return (hours > 0 ? hours + ":" + pad(minutes) : minutes) + ":" + pad(seconds);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js
 	function normalizeDialNumber(value) {
 		var input = String(value || "").trim();
 		var hasInternationalPrefix = input.charAt(0) === "+";
@@ -53,13 +52,11 @@
 		if (!international && digits.length <= 10 || international && digits.charAt(0) === "1" && digits.length <= 11) return formatNanpNumber(digits, international);
 		return international ? formatInternationalNumber(digits) : digits;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
 	function escapeHtml(value) {
 		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/telephony-client.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/telephony-client.js
 	(function(window) {
 		"use strict";
 		var CALL_STATE_NAMES = [
@@ -84,5 +81,4 @@
 			normalizeCallState
 		};
 	})(window);
-	//#endregion
 })();

@@ -3,12 +3,11 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
 	function escapeHtml(value) {
 		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js
 	function hostWindow() {
 		return typeof window !== "undefined" ? window : {};
 	}
@@ -87,8 +86,7 @@
 			}, 0);
 		}, true);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/http.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/http.js
 	var safeMethods = [
 		"GET",
 		"HEAD",
@@ -157,14 +155,12 @@
 		if (!response.ok) throw new HttpError(response);
 		return response;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/text.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/text.js
 	function format(template, ...args) {
 		if (template === void 0 || template === null) return "";
 		return String(template).replace(/\{(\d+)\}/g, (match, index) => args[index] !== void 0 ? String(args[index]) : match);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/index.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/index.js
 	(function(window, document) {
 		"use strict";
 		if (window.crestapps && window.crestapps.http) return;
@@ -181,5 +177,4 @@
 		bindForms(document);
 		bindRemoveLinks(document);
 	})(window, document);
-	//#endregion
 })();

@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 var SIP = (function() {
-	//#region \0rolldown/runtime.js
+	// \0rolldown/runtime.js
 	var __defProp = Object.defineProperty;
 	var __exportAll = (all, no_symbols) => {
 		let target = {};
@@ -14,11 +14,9 @@ var SIP = (function() {
 		if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 		return target;
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/version.js
+	// node_modules/sip.js/lib/version.js
 	var LIBRARY_VERSION = "0.21.1";
-	//#endregion
-	//#region node_modules/sip.js/lib/core/exceptions/exception.js
+	// node_modules/sip.js/lib/core/exceptions/exception.js
 	/**
 	* An Exception is considered a condition that a reasonable application may wish to catch.
 	* An Error indicates serious problems that a reasonable application should not try to catch.
@@ -30,8 +28,7 @@ var SIP = (function() {
 			Object.setPrototypeOf(this, new.target.prototype);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/exceptions/content-type-unsupported.js
+	// node_modules/sip.js/lib/api/exceptions/content-type-unsupported.js
 	/**
 	* An exception indicating an unsupported content type prevented execution.
 	* @public
@@ -41,8 +38,7 @@ var SIP = (function() {
 			super(message ? message : "Unsupported content type.");
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/exceptions/request-pending.js
+	// node_modules/sip.js/lib/api/exceptions/request-pending.js
 	/**
 	* An exception indicating an outstanding prior request prevented execution.
 	* @public
@@ -53,8 +49,7 @@ var SIP = (function() {
 			super(message ? message : "Request pending.");
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/exceptions/session-description-handler.js
+	// node_modules/sip.js/lib/api/exceptions/session-description-handler.js
 	/**
 	* An exception indicating a session description handler error occured.
 	* @public
@@ -64,8 +59,7 @@ var SIP = (function() {
 			super(message ? message : "Unspecified session description handler error.");
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/exceptions/session-terminated.js
+	// node_modules/sip.js/lib/api/exceptions/session-terminated.js
 	/**
 	* An exception indicating the session terminated before the action completed.
 	* @public
@@ -75,8 +69,7 @@ var SIP = (function() {
 			super("The session has terminated.");
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/exceptions/state-transition.js
+	// node_modules/sip.js/lib/api/exceptions/state-transition.js
 	/**
 	* An exception indicating an invalid state transition error occured.
 	* @public
@@ -86,8 +79,7 @@ var SIP = (function() {
 			super(message ? message : "An error occurred during state transition.");
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/ack.js
+	// node_modules/sip.js/lib/api/ack.js
 	/**
 	* A request to confirm a {@link Session} (incoming ACK).
 	* @public
@@ -102,8 +94,7 @@ var SIP = (function() {
 			return this.incomingAckRequest.message;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/bye.js
+	// node_modules/sip.js/lib/api/bye.js
 	/**
 	* A request to end a {@link Session} (incoming BYE).
 	* @public
@@ -128,8 +119,7 @@ var SIP = (function() {
 			return Promise.resolve();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/cancel.js
+	// node_modules/sip.js/lib/api/cancel.js
 	/**
 	* A request to reject an {@link Invitation} (incoming CANCEL).
 	* @public
@@ -144,8 +134,7 @@ var SIP = (function() {
 			return this.incomingCancelRequest;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/emitter.js
+	// node_modules/sip.js/lib/api/emitter.js
 	/**
 	* An {@link Emitter} implementation.
 	* @internal
@@ -213,8 +202,7 @@ var SIP = (function() {
 			return this.addListener(listener, { once: true });
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/info.js
+	// node_modules/sip.js/lib/api/info.js
 	/**
 	* An exchange of information (incoming INFO).
 	* @public
@@ -239,8 +227,7 @@ var SIP = (function() {
 			return Promise.resolve();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/grammar/parameters.js
+	// node_modules/sip.js/lib/grammar/parameters.js
 	/**
 	* @internal
 	*/
@@ -270,8 +257,7 @@ var SIP = (function() {
 			this.parameters = {};
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/grammar/name-addr-header.js
+	// node_modules/sip.js/lib/grammar/name-addr-header.js
 	/**
 	* Name Address SIP header.
 	* @public
@@ -310,8 +296,7 @@ var SIP = (function() {
 			return body;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/grammar/uri.js
+	// node_modules/sip.js/lib/grammar/uri.js
 	/**
 	* URI.
 	* @public
@@ -494,8 +479,7 @@ var SIP = (function() {
 		}
 		return true;
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/grammar/pegjs/dist/grammar.js
+	// node_modules/sip.js/lib/grammar/pegjs/dist/grammar.js
 	function peg$padEnd(str, targetLength, padString) {
 		padString = padString || " ";
 		if (str.length > targetLength) return str;
@@ -1967,8 +1951,7 @@ var SIP = (function() {
 		}
 	}
 	var parse = peg$parse;
-	//#endregion
-	//#region node_modules/sip.js/lib/grammar/grammar.js
+	// node_modules/sip.js/lib/grammar/grammar.js
 	/**
 	* Grammar.
 	* @internal
@@ -2011,8 +1994,7 @@ var SIP = (function() {
 		}
 		Grammar.URIParse = URIParse;
 	})(Grammar = Grammar || (Grammar = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/utils.js
+	// node_modules/sip.js/lib/core/messages/utils.js
 	/**
 	* SIP Response Reasons
 	* DOC: http://www.iana.org/assignments/sip-parameters
@@ -2146,8 +2128,7 @@ var SIP = (function() {
 	function utf8Length(str) {
 		return encodeURIComponent(str).replace(/%[A-F\d]{2}/g, "U").length;
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/incoming-message.js
+	// node_modules/sip.js/lib/core/messages/incoming-message.js
 	/**
 	* Incoming message.
 	* @public
@@ -2247,8 +2228,7 @@ var SIP = (function() {
 			return this.data;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/incoming-request-message.js
+	// node_modules/sip.js/lib/core/messages/incoming-request-message.js
 	/**
 	* Incoming request message.
 	* @public
@@ -2258,8 +2238,7 @@ var SIP = (function() {
 			super();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/incoming-response-message.js
+	// node_modules/sip.js/lib/core/messages/incoming-response-message.js
 	/**
 	* Incoming response message.
 	* @public
@@ -2269,8 +2248,7 @@ var SIP = (function() {
 			super();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/outgoing-request-message.js
+	// node_modules/sip.js/lib/core/messages/outgoing-request-message.js
 	/**
 	* Outgoing SIP request message.
 	* @public
@@ -2426,8 +2404,7 @@ var SIP = (function() {
 			return msg;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/body.js
+	// node_modules/sip.js/lib/core/messages/body.js
 	function contentTypeToContentDisposition(contentType) {
 		if (contentType === "application/sdp") return "session";
 		else return "render";
@@ -2509,8 +2486,7 @@ var SIP = (function() {
 			content
 		};
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/core/session/session.js
+	// node_modules/sip.js/lib/core/session/session.js
 	/**
 	* Session state.
 	* @remarks
@@ -2551,8 +2527,7 @@ var SIP = (function() {
 		SignalingState["Stable"] = "Stable";
 		SignalingState["Closed"] = "Closed";
 	})(SignalingState = SignalingState || (SignalingState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/core/timers.js
+	// node_modules/sip.js/lib/core/timers.js
 	var T1 = 500;
 	/**
 	* Timers.
@@ -2574,8 +2549,7 @@ var SIP = (function() {
 		TIMER_N: 64 * T1,
 		PROVISIONAL_RESPONSE_INTERVAL: 6e4
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/exceptions/transaction-state-error.js
+	// node_modules/sip.js/lib/core/exceptions/transaction-state-error.js
 	/**
 	* Indicates that the operation could not be completed given the current transaction state.
 	* @public
@@ -2585,8 +2559,7 @@ var SIP = (function() {
 			super(message ? message : "Transaction state error.");
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/methods/constants.js
+	// node_modules/sip.js/lib/core/messages/methods/constants.js
 	/**
 	* SIP Methods
 	* @internal
@@ -2608,8 +2581,7 @@ var SIP = (function() {
 		C.REFER = "REFER";
 		C.PRACK = "PRACK";
 	})(C = C || (C = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agent-core/allowed-methods.js
+	// node_modules/sip.js/lib/core/user-agent-core/allowed-methods.js
 	/**
 	* FIXME: TODO: Should be configurable/variable.
 	*/
@@ -2627,8 +2599,7 @@ var SIP = (function() {
 		C.REGISTER,
 		C.SUBSCRIBE
 	];
-	//#endregion
-	//#region node_modules/sip.js/lib/api/message.js
+	// node_modules/sip.js/lib/api/message.js
 	/**
 	* A received message (incoming MESSAGE).
 	* @public
@@ -2653,8 +2624,7 @@ var SIP = (function() {
 			return Promise.resolve();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/notification.js
+	// node_modules/sip.js/lib/api/notification.js
 	/**
 	* A notification of an event (incoming NOTIFY).
 	* @public
@@ -2679,8 +2649,7 @@ var SIP = (function() {
 			return Promise.resolve();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/referral.js
+	// node_modules/sip.js/lib/api/referral.js
 	/**
 	* A request to establish a {@link Session} elsewhere (incoming REFER).
 	* @public
@@ -2748,8 +2717,7 @@ var SIP = (function() {
 			return this.inviter;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/session-state.js
+	// node_modules/sip.js/lib/api/session-state.js
 	/**
 	* {@link Session} state.
 	*
@@ -2796,8 +2764,7 @@ var SIP = (function() {
 		*/
 		SessionState["Terminated"] = "Terminated";
 	})(SessionState = SessionState || (SessionState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/api/session.js
+	// node_modules/sip.js/lib/api/session.js
 	/**
 	* A session provides real time communication between one or more participants.
 	*
@@ -3709,8 +3676,7 @@ var SIP = (function() {
 			return referTo;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/user-agent-options.js
+	// node_modules/sip.js/lib/api/user-agent-options.js
 	/**
 	* SIP extension support level.
 	* @public
@@ -3762,8 +3728,7 @@ var SIP = (function() {
 		timer: true,
 		uui: true
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/invitation.js
+	// node_modules/sip.js/lib/api/invitation.js
 	/**
 	* An invitation is an offer to establish a {@link Session} (incoming INVITE).
 	* @public
@@ -4273,8 +4238,7 @@ var SIP = (function() {
 			this.waitingForPrackReject = void 0;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/inviter.js
+	// node_modules/sip.js/lib/api/inviter.js
 	/**
 	* An inviter offers to establish a {@link Session} (outgoing INVITE).
 	* @public
@@ -4872,8 +4836,7 @@ var SIP = (function() {
 			}
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/messager.js
+	// node_modules/sip.js/lib/api/messager.js
 	/**
 	* A messager sends a {@link Message} (outgoing MESSAGE).
 	* @public
@@ -4914,8 +4877,7 @@ var SIP = (function() {
 			return Promise.resolve();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/publisher-state.js
+	// node_modules/sip.js/lib/api/publisher-state.js
 	/**
 	* {@link Publisher} state.
 	* @remarks
@@ -4938,8 +4900,7 @@ var SIP = (function() {
 		PublisherState["Unpublished"] = "Unpublished";
 		PublisherState["Terminated"] = "Terminated";
 	})(PublisherState = PublisherState || (PublisherState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/api/publisher.js
+	// node_modules/sip.js/lib/api/publisher.js
 	/**
 	* A publisher publishes a publication (outgoing PUBLISH).
 	* @public
@@ -5176,8 +5137,7 @@ var SIP = (function() {
 			if (newState === PublisherState.Terminated) this.dispose();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/registerer-state.js
+	// node_modules/sip.js/lib/api/registerer-state.js
 	/**
 	* {@link Registerer} state.
 	* @remarks
@@ -5200,8 +5160,7 @@ var SIP = (function() {
 		RegistererState["Unregistered"] = "Unregistered";
 		RegistererState["Terminated"] = "Terminated";
 	})(RegistererState = RegistererState || (RegistererState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/api/registerer.js
+	// node_modules/sip.js/lib/api/registerer.js
 	/**
 	* A registerer registers a contact for an address of record (outgoing REGISTER).
 	* @public
@@ -5676,8 +5635,7 @@ var SIP = (function() {
 	};
 	Registerer.defaultExpires = 600;
 	Registerer.defaultRefreshFrequency = 99;
-	//#endregion
-	//#region node_modules/sip.js/lib/core/subscription/subscription.js
+	// node_modules/sip.js/lib/core/subscription/subscription.js
 	/**
 	* Subscription state.
 	* @remarks
@@ -5692,8 +5650,7 @@ var SIP = (function() {
 		SubscriptionState["Active"] = "Active";
 		SubscriptionState["Terminated"] = "Terminated";
 	})(SubscriptionState$1 = SubscriptionState$1 || (SubscriptionState$1 = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/api/subscription-state.js
+	// node_modules/sip.js/lib/api/subscription-state.js
 	/**
 	* {@link Subscription} state.
 	* @remarks
@@ -5714,8 +5671,7 @@ var SIP = (function() {
 		SubscriptionState["Subscribed"] = "Subscribed";
 		SubscriptionState["Terminated"] = "Terminated";
 	})(SubscriptionState = SubscriptionState || (SubscriptionState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/api/subscription.js
+	// node_modules/sip.js/lib/api/subscription.js
 	/**
 	* A subscription provides {@link Notification} of events.
 	*
@@ -5799,8 +5755,7 @@ var SIP = (function() {
 			if (newState === SubscriptionState.Terminated) this.dispose();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/subscriber.js
+	// node_modules/sip.js/lib/api/subscriber.js
 	/**
 	* A subscriber establishes a {@link Subscription} (outgoing SUBSCRIBE).
 	*
@@ -6081,8 +6036,7 @@ var SIP = (function() {
 			});
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/transport-state.js
+	// node_modules/sip.js/lib/api/transport-state.js
 	/**
 	* {@link Transport} state.
 	*
@@ -6121,8 +6075,7 @@ var SIP = (function() {
 		*/
 		TransportState["Disconnected"] = "Disconnected";
 	})(TransportState = TransportState || (TransportState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/api/user-agent-state.js
+	// node_modules/sip.js/lib/api/user-agent-state.js
 	/**
 	* {@link UserAgent} state.
 	* @remarks
@@ -6138,8 +6091,7 @@ var SIP = (function() {
 		UserAgentState["Started"] = "Started";
 		UserAgentState["Stopped"] = "Stopped";
 	})(UserAgentState = UserAgentState || (UserAgentState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/md5.js
+	// node_modules/sip.js/lib/core/messages/md5.js
 	var Md5 = class Md5 {
 		constructor() {
 			this._dataLength = 0;
@@ -6471,8 +6423,7 @@ var SIP = (function() {
 	Md5.hexOut = [];
 	Md5.onePassHasher = new Md5();
 	if (Md5.hashStr("hello") !== "5d41402abc4b2a76b9719d911017c592") console.error("Md5 self test failed.");
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/digest-authentication.js
+	// node_modules/sip.js/lib/core/messages/digest-authentication.js
 	function MD5(s) {
 		return Md5.hashStr(s);
 	}
@@ -6588,8 +6539,7 @@ var SIP = (function() {
 			}
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/log/levels.js
+	// node_modules/sip.js/lib/core/log/levels.js
 	/**
 	* Log levels.
 	* @public
@@ -6601,8 +6551,7 @@ var SIP = (function() {
 		Levels[Levels["log"] = 2] = "log";
 		Levels[Levels["debug"] = 3] = "debug";
 	})(Levels = Levels || (Levels = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/core/log/logger.js
+	// node_modules/sip.js/lib/core/log/logger.js
 	/**
 	* Logger.
 	* @public
@@ -6635,8 +6584,7 @@ var SIP = (function() {
 			this.logger.level = newLevel;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/log/logger-factory.js
+	// node_modules/sip.js/lib/core/log/logger-factory.js
 	/**
 	* Logger.
 	* @public
@@ -6700,8 +6648,7 @@ var SIP = (function() {
 			}
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/parser.js
+	// node_modules/sip.js/lib/core/messages/parser.js
 	/**
 	* Extract and parse every header of a SIP message.
 	* @internal
@@ -6883,8 +6830,7 @@ var SIP = (function() {
 		}
 		Parser.parseMessage = parseMessage;
 	})(Parser = Parser || (Parser = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/core/messages/outgoing-response.js
+	// node_modules/sip.js/lib/core/messages/outgoing-response.js
 	/**
 	* When a UAS wishes to construct a response to a request, it follows
 	* the general procedures detailed in the following subsections.
@@ -6936,8 +6882,7 @@ var SIP = (function() {
 		} else response += "Content-Length: 0\r\n\r\n";
 		return { message: response };
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/core/exceptions/transport-error.js
+	// node_modules/sip.js/lib/core/exceptions/transport-error.js
 	/**
 	* Transport error.
 	* @public
@@ -6947,8 +6892,7 @@ var SIP = (function() {
 			super(message ? message : "Unspecified transport error.");
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/transaction.js
+	// node_modules/sip.js/lib/core/transactions/transaction.js
 	/**
 	* Transaction.
 	* @remarks
@@ -7065,8 +7009,7 @@ var SIP = (function() {
 			return "UnknownType";
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/server-transaction.js
+	// node_modules/sip.js/lib/core/transactions/server-transaction.js
 	/**
 	* Server Transaction.
 	* @remarks
@@ -7089,8 +7032,7 @@ var SIP = (function() {
 			return this._request;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/transaction-state.js
+	// node_modules/sip.js/lib/core/transactions/transaction-state.js
 	/**
 	* Transaction state.
 	* @public
@@ -7105,8 +7047,7 @@ var SIP = (function() {
 		TransactionState["Terminated"] = "Terminated";
 		TransactionState["Trying"] = "Trying";
 	})(TransactionState = TransactionState || (TransactionState = {}));
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/invite-server-transaction.js
+	// node_modules/sip.js/lib/core/transactions/invite-server-transaction.js
 	/**
 	* INVITE Server Transaction.
 	* @remarks
@@ -7365,8 +7306,7 @@ var SIP = (function() {
 			if (this.state === TransactionState.Accepted) this.stateTransition(TransactionState.Terminated);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/client-transaction.js
+	// node_modules/sip.js/lib/core/transactions/client-transaction.js
 	/**
 	* Client Transaction.
 	* @remarks
@@ -7413,8 +7353,7 @@ var SIP = (function() {
 			if (this.user.onRequestTimeout) this.user.onRequestTimeout();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/non-invite-client-transaction.js
+	// node_modules/sip.js/lib/core/transactions/non-invite-client-transaction.js
 	/**
 	* Non-INVITE Client Transaction.
 	* @remarks
@@ -7579,8 +7518,7 @@ var SIP = (function() {
 			if (this.state === TransactionState.Completed) this.stateTransition(TransactionState.Terminated);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/dialogs/dialog.js
+	// node_modules/sip.js/lib/core/dialogs/dialog.js
 	/**
 	* Dialog.
 	* @remarks
@@ -7870,8 +7808,7 @@ var SIP = (function() {
 			return true;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/invite-client-transaction.js
+	// node_modules/sip.js/lib/core/transactions/invite-client-transaction.js
 	/**
 	* INVITE Client Transaction.
 	* @remarks
@@ -8151,8 +8088,7 @@ var SIP = (function() {
 			if (this.state === TransactionState.Accepted) this.stateTransition(TransactionState.Terminated);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/user-agent-client.js
 	/**
 	* User Agent Client (UAC).
 	* @remarks
@@ -8364,8 +8300,7 @@ var SIP = (function() {
 			this.core.userAgentClients.set(userAgentClientId, this);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/bye-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/bye-user-agent-client.js
 	/**
 	* BYE UAC.
 	* @public
@@ -8377,8 +8312,7 @@ var SIP = (function() {
 			dialog.dispose();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/transactions/non-invite-server-transaction.js
+	// node_modules/sip.js/lib/core/transactions/non-invite-server-transaction.js
 	/**
 	* Non-INVITE Server Transaction.
 	* @remarks
@@ -8528,8 +8462,7 @@ var SIP = (function() {
 			if (this.state === TransactionState.Completed) this.stateTransition(TransactionState.Terminated);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/user-agent-server.js
 	/**
 	* User Agent Server (UAS).
 	* @remarks
@@ -8684,8 +8617,7 @@ var SIP = (function() {
 			this.core.userAgentServers.set(transaction.id, this);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/bye-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/bye-user-agent-server.js
 	/**
 	* BYE UAS.
 	* @public
@@ -8695,8 +8627,7 @@ var SIP = (function() {
 			super(NonInviteServerTransaction, dialog.userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/info-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/info-user-agent-client.js
 	/**
 	* INFO UAC.
 	* @public
@@ -8707,8 +8638,7 @@ var SIP = (function() {
 			super(NonInviteClientTransaction, dialog.userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/info-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/info-user-agent-server.js
 	/**
 	* INFO UAS.
 	* @public
@@ -8718,8 +8648,7 @@ var SIP = (function() {
 			super(NonInviteServerTransaction, dialog.userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/message-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/message-user-agent-client.js
 	/**
 	* MESSAGE UAC.
 	* @public
@@ -8729,8 +8658,7 @@ var SIP = (function() {
 			super(NonInviteClientTransaction, core, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/message-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/message-user-agent-server.js
 	/**
 	* MESSAGE UAS.
 	* @public
@@ -8740,8 +8668,7 @@ var SIP = (function() {
 			super(NonInviteServerTransaction, core, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/notify-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/notify-user-agent-client.js
 	/**
 	* NOTIFY UAS.
 	* @public
@@ -8752,8 +8679,7 @@ var SIP = (function() {
 			super(NonInviteClientTransaction, dialog.userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/notify-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/notify-user-agent-server.js
 	function instanceOfDialog(object) {
 		return object.userAgentCore !== void 0;
 	}
@@ -8772,8 +8698,7 @@ var SIP = (function() {
 			super(NonInviteServerTransaction, userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/prack-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/prack-user-agent-client.js
 	/**
 	* PRACK UAC.
 	* @public
@@ -8785,8 +8710,7 @@ var SIP = (function() {
 			dialog.signalingStateTransition(message);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/prack-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/prack-user-agent-server.js
 	/**
 	* PRACK UAS.
 	* @public
@@ -8806,8 +8730,7 @@ var SIP = (function() {
 			return super.accept(options);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/re-invite-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/re-invite-user-agent-client.js
 	/**
 	* Re-INVITE UAC.
 	* @remarks
@@ -8867,8 +8790,7 @@ var SIP = (function() {
 			}
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/re-invite-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/re-invite-user-agent-server.js
 	/**
 	* Re-INVITE UAS.
 	* @remarks
@@ -8933,8 +8855,7 @@ var SIP = (function() {
 			return super.reject(options);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/refer-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/refer-user-agent-client.js
 	/**
 	* REFER UAC.
 	* @public
@@ -8945,8 +8866,7 @@ var SIP = (function() {
 			super(NonInviteClientTransaction, dialog.userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/refer-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/refer-user-agent-server.js
 	function instanceOfSessionDialog(object) {
 		return object.userAgentCore !== void 0;
 	}
@@ -8965,8 +8885,7 @@ var SIP = (function() {
 			super(NonInviteServerTransaction, userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/dialogs/session-dialog.js
+	// node_modules/sip.js/lib/core/dialogs/session-dialog.js
 	/**
 	* Session Dialog.
 	* @public
@@ -9518,8 +9437,7 @@ var SIP = (function() {
 			}
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/invite-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/invite-user-agent-client.js
 	/**
 	* INVITE UAC.
 	* @remarks
@@ -9665,8 +9583,7 @@ var SIP = (function() {
 			throw new Error(`Executing what should be an unreachable code path receiving ${statusCode} response.`);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/invite-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/invite-user-agent-server.js
 	/**
 	* INVITE UAS.
 	* @remarks
@@ -9799,8 +9716,7 @@ var SIP = (function() {
 			return super.reject(options);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/publish-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/publish-user-agent-client.js
 	/**
 	* PUBLISH UAC.
 	* @public
@@ -9810,8 +9726,7 @@ var SIP = (function() {
 			super(NonInviteClientTransaction, core, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/register-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/register-user-agent-client.js
 	/**
 	* REGISTER UAC.
 	* @public
@@ -9821,8 +9736,7 @@ var SIP = (function() {
 			super(NonInviteClientTransaction, core, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/register-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/register-user-agent-server.js
 	/**
 	* REGISTER UAS.
 	* @public
@@ -9833,8 +9747,7 @@ var SIP = (function() {
 			this.core = core;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/re-subscribe-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/re-subscribe-user-agent-client.js
 	/**
 	* Re-SUBSCRIBE UAC.
 	* @public
@@ -9879,8 +9792,7 @@ var SIP = (function() {
 			super.receiveResponse(message);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/dialogs/subscription-dialog.js
+	// node_modules/sip.js/lib/core/dialogs/subscription-dialog.js
 	/**
 	* Subscription Dialog.
 	* @remarks
@@ -10214,8 +10126,7 @@ var SIP = (function() {
 			}
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/subscribe-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/subscribe-user-agent-client.js
 	/**
 	* SUBSCRIBE UAC.
 	* @remarks
@@ -10364,8 +10275,7 @@ var SIP = (function() {
 			if (this.delegate && this.delegate.onNotifyTimeout) this.delegate.onNotifyTimeout();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/subscribe-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/subscribe-user-agent-server.js
 	/**
 	* SUBSCRIBE UAS.
 	* @public
@@ -10376,8 +10286,7 @@ var SIP = (function() {
 			this.core = core;
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agent-core/user-agent-core.js
+	// node_modules/sip.js/lib/core/user-agent-core/user-agent-core.js
 	/**
 	* This is ported from UA.C.ACCEPTED_BODY_TYPES.
 	* FIXME: TODO: Should be configurable/variable.
@@ -10784,8 +10693,7 @@ var SIP = (function() {
 			else this.logger.warn(`Discarding unmatched ${message.statusCode} response to ${message.method} ${userAgentClientId}.`);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/session-description-handler/media-stream-factory-default.js
+	// node_modules/sip.js/lib/platform/web/session-description-handler/media-stream-factory-default.js
 	/**
 	* Function which returns a MediaStreamFactory.
 	* @public
@@ -10797,8 +10705,7 @@ var SIP = (function() {
 			return navigator.mediaDevices.getUserMedia.call(navigator.mediaDevices, constraints);
 		};
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/session-description-handler/peer-connection-configuration-default.js
+	// node_modules/sip.js/lib/platform/web/session-description-handler/peer-connection-configuration-default.js
 	/**
 	* Function which returns an RTCConfiguration.
 	* @public
@@ -10813,8 +10720,7 @@ var SIP = (function() {
 			rtcpMuxPolicy: "require"
 		};
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/session-description-handler/session-description-handler.js
+	// node_modules/sip.js/lib/platform/web/session-description-handler/session-description-handler.js
 	/**
 	* A base class implementing a WebRTC session description handler for sip.js.
 	* @remarks
@@ -11459,8 +11365,7 @@ var SIP = (function() {
 			};
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/session-description-handler/session-description-handler-factory-default.js
+	// node_modules/sip.js/lib/platform/web/session-description-handler/session-description-handler-factory-default.js
 	/**
 	* Function which returns a SessionDescriptionHandlerFactory.
 	* @remarks
@@ -11479,8 +11384,7 @@ var SIP = (function() {
 			return new SessionDescriptionHandler(session.userAgent.getLogger("sip.SessionDescriptionHandler"), mediaStreamFactory, sessionDescriptionHandlerConfiguration);
 		};
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/transport/transport.js
+	// node_modules/sip.js/lib/platform/web/transport/transport.js
 	/**
 	* Transport for SIP over secure WebSocket (WSS).
 	* @public
@@ -11913,8 +11817,7 @@ var SIP = (function() {
 		keepAliveDebounce: 10,
 		traceSip: true
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/api/user-agent.js
+	// node_modules/sip.js/lib/api/user-agent.js
 	/**
 	* A user agent sends and receives requests using a `Transport`.
 	*
@@ -12536,8 +12439,7 @@ var SIP = (function() {
 			this._stateEventEmitter.emit(this._state);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/cancel-user-agent-client.js
+	// node_modules/sip.js/lib/core/user-agents/cancel-user-agent-client.js
 	/**
 	* CANCEL UAC.
 	* @public
@@ -12547,8 +12449,7 @@ var SIP = (function() {
 			super(NonInviteClientTransaction, core, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/user-agents/re-subscribe-user-agent-server.js
+	// node_modules/sip.js/lib/core/user-agents/re-subscribe-user-agent-server.js
 	/**
 	* Re-SUBSCRIBE UAS.
 	* @public
@@ -12558,8 +12459,7 @@ var SIP = (function() {
 			super(NonInviteServerTransaction, dialog.userAgentCore, message, delegate);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/core/index.js
+	// node_modules/sip.js/lib/core/index.js
 	var core_exports = /* @__PURE__ */ __exportAll({
 		ByeUserAgentClient: () => ByeUserAgentClient,
 		ByeUserAgentServer: () => ByeUserAgentServer,
@@ -12626,8 +12526,7 @@ var SIP = (function() {
 		getBody: () => getBody,
 		isBody: () => isBody
 	});
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/modifiers/modifiers.js
+	// node_modules/sip.js/lib/platform/web/modifiers/modifiers.js
 	var stripPayload = (sdp, payload) => {
 		const mediaDescs = [];
 		const lines = sdp.split(/\r\n/);
@@ -12779,8 +12678,7 @@ var SIP = (function() {
 			type
 		});
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/session-description-handler/web-audio-session-description-handler.js
+	// node_modules/sip.js/lib/platform/web/session-description-handler/web-audio-session-description-handler.js
 	/**
 	* Start a conference.
 	* @param conferenceSessions - The sessions to conference.
@@ -12869,8 +12767,7 @@ var SIP = (function() {
 			this.localMediaStreamSourceNode.connect(this.localMediaStreamDestinationNode);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/session-manager/managed-session-factory-default.js
+	// node_modules/sip.js/lib/platform/web/session-manager/managed-session-factory-default.js
 	/**
 	* Function which returns a ManagedSessionFactory.
 	* @public
@@ -12884,8 +12781,7 @@ var SIP = (function() {
 			};
 		};
 	}
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/session-manager/session-manager.js
+	// node_modules/sip.js/lib/platform/web/session-manager/session-manager.js
 	/**
 	* A session manager for SIP.js sessions.
 	* @public
@@ -13846,8 +13742,7 @@ var SIP = (function() {
 			return Promise.resolve();
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/simple-user/simple-user.js
+	// node_modules/sip.js/lib/platform/web/simple-user/simple-user.js
 	/**
 	* A simple SIP user class.
 	* @remarks
@@ -14151,8 +14046,7 @@ var SIP = (function() {
 			return this.sessionManager.message(destination, message);
 		}
 	};
-	//#endregion
-	//#region node_modules/sip.js/lib/platform/web/index.js
+	// node_modules/sip.js/lib/platform/web/index.js
 	var web_exports = /* @__PURE__ */ __exportAll({
 		SessionDescriptionHandler: () => SessionDescriptionHandler,
 		SessionManager: () => SessionManager,
@@ -14173,8 +14067,7 @@ var SIP = (function() {
 		stripTelephoneEvent: () => stripTelephoneEvent,
 		stripVideo: () => stripVideo
 	});
-	//#endregion
-	//#region node_modules/sip.js/lib/index.js
+	// node_modules/sip.js/lib/index.js
 	var lib_exports = /* @__PURE__ */ __exportAll({
 		Ack: () => Ack,
 		Bye: () => Bye,
@@ -14218,6 +14111,5 @@ var SIP = (function() {
 	});
 	var version = LIBRARY_VERSION;
 	var name = "sip.js";
-	//#endregion
 	return lib_exports;
 })();

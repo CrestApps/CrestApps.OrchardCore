@@ -3,12 +3,11 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
 	function escapeHtml(value) {
 		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js
 	function hostWindow() {
 		return typeof window !== "undefined" ? window : {};
 	}
@@ -30,8 +29,7 @@
 		});
 		return Promise.resolve(typeof host.confirm === "function" ? Boolean(host.confirm(message || title || "")) : true);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Assets/js/profile-builder.js
+	// src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Assets/js/profile-builder.js
 	(function(window, document) {
 		"use strict";
 		var FEEDBACK_KIND = {
@@ -693,5 +691,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
 		else start();
 	})(window, document);
-	//#endregion
 })();

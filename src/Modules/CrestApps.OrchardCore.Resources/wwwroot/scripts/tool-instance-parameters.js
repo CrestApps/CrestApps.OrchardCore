@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/tool-instance-parameters.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/tool-instance-parameters.js
 	(function() {
 		"use strict";
 		document.addEventListener("DOMContentLoaded", function() {
@@ -233,5 +233,4 @@
 			refresh();
 		});
 	})();
-	//#endregion
 })();

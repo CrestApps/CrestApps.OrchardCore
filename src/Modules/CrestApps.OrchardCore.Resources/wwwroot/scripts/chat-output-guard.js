@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/chat-output-guard/guard.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/chat-output-guard/guard.js
 	var chatAttributePattern = /^data-(?:coreai-chat|chat-interaction)(?:-|$)/i;
 	var allowedDataAttributePattern = /^data-(?:chart-id|doc-index|error-index|carousel-(?:key|size|size-option|step|target)|stack-offset|active-index|image-count)$/i;
 	var chartCanvasIdPattern = /^chat_chart_\d+$/;
@@ -149,8 +149,6 @@
 		hardenSanitizer(window && window.DOMPurify);
 		watchRenderedOutput(window);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/chat-output-guard/index.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/chat-output-guard/index.js
 	installChatOutputGuard(window);
-	//#endregion
 })();

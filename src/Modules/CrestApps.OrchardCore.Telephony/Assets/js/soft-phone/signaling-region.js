@@ -23,9 +23,6 @@
 // The regions the vendored SDK accepts, with labels for the picker. Kept in step with the SDK's own Region
 // constant (lib/src/Region.d.ts); an unknown value is treated as automatic rather than passed through, so a
 // stale stored choice cannot send a client to a host that no longer exists.
-//
-// There is no Middle East entry. An agent in that part of the world has no in-region edge: Europe is the
-// nearest, and saying so here is more use than leaving them to discover it.
 export var SIGNALING_REGIONS = [
     { value: '', label: 'Automatic' },
     { value: 'us-west', label: 'US West' },
@@ -34,7 +31,12 @@ export var SIGNALING_REGIONS = [
     { value: 'ca-central', label: 'Canada Central' },
     { value: 'eu', label: 'Europe' },
     { value: 'apac', label: 'Asia Pacific' },
-    { value: 'south-asia', label: 'South Asia' }
+    { value: 'south-asia', label: 'South Asia' },
+    { value: 'asia', label: 'Asia' },
+    { value: 'in', label: 'India' },
+    { value: 'au', label: 'Australia' },
+    { value: 'sy', label: 'Sydney' },
+    { value: 'me', label: 'Middle East' }
 ];
 
 // Normalizes a stored, configured or chosen region. Empty means automatic: let the provider's geo-routing
