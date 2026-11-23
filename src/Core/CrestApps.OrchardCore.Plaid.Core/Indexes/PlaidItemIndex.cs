@@ -4,7 +4,8 @@ using YesSql.Indexes;
 namespace CrestApps.OrchardCore.Plaid.Indexes;
 
 /// <summary>
-/// Finds a kept Plaid item by its Plaid id, for webhooks, and by its bank account, when the account changes.
+/// Finds the kept Plaid items by their Plaid id, for webhooks (an item linked to several bank accounts is kept once per
+/// bank account), and by their bank account, when the account changes.
 /// </summary>
 public sealed class PlaidItemIndex : MapIndex
 {
