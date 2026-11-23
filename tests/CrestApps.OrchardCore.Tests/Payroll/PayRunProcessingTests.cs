@@ -415,8 +415,8 @@ public sealed class PayRunProcessingTests
             var session = services.GetRequiredService<global::YesSql.ISession>();
 
             return (
-                await session.Query<PayRun, CrestApps.OrchardCore.Payroll.Core.Services.PayRunIndex>(index => index.ItemId == setup.RunId, collection: PayrollConstants.CollectionName).CountAsync(),
-                await session.Query<PayStatement, CrestApps.OrchardCore.Payroll.Core.Indexes.PayStatementIndex>(index => index.RunId == setup.RunId, collection: PayrollConstants.CollectionName).CountAsync(),
+                await session.Query<PayRun, CrestApps.OrchardCore.Payroll.Core.Services.PayrollPayRunIndex>(index => index.ItemId == setup.RunId, collection: PayrollConstants.CollectionName).CountAsync(),
+                await session.Query<PayStatement, CrestApps.OrchardCore.Payroll.Core.Indexes.PayrollPayStatementIndex>(index => index.RunId == setup.RunId, collection: PayrollConstants.CollectionName).CountAsync(),
                 await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId),
                 await services.GetRequiredService<PayStatementStore>().FindByIdAsync(statementId));
         }, commit: false);
@@ -726,7 +726,7 @@ public sealed class PayRunProcessingTests
         var (runs, status) = await harness.RunAsync(async services =>
         {
             var session = services.GetRequiredService<global::YesSql.ISession>();
-            var count = await session.Query<PayRun, CrestApps.OrchardCore.Payroll.Core.Services.PayRunIndex>(index => index.ItemId == setup.RunId, collection: PayrollConstants.CollectionName).CountAsync();
+            var count = await session.Query<PayRun, CrestApps.OrchardCore.Payroll.Core.Services.PayrollPayRunIndex>(index => index.ItemId == setup.RunId, collection: PayrollConstants.CollectionName).CountAsync();
 
             return (count, (await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId)).Status);
         }, commit: false);

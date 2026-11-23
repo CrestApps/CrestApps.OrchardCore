@@ -42,7 +42,7 @@ public sealed partial class IndexDeclarationArchitectureTests
         "EnrollmentGrantIndex",
         "LeadImportIndex",
         "OmnichannelContactPhoneNumberIndex",
-        "PayStatementLineIndex",
+        "PayrollPayStatementLineIndex",
         "ProductAttributeIndex",
         "ProductBundleIndex",
         "ProductSkuIndex",

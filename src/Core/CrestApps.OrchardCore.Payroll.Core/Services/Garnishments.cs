@@ -39,7 +39,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Services;
 /// <summary>
 /// Indexes garnishment orders.
 /// </summary>
-public sealed class GarnishmentOrderIndex : CatalogItemIndex
+public sealed class PayrollGarnishmentOrderIndex : CatalogItemIndex
 {
     /// <summary>Gets or sets the employer.</summary>
     public string EmployerId { get; set; }
@@ -55,7 +55,7 @@ public sealed class GarnishmentOrderIndex : CatalogItemIndex
 }
 
 /// <summary>
-/// Maps garnishment orders to <see cref="GarnishmentOrderIndex"/> rows.
+/// Maps garnishment orders to <see cref="PayrollGarnishmentOrderIndex"/> rows.
 /// </summary>
 public sealed class GarnishmentOrderIndexProvider : IndexProvider<GarnishmentOrder>
 {
@@ -71,10 +71,10 @@ public sealed class GarnishmentOrderIndexProvider : IndexProvider<GarnishmentOrd
     public override void Describe(DescribeContext<GarnishmentOrder> context)
     {
         context
-            .For<GarnishmentOrderIndex>()
+            .For<PayrollGarnishmentOrderIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(order => new GarnishmentOrderIndex
+            .Map(order => new PayrollGarnishmentOrderIndex
             {
                 ItemId = order.ItemId,
                 EmployerId = order.EmployerId,
@@ -99,7 +99,7 @@ public static class GarnishmentOrderIndexSchema
     {
         ArgumentNullException.ThrowIfNull(schemaBuilder);
 
-        await schemaBuilder.CreateMapIndexTableAsync<GarnishmentOrderIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollGarnishmentOrderIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("EmployerId", column => column.Nullable().WithLength(26))
             .Column<string>("ProfileId", column => column.Nullable().WithLength(26))
@@ -107,16 +107,16 @@ public static class GarnishmentOrderIndexSchema
             .Column<string>("Status", column => column.Nullable().WithLength(20)),
             collection: PayrollConstants.CollectionName);
 
-        await schemaBuilder.AlterIndexTableAsync<GarnishmentOrderIndex>(table => table
-            .CreateIndex("IDX_GarnishmentOrderIndex_ItemId", "ItemId", "DocumentId"),
+        await schemaBuilder.AlterIndexTableAsync<PayrollGarnishmentOrderIndex>(table => table
+            .CreateIndex("IDX_PayrollGarnishmentOrderIndex_ItemId", "ItemId", "DocumentId"),
             collection: PayrollConstants.CollectionName);
 
-        await schemaBuilder.AlterIndexTableAsync<GarnishmentOrderIndex>(table => table
-            .CreateIndex("IDX_GarnishmentOrderIndex_Profile", "ProfileId", "Status"),
+        await schemaBuilder.AlterIndexTableAsync<PayrollGarnishmentOrderIndex>(table => table
+            .CreateIndex("IDX_PayrollGarnishmentOrderIndex_Profile", "ProfileId", "Status"),
             collection: PayrollConstants.CollectionName);
 
-        await schemaBuilder.AlterIndexTableAsync<GarnishmentOrderIndex>(table => table
-            .CreateIndex("IDX_GarnishmentOrderIndex_Employer", "EmployerId", "Status"),
+        await schemaBuilder.AlterIndexTableAsync<PayrollGarnishmentOrderIndex>(table => table
+            .CreateIndex("IDX_PayrollGarnishmentOrderIndex_Employer", "EmployerId", "Status"),
             collection: PayrollConstants.CollectionName);
     }
 }
@@ -124,7 +124,7 @@ public static class GarnishmentOrderIndexSchema
 /// <summary>
 /// Stores garnishment orders in the Payroll collection.
 /// </summary>
-public sealed class GarnishmentOrderStore : DocumentCatalog<GarnishmentOrder, GarnishmentOrderIndex>
+public sealed class GarnishmentOrderStore : DocumentCatalog<GarnishmentOrder, PayrollGarnishmentOrderIndex>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="GarnishmentOrderStore"/> class.
@@ -142,8 +142,8 @@ public sealed class GarnishmentOrderStore : DocumentCatalog<GarnishmentOrder, Ga
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The orders.</returns>
-    public async Task<IReadOnlyList<GarnishmentOrder>> ListAsync(System.Linq.Expressions.Expression<Func<GarnishmentOrderIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => (await Session.Query<GarnishmentOrder, GarnishmentOrderIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
+    public async Task<IReadOnlyList<GarnishmentOrder>> ListAsync(System.Linq.Expressions.Expression<Func<PayrollGarnishmentOrderIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => (await Session.Query<GarnishmentOrder, PayrollGarnishmentOrderIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
 }
 
 /// <summary>

@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Services;
 /// Stores pay statements in the Payroll collection. A statement that is not a draft is never deleted: a correction is a
 /// reversing statement.
 /// </summary>
-public sealed class PayStatementStore : DocumentCatalog<PayStatement, PayStatementIndex>
+public sealed class PayStatementStore : DocumentCatalog<PayStatement, PayrollPayStatementIndex>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PayStatementStore"/> class.
@@ -33,8 +33,8 @@ public sealed class PayStatementStore : DocumentCatalog<PayStatement, PayStateme
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The statements.</returns>
-    public async Task<IReadOnlyList<PayStatement>> ListAsync(System.Linq.Expressions.Expression<Func<PayStatementIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => (await Session.Query<PayStatement, PayStatementIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
+    public async Task<IReadOnlyList<PayStatement>> ListAsync(System.Linq.Expressions.Expression<Func<PayrollPayStatementIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => (await Session.Query<PayStatement, PayrollPayStatementIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
 
     /// <inheritdoc />
     protected override ValueTask DeletingAsync(PayStatement entry)
@@ -70,10 +70,10 @@ public sealed class PayAccumulatorService : IPayAccumulatorService
     /// <inheritdoc />
     public async Task<PayAccumulators> GetAsync(string staffMemberId, string employerId, DateOnly payDate, DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken = default)
     {
-        var payDay = PayStatementLineIndex.DayNumber(payDate);
-        var periodStartDay = PayStatementLineIndex.DayNumber(periodStart);
-        var periodEndDay = PayStatementLineIndex.DayNumber(periodEnd);
-        var rows = await _session.QueryIndex<PayStatementLineIndex>(row => row.StaffMemberId == staffMemberId && row.EmployerId == employerId && row.PayDay <= payDay, collection: PayrollConstants.CollectionName)
+        var payDay = PayrollPayStatementLineIndex.DayNumber(payDate);
+        var periodStartDay = PayrollPayStatementLineIndex.DayNumber(periodStart);
+        var periodEndDay = PayrollPayStatementLineIndex.DayNumber(periodEnd);
+        var rows = await _session.QueryIndex<PayrollPayStatementLineIndex>(row => row.StaffMemberId == staffMemberId && row.EmployerId == employerId && row.PayDay <= payDay, collection: PayrollConstants.CollectionName)
             .ListAsync(cancellationToken);
         var currency = (await _employers.FindByIdAsync(employerId, cancellationToken))?.Currency;
 
@@ -89,7 +89,7 @@ public sealed class PayAccumulatorService : IPayAccumulatorService
     /// <param name="periodEndDay">The last day of the period being calculated, as a number.</param>
     /// <param name="currency">The currency of the amounts.</param>
     /// <returns>The accumulators.</returns>
-    public static PayAccumulators Sum(IEnumerable<PayStatementLineIndex> rows, DateOnly payDate, int periodStartDay, int periodEndDay, string currency)
+    public static PayAccumulators Sum(IEnumerable<PayrollPayStatementLineIndex> rows, DateOnly payDate, int periodStartDay, int periodEndDay, string currency)
     {
         ArgumentNullException.ThrowIfNull(rows);
 
