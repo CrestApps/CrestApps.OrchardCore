@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Transactions.Services;
 
 /// <summary>
 /// Records a money operation that failed and must be finished by hand, so an operator sees it under
-/// <b>Commerce › Payment issues</b> instead of only in the log. Call it from the place that logs the failure, and keep
+/// <b>Commerce › Payment Issues</b> instead of only in the log. Call it from the place that logs the failure, and keep
 /// logging.
 /// </summary>
 public interface IPaymentIssueRecorder

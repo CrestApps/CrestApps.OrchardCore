@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.Learning.Packages.Models;
 
 /// <summary>
-/// The site settings of the package content host (Settings › Learning packages).
+/// The site settings of the package content host (Settings › Learning Packages).
 /// </summary>
 public sealed class LearningPackageContentHostSettings
 {

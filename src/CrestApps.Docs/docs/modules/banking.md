@@ -94,8 +94,8 @@ A link provider lets a person sign in to their bank in the browser and choose th
 
 | Page | Route | Permission |
 | --- | --- | --- |
-| **My Bank Accounts > Add** shows **Link your bank with \{provider\}** per available provider; linking makes a new account | `banking/my-accounts/link/{provider}` | `ManageOwnBankAccounts` |
-| **My Bank Accounts > Edit** shows **Link your bank with \{provider\} instead**; the bank's numbers replace the stored ones | `banking/my-accounts/link/{provider}/{id}` | `ManageOwnBankAccounts`, own accounts only |
+| **My Bank Accounts** → **Add** shows **Link your bank with \{provider\}** per available provider; linking makes a new account | `banking/my-accounts/link/{provider}` | `ManageOwnBankAccounts` |
+| **My Bank Accounts** → **Edit** shows **Link your bank with \{provider\} instead**; the bank's numbers replace the stored ones | `banking/my-accounts/link/{provider}/{id}` | `ManageOwnBankAccounts`, own accounts only |
 | The admin account page shows **Link with \{provider\}** in the action bar's secondary buttons | `banking/accounts/link/{id}/{provider}` | `ManageBankAccounts` |
 
 The flow (`BankAccountLinkFlow` in the module):
@@ -112,8 +112,8 @@ A closed account can't be linked. A changed number fires `NumberChanged` as a ty
 
 | Permission | Allows |
 | --- | --- |
-| `ManageBankAccounts` | **Banking > Bank Accounts**: add, change, verify, close and delete every account that nothing points to. Full numbers stay hidden. |
-| `ManageOwnBankAccounts` | **Banking > My Bank Accounts**: add, change and close one's own accounts (owned by the user or a party the user is). No status, no reveal, nobody else's. |
+| `ManageBankAccounts` | **Banking** → **Bank Accounts**: add, change, verify, close and delete every account that nothing points to. Full numbers stay hidden. |
+| `ManageOwnBankAccounts` | **Banking** → **My Bank Accounts**: add, change and close one's own accounts (owned by the user or a party the user is). No status, no reveal, nobody else's. |
 | `RevealBankAccountNumbers` | **Show the full number** on the account page. Security critical; every reveal is an Audit Trail event. |
 
 Administrators get all three. The owner picker searches every party kind the enabled features offer, through `{admin prefix}/api/banking/owners/search` (route name `CrestApps.Banking.OwnerSearch`, under the site's admin URL prefix, requires `ManageBankAccounts`). The editor saves an owner only of a kind a module provides and that exists. On **My Bank Accounts** a person can own an account only as one of the parties they are, never sets its status, and can't change a closed account. The reveal page is sent with `Cache-Control: no-store`.
@@ -201,7 +201,7 @@ A `CheckRecord` is one check: `BankAccountId` (one of the business's own account
 
 | Value | Means |
 | --- | --- |
-| `Next` (the default) | The next number of the account's series, from `INumberSequence`, one series per bank account (`Checks:{bankAccountId}`), starting at 1001. A number a check written by hand already took is skipped. The check is `Issued` until it prints. **Banking > Checks > Next numbers** sets the next number when new stock is loaded and refuses a number a check of the account already has. |
+| `Next` (the default) | The next number of the account's series, from `INumberSequence`, one series per bank account (`Checks:{bankAccountId}`), starting at 1001. A number a check written by hand already took is skipped. The check is `Issued` until it prints. **Banking** → **Checks** → **Next numbers** sets the next number when new stock is loaded and refuses a number a check of the account already has. |
 | `AtPrint` | For pre-printed stock, whose sheets carry their own numbers: the check is `Queued` with `Number` 0 and takes no number of the series. A print run numbers it (below). |
 | `Handwritten` | A check already written by hand, with `CheckIssueRequest.Number`: refused when another check of the account has that number; recorded as `Printed` (with `PrintedUtc`), never printed or reprinted by the site. |
 
@@ -284,9 +284,9 @@ A print run lays out the check line of every check before it draws anything, so 
 
 | Permission | Allows |
 | --- | --- |
-| `ManageCheckLayouts` | **Banking > Check Layouts**. Security critical. |
+| `ManageCheckLayouts` | **Banking** → **Check Layouts**. Security critical. |
 | `ManageChecks` | **Write a check** (the payee's optional address uses the shared address editor, in its country's format, so Checks depends on the Addresses feature; **Check number** picks the account's next number, numbering at print or a check already written by hand; other modules add fields with their own drivers), **Edit** of a check waiting to print (`banking/checks/edit/{id}`), print (the list's bulk actions **Print with the account's default layout** and **Print with** a layout's name), **Print queued checks**, reprint, void (with the void date), reissue, stop payment, mark cleared, mark not cleared, **Next numbers**. Security critical. |
-| `ViewCheckRegister` | **Banking > Checks**, the register, filtered by bank account and status and searched by payee or number. |
+| `ViewCheckRegister` | **Banking** → **Checks**, the register, filtered by bank account and status and searched by payee or number. |
 
 A print returns one PDF (`Cache-Control: no-store`) and records the checks as printed in one print run (`PrintRunId`). The bulk print refuses a check already printed: **Reprint** in its menu asks for the layout and a reason, prints it, and records a `Reprinted` change. A spoiled sheet can also be reissued from the check's menu. A new check is dated today in the site's time zone, and **Mark cleared** records today's date in that zone. Bulk printing only queued checks of one account opens its print run.
 
@@ -369,7 +369,7 @@ With Bank File (ACH) on, Banking's **Check with** offers **Test entry (prenote)*
 
 #### Return and change files
 
-**Disbursement Batches > Import a return file** reads the bank's file (`NachaReturnFileReader`): each return addenda (type 99) marks its disbursement returned, each notice of change (type 98) corrects the payee's account.
+**Disbursement Batches** → **Import a return file** reads the bank's file (`NachaReturnFileReader`): each return addenda (type 99) marks its disbursement returned, each notice of change (type 98) corrects the payee's account.
 
 ### Who sees which disbursements
 
@@ -379,8 +379,8 @@ Like Checks, Disbursements applies the shared source access seam (`ISourceAccess
 
 | Permission | Allows |
 | --- | --- |
-| `ManageDisbursements` | **Record a disbursement**, batch (the list's bulk action **Batch to send by** and the provider's name, with the arrival date), cancel, **Banking > Disbursement Batches** (release, download the bank file, mark paid, cancel, import a return file). Security critical. |
-| `ViewDisbursements` | **Banking > Disbursements**, filtered by method and status and searched by payee or trace number. |
+| `ManageDisbursements` | **Record a disbursement**, batch (the list's bulk action **Batch to send by** and the provider's name, with the arrival date), cancel, **Banking** → **Disbursement Batches** (release, download the bank file, mark paid, cancel, import a return file). Security critical. |
+| `ViewDisbursements` | **Banking** → **Disbursements**, filtered by method and status and searched by payee or trace number. |
 
 A bank file is downloaded with `Cache-Control: no-store`. A bank account money was sent from or to can't be deleted (`DisbursementBankAccountUsage`).
 

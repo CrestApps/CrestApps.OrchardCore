@@ -209,11 +209,11 @@ The **Report Subscriptions** feature (`CrestApps.OrchardCore.Reports.Subscriptio
 - `ReportSubscriptionSchedule.GetNextRunUtc` and `GetPeriod` work in the site's time zone. A run covers the day, the seven days, or the calendar month before it, from midnight to midnight.
 - `ReportSubscriptionsBackgroundTask` (every five minutes) sends the subscriptions that are due. A late run covers the period it was due for. `ReportSubscriptionService.SendAsync` runs the report with that date range, resolves its display values, and emails its metrics and tables (`ReportWorkflowService.ToHtml`) as they look on screen (`ReportRunMode.Display`), with the export attached when asked, from a second run in `ReportRunMode.Export`. It records `LastError` when the email or the report fails.
 - A report with an `ExportPermission` is attached only while the person who last saved the subscription (`ModifiedBy`, or `CreatedBy` when it was never changed) has that permission: saving refuses a file format without it, and a scheduled run that finds it gone sends nothing and records why in `LastError`.
-- **Reports > Subscriptions** (`ReportSubscriptionsController`, `Reports/subscriptions`, the `AdminList`) needs **Manage report subscriptions**, and lists only the reports the person can see. **Save and send now** sends one at once without moving its schedule.
+- **Reports** → **Subscriptions** (`ReportSubscriptionsController`, `Reports/subscriptions`, the `AdminList`) needs **Manage report subscriptions**, and lists only the reports the person can see. **Save and send now** sends one at once without moving its schedule.
 
 ## Dashboard widgets
 
-With Orchard Core's **Admin Dashboard** enabled next to **Reports**, any report can be shown on the admin dashboard. There is no feature of its own to turn on: the widgets appear when both are enabled. Add a widget from **Manage Dashboard > Add Widget** and set:
+With Orchard Core's **Admin Dashboard** enabled next to **Reports**, any report can be shown on the admin dashboard. There is no feature of its own to turn on: the widgets appear when both are enabled. Add a widget from **Manage Dashboard** → **Add Widget** and set:
 
 - **Report**: any report the person adding it may view. A ready-made widget fixes the report, so only the options below are set.
 - **Period**: today, yesterday, the last 7, 30 or 90 days, this month, last month, this year, the last 12 months, all time, or custom dates. Every period except custom dates moves with the clock, so "last 30 days" is always the 30 days up to now, in the site's time zone. This is the date range filter of the report.

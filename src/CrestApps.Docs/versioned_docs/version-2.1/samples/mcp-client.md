@@ -40,7 +40,7 @@ The Aspire AppHost orchestrates several services including **Ollama** (AI model 
 If the MCP server feature is not enabled, MCP requests will return `404`. Enable the MCP server feature in the default tenant:
 
 - Feature ID: `CrestApps.OrchardCore.AI.Mcp.Server`
-- Admin UI: **Tools → Features**
+- Admin UI: **Tools** → **Features**
 
 After enabling the feature, refresh the sample UI to see tools, prompts, and resources.
 
@@ -63,7 +63,7 @@ Use the MCP base endpoint (`/mcp`). The sample client auto-detects the transport
 
 The MCP server requires authentication by default (OpenId mode). The sample client supports **API Key** authentication. To connect:
 
-1. In the Orchard Core admin dashboard, navigate to **Settings → Artificial Intelligence**.
+1. In the Orchard Core admin dashboard, navigate to **Settings** → **Artificial Intelligence**.
 2. Set the MCP server authentication type to **API Key** and define a key.
 3. Set the same key in the sample client's `appsettings.json` under `Mcp:ApiKey`.
 

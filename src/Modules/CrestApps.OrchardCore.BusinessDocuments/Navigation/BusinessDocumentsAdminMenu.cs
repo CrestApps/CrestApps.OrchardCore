@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.BusinessDocuments.Navigation;
 
 /// <summary>
-/// Adds Settings › Business documents › Document templates and Number series to the admin menu.
+/// Adds Settings › Business Documents › Document Templates and Number series to the admin menu.
 /// </summary>
 public sealed class BusinessDocumentsAdminMenu : AdminNavigationProvider
 {
@@ -38,14 +38,14 @@ public sealed class BusinessDocumentsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Settings"], settings => settings
-                .Add(S["Business documents"], S["Business documents"].PrefixPosition(), documents => documents
-                    .Add(S["Document templates"], S["Document templates"].PrefixPosition(), templates => templates
+                .Add(S["Business Documents"], S["Business Documents"].PrefixPosition(), documents => documents
+                    .Add(S["Document Templates"], S["Document Templates"].PrefixPosition(), templates => templates
                         .Id("businessDocumentTemplates")
                         .Action(_templatesRouteValues)
                         .Permission(BusinessDocumentsPermissions.ManageBusinessDocumentTemplates)
                         .LocalNav()
                     )
-                    .Add(S["Number series"], S["Number series"].PrefixPosition(), series => series
+                    .Add(S["Number Series"], S["Number Series"].PrefixPosition(), series => series
                         .Id("numberSeries")
                         .Action("Index", "Admin", _numberSeriesRouteValues)
                         .Permission(BusinessDocumentsPermissions.ManageNumberSeries)

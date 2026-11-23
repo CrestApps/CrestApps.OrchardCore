@@ -43,7 +43,7 @@ Balance tracking runs on the [Checkout](checkout) framework's completion pipelin
 Because Pay Later never moves money at a gateway, every succeeded Pay Later payment leaves a balance the customer still owes. Pay Later records that balance in the provider-agnostic [Transactions](transactions) ledger when the checkout completes, so an outstanding Pay Later commitment is a first-class, trackable obligation:
 
 - The customer sees it on their **My Transactions** statement and can **pay it online** later (through the Checkout framework) once they are ready.
-- An administrator sees it in the **Commerce → Transactions** report alongside every other outstanding balance, and can send a reminder, record an offline payment, mark it paid, cancel it, or add a note.
+- An administrator sees it in the **Commerce** → **Transactions** report alongside every other outstanding balance, and can send a reminder, record an offline payment, mark it paid, cancel it, or add a note.
 - The [Transactions](transactions) reminder pipeline chases unpaid Pay Later balances automatically on the configured cadence, through the notification channel each user prefers.
 
 Recording is **idempotent per obligation**, so a checkout that completes more than once never duplicates the debt, and settlement checkouts (paying an existing transaction) never create a new balance.
@@ -61,7 +61,7 @@ Each cycle is created exactly once. The sweep takes a lock on the one commitment
 A Pay Later balance falls due the way an invoice does, and the way B2B checkouts and accounting systems set terms: the most specific term wins. `PayLaterDueDateResolver` decides, for the first balance and for every renewal cycle:
 
 1. **The payer's own payment term**, from their billing profile (`PartyBillingProfile.PaymentTermId`, such as an account that buys on Net 60). A guest has none.
-2. **The payment term chosen for Pay Later** (`PayLaterSettings.PaymentTermId`), under **Settings → Commerce → Offline payments → Payment term**. The field is shown when the [Payment Terms](transactions#payment-terms) feature is on, which Invoicing turns on.
+2. **The payment term chosen for Pay Later** (`PayLaterSettings.PaymentTermId`), under **Settings** → **Commerce** → **Offline Payments** → **Payment term**. The field is shown when the [Payment Terms](transactions#payment-terms) feature is on, which Invoicing turns on.
 3. **The net term (days)** (`PayLaterSettings.NetTermDays`, 30 by default): how many days after checkout, or after the start of the cycle, the balance is due. `0` records it with no due date.
 
 A payment term gives a date (Net 15, the end of the month, a day of the next month), so the balance is due at the end of that day in the site's time zone, as an invoice is. A disabled or deleted term is skipped. Without the Payment Terms feature only the number of days applies, as before. A trial or a delayed start counts from the day its first real cycle begins. The due date drives the reminder cadence configured in the [Transactions](transactions) settings.
@@ -97,7 +97,7 @@ Add the package to your Orchard Core project:
 dotnet add package CrestApps.OrchardCore.PayLater
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Pay Later**. It brings in the [Checkout](checkout) framework and the [Transactions](transactions) ledger as dependencies. Once enabled, the *Pay Later* option is offered by any checkout on the tenant (for example the [Subscriptions](subscriptions) checkout), and each Pay Later balance is tracked as an outstanding transaction.
+Then, in the **Orchard Core Admin Dashboard** under **Tools** → **Features**, enable **Pay Later**. It brings in the [Checkout](checkout) framework and the [Transactions](transactions) ledger as dependencies. Once enabled, the *Pay Later* option is offered by any checkout on the tenant (for example the [Subscriptions](subscriptions) checkout), and each Pay Later balance is tracked as an outstanding transaction.
 
 ## Related modules
 

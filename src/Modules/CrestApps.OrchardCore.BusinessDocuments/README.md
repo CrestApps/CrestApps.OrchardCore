@@ -6,7 +6,7 @@ Prints every business document the same way, such as receipts, payment requests,
 
 | Feature | Id | Description |
 | --- | --- | --- |
-| Business Documents | `CrestApps.OrchardCore.BusinessDocuments` | The `BusinessDocument` model, document templates (**Settings > Business documents > Document templates**), the HTML renderer, the `BusinessDocument` shape and the number series settings page (**Settings > Business documents > Number series**). |
+| Business Documents | `CrestApps.OrchardCore.BusinessDocuments` | The `BusinessDocument` model, document templates (**Settings > Business Documents > Document Templates**), the HTML renderer, the `BusinessDocument` shape and the number series settings page (**Settings > Business Documents > Number Series**). |
 | Business Documents PDF | `CrestApps.OrchardCore.BusinessDocuments.Pdf` | The PDF renderer, written with PdfPig. Depends on Business Documents. Reads the logo from the media library when the Media feature is enabled. |
 
 Enable a feature under **Configuration > Features**, or with the `Feature` step of a recipe. Modules that print documents, such as Receipts, depend on it.

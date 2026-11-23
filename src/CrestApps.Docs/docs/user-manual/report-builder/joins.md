@@ -15,7 +15,7 @@ Watch the short video, then follow the steps below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder > *a report* > Data model |
+| **Menu** | **Reports** → **Report Builder** → *a report* → **Data model** |
 | **Permission** | Build reports and manage own custom reports and views |
 | **Feature** | Report Builder |
 

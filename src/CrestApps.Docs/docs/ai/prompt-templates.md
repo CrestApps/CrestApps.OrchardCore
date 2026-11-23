@@ -51,7 +51,7 @@ In Orchard editors, prompt templates appear through the **Prompt templates** pic
 - compose reusable instructions for chat interactions
 - keep profile templates consistent across environments
 
-The picker lists **System Prompt** templates created under **Artificial Intelligence -> Templates** plus the file-based templates discovered from enabled modules. Using the picker is described, with a screencast, in the User Manual under [Reuse pieces of instructions](../user-manual/ai/prompt-templates.md#reuse-pieces-of-instructions).
+The picker lists **System Prompt** templates created under **Artificial Intelligence** → **Templates** plus the file-based templates discovered from enabled modules. Using the picker is described, with a screencast, in the User Manual under [Reuse pieces of instructions](../user-manual/ai/prompt-templates.md#reuse-pieces-of-instructions).
 
 ## Core documentation
 

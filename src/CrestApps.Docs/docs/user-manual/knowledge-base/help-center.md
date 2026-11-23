@@ -10,7 +10,7 @@ The help center is at `/help` on your site. It shows the articles by category, e
 
 | | |
 | --- | --- |
-| **Menu** | Design > Widgets (to move its widgets); the help center itself is at `/help` on your site |
+| **Menu** | **Design** → **Widgets (to move its widgets)**; the help center itself is at `/help` on your site |
 | **Permission** | **Manage layers** to move or remove widgets |
 | **Feature** | Knowledge Base, Widgets, Layers |
 
@@ -30,16 +30,16 @@ The help center's page and each article's page show these three zones themselves
 
 ## Set it up with the recipe
 
-1. Go to **Configuration > Recipes**.
+1. Go to **Configuration** → **Recipes**.
 2. Find **Knowledge Base** and select **Run**.
 
-The recipe turns on the Knowledge Base, Widgets and Layers. It adds the three zones under **Design > Settings > Zones**, keeping your own. It adds a **Help center** layer for `/help` and the pages under it, and places the three widgets on it. Run it again at any time: it changes nothing that is already there.
+The recipe turns on the Knowledge Base, Widgets and Layers. It adds the three zones under **Design** → **Settings** → **Zones**, keeping your own. It adds a **Help center** layer for `/help` and the pages under it, and places the three widgets on it. Run it again at any time: it changes nothing that is already there.
 
 Without the recipe, the help center still shows its own search box and categories, and articles show without the widgets.
 
 ## Move or change the widgets
 
-Go to **Design > Widgets** and find the **Help center** layer.
+Go to **Design** → **Widgets** and find the **Help center** layer.
 
 - To show related articles somewhere else, drag the **Related articles** widget to another zone. To show fewer or more of them, edit it and change **Articles to show**.
 - To remove a widget, delete it. On the help center's page, removing the search or the categories widget brings back the page's own.

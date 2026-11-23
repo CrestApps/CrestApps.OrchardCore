@@ -99,7 +99,7 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
                             .Id("payrollFilingsList")
                             .Action("Index", "PayrollFilings", PayrollConstants.Features.Payroll)
                             .LocalNav())
-                        .Add(S["Year end"], S["Year end"].PrefixPosition("30"), item => item
+                        .Add(S["Year End"], S["Year End"].PrefixPosition("30"), item => item
                             .Id("payrollYearEnd")
                             .Action("YearEnd", "PayrollFilings", PayrollConstants.Features.Payroll)
                             .LocalNav()));

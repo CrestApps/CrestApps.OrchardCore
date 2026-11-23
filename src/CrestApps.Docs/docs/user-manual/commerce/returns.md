@@ -10,7 +10,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Returns; Settings > Commerce > Returns |
+| **Menu** | **Commerce** → **Returns**; **Settings** → **Commerce** → **Returns** |
 | **Permission** | **Manage orders** to handle returns and change the settings. Buyers need nothing more than their order: their account, or the order link a guest has. |
 | **Feature** | Returns |
 
@@ -25,7 +25,7 @@ Watch the video for a tour of the settings, what a buyer does, and how to handle
 <YouTube video="returns" title="Setting up returns" start={83} end={115} />
 <YouTube video="orders" title="Video of the returns list and the return settings" start={267} end={292} />
 
-Under **Settings > Commerce > Returns**:
+Under **Settings** → **Commerce** → **Returns**:
 
 | Setting | What it does | Default |
 | --- | --- | --- |
@@ -52,7 +52,7 @@ Only goods can be returned: downloads and services have nothing to send back. An
 
 <YouTube video="returns" title="Handling a return" start={158} end={207} />
 
-**Commerce > Returns** lists the open returns, newest first. Search by return or order number, or show **Requested**, **Approved**, **Received**, **Completed**, **Declined**, **Withdrawn** or **All**. A return's page shows what's coming back, why, what it was paid, what the buyer wants and what they wrote, with a link to the order. The order's page lists its returns too.
+**Commerce** → **Returns** lists the open returns, newest first. Search by return or order number, or show **Requested**, **Approved**, **Received**, **Completed**, **Declined**, **Withdrawn** or **All**. A return's page shows what's coming back, why, what it was paid, what the buyer wants and what they wrote, with a link to the order. The order's page lists its returns too.
 
 | Status | Meaning |
 | --- | --- |

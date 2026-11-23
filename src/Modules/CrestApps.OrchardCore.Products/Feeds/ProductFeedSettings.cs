@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.Products.Feeds;
 
 /// <summary>
-/// Settings › Commerce › Product feeds.
+/// Settings › Commerce › Product Feeds.
 /// </summary>
 public sealed class ProductFeedSettings
 {

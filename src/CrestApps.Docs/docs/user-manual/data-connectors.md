@@ -15,7 +15,7 @@ Each data set is read in one of two ways:
 
 | | |
 | --- | --- |
-| **Menu** | Tools > Data Connectors > Connections, and Tools > Data Connectors > Data Sets |
+| **Menu** | **Tools** → **Data Connectors** → **Connections**, and **Tools** → **Data Connectors** → **Data Sets** |
 | **Permissions** | Manage data connections and their credentials (connections); Manage connected data sets (data sets); Refresh imported data sets (Refresh now); Read every connected data set, or Read the connected data set - *name*, to read a data set in a report or pipeline |
 | **Features** | Data Connectors, with at least one of HTTP API Data Connector, Elasticsearch Data Connector, Media Files Data Connector and SQL Server Data Connector |
 
@@ -25,7 +25,7 @@ Each data set is read in one of two ways:
 
 <YouTube video="data-connectors-connections" title="Video overview of connections: the four kinds, Save and test, secrets, and deleting" />
 
-1. Go to **Tools > Data Connectors > Connections** and click **Add Connection**.
+1. Go to **Tools** → **Data Connectors** → **Connections** and click **Add Connection**.
 2. In **Which kind of system should the connection reach?**, find the kind of system (type in **Filter** to narrow the list), then click **Add** on its card.
 3. Enter a **Name** and the settings of the system (see the tables below).
 4. Click **Save and test**. The site saves the connection and checks that it can reach the system. A green message says what it found, such as the server's version; a red message says why it failed.
@@ -79,7 +79,7 @@ It also reads OpenSearch clusters.
 | --- | --- |
 | **Folder** | The folder of the media library whose files data sets can read, with its subfolders. Leave it empty for the whole library. |
 
-Upload CSV, JSON, JSON Lines or Excel files to that folder with **Media > Library**. Out of the box the media library accepts Excel files only: your administrator has to allow CSV, JSON and JSON Lines in the site's media settings before you can upload them, and the library does not list them until then.
+Upload CSV, JSON, JSON Lines or Excel files to that folder with **Media** → **Library**. Out of the box the media library accepts Excel files only: your administrator has to allow CSV, JSON and JSON Lines in the site's media settings before you can upload them, and the library does not list them until then.
 
 The site can't reach servers on its own private network unless your administrator allows them. If a check fails with a message about the site's own network, ask your administrator.
 
@@ -87,7 +87,7 @@ The site can't reach servers on its own private network unless your administrato
 
 <YouTube video="data-connectors-data-sets" title="Video overview of adding data sets from a file and a web API, and reviewing their fields" />
 
-1. Go to **Tools > Data Connectors > Data Sets** and click **Add Data Set**, or open **Actions** on a connection and click **Add data set**.
+1. Go to **Tools** → **Data Connectors** → **Data Sets** and click **Add Data Set**, or open **Actions** on a connection and click **Add data set**.
 2. In **Which connection should the new data set read?**, find the connection and click **Add** on its card. The connections are grouped by the kind of system they reach: click a group on the left, such as **SQL Server** or **HTTP API**, to see only its connections, or type in **Filter** to search their names and descriptions.
 3. Enter a **Name**. The **Technical name** is what reports and pipelines store; it is made from the name if you leave it empty, and it can't change after you save.
 4. Pick the **Resource**: start typing to choose from what the connection lists, such as a table, a view, an index or a file. For an HTTP API, type the path, such as */orders?status=open*.
@@ -143,7 +143,7 @@ Open **Actions** on a data set and click **Preview**. You see its first rows exa
 
 Live data sets are listed under **Connected data (live)** and imported ones under **Connected data (imported)**, grouped by their connection, wherever you pick a data source: in the [Report Builder](report-builder/data-sources.md) and in a data pipeline's **Read a data source** step.
 
-You only see a data set there when your role has **Read every connected data set**, or **Read the connected data set** with that data set's name. This is the same for live and imported data sets, so importing data never shows it to more people. Ask your administrator to grant the permission in **Access Control > Roles**.
+You only see a data set there when your role has **Read every connected data set**, or **Read the connected data set** with that data set's name. This is the same for live and imported data sets, so importing data never shows it to more people. Ask your administrator to grant the permission in **Access Control** → **Roles**.
 
 ## Copy connections and data sets to another site
 
@@ -151,10 +151,10 @@ You only see a data set there when your role has **Read every connected data set
 
 You can move your connections and data sets to another site, such as from a staging site to the live one, with a deployment plan.
 
-1. Go to **Configuration > Import/Export > Deployment Plans** and create a plan, or open one.
+1. Go to **Configuration** → **Import/Export** → **Deployment Plans** and create a plan, or open one.
 2. Click **Add Step**, open the **Data** group, and add **Data Connections**. Then add **Connected Data Sets**. Keep the connections first: each data set needs its connection on the other site.
 3. In each step, leave **Include all connections** (or **Include all data sets**) ticked, or clear it and tick the ones to copy.
-4. Run the plan to download its file, or send it to the other site, and import it there with **Configuration > Import/Export > Package Import**.
+4. Run the plan to download its file, or send it to the other site, and import it there with **Configuration** → **Import/Export** → **Package Import**.
 
 On the other site:
 

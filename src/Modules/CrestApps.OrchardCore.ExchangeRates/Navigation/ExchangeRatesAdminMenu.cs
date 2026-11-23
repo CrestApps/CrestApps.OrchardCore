@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ExchangeRates.Navigation;
 
 /// <summary>
-/// Adds <b>Commerce &gt; Exchange rates</b> and <b>Settings &gt; Commerce &gt; Exchange rates</b>.
+/// Adds <b>Commerce &gt; Exchange Rates</b> and <b>Settings &gt; Commerce &gt; Exchange Rates</b>.
 /// </summary>
 public sealed class ExchangeRatesAdminMenu : AdminNavigationProvider
 {
@@ -28,14 +28,14 @@ public sealed class ExchangeRatesAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Exchange rates"], S["Exchange rates"].PrefixPosition("4.8"), rates => rates
+                .Add(S["Exchange Rates"], S["Exchange Rates"].PrefixPosition("4.8"), rates => rates
                     .Id("exchangerates")
                     .Action("Index", "ExchangeRates", new RouteValueDictionary { { "area", ExchangeRatesConstants.Features.Area } })
                     .Permission(ExchangeRatesPermissions.ManageExchangeRates)
                     .LocalNav()))
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                    .Add(S["Exchange rates"], S["Exchange rates"].PrefixPosition(), rates => rates
+                    .Add(S["Exchange Rates"], S["Exchange Rates"].PrefixPosition(), rates => rates
                         .Id("exchangeRateSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(ExchangeRatesPermissions.ManageExchangeRates)

@@ -38,12 +38,12 @@ Enabling a connector adds its own section to the file source editor; it does not
 separate [MCP FTP](./mcp/ftp) and [MCP SFTP](./mcp/sftp) resource features are unrelated to ingestion.
 
 Managing file sources requires the **Manage file sources** (`ManageFileSources`) permission. The screens live
-under **Artificial Intelligence → File Sources**.
+under **Artificial Intelligence** → **File Sources**.
 
 ## Create a file source
 
-A file source targets a **File** data source, created under **Artificial Intelligence → Data Sources**; the
-editor says so when none exists. **Add File Source** under **Artificial Intelligence → File Sources** opens the
+A file source targets a **File** data source, created under **Artificial Intelligence** → **Data Sources**; the
+editor says so when none exists. **Add File Source** under **Artificial Intelligence** → **File Sources** opens the
 list of connectors registered by the enabled features (**File system**, **FTP / FTPS**, **SFTP**). The admin
 steps are in the User Manual under [File sources](../user-manual/ai/knowledge.md#file-sources).
 

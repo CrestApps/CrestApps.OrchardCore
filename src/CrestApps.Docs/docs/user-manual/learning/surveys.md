@@ -10,7 +10,7 @@ A **feedback survey** asks learners what they thought of a course: ratings, choi
 
 | | |
 | --- | --- |
-| **Menu** | A course's list of lessons (create a **Feedback survey** or a **Choice**); the survey's editor > **Totals** |
+| **Menu** | A course's list of lessons (create a **Feedback survey** or a **Choice**); the survey's editor → **Totals** |
 | **Permission** | Manage courses, or Manage the courses you teach for the course's staff, to build surveys and read the totals; Access learning to answer |
 | **Feature** | Learning Surveys |
 

@@ -11,7 +11,7 @@ A **recipe** is a ready-made setup that creates content types, settings, roles o
 
 | | |
 | --- | --- |
-| **Menu** | Tools > Recipes; Tools > Deployments > JSON Import |
+| **Menu** | **Tools** → **Recipes**; **Tools** → **Deployments** → **JSON Import** |
 | **Permission** | Manage Recipes (to run one); Import Data (JSON Import) |
 | **Feature** | CrestApps Recipes; CrestApps Resources |
 
@@ -23,7 +23,7 @@ A **recipe** is a ready-made setup that creates content types, settings, roles o
 
 <YouTube video="site-wizard-recipes" title="Video of the recipe list and the JSON import editor" start={229} end={264} />
 
-1. Open **Tools > Recipes**. The recipes are grouped by feature. Each has a name, tags and a description of what it creates.
+1. Open **Tools** → **Recipes**. The recipes are grouped by feature. Each has a name, tags and a description of what it creates.
 2. Type in the **Search** box to find a recipe by name or tag.
 3. Read the description, then click **Run** and confirm. The page reports the result when the recipe is done.
 
@@ -33,7 +33,7 @@ A recipe changes the site: it can create content types, settings, roles and cont
 
 ## Paste a recipe
 
-1. Open **Tools > Deployments > JSON Import**.
+1. Open **Tools** → **Deployments** → **JSON Import**.
 2. Paste or type the recipe in the **Recipe JSON** editor. It suggests the names of the steps and their settings as you type, and underlines mistakes before anything runs.
 3. Click **Import**.
 

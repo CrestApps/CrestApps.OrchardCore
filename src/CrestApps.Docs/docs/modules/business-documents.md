@@ -104,11 +104,11 @@ A `BusinessDocumentTemplate` is a catalog record (YesSql collection `BusinessDoc
 
 `GetForKindAsync(kind, templateId)` returns the named template when it exists and is for the kind; otherwise the default for the kind, a template that lists the kind before one for every kind; otherwise `null`. `ApplyAsync(document, templateId)` copies the template's logo, accent color, paper size and footer onto the document where the document has none.
 
-The admin pages are at **Settings > Business documents > Document templates** (see the [user manual](../user-manual/commerce/document-templates-and-number-series.md)). Other modules can add fields to the template editor with a `DisplayDriver<BusinessDocumentTemplate>`.
+The admin pages are at **Settings** → **Business Documents** → **Document Templates** (see the [user manual](../user-manual/commerce/document-templates-and-number-series.md)). Other modules can add fields to the template editor with a `DisplayDriver<BusinessDocumentTemplate>`.
 
 ## Number series settings
 
-**Settings > Business documents > Number series** (settings group `number-series`) lists every series registered with `services.AddNumberSeries(name, title, defaultFormat)` and stores the formats the site chooses in `NumberSeriesSettings`, which `INumberSeries` reads. Each format is checked with `NumberSeriesFormat.Validate()`, and nothing is saved while a series has an error. A series set back to the format it was registered with is removed from the settings, so it follows its registration again.
+**Settings** → **Business Documents** → **Number Series** (settings group `number-series`) lists every series registered with `services.AddNumberSeries(name, title, defaultFormat)` and stores the formats the site chooses in `NumberSeriesSettings`, which `INumberSeries` reads. Each format is checked with `NumberSeriesFormat.Validate()`, and nothing is saved while a series has an error. A series set back to the format it was registered with is removed from the settings, so it follows its registration again.
 
 ## Permissions
 

@@ -10,15 +10,15 @@ An enrollment is one person taking one course. It keeps their progress, why they
 
 | | |
 | --- | --- |
-| **Menu** | Learning > Enrollments; Reports > Operations > Course completion, Inactive learners; Reports > Compliance & Audit > Learner transcript |
-| **Permission** | View enrollments; Manage enrollments to change them; View learning reports; Export learner records to export. Instructors, assistants and graders named on a course (with Manage the courses you teach) see **Learning > Enrollments** for their own courses, and instructors and assistants can **Enroll a learner** in them. |
+| **Menu** | **Learning** → **Enrollments**; **Reports** → **Operations** → **Course completion**, Inactive learners; **Reports** → **Compliance & Audit** → **Learner transcript** |
+| **Permission** | View enrollments; Manage enrollments to change them; View learning reports; Export learner records to export. Instructors, assistants and graders named on a course (with Manage the courses you teach) see **Learning** → **Enrollments** for their own courses, and instructors and assistants can **Enroll a learner** in them. |
 | **Feature** | Learning; Reports for the reports; Audit Trail to record each change; Enrollment by Cohort to enroll cohorts |
 
 <AskYourAdmin />
 
 ## Enroll a learner
 
-1. Go to **Learning > Enrollments** and select **Enroll a learner**.
+1. Go to **Learning** → **Enrollments** and select **Enroll a learner**.
 2. Search for the **Learner** and choose the **Course**.
 3. Under **Dates**, set when **Access ends** and when the course is **Due**, in your time zone, or leave them empty.
 4. Tick **Skip prerequisites** to enroll someone who has not completed the courses this course asks for first.
@@ -43,7 +43,7 @@ From then on:
 
 Only a change saved by someone with **Manage enrollments** is applied: if someone without it changes the cohorts (through an import or the content API), nothing is enrolled or ended. Once an hour the site also checks every linked cohort, enrolls anyone it missed and ends what a cohort gave people no longer in it.
 
-On a learning path, a person removed from every linked cohort is taken off the path, unless they started it themselves or required learning started it. In **Learning > Enrollments**, the enrollment's grants show **Cohort** as the source.
+On a learning path, a person removed from every linked cohort is taken off the path, unless they started it themselves or required learning started it. In **Learning** → **Enrollments**, the enrollment's grants show **Cohort** as the source.
 
 ## Find enrollments
 

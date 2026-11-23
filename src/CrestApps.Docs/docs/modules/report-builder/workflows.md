@@ -50,7 +50,7 @@ The output name can be changed on each task with `OutputName`. `Workflow.LastRes
 
 `CreateReportShareLinkTask` creates an Orchard Core shared link with `ISharedLinkManager`, like the report's **Sharing** tab (see [Share links](permissions.md#share-links)): only its recipients can open it, once signed in, until it expires, is used up or is revoked. With `NotifyByEmail`, Orchard Core emails the link and the note to the recipients; turn it off to send `Url` with another activity. The task takes `Failed` when there is no report, when there is no recipient or a recipient is not a user of the site, or when `NotifyByEmail` is set while the Email feature is off; the reason is logged.
 
-The URL is built from the site's base URL, or from the current request when the base URL is not set. Set the base URL for workflows started by a timer, which have no request. Links created by a workflow can be revoked on the report's **Sharing** tab or under **Tools > Shared Links**.
+The URL is built from the site's base URL, or from the current request when the base URL is not set. Set the base URL for workflows started by a timer, which have no request. Links created by a workflow can be revoked on the report's **Sharing** tab or under **Tools** → **Shared Links**.
 
 ## React in code with `IReportEventHandler`
 

@@ -11,7 +11,7 @@ user_manual:
 | --- | --- |
 | **Feature Name** | AI Usage Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.UsageAnalytics` |
-| **Report** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/Reports/view/ai-usage-analytics`, `AIUsageAnalyticsReport`) |
+| **Report** | **Reports** → **Billing & Usage** → **AI Usage Analytics** (`/Admin/Reports/view/ai-usage-analytics`, `AIUsageAnalyticsReport`) |
 | **Permission** | `ViewChatAnalytics` |
 
 The AI Usage Analytics report reports what AI cost a tenant, in three parts:
@@ -102,7 +102,7 @@ var completion = await completionService.CompleteAsync(deployment, messages, con
 
 ### Turning usage into cost
 
-Each AI deployment can carry its prices (**Artificial Intelligence > Deployments > Edit > Pricing**). The report then shows the **Est. cost** of every row of the metered, audio and chat completion tables, and the estimated total per currency above the metered table. Requests to a deployment without prices have no cost. See [Deployment pricing](#deployment-pricing).
+Each AI deployment can carry its prices (**Artificial Intelligence** → **Deployments** → **Edit** → **Pricing**). The report then shows the **Est. cost** of every row of the metered, audio and chat completion tables, and the estimated total per currency above the metered table. Requests to a deployment without prices have no cost. See [Deployment pricing](#deployment-pricing).
 
 Multiplying a row by the provider's list prices gives an estimate. To match what was actually paid, take the cost
 of each billing meter from the provider's invoice for a period and divide it in proportion to the units each row
@@ -154,7 +154,7 @@ The **AIDeployment** deployment step exports the prices in a `Pricing` section o
 }
 ```
 
-The recipe schema of the **AIDeployment** step describes `Pricing` and its fields. Prices that were entered on the **Costs** card of **Settings > Artificial Intelligence** before this release are moved onto the matching deployments once, when the site starts after the upgrade.
+The recipe schema of the **AIDeployment** step describes `Pricing` and its fields. Prices that were entered on the **Costs** card of **Settings** → **Artificial Intelligence** before this release are moved onto the matching deployments once, when the site starts after the upgrade.
 
 ## Audio usage
 
@@ -308,7 +308,7 @@ A measurement that the engine of the call cannot make is empty, as described in 
 
 ### Cost per call
 
-Each AI call's summary carries an estimated cost when prices are set on the **Costs** tab of **Settings > Communication > Telephony**:
+Each AI call's summary carries an estimated cost when prices are set on the **Costs** tab of **Settings** → **Communication** → **Telephony**:
 
 - the **Currency** of the carrier's price;
 - the carrier's price of a **Phone call, per minute**.

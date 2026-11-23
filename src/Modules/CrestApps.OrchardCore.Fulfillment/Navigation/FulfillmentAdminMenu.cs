@@ -8,7 +8,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Fulfillment.Navigation;
 
 /// <summary>
-/// Commerce › Fulfillment requests, for people who ship orders, and Settings › Commerce › Fulfillment partners, for
+/// Commerce › Fulfillment Requests, for people who ship orders, and Settings › Commerce › Fulfillment Partners, for
 /// people who manage the partners.
 /// </summary>
 internal sealed class FulfillmentAdminMenu : AdminNavigationProvider
@@ -31,14 +31,14 @@ internal sealed class FulfillmentAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Fulfillment requests"], S["Fulfillment requests"].PrefixPosition(), requests => requests
+                .Add(S["Fulfillment Requests"], S["Fulfillment Requests"].PrefixPosition(), requests => requests
                     .Id("fulfillmentRequests")
                     .Action(_requestsRouteValues)
                     .Permission(ShippingPermissions.FulfillOrders)
                     .LocalNav()))
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                    .Add(S["Fulfillment partners"], S["Fulfillment partners"].PrefixPosition(), partners => partners
+                    .Add(S["Fulfillment Partners"], S["Fulfillment Partners"].PrefixPosition(), partners => partners
                         .Id("fulfillmentPartnersSettings")
                         .Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = FulfillmentConstants.SettingsGroupId })
                         .Permission(FulfillmentPermissions.ManageFulfillmentPartners)

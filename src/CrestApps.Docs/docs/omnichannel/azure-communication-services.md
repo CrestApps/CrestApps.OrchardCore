@@ -37,8 +37,8 @@ The feature intentionally does not define another connection-string model or set
 
 After enabling the feature:
 
-1. Open **Settings > Communication > Email** and select/configure the Azure email provider.
-2. Open **Settings > Communication > SMS** and select/configure the Azure SMS provider.
+1. Open **Settings** → **Communication** → **Email** and select/configure the Azure email provider.
+2. Open **Settings** → **Communication** → **SMS** and select/configure the Azure SMS provider.
 3. Enable the Omnichannel channel feature that consumes the service when required by the application: **SMS Omnichannel Automation** for AI-driven SMS, or the **SMS Messaging Channel** of the [Messaging Workspace](./messaging-workspace.md), which can pin the Azure SMS provider on an SMS channel endpoint for outbound messages.
 
 Provider selection remains tenant-specific. Enabling this feature registers the ACS providers but does not silently change an existing tenant's selected email or SMS provider.

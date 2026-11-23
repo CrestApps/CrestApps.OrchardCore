@@ -28,7 +28,7 @@ public sealed class ContactCenterSharedVoicemailAdminMenu : AdminNavigationProvi
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Shared voicemail"], S["Shared voicemail"].PrefixPosition("3"), sharedVoicemail => sharedVoicemail
+                .Add(S["Shared Voicemail"], S["Shared Voicemail"].PrefixPosition("3"), sharedVoicemail => sharedVoicemail
                     .AddClass("contact-center-shared-voicemail")
                     .Id("contactCenterSharedVoicemail")
                     .Action("Index", "SharedVoicemail", "CrestApps.OrchardCore.ContactCenter")

@@ -77,7 +77,7 @@ the strongly-typed `ITelephonyClient` interface.
 
 ## Site settings
 
-Telephony settings live under **Settings → Communication → Telephony** and require the
+Telephony settings live under **Settings** → **Communication** → **Telephony** and require the
 `Manage telephony settings` permission. The screen follows the same multi-provider tab layout as the
 Orchard Core SMS settings:
 

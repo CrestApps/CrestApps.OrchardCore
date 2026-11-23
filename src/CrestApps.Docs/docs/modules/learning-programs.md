@@ -57,7 +57,7 @@ An exemption keeps a reason, who granted it and an optional evidence file in the
 
 ## Team learning
 
-**Learning > Team Learning** lists the people who report to the signed-in user on their staff records, directly or not (`IStaffHierarchy.GetReportsAsync`), with the state and due date of each piece of their required learning. It shows no answers or attempts.
+**Learning** → **Team Learning** lists the people who report to the signed-in user on their staff records, directly or not (`IStaffHierarchy.GetReportsAsync`), with the state and due date of each piece of their required learning. It shows no answers or attempts.
 
 ## Pages
 

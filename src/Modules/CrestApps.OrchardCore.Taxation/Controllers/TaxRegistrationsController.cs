@@ -17,7 +17,7 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Taxation.Controllers;
 
 /// <summary>
-/// Commerce &gt; Taxation &gt; Tax registrations: where the business is registered to collect a tax, under which number,
+/// Commerce &gt; Taxation &gt; Tax Registrations: where the business is registered to collect a tax, under which number,
 /// and, with Tax Returns, how often it files and when its returns are due.
 /// </summary>
 [Admin]

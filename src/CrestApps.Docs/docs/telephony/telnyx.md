@@ -62,7 +62,7 @@ administrators in [Phone and SMS provider setup](../user-manual/telephony-settin
 steps below add what Connect does behind the scenes.
 
 1. **Create an API key** — in the [Telnyx Mission Control portal](https://portal.telnyx.com/), go to
-   **Account → Keys & Credentials → API Keys** and click **Create API key** (a V2 key). Paste it into
+   **Account** → **Keys & Credentials** → **API Keys** and click **Create API key** (a V2 key). Paste it into
    **API key** and **Save**. ([API Keys](https://portal.telnyx.com/#/app/api-keys))
 
    :::warning
@@ -70,7 +70,7 @@ steps below add what Connect does behind the scenes.
    permissions of the member who creates it, so a **restricted member's key can read your account but
    cannot create** the Call Control application, SIP connection, and outbound voice profile that Connect
    needs — the create call fails with `Not authorized` (Telnyx code 10006). If you hit that, have an
-   account owner grant your member the Voice/Connections permissions (Account → Member Permissions) or
+   account owner grant your member the Voice/Connections permissions (**Account** → **Member Permissions**) or
    create the key from an owner account.
    :::
 2. **Click Connect Telnyx** — the app uses the API key to **find-or-create** (idempotently):
@@ -99,7 +99,7 @@ Telnyx** again.
 
 ## Configuration
 
-Configure Telnyx on the **Telnyx** tab under **Settings → Communication → Telephony**. You need the
+Configure Telnyx on the **Telnyx** tab under **Settings** → **Communication** → **Telephony**. You need the
 `Manage telephony settings` permission (key `ManageTelephonySettings`). The user manual describes the screen for
 administrators in [Phone and SMS provider setup](../user-manual/telephony-settings.md); this table is the reference.
 
@@ -614,8 +614,8 @@ way, and a call dialed from the browser still says in the transfer panel that it
 
 ## DID → agent routing
 
-Inbound calls route by their dialed number through **entry points** (**Interaction Center > Management > Inbound
-entry points**). An entry point maps one or more DIDs and chooses a **Route to** target (see
+Inbound calls route by their dialed number through **entry points** (**Interaction Center** → **Management** →
+**Inbound entry points**). An entry point maps one or more DIDs and chooses a **Route to** target (see
 [Inbound entry points](../user-manual/entry-points-and-ivr.md) in the user manual):
 
 - **Queue** (default) — the call is enqueued and offered to an available agent by the queue's routing
@@ -807,7 +807,7 @@ In a tenant's own `App_Data/Sites/{TenantName}/appsettings.json`, leave the `Orc
 
 ### Configuration from the UI
 
-Alternatively, configure it on the **Telnyx** tab of **Settings > Communication > SMS** (`/Admin/Settings/sms`); the
+Alternatively, configure it on the **Telnyx** tab of **Settings** → **Communication** → **SMS** (`/Admin/Settings/sms`); the
 fields are described for administrators in [Set up SMS](../user-manual/telephony-settings.md#set-up-sms). Secrets are
 protected at rest with the data-protection provider. Values entered in the UI take precedence over appsettings.
 

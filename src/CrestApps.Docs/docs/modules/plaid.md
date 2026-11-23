@@ -16,9 +16,9 @@ Projects: `CrestApps.OrchardCore.Plaid.Abstractions` (the contracts other module
 
 ## Set it up
 
-1. In the Plaid dashboard, copy the client id and the secret of the environment (Developers > Keys). Ask Plaid for Auth in Production.
-2. Under **Security > Secrets**, add a text secret, such as `Plaid.Secret`, holding the Plaid secret.
-3. Under **Configuration > Settings > Plaid**, choose the environment, enter the client id, choose the secret and save. **Test the connection** asks Plaid for a link token with the saved settings.
+1. In the Plaid dashboard, copy the client id and the secret of the environment (**Developers** → **Keys**). Ask Plaid for Auth in Production.
+2. Under **Security** → **Secrets**, add a text secret, such as `Plaid.Secret`, holding the Plaid secret.
+3. Under **Configuration** → **Settings** → **Plaid**, choose the environment, enter the client id, choose the secret and save. **Test the connection** asks Plaid for a link token with the saved settings.
 
 When the host supplies the keys (an `IPlaidCredentialsProvider` registered with `AddPlaidCredentialsProvider<T>()`), the settings page says so instead of showing the fields, saving it changes nothing, and **Test the connection** tries the host's keys.
 

@@ -10,7 +10,7 @@ The learning assistant brings the site's AI to your courses in three ways: a tut
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > AI Profiles (the tutor); Learning > Authoring assistant; Learning > Grading (scoring help) |
+| **Menu** | **Artificial Intelligence** → **AI Profiles (the tutor)**; **Learning** → **Authoring Assistant**; **Learning** → **Grading (scoring help)** |
 | **Permission** | Manage AI profiles for the tutor; Use the learning authoring assistant; Use scoring help while grading |
 | **Feature** | Learning Assistant; Learning Authoring Assistant for the authoring assistant and scoring help |
 
@@ -20,7 +20,7 @@ The site needs an AI connection and a deployment first. Without one, the pages s
 
 ## Set up the tutor
 
-1. Go to **Artificial Intelligence > AI Profiles** and select **Add Profile**.
+1. Go to **Artificial Intelligence** → **AI Profiles** and select **Add Profile**.
 2. Pick **Learning tutor**, give the profile a title, and create it.
 3. On the profile's **Knowledge** tab, pick the AI data source that holds your lessons. **Learning tutor** is already ticked.
 4. Show the profile to learners with the AI Chat widget, for example on your learning pages.
@@ -38,7 +38,7 @@ Any AI profile can also use two staff tools: **Overdue learners** and **Learners
 
 ## Draft with the authoring assistant
 
-Go to **Learning > Authoring assistant**. Each card makes drafts that you review, change and publish yourself:
+Go to **Learning** → **Authoring Assistant**. Each card makes drafts that you review, change and publish yourself:
 
 - **Draft a course outline**: say what the course is about and who it is for. You get a draft course with sections and a draft page lesson for each item, and the course editor opens.
 - **Draft questions from a lesson**: pick a lesson and a question bank. Draft questions with their right answers are added to the bank, unpublished. Check every answer before you publish a question.
@@ -47,7 +47,7 @@ Go to **Learning > Authoring assistant**. Each card makes drafts that you review
 
 ## Use scoring help while grading
 
-1. Open an attempt with an essay, or a coursework submission, from **Learning > Grading**.
+1. Open an attempt with an essay, or a coursework submission, from **Learning** → **Grading**.
 2. Select **Suggest a score**. The AI fills in a score (or a level for each rubric criterion) and feedback, based on the grader guidance or the rubric.
 3. Read the work yourself, change anything you disagree with, and save the grade as usual.
 

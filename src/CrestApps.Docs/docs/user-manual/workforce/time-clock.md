@@ -10,7 +10,7 @@ The time clock records when workers start and stop work, turns their punches int
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Time Management > Timesheets, Attendance, Past Payroll Exports, Time Clock Policies, Time Clock Kiosks; Tools > Data Pipelines; Payroll > Setup > Pay Schedules, Pay Codes |
+| **Menu** | **Workforce** → **Time Management** → **Timesheets**, Attendance, Past Payroll Exports, Time Clock Policies, Time Clock Kiosks; **Tools** → **Data Pipelines**; **Payroll** → **Setup** → **Pay Schedules**, Pay Codes |
 | **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Lock timesheets for payroll, Export payroll data, Clock in and out |
 | **Feature** | Workforce Time Clock (it needs Workforce and Time Tracker) |
 
@@ -20,18 +20,18 @@ The time clock records when workers start and stop work, turns their punches int
 
 Every punch of a worker who has a login also keeps their day in [Time Tracker](./time-tracker.md): each stretch of work, each meal and each break is an entry in a stage, and the time report counts it with everyone else's time. Time stays as punched there; rounding and meal rules are for pay, on the timesheet.
 
-- Each activity code has a **stage** (under **Workforce > Activity Codes**, in the **Time Tracker** card). When the time clock is turned on, every code gets a stage with its name, or the one with the same code or name if there is one; a new stage counts toward **Paid** when the code is paid and **Worked** when it counts as work. A meal or a break is kept in the stage of the first meal or break code.
+- Each activity code has a **stage** (under **Workforce** → **Activity Codes**, in the **Time Tracker** card). When the time clock is turned on, every code gets a stage with its name, or the one with the same code or name if there is one; a new stage counts toward **Paid** when the code is paid and **Worked** when it counts as work. A meal or a break is kept in the stage of the first meal or break code.
 - Punches made before are brought in by themselves, a few workers at a time.
 - People correct this time with punches, here, not in Time Tracker: Time Tracker shows these entries as **From the Time Clock** and doesn't let them be changed there. My Time tells the worker their time is kept by the time clock, with a link to My Work.
 - A worker without a login, who clocks in only at a kiosk, has no Time Tracker entries.
 
 ## Setting it up
 
-1. Under **Payroll > Setup > Pay Schedules**, choose **Add pay schedule**: how often workers are paid, the first day of any one period for weekly and two-weekly pay, the day the overtime week starts, and the pay date. The editor shows the next periods. See [Pay schedules and pay codes](../finance/pay-setup.md).
-2. Under **Payroll > Setup > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code an **export code** when your payroll system calls it something else.
-3. Under **Workforce > Time Management > Time Clock Policies**, choose **Add policy** (see below).
+1. Under **Payroll** → **Setup** → **Pay Schedules**, choose **Add pay schedule**: how often workers are paid, the first day of any one period for weekly and two-weekly pay, the day the overtime week starts, and the pay date. The editor shows the next periods. See [Pay schedules and pay codes](../finance/pay-setup.md).
+2. Under **Payroll** → **Setup** → **Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code an **export code** when your payroll system calls it something else.
+3. Under **Workforce** → **Time Management** → **Time Clock Policies**, choose **Add policy** (see below).
 4. Under **Teams**, give the team its **time clock policy**. Sub-teams use their parent's. A team with no policy, and no parent with one, doesn't clock time.
-5. For kiosks, give each worker an **employee number** (their badge number) and a PIN under **Workers > Actions > Time clock**.
+5. For kiosks, give each worker an **employee number** (their badge number) and a PIN under **Workers** → **Actions** → **Time clock**.
 
 ## Time clock policies
 
@@ -73,7 +73,7 @@ In **My Work**, the home page shows a **Time clock** card: whether the worker is
 
 ### Kiosks
 
-Under **Workforce > Time Management > Time Clock Kiosks**, choose **Add kiosk**, name it, and optionally limit it to a team. After saving, the kiosk's **private address** is shown once: open it on the device and leave it open. Workers enter their badge number and PIN, then choose what to punch. After five wrong PINs in a row, the kiosk refuses that worker's PIN for 15 minutes. **Give it a new address** when the address is lost or seen by someone it shouldn't be; the old one stops working.
+Under **Workforce** → **Time Management** → **Time Clock Kiosks**, choose **Add kiosk**, name it, and optionally limit it to a team. After saving, the kiosk's **private address** is shown once: open it on the device and leave it open. Workers enter their badge number and PIN, then choose what to punch. After five wrong PINs in a row, the kiosk refuses that worker's PIN for 15 minutes. **Give it a new address** when the address is lost or seen by someone it shouldn't be; the old one stops working.
 
 ## Timesheets
 
@@ -86,9 +86,9 @@ Each worker has a timesheet for each pay period. It is worked out from their pun
 - approved time off is added under its type's pay code (or paid time off), and approved predictability pay under the predictability pay code;
 - shift differentials add a premium for the hours in their window.
 
-Workers see theirs under **My Work > Timesheet**: the hours each day, their punches, anything that looks off, and the periods before. **Forgot to punch?** asks the manager for a punch they missed. **Submit** sends the timesheet with their confirmation that the hours are right.
+Workers see theirs under **My Work** → **Timesheet**: the hours each day, their punches, anything that looks off, and the periods before. **Forgot to punch?** asks the manager for a punch they missed. **Submit** sends the timesheet with their confirmation that the hours are right.
 
-Managers open **Workforce > Time Management > Timesheets**, choose the pay period, and open a timesheet. It shows each day's punches, hours and exceptions, the totals by pay code, and the punches the worker asked for. From there a manager can:
+Managers open **Workforce** → **Time Management** → **Timesheets**, choose the pay period, and open a timesheet. It shows each day's punches, hours and exceptions, the totals by pay code, and the punches the worker asked for. From there a manager can:
 
 - **Approve** the timesheet, **Send back** a submitted one with what to fix, or **Reopen** an approved one;
 - **Add a punch**, or **change or remove** one, with a reason. The original stays in the history;
@@ -101,7 +101,7 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 ## Attendance
 
-**Workforce > Time Management > Attendance** lists the exceptions found against the published schedule:
+**Workforce** → **Time Management** → **Attendance** lists the exceptions found against the published schedule:
 
 | Exception | When |
 | --- | --- |
@@ -112,23 +112,23 @@ Several timesheets can be approved at once from the list. **Make this period's t
 | **Long meal** | A meal longer than the policy allows. |
 | **Away from the site** | A punch farther from the site than the radius. |
 
-**Confirm** an exception, or **Excuse** it so it earns no points. When a missed punch is fixed, its exception goes away. Managers can also do this under **Approvals** in My Work. A worker's points are shown under **Workers > Actions > Time clock**.
+**Confirm** an exception, or **Excuse** it so it earns no points. When a missed punch is fixed, its exception goes away. Managers can also do this under **Approvals** in My Work. A worker's points are shown under **Workers** → **Actions** → **Time clock**.
 
 ## Payroll export
 
 Locked timesheets go to payroll as **pay inputs**. To send them to an outside payroll system, use a data pipeline:
 
-1. Under **Configuration > Recipes**, run **Payroll: export pay inputs to a CSV file**. It adds the draft pipeline **Pay inputs export**: one row per person, period, pay code and rate, with the hours and the amount (the hours times the rate and the code's multiplier, or times a differential's premium).
-2. Under **Tools > Data Pipelines**, open it. Add how the file is delivered, such as **Upload to an SFTP server** or **Send by email**, after **Payroll CSV**, then **Publish**.
+1. Under **Configuration** → **Recipes**, run **Payroll: export pay inputs to a CSV file**. It adds the draft pipeline **Pay inputs export**: one row per person, period, pay code and rate, with the hours and the amount (the hours times the rate and the code's multiplier, or times a differential's premium).
+2. Under **Tools** → **Data Pipelines**, open it. Add how the file is delivered, such as **Upload to an SFTP server** or **Send by email**, after **Payroll CSV**, then **Publish**.
 3. Choose **Run**, or schedule it with a workflow timer. The **Export to payroll** link on **Timesheets** opens Data Pipelines.
 
 Each timesheet is exported once: the pipeline marks the timesheets it read as exported only when the whole run succeeds, so a failed delivery exports them again next time. To export again what was already exported, add the parameter `IncludeExported=true` to its **Pay inputs** step. Change the columns, their headings or their order in the **Columns** step.
 
-Rates come from the staff member's **Pay** card (Staff Compensation). People who manage staff pay or may export payroll data see them, read only, under **Workers > Actions > Time clock**.
+Rates come from the staff member's **Pay** card (Staff Compensation). People who manage staff pay or may export payroll data see them, read only, under **Workers** → **Actions** → **Time clock**.
 
-If your site had chosen CSV columns for the earlier export, the update turned them into the draft pipeline **Payroll CSV export**, to publish the same way. The files the earlier export wrote stay under **Workforce > Time Management > Past Payroll Exports**.
+If your site had chosen CSV columns for the earlier export, the update turned them into the draft pipeline **Payroll CSV export**, to publish the same way. The files the earlier export wrote stay under **Workforce** → **Time Management** → **Past Payroll Exports**.
 
 ## Pay codes
 
-Pay codes are kept under **Payroll > Setup > Pay Codes** and shared with payroll (see [Pay schedules and pay codes](../finance/pay-setup.md)). The time clock uses the earning and memo codes in use: regular, overtime and double time for worked hours, holiday and weekend codes instead of the regular one on those days, and a shift differential for the hours in its window. A shift differential's hours, in the worker's time, and the days it starts on are set in the **Shift differential hours** card of the pay code.
+Pay codes are kept under **Payroll** → **Setup** → **Pay Codes** and shared with payroll (see [Pay schedules and pay codes](../finance/pay-setup.md)). The time clock uses the earning and memo codes in use: regular, overtime and double time for worked hours, holiday and weekend codes instead of the regular one on those days, and a shift differential for the hours in its window. A shift differential's hours, in the worker's time, and the days it starts on are set in the **Shift differential hours** card of the pay code.
 

@@ -11,7 +11,7 @@ This page lists the problems people most often meet in the Report Builder, and w
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder |
+| **Menu** | **Reports** → **Report Builder** |
 | **Permission** | Build reports and manage own custom reports and views |
 | **Feature** | Report Builder |
 
@@ -33,7 +33,7 @@ This page lists the problems people most often meet in the Report Builder, and w
 | A share link cannot be created | Every recipient must be a user of the site: check the user names and emails. To email the link, the Email feature must be on; otherwise turn off **Email the link to the recipients** and copy the link. |
 | A recipient cannot open a share link | They must sign in with the account the link was made for: a link opens for its recipients only. A link that expired, was used as many times as allowed, or was revoked no longer opens; create a new one. |
 | You want everyone to see a report without a link | Share it with the **Anonymous** role on the **Sharing** tab. Share links are always for named people. |
-| **Edit** or **Delete** is missing on a report | You may change only your own reports, unless you have *Manage all custom reports and views*. Use **Actions > Clone** to make your own copy. |
+| **Edit** or **Delete** is missing on a report | You may change only your own reports, unless you have *Manage all custom reports and views*. Use **Actions** → **Clone** to make your own copy. |
 | The export button is missing | The report's owner turned off **Let people the report is shared with export it**, or the share link does not allow export. |
 
 ## Reports that do not run

@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Commerce.Navigation;
 
 /// <summary>
-/// Adds Commerce › Set up your store, the store's setup guide. The Commerce feature, the store layer, registers it, so a
+/// Adds Commerce › Set Up Your Store, the store's setup guide. The Commerce feature, the store layer, registers it, so a
 /// site with billing alone has the Commerce menu without the guide.
 /// </summary>
 public sealed class StoreSetupAdminMenu : AdminNavigationProvider
@@ -26,7 +26,7 @@ public sealed class StoreSetupAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Commerce"], "15", commerce => commerce
                 .Id("commerce")
-                .Add(S["Set up your store"], S["Set up your store"].PrefixPosition("0"), setup => setup
+                .Add(S["Set Up Your Store"], S["Set Up Your Store"].PrefixPosition("0"), setup => setup
                     .Id("commerceSetup")
                     .Action("Index", "StoreSetup", new { area = CommerceConstants.Features.Area })
                     .Permission(CommercePermissions.SetUpStore)

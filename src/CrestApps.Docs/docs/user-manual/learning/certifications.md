@@ -11,7 +11,7 @@ A certification can be earned through learning: when a person completes the cour
 
 | | |
 | --- | --- |
-| **Menu** | Content > Certification Types (the certification editor); Content > Certificates; People on this path |
+| **Menu** | **Content** → **Certification Types (the certification editor)**; **Content** → **Certificates**; People on this path |
 | **Permission** | Manage skills and certifications to set up the path; View enrollments to see the people; Manage enrollments to start someone |
 | **Feature** | Learning Certifications (turns on Skills: Issued Certificates) |
 
@@ -19,7 +19,7 @@ A certification can be earned through learning: when a person completes the cour
 
 ## Set up a certification path
 
-1. Open the certification in **Content > Certification Types**, or add one. Set **Valid for (months)** and the **Reminders (days before expiry)**.
+1. Open the certification in **Content** → **Certification Types**, or add one. Set **Valid for (months)** and the **Reminders (days before expiry)**.
 2. In **Issued certificates**, choose whether the site numbers the certificates (and the prefix), and the **Certificate template** to print them with. **Preview a certificate** shows a sample.
 3. In **Earned through learning**, turn on **People earn this certification by completing courses and passing assessments**, and add the requirements of the first certificate: a course completed, or a quiz passed, each with an optional minimum grade. Choose whether all of them are needed or any one.
 4. Add the renewal requirements, or leave them empty to renew with the same ones.
@@ -39,7 +39,7 @@ On the day renewal opens, the holder gets a notification, is enrolled again in t
 
 ## Revoke a certificate
 
-If a quiz result a completed course rested on is voided or lowered, the enrollment is flagged for review. Its review card offers **Revoke the certificate**; the verification page shows it as revoked at once. A certificate can also be withdrawn in **Content > Certificates**.
+If a quiz result a completed course rested on is voided or lowered, the enrollment is flagged for review. Its review card offers **Revoke the certificate**; the verification page shows it as revoked at once. A certificate can also be withdrawn in **Content** → **Certificates**.
 
 ## For learners
 
@@ -50,7 +50,7 @@ If a quiz result a completed course rested on is voided or lowered, the enrollme
 
 Each issued certificate can be opened as a PDF. A certificate template decides how it looks. Without one, the site prints its default design.
 
-1. Go to **Content > Content Items**, create a **Certificate Template** and give it a title.
+1. Go to **Content** → **Content Items**, create a **Certificate Template** and give it a title.
 2. Choose the **Paper** (US Letter or A4) and tick **Landscape** to lay the page on its side.
 3. In **Font**, enter a font installed on the server, such as Noto Sans for letters beyond Latin. Leave it empty for the default font. The font is embedded in each certificate.
 4. Pick the **Accent color** and the **Text color**, and tick **Frame the page with a border** for a double border in the accent color.
@@ -61,7 +61,7 @@ Each issued certificate can be opened as a PDF. A certificate template decides h
 
 Positions are in points, 72 to the inch, from the top left of the page. US Letter on its side is 792 by 612 points, and A4 is 842 by 595.
 
-To use the template, open the certification in **Content > Certification Types** and choose it as the **Certificate template** under **Issued certificates**. **Preview a certificate** shows a sample with the saved settings.
+To use the template, open the certification in **Content** → **Certification Types** and choose it as the **Certificate template** under **Issued certificates**. **Preview a certificate** shows a sample with the saved settings.
 
 ## Verify a certificate
 
@@ -71,9 +71,9 @@ The page shows whether the certificate is **Valid**, **Expired**, **Revoked** or
 
 ## Education credits
 
-Education credits, such as CPD hours or CEUs, count the learning people do. Open **Learning > Education Credits** and click **Add credit type** to create a type, with its unit and whether people can record learning done elsewhere.
+Education credits, such as CPD hours or CEUs, count the learning people do. Open **Learning** → **Education Credits** and click **Add credit type** to create a type, with its unit and whether people can record learning done elsewhere.
 
 - To award credits for a course, edit the course and fill in **Education credits**: the type, the number of credits and, if they expire, for how many months they count. People earn them once when they complete the course. Learning paths can award credits the same way once the part is added to the Learning Path type.
-- People see their credits on **My education credits**, where they can also record learning done elsewhere with a certificate as evidence. Reviewers accept or reject it under **Learning > External Learning**; accepted learning adds the credits.
+- People see their credits on **My education credits**, where they can also record learning done elsewhere with a certificate as evidence. Reviewers accept or reject it under **Learning** → **External Learning**; accepted learning adds the credits.
 - A certification can be renewed by credits: in the **Earned through learning** card, add the requirement **Education credits earned**, choose the credit type and put the number of credits in **Minimum grade or credits**. Only credits earned in the current cycle count.
 - To load many records at once, use the **Record external learning** step in a data pipeline.

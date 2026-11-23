@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Commerce;
 
 /// <summary>
-/// One step of the store's setup guide, under Commerce › Set up your store, such as the store's details, how it's
+/// One step of the store's setup guide, under Commerce › Set Up Your Store, such as the store's details, how it's
 /// paid or its first product. Each module adds the steps for what it does, so a store sees only the steps of the
 /// features it has on.
 /// </summary>

@@ -151,7 +151,7 @@ public sealed class PackagesAdminController : Controller
         // Articulate's SCORM Driver runs in several frames, which only the package content host lets reach each other.
         if (result.UsesScormDriver && await _contentHost.GetOriginAsync() is null)
         {
-            await _notifier.WarningAsync(H["This package uses Articulate's SCORM Driver (Rise or Storyline 360), which runs in several frames. It shows a blank page until a package content host is set under Settings › Learning packages."]);
+            await _notifier.WarningAsync(H["This package uses Articulate's SCORM Driver (Rise or Storyline 360), which runs in several frames. It shows a blank page until a package content host is set under Settings › Learning Packages."]);
         }
 
         if (PackagesConstants.Standards.HasNoRuntime(result.Manifest.Standard))

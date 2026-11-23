@@ -10,7 +10,7 @@ An AI assistant can answer questions from your own help articles instead of from
 
 | | |
 | --- | --- |
-| **Menu** | Search > Indexes; Artificial Intelligence > Data Sources; Artificial Intelligence > Profiles; Design > Widgets; Access Control > Roles |
+| **Menu** | **Search** → **Indexes**; **Artificial Intelligence** → **Data Sources**; **Artificial Intelligence** → **Profiles**; **Design** → **Widgets**; **Access Control** → **Roles** |
 | **Permission** | Manage Indexes; Manage AI data sources; Manage AI profiles; Manage layers; Manage Roles |
 | **Feature** | Knowledge Base, Elasticsearch, AI Data Sources - Elasticsearch, AI Chat, Widgets, Layers |
 
@@ -38,7 +38,7 @@ You need:
 | An AI connection with a **chat** deployment (the model that writes answers) and an **embedding** deployment (the model that turns text into meaning). | Your administrator; see [AI connections](../ai/connections.md) |
 | The Knowledge Base with published articles. | See [Write articles](./write-articles.md) |
 
-Turn on these features under **Tools > Features**:
+Turn on these features under **Tools** → **Features**:
 
 | Feature | Why |
 | --- | --- |
@@ -51,14 +51,14 @@ Turn on these features under **Tools > Features**:
 
 The AI reads the *full text* of each article. By default that is the title and the body. Add the summary too, so short questions find the right article:
 
-1. Go to **Design > Content Definition > Content Types** and edit **Knowledge Article**.
+1. Go to **Design** → **Content Definition** → **Content Types** and edit **Knowledge Article**.
 2. Leave **Include display text** and **Include body parts** ticked.
 3. Tick **Use custom full-text** and enter `{{ Model.Content.KnowledgeArticlePart.Summary }}` in its box.
 4. Click **Save**.
 
 ## 2. Create the content index of your articles
 
-1. Go to **Search > Indexes** and click **Add index**.
+1. Go to **Search** → **Indexes** and click **Add index**.
 2. On **Content in Elasticsearch**, click **Add**.
 3. Enter an **Index Name**, such as *knowledgearticles*, and a **Name**, such as *Knowledge articles*.
 4. Under **Content types**, tick only **Knowledge Article**.
@@ -70,7 +70,7 @@ The new index shows in the list, and the site adds your published articles to it
 
 ## 3. Create the AI knowledge base index
 
-1. Go to **Search > Indexes** and click **Add index**.
+1. Go to **Search** → **Indexes** and click **Add index**.
 2. On **AI Knowledge Base Index (Elasticsearch)**, click **Add**.
 3. Enter an **Index Name**, such as *helpcenterknowledge*, and a **Name**, such as *Help center knowledge*.
 4. Choose the **Embedding deployment** of your AI connection. It can't be changed once the index is created.
@@ -78,7 +78,7 @@ The new index shows in the list, and the site adds your published articles to it
 
 ## 4. Create the AI data source
 
-1. Go to **Artificial Intelligence > Data Sources** and click **Add Data Source**.
+1. Go to **Artificial Intelligence** → **Data Sources** and click **Add Data Source**.
 2. On **Search Index Profile**, click **Add**.
 3. Enter a **Name**, such as *Help center articles*.
 4. Under **Source**, choose the **Source index** *Knowledge articles* from step 2.
@@ -92,7 +92,7 @@ Give it a minute, then go on to step 5 and ask the profile a question one of you
 
 ## 5. Create the AI profile
 
-1. Go to **Artificial Intelligence > Profiles** and create a profile of type **Chat**, such as *Help center assistant*. The **Website assistant** starting point is made for a public assistant. See [AI profiles](../ai/profiles.md).
+1. Go to **Artificial Intelligence** → **Profiles** and create a profile of type **Chat**, such as *Help center assistant*. The **Website assistant** starting point is made for a public assistant. See [AI profiles](../ai/profiles.md).
 2. Choose your chat connection and deployment.
 3. Write its instructions, for example:
 
@@ -107,12 +107,12 @@ To try it, open the profile's **Actions** menu and click **New chat**. Ask a que
 
 ## 6A. Let anyone ask on your website
 
-1. Go to **Design > Widgets**. In the zone where the chat button should live, such as **Footer**, click **Add Widget** and choose **Artificial Intelligence Chat**.
+1. Go to **Design** → **Widgets**. In the zone where the chat button should live, such as **Footer**, click **Add Widget** and choose **Artificial Intelligence Chat**.
 2. Choose **The layer** that decides where it shows:
    - **Help center**, made by the Knowledge Base recipe, shows it on `/help` and on every article;
    - a layer whose rule is a **Boolean** condition set to true, often named *Always*, shows it on every page.
 3. Choose the **Profile** *Help center assistant* and publish the widget.
-4. Go to **Access Control > Roles** and edit **Anonymous**. Tick only **Query AI profile - Help center assistant** and save. Never tick **Query any AI profile**: it would open every profile of the site to visitors.
+4. Go to **Access Control** → **Roles** and edit **Anonymous**. Tick only **Query AI profile - Help center assistant** and save. Never tick **Query any AI profile**: it would open every profile of the site to visitors.
 5. To let signed-in readers use it too, give the same permission to **Authenticated**.
 
 Check it as a visitor: open `/help` in a private browser window, where you are signed out. The round chat button shows in the corner; ask a question and check the sources under the answer.
@@ -123,15 +123,15 @@ More about the widget, what visitors see, and how a public assistant is protecte
 
 Staff can chat with the profile without a widget:
 
-- Open **Artificial Intelligence > Profiles**, then **New chat** in the profile's **Actions** menu.
+- Open **Artificial Intelligence** → **Profiles**, then **New chat** in the profile's **Actions** menu.
 - Or tick **Show on admin menu** on the profile, so it shows by its name under **Artificial Intelligence**.
 
-Give the staff roles **Query AI profile - Help center assistant** under **Access Control > Roles**. See [Chat with an AI assistant](../ai/chat.md). The admin chat answers from the same knowledge base, so staff get the articles for everyone too.
+Give the staff roles **Query AI profile - Help center assistant** under **Access Control** → **Roles**. See [Chat with an AI assistant](../ai/chat.md). The admin chat answers from the same knowledge base, so staff get the articles for everyone too.
 
 ## Keep it up to date
 
 - Publishing, changing or deleting an article updates the content index, and the data source updates the knowledge base soon after. Restricting an article removes it from the knowledge base.
-- Rebuilding the content index under **Search > Indexes** syncs the data source again.
+- Rebuilding the content index under **Search** → **Indexes** syncs the data source again.
 - **Sync index** in the data source's **Actions** menu rebuilds it by hand.
 - Every night the site also repairs any difference between the two indexes.
 

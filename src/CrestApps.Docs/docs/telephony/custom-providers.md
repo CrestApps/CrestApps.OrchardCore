@@ -60,7 +60,7 @@ TelephonyHub / soft phone projection
 
 ## 1. Implement the soft-phone provider
 
-To appear as a telephony provider in **Settings → Communication → Telephony**, implement `ITelephonyProvider`.
+To appear as a telephony provider in **Settings** → **Communication** → **Telephony**, implement `ITelephonyProvider`.
 
 `ITelephonyProvider` declares only the provider's display name and its advertised `TelephonyCapabilities`. Every call operation lives on a separate capability contract, so you implement exactly the operations your backend really supports and nothing else. A provider that can only place and end calls is complete after two methods:
 

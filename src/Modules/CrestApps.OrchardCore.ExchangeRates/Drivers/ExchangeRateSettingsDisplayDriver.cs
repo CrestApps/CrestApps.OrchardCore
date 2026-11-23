@@ -16,7 +16,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.ExchangeRates.Drivers;
 
 /// <summary>
-/// Edits the exchange rate settings under <b>Settings &gt; Commerce &gt; Exchange rates</b>.
+/// Edits the exchange rate settings under <b>Settings &gt; Commerce &gt; Exchange Rates</b>.
 /// </summary>
 public sealed class ExchangeRateSettingsDisplayDriver : SiteDisplayDriver<ExchangeRateSettings>
 {

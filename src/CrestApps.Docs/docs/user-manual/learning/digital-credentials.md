@@ -10,7 +10,7 @@ A digital credential is a badge or certificate that the site signs, so anyone ca
 
 | | |
 | --- | --- |
-| **Menu** | Learning > Credential Definitions; Learning > Credential Awards; My credentials (for learners) |
+| **Menu** | **Learning** → **Credential Definitions**; **Learning** → **Credential Awards**; My credentials (for learners) |
 | **Permission** | Manage credential definitions to define credentials; Award and revoke digital credentials to award and revoke; View digital credential awards to see the awards list; Access learning for My credentials |
 | **Feature** | Digital Credentials (turns on Secrets if it is off) |
 
@@ -20,7 +20,7 @@ Your administrator sets the site's **Base URL** in the site settings, so every c
 
 ## Define a credential
 
-1. Go to **Learning > Credential Definitions** and click **New**, then **Credential definition**.
+1. Go to **Learning** → **Credential Definitions** and click **New**, then **Credential definition**.
 2. Enter the **Title**, pick an **Image**, and write the **Description** (what the holder achieved) and the **Criteria** (what a person did to earn it).
 3. Choose the **Achievement type**, such as Badge or Certificate, and add **Tags** if you want them.
 4. Enter **Valid for (months)** if the credential expires; leave it empty if it does not.
@@ -32,7 +32,7 @@ A person gets a credential once while their award is valid. A course completion 
 
 ## Award a credential by hand
 
-1. Go to **Learning > Credential Awards** and click **Award a credential**.
+1. Go to **Learning** → **Credential Awards** and click **Award a credential**.
 2. Choose the **Credential** and the **Person**, and write a **Reason** if you want one (only staff see it).
 3. Click **Award**.
 
@@ -40,7 +40,7 @@ The person needs an e-mail address: the credential names them by a protected cod
 
 ## See and revoke awards
 
-**Learning > Credential Awards** lists every award. Search by user name, or filter by credential, status (active, expired, revoked) and issue dates. Click **View** to see an award, the result of the site's check of its signature, and the credential.
+**Learning** → **Credential Awards** lists every award. Search by user name, or filter by credential, status (active, expired, revoked) and issue dates. Click **View** to see an award, the result of the site's check of its signature, and the credential.
 
 To revoke one, click **Revoke** (on the award or in the row's menu), write why, and click **Revoke**. The verification page says the credential is revoked at once, and so does the site's revocation list that other verifiers check. A revocation cannot be undone; you can award the credential again by hand.
 

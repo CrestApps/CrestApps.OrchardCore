@@ -16,14 +16,14 @@ user_manual:
 
 The tools' service requests use Orchard Core's OpenID server, so configure it once:
 
-1. **Security → OpenID Connect → Settings → Authorization Server**: turn on the token endpoint and allow the client credentials flow. Use the `JWT` access token format, so the validation feature can read the tokens.
-2. **Security → OpenID Connect → Settings → Token Validation**: set the tenant to this tenant (or to the tenant whose authorization server you use).
+1. **Security** → **OpenID Connect** → **Settings** → **Authorization Server**: turn on the token endpoint and allow the client credentials flow. Use the `JWT` access token format, so the validation feature can read the tokens.
+2. **Security** → **OpenID Connect** → **Settings** → **Token Validation**: set the tenant to this tenant (or to the tenant whose authorization server you use).
 
 The feature's migration adds the five LTI service scopes to the OpenID scopes.
 
 ## Register a tool
 
-**Learning → External Tools** (permission **Manage external tools**, `ManageExternalTools`, security critical) lists the tools with Orchard Core's admin list and edits them. A tool has:
+**Learning** → **External Tools** (permission **Manage external tools**, `ManageExternalTools`, security critical) lists the tools with Orchard Core's admin list and edits them. A tool has:
 
 | Field | What it is |
 | --- | --- |
@@ -115,7 +115,7 @@ A `FullyGraded` score on a line item bound to an External tool item becomes that
 
 ## Conformance
 
-Conformance suite / certification: not run (needs an external account). The suite is 1EdTech's LTI Advantage certification suite for platforms, which needs a 1EdTech membership account. To run it, a person with that account signs in to 1EdTech's certification site, registers the suite as a tool on a test site reachable from the internet (**Learning → External Tools**, with the suite's client id, login initiation URL, redirect URIs and key set), gives the suite the platform details the editor shows, adds an External tool item of the suite to a test course with enrolled learners and staff, and runs the platform tests for LTI 1.3 Core, Deep Linking 2.0, Names and Role Provisioning Services 2.0 and Assignment and Grade Services 2.0, then keeps the report.
+Conformance suite / certification: not run (needs an external account). The suite is 1EdTech's LTI Advantage certification suite for platforms, which needs a 1EdTech membership account. To run it, a person with that account signs in to 1EdTech's certification site, registers the suite as a tool on a test site reachable from the internet (**Learning** → **External Tools**, with the suite's client id, login initiation URL, redirect URIs and key set), gives the suite the platform details the editor shows, adds an External tool item of the suite to a test course with enrolled learners and staff, and runs the platform tests for LTI 1.3 Core, Deep Linking 2.0, Names and Role Provisioning Services 2.0 and Assignment and Grade Services 2.0, then keeps the report.
 
 ## Not built
 

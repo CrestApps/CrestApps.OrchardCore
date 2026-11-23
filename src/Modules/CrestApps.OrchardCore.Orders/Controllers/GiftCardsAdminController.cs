@@ -28,7 +28,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Orders.Controllers;
 
 /// <summary>
-/// Commerce › Gift cards: issue cards, see what's left on them and how they were spent, and change their balances.
+/// Commerce › Gift Cards: issue cards, see what's left on them and how they were spent, and change their balances.
 /// </summary>
 [Feature(OrderConstants.Features.GiftCards)]
 [Admin("gift-cards/{action}/{itemId?}", "GiftCards{action}")]

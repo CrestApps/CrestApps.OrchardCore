@@ -50,7 +50,7 @@ The part is in `CartOptions.ChooseOnProductPageParts`, so product cards send sho
 - **`RefundAsync`** takes a refund off the order's donations, in proportion to each.
 - **`GetProgressAsync`** adds up what's been given and not refunded, in the campaign's currency, and counts the donors.
 
-`FundraisingSettings` (**Settings > Commerce > Fundraising**, `ManageFundraising`) holds the organization named on receipts (the site's name when empty), its tax ID, the receipt statement, and whether receipts are emailed.
+`FundraisingSettings` (**Settings** → **Commerce** → **Fundraising**, `ManageFundraising`) holds the organization named on receipts (the site's name when empty), its tax ID, the receipt statement, and whether receipts are emailed.
 
 ## Pages
 

@@ -10,7 +10,7 @@ Before a change to an AI profile goes live you can test it against simulated cus
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > AI Profiles, Design > Workflows, and Reports |
+| **Menu** | **Artificial Intelligence** → **AI Profiles**, **Design** → **Workflows**, and Reports |
 | **Permission** | Manage AI profiles, Manage workflows, and View AI chat analytics for the reports |
 | **Feature** | AI Services and Workflows. The reports need Reports, and the conversation metrics need AI Chat Session Analytics. |
 
@@ -20,7 +20,7 @@ Before a change to an AI profile goes live you can test it against simulated cus
 
 Every time an AI profile is saved, the profile as it was saved is kept as a new version, numbered from 1. Each conversation records the version of the profile that answered it.
 
-To see them, open **Artificial Intelligence > AI Profiles**, open the profile's actions menu and click **Versions**.
+To see them, open **Artificial Intelligence** → **AI Profiles**, open the profile's actions menu and click **Versions**.
 
 - **Compare** shows a version beside the profile as it is now, or beside another version: pick it in **Compare with**. Every field and setting is listed, grouped like the tabs of the profile editor: General, Instructions (with prompt templates and speaking styles), Parameters, Capabilities (tools, tool instances, agents, knowledge), Prompt Security (with guardrails) and Data Processing & Metrics (extraction, analysis, contact memory, privacy). Templates are shown by their titles. Changed settings are highlighted, and **Only differences** hides the rest.
 - **Restore** gives the profile that version's settings back. The restore is saved as a new version, so the version you replaced is kept too.
@@ -31,7 +31,7 @@ The profile's name, its technical name and its owner are not changed by a restor
 
 The **Simulate AI Conversation** task (under **AI Conversations**) plays an AI profile against a customer played by a model, then scores the conversation.
 
-1. In **Design > Workflows**, create a workflow. Start it with whatever should run the tests: a **Timer**, an **HTTP Request Event** your release process calls, or nothing at all if you start it by hand.
+1. In **Design** → **Workflows**, create a workflow. Start it with whatever should run the tests: a **Timer**, an **HTTP Request Event** your release process calls, or nothing at all if you start it by hand.
 2. Add **Simulate AI Conversation** and fill in:
 
 | Field | What to write |
@@ -62,7 +62,7 @@ Put the test cases in a **For Each** loop: a list of customers, each with their 
 
 ## Keep a catalog of tests
 
-With the **AI Quality** feature on, **Artificial Intelligence > Tests** keeps your simulation tests, so you can run them again after every change instead of building a workflow for each.
+With the **AI Quality** feature on, **Artificial Intelligence** → **Tests** keeps your simulation tests, so you can run them again after every change instead of building a workflow for each.
 
 A **test case** has:
 
@@ -77,7 +77,7 @@ To run tests, click **Run** on a test, or select several and choose **Run** or *
 
 To run the tests from a build pipeline, turn on **AI Chat WebAPI** too and call the API with a token from the site's OpenID server: `GET /api/ai/v1/tests` lists the tests, `POST /api/ai/v1/tests/batches` with `{ "profileId": "...", "repeats": 3 }` (or `testCaseIds`) queues a batch, and `GET /api/ai/v1/tests/batches/{batchId}` returns each run and the pass rate, with `completed` set once every run has finished. The client's role needs the **Manage AI tests, QA cohorts and alert rules** permission.
 
-To make a test from a real conversation, open **Artificial Intelligence > AI Chat sessions**, and choose **Create test** in a conversation's menu. The test plays that conversation's customer again, with its variables, so you can change the profile until the conversation goes the way it should, and keep the test to check it stays that way.
+To make a test from a real conversation, open **Artificial Intelligence** → **AI Chat sessions**, and choose **Create test** in a conversation's menu. The test plays that conversation's customer again, with its variables, so you can change the profile until the conversation goes the way it should, and keep the test to check it stays that way.
 
 ## Compare two profiles on live traffic
 
@@ -121,7 +121,7 @@ Every evaluation, real or simulated, also starts the workflows that begin with *
 
 ## Score a sample of real conversations
 
-With the **AI Quality** feature on, a **QA cohort** scores a share of the real conversations of some AI profiles after they close, without a workflow. Open **Artificial Intelligence > QA**, click **QA cohorts**, then **Add cohort**:
+With the **AI Quality** feature on, a **QA cohort** scores a share of the real conversations of some AI profiles after they close, without a workflow. Open **Artificial Intelligence** → **QA**, click **QA cohorts**, then **Add cohort**:
 
 - **AI profiles**: whose conversations are sampled.
 - **Sample**: the share scored, such as 20%. A conversation is in or out of the sample for good, so it is never scored twice.
@@ -132,7 +132,7 @@ A cohort starts with the conversations that close after it is saved, and scores 
 
 ### The QA dashboard
 
-The QA dashboard is the **AI QA Dashboard** report, under **Reports > Artificial Intelligence Reports**, so it needs the **Reports** feature. Open it from **Artificial Intelligence > QA** with **QA dashboard**, or with **Dashboard** on a cohort to see only that cohort's last 7 days. It shows, for one cohort or for every scored conversation, over the date range you choose (the last 7 days at first; **Last 24 Hours**, **Last 30 Days** and **Last 90 Days** are one click away in the **Date range**, beside the other choices):
+The QA dashboard is the **AI QA Dashboard** report, under **Reports** → **Artificial Intelligence Reports**, so it needs the **Reports** feature. Open it from **Artificial Intelligence** → **QA** with **QA dashboard**, or with **Dashboard** on a cohort to see only that cohort's last 7 days. It shows, for one cohort or for every scored conversation, over the date range you choose (the last 7 days at first; **Last 24 Hours**, **Last 30 Days** and **Last 90 Days** are one click away in the **Date range**, beside the other choices):
 
 - how many conversations were scored, their average score, and the share that passed and that were resolved;
 - the scores day by day;
@@ -140,7 +140,7 @@ The QA dashboard is the **AI QA Dashboard** report, under **Reports > Artificial
 - the most frequent opening questions, with the share of them resolved;
 - the lowest-scored conversations, with the AI profile of each and its session, which opens the conversation.
 
-Like every report, it exports as CSV, and as Excel when **Reports (OpenXml)** is on. **Artificial Intelligence > QA** now opens the cohorts list.
+Like every report, it exports as CSV, and as Excel when **Reports (OpenXml)** is on. **Artificial Intelligence** → **QA** now opens the cohorts list.
 
 ## Reports
 
@@ -152,7 +152,7 @@ For example, a table grouped by **Profile version** with the average **Score** a
 
 ### Alert rules
 
-With the **AI Quality** feature on, **Artificial Intelligence > Alert rules** watches a metric without a workflow. Click **Add alert rule** and choose the **Metric**, the **AI profile** (or every profile), when to alert and the **Threshold**, the **Window** measured, the **Minimum samples** a window needs, and how often to **Check** it. The metrics are the ones the task below measures.
+With the **AI Quality** feature on, **Artificial Intelligence** → **Alert Rules** watches a metric without a workflow. Click **Add alert rule** and choose the **Metric**, the **AI profile** (or every profile), when to alert and the **Threshold**, the **Window** measured, the **Minimum samples** a window needs, and how often to **Check** it. The metrics are the ones the task below measures.
 
 When the threshold is crossed, the rule opens an incident; when a measured window is back within it, the incident resolves. Each change is told once:
 

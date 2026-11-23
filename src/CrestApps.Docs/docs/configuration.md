@@ -176,18 +176,18 @@ Many modules can be set up both in the browser and in configuration. Which one w
 | Module | Admin screen | Configuration | Which wins |
 | --- | --- | --- | --- |
 | AI connections and deployments | **Artificial Intelligence** connections and deployments | `CrestApps:AI:Connections`, `CrestApps:AI:Deployments` | Both are used. Entries from configuration appear beside the ones stored in the database; deployments from configuration are read-only in the admin. |
-| AI default parameters | **Settings > Artificial Intelligence** | `CrestApps:AI:DefaultParameters` | Configuration sets the defaults. The settings page can override maximum iterations, distributed caching and OpenTelemetry for the tenant, and cannot raise iterations above `AbsoluteMaximumIterationsPerRequest`. |
-| Claude | **Settings > Artificial Intelligence > Claude** | `CrestApps:AI:Claude` | The settings page wins for every value it holds. The stored API key is used only while API-key authentication is selected. |
-| Copilot | **Settings > Artificial Intelligence > Copilot** | `CrestApps:AI:Copilot` | The settings page wins for every value it holds. |
-| MCP server | **Settings > Artificial Intelligence**, **MCP Server** card | `CrestApps:AI:McpServer` | **Configuration wins.** Values in configuration override the stored settings. |
-| WebMCP | **Settings > Artificial Intelligence**, **WebMCP** card | `CrestApps:AI:WebMcp` | **Configuration wins.** Values in configuration override the stored settings. |
+| AI default parameters | **Settings** → **Artificial Intelligence** | `CrestApps:AI:DefaultParameters` | Configuration sets the defaults. The settings page can override maximum iterations, distributed caching and OpenTelemetry for the tenant, and cannot raise iterations above `AbsoluteMaximumIterationsPerRequest`. |
+| Claude | **Settings** → **Artificial Intelligence** → **Claude** | `CrestApps:AI:Claude` | The settings page wins for every value it holds. The stored API key is used only while API-key authentication is selected. |
+| Copilot | **Settings** → **Artificial Intelligence** → **Copilot** | `CrestApps:AI:Copilot` | The settings page wins for every value it holds. |
+| MCP server | **Settings** → **Artificial Intelligence**, **MCP Server** card | `CrestApps:AI:McpServer` | **Configuration wins.** Values in configuration override the stored settings. |
+| WebMCP | **Settings** → **Artificial Intelligence**, **WebMCP** card | `CrestApps:AI:WebMcp` | **Configuration wins.** Values in configuration override the stored settings. |
 | AI data sources | The data source editor | `CrestApps:PostgreSQL`, `CrestApps:Elasticsearch` and the `CrestApps:AI:DataSources` overrides | A connection stored on a data source wins over configuration. |
-| Telnyx SMS | **Settings > Communication > SMS**, **Telnyx** | `OrchardCore_Sms_Telnyx` | The settings page wins while its provider is enabled. A field left blank there falls back to configuration. |
-| Telnyx voice | **Settings > Communication > Telephony**, **Telnyx** | None | Admin screen only. |
-| Asterisk | **Settings > Communication > Telephony**, **Asterisk** | `CrestApps:Asterisk:Default` | They are two separate providers. Configuration adds a **Default Asterisk** provider; the tenant picks which provider to use as its default telephony provider. |
-| Do Not Call registries | **Settings > DNC Registries** | `CrestApps:DncRegistry:AzureBlobStorage` | Registry credentials are admin-only. File storage in Azure is configuration-only. |
-| Phone number verification | **Settings > Phone Number Verifications** | None | Admin screen and recipes only. |
-| Stripe | **Settings > Payments > Stripe** | `CrestApps_Stripe` | **Configuration wins**, one value at a time. A value set in configuration is shown read-only on the settings page and is never overwritten by it; a value left out falls back to the settings page. |
+| Telnyx SMS | **Settings** → **Communication** → **SMS**, **Telnyx** | `OrchardCore_Sms_Telnyx` | The settings page wins while its provider is enabled. A field left blank there falls back to configuration. |
+| Telnyx voice | **Settings** → **Communication** → **Telephony**, **Telnyx** | None | Admin screen only. |
+| Asterisk | **Settings** → **Communication** → **Telephony**, **Asterisk** | `CrestApps:Asterisk:Default` | They are two separate providers. Configuration adds a **Default Asterisk** provider; the tenant picks which provider to use as its default telephony provider. |
+| Do Not Call registries | **Settings** → **DNC Registries** | `CrestApps:DncRegistry:AzureBlobStorage` | Registry credentials are admin-only. File storage in Azure is configuration-only. |
+| Phone number verification | **Settings** → **Phone Number Verifications** | None | Admin screen and recipes only. |
+| Stripe | **Settings** → **Payments** → **Stripe** | `CrestApps_Stripe` | **Configuration wins**, one value at a time. A value set in configuration is shown read-only on the settings page and is never overwritten by it; a value left out falls back to the settings page. |
 
 Every other section on this page is configuration-only: it has no admin screen.
 
@@ -970,7 +970,7 @@ The SMS settings screen wins while its Telnyx provider is enabled. See
 | --- | --- |
 | **Section** | `CrestApps_Stripe` |
 | **Feature** | Stripe (`CrestApps.OrchardCore.Stripe`) |
-| **Controls** | The Stripe mode and the keys of each mode, in place of or on top of **Settings > Payments > Stripe** |
+| **Controls** | The Stripe mode and the keys of each mode, in place of or on top of **Settings** → **Payments** → **Stripe** |
 
 Keys: `IsLive` (`true` or `false`; leave it out to let the settings page decide), and for each mode, `Test` and `Live`, the keys `PublishableKey`, `SecretKey` and `WebhookSecret`. Every key is optional. A key that has a value wins over the value stored on the settings page, and the page shows it as configured from the application settings and does not overwrite it; a key that is left out falls back to the settings page.
 
@@ -1841,7 +1841,7 @@ The registry credentials (USA FTC, Canada DNCL) are set only in the admin. See
 ### Phone number verification
 
 The phone number verification providers have no configuration section. Set them up under
-**Settings > Phone Number Verifications**, or with the recipe `settings` step. See
+**Settings** → **Phone Number Verifications**, or with the recipe `settings` step. See
 [Phone Number Verifications](modules/phone-number-verifications.md).
 
 ## Commerce

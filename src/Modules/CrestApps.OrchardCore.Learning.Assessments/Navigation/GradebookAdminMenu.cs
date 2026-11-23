@@ -45,7 +45,7 @@ public sealed class GradebookAdminMenu : AdminNavigationProvider
                 .Action("Index", "Gradebook", AssessmentsConstants.Features.Assessments)
                 .Permission(gradebookPermission)
                 .LocalNav())
-            .Add(S["Grade scales"], S["Grade scales"].PrefixPosition(), scales => scales
+            .Add(S["Grade Scales"], S["Grade Scales"].PrefixPosition(), scales => scales
                 .Id("learningGradeScales")
                 .Action("Index", "GradeScales", AssessmentsConstants.Features.Assessments)
                 .Permission(AssessmentPermissions.ManageGradeScales)

@@ -32,7 +32,7 @@ The report lists every transaction on the site, newest first.
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Transactions |
+| **Menu** | **Commerce** → **Transactions** |
 | **Permission** | Manage transactions |
 | **Feature** | Transactions |
 
@@ -42,7 +42,7 @@ The report lists every transaction on the site, newest first.
 
 ### Find a transaction
 
-1. Open **Commerce > Transactions**.
+1. Open **Commerce** → **Transactions**.
 2. Type part of the transaction's title in **Search by title** and press Enter.
 3. To narrow the list, pick a status in the **Any status** list in the list header, or a source in the **Any source** list. The list updates as soon as you pick.
 
@@ -99,7 +99,7 @@ The **Timeline** lists everything that happened to the transaction, newest first
 
 Use this when the customer paid by cash, check or bank transfer.
 
-1. Open the transaction from **Commerce > Transactions**.
+1. Open the transaction from **Commerce** → **Transactions**.
 2. In **Record an offline payment**, check the **Amount**. It starts at the full outstanding balance; change it for a part payment.
 3. Optionally, pick how the customer paid in **Payment method**: *Cash*, *Check*, *Bank transfer*, *Card terminal* or *Other*, or type another way. Then change **Received** to when the money arrived. **Received** starts at now, in your site's time zone.
 4. Optionally, type the check number or transfer reference in **Reference**. It is recorded with the payment.
@@ -180,7 +180,7 @@ The **Send the invoice** card appears when the **Transaction Reminders** feature
 1. Open the transaction.
 2. In **Send the invoice**, click **Send invoice**, then click **Send invoice** in the confirmation box, which names the amount still owed.
 
-The transaction gets its invoice number, such as *INV-1001*, if it has none yet, and the customer is sent a notice titled *Invoice INV-1001* with a link that pays it. It is not worded as a reminder, and it uses its own e-mail template (**Payment request**), which an administrator can change under **Settings > Commerce > Emails** without changing the reminder. It counts as the first notice: it adds to **Reminders sent**, and the next scheduled reminder waits a full interval after it. If you see *The invoice could not be sent. The owner may not have a notification channel configured.*, contact the customer another way; the invoice number is kept for the next try.
+The transaction gets its invoice number, such as *INV-1001*, if it has none yet, and the customer is sent a notice titled *Invoice INV-1001* with a link that pays it. It is not worded as a reminder, and it uses its own e-mail template (**Payment request**), which an administrator can change under **Settings** → **Commerce** → **Emails** without changing the reminder. It counts as the first notice: it adds to **Reminders sent**, and the next scheduled reminder waits a full interval after it. If you see *The invoice could not be sent. The owner may not have a notification channel configured.*, contact the customer another way; the invoice number is kept for the next try.
 
 ### Send a reminder now
 
@@ -217,13 +217,13 @@ Customers with an account get reminders through the site's notifications, on the
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Transactions |
+| **Menu** | **Settings** → **Commerce** → **Transactions** |
 | **Permission** | Manage transaction settings |
 | **Feature** | Transaction Reminders |
 
 <AskYourAdmin />
 
-1. Open **Settings > Commerce > Transactions**.
+1. Open **Settings** → **Commerce** → **Transactions**.
 2. Change the fields below and click **Save**.
 
 | Field | What it does |
@@ -246,7 +246,7 @@ On the transaction's page, the **Scheduled reminders** card has **Pause reminder
 
 ### A balance charged to a saved card
 
-A balance charged automatically to the customer's saved card, such as an invoice marked **Charge the customer's saved card**, shows a **Charged to a saved card** card with the card and the day it is charged, and how many charges were declined so far. The customer gets no reminder that it is owed while the charge is pending. If the card is declined, it is tried again on the retry schedule above; when no try is left, or the card's bank asks the customer to approve the payment, the customer is asked to pay it themselves (an invoice is e-mailed to them) and a payment issue is recorded under **Commerce > Payment issues**. **Cancel the charge** stops it, and the customer pays themselves.
+A balance charged automatically to the customer's saved card, such as an invoice marked **Charge the customer's saved card**, shows a **Charged to a saved card** card with the card and the day it is charged, and how many charges were declined so far. The customer gets no reminder that it is owed while the charge is pending. If the card is declined, it is tried again on the retry schedule above; when no try is left, or the card's bank asks the customer to approve the payment, the customer is asked to pay it themselves (an invoice is e-mailed to them) and a payment issue is recorded under **Commerce** → **Payment Issues**. **Cancel the charge** stops it, and the customer pays themselves.
 
 ## My Transactions (for customers)
 
@@ -256,7 +256,7 @@ An **admin** of a business account also sees what the account owes, whoever in t
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > My Transactions |
+| **Menu** | **Commerce** → **My Transactions** |
 | **Permission** | View own transactions |
 | **Feature** | Transactions |
 
@@ -265,7 +265,7 @@ An **admin** of a business account also sees what the account owes, whoever in t
 
 ### See what you owe
 
-1. Open **Commerce > My Transactions**.
+1. Open **Commerce** → **My Transactions**.
 2. To see only what you still owe, pick **Outstanding** in the **Any status** list in the list header.
 3. To find one transaction, type part of its description in **Search by description** and press Enter.
 
@@ -309,7 +309,7 @@ Installments are offered only for a balance that is still owed in full and belon
 
 ## My Transactions on the website
 
-Customers who never open the admin can see their transactions on the website itself, in your site's own design. They see the same transactions, invoices and receipts as on **Commerce > My Transactions**, and only their own.
+Customers who never open the admin can see their transactions on the website itself, in your site's own design. They see the same transactions, invoices and receipts as on **Commerce** → **My Transactions**, and only their own.
 
 | | |
 | --- | --- |
@@ -339,7 +339,7 @@ Your site's designer can change how these pages look, or show the same documents
 
 ## Move transactions to another site
 
-Under **Tools > Deployments > Plans**, add the **Transactions** step to a plan to take every transaction, with its timeline, payments, refunds and payment issues, to another site. They arrive as they were: nothing is charged, numbered or e-mailed again, and a transaction the other site already has is left as it is. Payments and refunds need **Checkout** enabled on the other site.
+Under **Tools** → **Deployments** → **Plans**, add the **Transactions** step to a plan to take every transaction, with its timeline, payments, refunds and payment issues, to another site. They arrive as they were: nothing is charged, numbered or e-mailed again, and a transaction the other site already has is left as it is. Payments and refunds need **Checkout** enabled on the other site.
 
 ## Related pages
 

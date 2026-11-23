@@ -30,10 +30,10 @@ Each Contact Center capability owns both its runtime services and the administra
 
 | Capability feature | Included administration screens |
 | --- | --- |
-| `CrestApps.OrchardCore.ContactCenter` | The **Voice Media** library and the administration menu. **Settings > Contact Center** appears with its first tab, from the features below |
+| `CrestApps.OrchardCore.ContactCenter` | The **Voice Media** library and the administration menu. **Settings** → **Contact Center** appears with its first tab, from the features below |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | The **Agent states** reason-code screens |
 | `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | The **Agent entitlements** screen |
-| `CrestApps.OrchardCore.ContactCenter.BusinessHours` | None of its own: business hours are edited under **Content > Business Hours** (the Business Hours module it depends on) |
+| `CrestApps.OrchardCore.ContactCenter.BusinessHours` | None of its own: business hours are edited under **Content** → **Business Hours** (the Business Hours module it depends on) |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Queue, queue group, and skill screens |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialer profile screens |
 | `CrestApps.OrchardCore.ContactCenter.Voice`, enabled with Inbound Voice, the Outbound Dialer, Voice Media, Call Recording or Supervision | The **External transfer destinations** settings tab |
@@ -108,7 +108,7 @@ Contact Center administration is intentionally split into focused menu entries u
 | --- | --- | --- |
 | **Agent states** | The not-ready reason codes agents can choose when they are unavailable. The selected reason changes presence and leaves an audit trail. | `Lunch` sets the agent to `Break`; `Coaching` sets the agent to `Meeting`. |
 | **Agent entitlements** | Provided by the optional Agent Entitlements feature: which queues and campaigns each agent may sign in to, and their administrator-assigned skills. An agent's capacity (`MaxConcurrentInteractions`, a single number) is set only through the `ContactCenterAgentEntitlement` recipe step. | Maria may sign in to the Billing queue and has the `Spanish` skill. |
-| **Business hours** | Business Hours schedules (Content > Business Hours) with a time zone, weekly hours and holidays. While the schedule is closed, a queue either holds its waiting work or overflows it, and an entry point applies its closed-hours handling. | The Support calendar is open Monday-Friday 08:00-17:00 America/New_York and closed on holidays. |
+| **Business hours** | Business Hours schedules (**Content** → **Business Hours**) with a time zone, weekly hours and holidays. While the schedule is closed, a queue either holds its waiting work or overflows it, and an entry point applies its closed-hours handling. | The Support calendar is open Monday-Friday 08:00-17:00 America/New_York and closed on holidays. |
 | **Campaigns** | Omnichannel CRM grouping and reporting records. Campaigns describe the business initiative; they do not decide routing or media execution. | `July renewal outreach` groups all outbound renewal activities and reports outcomes. |
 | **Channel endpoints** | Omnichannel sender/receiver addresses such as SMS numbers, phone numbers, or email addresses. Contact Center references them but Telephony/provider modules still execute media. | `+1 800 555 0100` is the public support number used by an inbound entry point. |
 | **Inbound entry points** | Inbound front doors for voice work. They map dialed numbers to queues, apply business-hours behavior, set priority, and define closed-hours handling. | Calls to the support DID route to Tier 1 during business hours and overflow to voicemail after hours. |
@@ -185,7 +185,7 @@ The [Agent Workspace](agent-desktop.md) is the full-screen desktop where agents 
 
 Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive campaigns, and future channels all offer Activities through the same real-time agent-offer model.
 
-The current soft-phone **Work** tab lets agents choose queues and campaigns. Campaigns come from the Omnichannel Management **Interaction Center → Management** campaign catalog. Routing skills come from **Interaction Center → Management → Skills**, but they are assigned by administrators/supervisors rather than self-selected by agents. Skill, queue, and dialer profile admin screens use display drivers and extensible summary/editor shapes so providers and future desktop panels can extend the model without replacing the base UI.
+The current soft-phone **Work** tab lets agents choose queues and campaigns. Campaigns come from the Omnichannel Management **Interaction Center** → **Management** campaign catalog. Routing skills come from **Interaction Center** → **Management** → **Skills**, but they are assigned by administrators/supervisors rather than self-selected by agents. Skill, queue, and dialer profile admin screens use display drivers and extensible summary/editor shapes so providers and future desktop panels can extend the model without replacing the base UI.
 
 ## Voice provider integration
 

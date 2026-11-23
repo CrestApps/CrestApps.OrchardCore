@@ -45,7 +45,7 @@ public sealed class AIVoiceLibraryAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Voice library"], S["Voice library"].PrefixPosition(), voices => voices
+                .Add(S["Voice Library"], S["Voice Library"].PrefixPosition(), voices => voices
                     .Id("aiVoiceLibrary")
                     .Action("Index", "AIVoiceLibrary", AIConstants.Feature.Area)
                     .Permission(AIPermissions.ManageAIDeployments)

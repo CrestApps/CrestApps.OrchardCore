@@ -7,7 +7,7 @@ Checks carts out through the checkout and records what was bought, with order li
 | Feature | Id | Description |
 | --- | --- | --- |
 | Orders | `CrestApps.OrchardCore.Orders` | Checks carts out through the checkout and records what was bought, with order lists for the store and its customers. |
-| Gift Cards | `CrestApps.OrchardCore.Orders.GiftCards` | Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift cards. |
+| Gift Cards | `CrestApps.OrchardCore.Orders.GiftCards` | Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift Cards. |
 | Returns | `CrestApps.OrchardCore.Orders.Returns` | Lets buyers ask to return items of their orders, for a refund or an exchange, and the store approve, receive, restock and refund them under Commerce > Returns. |
 | Orders API | `CrestApps.OrchardCore.Orders.Api` | Lets a headless storefront or app check out the cart, and the buyer see their orders and ask for returns, over the commerce JSON API; staff list, refund and cancel orders. Enable OpenAPI to document it. |
 

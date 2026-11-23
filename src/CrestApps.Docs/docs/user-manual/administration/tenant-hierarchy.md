@@ -14,7 +14,7 @@ This video is the whole tour of the tenant hierarchy, from the platform and from
 
 | | |
 | --- | --- |
-| **Menu** | Multi-Tenancy > Tenant Hierarchy |
+| **Menu** | **Multi-Tenancy** → **Tenant Hierarchy** |
 | **Permission** | Manage the tenant hierarchy |
 | **Feature** | Tenant Hierarchy Platform (main site only) |
 
@@ -34,7 +34,7 @@ If the screen shows **The host guards are not installed**, the application was s
 
 <YouTube video="tenant-hierarchy" title="Video of the platform's Tenant Hierarchy screen: two parents with their child tenants, searching for a parent, and managing one" start={397} end={425} />
 
-Open **Multi-Tenancy > Tenant Hierarchy**. It looks like the **Tenants** screen. Each parent is listed with its address and badges for its state, a count such as **3 of 25 child tenants** and where its child tenants' data lives, with its child tenants underneath. Use the search box to find a parent by its name or address, or by the name or address of one of its child tenants. Click a parent's name, or **Manage**, to see all its child tenants and the actions for the parent. **View** opens the site.
+Open **Multi-Tenancy** → **Tenant Hierarchy**. It looks like the **Tenants** screen. Each parent is listed with its address and badges for its state, a count such as **3 of 25 child tenants** and where its child tenants' data lives, with its child tenants underneath. Use the search box to find a parent by its name or address, or by the name or address of one of its child tenants. Click a parent's name, or **Manage**, to see all its child tenants and the actions for the parent. **View** opens the site.
 
 **Orphaned child tenants** are child tenants whose parent no longer exists. Move each one to a parent, or make it an ordinary tenant.
 

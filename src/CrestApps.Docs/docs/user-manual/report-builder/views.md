@@ -14,7 +14,7 @@ Watch the short video, then follow the steps below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Views |
+| **Menu** | **Reports** → **Report Views** |
 | **Permission** | Build reports and manage own custom reports and views |
 | **Feature** | Report Builder |
 
@@ -22,7 +22,7 @@ Watch the short video, then follow the steps below.
 
 ## Create a view
 
-1. Open **Reports > Report Views** and click **Add View**.
+1. Open **Reports** → **Report Views** and click **Add View**.
 2. On the **Settings** tab, enter a **View name** (other reports list the view by this name) and a **Description** that tells other report builders what the view prepares.
 3. Design it like a report on the **Design** and **Data model** tabs: add data sets, joins, calculated fields, filters and columns. The columns are what reports can use.
 4. Click **Save**.

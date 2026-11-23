@@ -57,7 +57,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
         services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
 
-        // Money operations that failed and must be finished by hand, listed under Commerce > Payment issues.
+        // Money operations that failed and must be finished by hand, listed under Commerce > Payment Issues.
         services.AddPaymentIssues();
         services.AddDataMigration<PaymentIssueMigrations>()
             .AddIndexProvider<PaymentIssueIndexProvider>();

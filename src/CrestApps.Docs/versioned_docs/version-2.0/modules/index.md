@@ -45,4 +45,4 @@ dotnet add package CrestApps.OrchardCore.SignalR
 # etc.
 ```
 
-After installation, enable the desired features in the **Orchard Core Admin Dashboard** under **Tools > Features**.
+After installation, enable the desired features in the **Orchard Core Admin Dashboard** under **Tools** → **Features**.

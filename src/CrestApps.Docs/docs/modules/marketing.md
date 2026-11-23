@@ -51,7 +51,7 @@ Marketing depends on Orchard Core's **Email** feature, so campaigns can always b
 
 | Screen | Permission | Default roles |
 | --- | --- | --- |
-| **Commerce > Segments** (`SegmentsAdminController`, `marketing/segments`) and **Commerce > Campaigns** (`CampaignsAdminController`, `marketing/campaigns`), on Orchard Core's `AdminList` | `ManageMarketing` (**Manage marketing**) | Administrator |
+| **Commerce** → **Segments** (`SegmentsAdminController`, `marketing/segments`) and **Commerce** → **Campaigns** (`CampaignsAdminController`, `marketing/campaigns`), on Orchard Core's `AdminList` | `ManageMarketing` (**Manage marketing**) | Administrator |
 
 A segment's editor counts its customers and those who accept marketing (up to 10,000). A campaign's editor sends a test, as the segment's first customer would get it.
 

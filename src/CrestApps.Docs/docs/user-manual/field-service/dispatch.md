@@ -11,7 +11,7 @@ A visit is one trip to do a work order's job. Dispatch finds who can do it, book
 
 | | |
 | --- | --- |
-| **Menu** | Field Service > Dispatch Board, Visits; Settings > Dispatch |
+| **Menu** | **Field Service** → **Dispatch Board**, Visits; **Settings** → **Dispatch** |
 | **Permission** | Dispatch visits, or View visits and the dispatch board to see them; Manage dispatch settings for the settings |
 | **Feature** | Dispatch; SignalR for a board that updates by itself |
 
@@ -19,16 +19,16 @@ A visit is one trip to do a work order's job. Dispatch finds who can do it, book
 
 ## Before you start
 
-**Get started** on the dispatch board opens a checklist of what to set up, in order, with what is there now. To try field service with a sample team, territories, assets and work order types, run the **Field service sample** under **Configuration > Recipes**, then publish a schedule for its Field Operations team.
+**Get started** on the dispatch board opens a checklist of what to set up, in order, with what is there now. To try field service with a sample team, territories, assets and work order types, run the **Field service sample** under **Configuration** → **Recipes**, then publish a schedule for its Field Operations team.
 
 - Technicians are workers in a team, with published shifts. Give them a home base, or their team a place, so travel is counted from there.
 - On a work order type, under **Who can do it**, choose the skills the job needs (with the lowest level) and the certifications the technician must hold.
-- On a territory's page (**Field Service > Territories**), choose under **Who serves it** the technicians and teams that work there.
+- On a territory's page (**Field Service** → **Territories**), choose under **Who serves it** the technicians and teams that work there.
 - On a work order, place the job on the map: click the map under the address, or drag the pin. Without a pin, the address is placed in the background when a geocoding provider is set.
 
 ## Schedule a visit
 
-Every new work order gets an unscheduled visit. Work orders made before Dispatch was on get theirs from **Field Service > Visits**: select **Make their visits**.
+Every new work order gets an unscheduled visit. Work orders made before Dispatch was on get theirs from **Field Service** → **Visits**: select **Make their visits**.
 
 1. Open the visit from the work order's **Visits** panel, the visits list or the board.
 2. Under **Schedule it**, choose the day and select **Find technicians**. The best technicians are listed with their earliest start, the trip there and a score; hover the score to see what it is made of. **Ruled out** says why the others can't.
@@ -38,7 +38,7 @@ The visit gets an arrival window to tell the customer, the job shows on the tech
 
 ## The board
 
-**Field Service > Dispatch Board** shows a day:
+**Field Service** → **Dispatch Board** shows a day:
 
 - a row for each technician, with their shift in green, time off hatched, their visits colored by status, and a dashed bar for the trip before each;
 - the unscheduled visits on the right, most urgent first;
@@ -56,7 +56,7 @@ On a work order type, **People needed** sets the crew: a visit is assigned only 
 
 ## Customers
 
-Turn on notices in **Settings > Dispatch > Customer notices**. The work order's contact then gets a text (or an email) when the visit is scheduled or moved, the day before, when the technician is on the way (with a link to follow them), and when it is done or canceled. The link shows the arrival window and, once on the way, when the technician is expected; it stops working when the visit is over. The visit's page lists what the customer was told, and links to the tracking page.
+Turn on notices in **Settings** → **Dispatch** → **Customer notices**. The work order's contact then gets a text (or an email) when the visit is scheduled or moved, the day before, when the technician is on the way (with a link to follow them), and when it is done or canceled. The link shows the arrival window and, once on the way, when the technician is expected; it stops working when the visit is over. The visit's page lists what the customer was told, and links to the tracking page.
 
 ## Visits at risk
 
@@ -89,8 +89,8 @@ The first time, the page asks whether to share their location while they work. I
 
 ## KPIs
 
-**Reports > Field Service > KPIs** shows how field service went over a range of days, the last 30 by default: the share of jobs done the first time, arrivals inside the window, completed jobs per technician a day, return visits, time on the road against time on site, work orders answered and resolved in time, the mean time to repair, what a completed work order bills on average, and repeat work: completed work orders whose asset needed another work order soon after. Below them, **Parts used by stock location** shows the parts each van or store gave. Choose the days and, under **Repeat within**, how many days count as soon after (30 by default), then select **Show**. For your own charts and tables, use the **Field Service** data source in the Report Builder, which has a row per work order, visit, asset, meter reading or asset serviced.
+**Reports** → **Field Service** → **KPIs** shows how field service went over a range of days, the last 30 by default: the share of jobs done the first time, arrivals inside the window, completed jobs per technician a day, return visits, time on the road against time on site, work orders answered and resolved in time, the mean time to repair, what a completed work order bills on average, and repeat work: completed work orders whose asset needed another work order soon after. Below them, **Parts used by stock location** shows the parts each van or store gave. Choose the days and, under **Repeat within**, how many days count as soon after (30 by default), then select **Show**. For your own charts and tables, use the **Field Service** data source in the Report Builder, which has a row per work order, visit, asset, meter reading or asset serviced.
 
 ## Settings
 
-**Settings > Dispatch** has three cards. **Visits** sets whether new work orders get a visit, the arrival window, the minutes kept free between visits, how far ahead to look, the time zone, and how late a visit is before it is at risk. **Choosing technicians** sets whether only a territory's technicians are offered, how much each thing counts when they are ranked (a short trip, the soonest start, skill level, the preferred technician and an even workload), and how long the optimizer looks. **Customer notices** turns the notices and the tracking link on, sets the reminder hour, and holds the five texts.
+**Settings** → **Dispatch** has three cards. **Visits** sets whether new work orders get a visit, the arrival window, the minutes kept free between visits, how far ahead to look, the time zone, and how late a visit is before it is at risk. **Choosing technicians** sets whether only a territory's technicians are offered, how much each thing counts when they are ranked (a short trip, the soonest start, skill level, the preferred technician and an even workload), and how long the optimizer looks. **Customer notices** turns the notices and the tracking link on, sets the reminder hour, and holds the five texts.

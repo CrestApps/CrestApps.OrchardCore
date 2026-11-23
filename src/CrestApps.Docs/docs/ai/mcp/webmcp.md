@@ -186,7 +186,7 @@ The marks are kept in `AnonymousAIToolOptions` (`CrestApps.OrchardCore.AI.Core.M
 
 WebMCP lets each page expose its own tools, not only the tools every page gets. The **WebMCP tools** content part (`WebMcpPart`) does that for content items. It is available when Orchard Core's **Contents** feature is enabled.
 
-1. Attach **WebMCP tools** to a content type (**Content Definition → Content Types → Edit → Add Parts**).
+1. Attach **WebMCP tools** to a content type (**Content Definition** → **Content Types** → **Edit** → **Add Parts**).
 2. When creating or editing a content item of that type, pick the tools its page exposes. The list shows only the selectable tools and tool instances the editor may use (**Access AI tool**); tools another editor picked that the current editor may not use stay selected.
 3. On the content item's page (its **Detail** display), signed-in users with **Use WebMCP tools in the browser** get those tools, registered with `document.modelContext.registerTool()` like the site tools. Each call goes to the item's own endpoints:
 

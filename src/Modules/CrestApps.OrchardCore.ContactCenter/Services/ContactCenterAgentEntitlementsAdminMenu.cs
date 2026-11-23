@@ -31,7 +31,7 @@ public sealed class ContactCenterAgentEntitlementsAdminMenu : AdminNavigationPro
                 .Add(S["Management"], S["Management"].PrefixPosition(), management => management
                     .AddClass("interaction-center-management")
                     .Id("interactionCenterManagement")
-                    .Add(S["Agent entitlements"], S["Agent entitlements"].PrefixPosition(), entitlements => entitlements
+                    .Add(S["Agent Entitlements"], S["Agent Entitlements"].PrefixPosition(), entitlements => entitlements
                     .AddClass("contact-center-agent-entitlements")
                     .Id("contactCenterAgentEntitlements")
                     .Action("Index", "AgentEntitlements", "CrestApps.OrchardCore.ContactCenter")

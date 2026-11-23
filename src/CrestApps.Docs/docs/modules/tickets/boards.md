@@ -5,7 +5,7 @@ description: "Ticket boards: columns of statuses, moving a card to change a tick
 user_manual: user-manual/service-desk/boards
 ---
 
-A board (`TicketBoard`, **Service Desk → Boards**, `Admin/tickets/boards`) shows tickets as cards in columns. Each column (`TicketBoardColumn`) holds one or more statuses, such as a **Pending** column for **Waiting for the requester** and **Waiting for a third party**; a status is in one column of a board only, and tickets in a status that is in no column don't show on that board. Dragging a card to another column (or choosing **Move** on the card, for the keyboard and touch screens) sets the ticket's status: to the column's only status, to its **default** when it has several, or to the one the agent picks when it has several and no default. A column can have a limit; the header turns red when the column holds more, and moves are never refused for it.
+A board (`TicketBoard`, **Service Desk** → **Boards**, `Admin/tickets/boards`) shows tickets as cards in columns. Each column (`TicketBoardColumn`) holds one or more statuses, such as a **Pending** column for **Waiting for the requester** and **Waiting for a third party**; a status is in one column of a board only, and tickets in a status that is in no column don't show on that board. Dragging a card to another column (or choosing **Move** on the card, for the keyboard and touch screens) sets the ticket's status: to the column's only status, to its **default** when it has several, or to the one the agent picks when it has several and no default. A column can have a limit; the header turns red when the column holds more, and moves are never refused for it.
 
 ## What a board shows
 

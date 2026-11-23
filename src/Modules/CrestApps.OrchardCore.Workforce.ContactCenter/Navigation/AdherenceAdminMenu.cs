@@ -25,7 +25,7 @@ public sealed class AdherenceAdminMenu : AdminNavigationProvider
         builder.Add(S["Workforce"], S["Workforce"].PrefixPosition("6"), workforce => workforce
             .Add(S["Adherence"], S["Adherence"].PrefixPosition("55"), adherence => adherence
                 .Id("workforceAdherence")
-                .Add(S["Real-time"], S["Real-time"].PrefixPosition("10"), board => board
+                .Add(S["Real-Time"], S["Real-Time"].PrefixPosition("10"), board => board
                     .Id("workforceAdherenceBoard")
                     .Action("Index", "Adherence", WorkforceContactCenterConstants.Features.Adherence)
                     .Permission(WorkforcePermissions.ViewAdherence)

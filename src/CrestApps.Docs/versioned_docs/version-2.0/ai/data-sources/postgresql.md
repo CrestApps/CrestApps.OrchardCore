@@ -29,8 +29,8 @@ The handler reads rows in batches, supports targeted reads by key for explicit r
 ## Getting started
 
 1. Enable **AI Data Sources** and **AI Data Sources - PostgreSQL**.
-2. Create an AI knowledge base index under **Search > Indexing**.
-3. Create a new data source under **Artificial Intelligence > Data Sources**.
+2. Create an AI knowledge base index under **Search** → **Indexing**.
+3. Create a new data source under **Artificial Intelligence** → **Data Sources**.
 4. Choose **PostgreSQL** as the **Source type**.
 5. Enter the PostgreSQL connection string and source table name.
 6. Map the key, title, and content fields, then save the data source.

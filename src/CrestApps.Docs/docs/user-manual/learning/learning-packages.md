@@ -10,7 +10,7 @@ A learning package is a lesson made in an authoring tool, such as Articulate Ris
 
 | | |
 | --- | --- |
-| **Menu** | A course's outline (add a **Learning package** item); Settings > Learning packages |
+| **Menu** | A course's outline (add a **Learning package** item); **Settings** → **Learning Packages** |
 | **Permission** | Import learning packages (given with Manage courses) to import; Manage learning package settings to set the package content host |
 | **Feature** | Learning SCORM Packages (and Learning cmi5 Packages for cmi5 courses) |
 
@@ -32,7 +32,7 @@ Rise and Storyline 360 packages run in several frames that must talk to each oth
 Your administrator sets the content host once:
 
 1. Ask whoever runs your site to point a separate host name at the site, for example packages.example.com, with a certificate. It must not share the site's sign-in cookies; a different domain is best.
-2. Go to **Settings > Learning packages**.
+2. Go to **Settings** → **Learning Packages**.
 3. Enter the address in **Package content host** and click **Save**.
 
 From then on, every package opens from that host, and that host shows nothing but package files. Packages that already worked keep working. To go back, empty the field and save.

@@ -21,7 +21,7 @@ Enabling this feature automatically enables the core **Phone Number Verification
 
 ## Configuration
 
-Configure the provider under **Settings** -> **Phone Number Verifications** on the **Veriphone** tab. The tab only appears when this feature is enabled.
+Configure the provider under **Settings** → **Phone Number Verifications** on the **Veriphone** tab. The tab only appears when this feature is enabled.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
@@ -73,8 +73,8 @@ Veriphone returns the following information, which the provider maps into the co
 The User Manual walks administrators through these screens on [Phone Number Verification](../user-manual/administration/phone-number-verification.md#set-up-a-provider). In short:
 
 1. Create an account at [veriphone.io](https://veriphone.io) and copy the API key.
-2. Enable the **Veriphone Phone Number Verification** feature under **Tools** -> **Features**.
-3. Open **Settings** -> **Phone Number Verifications**, select the **Veriphone** tab, switch on **Enable this provider**, paste the key, and save.
+2. Enable the **Veriphone Phone Number Verification** feature under **Tools** → **Features**.
+3. Open **Settings** → **Phone Number Verifications**, select the **Veriphone** tab, switch on **Enable this provider**, paste the key, and save.
 4. On the **General** tab, select **Veriphone** as the default provider.
 
 ## Troubleshooting
