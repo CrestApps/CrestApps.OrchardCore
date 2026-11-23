@@ -41,6 +41,7 @@ public static class SurveysExtrasServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddScoped<SurveyInvitationLinks>();
+        services.TryAddScoped<SurveyInvitationEmailLimit>();
         services.TryAddScoped<SurveyInvitationService>();
         services.RemoveAll<ISurveyInvitationService>();
         services.AddScoped<ISurveyInvitationService>(provider => provider.GetRequiredService<SurveyInvitationService>());

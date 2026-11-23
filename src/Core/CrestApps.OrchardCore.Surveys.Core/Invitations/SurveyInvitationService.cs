@@ -10,7 +10,6 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
 
@@ -38,11 +37,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private readonly IEnumerable<ISurveyInvitationRecipientPolicy> _recipientPolicies;
     private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
-    private readonly ISiteService _siteService;
-
-    // The daily e-mail limit of the current call: the settings are read and today's e-mails counted once, then this
-    // scope's own sends are added as they go out.
-    private DailyEmailBudget _emailBudget;
+    private readonly SurveyInvitationEmailLimit _emailLimit;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationService"/> class.
@@ -56,7 +51,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <param name="recipientPolicies">The opt-out and consent checks asked before an e-mail invitation is sent.</param>
     /// <param name="secrets">The anonymity secrets, which sign the invitation links.</param>
     /// <param name="clock">The clock.</param>
-    /// <param name="siteService">The site service, for the daily e-mail limit; without it the default limit applies.</param>
+    /// <param name="emailLimit">The site's daily e-mail limit, held under a lock per site day.</param>
     public SurveyInvitationService(
         SurveyStore surveyStore,
         SurveyCollectorStore collectorStore,
@@ -67,9 +62,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         IEnumerable<ISurveyInvitationRecipientPolicy> recipientPolicies,
         SurveyAnonymitySecrets secrets,
         IClock clock,
-        ISiteService siteService = null)
+        SurveyInvitationEmailLimit emailLimit)
     {
-        _siteService = siteService;
+        _emailLimit = emailLimit;
         _surveyStore = surveyStore;
         _collectorStore = collectorStore;
         _invitationStore = invitationStore;
@@ -86,7 +81,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        _emailBudget = null;
+        _emailLimit.BeginBatch();
 
         var result = await CreateAsync(request, requireRecipient: true, cancellationToken);
 
@@ -200,7 +195,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <returns>How many were sent.</returns>
     public async Task<int> SendPendingAsync(string collectorId, CancellationToken cancellationToken = default)
     {
-        _emailBudget = null;
+        _emailLimit.BeginBatch();
 
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
         var survey = collector is null ? null : await _surveyStore.FindByIdAsync(collector.SurveyId, cancellationToken);
@@ -236,7 +231,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <returns>How many reminders, and invitations held back earlier, were sent.</returns>
     public async Task<int> RemindAsync(string collectorId, bool force, CancellationToken cancellationToken = default)
     {
-        _emailBudget = null;
+        _emailLimit.BeginBatch();
 
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
         var survey = collector is null ? null : await _surveyStore.FindByIdAsync(collector.SurveyId, cancellationToken);
@@ -479,9 +474,10 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         var isEmail = string.IsNullOrEmpty(invitation.UserId) && !string.IsNullOrWhiteSpace(invitation.Email);
 
-        // The site's daily e-mail limit: an invitation over it is not sent. A first send is held back and the hourly
-        // reminder task sends it on a later day; a reminder simply stays due.
-        if (isEmail && await IsDailyEmailLimitReachedAsync(cancellationToken))
+        // The site's daily e-mail limit, checked under the lock of the site's day: an invitation over it, or one whose
+        // sender can't get the lock in time, is not sent. A first send is held back and the hourly reminder task sends
+        // it on a later run; a reminder simply stays due.
+        if (isEmail && !await _emailLimit.CanSendAsync(cancellationToken))
         {
             await HoldAsync(invitation, isReminder, cancellationToken);
 
@@ -504,9 +500,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return false;
         }
 
-        if (isEmail && _emailBudget is not null)
+        if (isEmail)
         {
-            _emailBudget.Emailed++;
+            _emailLimit.AddSent();
         }
 
         if (isReminder)
@@ -537,8 +533,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         // Read by the indexed hold mark, so held invitations are found however many never-sent ones the collector has.
         var held = await _invitationStore.ListHeldByCollectorAsync(collector.ItemId, SurveysConstants.PageSize, cancellationToken);
 
-        // Held invitations are e-mails; while today's limit is still reached they all wait for another run.
-        if (held.Count == 0 || await IsDailyEmailLimitReachedAsync(cancellationToken))
+        // Held invitations are e-mails; while today's limit is still reached (or its lock is busy) they all wait for
+        // another run.
+        if (held.Count == 0 || !await _emailLimit.CanSendAsync(cancellationToken))
         {
             return 0;
         }
@@ -576,46 +573,6 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         invitation.Put(new SurveyInvitationHold { HeldUtc = _clock.UtcNow });
         await _invitationStore.UpdateAsync(invitation, cancellationToken);
-    }
-
-    private async Task<bool> IsDailyEmailLimitReachedAsync(CancellationToken cancellationToken)
-    {
-        if (_emailBudget is null)
-        {
-            string timeZoneId = null;
-            SurveySettings settings = null;
-
-            if (_siteService is not null)
-            {
-                settings = await _siteService.GetSettingsAsync<SurveySettings>();
-                timeZoneId = (await _siteService.GetSiteSettingsAsync())?.TimeZoneId;
-            }
-
-            if (string.IsNullOrEmpty(timeZoneId))
-            {
-                timeZoneId = _clock.GetSystemTimeZone()?.TimeZoneId ?? string.Empty;
-            }
-
-            _emailBudget = new DailyEmailBudget
-            {
-                TimeZoneId = timeZoneId,
-                Limit = Math.Max(1, settings?.InvitationEmailsPerDay ?? SurveySettings.DefaultInvitationEmailsPerDay),
-            };
-        }
-
-        var dayStartUtc = DayStartUtc(_clock.UtcNow, _emailBudget.TimeZoneId);
-
-        // Counted once per call (and again when the site's day changes during it), not for every e-mail: the count
-        // takes the e-mails committed so far, this scope's earlier sends included (YesSql flushes them before the
-        // count), and the sends of this call are added as they go out. A send running in parallel elsewhere is not
-        // seen until the next call, so the limit can be passed by what parallel calls send at the same time.
-        if (_emailBudget.DayStartUtc != dayStartUtc)
-        {
-            _emailBudget.DayStartUtc = dayStartUtc;
-            _emailBudget.Emailed = await _invitationStore.CountEmailedSinceAsync(dayStartUtc, cancellationToken);
-        }
-
-        return _emailBudget.Emailed >= _emailBudget.Limit;
     }
 
     private async Task<bool?> HasOptedOutAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken)
@@ -666,17 +623,6 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         var rows = await _participationStore.ListAsync(survey.ItemId, key, DateOnly.MinValue, cancellationToken);
 
         return rows.Any(row => row.CompletedCount > 0);
-    }
-
-    private sealed class DailyEmailBudget
-    {
-        public string TimeZoneId { get; init; }
-
-        public int Limit { get; init; }
-
-        public DateTime DayStartUtc { get; set; }
-
-        public int Emailed { get; set; }
     }
 
     private async Task<SurveyInvitation> FindForRecipientAsync(string collectorId, string userId, PartyRef? recipient, string email, CancellationToken cancellationToken)

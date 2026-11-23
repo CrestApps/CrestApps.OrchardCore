@@ -83,14 +83,15 @@ internal sealed class SurveysMigrations : DataMigration
     }
 
     /// <summary>
-    /// Adds the hold column of the invitation index (schema only), so the reminder task reads held first sends directly.
-    /// Invitations held before the column existed are marked when the step that indexes invitations again saves them.
+    /// Adds the hold column of the invitation index (schema only), so the reminder task reads held first sends directly,
+    /// and asks for the step that marks the invitations held before the column existed. That step reads only pending
+    /// invitations and saves only the held ones, so they are marked within its first runs.
     /// </summary>
     /// <returns>The migration version.</returns>
     public async Task<int> UpdateFrom4Async()
     {
         await SurveysIndexSchema.AddInvitationHoldColumnAsync(SchemaBuilder);
-        await _steps.RequestAsync(SurveyInvitationsReindexStep.StepName);
+        await _steps.RequestAsync(SurveyInvitationHoldsStep.StepName);
 
         return 5;
     }
