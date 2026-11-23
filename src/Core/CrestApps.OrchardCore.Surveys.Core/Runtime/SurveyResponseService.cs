@@ -28,7 +28,7 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 /// reopening, voiding and deleting. Every write to a response runs under a lock per response on a fresh read, with
 /// optimistic concurrency; observers run after the commit.
 /// </summary>
-public sealed class SurveyResponseService : ISurveyResponseService
+public sealed partial class SurveyResponseService : ISurveyResponseService
 {
     /// <summary>
     /// The number series of responses.
@@ -555,6 +555,19 @@ public sealed class SurveyResponseService : ISurveyResponseService
             // puts them back, so a bad new file never takes the files kept earlier with it.
             var storedFileAnswers = StoredFileAnswers(response);
 
+            // The response before this post, when the post could take a locked answer off the path or hide it.
+            var lockSnapshot = LockSnapshot(definition, response);
+            var screenQuestionIds = SurveyPlanNavigator.QuestionsOf(response.Plan, response.CurrentPageId);
+
+            // A post whose answers would take a locked answer off the path or hide it is refused: the response keeps
+            // the answers it had, nothing is saved, and the page shows why on the answers that would do it.
+            SurveyPageResult RefuseLockBreak(Dictionary<string, List<string>> breaks)
+            {
+                RestoreSnapshot(response, lockSnapshot);
+
+                return new SurveyPageResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Page = BuildPage(version, response), Errors = breaks };
+            }
+
             // Once the page's own time is up, what is posted for it is ignored: only what was saved in time counts.
             var readErrors = pageTimeIsUp
                 ? new Dictionary<string, List<string>>(StringComparer.Ordinal)
@@ -566,6 +579,12 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             if (request.Direction == SurveyPageDirection.Back)
             {
+                // Going back keeps the page's answers as they are, so it is refused too when they would break a lock.
+                if (FindLockBreaks(definition, cacheKey, lockSnapshot, response, screenQuestionIds) is { } backBreaks)
+                {
+                    return RefuseLockBreak(backBreaks);
+                }
+
                 if (CanGoBack(definition, response, now))
                 {
                     LeaveScreen(response, now);
@@ -584,7 +603,24 @@ public sealed class SurveyResponseService : ISurveyResponseService
             if (errors.Count > 0 && pageTimeIsUp)
             {
                 // The page's time ran out: what is valid is kept, the rest is dropped, and the respondent moves on.
+                var beforeDrop = lockSnapshot is null ? null : Clone(response);
+
                 RemoveUnlocked(response, errors.Keys);
+
+                // Nothing posted is read once the time is up, so the respondent can no longer change these answers: an
+                // answer saved in time whose drop would take a locked answer off the path or hide it stays as saved,
+                // rather than refusing the page for good.
+                if (FindLockBreaks(definition, cacheKey, lockSnapshot, response, errors.Keys) is { } keptForLocks)
+                {
+                    foreach (var questionId in keptForLocks.Keys)
+                    {
+                        if (beforeDrop.Answers.TryGetValue(questionId, out var saved))
+                        {
+                            response.Answers[questionId] = saved;
+                        }
+                    }
+                }
+
                 errors.Clear();
             }
 
@@ -597,9 +633,24 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 // leaves them alone.
                 SurveyResponseFiles.DiscardPending(response);
                 RestoreFileAnswers(response, SurveyPlanNavigator.QuestionsOf(response.Plan, response.CurrentPageId).Where(id => !state.HiddenQuestionIds.Contains(id)), storedFileAnswers);
+
+                // The valid answers of a refused page are kept, so they must keep the locked answers too.
+                if (FindLockBreaks(definition, cacheKey, lockSnapshot, response, screenQuestionIds) is { } refusedBreaks)
+                {
+                    return RefuseLockBreak(refusedBreaks);
+                }
+
                 await _responseStore.UpdateAsync(response, cancellationToken);
 
                 return new SurveyPageResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Page = BuildPage(version, response, state), Errors = errors };
+            }
+
+            // The answers move the respondent on (or finish): the path from here, with the answers a branch skips
+            // dropped, must keep every locked answer. Once the page's time is up nothing posted was read, and the
+            // answers dropped above already kept them.
+            if (!pageTimeIsUp && FindLockBreaks(definition, cacheKey, lockSnapshot, response, screenQuestionIds) is { } forwardBreaks)
+            {
+                return RefuseLockBreak(forwardBreaks);
             }
 
             var fileErrors = await Files.StorePendingAsync(response, pendingFiles, cancellationToken);
@@ -680,8 +731,19 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 return new SurveySaveResult { Error = SurveyErrorCode.InvalidState, Response = response };
             }
 
+            var lockSnapshot = LockSnapshot(version.Definition, response);
+
             await ReadScreenAsync(version.Definition, version, response, request, SurveyAnswerReadMode.Draft, pendingFiles: null, cancellationToken);
             Settle(version.Definition, response, SurveyRuntimeVersions.CacheKey(version));
+
+            // An autosave whose answers would take a locked answer off the path or hide it saves nothing.
+            if (FindLockBreaks(version.Definition, SurveyRuntimeVersions.CacheKey(version), lockSnapshot, response, SurveyPlanNavigator.QuestionsOf(response.Plan, response.CurrentPageId)) is { } breaks)
+            {
+                RestoreSnapshot(response, lockSnapshot);
+
+                return new SurveySaveResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Errors = breaks };
+            }
+
             response.LastActivityUtc = now;
             response.ModifiedUtc = now;
             await _responseStore.UpdateAsync(response, cancellationToken);
@@ -728,6 +790,11 @@ public sealed class SurveyResponseService : ISurveyResponseService
             HiddenQuestionIds = page.HiddenQuestionIds,
             HiddenChoiceIds = page.HiddenChoiceIds,
             Variables = new Dictionary<string, string>(response.Variables, StringComparer.Ordinal),
+
+            // The answers a save or a page post would refuse because they'd take a locked answer off the path or hide
+            // it, so the page can say so as the respondent changes them.
+            Errors = (GuardsLocks(definition, stored) ? FindLockBreaks(definition, cacheKey, stored, response, SurveyPlanNavigator.QuestionsOf(response.Plan, response.CurrentPageId)) : null)
+                ?? new Dictionary<string, List<string>>(StringComparer.Ordinal),
         };
 
         foreach (var question in page.Questions)
@@ -779,6 +846,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
             }
 
             var cacheKey = SurveyRuntimeVersions.CacheKey(version);
+            var lockSnapshot = LockSnapshot(definition, response);
             var before = _logic.Evaluate(definition, response, cacheKey);
             var readErrors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
@@ -802,6 +870,15 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             // The answer is locked first: the review policy shows feedback during a response only for a checked answer.
             answer.CheckedUtc = now;
+
+            // The answer checked may itself be read by a rule or a branch: it can't take an answer locked earlier off the
+            // path or hide it, and then nothing is locked or saved.
+            if (FindLockBreaks(definition, cacheKey, lockSnapshot, response, [question.Id]) is { } breaks)
+            {
+                RestoreSnapshot(response, lockSnapshot);
+
+                return new SurveyCheckResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Errors = [.. breaks.Values.SelectMany(messages => messages).Distinct(StringComparer.Ordinal)] };
+            }
 
             var during = _serviceProvider.GetService<ISurveyReviewPolicy>() is { } policy
                 ? policy.GetAllowedFor(survey, definition, response, question.Id, now)
@@ -891,6 +968,20 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 response.Status = SurveyResponseStatus.InProgress;
                 response.CompletedUtc = null;
                 response.EndingId = null;
+
+                // The earlier completion's result goes too: rules on the score read the score of the next completion,
+                // never an old one, and completing again scores the response afresh.
+                response.Score = null;
+                response.MaxScore = null;
+                response.Percent = null;
+                response.Passed = null;
+                response.ScoreBandId = null;
+                response.CategoryScores.Clear();
+
+                if (version.Definition.Scoring?.Enabled == true)
+                {
+                    response.Grading = GradingStatus.Pending;
+                }
                 response.CurrentPageId = response.PagePath.LastOrDefault() ?? response.Plan.PageOrder.FirstOrDefault();
                 response.PageVisits.Add(new SurveyPageVisit { PageId = response.CurrentPageId, EnteredUtc = now });
                 response.LastActivityUtc = now;
@@ -1416,8 +1507,30 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
     private (string Next, SurveyEnding Ending) NextScreen(SurveyDefinition definition, SurveyResponse response, SurveyLogicState state, string cacheKey)
     {
+        var step = ChooseNext(definition, response, state, cacheKey, response.CurrentPageId);
+
+        // The answers of the pages a branch skips are dropped, except the locked answers checked with immediate feedback.
+        SkipScreens(response, step);
+
+        // Only a branch names an ending here. Otherwise the completion chooses it once the response is scored, so an
+        // ending (or a rule it reads) on the score sees this response's score.
+        return (step.Next, step.Ending);
+    }
+
+    // Drops the answers of the screens a branch skips, except the locked ones.
+    private static void SkipScreens(SurveyResponse response, NextStep step)
+    {
+        for (var skipped = step.SkipFrom; skipped < step.SkipTo; skipped++)
+        {
+            RemoveUnlocked(response, SurveyPlanNavigator.QuestionsOf(response.Plan, response.Plan.PageOrder[skipped]));
+        }
+    }
+
+    // Chooses the screen after a screen, as a page post forward does: a branch that holds on the last screen of a page,
+    // else the next screen that shows. It changes nothing: the caller drops the answers of the screens a branch skips.
+    private NextStep ChooseNext(SurveyDefinition definition, SurveyResponse response, SurveyLogicState state, string cacheKey, string current)
+    {
         var plan = response.Plan;
-        var current = response.CurrentPageId;
         var index = plan.PageOrder.IndexOf(current);
 
         if (SurveyPlanNavigator.IsLastScreenOfPage(plan, current))
@@ -1438,7 +1551,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
                     if (ending is not null)
                     {
-                        return (null, ending);
+                        return new NextStep(null, ending, 0, 0);
                     }
 
                     continue;
@@ -1454,21 +1567,16 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
                 var target = SurveyPlanNavigator.FirstShowing(plan, state, targetIndex);
 
-                // The answers of the pages the branch skips are dropped, except the locked answers checked with
-                // immediate feedback.
-                for (var skipped = index + 1; skipped < (target is null ? plan.PageOrder.Count : plan.PageOrder.IndexOf(target)); skipped++)
-                {
-                    RemoveUnlocked(response, SurveyPlanNavigator.QuestionsOf(plan, plan.PageOrder[skipped]));
-                }
-
-                return (target, target is null ? _endings.Choose(definition, response, state, cacheKey) : null);
+                return new NextStep(target, null, index + 1, target is null ? plan.PageOrder.Count : plan.PageOrder.IndexOf(target));
             }
         }
 
-        var next = SurveyPlanNavigator.FirstShowing(plan, state, index + 1);
-
-        return next is null ? (null, _endings.Choose(definition, response, state, cacheKey)) : (next, null);
+        return new NextStep(SurveyPlanNavigator.FirstShowing(plan, state, index + 1), null, 0, 0);
     }
+
+    // The screen after a screen (null at the end), the ending a branch goes to, and the plan positions of the screens a
+    // branch skips (SkipFrom up to, not including, SkipTo).
+    private readonly record struct NextStep(string Next, SurveyEnding Ending, int SkipFrom, int SkipTo);
 
     private async Task<SurveyErrorCode> CompleteCoreAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyEnding ending, bool autoSubmitted, SurveyRespondentIdentity identity, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
@@ -1522,6 +1630,11 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             LeaveScreen(response, now);
 
+            // The response is being completed: from here it is scored as completed, so the engine counts the pages on
+            // the respondent's path (not the pages a branch skipped), the same questions a regrade and the review count.
+            // The final status (completed or screened out) is set once the ending is chosen below.
+            response.Status = SurveyResponseStatus.Completed;
+
             var scoring = definition.Scoring?.Enabled == true ? _serviceProvider.GetService<ISurveyScoringEngine>() : null;
 
             if (scoring is not null)
@@ -1540,6 +1653,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
             var quotas = response.IsTest || definition.Quotas is not { Count: > 0 } ? null : _serviceProvider.GetService<ISurveyQuotaService>();
             var screenedByQuota = false;
 
+            // Unless a branch named it, the ending is chosen now, after scoring, so a rule on the score reads this score.
             ending ??= _endings.Choose(definition, response, logicState, SurveyRuntimeVersions.CacheKey(version));
 
             if (quotas is not null && ending?.Outcome != EndingOutcome.ScreenedOut
@@ -1668,12 +1782,11 @@ public sealed class SurveyResponseService : ISurveyResponseService
         if (invalid.Count > 0)
         {
             RemoveUnlocked(response, invalid.Keys);
-            state = Settle(definition, response, cacheKey);
+            Settle(definition, response, cacheKey);
         }
 
-        var ending = _endings.Choose(definition, response, state, cacheKey);
-
-        await CompleteCoreAsync(survey, version, response, ending, autoSubmitted: true, identity, notifications, cancellationToken);
+        // The completion chooses the ending once the response is scored.
+        await CompleteCoreAsync(survey, version, response, ending: null, autoSubmitted: true, identity, notifications, cancellationToken);
     }
 
     // Takes back what completing a response counted: the respondent's participation and the quotas it matched. Runs

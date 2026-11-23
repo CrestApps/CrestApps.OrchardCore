@@ -88,6 +88,38 @@ export function evaluateRules(rules, answers, questionIds) {
 }
 
 /**
+ * Works out whether a question shows after the rules ran. A checked (locked) answer keeps the visibility the server gave
+ * it: the server refuses a change that would skip or hide it, so the page must not look as if the change had hidden it.
+ * @param {string} questionId the question
+ * @param {boolean} locked whether its answer is checked and locked
+ * @param {boolean} hiddenNow whether it is hidden now
+ * @param {Set<string>} hiddenQuestions the questions the rules hide
+ * @returns {boolean} whether it is hidden
+ */
+export function isQuestionHidden(questionId, locked, hiddenNow, hiddenQuestions) {
+    return locked ? hiddenNow : hiddenQuestions.has(questionId);
+}
+
+/**
+ * Works out how the runner locks a form control once its answer is checked. `readonly` does nothing on a radio, a
+ * checkbox or a drop-down, so those are disabled, as the server renders a locked answer (the server never reads a locked
+ * answer from a post anyway); text-like controls become read-only, and hidden inputs stay as they are.
+ * @param {string} tagName the element's tag name
+ * @param {string} type the input's type, or an empty string
+ * @returns {'disabled' | 'readonly' | null} the attribute to set, or null
+ */
+export function lockAttribute(tagName, type) {
+    const tag = tagName.toUpperCase();
+    const kind = (type ?? '').toLowerCase();
+
+    if (tag === 'SELECT' || (tag === 'INPUT' && (kind === 'radio' || kind === 'checkbox'))) {
+        return 'disabled';
+    }
+
+    return tag === 'INPUT' && kind === 'hidden' ? null : 'readonly';
+}
+
+/**
  * Formats the time left as m:ss, or h:mm:ss past an hour.
  * @param {number} milliseconds the time left
  * @returns {string} the text

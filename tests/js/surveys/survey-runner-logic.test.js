@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
     evaluateRules,
     formatTimeLeft,
+    isQuestionHidden,
+    lockAttribute,
     readAnswers,
 } from '../../../src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner-logic.js';
 
@@ -56,6 +58,33 @@ describe('evaluateRules', () => {
         const hidden = evaluateRules({ 'q:b': showWhen('earlier', 'yes') }, new Map(), new Set(['b']));
 
         expect(hidden.questions.size).toBe(0);
+    });
+});
+
+describe('isQuestionHidden', () => {
+    it('follows the rules for an answer that is not locked', () => {
+        expect(isQuestionHidden('q2', false, false, new Set(['q2']))).toBe(true);
+        expect(isQuestionHidden('q2', false, true, new Set())).toBe(false);
+    });
+
+    it('keeps a locked answer as the server showed it, whatever the rules say', () => {
+        // The server refuses a change that would hide a checked answer, so the page must not hide it either.
+        expect(isQuestionHidden('q2', true, false, new Set(['q2']))).toBe(false);
+        expect(isQuestionHidden('q2', true, true, new Set())).toBe(true);
+    });
+});
+
+describe('lockAttribute', () => {
+    it('disables choice controls, where readonly does nothing', () => {
+        expect(lockAttribute('INPUT', 'radio')).toBe('disabled');
+        expect(lockAttribute('INPUT', 'checkbox')).toBe('disabled');
+        expect(lockAttribute('SELECT', '')).toBe('disabled');
+    });
+
+    it('makes text-like controls read-only and leaves hidden inputs alone', () => {
+        expect(lockAttribute('INPUT', 'text')).toBe('readonly');
+        expect(lockAttribute('TEXTAREA', '')).toBe('readonly');
+        expect(lockAttribute('INPUT', 'hidden')).toBeNull();
     });
 });
 

@@ -328,6 +328,32 @@
 		};
 	}
 	/**
+	* Works out whether a question shows after the rules ran. A checked (locked) answer keeps the visibility the server gave
+	* it: the server refuses a change that would skip or hide it, so the page must not look as if the change had hidden it.
+	* @param {string} questionId the question
+	* @param {boolean} locked whether its answer is checked and locked
+	* @param {boolean} hiddenNow whether it is hidden now
+	* @param {Set<string>} hiddenQuestions the questions the rules hide
+	* @returns {boolean} whether it is hidden
+	*/
+	function isQuestionHidden(questionId, locked, hiddenNow, hiddenQuestions) {
+		return locked ? hiddenNow : hiddenQuestions.has(questionId);
+	}
+	/**
+	* Works out how the runner locks a form control once its answer is checked. `readonly` does nothing on a radio, a
+	* checkbox or a drop-down, so those are disabled, as the server renders a locked answer (the server never reads a locked
+	* answer from a post anyway); text-like controls become read-only, and hidden inputs stay as they are.
+	* @param {string} tagName the element's tag name
+	* @param {string} type the input's type, or an empty string
+	* @returns {'disabled' | 'readonly' | null} the attribute to set, or null
+	*/
+	function lockAttribute(tagName, type) {
+		const tag = tagName.toUpperCase();
+		const kind = (type ?? "").toLowerCase();
+		if (tag === "SELECT" || tag === "INPUT" && (kind === "radio" || kind === "checkbox")) return "disabled";
+		return tag === "INPUT" && kind === "hidden" ? null : "readonly";
+	}
+	/**
 	* Formats the time left as m:ss, or h:mm:ss past an hour.
 	* @param {number} milliseconds the time left
 	* @returns {string} the text
@@ -394,7 +420,9 @@
 		for (const question of form.querySelectorAll("[data-question-id]")) {
 			const element = question;
 			const id = element.dataset.questionId ?? "";
-			element.hidden = hidden.questions.has(id);
+			const locked = element.hasAttribute("data-survey-locked");
+			element.hidden = isQuestionHidden(id, locked, element.hidden, hidden.questions);
+			if (locked) continue;
 			const hiddenChoices = hidden.choices.get(id) ?? /* @__PURE__ */ new Set();
 			for (const input of element.querySelectorAll("input[type=\"radio\"], input[type=\"checkbox\"], option")) {
 				const choice = input;
@@ -421,10 +449,23 @@
 		const evaluateLocal = () => {
 			if (Object.keys(rules).length > 0) applyVisibility(form, evaluateRules(rules, readAnswers(new FormData(form).entries()), questionIds));
 		};
+		const showLockErrors = (errors) => {
+			let first = "";
+			for (const output of form.querySelectorAll("[data-survey-lock-error]")) {
+				const element = output;
+				const text = (errors?.[element.dataset.surveyLockError ?? ""] ?? []).join(" ");
+				if (text && text !== element.textContent) first ||= text;
+				element.textContent = text;
+				element.hidden = !text;
+			}
+			if (first) announce(first);
+		};
+		const hasLocks = () => form.querySelector("[data-survey-locked]") !== null;
 		const evaluateServer = debounce(async () => {
-			if (serverRules.length === 0 || !form.dataset.evaluateUrl) return;
+			if (serverRules.length === 0 && !hasLocks() || !form.dataset.evaluateUrl) return;
 			const result = await post(form, form.dataset.evaluateUrl);
 			if (!result?.ok) return;
+			showLockErrors(result.errors);
 			const choices = new Map(Object.entries(result.hiddenChoiceIds ?? {}).map(([key, value]) => [key, new Set(value)]));
 			applyVisibility(form, {
 				questions: new Set(result.hiddenQuestionIds ?? []),
@@ -438,7 +479,8 @@
 		const save = async () => {
 			if (!dirty || submitting || !form.dataset.saveUrl) return;
 			dirty = false;
-			await post(form, form.dataset.saveUrl);
+			const result = await post(form, form.dataset.saveUrl);
+			if (result && !result.ok && result.errors && Object.keys(result.errors).length > 0) showLockErrors(result.errors);
 		};
 		const autosave = debounce(save, autosaveDelay);
 		const changed = () => {
@@ -480,7 +522,12 @@
 				if (result.feedback?.rightAnswer) parts.push(result.feedback.rightAnswer);
 				if (result.feedback?.feedback) parts.push(result.feedback.feedback);
 				button.remove();
-				form.querySelector(`[data-question-id="${CSS.escape(questionId)}"]`)?.querySelectorAll("input, select, textarea").forEach((input) => input.setAttribute("readonly", "readonly"));
+				const question = form.querySelector(`[data-question-id="${CSS.escape(questionId)}"]`);
+				question?.setAttribute("data-survey-locked", "true");
+				question?.querySelectorAll("input, select, textarea").forEach((input) => {
+					const attribute = lockAttribute(input.tagName, input instanceof HTMLInputElement ? input.type : "");
+					if (attribute) input.setAttribute(attribute, attribute);
+				});
 			}
 			output.textContent = parts.filter((part) => part).join(" ");
 			announce(output.textContent ?? "");

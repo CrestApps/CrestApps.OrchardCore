@@ -25,4 +25,10 @@ public sealed class SurveyEvaluateResult : SurveyResponseResult
     /// Gets or sets the values of calculated variables.
     /// </summary>
     public Dictionary<string, string> Variables { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the errors by question id that saving these answers would get: with immediate feedback, the answers
+    /// that would take an answer already checked off the respondent's path or hide it, which a save or a page post refuses.
+    /// </summary>
+    public Dictionary<string, List<string>> Errors { get; set; } = [];
 }

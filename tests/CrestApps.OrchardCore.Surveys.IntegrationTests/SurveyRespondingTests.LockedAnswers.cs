@@ -9,14 +9,109 @@ namespace CrestApps.OrchardCore.Surveys.IntegrationTests;
 
 public sealed partial class SurveyRespondingTests
 {
+    // Part of the refusal message without an apostrophe, which the page HTML-encodes.
+    private const string LockRefusal = "the change would skip or hide a question whose answer you already checked";
+
     [Fact]
-    public async Task LockedAnswer_HiddenLater_CountsInTheScore_AndShowsOnTheReview()
+    public async Task LockedAnswer_AChangeThatWouldHideIt_IsRefused_AndTheScoreCountsTheKeptAnswers()
     {
         // Arrange: q2 and q3 show only when q1 is "yes"; immediate feedback locks an answer once it is checked.
-        var (surveyId, token, ids) = await PublishLockedAnswerQuizAsync();
+        var (surveyId, token, ids) = await PublishLockedAnswerQuizAsync(branched: false);
         using var http = await _fixture.CreateClientAsync();
         var cancellationToken = TestContext.Current.CancellationToken;
+        var (responsePath, page) = await StartQuizAsync(http, token);
+        var antiforgery = SurveysSiteFixture.Token(page);
 
+        // The respondent checks q2 (right, so it locks) and answers q3 without checking it.
+        var savedFirst = await http.PostAsync($"{responsePath}/save", Form(antiforgery, page, (ids["q1"], ids["yes"])), cancellationToken);
+        var checkedAnswer = await http.PostAsync($"{responsePath}/check/{ids["q2"]}", Form(antiforgery, page, (ids["q2"], ids["q2a"])), cancellationToken);
+        await http.PostAsync($"{responsePath}/save", Form(antiforgery, page, (ids["q1"], ids["yes"]), (ids["q3"], ids["q3a"])), cancellationToken);
+
+        // Act: an autosave and a finish that change q1 to "no" (which would hide q2) are refused.
+        var refusedSave = await http.PostAsync($"{responsePath}/save", Form(antiforgery, page, (ids["q1"], ids["no"])), cancellationToken);
+        var refusedFinish = await http.PostAsync(responsePath, Multipart(antiforgery, page, "finish", (ids["q1"], ids["no"]), (ids["q4"], ids["q4a"])), cancellationToken);
+        var refusedHtml = await refusedFinish.Content.ReadAsStringAsync(cancellationToken);
+        var stillOpen = await LatestResponseAsync(surveyId);
+
+        // The respondent keeps "yes" and finishes.
+        var finished = await http.PostAsync(responsePath, Multipart(antiforgery, page, "finish", (ids["q1"], ids["yes"]), (ids["q3"], ids["q3a"]), (ids["q4"], ids["q4a"])), cancellationToken);
+        var review = await http.GetStringAsync($"{responsePath}/review", cancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, savedFirst.StatusCode);
+        var checkedJson = await checkedAnswer.Content.ReadAsStringAsync(cancellationToken);
+        Assert.True(checkedJson.Contains("\"ok\":true", StringComparison.Ordinal), checkedJson);
+
+        var refusedSaveJson = await refusedSave.Content.ReadAsStringAsync(cancellationToken);
+        Assert.Contains("\"ok\":false", refusedSaveJson, StringComparison.Ordinal);
+        Assert.Contains(ids["q1"], refusedSaveJson, StringComparison.Ordinal);
+
+        Assert.Equal(HttpStatusCode.OK, refusedFinish.StatusCode);
+        Assert.Contains(LockRefusal, refusedHtml, StringComparison.Ordinal);
+        Assert.Equal(SurveyResponseStatus.InProgress, stillOpen.Status);
+        Assert.Equal(ids["yes"], stillOpen.Answers[ids["q1"]].Values.Single());
+        Assert.Null(stillOpen.Score);
+
+        Assert.Equal(HttpStatusCode.Redirect, finished.StatusCode);
+        var response = await LatestResponseAsync(surveyId);
+
+        Assert.Equal(SurveyResponseStatus.Completed, response.Status);
+        Assert.True(response.Answers[ids["q2"]].IsLocked);
+        Assert.Equal(6m, response.Score);
+        Assert.Equal(6m, response.MaxScore);
+        Assert.Contains("Locked question two", review, StringComparison.Ordinal);
+        Assert.Contains("Unchecked question three", review, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LockedAnswer_OnABranch_BackThenChangingTheBranchAnswer_IsRefused_AndTheScoreIsUnchanged()
+    {
+        // Arrange: q1 "yes" goes to branch B (page 3), "no" to branch A (page 2, which jumps past page 3).
+        var (surveyId, token, ids) = await PublishLockedAnswerQuizAsync(branched: true);
+        using var http = await _fixture.CreateClientAsync();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (responsePath, page1) = await StartQuizAsync(http, token);
+        var antiforgery = SurveysSiteFixture.Token(page1);
+
+        await http.PostAsync(responsePath, Multipart(antiforgery, page1, "next", (ids["q1"], ids["yes"])), cancellationToken);
+        var branchB = await http.GetStringAsync(responsePath, cancellationToken);
+        var checkedAnswer = await http.PostAsync($"{responsePath}/check/{ids["q3"]}", Form(antiforgery, branchB, (ids["q3"], ids["q3a"])), cancellationToken);
+        await http.PostAsync(responsePath, Multipart(antiforgery, branchB, "back"), cancellationToken);
+        var backOnPage1 = await http.GetStringAsync(responsePath, cancellationToken);
+
+        // Act: going on with "no" would leave branch B and its locked answer.
+        var refused = await http.PostAsync(responsePath, Multipart(antiforgery, backOnPage1, "next", (ids["q1"], ids["no"])), cancellationToken);
+        var refusedHtml = await refused.Content.ReadAsStringAsync(cancellationToken);
+        var stored = await LatestResponseAsync(surveyId);
+
+        // Assert
+        var checkedJson = await checkedAnswer.Content.ReadAsStringAsync(cancellationToken);
+        Assert.True(checkedJson.Contains("\"ok\":true", StringComparison.Ordinal), checkedJson);
+        Assert.Equal(PageId(page1), PageId(backOnPage1));
+        Assert.Equal(HttpStatusCode.OK, refused.StatusCode);
+        Assert.Contains(LockRefusal, refusedHtml, StringComparison.Ordinal);
+        Assert.Equal(PageId(page1), PageId(refusedHtml));
+        Assert.Equal(ids["yes"], stored.Answers[ids["q1"]].Values.Single());
+        Assert.True(stored.Answers[ids["q3"]].IsLocked);
+        Assert.Null(stored.Score);
+
+        // The respondent stays on branch B and finishes: the score counts branch B only (q3 and q4).
+        await http.PostAsync(responsePath, Multipart(antiforgery, backOnPage1, "next", (ids["q1"], ids["yes"])), cancellationToken);
+        var branchBAgain = await http.GetStringAsync(responsePath, cancellationToken);
+        await http.PostAsync(responsePath, Multipart(antiforgery, branchBAgain, "next"), cancellationToken);
+        var lastPage = await http.GetStringAsync(responsePath, cancellationToken);
+        var finished = await http.PostAsync(responsePath, Multipart(antiforgery, lastPage, "finish", (ids["q4"], ids["q4a"])), cancellationToken);
+        var completed = await LatestResponseAsync(surveyId);
+
+        Assert.Equal(HttpStatusCode.Redirect, finished.StatusCode);
+        Assert.Equal(SurveyResponseStatus.Completed, completed.Status);
+        Assert.Equal(4m, completed.Score);
+        Assert.Equal(4m, completed.MaxScore);
+    }
+
+    private async Task<(string ResponsePath, string Page)> StartQuizAsync(HttpClient http, string token)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var landing = await http.GetStringAsync($"s/{token}", cancellationToken);
         var started = await http.PostAsync($"s/{token}/start", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -24,69 +119,44 @@ public sealed partial class SurveyRespondingTests
         }), cancellationToken);
 
         var responsePath = started.Headers.Location?.OriginalString;
-        var page = await http.GetStringAsync(responsePath, cancellationToken);
-        var antiforgery = SurveysSiteFixture.Token(page);
 
-        // Act: the respondent checks q2 (right, so it locks), answers q3 without checking it, then changes q1 to
-        // "no", which hides both, and finishes.
-        var savedFirst = await http.PostAsync($"{responsePath}/save", new FormUrlEncodedContent(new Dictionary<string, string>
+        return (responsePath, await http.GetStringAsync(responsePath, cancellationToken));
+    }
+
+    private static FormUrlEncodedContent Form(string antiforgery, string page, params (string QuestionId, string Value)[] answers)
+    {
+        var fields = new Dictionary<string, string>
         {
             ["__RequestVerificationToken"] = antiforgery,
             ["pageId"] = PageId(page),
-            ["q." + ids["q1"]] = ids["yes"],
-        }), cancellationToken);
+        };
 
-        var checkedAnswer = await http.PostAsync($"{responsePath}/check/{ids["q2"]}", new FormUrlEncodedContent(new Dictionary<string, string>
+        foreach (var (questionId, value) in answers)
         {
-            ["__RequestVerificationToken"] = antiforgery,
-            ["pageId"] = PageId(page),
-            ["q." + ids["q1"]] = ids["yes"],
-            ["q." + ids["q2"]] = ids["q2a"],
-        }), cancellationToken);
+            fields["q." + questionId] = value;
+        }
 
-        var saved = await http.PostAsync($"{responsePath}/save", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["__RequestVerificationToken"] = antiforgery,
-            ["pageId"] = PageId(page),
-            ["q." + ids["q1"]] = ids["yes"],
-            ["q." + ids["q2"]] = ids["q2a"],
-            ["q." + ids["q3"]] = ids["q3a"],
-        }), cancellationToken);
+        return new FormUrlEncodedContent(fields);
+    }
 
-        var finished = await http.PostAsync(responsePath, new MultipartFormDataContent
+    private static MultipartFormDataContent Multipart(string antiforgery, string page, string direction, params (string QuestionId, string Value)[] answers)
+    {
+        var content = new MultipartFormDataContent
         {
             { new StringContent(antiforgery), "__RequestVerificationToken" },
             { new StringContent(PageId(page)), "pageId" },
-            { new StringContent("finish"), "direction" },
-            { new StringContent(ids["no"]), "q." + ids["q1"] },
-            { new StringContent(ids["q4a"]), "q." + ids["q4"] },
-        }, cancellationToken);
+            { new StringContent(direction), "direction" },
+        };
 
-        var review = await http.GetAsync($"{responsePath}/review", cancellationToken);
-        var reviewHtml = await review.Content.ReadAsStringAsync(cancellationToken);
+        foreach (var (questionId, value) in answers)
+        {
+            content.Add(new StringContent(value), "q." + questionId);
+        }
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, savedFirst.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, checkedAnswer.StatusCode);
-        Assert.Contains("\"ok\":true", await checkedAnswer.Content.ReadAsStringAsync(cancellationToken), StringComparison.Ordinal);
-        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
-        Assert.Equal(HttpStatusCode.Redirect, finished.StatusCode);
-        Assert.EndsWith("/done", finished.Headers.Location?.OriginalString, StringComparison.Ordinal);
-
-        var response = await LatestResponseAsync(surveyId);
-
-        Assert.Equal(SurveyResponseStatus.Completed, response.Status);
-        Assert.True(response.Answers[ids["q2"]].IsLocked);
-        Assert.Equal(3m, response.Score);
-        Assert.Equal(3m, response.MaxScore);
-
-        Assert.Equal(HttpStatusCode.OK, review.StatusCode);
-        Assert.Contains("Locked question two", reviewHtml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Unchecked question three", reviewHtml, StringComparison.Ordinal);
-        Assert.Contains("Always shown question four", reviewHtml, StringComparison.Ordinal);
+        return content;
     }
 
-    private Task<(string SurveyId, string Token, Dictionary<string, string> Ids)> PublishLockedAnswerQuizAsync()
+    private Task<(string SurveyId, string Token, Dictionary<string, string> Ids)> PublishLockedAnswerQuizAsync(bool branched)
         => _fixture.InTenantAsync(async services =>
         {
             static SurveyQuestion Choice(string id, string title, decimal points, string correct, SurveyVisibility visibility = null)
@@ -101,26 +171,36 @@ public sealed partial class SurveyRespondingTests
                     Visibility = visibility ?? new SurveyVisibility(),
                 };
 
-            var showWhenYes = new SurveyVisibility
-            {
-                Mode = VisibilityMode.ShowWhen,
-                Rule = new ConditionRule { Conditions = [new Condition { Source = "q1", Operator = ConditionOperator.Is, Values = ["yes"] }] },
-            };
+            var whenYes = new ConditionRule { Conditions = [new Condition { Source = "q1", Operator = ConditionOperator.Is, Values = ["yes"] }] };
 
             var q1 = new SurveyQuestion
             {
                 Id = "q1",
                 Name = "q1",
                 ControlType = SurveyControlNames.SingleChoice,
-                Title = "Show the extra questions?",
+                Title = branched ? "Take branch B?" : "Show the extra questions?",
                 Scoring = new SurveyQuestionScoring { Points = 0 },
                 Choices = [new SurveyChoice { Id = "yes", Value = "yes", Text = "Yes" }, new SurveyChoice { Id = "no", Value = "no", Text = "No" }],
             };
 
-            var definition = new SurveyDefinition
+            List<SurveyPage> pages;
+
+            if (branched)
             {
-                Title = "Locked answers quiz",
-                Pages =
+                // Page 1 branches to page 3 on "yes"; page 2 (branch A) jumps past page 3 to page 4.
+                pages =
+                [
+                    new SurveyPage { Id = "p1", Name = "page_1", Title = "Page 1", Questions = [q1], Branches = [new SurveyBranch { Id = "toB", Rule = whenYes, TargetKind = BranchTargetKind.Page, TargetId = "p3" }] },
+                    new SurveyPage { Id = "p2", Name = "page_2", Title = "Branch A", Questions = [Choice("q2", "Branch A question", 2, "a")], Branches = [new SurveyBranch { Id = "pastB", TargetKind = BranchTargetKind.Page, TargetId = "p4" }] },
+                    new SurveyPage { Id = "p3", Name = "page_3", Title = "Branch B", Questions = [Choice("q3", "Branch B question", 2, "a")] },
+                    new SurveyPage { Id = "p4", Name = "page_4", Title = "Last", Questions = [Choice("q4", "Last question", 2, "a")] },
+                ];
+            }
+            else
+            {
+                var showWhenYes = new SurveyVisibility { Mode = VisibilityMode.ShowWhen, Rule = whenYes };
+
+                pages =
                 [
                     new SurveyPage
                     {
@@ -135,7 +215,13 @@ public sealed partial class SurveyRespondingTests
                             Choice("q4", "Always shown question four", 1, "a"),
                         ],
                     },
-                ],
+                ];
+            }
+
+            var definition = new SurveyDefinition
+            {
+                Title = branched ? "Branched locked answers quiz" : "Locked answers quiz",
+                Pages = pages,
                 Endings = [new SurveyEnding { Id = "e1", Name = "thanks", Title = "Thanks", Message = "Thank you!", IsDefault = true }],
             };
 
@@ -154,7 +240,7 @@ public sealed partial class SurveyRespondingTests
             // The saved draft can give questions and choices new ids, so the form posts the ids it keeps, found by name and value.
             var ids = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            foreach (var question in reloaded.Draft.Pages[0].Questions)
+            foreach (var question in reloaded.Draft.Pages.SelectMany(page => page.Questions))
             {
                 ids[question.Name] = question.Id;
 

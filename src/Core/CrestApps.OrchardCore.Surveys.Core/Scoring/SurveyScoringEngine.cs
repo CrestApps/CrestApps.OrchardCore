@@ -191,9 +191,11 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
     /// <summary>
     /// Lists the questions that count toward a response's score, in the order the respondent saw them: the questions of
     /// the pages on the respondent's path that logic did not hide, then every question whose answer is locked (checked
-    /// with immediate feedback) that a later branch or visibility rule took off the path or hid. The respondent saw a
-    /// locked answer graded and it is kept, so it counts with its points and its most points alike. The review and the
-    /// grading page show the same questions.
+    /// with immediate feedback) that a later branch or visibility rule took off the path or hid. The respondent's own
+    /// changes can't do that (the response service refuses them), so such an answer comes only from the author's logic,
+    /// such as a rule on the time. The respondent saw a locked answer graded and it is kept, so it counts with its points
+    /// and its most points alike. The completion scores a response as completed, so a completion, a regrade and the
+    /// review page count the same questions; the grading page shows them too.
     /// </summary>
     /// <param name="definition">The definition.</param>
     /// <param name="response">The response.</param>

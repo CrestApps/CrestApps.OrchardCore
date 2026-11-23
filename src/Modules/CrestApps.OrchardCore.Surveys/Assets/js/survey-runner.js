@@ -5,7 +5,7 @@
 // feedback, and keeps a page from being submitted twice. The server decides everything again when the page is posted,
 // and the page works without this script.
 
-import { debounce, evaluateRules, formatTimeLeft, readAnswers } from './survey-runner-logic.js';
+import { debounce, evaluateRules, formatTimeLeft, isQuestionHidden, lockAttribute, readAnswers } from './survey-runner-logic.js';
 
 const autosaveDelay = 10000;
 const evaluateDelay = 300;
@@ -58,7 +58,14 @@ function applyVisibility(form, hidden) {
         const element = /** @type {HTMLElement} */ (question);
         const id = element.dataset.questionId ?? '';
 
-        element.hidden = hidden.questions.has(id);
+        const locked = element.hasAttribute('data-survey-locked');
+
+        element.hidden = isQuestionHidden(id, locked, element.hidden, hidden.questions);
+
+        // The choices of a locked answer stay as the server showed them too.
+        if (locked) {
+            continue;
+        }
 
         const hiddenChoices = hidden.choices.get(id) ?? new Set();
 
@@ -99,8 +106,34 @@ function initForm(form) {
         }
     };
 
+    // Shows, on each answer that would do it, why a change can't be saved: it would skip or hide an answer already
+    // checked. The server refuses such a save or page post and keeps the earlier answers.
+    const showLockErrors = (/** @type {Record<string, string[]> | undefined} */ errors) => {
+        let first = '';
+
+        for (const output of form.querySelectorAll('[data-survey-lock-error]')) {
+            const element = /** @type {HTMLElement} */ (output);
+            const messages = errors?.[element.dataset.surveyLockError ?? ''] ?? [];
+            const text = messages.join(' ');
+
+            if (text && text !== element.textContent) {
+                first ||= text;
+            }
+
+            element.textContent = text;
+            element.hidden = !text;
+        }
+
+        if (first) {
+            announce(first);
+        }
+    };
+
+    const hasLocks = () => form.querySelector('[data-survey-locked]') !== null;
+
     const evaluateServer = debounce(async () => {
-        if (serverRules.length === 0 || !form.dataset.evaluateUrl) {
+        // With a checked answer on the response, the server also says whether a change would skip or hide it.
+        if ((serverRules.length === 0 && !hasLocks()) || !form.dataset.evaluateUrl) {
             return;
         }
 
@@ -109,6 +142,8 @@ function initForm(form) {
         if (!result?.ok) {
             return;
         }
+
+        showLockErrors(result.errors);
 
         const choices = new Map(Object.entries(result.hiddenChoiceIds ?? {}).map(([key, value]) => [key, new Set(/** @type {string[]} */ (value))]));
         applyVisibility(form, { questions: new Set(result.hiddenQuestionIds ?? []), choices });
@@ -128,7 +163,12 @@ function initForm(form) {
         }
 
         dirty = false;
-        await post(form, form.dataset.saveUrl);
+        const result = await post(form, form.dataset.saveUrl);
+
+        // A refused save kept nothing: say why on the answers that caused it.
+        if (result && !result.ok && result.errors && Object.keys(result.errors).length > 0) {
+            showLockErrors(result.errors);
+        }
     };
 
     const autosave = debounce(save, autosaveDelay);
@@ -200,7 +240,20 @@ function initForm(form) {
                 }
 
                 button.remove();
-                form.querySelector(`[data-question-id="${CSS.escape(questionId)}"]`)?.querySelectorAll('input, select, textarea').forEach((input) => input.setAttribute('readonly', 'readonly'));
+
+                const question = form.querySelector(`[data-question-id="${CSS.escape(questionId)}"]`);
+
+                // The answer is locked now: rules no longer show or hide it here, as on the server.
+                question?.setAttribute('data-survey-locked', 'true');
+                // readonly does nothing on a radio, a checkbox or a drop-down, so those are disabled, as the server
+                // renders a locked answer; a locked answer isn't read from the post anyway.
+                question?.querySelectorAll('input, select, textarea').forEach((input) => {
+                    const attribute = lockAttribute(input.tagName, input instanceof HTMLInputElement ? input.type : '');
+
+                    if (attribute) {
+                        input.setAttribute(attribute, attribute);
+                    }
+                });
             }
 
             output.textContent = parts.filter((part) => part).join(' ');

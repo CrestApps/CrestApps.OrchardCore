@@ -19,7 +19,7 @@ Condition sources:
 | `{questionId}` | The answer to a question |
 | `{questionId}.{rowId}` | One row of a matrix or similar |
 | `var:{name}` | A variable |
-| `score`, `score:{categoryId}` | The score so far, or a category's |
+| `score`, `score:{categoryId}` | The response's score, or a category's. It is set when the response completes, before the ending is chosen, so ending rules read this response's score. While the response is in progress (also after a reopen, which clears the earlier result) it is empty, so page, question and branch rules on it don't see a score |
 | `context:{key}` | A value a consumer provides through `ISurveyConditionSourceProvider` |
 | `collector` | The collector the response came through |
 | `culture` | The response's culture |
@@ -38,7 +38,7 @@ The runner script (`survey-runner.js`) evaluates plain rules of the current page
 
 When a page is completed, its `Branches` are evaluated in order; the first that holds goes to a **later** page or to an ending. Without a branch, the next visible page in the plan follows. Skipped pages leave the page path and their answers are dropped. Going back (when the survey and the page allow it) saves the page without checking it.
 
-After the last page, the first ending whose condition holds is used, else the default ending. An ending with the outcome **Screened out** ends the response as screened out. Ending messages are Liquid with sanitized HTML; a redirect goes only to the site or a host listed in the site settings.
+After the last page, the response is scored and then the first ending whose condition holds is used, else the default ending, so an ending on `score` reads this response's score. A branch that goes to an ending names it directly. An ending with the outcome **Screened out** ends the response as screened out. Ending messages are Liquid with sanitized HTML; a redirect goes only to the site or a host listed in the site settings.
 
 An ending message renders in this order (`LiquidSurveyEndingRenderer`):
 

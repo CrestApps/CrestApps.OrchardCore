@@ -106,7 +106,8 @@ public sealed class SurveyRunnerShapes
                 Respond,
                 hiddenChoiceIds: page.HiddenChoiceIds.TryGetValue(view.Id, out var hiddenChoices) ? hiddenChoices : null,
                 canCheck: definition.Scoring?.FeedbackMode == FeedbackMode.Immediate && !checkedAnswer,
-                culture: response.Culture));
+                culture: response.Culture,
+                locked: checkedAnswer));
         }
 
         var shape = await _shapeFactory.CreateAsync<SurveyPageRespondViewModel>("SurveyPage_Respond", model =>
@@ -165,8 +166,9 @@ public sealed class SurveyRunnerShapes
         var screens = response.PagePath.Count > 0 ? response.PagePath : response.Plan.PageOrder;
 
         // The questions on the respondent's path that logic did not hide, then each locked answer (checked with immediate
-        // feedback) that a later branch or visibility rule took off the path or hid: the respondent saw it graded and it
-        // counts toward the score, so the review shows it too.
+        // feedback) that logic took off the path or hid: the respondent saw it graded and it counts toward the score, so
+        // the review shows it too. The respondent can't do that with their own answers (a change that would is refused),
+        // so this is only the author's logic, such as a rule on the date or time.
         var listed = new HashSet<string>(StringComparer.Ordinal);
         var questionIds = screens
             .Distinct(StringComparer.Ordinal)
@@ -259,7 +261,8 @@ public sealed class SurveyRunnerShapes
         bool canCheck,
         string culture,
         SurveyAnswerFeedback feedback = null,
-        string answerText = null)
+        string answerText = null,
+        bool locked = false)
     {
         var control = await _shapeFactory.CreateAsync<SurveyControlViewModel>(SurveyControlShapes.Control, model =>
         {
@@ -307,6 +310,7 @@ public sealed class SurveyRunnerShapes
             model.Feedback = feedback;
             model.Hidden = hidden;
             model.CanCheck = canCheck;
+            model.Locked = locked;
             model.Answerable = descriptor?.Has(SurveyControlCapabilities.Answerable) ?? true;
             model.DisplayType = displayType;
         });
