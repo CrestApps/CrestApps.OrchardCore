@@ -1046,6 +1046,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 response.Passed = null;
                 response.ScoreBandId = null;
                 response.CategoryScores.Clear();
+                response.UnreachedPagePath = [];
 
                 if (version.Definition.Scoring?.Enabled == true)
                 {
@@ -1729,6 +1730,12 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             LeaveScreen(response, now);
 
+            if (!autoSubmitted)
+            {
+                // The respondent submitted from the end of their path: nothing on it is left unreached.
+                response.UnreachedPagePath = [];
+            }
+
             // The response is being completed: from here it is scored as completed, so the engine counts the pages on
             // the respondent's path (not the pages a branch skipped), the same questions a regrade and the review count.
             // The final status (completed or screened out) is set once the ending is chosen below.
@@ -1902,11 +1909,55 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         if (invalid.Count > 0)
         {
             RemoveUnlocked(response, invalid.Keys);
-            Settle(definition, response, cacheKey);
+            state = Settle(definition, response, cacheKey);
         }
+
+        // The pages still ahead on the respondent's path count toward the score with 0 points, so walking away from a
+        // timed or closing quiz can't pass it on the pages answered so far. Pages a branch skips stay out.
+        response.UnreachedPagePath = UnreachedScreens(definition, response, state, cacheKey);
 
         // The completion chooses the ending once the response is scored.
         return await CompleteCoreAsync(survey, version, response, ending: null, autoSubmitted: true, identity, notifications, cancellationToken);
+    }
+
+    // Walks on from the screen the respondent is on to the end, choosing each next screen as a page post forward would with
+    // the answers given so far: a branch whose rule holds on those answers is taken (and drops the answers of the screens
+    // it skips, unless locked), a branch point left unanswered takes no branch, so the walk goes on to the next screen
+    // that shows, and a branch to an ending ends it. Returns the screens the walk reached, in order.
+    private List<string> UnreachedScreens(SurveyDefinition definition, SurveyResponse response, SurveyLogicState state, string cacheKey)
+    {
+        var unreached = new List<string>();
+        var plan = response.Plan;
+
+        if (plan?.PageOrder is not { Count: > 0 } || string.IsNullOrEmpty(response.CurrentPageId) || !plan.PageOrder.Contains(response.CurrentPageId))
+        {
+            return unreached;
+        }
+
+        var seen = new HashSet<string>(response.PagePath ?? [], StringComparer.Ordinal) { response.CurrentPageId };
+        var screen = response.CurrentPageId;
+
+        // A next screen is always further on in the plan, so the walk ends; the set stops it on a bad plan too.
+        while (screen is not null)
+        {
+            var step = ChooseNext(definition, response, state, cacheKey, screen);
+
+            if (step.SkipTo > step.SkipFrom)
+            {
+                SkipScreens(response, step);
+                state = Settle(definition, response, cacheKey);
+            }
+
+            if (step.Next is null || !seen.Add(step.Next))
+            {
+                break;
+            }
+
+            unreached.Add(step.Next);
+            screen = step.Next;
+        }
+
+        return unreached;
     }
 
     // Takes back what completing a response counted: the respondent's participation and the quotas it matched. Runs

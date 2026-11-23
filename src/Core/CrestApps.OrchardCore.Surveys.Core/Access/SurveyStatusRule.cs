@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.Surveys.Core.Access;
 /// Only an open survey and an open collector accept responses; a test response only needs a definition. The same goes
 /// for completing a response: once staff close the survey or its link, a response in progress can't be submitted with
 /// new answers. It is submitted for the respondent with what it had saved (<see cref="SurveyAccessContext.AutoSubmitted"/>).
+/// A survey being deleted (<see cref="Survey.DeletingUtc"/>) accepts no new response at all.
 /// </summary>
 public sealed class SurveyStatusRule : ISurveyAccessRule
 {
@@ -19,6 +20,12 @@ public sealed class SurveyStatusRule : ISurveyAccessRule
     /// <inheritdoc />
     public Task<SurveyAccessDecision> CheckStartAsync(SurveyAccessContext context)
     {
+        // A survey being deleted takes no response, not even a test one: its records are being removed.
+        if (context.Survey?.DeletingUtc is not null)
+        {
+            return Task.FromResult(SurveyAccessDecision.Deny(SurveyErrorCode.NotFound));
+        }
+
         if (context.IsTest)
         {
             return Task.FromResult(SurveyAccessDecision.Allow);

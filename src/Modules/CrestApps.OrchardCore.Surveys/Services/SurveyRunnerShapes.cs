@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
+using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Core.ViewModels;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
@@ -163,7 +164,7 @@ public sealed class SurveyRunnerShapes
         var definition = version.Definition;
         var state = _logic.Evaluate(definition, response, SurveyRuntimeVersions.CacheKey(version));
         var shapes = new List<IShape>();
-        var screens = response.PagePath.Count > 0 ? response.PagePath : response.Plan.PageOrder;
+        var screens = response.PagePath.Count > 0 ? SurveyScoringEngine.ScreensOnPath(response).ToList() : response.Plan.PageOrder;
 
         // The questions on the respondent's path that logic did not hide, then each locked answer (checked with immediate
         // feedback) that logic took off the path or hid: the respondent saw it graded and it counts toward the score, so

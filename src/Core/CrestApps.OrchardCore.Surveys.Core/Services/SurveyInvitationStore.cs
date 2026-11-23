@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -231,7 +232,77 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
         }
 
         var names = statuses.Select(status => status.ToString()).ToArray();
-        var last = await Session.QueryIndex<SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Status.IsIn(names), collection: CollectionName)
+
+        await VisitWhereAsync(index => index.CollectorId == collectorId && index.Status.IsIn(names), visit, pageSize, cancellationToken);
+    }
+
+    /// <summary>
+    /// Visits the invitations of a collector in some statuses that are due a reminder, by the index only: reminders
+    /// didn't stop, fewer than <paramref name="maxReminders"/> were sent, and the last reminder (or the send, before the
+    /// first reminder) is at or before <paramref name="lastContactBefore"/>. A page at a time, oldest first, as
+    /// <see cref="VisitByCollectorAsync"/> does, so a large list with nothing due reads nothing but the index.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="statuses">The statuses visited.</param>
+    /// <param name="lastContactBefore">The latest last contact of an invitation due a reminder, in UTC.</param>
+    /// <param name="maxReminders">The most reminders an invitation gets.</param>
+    /// <param name="visit">The visit, which saves what it changes through this store.</param>
+    /// <param name="pageSize">The number of invitations read at a time.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task VisitDueForReminderAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, DateTime lastContactBefore, int maxReminders, Func<SurveyInvitation, Task> visit, int pageSize = 500, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+        ArgumentNullException.ThrowIfNull(visit);
+
+        if (string.IsNullOrEmpty(collectorId) || statuses.Count == 0 || maxReminders <= 0)
+        {
+            return;
+        }
+
+        var names = statuses.Select(status => status.ToString()).ToArray();
+
+        await VisitWhereAsync(
+            index => index.CollectorId == collectorId
+                && index.Status.IsIn(names)
+                && index.RemindersStopped == false
+                && index.RemindersSent < maxReminders
+                && ((index.LastReminderUtc != null && index.LastReminderUtc <= lastContactBefore)
+                    || (index.LastReminderUtc == null && index.SentUtc != null && index.SentUtc <= lastContactBefore)),
+            visit,
+            pageSize,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Visits the invitations of a collector in some statuses whose link expired, by the index only, a page at a time.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="statuses">The statuses visited.</param>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <param name="visit">The visit, which saves what it changes through this store.</param>
+    /// <param name="pageSize">The number of invitations read at a time.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task VisitExpiredAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, DateTime utcNow, Func<SurveyInvitation, Task> visit, int pageSize = 500, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+        ArgumentNullException.ThrowIfNull(visit);
+
+        if (string.IsNullOrEmpty(collectorId) || statuses.Count == 0)
+        {
+            return;
+        }
+
+        var names = statuses.Select(status => status.ToString()).ToArray();
+
+        await VisitWhereAsync(index => index.CollectorId == collectorId && index.Status.IsIn(names) && index.ExpiresUtc != null && index.ExpiresUtc <= utcNow, visit, pageSize, cancellationToken);
+    }
+
+    // Visits the invitations whose index rows match, a page at a time, up to the last row there when the walk began.
+    private async Task VisitWhereAsync(Expression<Func<SurveyInvitationIndex, bool>> filter, Func<SurveyInvitation, Task> visit, int pageSize, CancellationToken cancellationToken)
+    {
+        var last = await Session.QueryIndex<SurveyInvitationIndex>(filter, collection: CollectionName)
             .OrderByDescending(index => index.Id)
             .FirstOrDefaultAsync(cancellationToken);
         var upToId = last?.Id ?? 0;
@@ -241,7 +312,9 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var rows = (await Session.QueryIndex<SurveyInvitationIndex>(index => index.CollectorId == collectorId && index.Status.IsIn(names) && index.Id > afterId && index.Id <= upToId, collection: CollectionName)
+            var from = afterId;
+            var rows = (await Session.QueryIndex<SurveyInvitationIndex>(filter, collection: CollectionName)
+                .Where(index => index.Id > from && index.Id <= upToId)
                 .OrderBy(index => index.Id)
                 .Take(Math.Max(1, pageSize))
                 .ListAsync(cancellationToken)).ToList();

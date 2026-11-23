@@ -189,7 +189,7 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
     /// changes can't do that (the response service refuses them), so such an answer comes only from the author's logic,
     /// such as a rule on the time. The respondent saw a locked answer graded and it is kept, so it counts with its points
     /// and its most points alike. The completion scores a response as completed, so a completion, a regrade and the
-    /// review page count the same questions; the grading page shows them too.
+    /// review page count the same questions (see <see cref="ScreensOnPath"/>); the grading page shows them too.
     /// </summary>
     /// <param name="definition">The definition.</param>
     /// <param name="response">The response.</param>
@@ -233,6 +233,25 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
         return counted;
     }
 
+    /// <summary>
+    /// Lists the screens on a finished response's path, in order: the screens the respondent reached, then the screens
+    /// still ahead of them when the response was submitted for them at its deadline or once its survey closed. The
+    /// unreached screens count toward the score with 0 points (the respondent left them unanswered), so walking away from
+    /// a timed or closing quiz can't pass it on the pages answered so far; the screens a branch skipped stay out. The
+    /// completion, a regrade and the review page all read this list.
+    /// </summary>
+    /// <param name="response">The response.</param>
+    /// <returns>The screen ids.</returns>
+    public static IEnumerable<string> ScreensOnPath(SurveyResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return (response.PagePath ?? [])
+            .Concat(response.UnreachedPagePath ?? [])
+            .Where(screen => !string.IsNullOrEmpty(screen))
+            .Distinct(StringComparer.Ordinal);
+    }
+
     private static bool IsLocked(SurveyResponse response, string questionId)
         => response.Answers is not null && response.Answers.TryGetValue(questionId, out var answer) && answer?.IsLocked == true;
 
@@ -247,8 +266,8 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
         }
 
         // Pages skipped by a branch were never shown; when the response kept no path every planned page counts.
-        var pages = response.PagePath is { Count: > 0 } path && response.Status != SurveyResponseStatus.InProgress
-            ? path.Where(order.ContainsKey).Distinct(StringComparer.Ordinal)
+        var pages = response.PagePath is { Count: > 0 } && response.Status != SurveyResponseStatus.InProgress
+            ? ScreensOnPath(response).Where(order.ContainsKey)
             : order.Keys;
 
         return pages

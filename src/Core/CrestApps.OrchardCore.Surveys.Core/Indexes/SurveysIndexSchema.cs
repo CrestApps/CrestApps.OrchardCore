@@ -206,7 +206,9 @@ public static class SurveysIndexSchema
             .Column<DateTime?>("LastReminderUtc", column => column.Nullable())
             .Column<DateTime?>("SentUtc", column => column.Nullable())
             .Column<DateTime?>("ExpiresUtc", column => column.Nullable())
-            .Column<bool>("Held", column => column.NotNull().WithDefault(false)),
+            .Column<bool>("Held", column => column.NotNull().WithDefault(false))
+            .Column<int>("RemindersSent", column => column.NotNull().WithDefault(0))
+            .Column<bool>("RemindersStopped", column => column.NotNull().WithDefault(false)),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
@@ -217,6 +219,7 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyInvitationIndex_Seal", "CollectorId", "SealLookup");
             table.CreateIndex("IDX_SurveyInvitationIndex_Email", "Email");
             table.CreateIndex("IDX_SurveyInvitationIndex_Held", "CollectorId", "Held");
+            table.CreateIndex("IDX_SurveyInvitationIndex_Remind", "CollectorId", "Status", "RemindersStopped", "RemindersSent");
         }, collection: collection);
 
         await schemaBuilder.CreateMapIndexTableAsync<SurveyOverrideIndex>(table => table
@@ -276,6 +279,29 @@ public static class SurveysIndexSchema
 
         await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
             table.CreateIndex("IDX_SurveyInvitationIndex_Held", "CollectorId", "Held"),
+            collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Adds the reminder columns of the invitation index (how many reminders were sent, and whether they stopped), so
+    /// the reminder task reads only the invitations due a reminder instead of every open one. They are not null and
+    /// default to none sent and not stopped, so every database fills the existing rows; the step that indexes the
+    /// reminded invitations again fills the count of those that had reminders.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddInvitationReminderColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
+        {
+            table.AddColumn<int>("RemindersSent", column => column.NotNull().WithDefault(0));
+            table.AddColumn<bool>("RemindersStopped", column => column.NotNull().WithDefault(false));
+        }, collection: SurveysConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(table =>
+            table.CreateIndex("IDX_SurveyInvitationIndex_Remind", "CollectorId", "Status", "RemindersStopped", "RemindersSent"),
             collection: SurveysConstants.CollectionName);
     }
 

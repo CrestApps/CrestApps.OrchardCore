@@ -120,6 +120,13 @@ public sealed class SurveyResponse : CatalogItem
     public List<string> PagePath { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the screens still ahead on the respondent's path when the response was submitted for them (at its
+    /// deadline or once its survey closed), in order. They were never reached, so their questions score 0 but count
+    /// toward the most points. Empty for a response the respondent submitted.
+    /// </summary>
+    public List<string> UnreachedPagePath { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets every page visit, for the funnel and timings.
     /// </summary>
     public List<SurveyPageVisit> PageVisits { get; set; } = [];

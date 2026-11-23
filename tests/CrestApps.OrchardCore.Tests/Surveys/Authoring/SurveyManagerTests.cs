@@ -277,6 +277,101 @@ public sealed class SurveyManagerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ChangeStatusAsync_RecordsWhenTheSurveyClosed_AndReopeningClearsIt()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _harness.Store.CreateSession();
+        var services = _harness.CreateServices(session);
+        var created = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Closing" }, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var survey = await services.Manager.FindByIdAsync(created.ItemId, cancellationToken);
+        survey.Status = SurveyStatus.Open;
+        await services.Manager.UpdateAsync(survey, null, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Act
+        await services.Manager.ChangeStatusAsync(created.ItemId, SurveyStatus.Closed, cancellationToken);
+        var closed = (await services.Manager.FindByIdAsync(created.ItemId, cancellationToken)).ClosedUtc;
+        await services.Manager.ChangeStatusAsync(created.ItemId, SurveyStatus.Open, cancellationToken);
+        var reopened = (await services.Manager.FindByIdAsync(created.ItemId, cancellationToken)).ClosedUtc;
+
+        // Assert
+        Assert.Equal(_harness.Now, closed);
+        Assert.Null(reopened);
+    }
+
+    [Fact]
+    public async Task DeleteSurveyAsync_LeavesANoteOfTheDelete_ForTheUpkeepsFollowUp()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        string surveyId;
+
+        await using (var session = _harness.Store.CreateSession())
+        {
+            surveyId = (await _harness.CreateServices(session).Manager.CreateSurveyAsync(new SurveyCreateRequest { Name = "noted", Title = "Noted" }, cancellationToken)).ItemId;
+            await session.SaveChangesAsync(cancellationToken);
+        }
+
+        // Act
+        await using (var session = _harness.Store.CreateSession())
+        {
+            Assert.Equal(SurveyErrorCode.None, await _harness.CreateServices(session).Manager.DeleteSurveyAsync(surveyId, cancellationToken));
+            await session.SaveChangesAsync(cancellationToken);
+        }
+
+        // Assert
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var notes = await session.Query<SurveyDeletion>(SurveysConstants.CollectionName).ListAsync(cancellationToken);
+
+            Assert.Contains(notes, note => note.SurveyId == surveyId && note.StartedUtc == _harness.Now);
+            Assert.Null(await _harness.CreateServices(session).Manager.FindByIdAsync(surveyId, cancellationToken));
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSurveyAsync_OfASurveyMarkedDeleting_ThatGotAResponse_TakesTheMarkOff_AndKeepsTheSurvey()
+    {
+        // Arrange: an earlier delete stopped half way, and a real response came in before the mark.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        string surveyId;
+
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var services = _harness.CreateServices(session);
+            var survey = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Half deleted" }, cancellationToken);
+            surveyId = survey.ItemId;
+            survey.DeletingUtc = _harness.Now;
+            await services.SurveyStore.UpdateAsync(survey, cancellationToken);
+            await session.SaveAsync(new SurveyDeletion { SurveyId = surveyId, StartedUtc = _harness.Now }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new SurveyResponse { ItemId = "late1", SurveyId = surveyId, StartedUtc = _harness.Now }, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+        }
+
+        // Act
+        SurveyErrorCode result;
+
+        await using (var session = _harness.Store.CreateSession())
+        {
+            result = await _harness.CreateServices(session).Manager.DeleteSurveyAsync(surveyId, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+        }
+
+        // Assert
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var survey = await _harness.CreateServices(session).Manager.FindByIdAsync(surveyId, cancellationToken);
+
+            Assert.Equal(SurveyErrorCode.HasResponses, result);
+            Assert.NotNull(survey);
+            Assert.Null(survey.DeletingUtc);
+            Assert.DoesNotContain(await session.Query<SurveyDeletion>(SurveysConstants.CollectionName).ListAsync(cancellationToken), note => note.SurveyId == surveyId);
+        }
+    }
+
+    [Fact]
     public async Task DeleteSurveyAsync_WithResponses_KeepsItsInvitations()
     {
         // Arrange

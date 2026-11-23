@@ -30,8 +30,10 @@ public sealed class SurveyParticipationService
     /// </summary>
     public const int RetentionDays = 45;
 
-    // The most survey ids one query leaves out, well under SQL Server's limit of 2,100 parameters.
-    private const int MaxKeptSurveysInQuery = 1000;
+    /// <summary>
+    /// The most survey ids one query leaves out, well under SQL Server's limit of 2,100 parameters.
+    /// </summary>
+    public const int MaxKeptSurveysInQuery = 1000;
 
     private readonly SurveyParticipationStore _store;
     private readonly ISiteService _siteService;
@@ -211,14 +213,15 @@ public sealed class SurveyParticipationService
     /// <param name="afterId">The index id of the last row of the previous batch, or 0 for the first batch.</param>
     /// <param name="batchSize">The most rows to list.</param>
     /// <param name="keptSurveyIds">The surveys whose records are kept, or <see langword="null"/>.</param>
+    /// <param name="maxKeptInQuery">The most kept surveys the query leaves out; past it, the caller reads past them.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The rows.</returns>
-    public async Task<IReadOnlyList<SurveyParticipationIndex>> ListExpiredAsync(DateTime utcNow, long afterId, int batchSize, IReadOnlyCollection<string> keptSurveyIds = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SurveyParticipationIndex>> ListExpiredAsync(DateTime utcNow, long afterId, int batchSize, IReadOnlyCollection<string> keptSurveyIds = null, int maxKeptInQuery = MaxKeptSurveysInQuery, CancellationToken cancellationToken = default)
     {
         var before = (await TodayAsync(utcNow)).AddDays(-RetentionDays).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
         var query = _store.YesSqlSession.QueryIndex<SurveyParticipationIndex>(index => index.Day < before && index.Id > afterId, collection: SurveysConstants.CollectionName);
 
-        if (keptSurveyIds is { Count: > 0 and <= MaxKeptSurveysInQuery })
+        if (keptSurveyIds is { Count: > 0 } && keptSurveyIds.Count <= Math.Min(maxKeptInQuery, MaxKeptSurveysInQuery))
         {
             var kept = keptSurveyIds.ToArray();
 

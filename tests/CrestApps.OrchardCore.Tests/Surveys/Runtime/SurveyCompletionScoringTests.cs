@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -89,6 +90,148 @@ public sealed class SurveyCompletionScoringTests
     }
 
     [Fact]
+    public async Task Deadline_WalkingAwayAfterPageOne_CountsTheUnreachedPagesAsZero_AndARegradeAndTheReviewAgree()
+    {
+        // Arrange: three scored pages (2 points each), pass at 60%. Page 1 is answered right, then the timer runs out.
+        await using var harness = await CreateHarnessAsync();
+        var definition = Quiz(RuntimeSurveys.Page("p1", Scored("q1")), RuntimeSurveys.Page("p2", Scored("q2")), RuntimeSurveys.Page("p3", Scored("q3")));
+        definition.Scoring.PassMarkPercent = 60;
+        definition.Timing.TimeLimitMinutes = 5;
+        definition.Timing.GraceSeconds = 0;
+        var survey = await harness.PublishAsync(definition);
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await harness.PostAsync(response, _identity, SurveyPageDirection.Next, ("q1", "right"));
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(6);
+        var submitted = await harness.ResponsesAsync(responses => responses.SubmitAtDeadlineAsync(response.ItemId));
+        var stored = await harness.FindAsync(response.ItemId);
+        var regraded = await RegradeAsync(harness, definition, stored);
+        var hidden = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<SurveyLogicEngine>().Evaluate(definition, stored).HiddenQuestionIds));
+
+        // Assert: 2 of 6, failed; the unreached page is stored, so a regrade and the counted questions agree.
+        Assert.True(submitted.Succeeded, submitted.Error.ToString());
+        Assert.True(stored.AutoSubmitted);
+        Assert.Equal(["p3"], stored.UnreachedPagePath);
+        Assert.Equal(2m, stored.Score);
+        Assert.Equal(6m, stored.MaxScore);
+        Assert.False(stored.Passed);
+        Assert.Equal(stored.Score, regraded.Score);
+        Assert.Equal(stored.MaxScore, regraded.MaxScore);
+        Assert.Equal(stored.Passed, regraded.Passed);
+        Assert.Equal(["q1", "q2", "q3"], SurveyScoringEngine.CountedQuestions(definition, stored, hidden).Select(question => question.Id));
+        Assert.Equal(["p1", "p2", "p3"], SurveyScoringEngine.ScreensOnPath(stored));
+    }
+
+    [Fact]
+    public async Task Deadline_OnABranchedQuiz_CountsTheUnreachedPagesOfTheTrack_AndLeavesTheSkippedTrackOut()
+    {
+        // Arrange: the P1-H2 track quiz. The learner picks track "a" and lets the timer run out on p2 without answering.
+        await using var harness = await CreateHarnessAsync();
+        var definition = TrackQuiz();
+        definition.Timing.TimeLimitMinutes = 5;
+        definition.Timing.GraceSeconds = 0;
+        var survey = await harness.PublishAsync(definition);
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await harness.PostAsync(response, _identity, SurveyPageDirection.Next, ("q1", "a"));
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(6);
+        await harness.ResponsesAsync(responses => responses.SubmitAtDeadlineAsync(response.ItemId));
+        var stored = await harness.FindAsync(response.ItemId);
+
+        // Assert: track a's 4 points count (0 scored); track b's never do.
+        Assert.Equal(0m, stored.Score);
+        Assert.Equal(4m, stored.MaxScore);
+        Assert.False(stored.Passed);
+    }
+
+    [Fact]
+    public async Task Deadline_OnTheFirstPage_FollowsTheBranchTheSavedAnswerTakes()
+    {
+        // Arrange: the learner saved "b" on p1 but never posted it; the walk follows the branch to p3 and skips p2.
+        await using var harness = await CreateHarnessAsync();
+        var definition = TrackQuiz();
+        definition.Timing.TimeLimitMinutes = 5;
+        definition.Timing.GraceSeconds = 0;
+        var survey = await harness.PublishAsync(definition);
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await harness.ResponsesAsync(responses => responses.SaveAsync(new SavePageRequest
+        {
+            ResponseId = response.ItemId,
+            Identity = _identity,
+            PageId = response.CurrentPageId,
+            Form = RuntimeTestHarness.Form(("q1", "b")),
+        }));
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(6);
+        await harness.ResponsesAsync(responses => responses.SubmitAtDeadlineAsync(response.ItemId));
+        var stored = await harness.FindAsync(response.ItemId);
+
+        // Assert
+        Assert.Equal(["p3"], stored.UnreachedPagePath);
+        Assert.Equal(0m, stored.Score);
+        Assert.Equal(4m, stored.MaxScore);
+    }
+
+    [Fact]
+    public async Task Deadline_OnTheFirstPage_WithTheBranchPointUnanswered_TakesNoBranch()
+    {
+        // Arrange: nothing answered on p1, so the "b" branch doesn't hold and the walk goes on to p2, which ends the survey.
+        await using var harness = await CreateHarnessAsync();
+        var definition = TrackQuiz();
+        definition.Timing.TimeLimitMinutes = 5;
+        definition.Timing.GraceSeconds = 0;
+        var survey = await harness.PublishAsync(definition);
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(6);
+        await harness.ResponsesAsync(responses => responses.SubmitAtDeadlineAsync(response.ItemId));
+        var stored = await harness.FindAsync(response.ItemId);
+
+        // Assert
+        Assert.Equal(["p2"], stored.UnreachedPagePath);
+        Assert.Equal(4m, stored.MaxScore);
+    }
+
+    [Fact]
+    public async Task Close_WalkingAwayFromAnUntimedQuiz_CountsTheUnreachedPagesAsZero()
+    {
+        // Arrange: an untimed quiz that closes in an hour; page 1 answered right and saved, then the learner leaves.
+        await using var harness = await CreateHarnessAsync();
+        var definition = Quiz(RuntimeSurveys.Page("p1", Scored("q1")), RuntimeSurveys.Page("p2", Scored("q2")));
+        definition.Scoring.PassMarkPercent = 60;
+        var survey = await harness.PublishAsync(definition, item => item.Access.ClosesUtc = RuntimeTestHarness.Now.AddHours(1));
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await harness.ResponsesAsync(responses => responses.SaveAsync(new SavePageRequest
+        {
+            ResponseId = response.ItemId,
+            Identity = _identity,
+            PageId = response.CurrentPageId,
+            Form = RuntimeTestHarness.Form(("q1", "right")),
+        }));
+
+        // Act: the upkeep's close step submits it.
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddHours(2);
+        var submitted = await harness.RunAsync(services => services.GetRequiredService<SurveyResponseService>().SubmitAtCloseAsync(response.ItemId));
+        var stored = await harness.FindAsync(response.ItemId);
+
+        // Assert
+        Assert.True(submitted.Succeeded, submitted.Error.ToString());
+        Assert.Equal(SurveyResponseStatus.Completed, stored.Status);
+        Assert.Equal(2m, stored.Score);
+        Assert.Equal(4m, stored.MaxScore);
+        Assert.Equal(50m, stored.Percent);
+        Assert.False(stored.Passed);
+    }
+
+    [Fact]
     public async Task Ending_OnTheScore_ReadsThisCompletionsScore_AndAReopenClearsTheOldOne()
     {
         // Arrange: "passed" shows when the score is at least 4; "try" is the default ending.
@@ -134,6 +277,15 @@ public sealed class SurveyCompletionScoringTests
         Assert.Equal(0m, second.Score);
         Assert.Equal("try", second.EndingId);
     }
+
+    private static Task<SurveyResponse> RegradeAsync(RuntimeTestHarness harness, SurveyDefinition definition, SurveyResponse stored)
+        => harness.RunAsync(services =>
+        {
+            var copy = System.Text.Json.JsonSerializer.Deserialize<SurveyResponse>(System.Text.Json.JsonSerializer.Serialize(stored));
+            services.GetRequiredService<ISurveyScoringEngine>().Score(definition, copy);
+
+            return Task.FromResult(copy);
+        });
 
     private static Task<RuntimeTestHarness> CreateHarnessAsync()
         => RuntimeTestHarness.CreateAsync(services =>

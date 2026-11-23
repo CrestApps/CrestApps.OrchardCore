@@ -38,6 +38,8 @@ public sealed class SurveyInvitationIndexProvider : IndexProvider<SurveyInvitati
                 SentUtc = item.SentUtc,
                 ExpiresUtc = item.ExpiresUtc,
                 Held = IsHeld(item),
+                RemindersSent = item.RemindersSent,
+                RemindersStopped = SurveyInvitationReminderFailures.HaveStopped(item),
             });
 
     private static bool IsHeld(SurveyInvitation item)
