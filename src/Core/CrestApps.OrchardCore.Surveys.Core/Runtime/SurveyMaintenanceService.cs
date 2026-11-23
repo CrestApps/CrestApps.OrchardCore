@@ -56,6 +56,7 @@ public sealed class SurveyMaintenanceService
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IEnumerable<ISurveyOverrideService> _overrides;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyMaintenanceService"/> class.
@@ -65,18 +66,21 @@ public sealed class SurveyMaintenanceService
     /// <param name="session">The YesSql session.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="overrides">The accommodations, when the feature that keeps them is on.</param>
     public SurveyMaintenanceService(
         SurveyStore surveyStore,
         SurveyResponseStore responseStore,
         ISession session,
         IClock clock,
-        ILogger<SurveyMaintenanceService> logger)
+        ILogger<SurveyMaintenanceService> logger,
+        IEnumerable<ISurveyOverrideService> overrides)
     {
         _surveyStore = surveyStore;
         _responseStore = responseStore;
         _session = session;
         _clock = clock;
         _logger = logger;
+        _overrides = overrides;
     }
 
     private enum UpkeepOutcome
@@ -90,6 +94,10 @@ public sealed class SurveyMaintenanceService
 
         // Failed, and the failure couldn't be counted: it is read past for the rest of the run.
         NotCounted,
+
+        // Not handled because the step doesn't apply to it yet (an accommodation keeps its survey open to it): it is read
+        // past without using the step's budget.
+        Skipped,
     }
 
     /// <summary>
@@ -116,6 +124,59 @@ public sealed class SurveyMaintenanceService
         await ApplyRetentionAsync(now, batchSize, surveys, cancellationToken);
         await SubmitOverdueAsync(now, batchSize, cancellationToken);
         await DeleteExpiredParticipationAsync(now, batchSize, surveys, cancellationToken);
+        await FollowUpDeletesAsync(now, cancellationToken);
+    }
+
+    // Follows up survey deletes (SurveyDeletion): finishes a delete that stopped half way (the survey is still marked
+    // deleting after SurveyManager.DeletionFollowUp), and once the survey is gone removes what a send, a reminder or a test
+    // response that was already running wrote for it after the delete; the note is forgotten after the follow-up time.
+    // Each delete runs in a child scope of its own; one that fails is logged and tried again on the next run.
+    private async Task FollowUpDeletesAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        var notes = (await _session.Query<SurveyDeletion>(SurveysConstants.CollectionName).ListAsync(cancellationToken))
+            .Select(note => (note.Id, note.SurveyId, StartedUtc: DateTime.SpecifyKind(note.StartedUtc, DateTimeKind.Utc)))
+            .ToList();
+
+        await EndReadAsync(cancellationToken);
+
+        foreach (var (noteId, surveyId, startedUtc) in notes)
+        {
+            try
+            {
+                await ShellScope.UsingChildScopeAsync(async scope =>
+                {
+                    var services = scope.ServiceProvider;
+                    var session = services.GetRequiredService<ISession>();
+                    var survey = string.IsNullOrEmpty(surveyId) ? null : await services.GetRequiredService<SurveyStore>().FindByIdAsync(surveyId, cancellationToken);
+
+                    if (survey is not null)
+                    {
+                        if (survey.DeletingUtc is { } deleting
+                            && now - DateTime.SpecifyKind(deleting, DateTimeKind.Utc) >= SurveyManager.DeletionFollowUp
+                            && services.GetService<ISurveyManager>() is { } manager)
+                        {
+                            await manager.DeleteSurveyAsync(surveyId, cancellationToken);
+                            await session.SaveChangesAsync(cancellationToken);
+                        }
+
+                        return;
+                    }
+
+                    var removed = string.IsNullOrEmpty(surveyId) ? 0 : await services.GetRequiredService<SurveyDataPurger>().DeleteBatchAsync(surveyId, SurveyDataPurger.BatchSize, cancellationToken);
+
+                    if (removed == 0 && now - startedUtc >= SurveyManager.DeletionFollowUp
+                        && (await session.GetAsync<SurveyDeletion>([noteId], SurveysConstants.CollectionName, cancellationToken)).FirstOrDefault() is { } note)
+                    {
+                        session.Delete(note, SurveysConstants.CollectionName);
+                        await session.SaveChangesAsync(cancellationToken);
+                    }
+                });
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogError(exception, "Survey upkeep could not follow up the delete of the survey '{SurveyId}'. It tries again on the next run.", surveyId);
+            }
+        }
     }
 
     /// <summary>
@@ -283,12 +344,20 @@ public sealed class SurveyMaintenanceService
     // Submits the responses left in progress on a survey that closed (staff closed or archived it, or its closing date
     // passed), as they were saved before the close: a closed survey takes no new answers. A respondent whose
     // accommodation closes later keeps answering; their response is skipped until then. Test responses are left alone.
+    //
+    // On a site upgraded from a version without this step (SurveyCloseStepStart), a survey that closed before the step
+    // started is left alone, except for the responses active since then: the earlier version left its responses in
+    // progress for idle expiry, and completing (scoring, notifying, grading) them now would act on old data.
+    //
+    // A response whose respondent has an accommodation that closes later is left out of the query when the
+    // accommodation names the user, and read past without using the step's budget otherwise (an audience), so
+    // accommodated responses never starve the other surveys' close submissions.
     private async Task SubmitClosedAsync(DateTime now, int batchSize, Dictionary<string, Survey> surveys, CancellationToken cancellationToken)
     {
-        var inProgress = nameof(SurveyResponseStatus.InProgress);
         var handled = 0;
+        var stepStart = await ReadCloseStepStartAsync(cancellationToken);
 
-        foreach (var survey in surveys.Values.Where(survey => survey is not null && SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, now)).ToList())
+        foreach (var survey in surveys.Values.Where(survey => survey is not null && survey.DeletingUtc is null && SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, now)).ToList())
         {
             if (handled >= batchSize)
             {
@@ -296,31 +365,121 @@ public sealed class SurveyMaintenanceService
             }
 
             var surveyId = survey.ItemId;
+            DateTime? activeSince = stepStart is { } start && !ClosedSince(survey, start, now) ? start : null;
+            string[] stillOpenUsers = null;
 
             handled += await WalkAsync(
                 batchSize - handled,
                 batchSize,
                 async (after, leftOut) =>
                 {
-                    var query = _responseStore.YesSqlSession.QueryIndex<SurveyResponseIndex>(
-                        index => index.SurveyId == surveyId && index.Status == inProgress && !index.IsTest && index.UpkeepFailures < MaxUpkeepFailures,
-                        collection: SurveysConstants.ResponsesCollectionName);
+                    var rows = await ReadClosedPageAsync(surveyId, activeSince, stillOpenUsers ?? [], after, batchSize, cancellationToken);
 
-                    if (after is not null)
+                    // The accommodations are read only for a survey that has responses to submit, once.
+                    if (stillOpenUsers is null && rows.Count > 0)
                     {
-                        var lastId = after.Id;
+                        stillOpenUsers = await StillOpenUsersAsync(survey, now, cancellationToken);
 
-                        query = query.Where(index => index.Id > lastId);
+                        if (stillOpenUsers.Length > 0)
+                        {
+                            rows = await ReadClosedPageAsync(surveyId, activeSince, stillOpenUsers, after, batchSize, cancellationToken);
+                        }
                     }
 
-                    return (await query
-                        .OrderBy(index => index.Id)
-                        .Take(batchSize)
-                        .ListAsync(cancellationToken)).ToList();
+                    return rows;
                 },
-                row => TryAsync("submit after its survey closed", row, async services => Done(await services.GetRequiredService<SurveyResponseService>().SubmitAtCloseAsync(row.ItemId, cancellationToken)), cancellationToken),
+                row => SubmitAtCloseAsync(row, cancellationToken),
                 cancellationToken);
         }
+    }
+
+    // Reads a page of a closed survey's responses in progress: active since a time when given, and not of the users whose
+    // own accommodation keeps the survey open.
+    private async Task<List<SurveyResponseIndex>> ReadClosedPageAsync(string surveyId, DateTime? activeSince, string[] stillOpenUsers, SurveyResponseIndex after, int batchSize, CancellationToken cancellationToken)
+    {
+        var inProgress = nameof(SurveyResponseStatus.InProgress);
+        var query = _responseStore.YesSqlSession.QueryIndex<SurveyResponseIndex>(
+            index => index.SurveyId == surveyId && index.Status == inProgress && !index.IsTest && index.UpkeepFailures < MaxUpkeepFailures,
+            collection: SurveysConstants.ResponsesCollectionName);
+
+        if (activeSince is { } since)
+        {
+            query = query.Where(index => index.LastActivityUtc >= since);
+        }
+
+        if (stillOpenUsers.Length > 0)
+        {
+            query = query.Where(index => index.UserId == null || index.UserId.IsNotIn(stillOpenUsers));
+        }
+
+        if (after is not null)
+        {
+            var lastId = after.Id;
+
+            query = query.Where(index => index.Id > lastId);
+        }
+
+        return (await query
+            .OrderBy(index => index.Id)
+            .Take(batchSize)
+            .ListAsync(cancellationToken)).ToList();
+    }
+
+    // Submits one response of a closed survey. One whose respondent's accommodation keeps the survey open (an audience's,
+    // which the query can't leave out) is read past without using the step's budget.
+    private async Task<UpkeepOutcome> SubmitAtCloseAsync(SurveyResponseIndex row, CancellationToken cancellationToken)
+    {
+        var stillOpen = false;
+        var outcome = await TryAsync("submit after its survey closed", row, async services =>
+        {
+            var result = await services.GetRequiredService<SurveyResponseService>().SubmitAtCloseAsync(row.ItemId, cancellationToken);
+
+            stillOpen = result.Error == SurveyErrorCode.InvalidState && result.Response?.Status == SurveyResponseStatus.InProgress;
+
+            return Done(result);
+        }, cancellationToken);
+
+        return stillOpen ? UpkeepOutcome.Skipped : outcome;
+    }
+
+    // Whether a survey closed at or after a time: its closing date passed since then, or staff closed it since then. A
+    // survey staff closed before the time, or whose closing time isn't known, did not.
+    private static bool ClosedSince(Survey survey, DateTime since, DateTime now)
+    {
+        if (SurveyAvailability.IsClosedByStatus(survey, collector: null))
+        {
+            return survey.ClosedUtc is { } closed && closed >= since;
+        }
+
+        return survey.Access?.ClosesUtc is { } closes && closes >= since && closes <= now;
+    }
+
+    // The users whose own accommodation (one that names them) keeps a survey closed by its date open now. A survey staff
+    // closed is closed to everyone, and a list too long for one query is left to the read-past.
+    private async Task<string[]> StillOpenUsersAsync(Survey survey, DateTime now, CancellationToken cancellationToken)
+    {
+        if (SurveyAvailability.IsClosedByStatus(survey, collector: null)
+            || survey.Access?.ClosesUtc is null
+            || _overrides.FirstOrDefault() is not { } overrides)
+        {
+            return [];
+        }
+
+        var users = (await overrides.ListAsync(survey.ItemId, cancellationToken))
+            .Where(item => item is not null && !string.IsNullOrEmpty(item.UserId) && item.ClosesUtc is { } closes && closes > now)
+            .Select(item => item.UserId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        return users.Length <= MaxLeftOutSurveys ? users : [];
+    }
+
+    // Reads when the close step started on a site upgraded from a version without it, or null on a new site.
+    private async Task<DateTime?> ReadCloseStepStartAsync(CancellationToken cancellationToken)
+    {
+        var start = await _session.Query<SurveyCloseStepStart>(SurveysConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
+
+        return start is null ? null : DateTime.SpecifyKind(start.StartedUtc, DateTimeKind.Utc);
     }
 
     private Task<int> SubmitOverdueAsync(DateTime now, int batchSize, CancellationToken cancellationToken)
@@ -363,23 +522,27 @@ public sealed class SurveyMaintenanceService
     // say) never stops the cleanup: it is logged and read past. The cleanup stops until the next run only when nothing
     // of a batch could be deleted.
     // The records of a survey with a total limit are kept, so its total counts every response for as long as it runs.
+    // When few enough surveys keep records the query leaves them out; past that they are read past in memory, and a run
+    // goes on from the index id the last one stopped at (SurveyParticipationCleanupCursor), starting over once it reached
+    // the newest record, so the kept records (the oldest ones) can never fill every run and stop the cleanup.
     private async Task DeleteExpiredParticipationAsync(DateTime now, int batchSize, Dictionary<string, Survey> surveys, CancellationToken cancellationToken)
     {
         var started = Stopwatch.GetTimestamp();
-        long afterId = 0;
         var kept = surveys.Values
             .Where(SurveyParticipationService.KeepsRecords)
             .Select(survey => survey.ItemId)
             .ToHashSet(StringComparer.Ordinal);
+        var afterId = await ReadParticipationCursorAsync(cancellationToken);
+        var reachedEnd = false;
 
-        for (var batch = 0; batch < MaxParticipationBatches; batch++)
+        for (var batch = 0; batch < ParticipationBatchLimit; batch++)
         {
             IReadOnlyList<SurveyParticipationIndex> rows = [];
 
             try
             {
                 await ShellScope.UsingChildScopeAsync(async scope =>
-                    rows = await scope.ServiceProvider.GetRequiredService<SurveyParticipationService>().ListExpiredAsync(now, afterId, batchSize, kept, cancellationToken));
+                    rows = await scope.ServiceProvider.GetRequiredService<SurveyParticipationService>().ListExpiredAsync(now, afterId, batchSize, kept, KeptSurveysInQueryLimit, cancellationToken));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -390,7 +553,9 @@ public sealed class SurveyMaintenanceService
 
             if (rows.Count == 0)
             {
-                return;
+                reachedEnd = true;
+
+                break;
             }
 
             var ids = rows
@@ -420,16 +585,87 @@ public sealed class SurveyMaintenanceService
                 {
                     _logger.LogError(batchFailure, "Survey upkeep could not delete old participation records. It tries again on the next run.");
 
-                    return;
+                    // The next run starts with this batch again.
+                    break;
                 }
             }
 
             afterId = rows[^1].Id;
 
-            if (rows.Count < batchSize || Stopwatch.GetElapsedTime(started) >= _participationBudget)
+            if (rows.Count < batchSize)
             {
-                return;
+                reachedEnd = true;
+
+                break;
             }
+
+            if (Stopwatch.GetElapsedTime(started) >= _participationBudget)
+            {
+                break;
+            }
+        }
+
+        await SaveParticipationCursorAsync(reachedEnd ? 0 : afterId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets or sets the most batches of old participation records one run reads. Tests lower it.
+    /// </summary>
+    internal int ParticipationBatchLimit { get; set; } = MaxParticipationBatches;
+
+    /// <summary>
+    /// Gets or sets the most kept surveys the participation query leaves out. Tests lower it.
+    /// </summary>
+    internal int KeptSurveysInQueryLimit { get; set; } = SurveyParticipationService.MaxKeptSurveysInQuery;
+
+    // Reads where the participation cleanup goes on from, or 0 when the last run reached the end or it can't be read.
+    private async Task<long> ReadParticipationCursorAsync(CancellationToken cancellationToken)
+    {
+        long afterId = 0;
+
+        try
+        {
+            await ShellScope.UsingChildScopeAsync(async scope =>
+            {
+                var cursor = await scope.ServiceProvider.GetRequiredService<ISession>()
+                    .Query<SurveyParticipationCleanupCursor>(SurveysConstants.CollectionName)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                afterId = Math.Max(cursor?.AfterId ?? 0, 0);
+            });
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning(exception, "Survey upkeep could not read where the participation cleanup stopped. It starts from the oldest record.");
+        }
+
+        return afterId;
+    }
+
+    // Stores where the next participation cleanup goes on from, in a child scope of its own.
+    private async Task SaveParticipationCursorAsync(long afterId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ShellScope.UsingChildScopeAsync(async scope =>
+            {
+                var session = scope.ServiceProvider.GetRequiredService<ISession>();
+                var cursor = await session.Query<SurveyParticipationCleanupCursor>(SurveysConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
+
+                if ((cursor is null && afterId == 0) || cursor?.AfterId == afterId)
+                {
+                    return;
+                }
+
+                cursor ??= new SurveyParticipationCleanupCursor();
+                cursor.AfterId = afterId;
+                await session.SaveAsync(cursor, false, SurveysConstants.CollectionName, cancellationToken);
+                await session.SaveChangesAsync(cancellationToken);
+            });
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning(exception, "Survey upkeep could not store where the participation cleanup stopped. The next run starts from the oldest record.");
         }
     }
 

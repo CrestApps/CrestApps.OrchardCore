@@ -90,7 +90,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
         {
-            var survey = await _surveyStore.FindByIdAsync(result.Invitation.SurveyId, cancellationToken);
+            var survey = await FindLiveSurveyAsync(result.Invitation.SurveyId, cancellationToken);
             var collector = await _collectorStore.FindByIdAsync(result.Invitation.CollectorId, cancellationToken);
 
             await DeliverAsync(survey, collector, result.Invitation, result.Link, isReminder: false, cancellationToken);
@@ -115,7 +115,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(requests);
 
-        var survey = await _surveyStore.FindByIdAsync(surveyId, cancellationToken);
+        var survey = await FindLiveSurveyAsync(surveyId, cancellationToken);
         var collector = survey is null ? null : await FindCollectorAsync(survey, collectorId, cancellationToken);
         var results = new List<SurveyInvitationResult>(requests.Count);
 
@@ -162,7 +162,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var survey = await _surveyStore.FindByIdAsync(request.SurveyId, cancellationToken);
+        var survey = await FindLiveSurveyAsync(request.SurveyId, cancellationToken);
         var collector = survey is null ? null : await FindCollectorAsync(survey, request.CollectorId, cancellationToken);
 
         if (collector is null)
@@ -171,6 +171,15 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         }
 
         return await CreateCoreAsync(survey, collector, request, requireRecipient, cancellationToken);
+    }
+
+    // The survey, or null when it doesn't exist or is being deleted: a survey being deleted invites and reminds nobody, so
+    // no invitation is written while its records are removed.
+    private async Task<Survey> FindLiveSurveyAsync(string surveyId, CancellationToken cancellationToken)
+    {
+        var survey = string.IsNullOrEmpty(surveyId) ? null : await _surveyStore.FindByIdAsync(surveyId, cancellationToken);
+
+        return survey?.DeletingUtc is null ? survey : null;
     }
 
     // The survey's invitation collector by id, or its personal links collector; null when the id names another kind of
@@ -239,6 +248,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             invitation.Properties.Remove(nameof(SurveyInvitationHold));
         }
 
+        // Inviting again also gives reminders that failed for good another chance.
+        invitation.Properties.Remove(nameof(SurveyInvitationReminderFailures));
+
         if (request.Context is { IsEmpty: false } context)
         {
             invitation.Put(new SurveyInvitationContext { Context = context.ToString() });
@@ -267,7 +279,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     public async Task<int> SendPendingAsync(string collectorId, CancellationToken cancellationToken = default)
     {
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
-        var survey = collector is null ? null : await _surveyStore.FindByIdAsync(collector.SurveyId, cancellationToken);
+        var survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
 
         if (survey is null)
         {
@@ -301,7 +313,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     public async Task<int> RemindAsync(string collectorId, bool force, CancellationToken cancellationToken = default)
     {
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
-        var survey = collector is null ? null : await _surveyStore.FindByIdAsync(collector.SurveyId, cancellationToken);
+        var survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
 
         if (survey is null || collector.Status != CollectorStatus.Open || survey.Status != SurveyStatus.Open)
         {
@@ -320,10 +332,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         var now = _clock.UtcNow;
 
-        // Every open invitation of the list is visited, a page at a time, so invitations that used up their reminders
-        // never hide the ones after them; expiry is checked before the due check, so an expired invitation leaves the
-        // open ones even when no reminder is due.
-        await _invitationStore.VisitByCollectorAsync(collector.ItemId, _remindable, async invitation =>
+        // Expired invitations leave the open ones first, even when no reminder is due.
+        await _invitationStore.VisitExpiredAsync(collector.ItemId, _remindable, now, async invitation =>
+        {
+            invitation.Status = SurveyInvitationStatus.Expired;
+            await _invitationStore.UpdateAsync(invitation, cancellationToken);
+        }, SurveysConstants.PageSize, cancellationToken);
+
+        async Task RemindOneAsync(SurveyInvitation invitation)
         {
             if (justSent.Contains(invitation.ItemId))
             {
@@ -359,7 +375,20 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             {
                 sent++;
             }
-        }, SurveysConstants.PageSize, cancellationToken);
+        }
+
+        if (force)
+        {
+            // A manual resend reminds every open invitation of the list, a page at a time.
+            await _invitationStore.VisitByCollectorAsync(collector.ItemId, _remindable, RemindOneAsync, SurveysConstants.PageSize, cancellationToken);
+        }
+        else
+        {
+            // Only the invitations the index says are due are read, so a large list with nothing due costs one query.
+            var lastContactBefore = now.AddDays(-Math.Max(settings.ReminderEveryDays, 1));
+
+            await _invitationStore.VisitDueForReminderAsync(collector.ItemId, _remindable, lastContactBefore, settings.ReminderCount, RemindOneAsync, SurveysConstants.PageSize, cancellationToken);
+        }
 
         return sent;
     }
@@ -376,7 +405,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         ArgumentNullException.ThrowIfNull(invitation);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (!_remindable.Contains(invitation.Status) || invitation.RemindersSent >= settings.ReminderCount)
+        if (!_remindable.Contains(invitation.Status) || invitation.RemindersSent >= settings.ReminderCount || SurveyInvitationReminderFailures.HaveStopped(invitation))
         {
             return false;
         }
@@ -597,11 +626,17 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         if (delivery != SurveyInvitationDelivery.Delivered)
         {
-            if (!isReminder)
+            if (isReminder)
+            {
+                // A reminder that can never be delivered stops the reminders; the invitation stays open.
+                invitation.Put(new SurveyInvitationReminderFailures { Stopped = true });
+            }
+            else
             {
                 invitation.Status = SurveyInvitationStatus.Bounced;
-                await _invitationStore.UpdateAsync(invitation, cancellationToken);
             }
+
+            await _invitationStore.UpdateAsync(invitation, cancellationToken);
 
             return false;
         }
@@ -615,6 +650,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         {
             invitation.RemindersSent++;
             invitation.LastReminderUtc = now;
+            invitation.Properties.Remove(nameof(SurveyInvitationReminderFailures));
         }
         else
         {
@@ -683,7 +719,21 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
     private async Task FailAsync(SurveyInvitation invitation, bool isReminder, CancellationToken cancellationToken)
     {
-        if (isReminder || invitation.Status != SurveyInvitationStatus.Pending)
+        if (isReminder)
+        {
+            // A reminder the mail server refused stays due for the next run, up to MaxSendAttempts tries; then the
+            // invitation gets no more reminders, so one bad address isn't retried every hour until it expires.
+            var failures = invitation.TryGet<SurveyInvitationReminderFailures>(out var stored) && stored is not null ? stored : new SurveyInvitationReminderFailures();
+
+            failures.FailedAttempts++;
+            failures.Stopped = failures.FailedAttempts >= SurveyInvitationHold.MaxSendAttempts;
+            invitation.Put(failures);
+            await _invitationStore.UpdateAsync(invitation, cancellationToken);
+
+            return;
+        }
+
+        if (invitation.Status != SurveyInvitationStatus.Pending)
         {
             return;
         }

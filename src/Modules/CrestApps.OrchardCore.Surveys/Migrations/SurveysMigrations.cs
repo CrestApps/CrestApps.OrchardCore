@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 using YesSql;
@@ -17,6 +19,8 @@ internal sealed class SurveysMigrations : DataMigration
     private readonly IRecipeMigrator _recipeMigrator;
     private readonly ResumableSteps _steps;
     private readonly IStore _store;
+    private readonly ISession _session;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysMigrations"/> class.
@@ -24,11 +28,15 @@ internal sealed class SurveysMigrations : DataMigration
     /// <param name="recipeMigrator">The recipe migrator.</param>
     /// <param name="steps">The resumable upgrade steps.</param>
     /// <param name="store">The YesSql store, for the database schema of the tenant's tables.</param>
-    public SurveysMigrations(IRecipeMigrator recipeMigrator, ResumableSteps steps, IStore store)
+    /// <param name="session">The YesSql session.</param>
+    /// <param name="clock">The clock.</param>
+    public SurveysMigrations(IRecipeMigrator recipeMigrator, ResumableSteps steps, IStore store, ISession session, IClock clock)
     {
         _recipeMigrator = recipeMigrator;
         _steps = steps;
         _store = store;
+        _session = session;
+        _clock = clock;
     }
 
     /// <summary>
@@ -40,7 +48,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 6;
+        return 8;
     }
 
     /// <summary>
@@ -108,5 +116,41 @@ internal sealed class SurveysMigrations : DataMigration
         await _steps.RequestAsync(SurveysReindexStep.StepName);
 
         return 6;
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Reminders read by the index (V-L8). Kept in its own step so another branch's step 6 can be renumbered around it.
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Adds the reminder columns of the invitation index (schema only), so the reminder task reads only the invitations
+    /// due a reminder, and asks for the step that fills the reminder count of the invitations reminded before.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await SurveysIndexSchema.AddInvitationReminderColumnsAsync(SchemaBuilder);
+        await _steps.RequestAsync(SurveyInvitationRemindersStep.StepName);
+
+        return 7;
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // The close step leaves surveys closed before the upgrade alone (V-L4).
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Records when the upkeep's close step started on this site (<see cref="SurveyCloseStepStart"/>), so it leaves alone
+    /// the responses of surveys that were already closed before the upgrade. One document, no data walk.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        if (await _session.Query<SurveyCloseStepStart>(SurveysConstants.CollectionName).FirstOrDefaultAsync() is null)
+        {
+            await _session.SaveAsync(new SurveyCloseStepStart { StartedUtc = _clock.UtcNow }, false, SurveysConstants.CollectionName);
+        }
+
+        return 8;
     }
 }

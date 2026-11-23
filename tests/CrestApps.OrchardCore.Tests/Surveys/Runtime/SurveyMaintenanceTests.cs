@@ -54,6 +54,85 @@ public sealed class SurveyMaintenanceTests
     }
 
     [Fact]
+    public async Task Run_MoreKeptRecordsThanARunReads_GoesOnFromWhereTheLastRunStopped_AndReachesTheExpiredRecordsAfterThem()
+    {
+        // Arrange: two surveys with a total limit keep their records, and too many surveys keep records to leave them out
+        // of the query (the limit is lowered to 1). Their 6 old records hold the lowest ids; 2 expired records of a survey
+        // without a total come after them. A run reads one batch of 2.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var old = DateOnly.FromDateTime(RuntimeTestHarness.Now).AddDays(-SurveyParticipationService.RetentionDays - 5);
+        var keptA = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Choice("q1", "a"))), item => item.Access.Limits = new RespondentLimits { Total = 1 });
+        var keptB = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Choice("q1", "a"))), item => item.Access.Limits = new RespondentLimits { Total = 1 });
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyParticipationStore>();
+
+            for (var index = 0; index < 6; index++)
+            {
+                await store.CreateAsync(new SurveyParticipation { SurveyId = index % 2 == 0 ? keptA.ItemId : keptB.ItemId, RespondentKey = "kept" + index, Day = old, CompletedCount = 1 });
+            }
+
+            await store.CreateAsync(new SurveyParticipation { SurveyId = "other", RespondentKey = "expired1", Day = old, StartedCount = 1 });
+            await store.CreateAsync(new SurveyParticipation { SurveyId = "other", RespondentKey = "expired2", Day = old, StartedCount = 1 });
+
+            return true;
+        });
+
+        // Act: four runs. Each used to start over at the oldest record and read only kept ones.
+        for (var run = 0; run < 4; run++)
+        {
+            await harness.RunInShellAsync(async services =>
+            {
+                var maintenance = services.GetRequiredService<SurveyMaintenanceService>();
+                maintenance.ParticipationBatchLimit = 1;
+                maintenance.KeptSurveysInQueryLimit = 1;
+                await maintenance.RunAsync(2, TestContext.Current.CancellationToken);
+
+                return true;
+            });
+        }
+
+        // Assert: the expired records are gone, the kept ones stay.
+        var left = await harness.RunAsync(services => services.GetRequiredService<ISession>()
+            .Query<SurveyParticipation, SurveyParticipationIndex>(collection: SurveysConstants.CollectionName)
+            .ListAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(6, left.Count);
+        Assert.All(left, row => Assert.StartsWith("kept", row.RespondentKey, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Run_AfterASurveyWasDeleted_RemovesWhatALateSendWroteForIt_ThenForgetsTheDelete()
+    {
+        // Arrange: a survey deleted two hours ago, and an invitation a send that was already running saved afterwards.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            await session.SaveAsync(new SurveyDeletion { SurveyId = "gone", StartedUtc = RuntimeTestHarness.Now.AddHours(-2) }, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(new SurveyInvitation { ItemId = "late", SurveyId = "gone", CollectorId = "c", Email = "late@example.com" });
+
+            return true;
+        });
+
+        // Act: the first run removes the invitation, the next one finds nothing left and forgets the delete.
+        await RunMaintenanceAsync(harness);
+        var notesAfterFirst = await CountAsync<SurveyDeletion>(harness);
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        Assert.Null(await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().FindByIdAsync("late").AsTask()));
+        Assert.Equal(1, notesAfterFirst);
+        Assert.Equal(0, await CountAsync<SurveyDeletion>(harness));
+    }
+
+    private static Task<int> CountAsync<T>(RuntimeTestHarness harness)
+        where T : class
+        => harness.RunAsync(async services => (await services.GetRequiredService<ISession>().Query<T>(SurveysConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken)).Count);
+
+    [Fact]
     public async Task Run_AnonymizeRetention_RemovesTheResponsesFiles()
     {
         // Arrange

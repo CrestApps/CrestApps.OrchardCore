@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Services;
 
@@ -16,6 +17,12 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 /// </summary>
 public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
 {
+    /// <summary>
+    /// How long the upkeep keeps removing what was written for a deleted survey after its delete began (a send or a
+    /// reminder that was already running), and how long a delete may run before the upkeep finishes it.
+    /// </summary>
+    public static readonly TimeSpan DeletionFollowUp = TimeSpan.FromHours(1);
+
     private readonly SurveyStore _store;
     private readonly SurveyVersionStore _versionStore;
     private readonly SurveyCollectorStore _collectorStore;
@@ -192,6 +199,19 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         var previous = survey.Status;
         survey.Status = status;
 
+        if (status is SurveyStatus.Closed or SurveyStatus.Archived)
+        {
+            // Closed to respondents from now (an archive of a closed survey keeps the time it closed).
+            if (previous is not (SurveyStatus.Closed or SurveyStatus.Archived) || survey.ClosedUtc is null)
+            {
+                survey.ClosedUtc = _clock.UtcNow;
+            }
+        }
+        else
+        {
+            survey.ClosedUtc = null;
+        }
+
         await UpdateAsync(survey, data: null, cancellationToken);
 
         foreach (var observer in _observers)
@@ -219,13 +239,24 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
 
         if (await _responseQueries.CountForSurveyAsync(survey.ItemId, cancellationToken) > 0)
         {
+            if (survey.DeletingUtc is not null)
+            {
+                // An earlier delete stopped when a real response came in: the survey is back in use.
+                await MarkDeletingAsync(surveyId, deleting: false, cancellationToken);
+            }
+
             return SurveyErrorCode.HasResponses;
         }
 
-        // The records that hang off the survey go first, a batch at a time, each committed on its own: invitations (with
+        // The survey is marked first, in a commit of its own: from then it takes no new response (not even a test one) and
+        // sends no invitation or reminder, and the upkeep finishes the delete if this one stops half way.
+        if (survey.DeletingUtc is null)
+        {
+            await MarkDeletingAsync(surveyId, deleting: true, cancellationToken);
+        }
+
+        // The records that hang off the survey go next, a batch at a time, each committed on its own: invitations (with
         // e-mail addresses and names), accommodations, participation, counters, and test responses with their files.
-        // Nothing revisits them once the survey is gone, and a delete that stops half way leaves the survey in place, so
-        // deleting it again finishes the job.
         await PurgeAsync(survey.ItemId, cancellationToken);
 
         // A batch that ran on this scope's session committed it, which detaches what it had loaded: read the survey again.
@@ -234,6 +265,14 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         if (survey is null)
         {
             return SurveyErrorCode.NotFound;
+        }
+
+        // A real response that started just before the mark would be orphaned: the delete stops, and the survey stays.
+        if (await _responseQueries.CountForSurveyAsync(survey.ItemId, cancellationToken) > 0)
+        {
+            await MarkDeletingAsync(surveyId, deleting: false, cancellationToken);
+
+            return SurveyErrorCode.HasResponses;
         }
 
         foreach (var collector in await _collectorStore.ListBySurveyAsync(survey.ItemId, cancellationToken))
@@ -263,6 +302,60 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     /// <inheritdoc />
     public Task<IReadOnlyList<Survey>> ListByOwnersAsync(IReadOnlyCollection<RecordRef> owners, CancellationToken cancellationToken = default)
         => _store.ListByOwnersAsync((owners ?? []).Where(owner => !owner.IsEmpty).Select(owner => owner.ToString()).ToArray(), cancellationToken);
+
+    // Marks a survey as being deleted (with the upkeep's note of the delete), or takes the mark off, and commits it on its
+    // own: in a child scope inside a shell, so the request's other changes aren't committed with it, else on this scope's
+    // session (tools and tests).
+    private async Task MarkDeletingAsync(string surveyId, bool deleting, CancellationToken cancellationToken)
+    {
+        if (ShellScope.Current is null)
+        {
+            await MarkDeletingAsync(_store, _store.YesSqlSession, surveyId, deleting, _clock.UtcNow, cancellationToken);
+
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        await ShellScope.UsingChildScopeAsync(scope => MarkDeletingAsync(
+            scope.ServiceProvider.GetRequiredService<SurveyStore>(),
+            scope.ServiceProvider.GetRequiredService<global::YesSql.ISession>(),
+            surveyId,
+            deleting,
+            now,
+            cancellationToken));
+    }
+
+    private static async Task MarkDeletingAsync(SurveyStore store, global::YesSql.ISession session, string surveyId, bool deleting, DateTime now, CancellationToken cancellationToken)
+    {
+        var survey = await store.FindByIdAsync(surveyId, cancellationToken);
+
+        if (survey is null)
+        {
+            return;
+        }
+
+        survey.DeletingUtc = deleting ? now : null;
+        await store.UpdateAsync(survey, cancellationToken);
+
+        var notes = (await session.Query<SurveyDeletion>(SurveysConstants.CollectionName).ListAsync(cancellationToken))
+            .Where(note => string.Equals(note.SurveyId, surveyId, StringComparison.Ordinal))
+            .ToList();
+
+        if (deleting && notes.Count == 0)
+        {
+            await session.SaveAsync(new SurveyDeletion { SurveyId = surveyId, StartedUtc = now }, false, SurveysConstants.CollectionName, cancellationToken);
+        }
+        else if (!deleting)
+        {
+            foreach (var note in notes)
+            {
+                session.Delete(note, SurveysConstants.CollectionName);
+            }
+        }
+
+        await session.SaveChangesAsync(cancellationToken);
+    }
 
     private async Task PurgeAsync(string surveyId, CancellationToken cancellationToken)
     {

@@ -49,6 +49,9 @@ public static class SurveysRuntimeServiceCollectionExtensions
         services.TryAddScoped<SurveyPipingRenderer>();
         services.TryAddSingleton<ISurveyPoolCounter, NullSurveyPoolCounter>();
         services.TryAddScoped<SurveyPlanBuilder>();
+
+        // Upkeep follows up survey deletes, so the purger is there wherever upkeep runs.
+        services.TryAddScoped<SurveyDataPurger>();
         services.TryAddScoped<SurveyRuntimeVersions>();
         services.TryAddScoped<SurveyRespondentProjector>();
         services.TryAddSingleton<SurveyDefinitionLocalizer>();

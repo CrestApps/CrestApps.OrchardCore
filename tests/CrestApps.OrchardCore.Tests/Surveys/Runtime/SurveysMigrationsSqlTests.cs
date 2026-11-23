@@ -91,7 +91,7 @@ public sealed class SurveysMigrationsSqlTests
 
         await InTransactionAsync(store, async builder =>
         {
-            version = await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(documents.Object), store) { SchemaBuilder = builder }.UpdateFrom5Async();
+            version = await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(documents.Object), store, Mock.Of<ISession>(), Mock.Of<global::OrchardCore.Modules.IClock>()) { SchemaBuilder = builder }.UpdateFrom5Async();
         });
 
         // Assert
@@ -115,6 +115,59 @@ public sealed class SurveysMigrationsSqlTests
             Assert.Equal(0, tags);
         });
     }
+
+    [Fact]
+    public async Task UpdateFrom6_OnSqlite_AddsTheReminderColumns_ExistingRowsReadNoneSentAndNotStopped_AndAsksForTheStep()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var database = SqliteDatabase.Create();
+        var store = database.Store;
+        var pending = new ResumableStepsDocument();
+        var documents = new Mock<IDocumentManager<ResumableStepsDocument>>();
+        documents.Setup(manager => manager.GetOrCreateMutableAsync(It.IsAny<Func<Task<ResumableStepsDocument>>>())).ReturnsAsync(pending);
+
+        await store.InitializeAsync(cancellationToken);
+        await store.InitializeCollectionAsync(SurveysConstants.CollectionName, cancellationToken);
+
+        // The invitation index as version 6 made it, with a row in it.
+        await InTransactionAsync(store, builder => builder.CreateMapIndexTableAsync<SurveyInvitationIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("CollectorId", column => column.Nullable().WithLength(26))
+            .Column<string>("Status", column => column.Nullable().WithLength(20))
+            .Column<bool>("Held", column => column.NotNull().WithDefault(false)),
+            collection: SurveysConstants.CollectionName));
+
+        await InTransactionAsync(store, builder => builder.Connection.ExecuteAsync(
+            $"INSERT INTO {InvitationIndexTable(builder)} ({builder.Dialect.QuoteForColumnName("DocumentId")}, {builder.Dialect.QuoteForColumnName("ItemId")}, {builder.Dialect.QuoteForColumnName("Status")}) VALUES (1, 'i1', 'Sent')",
+            transaction: builder.Transaction));
+
+        // Act
+        var version = 0;
+
+        await InTransactionAsync(store, async builder =>
+        {
+            version = await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(documents.Object), store, Mock.Of<ISession>(), Mock.Of<global::OrchardCore.Modules.IClock>()) { SchemaBuilder = builder }.UpdateFrom6Async();
+        });
+
+        // Assert
+        Assert.Equal(7, version);
+        Assert.True(pending.Pending.ContainsKey(SurveyInvitationRemindersStep.StepName));
+
+        await InTransactionAsync(store, async builder =>
+        {
+            var dialect = builder.Dialect;
+            var row = (IDictionary<string, object>)await builder.Connection.QuerySingleAsync(
+                $"SELECT {dialect.QuoteForColumnName("RemindersSent")} AS RemindersSent, {dialect.QuoteForColumnName("RemindersStopped")} AS RemindersStopped FROM {InvitationIndexTable(builder)}",
+                transaction: builder.Transaction);
+
+            Assert.Equal(0L, Convert.ToInt64(row["RemindersSent"], System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal(0L, Convert.ToInt64(row["RemindersStopped"], System.Globalization.CultureInfo.InvariantCulture));
+        });
+    }
+
+    private static string InvitationIndexTable(ISchemaBuilder builder)
+        => builder.Dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetIndexTable(typeof(SurveyInvitationIndex), SurveysConstants.CollectionName), null);
 
     private static string SurveyIndexTable(ISchemaBuilder builder)
         => builder.Dialect.QuoteForTableName(builder.TablePrefix + builder.TableNameConvention.GetIndexTable(typeof(SurveyIndex), SurveysConstants.CollectionName), null);
@@ -307,7 +360,7 @@ public sealed class SurveysMigrationsSqlTests
 
         await InTransactionAsync(store, async builder =>
         {
-            var migration = new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), store)
+            var migration = new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), store, Mock.Of<ISession>(), Mock.Of<global::OrchardCore.Modules.IClock>())
             {
                 SchemaBuilder = builder,
             };

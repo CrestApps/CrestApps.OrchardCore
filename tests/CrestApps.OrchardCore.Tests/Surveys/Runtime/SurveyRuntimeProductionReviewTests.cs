@@ -260,8 +260,41 @@ public sealed class SurveyRuntimeProductionReviewTests
         var secondKey = RespondRateLimitsStartup.ResponsePartitionKey(second);
 
         // Assert
-        Assert.Equal("response:r1", firstKey);
+        Assert.StartsWith("response:r1|", firstKey, StringComparison.Ordinal);
         Assert.NotEqual(firstKey, secondKey);
         Assert.True(RespondRateLimitsStartup.ResponseRequestsPerMinute >= RespondRateLimitsStartup.RequestsPerMinute);
+    }
+
+    [Fact]
+    public void ResponseRoutes_AStrangerWithTheVictimsResponseId_CountsInABudgetOfTheirOwn()
+    {
+        // Arrange: the respondent carries the response's resume cookie; a stranger (another address) only knows the id.
+        var respondent = new DefaultHttpContext();
+        respondent.Request.RouteValues["responseId"] = "r1";
+        respondent.Request.Headers.Cookie = "sr_s1=r1.secret~g1";
+        respondent.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.1");
+
+        var sameRespondentOtherAddress = new DefaultHttpContext();
+        sameRespondentOtherAddress.Request.RouteValues["responseId"] = "r1";
+        sameRespondentOtherAddress.Request.Headers.Cookie = "sr_s1=r1.secret~g1";
+        sameRespondentOtherAddress.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.9");
+
+        var stranger = new DefaultHttpContext();
+        stranger.Request.RouteValues["responseId"] = "r1";
+        stranger.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.2");
+
+        var apiClient = new DefaultHttpContext();
+        apiClient.Request.RouteValues["responseId"] = "r1";
+        apiClient.Request.Headers[CrestApps.OrchardCore.Surveys.Api.SurveysApiEndpoints.ResumeTokenHeader] = "r1.secret";
+
+        // Act
+        var respondentKey = RespondRateLimitsStartup.ResponsePartitionKey(respondent);
+        var strangerKey = RespondRateLimitsStartup.ResponsePartitionKey(stranger);
+
+        // Assert: the token, not the address, names the respondent; the stranger has another key; the secret isn't in it.
+        Assert.Equal(respondentKey, RespondRateLimitsStartup.ResponsePartitionKey(sameRespondentOtherAddress));
+        Assert.Equal(respondentKey, RespondRateLimitsStartup.ResponsePartitionKey(apiClient));
+        Assert.NotEqual(respondentKey, strangerKey);
+        Assert.DoesNotContain("secret", respondentKey, StringComparison.Ordinal);
     }
 }

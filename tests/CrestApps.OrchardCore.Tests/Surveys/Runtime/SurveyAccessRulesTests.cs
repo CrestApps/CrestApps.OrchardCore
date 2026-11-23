@@ -13,6 +13,22 @@ namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
 public sealed class SurveyAccessRulesTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StatusRule_ASurveyBeingDeleted_TakesNoResponse_NotEvenATestOne(bool isTest)
+    {
+        // Arrange
+        var survey = new Survey { Status = SurveyStatus.Open, DeletingUtc = RuntimeTestHarness.Now };
+
+        // Act
+        var decision = await new SurveyStatusRule().CheckStartAsync(new SurveyAccessContext { Survey = survey, Version = new SurveyVersion(), IsTest = isTest, UtcNow = RuntimeTestHarness.Now });
+
+        // Assert
+        Assert.False(decision.IsAllowed);
+        Assert.Equal(SurveyErrorCode.NotFound, decision.Error);
+    }
+
+    [Theory]
     [InlineData(9, 0, true)]
     [InlineData(8, 59, false)]
     [InlineData(17, 0, false)]

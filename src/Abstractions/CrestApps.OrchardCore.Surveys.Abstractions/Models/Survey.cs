@@ -102,6 +102,18 @@ public sealed class Survey : CatalogItem, IAuditedModel, INameAwareModel
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when staff (or a quota, or its owner) last closed or archived the survey, in UTC, or null while it is
+    /// open. The upkeep's close step reads it to leave alone the surveys closed before it existed.
+    /// </summary>
+    public DateTime? ClosedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a delete of the survey began, in UTC, or null. A survey being deleted takes no new responses,
+    /// sends no invitations or reminders, and the upkeep finishes a delete that stopped half way.
+    /// </summary>
+    public DateTime? DeletingUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the id of the user who owns the survey.
     /// </summary>
     public string OwnerId { get; set; }

@@ -594,6 +594,176 @@ public sealed class SurveyInvitationDeliveryTests
     }
 
     [Fact]
+    public async Task AReminderThatKeepsFailing_StopsAfterItsAttempts_TheInvitationStaysOpen_AndInvitingAgainStartsThemAgain()
+    {
+        // Arrange: a delivered invitation on a list with three reminders a day apart; then the mail server refuses the
+        // address every time.
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 1000);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var invited = await InviteAsync(harness, survey, "refused@example.com");
+        await SetRemindersAsync(harness, invited.Invitation.CollectorId, count: 3, everyDays: 1);
+        sender.Outcome = _ => SurveyInvitationDelivery.RetryLater;
+        var attemptsBefore = sender.Attempts;
+
+        // Act: two days later, eight hourly runs.
+        for (var run = 0; run < 8; run++)
+        {
+            harness.Clock.UtcNow = _evening.AddDays(2).AddHours(run);
+            await RemindAsync(harness, invited.Invitation.CollectorId);
+        }
+
+        var stopped = await FindAsync(harness, invited.Invitation.ItemId);
+        sender.Outcome = null;
+        await InviteAsync(harness, survey, "refused@example.com");
+        var invitedAgain = await FindAsync(harness, invited.Invitation.ItemId);
+
+        // Assert: tried MaxSendAttempts times, then no more; the invitation is still open, and inviting again clears it.
+        Assert.Equal(SurveyInvitationHold.MaxSendAttempts, sender.Attempts - attemptsBefore);
+        Assert.Equal(SurveyInvitationStatus.Sent, stopped.Status);
+        Assert.True(SurveyInvitationReminderFailures.HaveStopped(stopped));
+        Assert.Equal(0, stopped.RemindersSent);
+        Assert.False(SurveyInvitationReminderFailures.HaveStopped(invitedAgain));
+    }
+
+    [Fact]
+    public async Task AReminderThatCanNeverBeDelivered_StopsTheReminders_AtOnce()
+    {
+        // Arrange
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 1000);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var invited = await InviteAsync(harness, survey, "gone@example.com");
+        await SetRemindersAsync(harness, invited.Invitation.CollectorId, count: 3, everyDays: 1);
+        sender.Outcome = _ => SurveyInvitationDelivery.Undeliverable;
+        var attemptsBefore = sender.Attempts;
+
+        // Act
+        for (var run = 0; run < 3; run++)
+        {
+            harness.Clock.UtcNow = _evening.AddDays(2).AddHours(run);
+            await RemindAsync(harness, invited.Invitation.CollectorId);
+        }
+
+        // Assert
+        Assert.Equal(1, sender.Attempts - attemptsBefore);
+        Assert.Equal(SurveyInvitationStatus.Sent, (await FindAsync(harness, invited.Invitation.ItemId)).Status);
+    }
+
+    [Fact]
+    public async Task VisitDueForReminder_ReadsOnlyTheInvitationsTheIndexSaysAreDue()
+    {
+        // Arrange: one due invitation among ones sent too recently, ones that used up their reminders, one whose
+        // reminders stopped, and one of another list.
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 1000);
+        var dueId = IdGenerator.GenerateId();
+        var dueAfterReminderId = IdGenerator.GenerateId();
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+
+            SurveyInvitation Make(string id, string collector, DateTime? sent, int reminders, DateTime? lastReminder)
+                => new()
+                {
+                    ItemId = id ?? IdGenerator.GenerateId(),
+                    SurveyId = "s1",
+                    CollectorId = collector,
+                    Email = IdGenerator.GenerateId() + "@example.com",
+                    Status = SurveyInvitationStatus.Sent,
+                    CreatedUtc = _evening.AddDays(-10),
+                    SentUtc = sent,
+                    RemindersSent = reminders,
+                    LastReminderUtc = lastReminder,
+                };
+
+            await store.CreateAsync(Make(dueId, "c1", _evening.AddDays(-3), 0, null));
+            await store.CreateAsync(Make(dueAfterReminderId, "c1", _evening.AddDays(-9), 1, _evening.AddDays(-3)));
+            await store.CreateAsync(Make(null, "c1", _evening.AddHours(-1), 0, null));
+            await store.CreateAsync(Make(null, "c1", _evening.AddDays(-3), 0, _evening.AddHours(-2)));
+            await store.CreateAsync(Make(null, "c1", _evening.AddDays(-9), 2, _evening.AddDays(-3)));
+
+            var stopped = Make(null, "c1", _evening.AddDays(-3), 0, null);
+            stopped.Put(new SurveyInvitationReminderFailures { FailedAttempts = 5, Stopped = true });
+            await store.CreateAsync(stopped);
+
+            await store.CreateAsync(Make(null, "c2", _evening.AddDays(-3), 0, null));
+
+            return true;
+        });
+
+        // Act
+        var visited = await harness.RunAsync(async services =>
+        {
+            var ids = new List<string>();
+            await services.GetRequiredService<SurveyInvitationStore>().VisitDueForReminderAsync(
+                "c1",
+                [SurveyInvitationStatus.Sent, SurveyInvitationStatus.Opened, SurveyInvitationStatus.Started],
+                _evening.AddDays(-1),
+                maxReminders: 2,
+                invitation =>
+                {
+                    ids.Add(invitation.ItemId);
+
+                    return Task.CompletedTask;
+                });
+
+            return ids;
+        });
+
+        // Assert
+        Assert.Equal(new[] { dueId, dueAfterReminderId }.Order(StringComparer.Ordinal), visited.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task ASurveyBeingDeleted_InvitesAndRemindsNobody()
+    {
+        // Arrange: an invitation due a reminder, then the survey's delete begins.
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 1000);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var invited = await InviteAsync(harness, survey, "first@example.com");
+        await SetRemindersAsync(harness, invited.Invitation.CollectorId, count: 3, everyDays: 1);
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyStore>();
+            var deleting = await store.FindByIdAsync(survey.ItemId);
+            deleting.DeletingUtc = _evening;
+            await store.UpdateAsync(deleting);
+
+            return true;
+        });
+
+        var attemptsBefore = sender.Attempts;
+
+        // Act
+        harness.Clock.UtcNow = _evening.AddDays(2);
+        var reminded = await RemindAsync(harness, invited.Invitation.CollectorId);
+        var another = await InviteAsync(harness, survey, "second@example.com");
+
+        // Assert
+        Assert.Equal(0, reminded);
+        Assert.Equal(CrestApps.OrchardCore.Surveys.SurveyErrorCode.NotFound, another.Error);
+        Assert.Equal(attemptsBefore, sender.Attempts);
+    }
+
+    private static Task<bool> SetRemindersAsync(RuntimeTestHarness harness, string collectorId, int count, int everyDays)
+        => harness.RunAsync(async services =>
+        {
+            var collectors = services.GetRequiredService<SurveyCollectorStore>();
+            var collector = await collectors.FindByIdAsync(collectorId);
+            collector.Put(new SurveyInvitationSettings { ReminderCount = count, ReminderEveryDays = everyDays });
+            await collectors.UpdateAsync(collector);
+
+            return true;
+        });
+
+    [Fact]
     public async Task AFirstSendTheMailServerFails_IsHeldAndSentByALaterRun_NotBounced()
     {
         // Arrange: the mail server is down for the first send.

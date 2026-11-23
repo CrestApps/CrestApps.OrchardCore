@@ -328,6 +328,130 @@ public sealed class SurveyCloseAndAutoSubmitTests
         Assert.False(string.IsNullOrEmpty(invited.Response.InvitationId));
     }
 
+    [Theory]
+    [InlineData(LimitCount.Completed)]
+    [InlineData(LimitCount.Started)]
+    public async Task Total_AVoidedAttemptStaysUsed_AndOnlyADeleteGivesItBack(LimitCount counts)
+    {
+        // Arrange: an identified quiz with one attempt; the attempt is voided for misconduct.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var survey = await harness.PublishAsync(OnePage(), item => item.Access.Limits = new RespondentLimits { Total = 1, Counts = counts });
+        var start = await harness.StartAsync(survey, "u1");
+        await harness.PostAsync(start.Response, _u1, SurveyPageDirection.Finish, ("q1", "a"));
+        var voided = await harness.ResponsesAsync(responses => responses.VoidAsync(start.Response.ItemId, "staff", "Misconduct"));
+
+        // Act
+        var afterVoid = await harness.StartAsync(survey, "u1");
+        await harness.ResponsesAsync(responses => responses.DeleteAsync(start.Response.ItemId, "staff"));
+        var afterDelete = await harness.StartAsync(survey, "u1");
+
+        // Assert
+        Assert.True(voided.Succeeded, voided.Error.ToString());
+        Assert.Equal(SurveyErrorCode.LimitReached, afterVoid.Error);
+        Assert.True(afterDelete.Succeeded, afterDelete.Error.ToString());
+    }
+
+    [Fact]
+    public async Task Upkeep_AccommodatedResponsesOfAClosedSurvey_DoNotUseTheCloseStepsBudget()
+    {
+        // Arrange: survey A closed, but u1's accommodation keeps it open for another day; survey B closed too. A run
+        // handles one response.
+        var overrides = new FakeOverrides();
+        await using var harness = await RuntimeTestHarness.CreateAsync(services => services.AddSingleton<ISurveyOverrideService>(overrides));
+        var surveyA = await harness.PublishAsync(OnePage(), item => item.Access.ClosesUtc = RuntimeTestHarness.Now.AddHours(1));
+        var surveyB = await harness.PublishAsync(OnePage(), item => item.Access.ClosesUtc = RuntimeTestHarness.Now.AddHours(1));
+        overrides.Items.Add(new SurveyOverride { ItemId = "o1", SurveyId = surveyA.ItemId, UserId = "u1", ClosesUtc = RuntimeTestHarness.Now.AddDays(1) });
+        overrides.Items.Add(new SurveyOverride { ItemId = "o2", SurveyId = surveyA.ItemId, AudienceId = "group", ClosesUtc = RuntimeTestHarness.Now.AddDays(1) });
+        overrides.AudienceMembers.Add("u3");
+
+        var accommodated = await harness.StartAsync(surveyA, "u1");
+        var byAudience = await harness.StartAsync(surveyA, "u3");
+        var other = await harness.StartAsync(surveyB, "u2");
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddHours(2);
+        await harness.RunInShellAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyMaintenanceService>().RunAsync(batchSize: 1, cancellationToken: TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+        // Assert: the accommodated responses keep going, and survey B's response is submitted in the same run.
+        Assert.Equal(SurveyResponseStatus.InProgress, (await harness.FindAsync(accommodated.Response.ItemId)).Status);
+        Assert.Equal(SurveyResponseStatus.InProgress, (await harness.FindAsync(byAudience.Response.ItemId)).Status);
+        Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(other.Response.ItemId)).Status);
+    }
+
+    [Fact]
+    public async Task Upkeep_OnAnUpgradedSite_LeavesTheResponsesOfASurveyClosedBeforeTheUpgradeAlone_AndSubmitsTheOthers()
+    {
+        // Arrange: the survey "before" closed before the close step started on this site (the upgrade); "after" closes
+        // after it, and "manual" was closed by staff after it.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var before = await harness.PublishAsync(OnePage(), item => item.Access.ClosesUtc = RuntimeTestHarness.Now.AddHours(1));
+        var after = await harness.PublishAsync(OnePage(), item => item.Access.ClosesUtc = RuntimeTestHarness.Now.AddHours(3));
+        var manual = await harness.PublishAsync(OnePage());
+        var old = await harness.StartAsync(before, "u1");
+        var current = await harness.StartAsync(after, "u1");
+        var closedByStaff = await harness.StartAsync(manual, "u1");
+
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddHours(2);
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<global::YesSql.ISession>();
+            await session.SaveAsync(new SurveyCloseStepStart { StartedUtc = harness.Clock.UtcNow }, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            return true;
+        });
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyStore>();
+            var survey = await store.FindByIdAsync(manual.ItemId, TestContext.Current.CancellationToken);
+            survey.Status = SurveyStatus.Closed;
+            survey.ClosedUtc = harness.Clock.UtcNow;
+            await store.UpdateAsync(survey, TestContext.Current.CancellationToken);
+            await services.GetRequiredService<global::YesSql.ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddHours(4);
+        await harness.RunInShellAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyMaintenanceService>().RunAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+        // Assert
+        Assert.Equal(SurveyResponseStatus.InProgress, (await harness.FindAsync(old.Response.ItemId)).Status);
+        Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(current.Response.ItemId)).Status);
+        Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(closedByStaff.Response.ItemId)).Status);
+    }
+
     private static SurveyDefinition OnePage()
         => RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+
+    private sealed class FakeOverrides : ISurveyOverrideService
+    {
+        public List<SurveyOverride> Items { get; } = [];
+
+        public HashSet<string> AudienceMembers { get; } = new(StringComparer.Ordinal);
+
+        public Task<SurveyErrorCode> GrantAsync(SurveyOverride surveyOverride, CancellationToken cancellationToken = default)
+            => Task.FromResult(SurveyErrorCode.None);
+
+        public Task<IReadOnlyList<SurveyOverride>> ListAsync(string surveyId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SurveyOverride>>(Items.Where(item => item.SurveyId == surveyId).ToList());
+
+        public Task<bool> RevokeAsync(string overrideId, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<SurveyOverride> FindEffectiveAsync(string surveyId, string userId, CrestApps.OrchardCore.Records.RecordRef? context, CancellationToken cancellationToken = default)
+            => Task.FromResult(Items.FirstOrDefault(item => item.SurveyId == surveyId
+                && (item.UserId == userId || (!string.IsNullOrEmpty(item.AudienceId) && userId is not null && AudienceMembers.Contains(userId)))));
+    }
 }

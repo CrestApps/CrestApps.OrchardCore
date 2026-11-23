@@ -33,6 +33,11 @@ public sealed class SurveyStore : DocumentCatalog<Survey, SurveyIndex>, INamedCa
         _dataProtectionProvider = dataProtectionProvider;
     }
 
+    /// <summary>
+    /// Gets the YesSql session, for the writes of the core services that commit on their own.
+    /// </summary>
+    internal ISession YesSqlSession => Session;
+
     /// <inheritdoc />
     protected override ValueTask SavingAsync(Survey record)
     {

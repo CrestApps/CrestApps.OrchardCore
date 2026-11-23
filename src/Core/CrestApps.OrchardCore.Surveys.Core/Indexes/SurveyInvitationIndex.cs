@@ -68,4 +68,15 @@ public sealed class SurveyInvitationIndex : CatalogItemIndex
     /// hold mark), so the reminder task finds held invitations without reading the never-sent ones.
     /// </summary>
     public bool Held { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many reminders were sent, so the reminder task reads only the invitations still due one.
+    /// </summary>
+    public int RemindersSent { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether reminders stopped for the invitation (they kept failing, or can never be
+    /// delivered; see <see cref="Invitations.SurveyInvitationReminderFailures"/>).
+    /// </summary>
+    public bool RemindersStopped { get; set; }
 }

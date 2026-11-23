@@ -70,6 +70,37 @@ public sealed class SurveyResponseCounter
     }
 
     /// <summary>
+    /// Counts the attempts a user used toward a total limit, test responses left out: every response they started (or
+    /// every response they submitted) that staff kept. A voided attempt stays used, as an attempt with misconduct does in
+    /// Moodle: voiding takes a response out of the results and the grade, but doesn't give the attempt back. Only a
+    /// response staff delete gives it back. Counting submitted responses, a voided one counts when it was submitted
+    /// before it was voided (it has a completion time; a screened-out response voided later counts too).
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="userId">The user.</param>
+    /// <param name="contextRef">The context as Kind:Id, or <see langword="null"/>.</param>
+    /// <param name="countStarted">Whether the limit counts started responses, else submitted ones.</param>
+    /// <returns>The count.</returns>
+    public Task<int> CountAttemptsUsedByUserAsync(string surveyId, string userId, string contextRef, bool countStarted)
+    {
+        var completed = nameof(SurveyResponseStatus.Completed);
+        var voided = nameof(SurveyResponseStatus.Voided);
+        var query = _store.YesSqlSession.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
+
+        if (contextRef is not null)
+        {
+            query = query.Where(index => index.ContextRef == contextRef);
+        }
+
+        if (!countStarted)
+        {
+            query = query.Where(index => index.Status == completed || (index.Status == voided && index.CompletedUtc != null));
+        }
+
+        return query.CountAsync();
+    }
+
+    /// <summary>
     /// Finds the response in progress of a user for a survey and context.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
