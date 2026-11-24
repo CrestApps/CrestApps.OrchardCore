@@ -12,7 +12,7 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Voice Media |
+| **Menu** | **Interaction Center** → **Management** → **Voice Media** |
 | **Permission** | Manage the Contact Center voice media library |
 | **Feature** | Contact Center, with the Telephony feature for the master copy and a phone provider that can host media, such as Telnyx |
 
@@ -24,14 +24,14 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 <YouTube video="contact-center-ai-voice-agent-inbound" title="Video of the two things called Voice Media: the Contact Center Voice Media feature and this library" start={205} end={245} />
 
-The **Voice Media** library on this page is not the **Contact Center Voice Media** feature. That feature (see **Tools > Features**) gives automated calls a live two-way audio path, which an AI voice agent needs for a live conversation. The library is part of the base Contact Center and has no feature of its own.
+The **Voice Media** library on this page is not the **Contact Center Voice Media** feature. That feature (see **Tools** → **Features**) gives automated calls a live two-way audio path, which an AI voice agent needs for a live conversation. The library is part of the base Contact Center and has no feature of its own.
 <YouTube video="telephony-recording-storage" title="Video of the voice media master copy and where it is stored" start={112} end={139} />
 
 ## Add a clip
 
 <YouTube video="contact-center-voice-media" title="Video of adding a clip" start={61} end={114} />
 
-1. Open **Interaction Center > Management > Voice Media** and click **Add Voice Media**.
+1. Open **Interaction Center** → **Management** → **Voice Media** and click **Add Voice Media**.
 2. Enter a **Name** that people will recognize, such as *Main hold music*, and an optional **Description**.
 3. Under **Audio**, choose an MP3, WAV, OGG or WebM file of up to 20 MB.
 4. Click **Save**. The platform keeps the file as the clip's master copy and sends a copy to the phone provider.
@@ -51,7 +51,7 @@ A clip travels in a [deployment plan](administration/import-and-export.md) as it
 <YouTube video="contact-center-configuration-deployment" title="Video of re-uploading the audio of an imported voice media clip" start={207} end={256} />
 
 :::caution[Two things with similar names]
-The **Voice Media** screen under **Interaction Center > Management** is the library of hold music and prompts described on this page. The **Contact Center Voice Media** feature on the **Features** page is a different thing: it adds live two-way audio for calls, such as AI voice conversations. You do not need that feature for hold music and recorded prompts.
+The **Voice Media** screen under **Interaction Center** → **Management** is the library of hold music and prompts described on this page. The **Contact Center Voice Media** feature on the **Features** page is a different thing: it adds live two-way audio for calls, such as AI voice conversations. You do not need that feature for hold music and recorded prompts.
 :::
 
 ## What the badges mean

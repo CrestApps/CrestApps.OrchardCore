@@ -12,7 +12,7 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 | | |
 | --- | --- |
-| **Menu** | Staff > All Staff, Teams, Workforce > Activity Codes |
+| **Menu** | **Staff** → **All Staff**, Teams, **Workforce** → **Activity Codes** |
 | **Permission** | View workers, Manage workers, Manage workforce teams, Manage activity codes, View sensitive worker details, Manage the whole workforce |
 | **Feature** | Workforce (it needs Calendars, Skills and Teams) |
 
@@ -20,7 +20,7 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 ## Build the team tree
 
-Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Content > Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Staff**, **Add a staff member** and **Calendar** to each team's **Actions** menu.
+Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Content** → **Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Staff**, **Add a staff member** and **Calendar** to each team's **Actions** menu.
 
 ### The Workforce card
 
@@ -43,7 +43,7 @@ A team that still has teams under it, or current workers, can't be deleted. Move
 
 ## Add a worker
 
-Workers are staff members: there is one list of the people who work, under **Staff > All Staff**, and Workforce schedules them. Managers who aren't allowed to see all staff see the staff of the teams they manage there. Choose **Add staff member**, or **Add a staff member** from a team's **Actions** menu.
+Workers are staff members: there is one list of the people who work, under **Staff** → **All Staff**, and Workforce schedules them. Managers who aren't allowed to see all staff see the staff of the teams they manage there. Choose **Add staff member**, or **Add a staff member** from a team's **Actions** menu.
 
 Each staff member has a profile (choose their name in the list). Its side menu shows **Overview**, **Teams**, **Skills** (with their certificates, which you add there), **Work** (their shift rules, **Time clock**, **Timesheets** and **Time off**), **Pay** and **Employment history**, each from the module that keeps it. **Edit Staff Member** opens the editor with the fields below.
 
@@ -85,11 +85,11 @@ One line for each enabled skill: choose how well the worker holds it, from **1 -
 
 **Certificates**
 
-After the worker is saved, the editor lists their certificates. Add one with **Certification**, **Number**, **Issued on**, **Valid until** (leave it empty to work it out from the certification) and **Checked**, then choose **Add**. The certificate also appears in **Content > Certificates**.
+After the worker is saved, the editor lists their certificates. Add one with **Certification**, **Number**, **Issued on**, **Valid until** (leave it empty to work it out from the certification) and **Checked**, then choose **Add**. The certificate also appears in **Content** → **Certificates**.
 
 ## From the user editor
 
-People with an account are managed with their user too. With **Manage workers**, the user editor (**Access Control > Users > Edit**) has a **Workforce** card:
+People with an account are managed with their user too. With **Manage workers**, the user editor (**Access Control** → **Users** → **Edit**) has a **Workforce** card:
 
 - For a user who isn't a worker yet, tick **Make them a worker** and fill in their employee number, job title, employment, status, hire date, **Main team** and contracted hours. Saving the user makes the worker, with the user's name and email.
 - For a worker, the same fields change their worker. A new main team is joined from today, and the teams they were in stay. **Open their worker page** has the rest: teams and their dates, hours, availability, pay rates and certificates.
@@ -99,11 +99,11 @@ The **Workers** list stays, for workers without an account (such as people who c
 
 ## Find workers
 
-**Workforce > Workers** lists the workers you can see. Search by name, email or employee number, and filter by team (a team includes the teams under it) or status. A badge shows workers with **No account**.
+**Workforce** → **Workers** lists the workers you can see. Search by name, email or employee number, and filter by team (a team includes the teams under it) or status. A badge shows workers with **No account**.
 
 ## Activity codes
 
-An activity code says what a worker does during part of a shift: work, a break, a meal, a meeting, training and so on. The usual codes are added the first time Workforce is turned on. Open **Workforce > Activity Codes** to change them or add your own. With the time clock on, each code also has the Time Tracker **stage** its clocked time is kept in.
+An activity code says what a worker does during part of a shift: work, a break, a meal, a meeting, training and so on. The usual codes are added the first time Workforce is turned on. Open **Workforce** → **Activity Codes** to change them or add your own. With the time clock on, each code also has the Time Tracker **stage** its clocked time is kept in.
 
 | Field | What it does |
 | --- | --- |

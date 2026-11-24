@@ -10,7 +10,7 @@ A **wizard** shows a form one step at a time, with a progress bar, remembers the
 
 | | |
 | --- | --- |
-| **Menu** | Design > Content Definition > Content Types (setup); Content > Content Items (building the steps) |
+| **Menu** | **Design** → **Content Definition** → **Content Types (setup)**; **Content** → **Content Items (building the steps)** |
 | **Permission** | Edit content types (setup); the usual permission to create the content item (building the steps); Start a wizard and Continue a wizard (for the people who take part) |
 | **Feature** | Wizard |
 
@@ -29,7 +29,7 @@ A **wizard** shows a form one step at a time, with a progress bar, remembers the
 <YouTube video="site-wizard-recipes" title="Video of adding the Wizard part to a content type" start={102} end={154} />
 
 1. Create the content types for the steps, for example *Visitor Details* and *Visit Preferences*, with the boxes each step asks for.
-2. Open **Design > Content Definition > Content Types** and edit the type that will host the wizard, for example *Workshop Registration*.
+2. Open **Design** → **Content Definition** → **Content Types** and edit the type that will host the wizard, for example *Workshop Registration*.
 3. Click **Add Parts**, and click **Add & Configure** next to **Wizard**.
 4. Set the options below and click **Save**.
 
@@ -45,7 +45,7 @@ A **wizard** shows a form one step at a time, with a progress bar, remembers the
 
 <YouTube video="site-wizard-recipes" title="Video of building the steps of a wizard" start={154} end={182} />
 
-1. Open **Content > Content Items**, click **New** and choose the wizard type.
+1. Open **Content** → **Content Items**, click **New** and choose the wizard type.
 2. Enter the **Title**.
 3. Click **Add step** and choose a step type. Repeat for each step. Each step card has its own boxes, which can start with a default value.
 4. Drag a card by its handle to change the order. The order of the cards is the order of the steps.
@@ -61,7 +61,7 @@ The wizard opens on the first step. A progress bar at the top shows every step a
 
 <YouTube video="site-wizard-recipes" title="Video of the content items a wizard creates" start={212} end={229} />
 
-With the default **Completion policy**, each step's answers become a published content item of the step's type. Open **Content > Content Items** to find them, and edit or publish them like any other item.
+With the default **Completion policy**, each step's answers become a published content item of the step's type. Open **Content** → **Content Items** to find them, and edit or publish them like any other item.
 
 :::note
 The progress bar names each step after its content type. Give the step types names that make sense to visitors.

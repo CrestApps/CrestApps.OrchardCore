@@ -10,7 +10,7 @@ Territories group the places you serve, so work can go to the people who cover t
 
 | | |
 | --- | --- |
-| **Menu** | Territories; Settings > Maps and Geocoding |
+| **Menu** | Territories; **Settings** → **Maps and Geocoding** |
 | **Permission** | Manage service territories; Manage maps and geocoding settings |
 | **Feature** | Geo, Maps and Territories |
 
@@ -18,7 +18,7 @@ Territories group the places you serve, so work can go to the people who cover t
 
 ## Add a territory
 
-1. Go to **Field Service > Territories** and select **Add territory**.
+1. Go to **Field Service** → **Territories** and select **Add territory**.
 2. Enter a name, and choose the larger territory it is part of, if any.
 3. Under **Area**, draw it with the tools on the left of the map: a rectangle or a polygon (click each corner, then the first one again). Draw more than one shape if the territory has separate parts. Drag a corner to change a shape, move it, cut a hole in it, or erase it. Other territories show in grey.
 4. Under **Postal codes**, list its codes, separated by commas. End a code with `*` to take every code that starts with it, such as `021*`.
@@ -35,7 +35,7 @@ On the **Territories** page, the map shows every territory. Under **Find the ter
 
 ## Set up maps and geocoding
 
-Go to **Settings > Maps and Geocoding**.
+Go to **Settings** → **Maps and Geocoding**.
 
 - **Geocoding** finds the coordinates of addresses, such as a team's location or a worker's home base, in the background every minute, and retries for about three hours when the provider fails. Until you choose a provider, addresses wait; the page shows how many are waiting, geocoded and not found, and the latest problem, such as a refused key.
 - **Travel times** come from the provider you choose, or from the built-in estimate: the straight-line distance times the **road factor**, at the **average speed**.
@@ -43,7 +43,7 @@ Go to **Settings > Maps and Geocoding**.
 
 ## Use a map provider
 
-Turn on the **Azure Maps**, **Google Maps** or **OSRM** feature under **Configuration > Features**. Its section appears on **Settings > Maps and Geocoding**:
+Turn on the **Azure Maps**, **Google Maps** or **OSRM** feature under **Configuration** → **Features**. Its section appears on **Settings** → **Maps and Geocoding**:
 
 - **Azure Maps:** paste the primary key of your Azure Maps account. It geocodes, gives travel times with traffic, and draws routes.
 - **Google Maps:** paste an API key enabled for the Geocoding, Distance Matrix and Directions APIs, restricted to them. Google bills each request, and its travel times are never kept, as its terms require.

@@ -10,7 +10,7 @@ Bulk import creates or updates many content items from one spreadsheet, and bulk
 
 | | |
 | --- | --- |
-| **Menu** | Content > Import; Content > Export |
+| **Menu** | **Content** → **Import**; **Content** → **Export** |
 | **Permission** | List content transfer entries (to open the Import page); Import content items from file, or Import *type* content items from file for one type; Export content items from file; Delete content transfer entries |
 | **Feature** | Content Transfer (CSV files); Content Transfer (OpenXml) adds Excel files |
 
@@ -50,7 +50,7 @@ Some features add records that are not content items to the **Import** menu, suc
 <YouTube video="content-transfer" title="Video of preparing a file and uploading it" start={112} end={197} />
 <YouTube video="content-transfer-columns" title="Video of the Columns Requirements table of an import and of importing a file" start={43} end={155} />
 
-1. Open **Content > Import**. The **Bulk Import** page lists earlier imports.
+1. Open **Content** → **Import**. The **Bulk Import** page lists earlier imports.
 2. Click **Import** and pick the content type. When only one type can be imported, the button reads **Import** followed by the type's name.
 3. Read the **File Requirements** card, and download a template if you need one.
 4. Choose your file.
@@ -107,7 +107,7 @@ Use the status and sort menus above the list to find an import, and tick several
 
 For a contact type, the export page also shows a **CRM last activity** section. Tick **Include last completed activity information** and choose a **Subject**, and the file appends each contact's most recent completed activity of that subject: the agent's note, the completion date, the disposition, the subject and the subject's fields. Tick **Include only contacts with a last activity record** to leave out the contacts that have none.
 
-1. Open **Content > Export**. The **Bulk Export** page lists earlier exports.
+1. Open **Content** → **Export**. The **Bulk Export** page lists earlier exports.
 2. Click **Export** to open the **Export contents** form.
 3. Choose the **File type** and the **Content type**.
 4. Under **Export scope**, choose **Export all published**, or **Filtered Export** to narrow it down with the filters below.

@@ -289,7 +289,7 @@ needs no reference to the Accounts module to do it:
 services.Configure<AccountsAdminMenuOptions>(options => options.ShowAccountsMenu = false);
 ```
 
-The CRM does this and lists accounts under **Interaction Center > Accounts**.
+The CRM does this and lists accounts under **Interaction Center** → **Accounts**.
 
 ## Recipes and deployment
 

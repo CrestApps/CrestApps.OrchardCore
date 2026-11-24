@@ -16,7 +16,7 @@ This module wires the shared Claude support from CrestApps.Core into Orchard Cor
 
 ## Capabilities
 
-- tenant-level Claude settings under **Settings -> Artificial Intelligence -> Claude**
+- tenant-level Claude settings under **Settings** → **Artificial Intelligence** → **Claude**
 - encrypted Anthropic API key storage
 - Claude model discovery from the Anthropic models API
 - per-item Claude model overrides for AI Profiles, AI Profile templates, and Chat Interactions
@@ -54,7 +54,7 @@ The module binds shared Claude options from:
 
 ### Site settings
 
-In Orchard Core, go to **Settings -> Artificial Intelligence -> Claude**.
+In Orchard Core, go to **Settings** → **Artificial Intelligence** → **Claude**.
 
 From there you can configure:
 

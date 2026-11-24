@@ -10,7 +10,7 @@ A **pay profile** is what an employer needs to pay a staff member. A person paid
 
 | | |
 | --- | --- |
-| **Menu** | Staff > a staff member's profile > **Pay** > **Payroll** card |
+| **Menu** | **Staff** → *a staff member's profile* → **Pay** → **Payroll** card |
 | **Permission** | See pay profiles, Manage pay profiles (all employers, or one), See full tax ids |
 | **Feature** | Payroll |
 
@@ -51,7 +51,7 @@ A profile with pay items can't be deleted: remove its items first, or set its st
 
 ## Your own pay
 
-Nobody can change their own pay profile in these pages, even with the permission, unless **Settings > Payroll** allows it.
+Nobody can change their own pay profile in these pages, even with the permission, unless **Settings** → **Payroll** allows it.
 
 ## Confirm your password to see pay
 

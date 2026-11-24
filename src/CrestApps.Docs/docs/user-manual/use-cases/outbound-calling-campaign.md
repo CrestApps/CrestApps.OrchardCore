@@ -28,7 +28,7 @@ When it is done:
 | You need | Who sets it up |
 | --- | --- |
 | A phone provider and at least one number to call from | Your administrator; see [Phone and SMS setup](../telephony-settings.md) |
-| The features **Omnichannel Management**, **Contact Center Outbound Dialer** (preview dialing), **Contact Center Paced Dialing** (power, progressive and predictive), **Contact Center Agents**, **Contact Center Agent Entitlements**, **Telephony Soft Phone Extension**, **Content Transfer** (to import lists) and **Reports** | Your administrator, in **Tools > Features** |
+| The features **Omnichannel Management**, **Contact Center Outbound Dialer** (preview dialing), **Contact Center Paced Dialing** (power, progressive and predictive), **Contact Center Agents**, **Contact Center Agent Entitlements**, **Telephony Soft Phone Extension**, **Content Transfer** (to import lists) and **Reports** | Your administrator, in **Tools** → **Features** |
 | A manager role with Manage subject flows, Manage dispositions, Manage campaigns, Manage the Contact Center dialer, Manage Contact Center agents and Manage activity batches | Your administrator; see [Roles and permissions](../getting-started/roles-and-permissions.md) |
 | The **Agent** role, plus **Use the telephony soft phone**, for the callers | Your administrator |
 
@@ -38,19 +38,19 @@ When it is done:
 
 <YouTube video="use-case-outbound-calling-campaign" title="Video of the set-up order: the data and outcomes, the rules, the people and the work" start={91} end={125} />
 
-1. **Get your contacts in.** Set up the contact type once, then import your list under **Content > Import**. Pick the lead country, skip duplicates, and scrub the do-not-call registries. Check the import's result for skipped rows. See [Contacts](../contacts.md). Working with prospects rather than customers? See [Turn leads into deals](leads-to-deals.md).
+1. **Get your contacts in.** Set up the contact type once, then import your list under **Content** → **Import**. Pick the lead country, skip duplicates, and scrub the do-not-call registries. Check the import's result for skipped rows. See [Contacts](../contacts.md). Working with prospects rather than customers? See [Turn leads into deals](leads-to-deals.md).
 2. **Create the subject.** On **Subject Flows**, click **Add Subject** (on a new site, **Create a new content type**), name it, for example *Spring lead drive*, and click **Add & Configure** next to **Omnichannel Subject**. Pick its **Default campaign**, leave **Direction** on **Outbound** and **Require a disposition** on, and add the fields agents fill in during the call. See [Subjects](../subjects.md).
 
    <YouTube video="use-case-outbound-calling-campaign" title="Video of creating the subject and opening its flow" start={125} end={182} />
 3. **Create the outcomes.** Add the dispositions agents can pick, such as *No answer*, *Call back*, *Interested* and *Not interested*. Add one with the **Number not in service** outcome so dead numbers are handled for you. See [Dispositions](../dispositions.md).
-4. **Decide what happens next.** On the subject's flow (**Manage Flow > Add Action**), add an action for every disposition: **Finish**, **Try Again** later, or a **New Activity** such as a follow-up call. See [Subject flows](../subject-flows.md).
+4. **Decide what happens next.** On the subject's flow (**Manage Flow** → **Add Action**), add an action for every disposition: **Finish**, **Try Again** later, or a **New Activity** such as a follow-up call. See [Subject flows](../subject-flows.md).
    <YouTube video="use-case-outbound-calling-campaign" title="Video of the dispositions, campaign, calling hours, dialer profile and entitlements" start={182} end={228} />
 
 5. **Create the campaign.** Add the campaign, and a campaign group if you want to roll it up in reports. Agents sign in to this campaign to get its calls. See [Campaigns](../campaigns.md).
 6. **Set the calling window.** Create a business hours calendar for the hours you may call. The dialer checks it in each contact's own time zone. See [Business hours](../business-hours.md).
 7. **Choose how to dial.** Create a dialer profile: the mode (**Preview**, **Power** or **Progressive**), the caller ID customers see, the compliance rules with your calling calendar, and, for power and progressive, attempts, retry delay and the abandonment cap. See [Dialer profiles](../dialer-profiles.md).
 8. **Give agents the campaign.** On each agent's entitlement record, add the campaign under **Allowed campaigns**. See [Skills and agent entitlements](../skills-and-entitlements.md).
-9. **Load the work.** Create a **Dialer** activity load with the subject, the dialer profile and the campaign, filter the contacts, and pick a **Dial from** number if this campaign should show its own number. Save, then choose **Actions > Load activities**, and read the load's report of what was loaded and skipped. See [Load activities](../load-inventory.md).
+9. **Load the work.** Create a **Dialer** activity load with the subject, the dialer profile and the campaign, filter the contacts, and pick a **Dial from** number if this campaign should show its own number. Save, then choose **Actions** → **Load activities**, and read the load's report of what was loaded and skipped. See [Load activities](../load-inventory.md).
 10. **Agents dial.** Agents sign in to the campaign from the soft phone's **Work** tab and set themselves **Available**. With preview, each record is offered with **Dial** and **Skip**; with power, progressive or predictive, the call is placed for them and the record opens once the customer answers and they are connected. See [Agent workspace](../agent-workspace.md) and [Placing and handling calls](../calls.md).
 11. **Agents record the outcome.** After the call, the agent completes the activity with a disposition and notes, which ends wrap-up and runs the subject flow. See [Activities](../activities.md).
 12. **Watch and adjust.** Supervisors filter the live dashboard by the campaign. Managers reassign, reschedule or move work to another dialer profile in bulk, and review dead numbers. See [Live dashboard](../live-dashboard.md), [Managing activities in bulk](../bulk-activities.md) and [Numbers not in service](../numbers-not-in-service.md).

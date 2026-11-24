@@ -15,7 +15,7 @@ Watch the short video, then follow the steps below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder (or Reports > Shared Reports) |
+| **Menu** | **Reports** → **Report Builder (or Reports** → **Shared Reports)** |
 | **Permission** | Build reports and manage own custom reports and views, to design reports. None to run a report shared with you. |
 | **Feature** | Report Builder |
 
@@ -25,7 +25,7 @@ Watch the short video, then follow the steps below.
 
 Turning features on is work for an administrator.
 
-1. Open **Tools > Features**.
+1. Open **Tools** → **Features**.
 2. Find **Report Builder** in the **Reporting** group and click **Enable**. It turns on **Reports** too, and Orchard Core's **Data Pipelines Core**, which provides the data sources, the formulas and the share links the builder uses. You never turn Data Pipelines Core on yourself: the features that need it turn it on.
 3. To report on your content types (such as customers or orders), make sure **Contents** is on. To report on your saved queries, turn on **Queries**. To email share links to people, turn on **Email** and set up how the site sends email.
 4. Give the people who build reports the **Build reports and manage own custom reports and views** permission in their role. See [Roles and permissions](../administration/roles.md) and the permission list on the [Report Builder overview](index.md#who-can-do-what).

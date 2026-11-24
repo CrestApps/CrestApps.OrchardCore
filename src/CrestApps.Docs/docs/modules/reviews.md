@@ -13,12 +13,12 @@ user_manual: user-manual/commerce/reviews
 
 <YouTube video="reviews" title="Narrated video overview of Product reviews" />
 
-The **Product Reviews** feature lets buyers rate and review the products they bought. The store approves each review under **Commerce > Reviews**; approved reviews show on the product's page with its stars, and the product's average rating goes into its listing search record, where listings filter and sort by it.
+The **Product Reviews** feature lets buyers rate and review the products they bought. The store approves each review under **Commerce** → **Reviews**; approved reviews show on the product's page with its stars, and the product's average rating goes into its listing search record, where listings filter and sort by it.
 
 ## Model
 
 - **`ProductReview`** (collection `Reviews`, `ProductReviewIndex`): the product, the user and the name shown, `Rating` (1 to 5), `Title`, `Body`, `Status` (`Pending`, `Approved` or `Rejected`), `VerifiedPurchase` and the `OrderId` it was bought on, and who moderated it when.
-- **`ReviewSettings`** (group `reviews`, **Settings > Commerce > Reviews**): `RequireApproval` (on), `BuyersOnly` (on), `SendReviewRequests` (off) and `ReviewRequestDelayDays` (14).
+- **`ReviewSettings`** (group `reviews`, **Settings** → **Commerce** → **Reviews**): `RequireApproval` (on), `BuyersOnly` (on), `SendReviewRequests` (off) and `ReviewRequestDelayDays` (14).
 - **`ProductReview.Photos`**: the media paths of up to three photos.
 - **`ProductRating`**: the count and the average (one decimal) of a product's approved reviews, from `ProductRatingReader`.
 
@@ -43,7 +43,7 @@ With Orchard Core's Media feature on, the form takes up to three photos (`Review
 
 ## Moderating
 
-**Commerce > Reviews** (permission **Moderate product reviews**) is an admin list of reviews, waiting for approval first, filtered by status, with **Approve**, **Reject** and **Delete** on each. Approving, rejecting or deleting an approved review calls `IProductSearchIndexRefresher.RefreshAsync` for its product, so the rating in listings follows at once.
+**Commerce** → **Reviews** (permission **Moderate product reviews**) is an admin list of reviews, waiting for approval first, filtered by status, with **Approve**, **Reject** and **Delete** on each. Approving, rejecting or deleting an approved review calls `IProductSearchIndexRefresher.RefreshAsync` for its product, so the rating in listings follows at once.
 
 ## Ratings in listings
 
@@ -56,7 +56,7 @@ With Product Listing on:
 
 ## Report Builder data source
 
-With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Product Reviews adds the **Reviews** data source (`Reviews`) to the Report Builder and to Orchard Core data pipelines. Its data set needs **Moderate product reviews** (`ManageProductReviews`), the permission of **Commerce > Reviews** and of the built-in **Product reviews** report, which keeps working as before.
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Product Reviews adds the **Reviews** data source (`Reviews`) to the Report Builder and to Orchard Core data pipelines. Its data set needs **Moderate product reviews** (`ManageProductReviews`), the permission of **Commerce** → **Reviews** and of the built-in **Product reviews** report, which keeps working as before.
 
 The **Product reviews** data set (`ProductReviews`) has one row per review, newest first by when it was written, which is its default date. Date ranges on that date, joins on the review, product and user IDs, and status filters are applied in the database, and simple groups and totals of the fields its index holds (status, rating, product, user and date) are counted there too. The text of a review and its photos are never exposed: only the number of photos is.
 

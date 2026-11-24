@@ -1,17 +1,17 @@
 ---
 sidebar_label: Notification Templates
 title: Notification Templates
-description: "Write the messages requesters get when their ticket is received, answered and solved, and when they're asked to rate it, under Settings > Service Desk."
+description: "Write the messages requesters get when their ticket is received, answered and solved, and when they're asked to rate it, under Settings → Service Desk."
 technical_manual:
   - modules/tickets/emails-and-notifications
   - modules/templated-emails
 ---
 
-Requesters hear from your service desk when their ticket is received, when an agent replies, when it's solved, and when they're asked to rate it. You write those messages once, under **Settings > Service Desk**.
+Requesters hear from your service desk when their ticket is received, when an agent replies, when it's solved, and when they're asked to rate it. You write those messages once, under **Settings** → **Service Desk**.
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Service Desk |
+| **Menu** | **Settings** → **Service Desk** |
 | **Permission** | Manage ticket settings |
 | **Feature** | Tickets |
 
@@ -19,7 +19,7 @@ Requesters hear from your service desk when their ticket is received, when an ag
 
 ## Edit the messages
 
-1. Go to **Settings > Service Desk** and open **Notification templates**.
+1. Go to **Settings** → **Service Desk** and open **Notification templates**.
 2. Edit the subject and body of each message: **Ticket received**, **Reply from an agent**, **Ticket solved** and **Rate a solved ticket**. A message can use the ticket's number, subject, status, requester's name and category, and a reply's message and author.
 3. Select **Save**.
 

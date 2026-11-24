@@ -12,7 +12,7 @@ A buyer can use several codes on one order. Each coupon says which other kinds o
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Coupons |
+| **Menu** | **Commerce** → **Coupons** |
 | **Permission** | Manage coupons |
 | **Feature** | Checkout |
 
@@ -24,7 +24,7 @@ A buyer can use several codes on one order. Each coupon says which other kinds o
 
 <YouTube video="coupons-and-discounts" title="Finding coupons and their recent uses" start={314} end={355} />
 
-**Commerce > Coupons** lists your coupons, newest first.
+**Commerce** → **Coupons** lists your coupons, newest first.
 
 - **Search by code or description** at the top: type part of a code or description and press Enter.
 - The status filter in the list header (**Filter by status**) shows **Any status**, **Active**, **Not available** or **Disabled** coupons.
@@ -53,7 +53,7 @@ When at least one enabled coupon has neither a usage limit nor an end date, a wa
 
 <YouTube video="coupons-and-discounts" title="Creating a code" start={99} end={151} />
 
-1. Open **Commerce > Coupons** and click **Add coupon**.
+1. Open **Commerce** → **Coupons** and click **Add coupon**.
 2. Under **How it's applied**, choose **The customer enters a code** or **Automatically, on every order that qualifies**.
 3. Enter a **Code** and, optionally, a **Description**. An automatic discount needs a description, because that's what the buyer sees; its code is optional.
 4. Pick the **Discount type** and fill in **Percentage**, or **Amount** and **Currency**, or what the customer buys and gets.

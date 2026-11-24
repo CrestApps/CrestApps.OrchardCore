@@ -10,7 +10,7 @@ A board shows tickets as cards in columns, one column for each stage of the work
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Boards |
+| **Menu** | **Service Desk** → **Boards** |
 | **Permission** | A view permission on a desk to open a board; **Manage shared ticket boards** to make boards for everybody or a team; **Manage my own ticket boards** to make your own |
 | **Feature** | Tickets |
 
@@ -18,7 +18,7 @@ A board shows tickets as cards in columns, one column for each stage of the work
 
 ## Work tickets on a board
 
-Go to **Service Desk > Boards** and open a board.
+Go to **Service Desk** → **Boards** and open a board.
 
 - **Drag a card** to another column to change the ticket's status. When the column holds several statuses and has no default, you're asked which one.
 - To move a card without dragging (with the keyboard, or on a phone), select **⋮** on the card and choose the status.
@@ -30,7 +30,7 @@ A new site starts with a **Service desk** board, with a column for each kind of 
 
 ## Make a board
 
-1. Go to **Service Desk > Boards** and select **Add board**.
+1. Go to **Service Desk** → **Boards** and select **Add board**.
 2. Enter a **Name** and, if you want, a **Description** and a **Position** (lower comes first in the list of boards).
 3. Choose **Who it is for**: **Only me**, **A team**, or **Everybody who works on tickets**. Sharing a board needs **Manage shared ticket boards**; with **Manage my own ticket boards** you can keep boards for yourself.
 4. Under **Which tickets it shows**, choose desks, teams and ticket types to keep the board to, say, IT; leave them empty to show everything you may see. Choose whose tickets (**Assigned to**) and the order of the cards (**Cards in order of**).

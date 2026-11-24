@@ -11,7 +11,7 @@ A **desk** keeps its own tickets, such as Support, IT or HR. Who may see and wor
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Desks |
+| **Menu** | **Service Desk** → **Desks** |
 | **Permission** | Manage ticket settings |
 | **Feature** | Tickets |
 
@@ -19,7 +19,7 @@ A **desk** keeps its own tickets, such as Support, IT or HR. Who may see and wor
 
 ## Add or edit a desk
 
-Go to **Service Desk > Desks** and select **Add desk**, or a desk's name to edit it. The editor groups its fields in cards.
+Go to **Service Desk** → **Desks** and select **Add desk**, or a desk's name to edit it. The editor groups its fields in cards.
 
 ### Desk
 
@@ -44,7 +44,7 @@ Only members who can take work now, and who hold the skills the ticket type asks
 | Field | What it does |
 | --- | --- |
 | **Business hours** | The hours the desk counts in, such as for workflows that wait a number of business hours |
-| **Service-level policy** | Used when the ticket's type names no policy. Policies are written under **Content > Service Levels**, for tickets. See [Service levels](../administration/service-levels.md) |
+| **Service-level policy** | Used when the ticket's type names no policy. Policies are written under **Content** → **Service Levels**, for tickets. See [Service levels](../administration/service-levels.md) |
 
 ### Solved tickets
 
@@ -58,7 +58,7 @@ Only members who can take work now, and who hold the skills the ticket type asks
 
 | Field | What it does |
 | --- | --- |
-| **Tell the requester** | Requesters hear when their ticket is received, answered and solved: through their notifications when they have an account on the site, otherwise by e-mail. The messages are written under **Settings > Service Desk**. See [Notification templates](./notification-templates.md) |
+| **Tell the requester** | Requesters hear when their ticket is received, answered and solved: through their notifications when they have an account on the site, otherwise by e-mail. The messages are written under **Settings** → **Service Desk**. See [Notification templates](./notification-templates.md) |
 | **Tell the assignee** | Agents hear when a ticket is assigned to them, and the members of its team when it is given to their team |
 | **Ask requesters to rate a solved ticket after (hours)** | With Tickets Portal on and requesters told, the requester gets one message with a link to rate how their request was handled. 0 never asks |
 
@@ -89,7 +89,7 @@ Select **Save** when you're done.
 
 ## Who sees a desk's tickets
 
-The permissions to view and work tickets exist for each desk, under **Users > Roles**:
+The permissions to view and work tickets exist for each desk, under **Users** → **Roles**:
 
 | Permission | Lets a user |
 | --- | --- |

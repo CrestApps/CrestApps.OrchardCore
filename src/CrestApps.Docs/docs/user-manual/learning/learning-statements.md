@@ -10,7 +10,7 @@ Some learning content reports what learners do as learning statements, such as "
 
 | | |
 | --- | --- |
-| **Menu** | Learning > Learning Statements |
+| **Menu** | **Learning** → **Learning Statements** |
 | **Permission** | Read all learning statements of the Learning Record Store |
 | **Feature** | Learning Record Store |
 
@@ -18,7 +18,7 @@ Some learning content reports what learners do as learning statements, such as "
 
 ## Find a statement
 
-Go to **Learning > Learning Statements**. The newest statements come first, each with who did it, what they did, the result and when it was stored.
+Go to **Learning** → **Learning Statements**. The newest statements come first, each with who did it, what they did, the result and when it was stored.
 
 - Search by actor: a user name, an e-mail address or an account name.
 - Filter by **Verb** (what was done, such as completed or passed), **Activity IRI** (the web address that names the activity), **Registration** (one attempt at a course) and the days it was stored, from **Stored from** to **Stored to**. The days are in your time zone. **Clear** removes the filters.

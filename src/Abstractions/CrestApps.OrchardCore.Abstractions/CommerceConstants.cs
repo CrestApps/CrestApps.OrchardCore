@@ -12,7 +12,7 @@ public static class CommerceConstants
     public static class Features
     {
         /// <summary>
-        /// The Commerce feature: the store layer, with the store's setup guide (Commerce › Set up your store) and the
+        /// The Commerce feature: the store layer, with the store's setup guide (Commerce › Set Up Your Store) and the
         /// roles it adds for a store's staff. It is enabled by dependency only and brings <see cref="Foundation"/>; the
         /// store modules (products, carts, checkout, orders, shipping and the like) depend on it.
         /// </summary>

@@ -15,13 +15,13 @@ This video shows how to build a report, add totals, formulas, filters and charts
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder, and Reports > Report Views |
+| **Menu** | **Reports** → **Report Builder**, and **Reports** → **Report Views** |
 | **Permissions** | Build reports and manage own custom reports and views (to design); Share custom reports publicly and through share links (to share with everyone or create links); Manage all custom reports and views (to change other people's reports) |
 | **Features** | Report Builder, which turns on Orchard Core's Data Pipelines Core. Your content types (such as customers or orders) are offered as data when Contents is on, and your saved queries when Queries is on. Emailing share links needs Email. |
 
 <AskYourAdmin />
 
-People who only run reports that were shared with them need no permission: they see **Reports > Shared Reports**, and any report pinned to the menu that they may open.
+People who only run reports that were shared with them need no permission: they see **Reports** → **Shared Reports**, and any report pinned to the menu that they may open.
 
 ## What you can do
 

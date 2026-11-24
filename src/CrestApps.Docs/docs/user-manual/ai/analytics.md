@@ -11,7 +11,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Artificial Intelligence Reports |
+| **Menu** | **Reports** → **Artificial Intelligence Reports** |
 | **Permission** | View AI Chat Analytics, to see the reports; Export AI Chat Analytics as well, to export Session Analytics, Extracted Data and Conversion Goals |
 | **Feature** | AI Chat Session Analytics, AI Usage Analytics |
 
@@ -32,8 +32,8 @@ The video shows the settings that collect the data and tours the Session Analyti
 
 The reports only contain what was collected, and only from the moment collection was turned on.
 
-- **For the chat reports**, open each chat profile under **Artificial Intelligence > Profiles**, go to the **Data Processing & Metrics** tab and tick **Enable session metrics**. Tick **Enable AI resolution detection** to have the AI judge whether each chat solved the problem, and **Enable conversion metrics** to score chats against goals. Data extraction and conversion goals are set on the same tab; see [AI profiles](profiles.md#data-processing-and-metrics).
-- **For the usage report**, an administrator enables the **AI Usage Analytics** feature under **Tools > Features**. Usage is recorded from that moment on, and the report appears under **Reports > Billing & Usage**.
+- **For the chat reports**, open each chat profile under **Artificial Intelligence** → **Profiles**, go to the **Data Processing & Metrics** tab and tick **Enable session metrics**. Tick **Enable AI resolution detection** to have the AI judge whether each chat solved the problem, and **Enable conversion metrics** to score chats against goals. Data extraction and conversion goals are set on the same tab; see [AI profiles](profiles.md#data-processing-and-metrics).
+- **For the usage report**, an administrator enables the **AI Usage Analytics** feature under **Tools** → **Features**. Usage is recorded from that moment on, and the report appears under **Reports** → **Billing & Usage**.
 
 When session metrics are on, every answer in the chat gets **Thumbs up** and **Thumbs down** buttons, and people's ratings feed the **User Feedback** section.
 
@@ -45,7 +45,7 @@ A chat counts as finished when it ends naturally or when nobody writes for the p
 
 <YouTube video="ai-chat-analytics" title="Video of the AI Chat Session Analytics report" start={95} end={177} />
 
-1. Open **Reports > Artificial Intelligence Reports > AI Chat Session Analytics**.
+1. Open **Reports** → **Artificial Intelligence Reports** → **AI Chat Session Analytics**.
 2. Choose a **Date range**, such as **Last 30 Days** or dates of your own, and optionally one profile (or **Any profile**). The report starts on **All Time**, every chat; **On or after** and **On or before** leave the other end open.
 3. Click **Show**.
 
@@ -109,7 +109,7 @@ Lists the details an assistant collected with data extraction, such as names, em
 
 <YouTube video="ai-chat-analytics" title="Video of the AI Chat Extracted Data report" start={177} end={207} />
 
-1. Open **Reports > Artificial Intelligence Reports > AI Chat Extracted Data**.
+1. Open **Reports** → **Artificial Intelligence Reports** → **AI Chat Extracted Data**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
 3. Click **Show**. The table has **Session started**, **Session** and one column per extracted detail. The report starts on **All Time**.
 4. Click **Export** to download it, for example to import leads into another system. It needs the **Export AI Chat Analytics** permission. The file has the columns `SessionStartedUtc`, `SessionId` and one per extracted detail.
@@ -120,7 +120,7 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 <YouTube video="ai-chat-analytics" title="Video of the AI Chat Conversion Goals report" start={207} end={235} />
 
-1. Open **Reports > Artificial Intelligence Reports > AI Chat Conversion Goals**.
+1. Open **Reports** → **Artificial Intelligence Reports** → **AI Chat Conversion Goals**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
 3. Click **Show**. The table has **Session started**, **Session**, **Total points** and one column per goal. The report starts on **All Time**.
 4. Click **Export** to download it. It needs the **Export AI Chat Analytics** permission. The file has the columns `SessionStartedUtc`, `SessionId`, `TotalPoints` and one per goal.
@@ -135,7 +135,7 @@ Shows what AI used across the whole site: every request sent to an AI service, t
 
 <YouTube video="ai-usage-analytics" title="Video of running the AI Usage Analytics report" start={92} end={188} />
 
-1. Open **Reports > Billing & Usage > AI Usage Analytics**. It needs the **AI Usage Analytics** feature, not **AI Chat Session Analytics**.
+1. Open **Reports** → **Billing & Usage** → **AI Usage Analytics**. It needs the **AI Usage Analytics** feature, not **AI Chat Session Analytics**.
 2. Choose a **Date range**, and optionally an **AI profile**. The report starts on **All Time**.
 3. Choose how to group the figures:
    - **Group metered usage by**: **Model**, **Model and category** (which feature made the request: chat, SMS, voice calls, the API, workflows) or **Model and purpose** (why: answering, searching, indexing documents, transcribing, and so on).

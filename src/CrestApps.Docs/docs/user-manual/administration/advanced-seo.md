@@ -10,7 +10,7 @@ Structured data describes the site and each page in a standard vocabulary, [sche
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Search > Search Engine Optimization > Advanced SEO; Content Definition > Content Types (each content type) |
+| **Menu** | **Settings** → **Search** → **Search Engine Optimization** → **Advanced SEO**; **Content Definition** → **Content Types (each content type)** |
 | **Permission** | Manage the advanced SEO settings (for the site settings); Edit content types (to add and set up the Schema.org part) |
 | **Feature** | Advanced SEO |
 
@@ -20,7 +20,7 @@ Once the feature is on, every page describes the site and who publishes it. To d
 
 ## Describe who publishes the site
 
-1. Open **Settings > Search > Search Engine Optimization > Advanced SEO**.
+1. Open **Settings** → **Search** → **Search Engine Optimization** → **Advanced SEO**.
 2. Fill in the fields.
 3. Click **Save**.
 
@@ -36,7 +36,7 @@ Once the feature is on, every page describes the site and who publishes it. To d
 
 ## Describe a content type
 
-1. Open **Content Definition > Content Types** and click **Edit** next to the content type, such as **Blog Post**.
+1. Open **Content Definition** → **Content Types** and click **Edit** next to the content type, such as **Blog Post**.
 2. Click **Add Parts**, check **Schema.org** and click **Save**.
 3. Next to the **Schema.org** part, click **Edit**.
 4. In **Schema.org type**, choose what the items are, such as **BlogPosting**, **Event**, **Recipe** or **LocalBusiness**. The types are grouped, and each has a link to its description on schema.org and to Google's guide. To use any other schema.org type, choose **Another schema.org type…** and type its name.

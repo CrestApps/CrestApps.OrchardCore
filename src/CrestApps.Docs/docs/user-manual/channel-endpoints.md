@@ -13,7 +13,7 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Omnichannel Addresses |
+| **Menu** | **Interaction Center** → **Management** → **Omnichannel Addresses** |
 | **Permission** | Manage omnichannel addresses |
 | **Feature** | Omnichannel Channel Endpoints, which turns on with Omnichannel Management, Omnichannel Messaging Workspace or Contact Center Voice. **Voice calls** comes with Contact Center Voice, which the voice features turn on; **Text messages (SMS)** comes with SMS Messaging Channel. |
 
@@ -25,14 +25,14 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 
 <YouTube video="omnichannel-addresses" title="Video of the address list and adding a phone number used for text messages" start={44} end={122} />
 
-1. Open **Interaction Center > Management > Omnichannel Addresses** and click **Add Address**.
+1. Open **Interaction Center** → **Management** → **Omnichannel Addresses** and click **Add Address**.
 2. Under **What kind of address?**, pick the kind, such as **Phone number**. Only kinds that something on your site can use are offered. If none is, the page asks for a feature that uses addresses, such as Contact Center Voice or SMS Messaging Channel.
 3. Enter a **Name** people will recognize and the **Phone number** in international format, such as `+17025550100`.
 4. Under **Used for**, tick **Voice calls**, **Text messages (SMS)**, or both. The settings for each appear while it is ticked:
    - **Text messages**: the SMS **Provider** that owns the number, and the **Agents who text from this number**. New conversations these agents start in the messaging workspace are sent from it. Each agent texts from one number. Which entry point answers its texts is set on the entry point.
    - **Voice calls**: the **Agents who dial from this number**. Each agent dials from one number. Which entry point answers its calls is set on the entry point.
 
-   Agents on no number's list use the default numbers chosen under **Settings > Contact Center > [Default numbers](contact-center-settings.md#default-numbers)**.
+   Agents on no number's list use the default numbers chosen under **Settings** → **Contact Center** → [**Default numbers**](contact-center-settings.md#default-numbers).
 5. Add an optional **Description** and click **Save**.
 
 To add a number set up like an existing one, open the existing address's **Actions** menu and choose **Clone**. The form opens with its kind, what it is used for, its description and its SMS provider. Enter the new number and a name, pick its agents, and click **Save**. The number and the agents who dial or text from it are not copied, because each agent dials and texts from one number.
@@ -49,7 +49,7 @@ Numbers that were listed once per channel before addresses had capabilities were
 
 ## Buy a Telnyx number
 
-With Telnyx as the phone provider, **Settings → Communication → Telnyx numbers** lists the numbers on the Telnyx account. **Buy a number** searches the numbers for sale by country, area code, city, state or digits, and whether they can text; **Buy** orders one on the voice connection in the Telnyx settings and adds it here as a phone address. On the list, type a **Caller name** and **Set** to change the name the number shows on the phones it calls (up to 15 letters, digits and spaces; carriers take a few days to show it), and **Release** gives a number back to Telnyx. Buying and keeping numbers is billed by Telnyx.
+With Telnyx as the phone provider, **Settings** → **Communication** → **Telnyx Numbers** lists the numbers on the Telnyx account. **Buy a number** searches the numbers for sale by country, area code, city, state or digits, and whether they can text; **Buy** orders one on the voice connection in the Telnyx settings and adds it here as a phone address. On the list, type a **Caller name** and **Set** to change the name the number shows on the phones it calls (up to 15 letters, digits and spaces; carriers take a few days to show it), and **Release** gives a number back to Telnyx. Buying and keeping numbers is billed by Telnyx.
 
 The same is in the [AI API](../ai/conversations-api.md) under `api/ai/v1/carrier-numbers`: search (`GET available`), buy (`POST orders`), list, release and set the caller name.
 

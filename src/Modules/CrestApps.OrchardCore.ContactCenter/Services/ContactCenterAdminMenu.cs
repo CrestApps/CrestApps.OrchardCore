@@ -30,7 +30,7 @@ public sealed class ContactCenterAdminMenu : AdminNavigationProvider
                 .Add(S["Management"], S["Management"].PrefixPosition(), management => management
                     .AddClass("interaction-center-management")
                     .Id("interactionCenterManagement")
-                    .Add(S["Queue groups"], S["Queue groups"].PrefixPosition(), queueGroups => queueGroups
+                    .Add(S["Queue Groups"], S["Queue Groups"].PrefixPosition(), queueGroups => queueGroups
                     .AddClass("contact-center-queue-groups")
                     .Id("contactCenterQueueGroups")
                     .Action("Index", "QueueGroups", "CrestApps.OrchardCore.ContactCenter")

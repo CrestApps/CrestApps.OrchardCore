@@ -11,7 +11,7 @@ When a request needs a visit, turn it into a work order from the ticket.
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Tickets, then a ticket's **Work order** panel |
+| **Menu** | **Service Desk** → **Tickets**, then a ticket's **Work order** panel |
 | **Permission** | Edit tickets on the ticket's desk, and **Manage work orders** |
 | **Feature** | Tickets and Work Orders |
 

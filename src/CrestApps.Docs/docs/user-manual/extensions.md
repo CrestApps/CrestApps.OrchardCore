@@ -11,7 +11,7 @@ An **extension** is a short internal number, such as `1001`, that belongs to one
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Extensions |
+| **Menu** | **Interaction Center** → **Management** → **Extensions** |
 | **Permission** | Manage telephony extensions |
 | **Feature** | Telephony |
 
@@ -21,7 +21,7 @@ An **extension** is a short internal number, such as `1001`, that belongs to one
 
 ## Create an extension
 
-1. Open **Interaction Center > Management > Extensions** and click **Add extension**.
+1. Open **Interaction Center** → **Management** → **Extensions** and click **Add extension**.
 2. Fill in the fields below.
 3. Click **Save**.
 

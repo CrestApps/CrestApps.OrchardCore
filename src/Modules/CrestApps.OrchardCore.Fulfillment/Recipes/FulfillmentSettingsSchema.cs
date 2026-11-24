@@ -14,7 +14,7 @@ internal sealed class FulfillmentSettingsSchema : SiteSettingsSchemaBase
     protected override JsonSchemaBuilder BuildSchemaCore()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Description("How paid orders reach the fulfillment partners, under Settings › Commerce › Fulfillment partners.")
+            .Description("How paid orders reach the fulfillment partners, under Settings › Commerce › Fulfillment Partners.")
             .Properties(
                 ("SendAutomatically", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether paid orders are sent to the connected partners by themselves. When false, a person sends each order from its page.")))
             .AdditionalProperties(true);

@@ -14,7 +14,7 @@ Watch the short video, then read how it works below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder > *a report* > Edit |
+| **Menu** | **Reports** → **Report Builder** → *a report* → **Edit** |
 | **Permission** | Build reports and manage own custom reports and views (your own reports); Manage all custom reports and views (anyone's) |
 | **Feature** | Report Builder |
 

@@ -10,7 +10,7 @@ A **do-not-call list** holds phone numbers your company must not call. You can u
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Local DNC Registry; Settings > Content Import; Settings > DNC Registries |
+| **Menu** | **Interaction Center** → **Local DNC Registry**; **Settings** → **Content Import**; **Settings** → **DNC Registries** |
 | **Permission** | Manage DNC registry settings |
 | **Feature** | DNC Registry, plus one or more of: Local Do Not Call Registry, USA FTC Do Not Call Registry, Canada LNNTE-DNCL Registry |
 
@@ -36,7 +36,7 @@ A registry that cannot answer, for example because it is unreachable, never coun
 
 The **Local Do Not Call Registry** keeps lists you upload yourself, organized by country.
 
-1. Open **Interaction Center > Local DNC Registry** and click **Upload new list**.
+1. Open **Interaction Center** → **Local DNC Registry** and click **Upload new list**.
 2. Enter a **List name**, for example *June 2026 DNC Update*.
 3. Pick the **Country** the numbers belong to. The menu shows each country's calling code.
 4. Choose the **CSV file** and click **Upload**.
@@ -92,7 +92,7 @@ Use this when company policy says every contact import must be checked, so nobod
 
 <YouTube video="site-administration-walkthroughs" title="Video of uploading a local DNC list and enforcing it globally" start={289} end={310} />
 
-1. Open **Settings > Content Import**.
+1. Open **Settings** → **Content Import**.
 2. Tick **Enforce do-not-call registry checks globally**. Every contact import must then check phone numbers, and the person importing cannot turn it off.
 3. Under **Enforced registries**, tick the lists and registries that are always checked. People can add more when they import, but cannot remove these.
 4. Click **Save**.
@@ -119,7 +119,7 @@ See [Contacts](../contacts.md) for the full contact import.
 
 Each national registry needs an account with the registry's operator. Get the account details first, then:
 
-1. Open **Settings > DNC Registries** and pick the registry.
+1. Open **Settings** → **DNC Registries** and pick the registry.
 2. Fill in the fields below and click **Save**.
 
 ### USA FTC Registry

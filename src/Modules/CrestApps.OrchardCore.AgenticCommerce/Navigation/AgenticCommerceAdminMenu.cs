@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.AgenticCommerce.Navigation;
 
 /// <summary>
-/// Adds Commerce › AI agents and Settings › Commerce › Agentic commerce to the admin menu.
+/// Adds Commerce › AI Agents and Settings › Commerce › Agentic Commerce to the admin menu.
 /// </summary>
 public sealed class AgenticCommerceAdminMenu : AdminNavigationProvider
 {
@@ -39,7 +39,7 @@ public sealed class AgenticCommerceAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["AI agents"], S["AI agents"].PrefixPosition("10"), agents => agents
+                .Add(S["AI Agents"], S["AI Agents"].PrefixPosition("10"), agents => agents
                     .Id("agentPlatforms")
                     .Action(_platformsRouteValues)
                     .Permission(AgenticCommercePermissions.ManageAgentPlatforms)
@@ -48,7 +48,7 @@ public sealed class AgenticCommerceAdminMenu : AdminNavigationProvider
             )
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                    .Add(S["Agentic commerce"], S["Agentic commerce"].PrefixPosition(), agentic => agentic
+                    .Add(S["Agentic Commerce"], S["Agentic Commerce"].PrefixPosition(), agentic => agentic
                         .Id("agenticCommerceSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(AgenticCommercePermissions.ManageAgenticCommerceSettings)

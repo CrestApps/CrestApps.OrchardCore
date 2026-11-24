@@ -23,7 +23,7 @@ public sealed class AuthoringAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder.Add(S["Learning"], learning => learning
-            .Add(S["Authoring assistant"], S["Authoring assistant"].PrefixPosition(), authoring => authoring
+            .Add(S["Authoring Assistant"], S["Authoring Assistant"].PrefixPosition(), authoring => authoring
                 .Id("learningAuthoringAssistant")
                 .Action("Index", "Authoring", LearningAIConstants.Features.Assistant)
                 .Permission(LearningAIPermissions.UseAuthoringAssistant)

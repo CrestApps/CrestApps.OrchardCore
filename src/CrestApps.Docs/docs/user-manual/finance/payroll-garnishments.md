@@ -10,7 +10,7 @@ A **garnishment order** tells an employer to withhold part of a person's pay and
 
 | | |
 | --- | --- |
-| **Menu** | Payroll > Garnishments |
+| **Menu** | **Payroll** → **Garnishments** |
 | **Permission** | Manage garnishments (for every employer, or for one) |
 | **Feature** | Garnishments |
 
@@ -18,7 +18,7 @@ A **garnishment order** tells an employer to withhold part of a person's pay and
 
 ## Add an order
 
-1. Open **Payroll > Garnishments** and choose **Add garnishment**.
+1. Open **Payroll** → **Garnishments** and choose **Add garnishment**.
 2. Under **The order**, choose the **Person** (the person and the employer that withholds), the **Kind**, the **Case number** and the **Court or agency**, and the **Pay code** it shows as on statements (**GARN Garnishment** is added for you). Enter the day it was **Received** and the first pay date it applies to under **From**.
 3. Under **How much**, enter the **Amount each pay**, a **Percent of disposable earnings**, or both, and the **Total owed** when the order has an end amount.
 4. Leave the limits empty to take the kind's: a student loan 15%, a creditor 25% while leaving 217.50 a week. For support, check **Supports another spouse or child** and **Arrears over 12 weeks old** when they apply: the limit is 60%, 50% with another spouse or child, and 5 points more for old arrears (so 50, 55, 60 or 65). An order may ask for less, never more. A federal tax levy needs the **Exempt each pay** amount from its notice.
@@ -39,4 +39,4 @@ If a pay statement is voided, its check or deposit is stopped if it has not gone
 
 To stop an order, choose **Release** in its row's menu: nothing more is withheld, and what was withheld stays on the statements. An order that has withheld nothing yet can be deleted. To pause an order, set its **Status** to **Suspended**.
 
-You can't manage your own garnishment order, unless your administrator allows changing one's own pay in **Settings > Payroll**. The **Garnishments** data set shows case numbers and courts only to people who manage the employer's garnishments.
+You can't manage your own garnishment order, unless your administrator allows changing one's own pay in **Settings** → **Payroll**. The **Garnishments** data set shows case numbers and courts only to people who manage the employer's garnishments.

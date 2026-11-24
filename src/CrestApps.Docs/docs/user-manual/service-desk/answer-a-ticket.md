@@ -11,7 +11,7 @@ Open a ticket from the list. Its thread is on the left, newest first; its values
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Tickets, then a ticket |
+| **Menu** | **Service Desk** → **Tickets**, then a ticket |
 | **Permission** | **Reply to tickets** to answer the requester, **Add internal notes to tickets** for internal notes, **Edit tickets** to change its values, **Assign tickets** to assign it, on the ticket's desk |
 | **Feature** | Tickets |
 

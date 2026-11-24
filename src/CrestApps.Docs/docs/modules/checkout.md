@@ -192,7 +192,7 @@ A provider implementing **`ICheckoutDiscountProvider`** decides only *what* to t
 
 Within its bucket a discount takes off only what it can discount (`CheckoutDiscountBase`): a one-time discount, the goods bought now but never a shipping line; a first-cycle discount, the recurring charges collected now. What it took off is spread across those lines in proportion to each line's total, into `CheckoutLineItem.DiscountAmount`, and the last line takes what rounding leaves, so the shares add up to the discount exactly. `CheckoutTaxContextFactory` passes each share to tax as `TaxableItem.DiscountAmount`, so a line is taxed on what the buyer pays for it, and shipping, which no coupon touches, is taxed in full. A coupon's percentage and its minimum amount count the same lines: a 10% coupon on a $50 item with $15 shipping takes $5 off, and with a 10% tax charges $4.50 on the item and $1.50 on shipping.
 
-The **coupon catalog** ships in the box. Manage codes under **Commerce → Coupons**: percentage, fixed amount or free shipping, targeting the one-time amount or the first cycle, with an optional validity window, minimum and maximum amount, usage limit and limit per customer. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
+The **coupon catalog** ships in the box. Manage codes under **Commerce** → **Coupons**: percentage, fixed amount or free shipping, targeting the one-time amount or the first cycle, with an optional validity window, minimum and maximum amount, usage limit and limit per customer. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
 
 A **free-shipping** coupon (`CouponKind.FreeShipping`) contributes a discount aimed at `DiscountTarget.Shipping`: it takes off the shipping lines charged now, and nothing else, while its minimum and maximum count the items. A coupon can be **limited to some products or categories** (`Coupon.ProductIds`, `Coupon.CategoryIds`, taxonomy term ids): only the lines it applies to count toward its amounts, and its `DiscountLine.LineItemIds` keeps the share off the other lines. A line knows its product and categories through `BillingItem.ProductId` and `BillingItem.CategoryIds`; the [Orders](carts-and-orders) feature fills them in and adds the product and category pickers to the coupon editor (through `IDisplayManager<Coupon>`, so other modules can add editors too).
 
@@ -283,7 +283,7 @@ An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer dest
 
 The default provider then runs every **`ICheckoutTaxProfileHandler`**, at checkout and when a recurring charge is taxed, so modules add what they know without replacing it:
 
-- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Settings > Commerce > Tax origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
+- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Settings** → **Commerce** → **Tax Origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
 - `CustomerCheckoutTaxProfileHandler` (with [Customers](customers)) sets `CheckoutTaxProfile.Customer` for a signed-in buyer: business (`B2B`) or person, their tax id as the registration and VAT number, `IsTaxExempt`, and the ids of the exemption certificates on file for them. A rule the customer is exempt from charges nothing (`TaxTreatment.Exempt`). A guest is taxed as a person.
 
 A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the
@@ -519,7 +519,7 @@ A provider can report a fraud rating with the verification (`PaymentVerification
 
 ### One-page layout
 
-`CheckoutSettings.Layout` (**Settings > Commerce > Checkout**, group `checkout`, permission `ManageCheckoutSettings`) is `CheckoutLayout.Steps` (the default) or `CheckoutLayout.OnePage`. On one page, `CheckoutController` builds the editor of every visible step in order, each with the flow's current step set to it, and renders their `Header`, `Content` and `Footer` zones as sections of the `OnePage` view, with the last section's `Aside` zone (the invoice summary and the coupon box). Step drivers need no change.
+`CheckoutSettings.Layout` (**Settings** → **Commerce** → **Checkout**, group `checkout`, permission `ManageCheckoutSettings`) is `CheckoutLayout.Steps` (the default) or `CheckoutLayout.OnePage`. On one page, `CheckoutController` builds the editor of every visible step in order, each with the flow's current step set to it, and renders their `Header`, `Content` and `Footer` zones as sections of the `OnePage` view, with the last section's `Aside` zone (the invoice summary and the coupon box). Step drivers need no change.
 
 - A post updates every section it showed, in order, and redirects back (post, redirect, get). The payment section joins the page once every visible step with `CollectData` before it has its key in `SavedSteps`.
 - With payment showing, the payment script takes the submit as on the stepped layout. A post from that page with no `checkout-action` completes the checkout, for a purchase that needs no gateway.

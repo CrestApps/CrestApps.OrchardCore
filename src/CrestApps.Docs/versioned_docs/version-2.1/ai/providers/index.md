@@ -79,7 +79,7 @@ When configuring connections through `appsettings.json`, each connection can def
 }
 ```
 
-Assign deployments directly on profiles and interactions when you need explicit model selection. For tenant-wide fallbacks, configure **Settings -> Artificial Intelligence -> Default Deployments**.
+Assign deployments directly on profiles and interactions when you need explicit model selection. For tenant-wide fallbacks, configure **Settings** → **Artificial Intelligence** → **Default Deployments**.
 
 ## Implementing a Custom Provider
 

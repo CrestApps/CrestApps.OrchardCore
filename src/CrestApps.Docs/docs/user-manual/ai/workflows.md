@@ -10,7 +10,7 @@ Orchard Core **Workflows** let you automate work without code. The AI features a
 
 | | |
 | --- | --- |
-| **Menu** | Design > Workflows |
+| **Menu** | **Design** → **Workflows** |
 | **Permission** | Manage workflows |
 | **Feature** | Workflows, plus AI Services. **AI Completion using Direct Config** also needs AI Chat Interactions. |
 
@@ -22,7 +22,7 @@ Orchard Core **Workflows** let you automate work without code. The AI features a
 
 ## Add an AI task to a workflow
 
-1. Open **Design > Workflows** and open your workflow, or click **Create Workflow** to start a new one.
+1. Open **Design** → **Workflows** and open your workflow, or click **Create Workflow** to start a new one.
 2. Click **Add Task**, find **AI Completion using Profile** (or **AI Completion using Direct Config**) under **Artificial Intelligence**, and click **Add**.
 3. Fill in the fields described below and click **Save**.
 4. On the canvas, connect the task to the step before it, and connect its outcomes to the steps that follow.

@@ -10,7 +10,7 @@ Scheduling books appointments with your staff, rooms and equipment: a consultati
 
 | | |
 | --- | --- |
-| **Menu** | Calendars > Appointments, Calendars > Appointment Types, Calendars > Scheduling Resources, Calendars > Waitlist |
+| **Menu** | **Calendars** → **Appointments**, **Calendars** → **Appointment Types**, **Calendars** → **Scheduling Resources**, **Calendars** → **Waitlist** |
 | **Permission** | View appointments, Manage appointments (booking and changing appointments, and the waitlist), Manage scheduling (appointment types and resources) |
 | **Feature** | Scheduling (it needs Calendars) |
 
@@ -22,7 +22,7 @@ To set it up, add your resources first, then your appointment types. A video sho
 
 ## Add the people, rooms and equipment that take appointments
 
-Open **Calendars > Scheduling Resources** and choose **Add resource**.
+Open **Calendars** → **Scheduling Resources** and choose **Add resource**.
 
 | Field | What it does |
 | --- | --- |
@@ -37,13 +37,13 @@ Open **Calendars > Scheduling Resources** and choose **Add resource**.
 | **Days off and changed days** | One per line, such as *2026-12-24 closed*, or *2026-12-31 09:00-12:00* for shorter hours that day. |
 | **Shift calendars** | For hours from shifts: the calendars whose **Shift** events name this staff member, such as one for each team a workforce management module provides. Hold Ctrl to choose more than one. They can then only be booked during their shifts. |
 
-The resource's calendar is an **Appointments** calendar. Like any calendar, you can open it in **Calendars > Calendar**, and anything you add to it there, such as a **Blocked time** event, keeps that time from being booked.
+The resource's calendar is an **Appointments** calendar. Like any calendar, you can open it in **Calendars** → **Calendar**, and anything you add to it there, such as a **Blocked time** event, keeps that time from being booked.
 
 Deleting a resource keeps its calendar and its appointments.
 
 ## Describe an appointment type
 
-Open **Calendars > Appointment Types** and choose **Add appointment type**.
+Open **Calendars** → **Appointment Types** and choose **Add appointment type**.
 
 **General**
 
@@ -115,7 +115,7 @@ A video shows booking, and managing the appointment afterwards:
 
 <YouTube video="scheduling-book-and-manage" title="Video of booking and managing appointments" />
 
-1. Open **Calendars > Appointments** and choose **Book an appointment**, or choose **Book** next to an appointment type.
+1. Open **Calendars** → **Appointments** and choose **Book an appointment**, or choose **Book** next to an appointment type.
 2. Choose the **Appointment type** and the **Day**, then **Show times**.
 3. Pick a time, fill in the customer's **Name**, **Email**, **Phone** and **Notes**, and choose **Book**.
 
@@ -123,7 +123,7 @@ If someone else took the time a moment before you, you're told so and can pick a
 
 ## Manage appointments
 
-**Calendars > Appointments** lists appointments with a search by customer and a **Status** filter. **Open** shows an appointment with its time, resource, customer, place and notes, and these actions:
+**Calendars** → **Appointments** lists appointments with a search by customer and a **Status** filter. **Open** shows an appointment with its time, resource, customer, place and notes, and these actions:
 
 - **Confirm** a requested appointment.
 - **Took place** or **No-show**, once the visit has happened. Both are offered for confirmed and requested appointments.
@@ -158,7 +158,7 @@ Scheduling doesn't email customers by itself. To send a confirmation with the ma
 
 ## Waitlist
 
-When a customer wants a time that's taken, add them to the waitlist. Open **Calendars > Waitlist**, choose the **Appointment type**, the **From** and **To** days they can come (whole days in the site's time zone, both included), their **Name** and **Email**, and choose **Add**.
+When a customer wants a time that's taken, add them to the waitlist. Open **Calendars** → **Waitlist**, choose the **Appointment type**, the **From** and **To** days they can come (whole days in the site's time zone, both included), their **Name** and **Email**, and choose **Add**.
 
 When an appointment of that type is cancelled or moved, the customer who has waited longest and can come on the day of the freed time is marked *Notified*, and the **Waitlist Slot Available** workflow event starts, so a workflow can tell them. **Remove** takes a customer off the list.
 

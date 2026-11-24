@@ -41,8 +41,8 @@ The framework is split into three assemblies:
 
 | Feature | Contents |
 | --- | --- |
-| **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Commerce > Taxation > Jurisdictions** and **Commerce > Taxation > Tables** (a site with Payroll and no store gets the same Commerce item with only Taxation in it), with their recipe and deployment steps. No Commerce dependency: Sales Tax and Income Tax share it (`AddTaxTablesCore()` registers the services). |
-| **Sales Tax** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables only: categories, types, rules, the business's tax registrations (**Commerce > Taxation > Tax registrations**), the `TaxationPart`, the sales tax engine and tax origin settings. Commerce (orders, checkout, point of sale) uses it, and a site that keeps its own books uses it without a store: it no longer depends on Commerce Foundation, and its admin items build the **Commerce** node themselves. The id is the module's, kept from when the feature was named Taxation. |
+| **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Commerce** → **Taxation** → **Jurisdictions** and **Commerce** → **Taxation** → **Tables** (a site with Payroll and no store gets the same Commerce item with only Taxation in it), with their recipe and deployment steps. No Commerce dependency: Sales Tax and Income Tax share it (`AddTaxTablesCore()` registers the services). |
+| **Sales Tax** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables only: categories, types, rules, the business's tax registrations (**Commerce** → **Taxation** → **Tax Registrations**), the `TaxationPart`, the sales tax engine and tax origin settings. Commerce (orders, checkout, point of sale) uses it, and a site that keeps its own books uses it without a store: it no longer depends on Commerce Foundation, and its admin items build the **Commerce** node themselves. The id is the module's, kept from when the feature was named Taxation. |
 | **Tax Returns** (`CrestApps.OrchardCore.Taxation.Returns`) | Depends on Sales Tax: a filing schedule on each registration, the periods it files for, and a return per period from the figures modules give. See [Tax returns](#tax-returns). |
 | **Tax E-Filing** (`CrestApps.OrchardCore.Taxation.EFiling`) | Depends on Tax Returns: filing channels and file formats, a manual channel that hands over a file, and the task that asks channels for the agency's answers. See [E-filing](#e-filing). |
 | **Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax`) | Depends on Tax Tables only: income tax rules, the built-in income tax provider and its seam, tax categories, election forms and withholding methods. Payroll uses it; any module that pays income can. See [Income tax](#income-tax). |
@@ -54,7 +54,7 @@ A module whose records point at tax tables registers an `ITaxTableUsage`, so a t
 
 ## Getting started
 
-Enable the **Taxation** feature under **Tools → Features**, then:
+Enable the **Taxation** feature under **Tools** → **Features**, then:
 
 1. Create your tax **categories**, **types**, **jurisdictions**, optional **tables**, and **rules** from the admin UI (see [Managing taxation from the admin UI](#managing-taxation-from-the-admin-ui)).
 2. Attach the **Taxation** part to a content type and classify it (see [The TaxationPart](#the-taxationpart)).
@@ -62,13 +62,13 @@ Enable the **Taxation** feature under **Tools → Features**, then:
 
 ## Managing taxation from the admin UI
 
-Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce → Taxation** menu with five screens: **Categories**, **Types**, **Jurisdictions**, **Tables**, and **Sales tax rules** (and **Income tax rules** with Income Tax). Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
+Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce** → **Taxation** menu with five screens: **Categories**, **Types**, **Jurisdictions**, **Tables**, and **Sales Tax Rules** (and **Income Tax Rules** with Income Tax). Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
 
 Setting up taxes end to end is a workflow of a few ordered steps. The order matters, because rules reference jurisdictions, types, and categories, and content classification reuses the categories you create.
 
 ### 1. Define what you sell — Categories
 
-Go to **Commerce → Taxation → Categories** and add a category for each kind of thing you tax (for example `Electronics`, or a finer `Television`). A category has:
+Go to **Commerce** → **Taxation** → **Categories** and add a category for each kind of thing you tax (for example `Electronics`, or a finer `Television`). A category has:
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
 - **Code** — the value matched by tax rules and stored on taxable items (for example `Electronics`).
@@ -79,7 +79,7 @@ Create the broad categories you match rules against, plus any finer classificati
 
 ### 2. Name your kinds of tax — Types
 
-Go to **Commerce → Taxation → Types** and manage the list of **tax types** — the labels that group and report the kind of tax a rule produces (for example `SalesTax`, `VAT`, or `GST`). A tax type has:
+Go to **Commerce** → **Taxation** → **Types** and manage the list of **tax types** — the labels that group and report the kind of tax a rule produces (for example `SalesTax`, `VAT`, or `GST`). A tax type has:
 
 - **Name** — the value stored on the resulting tax lines and offered in the rule editor (the unique key, fixed after creation).
 - **Description** — optional notes.
@@ -88,7 +88,7 @@ The catalog is seeded with a set of well-known types on first run so existing be
 
 ### 3. Define where you tax — Jurisdictions
 
-Go to **Taxes → Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
+Go to **Taxes** → **Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
 
 :::tip
 When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdown is populated from your managed `Country` content items instead of the built-in list, so you can curate the countries you operate in. The stored value is still the ISO country code, so switching the Addresses feature on or off never orphans existing jurisdictions or rules.
@@ -96,7 +96,7 @@ When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdow
 
 ### 4. Provide lookup tables — Tables (optional)
 
-Go to **Taxes → Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
+Go to **Taxes** → **Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
 - **Effective from/to** — optional date-only window during which the table is valid. A table is only used for a transaction whose date falls inside this window; a rule that requires a table but has no table in effect on the transaction date is **skipped** (it never silently taxes at zero).
@@ -114,11 +114,11 @@ Each time you save a table its **Version** is incremented, and that version is c
 
 ### 5. Define how tax applies — Rules
 
-Go to **Commerce → Taxation → Sales tax rules** and click **Add Tax Rule**. A dialog lists the available **calculation methods** — Percentage, Fixed amount, Per unit, Per weight, Per volume, Progressive, Threshold, and Tax table lookup. The method you pick becomes the rule's **source** and is fixed for the life of the rule, exactly like the source-aware editors used elsewhere in the platform (for example AI data sources and deployments). The editor then shows the fields shared by every rule — the **Name** (the rule's unique identifier, fixed after creation), the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, an optional **Display name**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, **Reverse charge**, and **Applies to shipping** — plus only the calculation fields the selected method needs: a **Rate** for the percentage method, a **Fixed amount** for the fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`), populated from the tables you created in step 4. A disabled rule is never applied, and rules outside their effective window are ignored.
+Go to **Commerce** → **Taxation** → **Sales Tax Rules** and click **Add Tax Rule**. A dialog lists the available **calculation methods** — Percentage, Fixed amount, Per unit, Per weight, Per volume, Progressive, Threshold, and Tax table lookup. The method you pick becomes the rule's **source** and is fixed for the life of the rule, exactly like the source-aware editors used elsewhere in the platform (for example AI data sources and deployments). The editor then shows the fields shared by every rule — the **Name** (the rule's unique identifier, fixed after creation), the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, an optional **Display name**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, **Reverse charge**, and **Applies to shipping** — plus only the calculation fields the selected method needs: a **Rate** for the percentage method, a **Fixed amount** for the fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`), populated from the tables you created in step 4. A disabled rule is never applied, and rules outside their effective window are ignored.
 
 The **Reverse charge** flag marks a rule whose liability shifts to a registered business buyer (for example the EU B2B reverse charge). When it is set and the customer is a **B2B** customer, the engine does not charge the tax; instead it emits a zero-amount line marked *Reverse charge* so the obligation is still visible on the document. For any other customer the rule behaves normally.
 
-The **Display name** (`TaxName`) is optional: it is the label shown to customers on invoices and receipts, and when it is left empty the tax line falls back to the rule **Name**. The **Tax type** labels and groups the kind of tax the rule produces (for example `SalesTax`, `VAT`, or `GST`); the dropdown is populated from the **Tax types** you manage under **Commerce → Taxation → Types**, and a rule that already stores a value not present in the catalog keeps it. The tax type never changes how the amount is calculated.
+The **Display name** (`TaxName`) is optional: it is the label shown to customers on invoices and receipts, and when it is left empty the tax line falls back to the rule **Name**. The **Tax type** labels and groups the kind of tax the rule produces (for example `SalesTax`, `VAT`, or `GST`); the dropdown is populated from the **Tax types** you manage under **Commerce** → **Taxation** → **Types**, and a rule that already stores a value not present in the catalog keeps it. The tax type never changes how the amount is calculated.
 
 ### 6. Classify your content
 
@@ -204,8 +204,10 @@ A content editor can then leave the defaults or override the classification per 
 | `DefaultTaxCategoryCode` | The category applied when the item does not specify one. Selected from the categories catalog. |
 | `DefaultTaxClassificationCode` | The classification applied when the item does not specify one. Selected from the categories catalog. |
 | `AllowClassificationOverride` | Whether editors may override the classification per content item. |
+| `ShowClassification` | Whether editors see **Tax classification** when they may override it (default `true`). Turn it off for a type that only needs a tax category; the item keeps the classification it has. |
+| `ShowExternalTaxCode` | Whether editors see **External tax code** (default `true`). Turn it off for a type taxed only by the site's own rules; the item keeps the code it has. |
 
-In the content-type editor, **Default tax category** and **Default tax classification** are dropdowns populated from the tax categories you created under **Commerce → Taxation → Categories**, so create your categories first. When `AllowClassificationOverride` is disabled, editors do not see the category/classification fields and the defaults configured here are always used.
+In the content-type editor, **Default tax category** and **Default tax classification** are dropdowns populated from the tax categories you created under **Commerce** → **Taxation** → **Categories**, so create your categories first. When `AllowClassificationOverride` is disabled, editors do not see the category/classification fields and the defaults configured here are always used. **Show the tax classification** and **Show the external tax code** hide those two fields, so a type such as a sales category can offer **Taxable** and **Tax category** alone. The editor posts a hidden `Rendered` field; when a type places the part's editor elsewhere or removes it, the driver leaves the part as it is instead of clearing **Taxable** and the codes.
 
 ## Domain model
 
@@ -369,7 +371,7 @@ Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`)
 
 A rule with a `JurisdictionId` applies only when that jurisdiction is among the ones resolved for the item's address (`ITaxJurisdictionResolver`). With no address, or an address outside it, the rule does not apply; rules without a jurisdiction apply everywhere. So the address the checkout supplies decides which jurisdiction rules can apply.
 
-The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Settings > Commerce > Tax origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
+The built-in `DefaultCheckoutTaxProfileProvider` uses the address the order ships to, else the billing address, as the destination, and the store's address under **Settings** → **Commerce** → **Tax Origin** (`TaxOriginSettings`) as the origin. Other modules add to the profile through `ICheckoutTaxProfileHandler`, such as the customer's exemption from [Customers](customers); see [Taxation at checkout](checkout#taxation).
 
 Do not assume the shipping address is always the tax location. Sourcing is pluggable through `ITaxSourcingStrategy` (resolved by `ITaxSourcingStrategyProvider`), with these built-in strategies: `Origin`, `Destination`, `CustomerResidence`, `CustomerBusiness`, `ServiceLocation`, and `EventLocation`. The engine picks a strategy from the taxable item's `Kind` (for example digital goods use the destination, services and bookings use the service location, and events use the event location) and falls back through destination, item origin, context origin, and customer residence.
 
@@ -400,7 +402,7 @@ A refund at or above the snapshot total returns the full refund; a non-positive 
 
 ## Rounding
 
-Rounding is one site setting, **Settings > Commerce > Tax calculation** (`TaxCalculationSettings.RoundingLevel`, group `tax-calculation`, permission **Manage taxation**), that the checkout and [invoices](invoicing#tax) both read through `ITaxRoundingLevelProvider`, so a cart and an invoice with the same lines come to the same tax. A calculation can still name its own level (`TaxCalculationContext.RoundingLevel`); a host without site settings falls back to `TaxationOptions.RoundingLevel` (`Line`).
+Rounding is one site setting, **Settings** → **Commerce** → **Tax Calculation** (`TaxCalculationSettings.RoundingLevel`, group `tax-calculation`, permission **Manage taxation**), that the checkout and [invoices](invoicing#tax) both read through `ITaxRoundingLevelProvider`, so a cart and an invoice with the same lines come to the same tax. A calculation can still name its own level (`TaxCalculationContext.RoundingLevel`); a host without site settings falls back to `TaxationOptions.RoundingLevel` (`Line`).
 
 | Level (`TaxRoundingLevel`) | Behavior |
 |-------|----------|
@@ -506,7 +508,7 @@ Each line has the tax code, name, jurisdiction, the jurisdiction that collects i
 
 ### Income tax rules
 
-The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Commerce > Taxation > Income tax rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
+The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Commerce** → **Taxation** → **Income Tax Rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
 
 | Field | Use |
 | --- | --- |
@@ -726,7 +728,7 @@ A registration with returns can't be deleted from **Tax registrations**.
 
 | Permission | Grants |
 | --- | --- |
-| `ManageTaxReturns` | **Commerce > Taxation > Tax returns**: see, prepare, prepare again, mark ready, reopen, delete a draft with no payment |
+| `ManageTaxReturns` | **Commerce** → **Taxation** → **Tax Returns**: see, prepare, prepare again, mark ready, reopen, delete a draft with no payment |
 | `FileTaxReturns` | Mark filed, amend, record and remove payments, file electronically; it grants `ManageTaxReturns` |
 
 Both are given to Administrator by default.
@@ -778,7 +780,7 @@ The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxati
 
 | | |
 | --- | --- |
-| **Settings** | **Settings > Commerce > TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
+| **Settings** | **Settings** → **Commerce** → **TaxJar** (settings group `taxjar`, permission `ManageTaxation`), stored as `TaxJarSettings` |
 | **Provider** | `TaxJarTaxDeterminationProvider` (`ITaxDeterminationProvider`, `Order` 100), with the named `HttpClient` `TaxJar` (10-second timeout) |
 | **Options** | `TaxJarOptions`: `ApiKey` (unprotected), `UseSandbox`, `Countries`, and `BaseUrl` (`https://api.taxjar.com/v2/`, or `https://api.sandbox.taxjar.com/v2/` with the sandbox) |
 
@@ -790,7 +792,7 @@ The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxati
 
 | TaxJar field | From |
 | --- | --- |
-| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Settings > Commerce > Tax origin**) |
+| `from_country`, `from_zip`, `from_state`, `from_city`, `from_street` | `TaxCalculationContext.Origin` (**Settings** → **Commerce** → **Tax Origin**) |
 | `to_country`, `to_zip`, `to_state`, `to_city`, `to_street` | `TaxCalculationContext.Destination` |
 | `amount`, `shipping` | The non-shipping and the shipping items' unit price times quantity, less their discounts |
 | `line_items` | Each non-shipping item: `id`, `quantity`, `unit_price`, `discount`, and `product_tax_code` from `TaxableItem.TaxClassificationCode` |
@@ -924,9 +926,9 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 
 ### EU VAT standard rates
 
-The Taxation module ships the **EU VAT standard rates** recipe (`EuVatStandardRates`, `Recipes/eu-vat.recipe.json`, not a setup recipe), run from **Configuration > Recipes**. It enables Taxation and adds the 27 EU member states as `TaxJurisdiction`s (level `Country`, with the ISO code as code and country, Greece as `GR`), and a `Percentage` `TaxRule` for each (`TaxType` `VAT`, `TaxName` *VAT*, the country's standard rate, `AppliesToShipping`, priority 0). Its entries have fixed `ItemId`s (`4evatj…` for jurisdictions, `4evatr…` for rules), so running it again updates the same entries. Rates change: check them before relying on the recipe, and add reduced-rate rules by category.
+The Taxation module ships the **EU VAT standard rates** recipe (`EuVatStandardRates`, `Recipes/eu-vat.recipe.json`, not a setup recipe), run from **Configuration** → **Recipes**. It enables Taxation and adds the 27 EU member states as `TaxJurisdiction`s (level `Country`, with the ISO code as code and country, Greece as `GR`), and a `Percentage` `TaxRule` for each (`TaxType` `VAT`, `TaxName` *VAT*, the country's standard rate, `AppliesToShipping`, priority 0). Its entries have fixed `ItemId`s (`4evatj…` for jurisdictions, `4evatr…` for rules), so running it again updates the same entries. Rates change: check them before relying on the recipe, and add reduced-rate rules by category.
 
-**Deployment steps** with the same five names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
+**Deployment steps** with the same five names are available under **Configuration** → **Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
 
 ### Tax registrations and exemption certificates
 

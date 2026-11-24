@@ -13,7 +13,7 @@ When combined with the **Workflows** feature, the **AI Services** module introdu
 
 The activities that read or change a chat session (**Set Conversation Variables**, the conversation flow activities, **Evaluate Conversation**, **Simulate Conversation**, **Rerun Conversation Analysis** and **Update Contact Memory**) also need the **AI Chat Services** feature (`CrestApps.OrchardCore.AI.Chat.Core`). A feature such as **AI Chat** or **AI Chat Interactions** enables it. Without it, the workflow editor does not show these activities.
 
-Adding these activities in **Design > Workflows**, their fields and outcomes (**Done**, **Drew Blank**, **Failed**), and example uses are described in the User Manual under [AI in workflows](../user-manual/ai/workflows.md). This page covers the output and input contracts.
+Adding these activities in **Design** → **Workflows**, their fields and outcomes (**Done**, **Drew Blank**, **Failed**), and example uses are described in the User Manual under [AI in workflows](../user-manual/ai/workflows.md). This page covers the output and input contracts.
 
 ## AI Completion using Profile Task
 

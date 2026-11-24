@@ -12,7 +12,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Learning.Packages.Drivers;
 
 /// <summary>
-/// Settings › Learning packages: the package content host.
+/// Settings › Learning Packages: the package content host.
 /// </summary>
 public sealed class LearningPackageContentHostSettingsDisplayDriver : SiteDisplayDriver<LearningPackageContentHostSettings>
 {

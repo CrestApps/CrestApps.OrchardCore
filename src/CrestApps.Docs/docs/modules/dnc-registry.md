@@ -29,9 +29,9 @@ The module ships with these provider features:
 
 | Registry | Feature ID | Admin location |
 | --- | --- | --- |
-| USA FTC Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | **Settings** -> **DNC Registries** -> **USA FTC Registry** |
-| Canada LNNTE-DNCL Registry | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** |
-| Local Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.Local` | **Interaction Center** -> **Local DNC Registry** |
+| USA FTC Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | **Settings** → **DNC Registries** → **USA FTC Registry** |
+| Canada LNNTE-DNCL Registry | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | **Settings** → **DNC Registries** → **Canada LNNTE-DNCL Registry** |
+| Local Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.Local` | **Interaction Center** → **Local DNC Registry** |
 | DNC Registry - Azure Blob Storage | `CrestApps.OrchardCore.DncRegistry.Azure` | Configuration only -- see [below](#store-local-registry-files-in-azure-blob-storage) |
 
 Enable the core **DNC Registry** feature first, then enable the provider features you want to use. The **USA FTC Registry**, **Canada LNNTE-DNCL Registry**, and **Local DNC Registry** admin pages are only added to the admin menu when their matching provider feature is enabled.
@@ -42,10 +42,10 @@ The module splits settings by responsibility:
 
 | Location | Purpose |
 | --- | --- |
-| **Settings** -> **Content Import** | Enforce do-not-call checks globally for imports and choose registries that must always run |
-| **Settings** -> **DNC Registries** -> **USA FTC Registry** | Configure USA FTC API access |
-| **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** | Configure Canada DNCL API access |
-| **Interaction Center** -> **Local DNC Registry** | Manage locally uploaded DNC lists |
+| **Settings** → **Content Import** | Enforce do-not-call checks globally for imports and choose registries that must always run |
+| **Settings** → **DNC Registries** → **USA FTC Registry** | Configure USA FTC API access |
+| **Settings** → **DNC Registries** → **Canada LNNTE-DNCL Registry** | Configure Canada DNCL API access |
+| **Interaction Center** → **Local DNC Registry** | Manage locally uploaded DNC lists |
 
 The settings pages and the Local DNC Registry screen require the **Manage DNC registry settings** (`ManageDncRegistrySettings`) permission.
 
@@ -109,7 +109,7 @@ The **Local DNC Registry** feature (`CrestApps.OrchardCore.DncRegistry.Local`) a
 
 ### Local lists and background processing
 
-Lists are managed under **Interaction Center** -> **Local DNC Registry** (requires `ManageDncRegistrySettings`). An
+Lists are managed under **Interaction Center** → **Local DNC Registry** (requires `ManageDncRegistrySettings`). An
 upload saves a `LocalDncList` with the **Pending** status and returns immediately; the rows are imported in the
 background. Each list tracks total, processed, successful and rejected rows, and the rejected rows (with a reason
 each) can be downloaded as CSV. The operator actions (**Process now**, **Pause import**, **Delete**, **Download
@@ -216,7 +216,7 @@ The entries of a list being deleted stay in **DNC entries** until the deletion e
 
 ## Provider-specific configuration
 
-Each national registry is configured on its own page under **Settings** -> **DNC Registries**. The field-by-field
+Each national registry is configured on its own page under **Settings** → **DNC Registries**. The field-by-field
 reference is in the [User Manual](../user-manual/administration/do-not-call-lists.md#connect-a-national-registry).
 
 | Registry | Settings object | Properties | Default `BaseUrl` |
@@ -321,7 +321,7 @@ To integrate another national do-not-call registry:
 2. Implement `INationalDoNotCallRegistry`.
 3. Provide a stable `Key`, plus localized `DisplayName` and `Description`.
 4. Register the implementation in `Startup` with `services.AddScoped<INationalDoNotCallRegistry, TRegistry>();`.
-5. If the provider needs configuration, add its own site settings model, display driver, and admin menu entry under **Settings** -> **DNC Registries**.
+5. If the provider needs configuration, add its own site settings model, display driver, and admin menu entry under **Settings** → **DNC Registries**.
 
 `CrestApps.OrchardCore.DncRegistry.Abstractions` also holds `DncRegistrySettings` (the global enforcement settings) and `DncRegistryConstants` (feature IDs, settings group IDs), so a module that reads which registries are enforced, such as the contact import of Omnichannel Management, does not use the DNC Registry module's own types.
 

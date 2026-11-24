@@ -10,7 +10,7 @@ Tax returns list every period your business files a sales and use tax return for
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > Tax registrations; Commerce > Taxation > Tax returns |
+| **Menu** | **Commerce** → **Taxation** → **Tax Registrations**; **Commerce** → **Taxation** → **Tax Returns** |
 | **Permission** | Manage taxation (tax registrations); Manage tax returns (see and prepare returns); File tax returns (mark filed, amend, record payments, file electronically) |
 | **Feature** | Sales Tax (tax registrations); Tax Returns (filing frequency and returns); Tax E-Filing (electronic filing) |
 
@@ -20,7 +20,7 @@ Tax returns list every period your business files a sales and use tax return for
 
 A tax registration says where your business collects a tax and under which number.
 
-1. Open **Commerce > Taxation > Tax registrations** and choose **Add tax registration**.
+1. Open **Commerce** → **Taxation** → **Tax Registrations** and choose **Add tax registration**.
 2. Give it a **Name**, such as *Michigan sales, use and withholding tax*, and choose the **Jurisdiction**. Choose a **Tax type**, or **Every tax type** for a return that has both sales and use tax.
 3. Enter the **Registration number** the agency gave you, and keep **Active** ticked.
 4. Under **When it applies**, enter the days it takes effect and ends, if you know them, and a **Sales threshold** when the business must collect only above a level of sales.
@@ -35,7 +35,7 @@ A registration with tax returns can't be deleted; clear **Active** instead.
 
 ## The periods and their returns
 
-Open **Commerce > Taxation > Tax returns**. Each row is a period of a registration, by due date, with its form and status: **Not prepared**, **Draft**, **Ready to file**, **Filed** or **Amended**. A row with a return shows its amount due and, once filed, what is left to pay. Choose another year in the list's toolbar to see the periods that end in it.
+Open **Commerce** → **Taxation** → **Tax Returns**. Each row is a period of a registration, by due date, with its form and status: **Not prepared**, **Draft**, **Ready to file**, **Filed** or **Amended**. A row with a return shows its amount due and, once filed, what is left to pay. Choose another year in the list's toolbar to see the periods that end in it.
 
 ## Prepare a return
 

@@ -27,7 +27,7 @@ public sealed class ContactCenterSupervisionAdminMenu : AdminNavigationProvider
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Live dashboard"], S["Live dashboard"].PrefixPosition("2"), dashboard => dashboard
+                .Add(S["Live Dashboard"], S["Live Dashboard"].PrefixPosition("2"), dashboard => dashboard
                     .AddClass("contact-center-dashboard")
                     .Id("contactCenterDashboard")
                     .Action("Index", "SupervisorDashboard", "CrestApps.OrchardCore.ContactCenter")

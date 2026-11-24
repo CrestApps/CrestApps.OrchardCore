@@ -29,7 +29,7 @@ When it is done:
 | You need | Who sets it up |
 | --- | --- |
 | A phone provider account (such as Telnyx) with the numbers customers will call | Your administrator, with IT |
-| The features **Telephony**, your provider's feature (such as **Telnyx**), **Contact Center Work Distribution**, **Contact Center Inbound Entry Points**, **Contact Center Inbound Voice**, **Contact Center Agents**, **Telephony Soft Phone Extension**, and for supervisors **Contact Center Supervision & Live Dashboard** and **Reports**. **Contact Center Agent Entitlements** is recommended once you have more than one team. | Your administrator, in **Tools > Features** |
+| The features **Telephony**, your provider's feature (such as **Telnyx**), **Contact Center Work Distribution**, **Contact Center Inbound Entry Points**, **Contact Center Inbound Voice**, **Contact Center Agents**, **Telephony Soft Phone Extension**, and for supervisors **Contact Center Supervision & Live Dashboard** and **Reports**. **Contact Center Agent Entitlements** is recommended once you have more than one team. | Your administrator, in **Tools** → **Features** |
 | A manager role with the permissions for queues, skills, agents, business hours, voice media and omnichannel addresses | Your administrator; see [Roles and permissions](../getting-started/roles-and-permissions.md) |
 | The **Agent** role, plus **Use the telephony soft phone**, for everyone who answers calls; the **Supervisor** role for team leads | Your administrator |
 
@@ -39,9 +39,9 @@ When it is done:
 
 <YouTube video="use-case-inbound-call-center" title="Video of the set-up order: numbers, hours, queues, people and routing" start={107} end={149} />
 
-1. **Connect the phone provider.** The administrator connects the provider under **Settings > Communication > Telephony**, and picks the default caller ID. See [Phone and SMS setup](../telephony-settings.md).
-2. **List your numbers.** Add each number customers call under **Interaction Center > Management > Omnichannel Addresses**, with **Voice calls** ticked. See [Omnichannel addresses](../channel-endpoints.md).
-3. **Set your opening hours.** Click **Add calendar** under **Interaction Center > Management > Business hours**, and set your weekly hours and holidays. See [Business hours](../business-hours.md).
+1. **Connect the phone provider.** The administrator connects the provider under **Settings** → **Communication** → **Telephony**, and picks the default caller ID. See [Phone and SMS setup](../telephony-settings.md).
+2. **List your numbers.** Add each number customers call under **Interaction Center** → **Management** → **Omnichannel Addresses**, with **Voice calls** ticked. See [Omnichannel addresses](../channel-endpoints.md).
+3. **Set your opening hours.** Click **Add calendar** under **Interaction Center** → **Management** → **Business hours**, and set your weekly hours and holidays. See [Business hours](../business-hours.md).
 
    <YouTube video="use-case-inbound-call-center" title="Video of listing the numbers customers call and the opening hours" start={149} end={174} />
 4. **Upload hold music and prompts (optional).** Add your hold music and any recorded menu prompts under **Voice Media**. See [Voice media](../voice-media.md).
@@ -56,7 +56,7 @@ When it is done:
 
    <YouTube video="use-case-inbound-call-center" title="Video of routing a number to a queue with an inbound entry point" start={214} end={258} /> See [Inbound entry points and IVR menus](../entry-points-and-ivr.md).
 9. **Give people extensions (optional).** Short internal numbers let colleagues call and transfer to each other by extension or by name. See [Extensions](../extensions.md).
-10. **Set the house rules.** The administrator sets call recording and consent, and the outside numbers agents may transfer to, under **Settings > Contact Center**. See [Contact Center settings](../contact-center-settings.md).
+10. **Set the house rules.** The administrator sets call recording and consent, and the outside numbers agents may transfer to, under **Settings** → **Contact Center**. See [Contact Center settings](../contact-center-settings.md).
 11. **Get the agents ready.** Each agent installs the phone app, signs in to their queues, and records a voicemail greeting. See [Browser extension and Windows app](../phone-apps.md), [Agent workspace](../agent-workspace.md) and [Voicemail](../voicemail.md).
 
     <YouTube video="use-case-inbound-call-center" title="Video of what agents and supervisors do" start={288} end={332} />

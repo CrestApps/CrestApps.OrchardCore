@@ -10,7 +10,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Reviews; Settings > Commerce > Reviews |
+| **Menu** | **Commerce** → **Reviews**; **Settings** → **Commerce** → **Reviews** |
 | **Permission** | **Moderate product reviews** to approve reviews; **Review products bought** to write one (signed-in users have it) |
 | **Feature** | Product Reviews |
 
@@ -34,19 +34,19 @@ Under the product's price, its stars, average and number of reviews link to the 
 
 ## Photos
 
-With the **Media** feature on, buyers can add up to three photos to their review: JPEG, PNG or WebP images of up to 5 MB each. They show with the review, on the product's page and under **Commerce > Reviews**. New photos replace the ones a review had.
+With the **Media** feature on, buyers can add up to three photos to their review: JPEG, PNG or WebP images of up to 5 MB each. They show with the review, on the product's page and under **Commerce** → **Reviews**. New photos replace the ones a review had.
 
 ## Ask buyers for reviews
 
 <YouTube video="reviews" title="Video of the review settings" start={200} end={250} />
 
-Under **Settings > Commerce > Reviews**, tick **Ask buyers for reviews** and choose the **Days after paying**, such as 14. Each order's buyer then gets one email with a link to review each product they bought. Only buyers who said yes to news and offers are asked, and only for orders from the last 60 days. It needs your site's email, its base URL, and Customers.
+Under **Settings** → **Commerce** → **Reviews**, tick **Ask buyers for reviews** and choose the **Days after paying**, such as 14. Each order's buyer then gets one email with a link to review each product they bought. Only buyers who said yes to news and offers are asked, and only for orders from the last 60 days. It needs your site's email, its base URL, and Customers.
 
 ## Approve reviews
 
 <YouTube video="reviews" title="Video of approving, rejecting and deleting reviews" start={158} end={200} />
 
-**Commerce > Reviews** lists the reviews waiting for approval, newest first. Each shows the product, who wrote it, the stars, the title and text, and whether it's a verified purchase.
+**Commerce** → **Reviews** lists the reviews waiting for approval, newest first. Each shows the product, who wrote it, the stars, the title and text, and whether it's a verified purchase.
 
 - **Approve** shows the review on the product and counts it in its rating.
 - **Reject** keeps it off the product.
@@ -62,7 +62,7 @@ Once a product has an approved review, shoppers can sort a listing by **Customer
 
 ## Settings
 
-Under **Settings > Commerce > Reviews**:
+Under **Settings** → **Commerce** → **Reviews**:
 
 | Setting | What it does |
 | --- | --- |

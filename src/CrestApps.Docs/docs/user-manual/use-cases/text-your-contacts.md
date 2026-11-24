@@ -28,7 +28,7 @@ When it is done:
 | You need | Who sets it up |
 | --- | --- |
 | An SMS provider account (Twilio or Telnyx) with numbers that can text | Your administrator, with IT |
-| The features **SMS Messaging Channel** (it turns on the messaging workspace), **Contact Center Inbound Entry Points**, **Omnichannel Management** and **Content Transfer** (to import contacts). **Omnichannel Messaging Routed Distribution** if each conversation should go to one available agent. | Your administrator, in **Tools > Features** |
+| The features **SMS Messaging Channel** (it turns on the messaging workspace), **Contact Center Inbound Entry Points**, **Omnichannel Management** and **Content Transfer** (to import contacts). **Omnichannel Messaging Routed Distribution** if each conversation should go to one available agent. | Your administrator, in **Tools** → **Features** |
 | A manager role with Manage omnichannel addresses and Manage Contact Center queues | Your administrator |
 | **Use the messaging workspace** for agents (the Agent role has it); **Send group messages** and **Manage the messaging workspace** for whoever sends broadcasts and writes templates (the Supervisor role has them) | Your administrator; see [Roles and permissions](../getting-started/roles-and-permissions.md) |
 
@@ -36,19 +36,19 @@ When it is done:
 
 ## Steps
 
-1. **Connect the SMS provider.** The administrator picks the default SMS provider and fills in its settings under **Settings > Communication > SMS**. See [Phone and SMS setup](../telephony-settings.md).
-2. **Import your contacts.** Set up the contact type, then import your list under **Content > Import**. Contacts who should not get texts can be marked **Do not SMS**. See [Contacts](../contacts.md).
-3. **Add your texting numbers.** Add each number under **Interaction Center > Management > Omnichannel Addresses** with **Text messages (SMS)** ticked, pick its provider, and pick the **Agents who text from this number**. See [Omnichannel addresses](../channel-endpoints.md).
-4. **Set the default number.** The administrator picks the **Default SMS number** used by agents who are on no number's list, under **Settings > Contact Center**. See [Contact Center settings](../contact-center-settings.md).
+1. **Connect the SMS provider.** The administrator picks the default SMS provider and fills in its settings under **Settings** → **Communication** → **SMS**. See [Phone and SMS setup](../telephony-settings.md).
+2. **Import your contacts.** Set up the contact type, then import your list under **Content** → **Import**. Contacts who should not get texts can be marked **Do not SMS**. See [Contacts](../contacts.md).
+3. **Add your texting numbers.** Add each number under **Interaction Center** → **Management** → **Omnichannel Addresses** with **Text messages (SMS)** ticked, pick its provider, and pick the **Agents who text from this number**. See [Omnichannel addresses](../channel-endpoints.md).
+4. **Set the default number.** The administrator picks the **Default SMS number** used by agents who are on no number's list, under **Settings** → **Contact Center**. See [Contact Center settings](../contact-center-settings.md).
 5. **Create a queue for shared inboxes (optional).** To share a number's texts across a team, create a queue for that team, such as *Support*. You send the number's texts to it in the next step. See [Queues](../queues.md).
 6. **Route incoming texts.** Add a **Text messages** entry point for each number under **Inbound entry points**: send its texts to a queue or to one agent, choose shared-pool or routed distribution, and write the auto-reply and the closed auto-reply. See [Inbound entry points and IVR menus](../entry-points-and-ivr.md).
-7. **Write templates.** Add canned responses agents insert into replies under **Messaging > Templates**. See [Messaging workspace](../messaging.md).
-8. **Train agents on the inbox.** Agents filter, claim, reply, transfer, close and reopen conversations, and start new ones, under **Messaging > Inbox**. See [Messaging workspace](../messaging.md).
-9. **Send broadcasts.** Supervisors send one message to many contacts under **Messaging > Broadcasts**. See [Messaging workspace](../messaging.md).
+7. **Write templates.** Add canned responses agents insert into replies under **Messaging** → **Templates**. See [Messaging workspace](../messaging.md).
+8. **Train agents on the inbox.** Agents filter, claim, reply, transfer, close and reopen conversations, and start new ones, under **Messaging** → **Inbox**. See [Messaging workspace](../messaging.md).
+9. **Send broadcasts.** Supervisors send one message to many contacts under **Messaging** → **Broadcasts**. See [Messaging workspace](../messaging.md).
 
 ## Check that it works
 
-1. Text one of your numbers from a mobile phone. The conversation appears in **Messaging > Inbox**: under **Unassigned** for a shared queue, or in the agent's own conversations for a personal number. If the entry point has an auto-reply, your phone receives it.
+1. Text one of your numbers from a mobile phone. The conversation appears in **Messaging** → **Inbox**: under **Unassigned** for a shared queue, or in the agent's own conversations for a personal number. If the entry point has an auto-reply, your phone receives it.
 2. Claim the conversation, reply, and check that your phone receives the reply.
 3. Start a **New conversation** to your phone from an agent's number.
 4. Text **STOP** from your phone and check that you receive the confirmation. Text **START** to opt back in.

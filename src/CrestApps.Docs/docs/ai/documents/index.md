@@ -31,7 +31,7 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 
 - **Unified Document Store**: A single `IAIDocumentStore` for storing and querying documents across all reference types (chat interactions, profiles)
 - **Text Extraction**: Automatic text extraction from uploaded documents via registered `IngestionDocumentReader` implementations (from `Microsoft.Extensions.DataIngestion`)
-- **Settings UI**: Admin settings page for configuring the default document index and default document retrieval mode (**Settings > Artificial Intelligence**)
+- **Settings UI**: Admin settings page for configuring the default document index and default document retrieval mode (**Settings** → **Artificial Intelligence**)
 - **Document Processing Tools**: AI tools for listing, reading, and searching documents
 - **RAG Search Tool**: Semantic vector search across uploaded documents
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
@@ -108,8 +108,8 @@ The orchestrator supports various document-related operations:
 ### Getting Started
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
-2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
+2. **Create an index**: Navigate to **Search** → **Indexing** and create a new index (e.g., "AI Documents").
+3. **Configure settings**: Navigate to **Settings** → **Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable **AI Documents for Chat Interactions** in the admin dashboard.
 5. Start using the **Knowledge** tab in your chat interactions (see [Chat interactions](../../user-manual/ai/chat-interactions.md#knowledge-tab)).
 
@@ -171,7 +171,7 @@ There are no separate API endpoints for profile document management — everythi
 
 <YouTube video="ai-knowledge" title="Video of creating the documents index and uploading a document to a profile" start={95} end={203} />
 
-Enable the `AI Documents for Profiles` feature. Documents are then uploaded on the **Knowledge** tab of the AI Profile editor (**Artificial Intelligence > Profiles**), together with **Document Top N** and **Document retrieval mode**. See [Upload documents to a profile](../../user-manual/ai/knowledge.md#upload-documents-to-a-profile).
+Enable the `AI Documents for Profiles` feature. Documents are then uploaded on the **Knowledge** tab of the AI Profile editor (**Artificial Intelligence** → **Profiles**), together with **Document Top N** and **Document retrieval mode**. See [Upload documents to a profile](../../user-manual/ai/knowledge.md#upload-documents-to-a-profile).
 
 ## AI Documents for Chat Sessions
 
@@ -206,15 +206,15 @@ The **Artificial Intelligence Chat** widget has no upload setting of its own: it
 
 | UI | Where | Notes |
 |----|-------|-------|
-| **AI Chat Session** | Admin > Artificial Intelligence > *profile name* | Full session page |
+| **AI Chat Session** | **Admin** → **Artificial Intelligence** → *profile name* | Full session page |
 | **AI Chat Admin Widget** | Floating admin widget | Compact chat widget on admin pages |
 | **AI Chat Widget** | Frontend content widget | Public-facing chat widget |
 
 ### Getting Started
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
-2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. Use **Allow document uploads in chat interactions** and **Allow image uploads in chat interactions** to control which file types chat interactions can accept. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
+2. **Create an index**: Navigate to **Search** → **Indexing** and create a new index (e.g., "AI Documents").
+3. **Configure settings**: Navigate to **Settings** → **Artificial Intelligence** and select your new index and default document retrieval mode. Use **Allow document uploads in chat interactions** and **Allow image uploads in chat interactions** to control which file types chat interactions can accept. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
 5. **Opt in per profile**: Edit the desired AI Profile and enable **Allow session document uploads**, **Allow session image uploads**, or both.
 6. Open a chat session. The attach button and drag-and-drop zone are available when at least one upload type is enabled for the profile. Image uploads also require a configured vision deployment.
@@ -272,8 +272,8 @@ This ensures the AI document indexes stay free of orphaned entries when their pa
 
 ### "Index Not Configured" Warning
 
-If you see this warning, navigate to **Settings > Artificial Intelligence** and select an index profile.
-If no index profiles are available, go to **Search > Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
+If you see this warning, navigate to **Settings** → **Artificial Intelligence** and select an index profile.
+If no index profiles are available, go to **Search** → **Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
 
 ### "Embedding Search Service Not Available" Warning
 

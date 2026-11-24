@@ -14,7 +14,7 @@ Watch the short video, then follow the examples below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder > New Report |
+| **Menu** | **Reports** → **Report Builder** → **New Report** |
 | **Permission** | Build reports and manage own custom reports and views |
 | **Feature** | Report Builder |
 

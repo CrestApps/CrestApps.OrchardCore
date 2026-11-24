@@ -14,7 +14,7 @@ An **AI profile** is one AI assistant or task with its own name, instructions, m
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Profiles |
+| **Menu** | **Artificial Intelligence** → **Profiles** |
 | **Permission** | Manage AI profiles |
 | **Feature** | AI Services; chat profiles also need AI Chat |
 
@@ -39,7 +39,7 @@ The video covers why each assistant is described once, how profiles, personas an
 
 <YouTube video="ai-profiles-personas-templates" title="Video of starting a profile from the New AI Profile picker" start={124} end={200} />
 
-1. Open **Artificial Intelligence > Profiles** and click **Add Profile**. The **New AI Profile** picker opens.
+1. Open **Artificial Intelligence** → **Profiles** and click **Add Profile**. The **New AI Profile** picker opens.
 2. Pick a starting point and click its **Start** button, or pick **Blank profile** to fill in everything yourself.
 3. For a starting point, complete the short setup step and click **Create profile**. For a blank profile, fill in the editor and click **Save**.
 
@@ -64,7 +64,7 @@ The site comes with these starting points (some only when their feature is on):
 | **Phone calls** | **Answer calls at the front desk**, **Qualify leads by phone**, **Confirm appointments by phone** |
 | Agent categories, such as **Research**, **Content** and **Analysis** | Building-block agents such as **Research Agent**, **Writer Agent**, **Summarizer Agent**, **Data Analyst Agent**, **Reviewer Agent**, **Code Assistant Agent**, **Executor Agent** and **Planner Agent** |
 
-Profile templates that your team creates under **Artificial Intelligence > Templates** also get a card. See [Templates](prompt-templates.md).
+Profile templates that your team creates under **Artificial Intelligence** → **Templates** also get a card. See [Templates](prompt-templates.md).
 
 ### Set it up
 
@@ -90,8 +90,8 @@ After you create one of these, finish it in the editor:
 
 - Click **Edit** on a profile to change it, then **Save**.
 - Open the profile's **Actions** menu and choose **Clone** to start a new profile from a copy. The copy opens unsaved, named "Copy of" the original; check its title and technical name, then **Save**.
-- **Actions > Delete** removes a profile after you confirm. Profiles marked **System** cannot be deleted.
-- To delete several profiles, tick them, then choose **Actions > Delete** above the list.
+- **Actions** → **Delete** removes a profile after you confirm. Profiles marked **System** cannot be deleted.
+- To delete several profiles, tick them, then choose **Actions** → **Delete** above the list.
 
 The **Actions** menu also has **New chat**, **View chat history** and **Delete chat history** for chat profiles, and **Invoke Profile** for utility and agent profiles. See [Chat with an AI assistant](chat.md).
 
@@ -119,7 +119,7 @@ The editor opens on the **Content** tab, a page of collapsible cards with the ma
 | **Show on admin menu** | Chat only. Adds the assistant to the **Artificial Intelligence** menu, so people can open its chat page. On by default for new chat profiles. |
 | **Initial response handler** | Shown only when your site has other handlers, such as a live agent platform. **Default (AI)** lets the AI answer new chats; another handler sends the messages of a new chat to that system instead. |
 
-When the **Orchestrator** is GitHub Copilot or Claude, a configuration block appears with a model picker, an **Effort level** (**Default**, **Low**, **Medium**, **High**) and, for Copilot, a **Sign in with GitHub** button and **Allow all tool executions**. Your administrator sets these engines up first under **Settings > Artificial Intelligence**.
+When the **Orchestrator** is GitHub Copilot or Claude, a configuration block appears with a model picker, an **Effort level** (**Default**, **Low**, **Medium**, **High**) and, for Copilot, a **Sign in with GitHub** button and **Allow all tool executions**. Your administrator sets these engines up first under **Settings** → **Artificial Intelligence**.
 
 ### Deployments & Interactions
 
@@ -263,11 +263,11 @@ An **AI persona** is a reusable character: who the assistant is and how it talks
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Personas |
+| **Menu** | **Artificial Intelligence** → **Personas** |
 | **Permission** | Manage AI personas |
 | **Feature** | AI Personas |
 
-1. Open **Artificial Intelligence > Personas** and click **Add Persona**.
+1. Open **Artificial Intelligence** → **Personas** and click **Add Persona**.
 2. Fill in the fields below and click **Save**.
 3. Edit a profile, and pick the persona in the **AI persona** field of the **Instructions** card. Profile templates, chat interactions and the **AI completion with configuration** workflow task have the same field.
 

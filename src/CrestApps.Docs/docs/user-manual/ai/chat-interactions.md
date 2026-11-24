@@ -10,7 +10,7 @@ A **chat interaction** is a free-form chat where you set everything up yourself,
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Chat Interactions |
+| **Menu** | **Artificial Intelligence** → **Chat Interactions** |
 | **Permission** | List chat interactions; Edit own chat interactions; Delete own chat interaction |
 | **Feature** | AI Chat Interactions; AI Documents for Chat Interactions to attach files |
 
@@ -24,7 +24,7 @@ The video covers why chat interactions exist, how to start one and set it up, th
 
 <YouTube video="ai-chat-interactions" title="Video of starting a chat interaction" start={92} end={145} />
 
-1. Open **Artificial Intelligence > Chat Interactions** and click **New Chat**. A new interaction opens and is saved straight away.
+1. Open **Artificial Intelligence** → **Chat Interactions** and click **New Chat**. A new interaction opens and is saved straight away.
 2. In the settings panel on the left, give it a **Title** and pick a **Chat deployment** (or leave **Default**).
 3. Type your question in the message box and press **Enter**.
 
@@ -39,7 +39,7 @@ The chat area works like the chat page of an assistant: answers appear as they a
 - The list shows your interactions with their titles. Click **Chat** to reopen one and continue. Type in **Search** and click the search button to find one.
 - In an open interaction, **New Chat** offers **Empty Chat** (start fresh) or **Chat with Preset Settings** (a new interaction with the same model, instructions, files and tools).
 - **Clear History** removes the messages but keeps your files, settings and tools. It cannot be undone.
-- To delete an interaction, open its **Actions** menu in the list and choose **Delete**. To delete several, tick them and use **Actions > Delete** above the list. Deleting an interaction also deletes its files.
+- To delete an interaction, open its **Actions** menu in the list and choose **Delete**. To delete several, tick them and use **Actions** → **Delete** above the list. Deleting an interaction also deletes its files.
 
 You see only your own interactions, unless you have the **List chat interactions for others** permission.
 
@@ -113,7 +113,7 @@ How these buttons work is described in [Chat with an AI assistant](chat.md#talk-
 
 <YouTube video="ai-chat-interactions" title="Video of the site settings for chat interactions" start={306} end={342} />
 
-Open **Settings > Artificial Intelligence**:
+Open **Settings** → **Artificial Intelligence**:
 
 | Section | Field | What it does |
 | --- | --- | --- |

@@ -10,7 +10,7 @@ The **Service Desk** is where your team answers requests. Each request is a **ti
 
 | | |
 | --- | --- |
-| **Menu** | **Service Desk**: Tickets, Boards and the boards you pinned, and for those who manage the service desk, Desks, Statuses, Priorities and Views; **Settings > Service Desk** for the notification templates and the AI profile for replies |
+| **Menu** | **Service Desk**: Tickets, Boards and the boards you pinned, and for those who manage the service desk, Desks, Statuses, Priorities and Views; **Settings** → **Service Desk** for the notification templates and the AI profile for replies |
 | **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the desks, statuses, priorities, views and settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
@@ -33,13 +33,13 @@ The **Service Desk** is where your team answers requests. Each request is a **ti
 
 The [Knowledge Base](../knowledge-base/index.md) is a feature of its own: it works with or without the Service Desk. With both on, agents and requesters get its articles as suggestions while they write.
 
-**Settings > Service Desk** holds the **Notification templates**, the messages requesters get, and, with AI on, the **AI profile for replies**.
+**Settings** → **Service Desk** holds the **Notification templates**, the messages requesters get, and, with AI on, the **AI profile for replies**.
 
 The permissions to view and work tickets exist for each desk, so HR tickets can stay with HR. Give a role **View all tickets**, **View the tickets of my teams** or **View the tickets assigned to me** on a desk to decide what its users see there.
 
 ## Features to turn on
 
-Turn them on under **Tools > Features**:
+Turn them on under **Tools** → **Features**:
 
 | Feature | What it adds |
 | --- | --- |

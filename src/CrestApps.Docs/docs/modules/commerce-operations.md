@@ -29,12 +29,12 @@ Each runs per tenant, on the schedule shown, while its feature is on.
 | Expired Carts Cleanup | Carts | Hourly | Deletes carts nobody changed within their lifetime. |
 | Abandoned orders | Orders | Every 15 minutes | Cancels unpaid orders whose checkout was canceled, failed, expired or never started, |
 | Expired stock holds | Inventory | Every 5 minutes | Releases stock held for orders not paid before the hold expired. |
-| Customer data retention | Customers | Daily at 03:30 | Erases inactive guests' personal data and anonymizes old guest orders, per **Settings > Commerce > Customers**. |
+| Customer data retention | Customers | Daily at 03:30 | Erases inactive guests' personal data and anonymizes old guest orders, per **Settings** → **Commerce** → **Customers**. |
 | Product Search Indexing | Products | Every minute | Rebuilds the product search records when product types or their attributes change. |
 | Pay Later Renewals | Pay Later | Every 30 minutes | Creates the next balance for recurring Pay Later commitments. |
 | Transaction Payment Reminders | Transactions | Every 6 hours | Sends reminders for outstanding balances. |
 
-They can be paused, rescheduled or run under **Configuration > Tasks** (feature `OrchardCore.BackgroundTasks`).
+They can be paused, rescheduled or run under **Configuration** → **Tasks** (feature `OrchardCore.BackgroundTasks`).
 
 ## What to back up
 

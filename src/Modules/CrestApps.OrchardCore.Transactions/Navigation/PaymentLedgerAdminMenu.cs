@@ -64,7 +64,7 @@ public sealed class PaymentLedgerAdminMenu : AdminNavigationProvider
                     .Permission(TransactionsPermissions.ManageRefunds)
                     .LocalNav()
                 )
-                .Add(S["Payment issues"], S["Payment issues"].PrefixPosition("8.5"), issues => issues
+                .Add(S["Payment Issues"], S["Payment Issues"].PrefixPosition("8.5"), issues => issues
                     .Id("paymentIssues")
                     .Action("Index", "PaymentIssuesAdmin", _issuesRouteValues)
                     .Permission(TransactionsPermissions.ManageRefunds)

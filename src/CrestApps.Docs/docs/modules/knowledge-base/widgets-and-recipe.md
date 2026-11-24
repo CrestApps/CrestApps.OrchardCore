@@ -31,14 +31,14 @@ The Knowledge Base renders three layout zones itself (`KnowledgeBaseConstants.Zo
 
 The help center's view (`HelpCenter/Index`) reads them with `KnowledgeBaseZones.Find(ThemeLayout, zone)`, which returns a zone only when widgets were put in it; with no widgets in the top or sidebar zone it renders its own search box or categories instead. An article's page is the `Content-KnowledgeArticle.Detail` template, Orchard Core's `Content` template with the three zones around it; a theme can override it.
 
-To use a theme's own zones instead, such as a sidebar, move the widgets there under **Design > Widgets**: they then show where that theme renders the zone, on the pages of their layer.
+To use a theme's own zones instead, such as a sidebar, move the widgets there under **Design** → **Widgets**: they then show where that theme renders the zone, on the pages of their layer.
 
 ## Recipe
 
 `knowledge-base.recipe.json` (**Knowledge Base**, in the module's `Recipes` folder) runs these steps:
 
 1. `feature`: enables `CrestApps.OrchardCore.KnowledgeBase`, `OrchardCore.Widgets` and `OrchardCore.Layers`.
-2. `KnowledgeBaseZones`: adds the three zones to `LayerSettings.Zones` (**Design > Settings > Zones**), keeping the site's own zones and adding none twice. Use this step instead of the `Settings` step, which replaces the list.
+2. `KnowledgeBaseZones`: adds the three zones to `LayerSettings.Zones` (**Design** → **Settings** → **Zones**), keeping the site's own zones and adding none twice. Use this step instead of the `Settings` step, which replaces the list.
 3. `Layers`: a **Help center** layer whose rule is any of `UrlCondition` equals `/help` or starts with `/help/` (both case-insensitive), so it covers the help center and the articles under `help/{slug}`.
 4. `Content`: the three widgets, on the **Help center** layer, in their zones, with fixed content item ids, so running the recipe again updates them rather than adding more.
 

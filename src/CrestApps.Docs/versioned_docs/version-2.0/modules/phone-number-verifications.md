@@ -14,7 +14,7 @@ The **Phone Number Verifications** module provides a provider-agnostic framework
 
 The core feature does not depend on any external verification provider. Providers ship as separate features (for example, **AbstractAPI Phone Number Verification**, **Veriphone Phone Number Verification**, and **Twilio Phone Number Verification**) and are discovered dynamically, so adding a provider never requires changes to the core feature.
 
-The core feature is enabled on demand. It is activated automatically when a dependent feature (such as a provider feature) is enabled, or you can enable it directly under **Configuration** -> **Features**.
+The core feature is enabled on demand. It is activated automatically when a dependent feature (such as a provider feature) is enabled, or you can enable it directly under **Configuration** → **Features**.
 
 ## Architecture
 
@@ -74,7 +74,7 @@ The entire normalized response is stored, so future providers can expose additio
 
 ## Content item integration
 
-Verification data is stored on contact content items through the **Phone Number Verification** content part (`PhoneNumberVerificationPart`). Attach the part to any content type that represents a contact under **Content** -> **Content Definition** -> **Content Types**.
+Verification data is stored on contact content items through the **Phone Number Verification** content part (`PhoneNumberVerificationPart`). Attach the part to any content type that represents a contact under **Content** → **Content Definition** → **Content Types**.
 
 The part stores:
 
@@ -168,7 +168,7 @@ Enable **Reports** (`CrestApps.OrchardCore.Reports`) alongside **Phone Number Ve
 
 ## Configuration
 
-Configure the module under **Settings** -> **Phone Number Verifications**.
+Configure the module under **Settings** → **Phone Number Verifications**.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |

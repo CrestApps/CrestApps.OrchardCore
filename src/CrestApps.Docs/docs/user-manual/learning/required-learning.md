@@ -10,7 +10,7 @@ A **learning path** puts courses in order: people finish one stage before the ne
 
 | | |
 | --- | --- |
-| **Menu** | Content > New > Learning Path; Learning > Required Learning; Learning > Team Learning |
+| **Menu** | **Content** → **New** → **Learning Path**; **Learning** → **Required Learning**; **Learning** → **Team Learning** |
 | **Permission** | Manage required learning; Exempt people from required learning to exempt someone; See the required learning of the people who report to you for managers |
 | **Feature** | Learning Paths; Required Learning; Team Learning for managers |
 
@@ -18,7 +18,7 @@ A **learning path** puts courses in order: people finish one stage before the ne
 
 ## Create a learning path
 
-1. Open **Content > New > Learning Path** and give it a title.
+1. Open **Content** → **New** → **Learning Path** and give it a title.
 2. Under **Course sets**, add a set for each group of courses. For each set, choose the courses (type part of a title to find one) and how many must be completed: **Every course**, **Any one course** or **At least** a number.
 3. Choose how each set joins the one before it: **Then** opens it once everything before is done; **And** and **Or** keep it open alongside the set before. Click **Add a set** for more, or the bin to remove one.
 4. Tick **People can start the path themselves** to show a **Start this path** button on the path's page.
@@ -28,7 +28,7 @@ People on a path are enrolled in the courses of the stage that is open to them; 
 
 ## Require learning
 
-First define who it is for: an [audience](../administration/users#audiences) such as "everyone in the Field team hired more than 30 days ago". Then open **Learning > Required Learning** and click **Add required learning**.
+First define who it is for: an [audience](../administration/users#audiences) such as "everyone in the Field team hired more than 30 days ago". Then open **Learning** → **Required Learning** and click **Add required learning**.
 
 | Field | What it does |
 | --- | --- |
@@ -55,4 +55,4 @@ When a person already has the learning, open the rule's **People**, choose **Exe
 
 ## See your team
 
-Managers open **Learning > Team Learning** to see the required learning of the people who report to them, with what is overdue first. It shows states and due dates only, never answers.
+Managers open **Learning** → **Team Learning** to see the required learning of the people who report to them, with what is overdue first. It shows states and due dates only, never answers.

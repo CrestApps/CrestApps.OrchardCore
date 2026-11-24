@@ -22,7 +22,7 @@ says what its model can do, and where it gets used is decided by a **slot**. See
 
 ## Declaring capabilities on a deployment
 
-Open **Artificial Intelligence → Deployments**, create or edit a deployment, and use the **Model capabilities** card (see also [Model capabilities](../user-manual/ai/connections.md#model-capabilities) in the User Manual, which lists the display name of each capability):
+Open **Artificial Intelligence** → **Deployments**, create or edit a deployment, and use the **Model capabilities** card (see also [Model capabilities](../user-manual/ai/connections.md#model-capabilities) in the User Manual, which lists the display name of each capability):
 
 - **Trained features** — tick the capabilities the underlying model was trained with. New deployments start from the features each provider registers as enabled by default, so existing chat deployments keep working without changes.
 - **Model parameters** — enable each parameter the model exposes. For a *choice* parameter you can narrow the supported values and pick a default; for a *number*/*integer* parameter you can set the minimum, maximum, and step. A parameter that depends on a feature (its **required feature**) is only shown while that feature is enabled.

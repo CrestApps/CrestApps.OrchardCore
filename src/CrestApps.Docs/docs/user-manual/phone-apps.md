@@ -27,7 +27,7 @@ Both apps show your site's own `/softphone` page, so the call controls are exact
 
 <YouTube video="telephony-phone-apps" title="Video of turning on the Telephony Soft Phone Extension feature and finding the Use the telephony soft phone permission" start={85} end={119} />
 
-1. Enable the **Telephony Soft Phone Extension** feature in **Tools > Features**. It adds the `/softphone` page the apps open.
+1. Enable the **Telephony Soft Phone Extension** feature in **Tools** → **Features**. It adds the `/softphone` page the apps open.
 2. Give the users the **Use the telephony soft phone** permission. The *Agent* role does not have it by default, so add it to that role or to another role your agents have.
 3. Tell your users the site's domain, for example `phone.example.com`.
 

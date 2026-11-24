@@ -11,7 +11,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Taxation.Drivers;
 
 /// <summary>
-/// How the site rounds tax, under Settings > Commerce > Tax calculation. The checkout and invoices both read it.
+/// How the site rounds tax, under Settings > Commerce > Tax Calculation. The checkout and invoices both read it.
 /// </summary>
 public sealed class TaxCalculationSettingsDisplayDriver : SiteDisplayDriver<TaxCalculationSettings>
 {

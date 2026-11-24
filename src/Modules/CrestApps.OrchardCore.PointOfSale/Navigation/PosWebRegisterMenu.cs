@@ -7,7 +7,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.PointOfSale.Navigation;
 
 /// <summary>
-/// Commerce › Point of sale › Web register, for staff who may sell at a register.
+/// Commerce › Point of Sale › Web Register, for staff who may sell at a register.
 /// </summary>
 public sealed class PosWebRegisterMenu : AdminNavigationProvider
 {
@@ -29,9 +29,9 @@ public sealed class PosWebRegisterMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Point of sale"], S["Point of sale"].PrefixPosition("7"), pos => pos
+                .Add(S["Point of Sale"], S["Point of Sale"].PrefixPosition("7"), pos => pos
                     .Id("pointOfSale")
-                    .Add(S["Web register"], S["Web register"].PrefixPosition("0"), register => register
+                    .Add(S["Web Register"], S["Web Register"].PrefixPosition("0"), register => register
                         .Action(_register)
                         .Permission(PosPermissions.SellAtRegister)
                         .LocalNav())

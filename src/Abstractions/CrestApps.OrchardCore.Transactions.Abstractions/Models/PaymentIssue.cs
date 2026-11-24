@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Transactions.Models;
 /// <summary>
 /// A money operation that failed and that an operator must finish by hand, such as a refund the checkout could not
 /// issue or a gateway subscription that could not be canceled. It is kept in the tenant database and listed under
-/// <b>Commerce › Payment issues</b> until someone resolves it, so it is not lost in the log.
+/// <b>Commerce › Payment Issues</b> until someone resolves it, so it is not lost in the log.
 /// </summary>
 public sealed class PaymentIssue : CatalogItem
 {

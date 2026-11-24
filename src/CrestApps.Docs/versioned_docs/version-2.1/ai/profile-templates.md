@@ -21,7 +21,7 @@ Use profile templates when you want to:
 
 After enabling the base AI module, Orchard adds:
 
-- **Artificial Intelligence -> Templates**
+- **Artificial Intelligence** → **Templates**
 
 This screen is backed by the Orchard profile-template manager and related display drivers contributed by enabled AI features.
 

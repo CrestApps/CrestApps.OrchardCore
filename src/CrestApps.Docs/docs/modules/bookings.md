@@ -123,7 +123,7 @@ The balance's transaction carries its charge from the start (`DeferredBalanceDeb
 - Stays of those nights, as rooms enough for the people.
 - Times on the first day.
 
-Each result links to the product with its date. **Commerce > Bookings > Calendar** shows each day's dates with what's taken.
+Each result links to the product with its date. **Commerce** → **Bookings** → **Calendar** shows each day's dates with what's taken.
 
 ## Booking hooks
 
@@ -223,7 +223,7 @@ Whenever Bookings and Calendars (`CrestApps.OrchardCore.Calendars`) are both on,
 
 The handler writes with `SkipConflictCheck` (Bookings checks capacity itself) and `SendInvitations = false`, inside the booking's session. The calendar is private by default, so only calendar administrators and the people it is shared with see it.
 
-**Sync to calendar.** `BookingCalendarController.Sync` (`bookings-calendar/sync` in the admin, **Manage bookings**) adds or updates the event of every booking from today on, held ones included, for bookings made before Calendars was on. It answers `404` while Calendars is off. It changes only what differs, so running it again is harmless. **Commerce > Bookings > Calendar** shows a **Sync to calendar** button, and **Open in calendar** (the calendar view on the Bookings calendar, same month) once the calendar exists.
+**Sync to calendar.** `BookingCalendarController.Sync` (`bookings-calendar/sync` in the admin, **Manage bookings**) adds or updates the event of every booking from today on, held ones included, for bookings made before Calendars was on. It answers `404` while Calendars is off. It changes only what differs, so running it again is harmless. **Commerce** → **Bookings** → **Calendar** shows a **Sync to calendar** button, and **Open in calendar** (the calendar view on the Bookings calendar, same month) once the calendar exists.
 
 **Block with calendar.** With Calendars on, Bookings adds a **Block with calendar** setting to the Booking part (`BookingPart.BlockingCalendarId`, edited by `BookingPartCalendarDisplayDriver`), listing every calendar except the Bookings calendar itself. `BookingCalendarSlotFilter` is its `IBookingSlotFilter`: it reads busy time on that calendar through `ICalendarAvailabilityService.GetBusyAsync`, tentative events included and busy-time sources left out. A time slot is closed when anything busy overlaps it; a departure date or a night is closed when anything busy falls on that day. Use it to keep a room, a guide or a vehicle from being sold twice across products, or to close dates that a team calendar marks as out of office.
 
@@ -245,7 +245,7 @@ The **Booking dates** deployment step (`BookingDatesDeploymentStep`, *Commerce*)
 
 ## Report Builder data source
 
-With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Bookings adds the **Bookings** data source (`Bookings`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage bookings** (`ManageBookings`), the permission of **Commerce > Bookings**. The travelers' details, the reason a booking was canceled, the cancellation policy, the card a balance is charged to and the payment provider's error messages are never exposed.
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Bookings adds the **Bookings** data source (`Bookings`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage bookings** (`ManageBookings`), the permission of **Commerce** → **Bookings**. The travelers' details, the reason a booking was canceled, the cancellation policy, the card a balance is charged to and the payment provider's error messages are never exposed.
 
 The **Bookings** data set (`Bookings`) has one row per booking, newest first by when it was booked, which is its default date. Date ranges on that date, joins on the booking, order, product and cart IDs, and status filters are applied in the database, and simple groups and totals of those fields and of the start date are counted there too. Money is in the booking's currency, which the `Currency` field names.
 

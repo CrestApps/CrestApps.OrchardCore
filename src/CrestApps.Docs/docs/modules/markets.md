@@ -14,7 +14,7 @@ user_manual: user-manual/commerce/markets
 
 The **Markets** feature sells to several countries on their own terms. A `Market` is a set of countries with a currency, an exchange rate from the store's currency, a price rounding rule, a culture and whether its prices include tax. The shopper's market decides the currency that product cards, product pages, the cart, the checkout, shipping and the catalog API price in. Admin screens are described in the [User Manual](../user-manual/commerce/markets.md).
 
-The **store's currency** throughout is `CheckoutSettings.Currency` (**Settings > Commerce > Checkout**). Rates are relative to it.
+The **store's currency** throughout is `CheckoutSettings.Currency` (**Settings** → **Commerce** → **Checkout**). Rates are relative to it.
 
 ## Model
 
@@ -174,7 +174,7 @@ The value is a market id or a two-letter country code a market covers. Without i
 
 | Screen | Permission | Default roles |
 | --- | --- | --- |
-| **Commerce > Markets** (`MarketsAdminController`, admin route `markets`): the list on Orchard Core's `AdminList`, and the editor | `ManageMarkets` (**Manage markets**) | Administrator |
+| **Commerce** → **Markets** (`MarketsAdminController`, admin route `markets`): the list on Orchard Core's `AdminList`, and the editor | `ManageMarkets` (**Manage markets**) | Administrator |
 | **Not sold in** on a product's editor | Editing the product | |
 
 ## Related modules

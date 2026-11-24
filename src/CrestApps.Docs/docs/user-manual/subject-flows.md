@@ -11,7 +11,7 @@ A **subject flow** is the list of actions a subject takes for each disposition. 
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Subject Flows > Manage Flow |
+| **Menu** | **Interaction Center** → **Management** → **Subject Flows** → **Manage Flow** |
 | **Permission** | Manage subject flows |
 | **Feature** | Omnichannel Management |
 
@@ -29,7 +29,7 @@ The inbound *Sales Inquiry* call finishes when the question is answered, and whe
 
 <YouTube video="omnichannel-subject-flows" title="Video of opening a subject flow, choosing an action type and adding a Finish action" start={46} end={93} />
 
-1. Open **Interaction Center > Management > Subject Flows** and click **Manage Flow** next to the subject.
+1. Open **Interaction Center** → **Management** → **Subject Flows** and click **Manage Flow** next to the subject.
 2. Click **Add Action** and pick the action type (below).
 3. Pick the **Disposition** it responds to and fill in the fields.
 4. Click **Create**. Repeat for every disposition the agent can choose.

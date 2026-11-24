@@ -71,7 +71,7 @@ The words this manual uses, in plain language. Each term links to the page that 
 
 ## F
 
-- **Feature**: a part of the product that an administrator turns on in **Tools > Features**. Its screens appear only while it is on. See [Features and settings](getting-started/features-and-settings.md).
+- **Feature**: a part of the product that an administrator turns on in **Tools** → **Features**. Its screens appear only while it is on. See [Features and settings](getting-started/features-and-settings.md).
 
 ## H
 

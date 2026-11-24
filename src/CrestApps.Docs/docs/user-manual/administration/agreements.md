@@ -12,13 +12,13 @@ An agreement is what you agreed with an account: a support contract with ten hou
 | --- | --- |
 | **Feature** | Agreements (it turns on Accounts); Tickets for support agreements, Work Orders' Service Agreements for visits, Time Tracker for counting ticket time, Notifications for the warnings |
 | **Permission** | **Manage agreements with accounts** to add and change them; **View agreements with accounts and their hours** to see them |
-| **Menu** | **Content > Agreements** |
+| **Menu** | **Content** → **Agreements** |
 
 <AskYourAdmin />
 
 ## Add an agreement
 
-1. Go to **Content > Agreements** and select **Add agreement**, or select **New agreement** on the account's page.
+1. Go to **Content** → **Agreements** and select **Add agreement**, or select **New agreement** on the account's page.
 2. Enter a name, choose the account, the days it starts and ends (leave the end empty when it runs until canceled), the notice you want before the end and the time zone its days and months are counted in.
 3. Under **Covered hours**, choose **A block of hours** (used until it runs out) or **An allowance each month** (it starts again each month and what's left doesn't carry over), the hours, and what each entry of time is rounded up to (none, 6, 15 or 30 minutes).
 4. Under **Tickets**, check **Covers the account's tickets**, and choose the desks and ticket types it covers (none for all of them) and the service level of its tickets.
@@ -42,14 +42,14 @@ A new ticket of the account on a desk and of a type the agreement covers works u
 
 ## Reports
 
-Under **Reports > Billing & Usage**, with **View agreements with accounts and their hours**:
+Under **Reports** → **Billing & Usage**, with **View agreements with accounts and their hours**:
 
 | Report | Shows |
 | --- | --- |
 | **Agreement Usage** | For each active agreement with covered hours: its period, the hours covered, used and left, the overage, the share used, and when the hours ran out or are expected to run out at the pace so far; then where the hours went (tickets, work orders) |
 | **Agreement Burn-down** | A chart of the hours left each day of the period against an even pace; choose an agreement to see its days |
 
-Both show where each agreement stands on the last day you choose (today at the latest), in the period that holds that day. Choose one agreement in **Agreement** to see only it. **Account Health**, under **Reports > Executive**, puts each account's tickets, service levels, satisfaction and agreement hours side by side (see [Service desk reports](../service-desk/reports.md)).
+Both show where each agreement stands on the last day you choose (today at the latest), in the period that holds that day. Choose one agreement in **Agreement** to see only it. **Account Health**, under **Reports** → **Executive**, puts each account's tickets, service levels, satisfaction and agreement hours side by side (see [Service desk reports](../service-desk/reports.md)).
 
 ## Warnings
 

@@ -74,14 +74,14 @@ Enable the **Wizard** feature, with `OrchardCore.Contents` and `OrchardCore.Flow
 
 ### 1. Attach the wizard part
 
-1. Go to **Design → Content Definition → Content Types** and edit (or create) the content type that will host the
+1. Go to **Design** → **Content Definition** → **Content Types** and edit (or create) the content type that will host the
 Enable **Wizard**, `OrchardCore.Contents` and `OrchardCore.Flows`.
 
 ### 1. Attach the wizard part
 
 <YouTube video="wizard" title="Video of the settings of the Wizard part" start={46} end={99} />
 
-1. Go to **Content Definition → Content Types** and edit (or create) the content type that will host the
+1. Go to **Content Definition** → **Content Types** and edit (or create) the content type that will host the
    wizard, for example `Registration`.
 2. Add the **WizardPart** to the type.
 3. Open the part settings on the type and configure the wizard:

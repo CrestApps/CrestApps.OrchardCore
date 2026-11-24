@@ -15,10 +15,10 @@ Bulk import and export Orchard Core content by using the enabled transfer file f
 
 ## Getting started
 
-1. Enable **Content Transfer** under **Tools** -> **Features**.
+1. Enable **Content Transfer** under **Tools** → **Features**.
 2. Enable **Content Transfer (OpenXml)** when you also want Excel workbook (`.xlsx`) support.
 3. Edit the content type only if you want to opt-out of transfer for that type. **Allow Bulk Import** and **Allow Bulk Export** are enabled by default.
-4. Open **Content** -> **Import** or **Content** -> **Export**.
+4. Open **Content** → **Import** or **Content** → **Export**.
 
 By default, content types appear in the import and export screens automatically. Set **Allow Bulk Import** or **Allow Bulk Export** to `false` on a content type when that type should opt out.
 
@@ -39,7 +39,7 @@ Enable **Content Transfer (OpenXml)** feature to add Excel workbook support (`.x
 
 ## Bulk import
 
-Use **Content** -> **Import** to upload a transfer file for a content type.
+Use **Content** → **Import** to upload a transfer file for a content type.
 
 1. Select a content type.
 2. Download the template if you need the expected column layout.
@@ -63,7 +63,7 @@ The Omnichannel contact columns `DoNotCall`, `DoNotSms`, `DoNotEmail`, and `DoNo
 
 ## Bulk export
 
-Use **Content** -> **Export** to export content items by using one of the enabled transfer formats.
+Use **Content** → **Export** to export content items by using one of the enabled transfer formats.
 
 Export supports:
 

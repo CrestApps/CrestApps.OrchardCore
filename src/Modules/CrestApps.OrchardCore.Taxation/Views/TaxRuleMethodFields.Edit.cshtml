@@ -17,7 +17,7 @@
     <div class="ocat-wrapper">
         <label asp-for="FixedAmount" class="ocat-label">@T["Fixed amount"]</label>
         <div class="ocat-end ocat-limited-wrapper">
-            <input asp-for="FixedAmount" type="number" step="0.01" class="form-control ocat-limited" />
+            <input asp-for="FixedAmount" type="number" step="any" class="form-control ocat-limited" />
             <span class="hint">@T["The amount charged by the selected calculation method."]</span>
             <span asp-validation-for="FixedAmount" class="text-danger"></span>
         </div>

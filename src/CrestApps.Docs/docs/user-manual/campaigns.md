@@ -12,7 +12,7 @@ A **campaign** is a named push of work, such as *Spring lead drive*. Every activ
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Campaigns, and Campaign Groups |
+| **Menu** | **Interaction Center** → **Management** → **Campaigns**, and Campaign Groups |
 | **Permission** | Manage campaigns; Manage campaign groups |
 | **Feature** | Omnichannel Management |
 
@@ -26,14 +26,14 @@ A **campaign** is a named push of work, such as *Spring lead drive*. Every activ
 
 <YouTube video="contact-center-campaigns" title="Video of creating a campaign group" start={57} end={80} />
 
-1. Open **Interaction Center > Management > Campaign Groups** and click **Add campaign group**.
+1. Open **Interaction Center** → **Management** → **Campaign Groups** and click **Add campaign group**.
 2. Enter a **Name** and optional **Description**, then **Save**.
 
 ## Create a campaign
 
 <YouTube video="contact-center-campaigns" title="Video of creating two campaigns" start={80} end={137} />
 
-1. Open **Interaction Center > Management > Campaigns** and click **Add Campaign**.
+1. Open **Interaction Center** → **Management** → **Campaigns** and click **Add Campaign**.
 2. Enter a **Name**, pick a **Campaign group** (or *No campaign group*), and add an optional **Description**.
 3. Click **Save**.
 
@@ -47,7 +47,7 @@ A campaign only groups and reports work. It does not decide the channel, the num
 
 Agents sign in only to the campaigns on their entitlements (when the **Contact Center Agent Entitlements** feature is on).
 
-1. Open **Interaction Center > Management > Agent entitlements** and click **Add agent entitlements**.
+1. Open **Interaction Center** → **Management** → **Agent Entitlements** and click **Add agent entitlements**.
 2. Pick the **User**.
 3. Under **Allowed campaigns**, pick the campaigns the agent may sign in to. **Allowed queues** is on the same page, for inbound work.
 4. Click **Save**. The campaign now appears in the **Work** tab of the agent's soft phone. Removing a campaign here also signs the agent out of it.

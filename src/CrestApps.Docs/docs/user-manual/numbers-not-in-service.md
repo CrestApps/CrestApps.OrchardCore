@@ -13,7 +13,7 @@ A list of phone numbers is never fully clean. Some numbers are disconnected, som
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Numbers Not In Service |
+| **Menu** | **Interaction Center** → **Management** → **Numbers Not In Service** |
 | **Permission** | Manage activities |
 | **Feature** | Omnichannel Management |
 
@@ -43,8 +43,8 @@ Some carriers answer the call and play a "the number you have dialed is not in s
 
 <YouTube video="contact-center-numbers-not-in-service" title="Video of choosing the not-in-service disposition" start={101} end={133} />
 
-1. Open **Interaction Center > Management > Dispositions**, add or edit a disposition (for example *Number Not In Service*) and set its **Outcome** to **Number not in service**.
-2. Optionally, add it to a subject's flow (**Subject Flows > Manage Flow**) with a **Finish** action. That makes it available to agents on that subject, and lets you add other actions to it.
+1. Open **Interaction Center** → **Management** → **Dispositions**, add or edit a disposition (for example *Number Not In Service*) and set its **Outcome** to **Number not in service**.
+2. Optionally, add it to a subject's flow (**Subject Flows** → **Manage Flow**) with a **Finish** action. That makes it available to agents on that subject, and lets you add other actions to it.
 
 When a call finds a dead number, the platform uses the subject's disposition with the *Number not in service* outcome, or any disposition with that outcome if the subject's flow has none. If no disposition has the outcome, it creates one named **Number Not In Service** the first time it needs one. When an agent picks a disposition with this outcome, the number is marked too.
 
@@ -71,12 +71,12 @@ If a later lookup finds the same number active again, the mark the earlier looku
 
 <YouTube video="contact-center-numbers-not-in-service" title="Video of marking a number by hand, searching, and allowing dialing" start={170} end={226} />
 
-Open **Interaction Center > Management > Numbers Not In Service**. The numbers are listed like the other admin lists: the header shows how many numbers there are and has a checkbox to select them all, and each number has its own checkbox. Next to each number, badges show what found it (*Dialer call*, *Automated call*, *Agent disposition*, *Number lookup* or *Marked by hand*, followed by the user who marked it, for example *Marked by hand (admin)*), what the carrier or lookup said, the campaign, when it was last found, and how many times (*Found once*, *Found 3 times*). Hover over a badge to see its name.
+Open **Interaction Center** → **Management** → **Numbers Not In Service**. The numbers are listed like the other admin lists: the header shows how many numbers there are and has a checkbox to select them all, and each number has its own checkbox. Next to each number, badges show what found it (*Dialer call*, *Automated call*, *Agent disposition*, *Number lookup* or *Marked by hand*, followed by the user who marked it, for example *Marked by hand (admin)*), what the carrier or lookup said, the campaign, when it was last found, and how many times (*Found once*, *Found 3 times*). Hover over a badge to see its name.
 
 - **Search by number** filters the list by digits. Press Enter to search.
 - **Mark as not in service** adds a number by hand: it opens a dialog with a **Phone number** field. Enter the number with its country code, for example +17025550123, and click **Mark as not in service**. The number is shown formatted, for example +1 702-555-0123.
 - **Allow dialing** removes the not-in-service mark from a number, so campaigns can load and dial it again. Use it when you learn the number is back in service or has been given to somebody new. It does not call the number. The number is dialed only when the dialer or an automated call later reaches an activity for it. Activities that were already cancelled because of the mark stay cancelled.
-- To allow dialing for several numbers at once, select them (the checkbox in the header selects them all), then pick **Actions > Allow dialing**.
+- To allow dialing for several numbers at once, select them (the checkbox in the header selects them all), then pick **Actions** → **Allow dialing**.
 
 ## Report on it
 
