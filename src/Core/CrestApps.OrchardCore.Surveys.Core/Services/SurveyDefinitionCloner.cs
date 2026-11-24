@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -127,9 +128,11 @@ public static class SurveyDefinitionCloner
 
     /// <summary>
     /// Gives the choices and rows of a question the ids of the matching choices and rows of an earlier copy of it, and
-    /// rewrites the references inside the question (scoring keys, choice rules) to them. A choice matches by value, then
-    /// by text, then by position; a row by name, then by text, then by position. Choices and rows of the earlier copy that
-    /// match nothing are kept, retired, so answers given to them still read.
+    /// rewrites the references inside the question (scoring keys, choice rules) to them. A choice matches by text, then by
+    /// value, then by position; a row by text, then by name, then by position. A value or name that only gives the item's
+    /// place (1, 2, 3, or r1, r2, r3, as a spreadsheet or a QTI file without identifiers gives) identifies nothing, so it
+    /// is not matched on: choices put in another order, or a new one added at the top, keep their ids. Choices and rows of
+    /// the earlier copy that match nothing are kept, retired, so answers given to them still read.
     /// </summary>
     /// <param name="question">The new copy of the question, changed in place.</param>
     /// <param name="previous">The earlier copy.</param>
@@ -166,25 +169,33 @@ public static class SurveyDefinitionCloner
         return map;
     }
 
-    // Matches incoming items to earlier ones (by key, then by text, then by position), gives each matched item the
-    // earlier id, and returns the earlier items nothing matched.
+    // Matches incoming items to earlier ones (by text, then by key, then by position), gives each matched item the
+    // earlier id, and returns the earlier items nothing matched. A key that only gives the item's place is no key.
     private static List<T> Match<T>(List<T> incoming, List<T> earlier, Func<T, string> id, Action<T, string> setId, Func<T, string> key, Func<T, string> text, Dictionary<string, string> map)
         where T : class
     {
         incoming ??= [];
-        var left = (earlier ?? []).Where(item => item is not null && !string.IsNullOrEmpty(id(item))).ToList();
+        var earlierList = earlier ?? [];
+        var left = earlierList.Where(item => item is not null && !string.IsNullOrEmpty(id(item))).ToList();
         var matched = new T[incoming.Count];
 
-        void Pass(Func<T, string> by)
+        string IncomingKey(int index)
+            => RealKey(key(incoming[index]), index);
+
+        string EarlierKey(T item)
+            => RealKey(key(item), earlierList.IndexOf(item));
+
+        void Pass(Func<int, string> incomingValue, Func<T, string> earlierValue)
         {
             for (var i = 0; i < incoming.Count; i++)
             {
-                if (matched[i] is not null || incoming[i] is null || string.IsNullOrWhiteSpace(by(incoming[i])))
+                if (matched[i] is not null || incoming[i] is null || string.IsNullOrWhiteSpace(incomingValue(i)))
                 {
                     continue;
                 }
 
-                var found = left.FirstOrDefault(item => string.Equals(by(item)?.Trim(), by(incoming[i]).Trim(), StringComparison.OrdinalIgnoreCase));
+                var value = incomingValue(i).Trim();
+                var found = left.FirstOrDefault(item => string.Equals(earlierValue(item)?.Trim(), value, StringComparison.OrdinalIgnoreCase));
 
                 if (found is not null)
                 {
@@ -194,20 +205,18 @@ public static class SurveyDefinitionCloner
             }
         }
 
-        Pass(key);
-        Pass(text);
+        Pass(i => text(incoming[i]), text);
+        Pass(IncomingKey, EarlierKey);
 
         // By position, only for items without a key on either side: the item at the same place, when it was not taken
         // by another. An item with a key that matched nothing is new, and the earlier one it replaces stays, retired.
-        var earlierList = earlier ?? [];
-
         for (var i = 0; i < incoming.Count && i < earlierList.Count; i++)
         {
             if (matched[i] is null
                 && incoming[i] is not null
                 && earlierList[i] is not null
-                && string.IsNullOrWhiteSpace(key(incoming[i]))
-                && string.IsNullOrWhiteSpace(key(earlierList[i]))
+                && string.IsNullOrWhiteSpace(IncomingKey(i))
+                && string.IsNullOrWhiteSpace(EarlierKey(earlierList[i]))
                 && left.Contains(earlierList[i]))
             {
                 matched[i] = earlierList[i];
@@ -234,6 +243,36 @@ public static class SurveyDefinitionCloner
         }
 
         return left;
+    }
+
+    /// <summary>
+    /// Gets a value or name that identifies an item, or <see langword="null"/> when it only gives the item's place in its
+    /// list: its number from 1, alone or after letters (1, 2, r1, r2), as files without identifiers number their items.
+    /// </summary>
+    /// <param name="key">The value or name.</param>
+    /// <param name="index">The item's place in its list, from 0.</param>
+    /// <returns>The key, or <see langword="null"/>.</returns>
+    internal static string RealKey(string key, int index)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        var trimmed = key.Trim();
+        var digits = trimmed.Length;
+
+        while (digits > 0 && char.IsAsciiDigit(trimmed[digits - 1]))
+        {
+            digits--;
+        }
+
+        var positional = digits < trimmed.Length
+            && trimmed[..digits].All(char.IsAsciiLetter)
+            && int.TryParse(trimmed[digits..], NumberStyles.None, CultureInfo.InvariantCulture, out var number)
+            && number == index + 1;
+
+        return positional ? null : trimmed;
     }
 
     private static void AssignNewIds(SurveyQuestion question, Func<string, string> next)

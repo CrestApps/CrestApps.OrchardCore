@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Parties;
@@ -31,6 +32,16 @@ public sealed class LearningSurveyService : ILearningSurveyService
     private readonly IContentManager _contentManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISession _session;
+
+    // The surveys this scope created for course items. A copied item gets one while it is created, before it is copied
+    // (Orchard creates the copy, then copies the content into it); the copy replaces it on this scope's session, so no
+    // child scope waits on a row the request hasn't committed (SQL Server's default locking holds such a read until the
+    // command times out).
+    private readonly HashSet<string> _createdInScope = new(StringComparer.Ordinal);
+
+    // The owners of the surveys of every course item, read once per scope: every scope check of the access providers
+    // asks for them.
+    private IReadOnlyCollection<RecordRef> _courseItemOwners;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningSurveyService"/> class.
@@ -84,6 +95,7 @@ public sealed class LearningSurveyService : ILearningSurveyService
             return null;
         }
 
+        _createdInScope.Add(survey.ItemId);
         ApplyCourseDefaults(survey);
 
         // Templates are records an administrator may remove; a quiz is scored even when it started blank.
@@ -107,10 +119,21 @@ public sealed class LearningSurveyService : ILearningSurveyService
 
         var owner = LearningSurveyContexts.Owner(item.ContentItemId);
 
-        // A copy made while the item was created (with a blank survey) is replaced: nobody responded to it yet.
+        // A copy made while the item was created (with a blank survey) is replaced: nobody responded to it yet. One this
+        // scope created has nothing hanging off it and may not be committed, so it is removed on this scope's session; a
+        // survey's delete would commit its steps in child scopes, which wait on the uncommitted row.
         foreach (var existing in await _surveyManager.ListByOwnerAsync(owner, cancellationToken))
         {
-            if (!string.Equals(existing.ItemId, sourceSurveyId, StringComparison.Ordinal))
+            if (string.Equals(existing.ItemId, sourceSurveyId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (_createdInScope.Remove(existing.ItemId))
+            {
+                await _serviceProvider.GetRequiredService<ICatalog<Survey>>().DeleteAsync(existing, cancellationToken);
+            }
+            else
             {
                 await _surveyManager.DeleteSurveyAsync(existing.ItemId, cancellationToken);
             }
@@ -304,6 +327,9 @@ public sealed class LearningSurveyService : ILearningSurveyService
 
     /// <inheritdoc />
     public async Task<IReadOnlyCollection<RecordRef>> ListCourseItemOwnersAsync(CancellationToken cancellationToken = default)
+        => _courseItemOwners ??= await ReadCourseItemOwnersAsync(cancellationToken);
+
+    private async Task<IReadOnlyCollection<RecordRef>> ReadCourseItemOwnersAsync(CancellationToken cancellationToken)
     {
         var types = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
             .Where(type => type.Parts.Any(part => part.PartDefinition?.Name == nameof(CourseItemPart)))

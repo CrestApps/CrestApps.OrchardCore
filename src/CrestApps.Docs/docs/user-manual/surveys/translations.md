@@ -27,8 +27,8 @@ Translate a survey so each respondent reads it in their language.
 
 Under **Translation file**, select **Export** to download every original text, translate the file, and select **Import** to load it. If someone reworded a text after you exported the file, its translation is left out, and a message says how many: export the file again and translate those texts.
 
-When someone changes a text after it was translated, its translation shows **Out of date** and no longer counts as translated. Change the translation to mark it current. Respondents see the old translation until you do.
+When someone changes a text after it was translated, its translation shows **Out of date** and no longer counts as translated. Change the translation, or tick **Mark current** under it when it still fits the new text, and select **Save**. Respondents see the old translation until you do. Saving the page changes only the translations you changed or marked: the others keep their **Out of date** or **Check** label.
 
-Translations made before the site tracked changes to the original text show **Check**: the site can't tell whether the original changed since. Read them against the original, fix any that are wrong, and select **Save**. Saving marks them current.
+Translations made before the site tracked changes to the original text show **Check**: the site can't tell whether the original changed since. Read each one against the original, fix it if it is wrong or tick **Mark current** if it is right, and select **Save**.
 
 With Surveys AI, **Translate with AI** in the survey's menu translates the texts for you to review.

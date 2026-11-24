@@ -110,6 +110,72 @@ public sealed class SurveyTranslationsTests
     }
 
     [Fact]
+    public void R6L21_Merge_AMultiLineTranslationPostedWithCrlf_IsUnchanged_AndStaysOutOfDate()
+    {
+        // Arrange: a two-line translation saved, then the original reworded.
+        var definition = TranslationsDefinitions.Create();
+        var key = SurveyTextKeys.QuestionTitle("q1");
+        SurveyTranslations.Merge(definition, "fr", [new(key, "Première ligne\nDeuxième ligne")]);
+        definition.Pages[0].Questions[0].Title = "Are you unhappy?";
+
+        // Act: the page's text box posts the same translation with CRLF line breaks.
+        var written = SurveyTranslations.Merge(definition, "fr", [new(key, "Première ligne\r\nDeuxième ligne")]);
+
+        // Assert
+        Assert.Equal(0, written);
+        Assert.Equal([key], SurveyTranslations.OutdatedKeys(definition, "fr"));
+        Assert.Equal("Première ligne\nDeuxième ligne", SurveyTranslations.Texts(definition, "fr")[key]);
+    }
+
+    [Fact]
+    public void R6L21_Fingerprint_IgnoresLineBreakStyle_AndAnOldCrlfFingerprintStillMatches()
+    {
+        // Arrange: an original with CRLF, fingerprinted before line breaks were normalized.
+        var definition = TranslationsDefinitions.Create();
+        var key = SurveyTextKeys.QuestionTitle("q1");
+        definition.Pages[0].Questions[0].Title = "Line one\r\nLine two";
+        definition.Translations["fr"] = new Dictionary<string, string> { [key] = "Ligne un\nLigne deux" };
+        definition.TranslationSources["fr"] = new Dictionary<string, string>
+        {
+            [key] = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("Line one\r\nLine two")), 0, 8),
+        };
+
+        // Act
+        var outdated = SurveyTranslations.OutdatedKeys(definition, "fr");
+
+        // Assert
+        Assert.Empty(outdated);
+        Assert.Equal(SurveyTranslations.Fingerprint("Line one\nLine two"), SurveyTranslations.Fingerprint("Line one\r\nLine two"));
+    }
+
+    [Fact]
+    public void R6L21_Merge_SavingThePage_LeavesUncheckedAndOutdatedEntries_UntilTheTranslatorConfirmsThem()
+    {
+        // Arrange: one translation saved before fingerprints were kept, one made before the original changed.
+        var definition = TranslationsDefinitions.Create();
+        var toCheck = SurveyTextKeys.QuestionTitle("q1");
+        var stale = SurveyTextKeys.PageTitle("p1");
+        SurveyTranslations.Merge(definition, "fr", [new(stale, "À propos de vous")]);
+        definition.Translations["fr"][toCheck] = "Content ?";
+        definition.Pages[0].Title = "About your visit";
+        var page = new List<KeyValuePair<string, string>> { new(toCheck, "Content ?"), new(stale, "À propos de vous") };
+
+        // Act: the page is saved unchanged, then saved with both confirmed.
+        var saved = SurveyTranslations.Merge(definition, "fr", page);
+        var uncheckedAfterSave = SurveyTranslations.UncheckedKeys(definition, "fr");
+        var outdatedAfterSave = SurveyTranslations.OutdatedKeys(definition, "fr");
+        var confirmed = SurveyTranslations.Merge(definition, "fr", page, overwrite: true, new HashSet<string>(StringComparer.Ordinal) { toCheck, stale });
+
+        // Assert
+        Assert.Equal(0, saved);
+        Assert.Equal([toCheck], uncheckedAfterSave);
+        Assert.Equal([stale], outdatedAfterSave);
+        Assert.Equal(2, confirmed);
+        Assert.Empty(SurveyTranslations.UncheckedKeys(definition, "fr"));
+        Assert.Empty(SurveyTranslations.OutdatedKeys(definition, "fr"));
+    }
+
+    [Fact]
     public void OutdatedKeys_OfATranslationWithoutAFingerprint_IsEmpty()
     {
         // Arrange: a translation saved before fingerprints were kept.

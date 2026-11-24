@@ -57,6 +57,8 @@ public static class SurveyTranslations
 
     /// <summary>
     /// Gets the fingerprint of an original text, stored with each translation so a later change of the original shows.
+    /// Line breaks are normalized first, so a text that only went through a browser's text box (which sends CRLF) keeps
+    /// its fingerprint.
     /// </summary>
     /// <param name="text">The original text.</param>
     /// <returns>The fingerprint, or <see langword="null"/> for an empty text.</returns>
@@ -67,8 +69,25 @@ public static class SurveyTranslations
             return null;
         }
 
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.Trim())), 0, 8);
+        return Hash(Normalize(text));
     }
+
+    /// <summary>
+    /// Normalizes a text for storing and comparing: CRLF and CR line breaks become LF, and the ends are trimmed.
+    /// </summary>
+    /// <param name="text">The text.</param>
+    /// <returns>The normalized text, or <see langword="null"/>.</returns>
+    public static string Normalize(string text)
+        => text?.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Trim();
+
+    // Whether a stored fingerprint stands for a text: the normalized fingerprint, or the one of the text as it was hashed
+    // before line breaks were normalized, so a fingerprint stored then is not read as a changed original.
+    private static bool Fingerprints(string fingerprint, string text)
+        => string.Equals(fingerprint, Fingerprint(text), StringComparison.Ordinal)
+            || (!string.IsNullOrWhiteSpace(text) && string.Equals(fingerprint, Hash(text.Trim()), StringComparison.Ordinal));
+
+    private static string Hash(string text)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)), 0, 8);
 
     /// <summary>
     /// Gets the keys of a culture whose translation was made from an original text that has changed since. A translation
@@ -94,7 +113,7 @@ public static class SurveyTranslations
                 && !string.IsNullOrWhiteSpace(text)
                 && sources.TryGetValue(entry.Key, out var fingerprint)
                 && !string.IsNullOrEmpty(fingerprint)
-                && !string.Equals(fingerprint, Fingerprint(entry.Text), StringComparison.Ordinal))
+                && !Fingerprints(fingerprint, entry.Text))
             {
                 outdated.Add(entry.Key);
             }
@@ -105,8 +124,8 @@ public static class SurveyTranslations
 
     /// <summary>
     /// Gets the keys of a culture whose translation has no fingerprint of its original text (saved before fingerprints
-    /// were kept), so nothing tells whether the original changed since. They are shown to be checked once: saving the
-    /// translation again, changed or not, records the original it now stands for.
+    /// were kept), so nothing tells whether the original changed since. They are shown to be checked once: changing the
+    /// translation, or confirming it as it is, records the original it now stands for.
     /// </summary>
     /// <param name="definition">The definition.</param>
     /// <param name="culture">The culture.</param>
@@ -160,7 +179,7 @@ public static class SurveyTranslations
 
             if (!string.IsNullOrWhiteSpace(entry.Original)
                 && originals.TryGetValue(entry.Key, out var original)
-                && !string.Equals(entry.Original.Trim(), original?.Trim(), StringComparison.Ordinal))
+                && !string.Equals(Normalize(entry.Original), Normalize(original), StringComparison.Ordinal))
             {
                 changed++;
 
@@ -175,14 +194,17 @@ public static class SurveyTranslations
 
     /// <summary>
     /// Writes texts of a culture into a definition. Keys of items that do not exist are left out; an empty text removes
-    /// the translation of its key. A culture left without texts is removed.
+    /// the translation of its key. A culture left without texts is removed. A changed text records the original it was
+    /// made from; a text posted again unchanged (line breaks normalized) changes nothing, unless its key is confirmed:
+    /// the translator checked it against the current original, which it then stands for.
     /// </summary>
     /// <param name="definition">The definition to change.</param>
     /// <param name="culture">The culture.</param>
     /// <param name="texts">The texts by key.</param>
     /// <param name="overwrite">Whether a text replaces an existing translation; when <see langword="false"/>, only missing translations are filled.</param>
-    /// <returns>How many texts were written.</returns>
-    public static int Merge(SurveyDefinition definition, string culture, IEnumerable<KeyValuePair<string, string>> texts, bool overwrite = true)
+    /// <param name="confirmed">The keys whose unchanged translation the translator confirmed as current, or <see langword="null"/>.</param>
+    /// <returns>How many texts were written or confirmed.</returns>
+    public static int Merge(SurveyDefinition definition, string culture, IEnumerable<KeyValuePair<string, string>> texts, bool overwrite = true, IReadOnlySet<string> confirmed = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentException.ThrowIfNullOrWhiteSpace(culture);
@@ -232,15 +254,15 @@ public static class SurveyTranslations
                 continue;
             }
 
-            var trimmed = text.Trim();
+            var trimmed = Normalize(text);
 
-            // A translation posted again unchanged keeps the fingerprint it was made from, so it stays marked out of
-            // date until someone really translates the new original.
-            if (target.TryGetValue(key, out var previous) && string.Equals(previous, trimmed, StringComparison.Ordinal))
+            // A translation posted again unchanged keeps the fingerprint it was made from (or none), so it stays marked
+            // out of date, or to be checked, until someone translates the new original or confirms it is current.
+            if (target.TryGetValue(key, out var previous) && string.Equals(Normalize(previous), trimmed, StringComparison.Ordinal))
             {
-                // One saved before fingerprints were kept is checked by being saved again: it now stands for the
-                // current original.
-                if (!sources.ContainsKey(key) && Fingerprint(originals.GetValueOrDefault(key)) is { } checkedFingerprint)
+                if (confirmed?.Contains(key) == true
+                    && Fingerprint(originals.GetValueOrDefault(key)) is { } checkedFingerprint
+                    && !string.Equals(sources.GetValueOrDefault(key), checkedFingerprint, StringComparison.Ordinal))
                 {
                     sources[key] = checkedFingerprint;
                     written++;

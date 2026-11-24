@@ -198,14 +198,15 @@ public sealed class SurveyGradingController : Controller
             return refused;
         }
 
-        if (SurveyScoreChangeChecks.GradingChangesGivenScores(response) && !await CanChangeScoresAsync(survey, response))
-        {
-            return Forbid();
-        }
-
         var scores = (model.Points ?? [])
             .Where(pair => pair.Value is not null)
             .ToDictionary(pair => pair.Key, pair => pair.Value.Value, StringComparer.Ordinal);
+
+        // Without the right to change scores, a grader gives points only to the questions that need grading.
+        if (SurveyScoreChangeChecks.GradingChangesGivenScores(response, scores) && !await CanChangeScoresAsync(survey, response))
+        {
+            return Forbid();
+        }
 
         var result = await _grading.GradeAsync(responseId, scores, model.Comments, model.Feedback, _userManager.GetUserId(User), HttpContext.RequestAborted);
 

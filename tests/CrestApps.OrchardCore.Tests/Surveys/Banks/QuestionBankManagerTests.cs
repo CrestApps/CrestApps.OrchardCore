@@ -302,6 +302,111 @@ public sealed class QuestionBankManagerTests : IAsyncLifetime
         Assert.True(updated.Retired);
     }
 
+    [Fact]
+    public async Task R6M9_ImportAsync_AgainWithTheChoicesReordered_KeepsEachChoicesIdAndTheKey()
+    {
+        // Arrange: a spreadsheet gives every choice its place as its value. Paris is right, and answers chose Paris.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _store.Store.CreateSession();
+        var manager = BanksTestStore.Manager(session);
+        var bank = await CreateBankAsync(manager, "capitals");
+
+        await manager.ImportAsync(bank.ItemId, [Positional("src-q", "Paris", "London", "Paris", "Rome")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var first = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        var firstIds = first.Question.Choices.ToDictionary(choice => choice.Text, choice => choice.Id);
+
+        // Act: the author puts Paris first.
+        await manager.ImportAsync(bank.ItemId, [Positional("src-q", "Paris", "Paris", "London", "Rome")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Assert: every choice keeps its id, so earlier answers still read Paris and the key still scores them.
+        var updated = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        Assert.Equal(["Paris", "London", "Rome"], updated.Question.Choices.Select(choice => choice.Text));
+        Assert.All(updated.Question.Choices, choice => Assert.Equal(firstIds[choice.Text], choice.Id));
+        Assert.DoesNotContain(updated.Question.Choices, choice => choice.Retired);
+        Assert.Equal([firstIds["Paris"]], updated.Question.Scoring.CorrectChoiceIds);
+    }
+
+    [Fact]
+    public async Task R6M9_ImportAsync_AgainWithADistractorAddedAtTheTop_KeepsTheIdsOfTheOthers()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _store.Store.CreateSession();
+        var manager = BanksTestStore.Manager(session);
+        var bank = await CreateBankAsync(manager, "capitals-distractor");
+
+        await manager.ImportAsync(bank.ItemId, [Positional("src-q", "Paris", "London", "Paris", "Rome")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var first = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        var firstIds = first.Question.Choices.ToDictionary(choice => choice.Text, choice => choice.Id);
+
+        // Act: a new choice at the top moves every place (and so every value) down by one.
+        await manager.ImportAsync(bank.ItemId, [Positional("src-q", "Paris", "Berlin", "London", "Paris", "Rome")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Assert
+        var updated = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        var choices = updated.Question.Choices.ToDictionary(choice => choice.Text);
+        Assert.Equal(firstIds["London"], choices["London"].Id);
+        Assert.Equal(firstIds["Paris"], choices["Paris"].Id);
+        Assert.Equal(firstIds["Rome"], choices["Rome"].Id);
+        Assert.DoesNotContain(choices["Berlin"].Id, firstIds.Values);
+        Assert.DoesNotContain(updated.Question.Choices, choice => choice.Retired);
+        Assert.Equal([firstIds["Paris"]], updated.Question.Scoring.CorrectChoiceIds);
+    }
+
+    [Fact]
+    public void R6M9_KeepIds_MatchesRealValuesWhenTheTextChanged_ButNeverAPlaceNumber()
+    {
+        // Arrange: QTI identifiers are real; a reworded choice keeps its id by them. Numbered values are only places.
+        var previous = Question(("ans_a", "Paris"), ("ans_b", "Lyon"));
+        var reworded = Question(("ans_b", "Lyon (Rhone)"), ("ans_a", "Paris"));
+        var numbered = Question(("1", "London"), ("2", "Paris"));
+        var renumbered = Question(("1", "Madrid"), ("2", "London"), ("3", "Paris"));
+
+        // Act
+        SurveyDefinitionCloner.KeepIds(reworded, previous);
+        SurveyDefinitionCloner.KeepIds(renumbered, numbered);
+
+        // Assert
+        Assert.Equal(previous.Choices[1].Id, reworded.Choices[0].Id);
+        Assert.Equal(previous.Choices[0].Id, reworded.Choices[1].Id);
+        Assert.Equal(numbered.Choices[0].Id, renumbered.Choices[1].Id);
+        Assert.Equal(numbered.Choices[1].Id, renumbered.Choices[2].Id);
+        Assert.DoesNotContain(renumbered.Choices[0].Id, numbered.Choices.Select(choice => choice.Id));
+    }
+
+    private static SurveyQuestion Question(params (string Value, string Text)[] choices)
+        => new()
+        {
+            ControlType = SurveyControlNames.SingleChoice,
+            Title = "Capital?",
+            Choices = choices.Select(item => new SurveyChoice { Id = global::OrchardCore.IdGenerator.GenerateId(), Value = item.Value, Text = item.Text }).ToList(),
+        };
+
+    // A question as the spreadsheet reader gives it: every choice's value is its place, from 1.
+    private static BankQuestion Positional(string source, string correct, params string[] texts)
+    {
+        var choices = texts
+            .Select((text, index) => new SurveyChoice { Id = global::OrchardCore.IdGenerator.GenerateId(), Value = (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), Text = text })
+            .ToList();
+        var key = choices.Single(choice => choice.Text == correct).Id;
+
+        return new BankQuestion
+        {
+            SourceIdentifier = source,
+            Question = new SurveyQuestion
+            {
+                ControlType = SurveyControlNames.SingleChoice,
+                Title = "Capital of France?",
+                Choices = choices,
+                Scoring = new SurveyQuestionScoring { CorrectChoiceIds = [key] },
+            },
+        };
+    }
+
     private static BankQuestion ImportedChoice(string source, (string Value, string Text) first, (string Value, string Text) second, (string Value, string Text) third, string correct)
     {
         var choices = new[] { first, second, third }

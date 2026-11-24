@@ -726,7 +726,7 @@ public sealed class SurveyDesignerController : Controller
         };
 
     private static long DraftVersion(Survey survey)
-        => survey.DraftModifiedUtc is { } modified ? new DateTime(modified.Ticks - (modified.Ticks % TimeSpan.TicksPerSecond), DateTimeKind.Utc).Ticks : 0;
+        => SurveyDraftStamp.From(survey.DraftModifiedUtc) ?? 0;
 
     private string Localized(LocalizationSource source)
         => source is null ? null : _localizerFactory.Localize(source).Value;

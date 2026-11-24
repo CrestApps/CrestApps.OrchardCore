@@ -28,4 +28,10 @@ public class QuizPartViewModel
     /// Gets or sets the grading methods to pick from.
     /// </summary>
     public IList<SelectListItem> GradingMethods { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the quiz completes "When the learner passes" but its survey has neither a pass mark nor a
+    /// score band that passes or fails, so any graded attempt completes it, neither passed nor failed.
+    /// </summary>
+    public bool NoPassDecision { get; set; }
 }

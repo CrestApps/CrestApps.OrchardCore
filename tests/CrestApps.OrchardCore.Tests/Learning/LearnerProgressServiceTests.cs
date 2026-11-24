@@ -247,6 +247,29 @@ public sealed class LearnerProgressServiceTests
     }
 
     [Fact]
+    public async Task R6M8_RecordResultAsync_OnAPassedItem_WithNoPassDecision_CompletesNeitherPassedNorFailed()
+    {
+        // Arrange: a quiz completed when the learner passes, whose survey has neither a pass mark nor a deciding band.
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "quiz", "Quiz", CompletionModes.Passed, configure: part => part.Gradable = true);
+        courses.AddItem("course1", "other");
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act: an attempt waiting for a grader, then the graded attempt.
+        var pending = await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "quiz", PassDecided = true, Submitted = true, Attempts = 1 }), enrollment.ItemId);
+        var graded = await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "quiz", Score = 40, PassDecided = true, CompletedWithoutPassDecision = true, Submitted = true, Graded = true, Attempts = 1 }), enrollment.ItemId);
+
+        // Assert
+        Assert.NotEqual(CourseItemState.Completed, pending.Item.State);
+        Assert.NotEqual(CourseItemState.Failed, pending.Item.State);
+        Assert.Equal(CourseItemState.Completed, graded.Item.State);
+        Assert.Null(graded.Item.Passed);
+        Assert.Equal(40, graded.Item.Score);
+    }
+
+    [Fact]
     public async Task RecordResultAsync_KeepsTheSelfReportedMark()
     {
         // Arrange

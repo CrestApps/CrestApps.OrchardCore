@@ -29,9 +29,9 @@ public class SurveyTranslationsViewModel
     public List<SurveyTranslationEntryViewModel> Entries { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets when the editor loaded the draft, to catch a concurrent edit.
+    /// Gets or sets the stamp of the draft the editor loaded (the ticks of its last change), to catch a concurrent edit.
     /// </summary>
-    public DateTime? DraftModifiedUtc { get; set; }
+    public long? DraftStamp { get; set; }
 
     /// <summary>
     /// Gets or sets how many texts are translated from their current original text.

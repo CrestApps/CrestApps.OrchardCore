@@ -67,6 +67,35 @@ public sealed class SurveyManagerTests : IAsyncLifetime
         Assert.True(survey.HasUnpublishedChanges);
     }
 
+    [Theory]
+    [InlineData(300)]
+    [InlineData(0)]
+    public async Task R6L22_SaveDraftAsync_WhenSomeoneElseSavedWithinTheSameSecond_ReturnsBusy(int milliseconds)
+    {
+        // Arrange: another author saves less than a second after the draft was loaded, or on the same clock tick.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _harness.Store.CreateSession();
+        var services = _harness.CreateServices(session);
+        var created = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Draft" }, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var survey = await services.Manager.FindByIdAsync(created.ItemId, cancellationToken);
+        var loaded = survey.DraftModifiedUtc;
+
+        _harness.Now = _harness.Now.AddMilliseconds(milliseconds);
+        Assert.Equal(SurveyErrorCode.None, await services.Manager.SaveDraftAsync(survey, AuthoringDefinitions.TwoPages(), loaded, cancellationToken));
+        var saved = survey.DraftModifiedUtc;
+
+        // Act
+        var result = await services.Manager.SaveDraftAsync(survey, AuthoringDefinitions.TwoPages(), loaded, cancellationToken);
+        var current = await services.Manager.SaveDraftAsync(survey, AuthoringDefinitions.TwoPages(), saved, cancellationToken);
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.Busy, result);
+        Assert.Equal(SurveyErrorCode.None, current);
+        Assert.True(saved > loaded);
+        Assert.True(survey.DraftModifiedUtc > saved);
+    }
+
     [Fact]
     public async Task DuplicateAsync_GivesNewIdsAndKeepsReferencesCodesAndTranslations()
     {

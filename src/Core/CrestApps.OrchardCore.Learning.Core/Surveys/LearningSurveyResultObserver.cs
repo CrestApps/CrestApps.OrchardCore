@@ -17,8 +17,11 @@ namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 /// <summary>
 /// Records the result of a course item when a learner's response to its survey changes: completed, graded, rescored or
 /// voided. The provider of the item's kind builds the result (a course survey is submitted; a quiz combines attempts).
-/// The result of an anonymous survey is recorded by the day only (the start of the day in the site's time zone), so the
-/// learner's progress never gives the exact time that would link them to their anonymous response.
+/// The result of an anonymous survey is its completion only, recorded by the day only (the start of the day in the site's
+/// time zone): no score or pass reaches the gradebook, and the learner's progress never gives the exact time that would
+/// link them to their anonymous response. An anonymous course survey's response names no enrollment, so the learner is
+/// the signed-in user of the request in which they completed it; every other event on it (graded, rescored, voided or
+/// deleted, by a grader, a workflow or a task) is someone else's request and changes nobody's progress.
 /// </summary>
 public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
 {
@@ -72,29 +75,37 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
 
     /// <inheritdoc />
     public Task CompletedAsync(SurveyResponseEventContext context)
-        => RecordAsync(context, deleted: false);
+        => RecordAsync(context, deleted: false, byRespondent: context is { CausedByWorkflow: false } && string.IsNullOrEmpty(context.ActorId));
 
     /// <inheritdoc />
     public Task GradedAsync(SurveyResponseEventContext context)
-        => RecordAsync(context, deleted: false);
+        => RecordAsync(context, deleted: false, byRespondent: false);
 
     /// <inheritdoc />
     public Task ScoreChangedAsync(SurveyResponseEventContext context)
-        => RecordAsync(context, deleted: false);
+        => RecordAsync(context, deleted: false, byRespondent: false);
 
     /// <inheritdoc />
     public Task VoidedAsync(SurveyResponseEventContext context)
-        => RecordAsync(context, deleted: false);
+        => RecordAsync(context, deleted: false, byRespondent: false);
 
     /// <inheritdoc />
     public Task DeletedAsync(SurveyResponseEventContext context)
-        => RecordAsync(context, deleted: true);
+        => RecordAsync(context, deleted: true, byRespondent: false);
 
-    private async Task RecordAsync(SurveyResponseEventContext context, bool deleted)
+    private async Task RecordAsync(SurveyResponseEventContext context, bool deleted, bool byRespondent)
     {
         var response = context?.Response;
 
         if (response is null || response.IsTest || response.Context is not { } responseContext)
+        {
+            return;
+        }
+
+        var courseContext = string.Equals(responseContext.Kind, LearningSurveyContexts.CourseKind, StringComparison.Ordinal);
+
+        // The learner of an anonymous course survey is known only in the request in which they completed it.
+        if (courseContext && !byRespondent)
         {
             return;
         }
@@ -141,10 +152,11 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
             return;
         }
 
-        // An anonymous survey's response keeps no enrollment; its completion reaches the progress by the day only.
-        if (context.Survey.Access?.Anonymity == AnonymityMode.Anonymous
-            || string.Equals(responseContext.Kind, LearningSurveyContexts.CourseKind, StringComparison.Ordinal))
+        // An anonymous survey's response keeps no enrollment; its completion reaches the progress by the day only, and
+        // nothing else: a score next to the learner's name would match the score shown next to the anonymous label.
+        if (context.Survey.Access?.Anonymity == AnonymityMode.Anonymous || courseContext)
         {
+            result = CompletionOnly(result);
             result.AnonymousDayUtc = await StartOfTodayUtcAsync();
         }
 
@@ -180,6 +192,29 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
         return version?.Definition ?? context.Version?.Definition;
     }
 
+    /// <summary>
+    /// Keeps only the completion of a result, for an anonymous survey: no score and no pass, and the work counts as handed
+    /// in and graded once a response is completed, because a later grade of an anonymous response reaches nobody.
+    /// </summary>
+    /// <param name="result">The result the item's provider built.</param>
+    /// <returns>The completion-only result.</returns>
+    public static CourseItemResult CompletionOnly(CourseItemResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        var done = result.Submitted || result.Graded;
+
+        return new CourseItemResult
+        {
+            ItemId = result.ItemId,
+            PassDecided = true,
+            CompletedWithoutPassDecision = done,
+            Submitted = done,
+            Graded = done,
+            Attempts = result.Attempts,
+        };
+    }
+
     private async Task<DateTime> StartOfTodayUtcAsync()
     {
         var site = await _siteService.GetSiteSettingsAsync();
@@ -211,7 +246,8 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
         }
 
         // An anonymous course survey keeps no enrollment: the learner who just completed it is the signed-in user of the
-        // request that completed it, and nothing that links them to the answers is stored.
+        // request that completed it (only a completion the respondent caused gets here), and nothing that links them to
+        // the answers is stored.
         if (string.Equals(responseContext.Kind, LearningSurveyContexts.CourseKind, StringComparison.Ordinal)
             && string.Equals(responseContext.Id, courseId, StringComparison.Ordinal))
         {

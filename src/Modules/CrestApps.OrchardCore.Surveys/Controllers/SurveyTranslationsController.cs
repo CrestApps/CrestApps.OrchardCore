@@ -117,9 +117,16 @@ public sealed class SurveyTranslationsController : Controller
             .Where(entry => !string.IsNullOrEmpty(entry?.Key))
             .Select(entry => new KeyValuePair<string, string>(entry.Key, html.Contains(entry.Key) && !string.IsNullOrWhiteSpace(entry.Translation) ? _htmlSanitizer.Sanitize(entry.Translation) : entry.Translation));
 
-        SurveyTranslations.Merge(draft, model.Culture, texts, overwrite: true);
+        // Only the texts that changed, and those the translator confirmed as current, stand for the current originals:
+        // saving the page leaves every other one out of date or to be checked.
+        var confirmed = (model.Entries ?? [])
+            .Where(entry => entry?.Confirmed == true && !string.IsNullOrEmpty(entry.Key))
+            .Select(entry => entry.Key)
+            .ToHashSet(StringComparer.Ordinal);
 
-        if (await _manager.SaveDraftAsync(survey, draft, model.DraftModifiedUtc, HttpContext.RequestAborted) == SurveyErrorCode.Busy)
+        SurveyTranslations.Merge(draft, model.Culture, texts, overwrite: true, confirmed);
+
+        if (await _manager.SaveDraftAsync(survey, draft, SurveyDraftStamp.ToUtc(model.DraftStamp), HttpContext.RequestAborted) == SurveyErrorCode.Busy)
         {
             await _notifier.ErrorAsync(H["Someone else changed this survey. Reload the page and try again."]);
         }
@@ -219,9 +226,15 @@ public sealed class SurveyTranslationsController : Controller
         // A text whose original in the file differs from the survey's now was translated before an author reworded it:
         // writing it would give respondents the old meaning, so it is left out and counted.
         var (current, changed) = SurveyTranslations.SplitByOriginal(draft, content.Texts);
+
+        // A text the file gives with the survey's current original was translated from it, so it is current.
+        var confirmed = current
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Original))
+            .Select(entry => entry.Key)
+            .ToHashSet(StringComparer.Ordinal);
         var written = SurveyTranslations.Merge(draft, culture, current
             .Where(entry => !string.IsNullOrWhiteSpace(entry.Translation))
-            .Select(entry => new KeyValuePair<string, string>(entry.Key, html.Contains(entry.Key) ? _htmlSanitizer.Sanitize(entry.Translation) : entry.Translation)));
+            .Select(entry => new KeyValuePair<string, string>(entry.Key, html.Contains(entry.Key) ? _htmlSanitizer.Sanitize(entry.Translation) : entry.Translation)), overwrite: true, confirmed);
 
         await _manager.SaveDraftAsync(survey, draft, cancellationToken: HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["{0} texts were imported into the draft.", written]);
@@ -244,7 +257,7 @@ public sealed class SurveyTranslationsController : Controller
             Survey = survey,
             Culture = culture,
             Cultures = cultures,
-            DraftModifiedUtc = survey.DraftModifiedUtc,
+            DraftStamp = SurveyDraftStamp.From(survey.DraftModifiedUtc),
         };
 
         foreach (var entry in SurveyTextCatalog.Describe(survey.Draft))

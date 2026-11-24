@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -39,13 +40,51 @@ public sealed class LearningSurveyAccessProvidersTests
         structure.Setup(service => service.GetCourseId(item)).Returns("course1");
         structure.Setup(service => service.IsCourseStaffAsync(UserId, "course1", It.IsAny<string[]>())).ReturnsAsync(true);
 
-        var provider = new LearningSurveyAccessProvider(learningSurveys.Object, structure.Object, Authorization(LearningPermissions.ManageOwnCourses));
+        var provider = new LearningSurveyAccessProvider(learningSurveys.Object, structure.Object, Authorization(LearningPermissions.ManageOwnCourses), [], Mock.Of<IServiceProvider>());
 
         // Act
         var granted = await provider.GrantsAsync(User(), OwnedSurvey(), operation, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(expected, granted);
+    }
+
+    [Theory]
+    // A quiz: voiding or deleting an attempt changes the grade, so an instructor needs Override grades.
+    [InlineData(SurveyKinds.Quiz, false, false, false)]
+    [InlineData(SurveyKinds.Quiz, false, true, true)]
+    // A course survey that gives no score stays with the instructors and assistants.
+    [InlineData(SurveyKinds.Survey, false, false, true)]
+    // A course survey that gives a score is graded like a quiz.
+    [InlineData(SurveyKinds.Survey, true, false, false)]
+    public async Task R6M7_AnInstructor_VoidsOrDeletesTheResponsesOfAGradedSurvey_OnlyWithOverrideGrades(string kind, bool scored, bool canOverride, bool expected)
+    {
+        // Arrange: instructor1 teaches the course of the item that owns the survey.
+        var item = new ContentItem { ContentItemId = "quiz1" };
+        var learningSurveys = Owned(true);
+        learningSurveys.Setup(service => service.FindOwnerItemAsync(It.IsAny<Survey>())).ReturnsAsync(item);
+
+        var structure = new Mock<ICourseStructureService>();
+        structure.Setup(service => service.GetCourseId(item)).Returns("course1");
+        structure.Setup(service => service.IsCourseStaffAsync(UserId, "course1", It.IsAny<string[]>())).ReturnsAsync(true);
+
+        var authorization = canOverride
+            ? Authorization(LearningPermissions.ManageOwnCourses, AssessmentPermissions.OverrideGrades)
+            : Authorization(LearningPermissions.ManageOwnCourses);
+        var provider = new LearningSurveyAccessProvider(learningSurveys.Object, structure.Object, authorization, [new AssessmentsScoreChangeCheck(learningSurveys.Object, authorization)], Mock.Of<IServiceProvider>());
+        var survey = OwnedSurvey();
+        survey.Kind = kind;
+        survey.Draft.Scoring.Enabled = scored;
+
+        // Act
+        var delete = await provider.GrantsAsync(User(), survey, SurveyOperation.DeleteResponses, TestContext.Current.CancellationToken);
+        var manage = await provider.GrantsAsync(User(), survey, SurveyOperation.Manage, TestContext.Current.CancellationToken);
+        var listed = await provider.ListGrantsAsync(User(), SurveyOperation.DeleteResponses, TestContext.Current.CancellationToken);
+
+        // Assert: the survey itself stays theirs to manage; the delete scope asks about each survey.
+        Assert.Equal(expected, delete);
+        Assert.True(manage);
+        Assert.Null(listed);
     }
 
     [Theory]
