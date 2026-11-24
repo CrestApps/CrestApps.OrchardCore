@@ -10,9 +10,9 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// reads it itself. <see cref="SurveysMigrations"/> asks for it when it adds the columns.
 /// </summary>
 /// <remarks>
-/// Each survey is saved as it was loaded, with YesSql's concurrency check (<see cref="SurveyStore.SaveUnchangedAsync"/>):
-/// when an author, a delete or a status change saves a survey of the page while the run holds it, the run's commit fails
-/// and writes nothing, rather than overwrite that save with the copy it loaded. The next run reads the page again.
+/// A survey is saved only when nobody saved it after the run read its index row (<see cref="SurveyUpgradePages.SaveUnchangedAsync"/>):
+/// when an author, a delete or a status change saves a survey of the page while the run holds it, the run leaves it as
+/// it is rather than overwrite that save with the copy it loaded; that save already filled the columns.
 /// </remarks>
 internal sealed class SurveyUpkeepReindexStep : IResumableStep
 {
@@ -42,5 +42,5 @@ internal sealed class SurveyUpkeepReindexStep : IResumableStep
     public Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
         => SurveyUpgradePages.RunAsync(
             context,
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _ => true, index => index.RetentionDays == null, save: _surveyStore.SaveUnchangedAsync, cancellationToken: cancellationToken));
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _ => true, index => index.RetentionDays == null, cancellationToken: cancellationToken));
 }

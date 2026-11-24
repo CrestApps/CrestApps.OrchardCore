@@ -35,22 +35,6 @@ public sealed class SurveyParticipationStore : DocumentCatalog<SurveyParticipati
     }
 
     /// <summary>
-    /// Saves a participation record again as loaded, with the checks of every save, and with YesSql's concurrency check: when another
-    /// save changed a participation record after it was loaded, the commit fails with a <see cref="ConcurrencyException"/> and writes
-    /// nothing, so a background rewrite (such as the anonymity upgrade step, while a completion counts on the same record) never overwrites it with the copy it loaded.
-    /// </summary>
-    /// <param name="record">The record, loaded in this session.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task.</returns>
-    public async ValueTask SaveUnchangedAsync(SurveyParticipation record, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(record);
-
-        await SavingAsync(record);
-        await Session.SaveAsync(record, checkConcurrency: true, collection: CollectionName, cancellationToken: cancellationToken);
-    }
-
-    /// <summary>
     /// Lists the participation rows of a respondent from a day on.
     /// </summary>
     /// <param name="surveyId">The survey.</param>

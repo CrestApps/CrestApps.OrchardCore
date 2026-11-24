@@ -12,10 +12,9 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// from the survey itself. <see cref="SurveysMigrations"/> asks for it when it adds the columns.
 /// </summary>
 /// <remarks>
-/// Each survey is saved as it was loaded, with YesSql's concurrency check (<see cref="SurveyStore.SaveUnchangedAsync"/>):
-/// when an author saves a survey of the page while the run holds it, the run's commit fails and writes nothing, rather
-/// than overwrite the edit with the copy it loaded. The next run reads the page again; the survey the author saved was
-/// reindexed by that save, so it is no longer listed.
+/// A survey is saved only when nobody saved it after the run read its index row (<see cref="SurveyUpgradePages.SaveUnchangedAsync"/>):
+/// when an author saves a survey of the page while the run holds it, the run leaves it as it is rather than overwrite
+/// the edit with the copy it loaded; the survey the author saved was reindexed by that save.
 /// </remarks>
 internal sealed class SurveysReindexStep : IResumableStep
 {
@@ -78,10 +77,7 @@ internal sealed class SurveysReindexStep : IResumableStep
 
         var ids = rows.Select(row => row.ItemId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
 
-        foreach (var survey in await _surveyStore.GetAsync(ids, cancellationToken))
-        {
-            await _surveyStore.SaveUnchangedAsync(survey, cancellationToken);
-        }
+        await SurveyUpgradePages.SaveUnchangedAsync(_session, _surveyStore, SurveysConstants.CollectionName, rows, await _surveyStore.GetAsync(ids, cancellationToken), cancellationToken);
 
         afterId = rows[^1].Id;
 
