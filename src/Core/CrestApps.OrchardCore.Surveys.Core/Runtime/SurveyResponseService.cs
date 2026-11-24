@@ -1007,9 +1007,11 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
     }
 
     // The accommodation of a response's respondent: the one of its user (the response's own, else the caller's), looked
-    // up now, so one granted while the response is in progress applies; else what the start granted, kept on the response,
-    // when no user can be looked up (an anonymous response submitted by the deadline task or upkeep) or the user's no
-    // longer matches (an anonymous response keeps a narrower context than its start was granted for).
+    // up now, so one granted while the response is in progress applies and one revoked or cut down no longer does (with a
+    // known user, finding none means none). What the start granted, kept on the response, applies only when no user can
+    // be looked up (an anonymous response submitted by the deadline task or upkeep), or when the lookup can't match it
+    // because the response keeps its context hidden (an anonymous response keeps the kind of an identifying context
+    // only, so an accommodation for that context can't be found again).
     private async Task<SurveyOverride> OverrideForAsync(Survey survey, SurveyResponse response, SurveyRespondentIdentity identity, CancellationToken cancellationToken)
     {
         if (response.IsTest)
@@ -1019,11 +1021,14 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
         var userId = response.UserId ?? identity?.UserId;
 
-        if (!string.IsNullOrEmpty(userId)
-            && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides
-            && await overrides.FindEffectiveAsync(survey.ItemId, userId, response.Context, cancellationToken) is { } found)
+        if (!string.IsNullOrEmpty(userId) && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides)
         {
-            return found;
+            var found = await overrides.FindEffectiveAsync(survey.ItemId, userId, response.Context, cancellationToken);
+
+            if (found is not null || !HasHiddenContext(survey, response))
+            {
+                return found;
+            }
         }
 
         return response.Accommodation is { } granted
@@ -1042,6 +1047,13 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         => surveyOverride is null || (surveyOverride.ClosesUtc is null && surveyOverride.ExtraAttempts <= 0)
             ? null
             : new SurveyResponseAccommodation { ClosesUtc = surveyOverride.ClosesUtc, ExtraAttempts = Math.Max(surveyOverride.ExtraAttempts, 0) };
+
+    // Whether a response keeps only the kind of its context (an anonymous survey's identifying context), so a lookup of
+    // its respondent's accommodations can't match one granted for that context.
+    private static bool HasHiddenContext(Survey survey, SurveyResponse response)
+        => response.Context is { } context
+            && string.Equals(context.Id, SurveyAnonymity.HiddenContextId, StringComparison.Ordinal)
+            && SurveyAnonymity.IsAnonymous(survey);
 
     /// <inheritdoc />
     public Task<SurveyResponseResult> ReopenAsync(string responseId, SurveyRespondentIdentity identity, CancellationToken cancellationToken = default)
