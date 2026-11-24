@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
 using CrestApps.OrchardCore.Outreach;
+using CrestApps.OrchardCore.Teams;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -38,5 +39,18 @@ using OrchardCore.Modules.Manifest;
     [
         MessagingConstants.Feature.Workspace,
         ContactCenterConstants.Feature.Queues,
+    ]
+)]
+
+[assembly: Feature(
+    Id = MessagingConstants.Feature.RoutingRules,
+    Name = "Omnichannel Messaging Routing Rules",
+    Description = "Assigns conversations nobody owns to agents by rules you define: when a contact starts a conversation or replies to one a workflow or broadcast started, or after the contact has waited, a rule gives it to an agent signed in to a queue, a member of a queue or of teams, a user in a role or a named user, by round robin or by the fewest open conversations.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        MessagingConstants.Feature.Workspace,
+        ContactCenterConstants.Feature.Queues,
+        TeamsConstants.Features.Teams,
     ]
 )]

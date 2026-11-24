@@ -26,6 +26,13 @@ public static class MessagingConstants
         public const string RoutedDistribution = "CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution";
 
         /// <summary>
+        /// The routing rules feature: admin-defined rules that assign a conversation nobody owns, such as one a
+        /// workflow started when the contact replies, to an agent picked from a queue, teams, roles or named users by
+        /// round robin or load.
+        /// </summary>
+        public const string RoutingRules = "CrestApps.OrchardCore.Omnichannel.Messaging.RoutingRules";
+
+        /// <summary>
         /// The SMS channel feature: sends and receives text messages in the messaging workspace.
         /// </summary>
         public const string Sms = "CrestApps.OrchardCore.Omnichannel.Messaging.Sms";

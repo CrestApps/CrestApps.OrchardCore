@@ -144,12 +144,25 @@ public sealed class ThreadTimelineTests
         Assert.Equal("Transferred from Ann &lt;Lead&gt; to the R&amp;D queue", sentence);
     }
 
+    // A routing rule's assignment names the agent and the rule, so an agent can tell why the thread is theirs.
+    [Fact]
+    public void Describe_ARoutedEntry_NamesTheAgentAndTheRule()
+    {
+        Assert.Equal(
+            "Assigned to Bea by the routing rule Lead replies",
+            Describe(new MessagingConversationEvent { Kind = MessagingConversationEventKind.Routed, ToAgentId = "agent-b", ToName = "Bea", RuleName = "Lead replies" }));
+        Assert.Equal(
+            "Assigned to an agent by a routing rule",
+            Describe(new MessagingConversationEvent { Kind = MessagingConversationEventKind.Routed }));
+        Assert.Equal("Transferred to Bea", Describe(new MessagingConversationEvent { ToAgentId = "agent-b", ToName = "Bea" }));
+    }
+
     // Renders the sentence the way the view writes it.
     private static string Describe(MessagingConversationEvent entry)
     {
         using var writer = new StringWriter();
 
-        ThreadTimeline.DescribeTransfer(entry, new PassThroughHtmlLocalizer()).WriteTo(writer, HtmlEncoder.Default);
+        ThreadTimeline.Describe(entry, new PassThroughHtmlLocalizer()).WriteTo(writer, HtmlEncoder.Default);
 
         return writer.ToString();
     }

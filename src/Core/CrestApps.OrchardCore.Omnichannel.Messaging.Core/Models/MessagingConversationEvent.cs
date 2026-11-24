@@ -9,6 +9,11 @@ public enum MessagingConversationEventKind
     /// The conversation was handed to another person, or sent back to a queue's shared pool.
     /// </summary>
     Transferred,
+
+    /// <summary>
+    /// A routing rule gave the conversation, which nobody owned, to an agent.
+    /// </summary>
+    Routed,
 }
 
 /// <summary>
@@ -70,4 +75,10 @@ public sealed class MessagingConversationEvent
     /// never sent to the customer.
     /// </summary>
     public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the routing rule that assigned the conversation, for a
+    /// <see cref="MessagingConversationEventKind.Routed"/> entry.
+    /// </summary>
+    public string RuleName { get; set; }
 }
