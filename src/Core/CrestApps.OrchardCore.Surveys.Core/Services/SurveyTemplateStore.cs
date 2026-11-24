@@ -33,6 +33,22 @@ public sealed class SurveyTemplateStore : DocumentCatalog<SurveyTemplate, Survey
         return base.SavingAsync(record);
     }
 
+    /// <summary>
+    /// Saves a template again as loaded, with the checks of every save, and with YesSql's concurrency check: when another
+    /// save changed a template after it was loaded, the commit fails with a <see cref="ConcurrencyException"/> and writes
+    /// nothing, so a background rewrite (such as the content sanitizing step) never overwrites it with the copy it loaded.
+    /// </summary>
+    /// <param name="record">The record, loaded in this session.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async ValueTask SaveUnchangedAsync(SurveyTemplate record, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        await SavingAsync(record);
+        await Session.SaveAsync(record, checkConcurrency: true, collection: CollectionName, cancellationToken: cancellationToken);
+    }
+
     /// <inheritdoc />
     public async ValueTask<SurveyTemplate> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {

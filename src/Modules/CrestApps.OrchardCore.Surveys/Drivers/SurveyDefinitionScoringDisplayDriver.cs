@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -50,7 +51,7 @@ internal sealed class SurveyDefinitionScoringDisplayDriver : DisplayDriver<Surve
         definition.Scoring.RoundingDecimals = Math.Clamp(definition.Scoring.RoundingDecimals, 0, 6);
         definition.Timing = model.Timing ?? new SurveyTimingSettings();
         definition.Timing.TimeLimitMinutes = definition.Timing.TimeLimitMinutes is > 0 ? definition.Timing.TimeLimitMinutes : null;
-        definition.Timing.GraceSeconds = Math.Clamp(definition.Timing.GraceSeconds, 0, 300);
+        definition.Timing.GraceSeconds = Math.Clamp(definition.Timing.GraceSeconds, 0, SurveyAvailability.MaxGraceSeconds);
         definition.Review = new SurveyReviewSettings
         {
             ResultsVisibility = model.ResultsVisibility,
