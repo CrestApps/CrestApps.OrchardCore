@@ -56,6 +56,61 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
     }
 
     [Fact]
+    public void SurveysCode_DoesNotReadTheUnformattedValueOfAnHtmlLocalizedStringWithArguments()
+    {
+        // Arrange: in C#, H is an IHtmlLocalizer, whose H["...{0}...", args].Value is the unformatted string as well.
+        var repositoryRoot = FindRepositoryRoot();
+        var violations = new List<string>();
+        var scannedFileCount = 0;
+
+        // Act
+        foreach (var root in new[] { Path.Combine(repositoryRoot, "src", "Modules"), Path.Combine(repositoryRoot, "src", "Core") })
+        {
+            foreach (var directory in Directory.EnumerateDirectories(root, "CrestApps.OrchardCore.Surveys*"))
+            {
+                foreach (var fullPath in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+                {
+                    if (IsBuildOutput(fullPath))
+                    {
+                        continue;
+                    }
+
+                    scannedFileCount++;
+
+                    var relativePath = Path.GetRelativePath(repositoryRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/');
+
+                    foreach (var line in FindFormattedValueReads(File.ReadAllText(fullPath), "H"))
+                    {
+                        violations.Add($"{relativePath}:{line}");
+                    }
+                }
+            }
+        }
+
+        // Assert
+        Assert.True(scannedFileCount > 0, "No Surveys source files were found, so the guard would pass vacuously.");
+        Assert.True(
+            violations.Count == 0,
+            "These files read .Value from H[\"...{0}...\", args], which is the unformatted string, so the user sees a " +
+            "literal placeholder. Use H.GetString(\"...\", args).Value for a plain string: " +
+            $"{string.Join(", ", violations)}.");
+    }
+
+    [Theory]
+    [InlineData("""ModelState.AddModelError(key, H["{0} is not an e-mail address.", email].Value);""", 1)]
+    [InlineData("""ModelState.AddModelError(key, H.GetString("{0} is not an e-mail address.", email).Value);""", 0)]
+    [InlineData("""await _notifier.SuccessAsync(H["{0} people were invited.", count]);""", 0)]
+    [InlineData("""var html = OH["{0} people", count].Value;""", 0)]
+    public void FindFormattedValueReads_OfTheHtmlLocalizer_FlagsOnlyValueReadsWithArguments(string source, int expectedCount)
+    {
+        // Act
+        var lines = FindFormattedValueReads(source, "H");
+
+        // Assert
+        Assert.Equal(expectedCount, lines.Count);
+    }
+
+    [Fact]
     public void Views_DoNotWriteALocalizedStringWithPlaceholdersButNoArguments()
     {
         // Arrange
@@ -129,8 +184,8 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
     /// with string and bracket awareness, so nested calls such as <c>T["(untitled)"].Value</c> or <c>items["key"]</c>
     /// inside the arguments neither end the indexer early nor count on their own.
     /// </summary>
-    private static List<int> FindFormattedValueReads(string source)
-        => FindIndexers(source, (hasArguments, readsValue, _) => hasArguments && readsValue);
+    private static List<int> FindFormattedValueReads(string source, string localizer = "T")
+        => FindIndexers(source, (hasArguments, readsValue, _) => hasArguments && readsValue, localizer);
 
     /// <summary>
     /// Returns the 1-based line of every <c>@T["...{N}..."]</c> or <c>@(T["...{N}..."])</c> with no arguments: written
@@ -139,18 +194,19 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
     private static List<int> FindPlaceholdersWithoutArguments(string source)
         => FindIndexers(source, (hasArguments, readsValue, written) => !hasArguments && !readsValue && written);
 
-    private static List<int> FindIndexers(string source, Func<bool, bool, bool, bool> matches)
+    private static List<int> FindIndexers(string source, Func<bool, bool, bool, bool> matches, string localizer = "T")
     {
         var lines = new List<int>();
+        var opening = localizer + "[";
 
-        for (var index = source.IndexOf("T[", StringComparison.Ordinal); index >= 0; index = source.IndexOf("T[", index + 1, StringComparison.Ordinal))
+        for (var index = source.IndexOf(opening, StringComparison.Ordinal); index >= 0; index = source.IndexOf(opening, index + 1, StringComparison.Ordinal))
         {
             if (index > 0 && (char.IsLetterOrDigit(source[index - 1]) || source[index - 1] == '_' || source[index - 1] == '.'))
             {
                 continue;
             }
 
-            var position = SkipWhitespace(source, index + 2);
+            var position = SkipWhitespace(source, index + opening.Length);
 
             if (!TryReadStringLiteral(source, ref position, out var name) || !_placeholderRegex.IsMatch(name))
             {

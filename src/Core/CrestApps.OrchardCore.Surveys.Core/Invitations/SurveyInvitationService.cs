@@ -86,6 +86,11 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (IsEmail(request))
+        {
+            await EnterEmailSendAsync(cancellationToken);
+        }
+
         var result = await CreateAsync(request, requireRecipient: true, cancellationToken);
 
         if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
@@ -114,6 +119,11 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     public async Task<IReadOnlyList<SurveyInvitationResult>> InviteManyAsync(string surveyId, string collectorId, IReadOnlyCollection<SurveyInvitationRequest> requests, bool send, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(requests);
+
+        if (send && requests.Any(request => request is not null && IsEmail(request)))
+        {
+            await EnterEmailSendAsync(cancellationToken);
+        }
 
         var survey = await FindLiveSurveyAsync(surveyId, cancellationToken);
         var collector = survey is null ? null : await FindCollectorAsync(survey, collectorId, cancellationToken);
@@ -278,6 +288,8 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <returns>How many were sent.</returns>
     public async Task<int> SendPendingAsync(string collectorId, CancellationToken cancellationToken = default)
     {
+        await EnterEmailSendAsync(cancellationToken);
+
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
         var survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
 
@@ -304,14 +316,20 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <summary>
     /// Sends the reminders that are due for a collector: invitations sent, opened or started but not completed, that
     /// have had fewer reminders than the collector allows and none for the collector's interval. First sends that were
-    /// held back (see <see cref="SurveyInvitationHold"/>) are sent first.
+    /// held back (see <see cref="SurveyInvitationHold"/>) are sent first, for as long as the send may e-mail.
     /// </summary>
     /// <param name="collectorId">The invitation collector.</param>
-    /// <param name="force">Whether to remind every open invitation now, ignoring the interval (a manual resend).</param>
+    /// <param name="force">Whether to remind every open invitation now, ignoring the interval (a manual resend). An
+    /// invitation already reminded today, in the site's time zone, is left out, so a resend that runs twice (a double
+    /// click, or two people at once) reminds each person once.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>How many reminders, and invitations held back earlier, were sent.</returns>
     public async Task<int> RemindAsync(string collectorId, bool force, CancellationToken cancellationToken = default)
     {
+        // The day's e-mail lock comes before any invitation is read, so another send of the list that is still going out
+        // has saved what it sent before this one reads it.
+        await EnterEmailSendAsync(cancellationToken);
+
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
         var survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
 
@@ -331,6 +349,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         }
 
         var now = _clock.UtcNow;
+        DateTime? remindedToday = force ? await _emailLimit.TodayStartUtcAsync() : null;
 
         // Expired invitations leave the open ones first, even when no reminder is due.
         await _invitationStore.VisitExpiredAsync(collector.ItemId, _remindable, now, async invitation =>
@@ -359,6 +378,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 return;
             }
 
+            // A manual resend reminds an invitation at most once a day: a second resend (or one that waited for another
+            // to save) finds it reminded already. So the daily limit, which keeps an invitation's last reminder time
+            // only, counts every reminder.
+            if (remindedToday is { } todayStart && invitation.LastReminderUtc is { } lastReminder && lastReminder >= todayStart)
+            {
+                return;
+            }
+
             // An anonymous response never names its invitation, so its completion is read from the participation
             // count of the invitation's pseudonymous key instead; such an invitation gets no more reminders.
             if (await IsAnsweredAnonymouslyAsync(survey, invitation, cancellationToken))
@@ -377,17 +404,29 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             }
         }
 
-        if (force)
-        {
-            // A manual resend reminds every open invitation of the list, a page at a time.
-            await _invitationStore.VisitByCollectorAsync(collector.ItemId, _remindable, RemindOneAsync, SurveysConstants.PageSize, cancellationToken);
-        }
-        else
-        {
-            // Only the invitations the index says are due are read, so a large list with nothing due costs one query.
-            var lastContactBefore = now.AddDays(-Math.Max(settings.ReminderEveryDays, 1));
+        // E-mail invitations first, while the send may e-mail: that walk ends as soon as no more e-mail of this send goes
+        // out (today's limit, a busy lock, the sending window or a failing mail server), so nothing is read, re-issued or
+        // looked up for reminders that would only wait for the next run. Then the invitations of users, whose
+        // notifications the limit doesn't count.
+        var canEmail = CanEmail;
+        bool EmailsStopped() => !canEmail || _emailLimit.IsClosed;
 
-            await _invitationStore.VisitDueForReminderAsync(collector.ItemId, _remindable, lastContactBefore, settings.ReminderCount, RemindOneAsync, SurveysConstants.PageSize, cancellationToken);
+        foreach (var emails in new[] { true, false })
+        {
+            var stop = emails ? EmailsStopped : (Func<bool>)null;
+
+            if (force)
+            {
+                // A manual resend reminds every open invitation of the list, a page at a time.
+                await _invitationStore.VisitByCollectorAsync(collector.ItemId, _remindable, RemindOneAsync, emails, stop, SurveysConstants.PageSize, cancellationToken);
+            }
+            else
+            {
+                // Only the invitations the index says are due are read, so a large list with nothing due costs one query.
+                var lastContactBefore = now.AddDays(-Math.Max(settings.ReminderEveryDays, 1));
+
+                await _invitationStore.VisitDueForReminderAsync(collector.ItemId, _remindable, lastContactBefore, settings.ReminderCount, RemindOneAsync, emails, stop, SurveysConstants.PageSize, cancellationToken);
+            }
         }
 
         return sent;
@@ -614,10 +653,21 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         // A send that may work later (the mail server failed or is down) keeps a first send pending and held, for the
         // hourly reminder task; one that failed MaxSendAttempts times is marked bounced, so it stops filling the task's
-        // held reads. A reminder simply stays due.
+        // held reads. A reminder simply stays due, up to as many tries.
         if (delivery == SurveyInvitationDelivery.RetryLater)
         {
-            await FailAsync(invitation, isReminder, cancellationToken);
+            // After an e-mail fails, the send's later e-mails are held without being tried, so a mail outage costs one
+            // try a run rather than one per invitation. The try counts toward the attempts only when the mail server took
+            // an earlier e-mail of this send, so the failure is this address's; when nothing of the send got through, the
+            // server may be down, and no invitation uses up its attempts (or bounces) on an outage.
+            var countAttempt = !isEmail || _emailLimit.HasSent;
+
+            if (isEmail)
+            {
+                _emailLimit.HoldAfterMailServerFailure();
+            }
+
+            await FailAsync(invitation, isReminder, countAttempt, cancellationToken);
 
             return false;
         }
@@ -669,40 +719,65 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
     private async Task<int> SendHeldAsync(Survey survey, SurveyCollector collector, HashSet<string> sentIds, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
-        var sent = 0;
-
-        // Read by the indexed hold mark, so held invitations are found however many never-sent ones the collector has.
-        var held = await _invitationStore.ListHeldByCollectorAsync(collector.ItemId, SurveysConstants.PageSize, cancellationToken);
-
-        // Held invitations are e-mails; while today's limit is still reached (or its lock is busy) they all wait for
-        // another run.
-        if (held.Count == 0 || _senders.LastOrDefault() is not { CanSendEmail: true } || !await _emailLimit.CanSendAsync(cancellationToken))
+        // Held invitations are e-mails; while today's limit is still reached (or its lock is busy, or the mail server
+        // failed) they all wait for another run.
+        if (!CanEmail || _emailLimit.IsClosed)
         {
             return 0;
         }
 
-        foreach (var invitation in held)
-        {
-            if (invitation.ExpiresUtc is { } expires && expires <= now)
+        var now = _clock.UtcNow;
+        var sent = 0;
+
+        // Read by the indexed hold mark, so held invitations are found however many never-sent ones the collector has, a
+        // page at a time for as long as the send may e-mail: a large held list goes out in one run when the limit and the
+        // sending window allow, not one page an hour.
+        await _invitationStore.VisitHeldByCollectorAsync(
+            collector.ItemId,
+            async invitation =>
             {
-                invitation.Status = SurveyInvitationStatus.Expired;
-                invitation.Properties.Remove(nameof(SurveyInvitationHold));
-                await _invitationStore.UpdateAsync(invitation, cancellationToken);
+                if (invitation.ExpiresUtc is { } expires && expires <= now)
+                {
+                    invitation.Status = SurveyInvitationStatus.Expired;
+                    invitation.Properties.Remove(nameof(SurveyInvitationHold));
+                    await _invitationStore.UpdateAsync(invitation, cancellationToken);
 
-                continue;
-            }
+                    return;
+                }
 
-            var link = await _links.BuildAsync(await ReissueTokenAsync(survey, invitation, cancellationToken));
+                var link = await _links.BuildAsync(await ReissueTokenAsync(survey, invitation, cancellationToken));
 
-            if (await DeliverAsync(survey, collector, invitation, link, isReminder: false, cancellationToken))
-            {
-                sentIds.Add(invitation.ItemId);
-                sent++;
-            }
-        }
+                if (await DeliverAsync(survey, collector, invitation, link, isReminder: false, cancellationToken))
+                {
+                    sentIds.Add(invitation.ItemId);
+                    sent++;
+                }
+            },
+            stop: () => _emailLimit.IsClosed,
+            SurveysConstants.PageSize,
+            cancellationToken);
 
         return sent;
+    }
+
+    // Whether the site can send e-mail invitations now (an e-mail service is turned on).
+    private bool CanEmail
+        => _senders.LastOrDefault() is { CanSendEmail: true };
+
+    // Whether a request invites an e-mail address rather than a user.
+    private static bool IsEmail(SurveyInvitationRequest request)
+        => string.IsNullOrEmpty(request.UserId) && !string.IsNullOrWhiteSpace(request.Email);
+
+    // Takes the site's daily e-mail lock (see SurveyInvitationEmailLimit) before the invitations to e-mail are read, so
+    // they are read after every other sender of the day saved its sends: an invitation another send just sent or reminded
+    // is read as sent or reminded, and isn't e-mailed again. Without an e-mail service nothing is e-mailed, and the lock
+    // isn't taken.
+    private async Task EnterEmailSendAsync(CancellationToken cancellationToken)
+    {
+        if (CanEmail && !_emailLimit.IsClosed)
+        {
+            await _emailLimit.CanSendAsync(cancellationToken);
+        }
     }
 
     private async Task HoldAsync(SurveyInvitation invitation, bool isReminder, CancellationToken cancellationToken)
@@ -717,16 +792,27 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         await _invitationStore.UpdateAsync(invitation, cancellationToken);
     }
 
-    private async Task FailAsync(SurveyInvitation invitation, bool isReminder, CancellationToken cancellationToken)
+    // Records a send the mail server failed. The invitation is saved either way, with the time of the failure: saving
+    // writes its index row again under a new id, so the next run tries it after the others and an address that keeps
+    // failing never stands first in line. Only a counted attempt uses up the invitation's tries.
+    private async Task FailAsync(SurveyInvitation invitation, bool isReminder, bool countAttempt, CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
+
         if (isReminder)
         {
             // A reminder the mail server refused stays due for the next run, up to MaxSendAttempts tries; then the
             // invitation gets no more reminders, so one bad address isn't retried every hour until it expires.
             var failures = invitation.TryGet<SurveyInvitationReminderFailures>(out var stored) && stored is not null ? stored : new SurveyInvitationReminderFailures();
 
-            failures.FailedAttempts++;
-            failures.Stopped = failures.FailedAttempts >= SurveyInvitationHold.MaxSendAttempts;
+            failures.LastFailedUtc = now;
+
+            if (countAttempt)
+            {
+                failures.FailedAttempts++;
+                failures.Stopped = failures.FailedAttempts >= SurveyInvitationHold.MaxSendAttempts;
+            }
+
             invitation.Put(failures);
             await _invitationStore.UpdateAsync(invitation, cancellationToken);
 
@@ -738,9 +824,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return;
         }
 
-        var hold = invitation.TryGet<SurveyInvitationHold>(out var held) && held is not null ? held : new SurveyInvitationHold { HeldUtc = _clock.UtcNow };
+        var hold = invitation.TryGet<SurveyInvitationHold>(out var held) && held is not null ? held : new SurveyInvitationHold { HeldUtc = now };
 
-        hold.FailedAttempts++;
+        hold.LastFailedUtc = now;
+
+        if (countAttempt)
+        {
+            hold.FailedAttempts++;
+        }
 
         if (hold.FailedAttempts >= SurveyInvitationHold.MaxSendAttempts)
         {

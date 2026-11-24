@@ -20,7 +20,13 @@ public sealed class SurveyInvitationHold
 
     /// <summary>
     /// Gets or sets how many times sending it failed at the mail server; at <see cref="MaxSendAttempts"/> it is marked
-    /// bounced.
+    /// bounced. A failure counts only when the mail server took another e-mail of the same send, so an outage, which
+    /// fails every e-mail, uses up no attempts.
     /// </summary>
     public int FailedAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets when sending it last failed at the mail server, in UTC, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? LastFailedUtc { get; set; }
 }

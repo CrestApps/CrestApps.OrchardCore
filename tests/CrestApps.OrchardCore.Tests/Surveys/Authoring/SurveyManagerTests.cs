@@ -372,6 +372,48 @@ public sealed class SurveyManagerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task DeleteSurveyAsync_AResponseThatArrivesBeforeTheMark_StopsTheDelete_BeforeAnythingIsRemoved()
+    {
+        // Arrange: a survey with an invitation, an accommodation and a participation record; a real response comes in
+        // right after the delete's first count, before the survey is marked (R6-L11).
+        var cancellationToken = TestContext.Current.CancellationToken;
+        string surveyId;
+
+        await using (var session = _harness.Store.CreateSession())
+        {
+            surveyId = (await _harness.CreateServices(session).Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Raced" }, cancellationToken)).ItemId;
+            await session.SaveAsync(new SurveyInvitation { ItemId = "invraced", SurveyId = surveyId, Email = "raced@example.com" }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new SurveyOverride { ItemId = "ovraced", SurveyId = surveyId, UserId = "u1", Reason = "Accommodation" }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new SurveyParticipation { ItemId = "paraced", SurveyId = surveyId, RespondentKey = "u:u1", Day = new DateOnly(2026, 11, 20) }, false, SurveysConstants.CollectionName, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+        }
+
+        // Act
+        SurveyErrorCode result;
+
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var services = _harness.CreateServices(session, responseQueries: inner => new ResponseArrivesAfterFirstCount(inner, session, surveyId));
+
+            result = await services.Manager.DeleteSurveyAsync(surveyId, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+        }
+
+        // Assert: the delete stopped, and nothing of the survey was removed.
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var survey = await _harness.CreateServices(session).Manager.FindByIdAsync(surveyId, cancellationToken);
+
+            Assert.Equal(SurveyErrorCode.HasResponses, result);
+            Assert.NotNull(survey);
+            Assert.Null(survey.DeletingUtc);
+            Assert.Equal(1, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyInvitationIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+            Assert.Equal(1, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyOverrideIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+            Assert.Equal(1, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyParticipationIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+        }
+    }
+
+    [Fact]
     public async Task DeleteSurveyAsync_WithResponses_KeepsItsInvitations()
     {
         // Arrange
@@ -389,5 +431,41 @@ public sealed class SurveyManagerTests : IAsyncLifetime
         // Assert
         Assert.Equal(SurveyErrorCode.HasResponses, result);
         Assert.Equal(1, await session.QueryIndex<CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyInvitationIndex>(index => index.SurveyId == survey.ItemId, SurveysConstants.CollectionName).CountAsync(cancellationToken));
+    }
+
+    // Counts no response the first time, as a delete's first count did, and a real response is saved right then, so it is
+    // committed with the delete's mark.
+    private sealed class ResponseArrivesAfterFirstCount : ISurveyResponseQueries
+    {
+        private readonly ISurveyResponseQueries _inner;
+        private readonly ISession _session;
+        private readonly string _surveyId;
+        private bool _arrived;
+
+        public ResponseArrivesAfterFirstCount(ISurveyResponseQueries inner, ISession session, string surveyId)
+        {
+            _inner = inner;
+            _session = session;
+            _surveyId = surveyId;
+        }
+
+        public Task<SurveyResponse> FindByIdAsync(string responseId, CancellationToken cancellationToken = default)
+            => _inner.FindByIdAsync(responseId, cancellationToken);
+
+        public Task<(int Count, IReadOnlyList<SurveyResponse> Items)> ListAsync(SurveyResponseQuery query, CancellationToken cancellationToken = default)
+            => _inner.ListAsync(query, cancellationToken);
+
+        public async Task<int> CountForSurveyAsync(string surveyId, CancellationToken cancellationToken = default)
+        {
+            var count = await _inner.CountForSurveyAsync(surveyId, cancellationToken);
+
+            if (!_arrived && surveyId == _surveyId)
+            {
+                _arrived = true;
+                await _session.SaveAsync(new SurveyResponse { ItemId = "arrived", SurveyId = surveyId, StartedUtc = new DateTime(2026, 11, 20, 9, 0, 0, DateTimeKind.Utc) }, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+
+            return count;
+        }
     }
 }

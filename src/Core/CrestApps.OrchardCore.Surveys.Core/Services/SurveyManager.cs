@@ -255,6 +255,15 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
             await MarkDeletingAsync(surveyId, deleting: true, cancellationToken);
         }
 
+        // A real response that started between the count above and the mark stops the delete before anything is removed,
+        // so a stopped delete has removed none of the survey's invitations, accommodations, participation or counters.
+        if (await HasResponsesSinceMarkAsync(survey.ItemId, cancellationToken))
+        {
+            await MarkDeletingAsync(surveyId, deleting: false, cancellationToken);
+
+            return SurveyErrorCode.HasResponses;
+        }
+
         // The records that hang off the survey go next, a batch at a time, each committed on its own: invitations (with
         // e-mail addresses and names), accommodations, participation, counters, and test responses with their files.
         await PurgeAsync(survey.ItemId, cancellationToken);
@@ -267,7 +276,8 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
             return SurveyErrorCode.NotFound;
         }
 
-        // A real response that started just before the mark would be orphaned: the delete stops, and the survey stays.
+        // A real response whose start was already past the mark check when the mark committed would be orphaned: the delete
+        // stops, and the survey stays.
         if (await _responseQueries.CountForSurveyAsync(survey.ItemId, cancellationToken) > 0)
         {
             await MarkDeletingAsync(surveyId, deleting: false, cancellationToken);
@@ -355,6 +365,23 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         }
 
         await session.SaveChangesAsync(cancellationToken);
+    }
+
+    // Counts the survey's real responses again once the mark is committed: in a child scope inside a shell, so the count
+    // reads what other requests committed since this scope's first read, else on this scope's session (tools and tests).
+    private async Task<bool> HasResponsesSinceMarkAsync(string surveyId, CancellationToken cancellationToken)
+    {
+        if (ShellScope.Current is null)
+        {
+            return await _responseQueries.CountForSurveyAsync(surveyId, cancellationToken) > 0;
+        }
+
+        var count = 0;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+            count = await scope.ServiceProvider.GetRequiredService<ISurveyResponseQueries>().CountForSurveyAsync(surveyId, cancellationToken));
+
+        return count > 0;
     }
 
     private async Task PurgeAsync(string surveyId, CancellationToken cancellationToken)

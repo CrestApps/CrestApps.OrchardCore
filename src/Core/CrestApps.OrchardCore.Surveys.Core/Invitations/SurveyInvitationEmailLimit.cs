@@ -26,6 +26,10 @@ namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
 /// scope far more than the rest of its work and its save once the window closes, so the lock doesn't expire while sent
 /// e-mails are still unsaved.
 /// </para>
+/// <para>
+/// <see cref="SurveyInvitationService"/> takes the lock before it reads the invitations it is about to e-mail, so it reads
+/// them after every other sender of the day saved: two senders of one list never e-mail the same people.
+/// </para>
 /// </summary>
 public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
 {
@@ -65,6 +69,8 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
     private bool _lockUnavailable;
     private bool _holdAll;
     private bool _windowClosed;
+    private bool _mailServerFailed;
+    private int _sentByScope;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationEmailLimit"/> class.
@@ -95,14 +101,29 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
         => _lockUnavailable;
 
     /// <summary>
+    /// Gets whether the mail server failed an e-mail of the scope (<see cref="HoldAfterMailServerFailure"/>), so the
+    /// scope's later e-mails are held for a later run.
+    /// </summary>
+    public bool MailServerFailed
+        => _mailServerFailed;
+
+    /// <summary>
+    /// Gets whether the scope sent at least one e-mail (see <see cref="AddSent"/>): the mail server was taking its
+    /// e-mails.
+    /// </summary>
+    public bool HasSent
+        => _sentByScope > 0;
+
+    /// <summary>
     /// Gets whether no more e-mail of the scope goes out, known without asking the store or the lock: the lock couldn't
-    /// be had, the e-mails are held (<see cref="HoldEmails"/>), the sending window passed, or today's limit is reached.
+    /// be had, the e-mails are held (<see cref="HoldEmails"/>), the mail server failed one of them, the sending window
+    /// passed, or today's limit is reached.
     /// </summary>
     public bool IsClosed
     {
         get
         {
-            if (_holdAll || _lockUnavailable || _windowClosed)
+            if (_holdAll || _lockUnavailable || _windowClosed || _mailServerFailed)
             {
                 return true;
             }
@@ -128,6 +149,27 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
         => _holdAll = true;
 
     /// <summary>
+    /// Holds every later e-mail of the scope after the mail server failed one (<see cref="SurveyInvitationDelivery.RetryLater"/>):
+    /// while it is down, a batch tries one e-mail, not every one, and no invitation uses up its attempts on an outage.
+    /// </summary>
+    public void HoldAfterMailServerFailure()
+        => _mailServerFailed = true;
+
+    /// <summary>
+    /// Gets the start of today in the site's time zone, as UTC: the day the limit counts.
+    /// </summary>
+    /// <returns>The start of the site's day, in UTC.</returns>
+    public async Task<DateTime> TodayStartUtcAsync()
+    {
+        if (_timeZoneId is null)
+        {
+            await ReadSettingsAsync();
+        }
+
+        return SurveyInvitationService.DayStartUtc(_clock.UtcNow, _timeZoneId);
+    }
+
+    /// <summary>
     /// Gets whether one more e-mail may go out now. Takes the lock of the site's day first when the scope doesn't hold
     /// it yet; when the lock can't be taken in time, no later e-mail of the scope goes out, without waiting again.
     /// </summary>
@@ -135,7 +177,7 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
     /// <returns><see langword="true"/> when the e-mail may be sent; call <see cref="AddSent"/> once it went out.</returns>
     public async Task<bool> CanSendAsync(CancellationToken cancellationToken = default)
     {
-        if (_holdAll || _lockUnavailable || _windowClosed)
+        if (_holdAll || _lockUnavailable || _windowClosed || _mailServerFailed)
         {
             return false;
         }
@@ -195,7 +237,10 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
     /// Adds an e-mail that went out to the batch's count.
     /// </summary>
     public void AddSent()
-        => _emailed++;
+    {
+        _emailed++;
+        _sentByScope++;
+    }
 
     /// <summary>
     /// Releases the locks the scope holds. Called once the scope's changes are saved.

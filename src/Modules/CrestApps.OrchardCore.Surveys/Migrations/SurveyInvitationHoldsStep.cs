@@ -59,6 +59,7 @@ internal sealed class SurveyInvitationHoldsStep : IResumableStep
                 IsHeld,
                 index => index.Status == pending && index.Held == false,
                 PageSize,
+                save: _invitationStore.SaveUnchangedAsync,
                 cancellationToken: cancellationToken));
     }
 

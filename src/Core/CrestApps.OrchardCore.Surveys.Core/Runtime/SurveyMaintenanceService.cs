@@ -59,6 +59,11 @@ public sealed class SurveyMaintenanceService
     private readonly ILogger _logger;
     private readonly IEnumerable<ISurveyOverrideService> _overrides;
 
+    // The responses the run tried. Saving a response (counting its failure, say) writes its index row again under a new,
+    // larger id, so a later page of a walk, or a later step, could read it again: each response is tried once per run
+    // (one a step skipped, as not applying to it yet, stays open to the other steps), so one failure is never counted twice.
+    private readonly HashSet<string> _tried = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyMaintenanceService"/> class.
     /// </summary>
@@ -110,6 +115,8 @@ public sealed class SurveyMaintenanceService
     public async Task RunAsync(int batchSize = SurveysConstants.PageSize, CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
+        _tried.Clear();
+
         // The surveys read in the run, each once. A step finds the surveys it needs by the survey index and reads only
         // those, never every survey of the site.
         var surveys = new Dictionary<string, Survey>(StringComparer.Ordinal);
@@ -756,12 +763,18 @@ public sealed class SurveyMaintenanceService
 
                 after = row;
 
-                if (row.SurveyId is not null && leftOut.Contains(row.SurveyId))
+                if ((row.SurveyId is not null && leftOut.Contains(row.SurveyId)) || (row.ItemId is not null && _tried.Contains(row.ItemId)))
                 {
                     continue;
                 }
 
                 var outcome = await handleAsync(row);
+
+                // A response a step doesn't apply to yet (Skipped) is left for the run's other steps.
+                if (outcome != UpkeepOutcome.Skipped && row.ItemId is not null)
+                {
+                    _tried.Add(row.ItemId);
+                }
 
                 if (outcome == UpkeepOutcome.Handled)
                 {

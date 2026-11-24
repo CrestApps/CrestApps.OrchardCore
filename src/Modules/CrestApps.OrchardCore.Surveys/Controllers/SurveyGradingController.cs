@@ -403,7 +403,7 @@ public sealed class SurveyGradingController : Controller
 
         if (result.SkippedQuestions.Count > 0)
         {
-            var skipped = string.Join(", ", result.SkippedQuestions.Select(question => H["{0} (version {1})", question.Title, question.VersionNumber].Value));
+            var skipped = string.Join(", ", result.SkippedQuestions.Select(question => H.GetString("{0} (version {1})", question.Title, question.VersionNumber).Value));
 
             await _notifier.WarningAsync(H["These questions kept their scores because the key names choices their version does not have: {0}. Grade them by hand if they need a change.", skipped]);
         }
@@ -417,7 +417,7 @@ public sealed class SurveyGradingController : Controller
         model.SurveyTitle = survey.Title;
         // The version index gives the ids and numbers; no version is loaded to fill the list.
         model.Versions = (await HttpContext.RequestServices.GetRequiredService<SurveyVersionStore>().ListRowsAsync(survey.ItemId, HttpContext.RequestAborted))
-            .Select(version => new SelectListItem(H["Version {0}", version.Number].Value, version.ItemId))
+            .Select(version => new SelectListItem(H.GetString("Version {0}", version.Number).Value, version.ItemId))
             .ToList();
         model.KeyVersionId ??= survey.PublishedVersionId;
 

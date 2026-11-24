@@ -600,21 +600,22 @@ public sealed class SurveyInvitationDeliveryTests
     public async Task AReminderThatKeepsFailing_StopsAfterItsAttempts_TheInvitationStaysOpen_AndInvitingAgainStartsThemAgain()
     {
         // Arrange: a delivered invitation on a list with three reminders a day apart; then the mail server refuses the
-        // address every time.
+        // address every time, while it takes the other e-mails of each run.
         var sender = new RecordingSender();
         await using var harness = await CreateAsync(sender, emailsPerDay: 1000);
         harness.Clock.UtcNow = _evening;
         var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
         var invited = await InviteAsync(harness, survey, "refused@example.com");
         await SetRemindersAsync(harness, invited.Invitation.CollectorId, count: 3, everyDays: 1);
-        sender.Outcome = _ => SurveyInvitationDelivery.RetryLater;
-        var attemptsBefore = sender.Attempts;
+        sender.Outcome = invitation => invitation.Email == "refused@example.com" ? SurveyInvitationDelivery.RetryLater : SurveyInvitationDelivery.Delivered;
+        var refusedAttempts = 0;
+        sender.OnAttempt = invitation => refusedAttempts += invitation.Email == "refused@example.com" ? 1 : 0;
 
-        // Act: two days later, eight hourly runs.
+        // Act: two days later, eight hourly runs; each run's send e-mails someone else first.
         for (var run = 0; run < 8; run++)
         {
             harness.Clock.UtcNow = _evening.AddDays(2).AddHours(run);
-            await RemindAsync(harness, invited.Invitation.CollectorId);
+            await InviteThenRemindAsync(harness, survey, $"other{run}@example.com", invited.Invitation.CollectorId);
         }
 
         var stopped = await FindAsync(harness, invited.Invitation.ItemId);
@@ -623,7 +624,7 @@ public sealed class SurveyInvitationDeliveryTests
         var invitedAgain = await FindAsync(harness, invited.Invitation.ItemId);
 
         // Assert: tried MaxSendAttempts times, then no more; the invitation is still open, and inviting again clears it.
-        Assert.Equal(SurveyInvitationHold.MaxSendAttempts, sender.Attempts - attemptsBefore);
+        Assert.Equal(SurveyInvitationHold.MaxSendAttempts, refusedAttempts);
         Assert.Equal(SurveyInvitationStatus.Sent, stopped.Status);
         Assert.True(SurveyInvitationReminderFailures.HaveStopped(stopped));
         Assert.Equal(0, stopped.RemindersSent);
@@ -785,7 +786,10 @@ public sealed class SurveyInvitationDeliveryTests
         // Assert
         Assert.Equal(SurveyInvitationStatus.Pending, whileDown.Status);
         Assert.True(whileDown.TryGet<SurveyInvitationHold>(out var hold) && hold is not null);
-        Assert.Equal(1, hold.FailedAttempts);
+
+        // Nothing of the send got through, so the server may be down: no attempt is used up.
+        Assert.Equal(0, hold.FailedAttempts);
+        Assert.Equal(_evening, hold.LastFailedUtc);
         Assert.Equal(1, later);
         Assert.Equal(SurveyInvitationStatus.Sent, (await FindAsync(harness, invited.Invitation.ItemId)).Status);
     }
@@ -793,18 +797,23 @@ public sealed class SurveyInvitationDeliveryTests
     [Fact]
     public async Task AFirstSendThatKeepsFailing_IsBouncedAfterItsAttempts_AndInvitingAgainRetriesIt()
     {
-        // Arrange: the mail server refuses this address every time.
-        var sender = new RecordingSender { Outcome = _ => SurveyInvitationDelivery.RetryLater };
+        // Arrange: the mail server refuses this address every time, and takes every other address. Alone in its send,
+        // the failure might be an outage, so it uses up no attempt.
+        var sender = new RecordingSender { Outcome = invitation => invitation.Email == "refused@example.com" ? SurveyInvitationDelivery.RetryLater : SurveyInvitationDelivery.Delivered };
+        var refusedAttempts = 0;
+        sender.OnAttempt = invitation => refusedAttempts += invitation.Email == "refused@example.com" ? 1 : 0;
         await using var harness = await CreateAsync(sender, emailsPerDay: 100);
         harness.Clock.UtcNow = _evening;
         var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
         var invited = await InviteAsync(harness, survey, "refused@example.com");
+        var alone = await FindAsync(harness, invited.Invitation.ItemId);
 
-        // Act: the hourly runs try again until the attempts are used up; then the address is fixed and invited again.
-        for (var run = 1; run < SurveyInvitationHold.MaxSendAttempts; run++)
+        // Act: the hourly runs, each of which e-mails someone else first, try again until the attempts are used up; then
+        // the address is fixed and invited again.
+        for (var run = 1; run <= SurveyInvitationHold.MaxSendAttempts; run++)
         {
             harness.Clock.UtcNow = _evening.AddHours(run);
-            await RemindAsync(harness, invited.Invitation.CollectorId);
+            await InviteThenRemindAsync(harness, survey, $"other{run}@example.com", invited.Invitation.CollectorId);
         }
 
         var afterAttempts = await FindAsync(harness, invited.Invitation.ItemId);
@@ -812,10 +821,252 @@ public sealed class SurveyInvitationDeliveryTests
         var again = await InviteAsync(harness, survey, "Refused@Example.com");
 
         // Assert
-        Assert.Equal(SurveyInvitationHold.MaxSendAttempts + 1, sender.Attempts);
+        Assert.True(alone.TryGet<SurveyInvitationHold>(out var aloneHold) && aloneHold is not null);
+        Assert.Equal(0, aloneHold.FailedAttempts);
+        Assert.Equal(SurveyInvitationHold.MaxSendAttempts + 2, refusedAttempts);
         Assert.Equal(SurveyInvitationStatus.Bounced, afterAttempts.Status);
         Assert.Equal(invited.Invitation.ItemId, again.Invitation.ItemId);
         Assert.Equal(SurveyInvitationStatus.Sent, (await FindAsync(harness, invited.Invitation.ItemId)).Status);
+    }
+
+    [Fact]
+    public async Task AMailOutage_TriesOneEmailARun_HoldsTheRest_UsesUpNoAttempts_AndEverythingGoesOutOnceItEnds()
+    {
+        // Arrange: the mail server is down (R6-L8).
+        var sender = new RecordingSender { Outcome = _ => SurveyInvitationDelivery.RetryLater };
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var requests = Enumerable.Range(0, 3).Select(i => new SurveyInvitationRequest { Email = $"down{i}@example.com" }).ToList();
+
+        // Act: the invite, then more hourly runs than an invitation has attempts; then the mail server is back.
+        var results = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().InviteManyAsync(survey.ItemId, null, requests, send: true));
+        var attemptsAtInvite = sender.Attempts;
+        var collectorId = results[0].Invitation.CollectorId;
+
+        for (var run = 1; run <= SurveyInvitationHold.MaxSendAttempts + 1; run++)
+        {
+            harness.Clock.UtcNow = _evening.AddHours(run);
+            await RemindAsync(harness, collectorId);
+        }
+
+        var attemptsDuringOutage = sender.Attempts;
+        var duringOutage = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().ListByCollectorAsync(collectorId, null, 10));
+
+        sender.Outcome = null;
+        harness.Clock.UtcNow = _evening.AddHours(SurveyInvitationHold.MaxSendAttempts + 2);
+        var sentOnceBack = await RemindAsync(harness, collectorId);
+
+        // Assert: one try per send, no invitation bounced or used up an attempt, and all three go out once it's back.
+        Assert.Equal(1, attemptsAtInvite);
+        Assert.Equal(1 + SurveyInvitationHold.MaxSendAttempts + 1, attemptsDuringOutage);
+        Assert.Equal(3, duringOutage.Count);
+        Assert.All(duringOutage, invitation =>
+        {
+            Assert.Equal(SurveyInvitationStatus.Pending, invitation.Status);
+            Assert.True(invitation.TryGet<SurveyInvitationHold>(out var hold) && hold is not null);
+            Assert.Equal(0, hold.FailedAttempts);
+        });
+        Assert.Equal(3, sentOnceBack);
+        Assert.Equal(3, sender.Sent.Count);
+    }
+
+    [Fact]
+    public async Task HeldInvitations_KeepGoingOutPageAfterPage_InOneRun_WhileTheLimitAllows()
+    {
+        // Arrange: more held invitations than one page (R6-L9).
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 2000);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var collectorId = (await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().CreateAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = "created@example.com" }))).Invitation.CollectorId;
+        var heldCount = CrestApps.OrchardCore.Surveys.SurveysConstants.PageSize + 20;
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+
+            for (var i = 0; i < heldCount; i++)
+            {
+                var invitation = new SurveyInvitation
+                {
+                    ItemId = IdGenerator.GenerateId(),
+                    SurveyId = survey.ItemId,
+                    CollectorId = collectorId,
+                    Email = $"held{i}@example.com",
+                    Status = SurveyInvitationStatus.Pending,
+                    CreatedUtc = _evening,
+                };
+
+                invitation.Put(new SurveyInvitationHold { HeldUtc = _evening });
+                await store.CreateAsync(invitation);
+            }
+
+            return true;
+        });
+
+        // Act
+        harness.Clock.UtcNow = _evening.AddHours(1);
+        var sent = await RemindAsync(harness, collectorId);
+
+        // Assert: every held invitation went out in the one run.
+        var stillHeld = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().ListHeldByCollectorAsync(collectorId, 10));
+
+        Assert.Equal(heldCount, sent);
+        Assert.Equal(heldCount, sender.Sent.Count);
+        Assert.Empty(stillHeld);
+    }
+
+    [Fact]
+    public async Task AManualResend_PastItsSendingWindow_StopsWalkingTheEmailInvitations_AndStillRemindsUsers()
+    {
+        // Arrange: ten e-mail invitations and one user invitation, sent three days ago, whose stored tokens a resend
+        // would re-issue; a mail server that takes two minutes per e-mail (R6-L10).
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var collectorId = (await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().CreateAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = "created@example.com" }))).Invitation.CollectorId;
+        var userInvitationId = IdGenerator.GenerateId();
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+
+            SurveyInvitation Make(string id, string email, string userId)
+                => new()
+                {
+                    ItemId = id,
+                    SurveyId = survey.ItemId,
+                    CollectorId = collectorId,
+                    Email = email,
+                    UserId = userId,
+                    Status = SurveyInvitationStatus.Sent,
+                    CreatedUtc = _evening.AddDays(-3),
+                    SentUtc = _evening.AddDays(-3),
+                    TokenHash = "stale",
+                };
+
+            for (var i = 0; i < 10; i++)
+            {
+                await store.CreateAsync(Make(IdGenerator.GenerateId(), $"slow{i}@example.com", null));
+            }
+
+            await store.CreateAsync(Make(userInvitationId, null, "u1"));
+
+            return true;
+        });
+
+        sender.OnSend = () => harness.Clock.UtcNow = harness.Clock.UtcNow.AddMinutes(2);
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().RemindAsync(collectorId, force: true));
+
+        // Assert: e-mails go out during the window (at 0, 2 and 4 minutes); the walk of the e-mail invitations then stops,
+        // so the other seven are left as they were (their tokens weren't even re-issued). The user is still reminded.
+        var all = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().ListByCollectorAsync(collectorId, [SurveyInvitationStatus.Sent], 100));
+        var emails = all.Where(invitation => invitation.UserId is null).ToList();
+
+        Assert.Equal(4, sender.Sent.Count);
+        Assert.Equal(3, emails.Count(invitation => invitation.RemindersSent == 1));
+        Assert.Equal(7, emails.Count(invitation => invitation.RemindersSent == 0 && invitation.TokenHash == "stale"));
+        Assert.Equal(1, all.Single(invitation => invitation.ItemId == userInvitationId).RemindersSent);
+    }
+
+    [Fact]
+    public async Task TwoSendsOfOneListAtOnce_EmailEachPersonOnce_AndTheLimitCountsEveryEmail()
+    {
+        // Arrange: three invitations created, not sent; the session is saved as Orchard Core saves it, when the shell
+        // scope ends, and slowly (R6-M12).
+        var sender = new RecordingSender();
+        var locks = new KeyedDistributedLock();
+        await using var harness = await CreateAsync(sender, SiteService(emailsPerDay: 100), configure: services =>
+        {
+            services.AddSingleton<IDistributedLock>(locks);
+            RuntimeTestHarness.UseOrchardSession(services, () => Task.Delay(300));
+        });
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        string collectorId = null;
+
+        for (var i = 0; i < 3; i++)
+        {
+            collectorId = (await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().CreateAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = $"twice{i}@example.com" }))).Invitation.CollectorId;
+        }
+
+        Task<(int Sent, bool LockUnavailable)> second = null;
+
+        // Act: the first Send e-mails all three in a shell scope and ends without saving itself. While it still holds the
+        // lock, a second Send of the list (a double click, or another admin) starts in its own shell scope.
+        var first = await harness.RunInShellScopeAsync(async services =>
+        {
+            var sent = await services.GetRequiredService<SurveyInvitationService>().SendPendingAsync(collectorId);
+
+            using (ExecutionContext.SuppressFlow())
+            {
+                second = Task.Run(() => harness.RunInShellScopeAsync(async secondServices =>
+                {
+                    var secondSent = await secondServices.GetRequiredService<SurveyInvitationService>().SendPendingAsync(collectorId);
+
+                    return (secondSent, secondServices.GetRequiredService<SurveyInvitationEmailLimit>().LockUnavailable);
+                }));
+            }
+
+            await Task.Delay(200, TestContext.Current.CancellationToken);
+            Assert.False(second.IsCompleted);
+
+            return sent;
+        });
+
+        var (secondSent, secondLockUnavailable) = await second;
+
+        // Assert: the second Send waited for the lock, read the list after the first one saved, and found nothing to send;
+        // each person got one e-mail, and the day's count is every e-mail sent.
+        var emailed = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().CountEmailedSinceAsync(SurveyInvitationService.DayStartUtc(_evening, "America/New_York")));
+        var all = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().ListByCollectorAsync(collectorId, null, 10));
+
+        Assert.Equal(3, first);
+        Assert.Equal(0, secondSent);
+        Assert.False(secondLockUnavailable);
+        Assert.Equal(3, sender.Sent.Count);
+        Assert.Equal(3, emailed);
+        Assert.All(all, invitation =>
+        {
+            Assert.Equal(SurveyInvitationStatus.Sent, invitation.Status);
+            Assert.False(invitation.TryGet<SurveyInvitationHold>(out var hold) && hold is not null);
+        });
+    }
+
+    [Fact]
+    public async Task AResendThatRunsTwice_RemindsEachPersonOnceADay_AndTheLimitCountsEveryEmail()
+    {
+        // Arrange: two invitations sent this evening (R6-M12).
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var first = await InviteAsync(harness, survey, "one@example.com");
+        await InviteAsync(harness, survey, "two@example.com");
+        var collectorId = first.Invitation.CollectorId;
+
+        Task<int> ResendAsync() => harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().RemindAsync(collectorId, force: true));
+
+        // Act: Send reminders now, twice the same evening, then again after midnight in the site's time zone.
+        harness.Clock.UtcNow = _evening.AddMinutes(30);
+        var firstResend = await ResendAsync();
+        harness.Clock.UtcNow = _evening.AddMinutes(31);
+        var secondResend = await ResendAsync();
+        var emailedToday = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().CountEmailedSinceAsync(SurveyInvitationService.DayStartUtc(_evening, "America/New_York")));
+        var sentToday = sender.Sent.Count;
+        harness.Clock.UtcNow = _evening.AddHours(7);
+        var nextDay = await ResendAsync();
+
+        // Assert
+        Assert.Equal(2, firstResend);
+        Assert.Equal(0, secondResend);
+        Assert.Equal(4, sentToday);
+        Assert.Equal(sentToday, emailedToday);
+        Assert.Equal(2, nextDay);
     }
 
     [Fact]
@@ -1044,6 +1295,17 @@ public sealed class SurveyInvitationDeliveryTests
     private static Task<int> RemindAsync(RuntimeTestHarness harness, string collectorId)
         => harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().RemindAsync(collectorId, force: false));
 
+    // One send that invites (and e-mails) someone, then runs a list's reminders, as a run whose mail server takes e-mails.
+    private static Task<int> InviteThenRemindAsync(RuntimeTestHarness harness, Survey survey, string email, string collectorId)
+        => harness.RunAsync(async services =>
+        {
+            var invitations = services.GetRequiredService<SurveyInvitationService>();
+
+            await invitations.InviteAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = email });
+
+            return await invitations.RemindAsync(collectorId, force: false);
+        });
+
     private static Task<SurveyInvitation> FindAsync(RuntimeTestHarness harness, string invitationId)
         => harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().FindByIdAsync(invitationId).AsTask());
 
@@ -1052,6 +1314,9 @@ public sealed class SurveyInvitationDeliveryTests
         public List<string> Sent { get; } = [];
 
         public Action OnSend { get; set; }
+
+        // Called for every attempt, delivered or not.
+        public Action<SurveyInvitation> OnAttempt { get; set; }
 
         public bool CanSendEmail { get; set; } = true;
 
@@ -1067,6 +1332,7 @@ public sealed class SurveyInvitationDeliveryTests
             lock (Sent)
             {
                 Attempts++;
+                OnAttempt?.Invoke(invitation);
 
                 if (outcome == SurveyInvitationDelivery.Delivered)
                 {

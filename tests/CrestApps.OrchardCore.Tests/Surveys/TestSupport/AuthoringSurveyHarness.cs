@@ -75,7 +75,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         await using var session = harness.Store.CreateSession();
         var transaction = await session.BeginTransactionAsync(cancellationToken);
 
-        Assert.Equal(11, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store, Mock.Of<ISession>(), Mock.Of<IClock>()) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
+        Assert.Equal(12, await new SurveysMigrations(Mock.Of<IRecipeMigrator>(), new ResumableSteps(Mock.Of<IDocumentManager<ResumableStepsDocument>>()), harness.Store, Mock.Of<ISession>(), Mock.Of<IClock>()) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
 
         await SurveyCountersIndexSchema.CreateAsync(new SchemaBuilder(harness.Store.Configuration, transaction));
         await transaction.CommitAsync(cancellationToken);
@@ -121,7 +121,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
     /// </summary>
     public SurveyFilesFakeAttachmentService Attachments { get; } = new();
 
-    public AuthoringServices CreateServices(ISession session, ISurveyFormulaValidator formulaValidator = null)
+    public AuthoringServices CreateServices(ISession session, ISurveyFormulaValidator formulaValidator = null, Func<ISurveyResponseQueries, ISurveyResponseQueries> responseQueries = null)
     {
         var clock = new Mock<IClock>();
 
@@ -140,7 +140,12 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         var versionStore = new SurveyVersionStore(session);
         var collectorStore = new SurveyCollectorStore(session);
         var bankQuestionStore = new BankQuestionStore(session);
-        var queries = new SurveyResponseQueries(session);
+        ISurveyResponseQueries queries = new SurveyResponseQueries(session);
+
+        if (responseQueries is not null)
+        {
+            queries = responseQueries(queries);
+        }
         var draftEditor = new SurveyDraftEditor(registry, new AuthoringLocalizer<SurveyDraftEditor>());
         var templateStore = new SurveyTemplateStore(session);
         var templates = new SurveyTemplateProvider(templateStore, new AuthoringLocalizer<SurveyTemplateProvider>());

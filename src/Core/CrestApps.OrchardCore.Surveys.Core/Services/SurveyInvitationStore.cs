@@ -126,8 +126,9 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
 
     /// <summary>
     /// Counts the invitation e-mails (to an address, not a user) sent since a time: each invitation first sent since
-    /// then is one e-mail, and each invitation reminded since then is one more. An invitation reminded twice in that
-    /// time (a manual resend) counts its reminders once, since only the last reminder time is kept.
+    /// then is one e-mail, and each invitation reminded since then is one more. Only the last reminder time is kept, so
+    /// this counts every e-mail of a site day because an invitation gets at most one reminder a day: scheduled reminders
+    /// are at least a day apart, and a manual resend skips an invitation already reminded that day.
     /// </summary>
     /// <param name="sinceUtc">The time, in UTC.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -218,10 +219,13 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     /// <param name="collectorId">The collector.</param>
     /// <param name="statuses">The statuses visited.</param>
     /// <param name="visit">The visit, which saves what it changes through this store.</param>
+    /// <param name="emails"><see langword="true"/> to visit only e-mail invitations (an address and no user),
+    /// <see langword="false"/> only the others, <see langword="null"/> all of them.</param>
+    /// <param name="stop">Asked before each invitation; the walk ends once it returns <see langword="true"/>.</param>
     /// <param name="pageSize">The number of invitations read at a time.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task.</returns>
-    public async Task VisitByCollectorAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, Func<SurveyInvitation, Task> visit, int pageSize = 500, CancellationToken cancellationToken = default)
+    public async Task VisitByCollectorAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, Func<SurveyInvitation, Task> visit, bool? emails = null, Func<bool> stop = null, int pageSize = 500, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(statuses);
         ArgumentNullException.ThrowIfNull(visit);
@@ -233,7 +237,34 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
 
         var names = statuses.Select(status => status.ToString()).ToArray();
 
-        await VisitWhereAsync(index => index.CollectorId == collectorId && index.Status.IsIn(names), visit, pageSize, cancellationToken);
+        await VisitWhereAsync(index => index.CollectorId == collectorId && index.Status.IsIn(names), emails, visit, stop, pageSize, cancellationToken);
+    }
+
+    /// <summary>
+    /// Visits the first sends of a collector that were held back (see
+    /// <see cref="CrestApps.OrchardCore.Surveys.Core.Invitations.SurveyInvitationHold"/>), oldest first, by the index's
+    /// hold mark, a page at a time as <see cref="VisitByCollectorAsync"/> does: each page is written and let go of before
+    /// the next is read, and the walk stops at the last row there when it began, so an invitation held again (whose index
+    /// row is written again under a new id) isn't visited twice.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="visit">The visit, which saves what it changes through this store.</param>
+    /// <param name="stop">Asked before each invitation; the walk ends once it returns <see langword="true"/>.</param>
+    /// <param name="pageSize">The number of invitations read at a time.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task VisitHeldByCollectorAsync(string collectorId, Func<SurveyInvitation, Task> visit, Func<bool> stop = null, int pageSize = 500, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(visit);
+
+        if (string.IsNullOrEmpty(collectorId))
+        {
+            return;
+        }
+
+        var pending = nameof(SurveyInvitationStatus.Pending);
+
+        await VisitWhereAsync(index => index.CollectorId == collectorId && index.Held && index.Status == pending, emails: null, visit, stop, pageSize, cancellationToken);
     }
 
     /// <summary>
@@ -247,10 +278,13 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     /// <param name="lastContactBefore">The latest last contact of an invitation due a reminder, in UTC.</param>
     /// <param name="maxReminders">The most reminders an invitation gets.</param>
     /// <param name="visit">The visit, which saves what it changes through this store.</param>
+    /// <param name="emails"><see langword="true"/> to visit only e-mail invitations (an address and no user),
+    /// <see langword="false"/> only the others, <see langword="null"/> all of them.</param>
+    /// <param name="stop">Asked before each invitation; the walk ends once it returns <see langword="true"/>.</param>
     /// <param name="pageSize">The number of invitations read at a time.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task.</returns>
-    public async Task VisitDueForReminderAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, DateTime lastContactBefore, int maxReminders, Func<SurveyInvitation, Task> visit, int pageSize = 500, CancellationToken cancellationToken = default)
+    public async Task VisitDueForReminderAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, DateTime lastContactBefore, int maxReminders, Func<SurveyInvitation, Task> visit, bool? emails = null, Func<bool> stop = null, int pageSize = 500, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(statuses);
         ArgumentNullException.ThrowIfNull(visit);
@@ -269,7 +303,9 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
                 && index.RemindersSent < maxReminders
                 && ((index.LastReminderUtc != null && index.LastReminderUtc <= lastContactBefore)
                     || (index.LastReminderUtc == null && index.SentUtc != null && index.SentUtc <= lastContactBefore)),
+            emails,
             visit,
+            stop,
             pageSize,
             cancellationToken);
     }
@@ -296,24 +332,45 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
 
         var names = statuses.Select(status => status.ToString()).ToArray();
 
-        await VisitWhereAsync(index => index.CollectorId == collectorId && index.Status.IsIn(names) && index.ExpiresUtc != null && index.ExpiresUtc <= utcNow, visit, pageSize, cancellationToken);
+        await VisitWhereAsync(index => index.CollectorId == collectorId && index.Status.IsIn(names) && index.ExpiresUtc != null && index.ExpiresUtc <= utcNow, emails: null, visit, stop: null, pageSize, cancellationToken);
     }
 
-    // Visits the invitations whose index rows match, a page at a time, up to the last row there when the walk began.
-    private async Task VisitWhereAsync(Expression<Func<SurveyInvitationIndex, bool>> filter, Func<SurveyInvitation, Task> visit, int pageSize, CancellationToken cancellationToken)
+    // Reads the index rows that match a filter, narrowed to the e-mail invitations (an address and no user), to the
+    // others, or not at all.
+    private IQueryIndex<SurveyInvitationIndex> QueryRows(Expression<Func<SurveyInvitationIndex, bool>> filter, bool? emails)
     {
-        var last = await Session.QueryIndex<SurveyInvitationIndex>(filter, collection: CollectionName)
+        var query = Session.QueryIndex(filter, collection: CollectionName);
+
+        return emails switch
+        {
+            true => query.Where(index => index.UserId == null && index.Email != null),
+            false => query.Where(index => index.UserId != null || index.Email == null),
+            _ => query,
+        };
+    }
+
+    // Visits the invitations whose index rows match, a page at a time, up to the last row there when the walk began, until
+    // the stop condition holds.
+    private async Task VisitWhereAsync(Expression<Func<SurveyInvitationIndex, bool>> filter, bool? emails, Func<SurveyInvitation, Task> visit, Func<bool> stop, int pageSize, CancellationToken cancellationToken)
+    {
+        if (stop?.Invoke() == true)
+        {
+            return;
+        }
+
+        var last = await QueryRows(filter, emails)
             .OrderByDescending(index => index.Id)
             .FirstOrDefaultAsync(cancellationToken);
         var upToId = last?.Id ?? 0;
         var afterId = 0L;
+        var stopped = false;
 
-        while (afterId < upToId)
+        while (afterId < upToId && !stopped)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var from = afterId;
-            var rows = (await Session.QueryIndex<SurveyInvitationIndex>(filter, collection: CollectionName)
+            var rows = (await QueryRows(filter, emails)
                 .Where(index => index.Id > from && index.Id <= upToId)
                 .OrderBy(index => index.Id)
                 .Take(Math.Max(1, pageSize))
@@ -330,6 +387,13 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
 
             foreach (var invitation in invitations)
             {
+                if (stop?.Invoke() == true)
+                {
+                    stopped = true;
+
+                    break;
+                }
+
                 await visit(invitation);
             }
 
@@ -435,6 +499,22 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
         var items = await query.OrderByDescending(index => index.Id).Skip(skip).Take(take).ListAsync(cancellationToken);
 
         return (count, items.ToList());
+    }
+
+    /// <summary>
+    /// Saves an invitation again as loaded, with YesSql's concurrency check: when another save changed the invitation
+    /// after it was loaded, the commit fails with a <see cref="ConcurrencyException"/> and writes nothing, so a background
+    /// rewrite (such as a reindex) never overwrites a send, a reminder or a completion.
+    /// </summary>
+    /// <param name="record">The invitation, loaded in this session.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async ValueTask SaveUnchangedAsync(SurveyInvitation record, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        await SavingAsync(record);
+        await Session.SaveAsync(record, checkConcurrency: true, collection: CollectionName, cancellationToken: cancellationToken);
     }
 
     /// <summary>

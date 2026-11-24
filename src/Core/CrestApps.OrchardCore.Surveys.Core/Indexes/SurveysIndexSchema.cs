@@ -227,6 +227,7 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyInvitationIndex_Email", "Email");
             table.CreateIndex("IDX_SurveyInvitationIndex_Held", "CollectorId", "Held");
             table.CreateIndex("IDX_SurveyInvitationIndex_Remind", "CollectorId", "Status", "RemindersStopped", "RemindersSent");
+            AddInvitationRecipientIndexes(table);
         }, collection: collection);
 
         await schemaBuilder.CreateMapIndexTableAsync<SurveyOverrideIndex>(table => table
@@ -395,6 +396,28 @@ public static class SurveysIndexSchema
             table.AddColumn<string>("PublishedBy", column => column.Nullable().WithLength(26));
             table.AddColumn<string>("Notes", column => column.Nullable().WithLength(SurveyVersionIndex.NotesLength));
         }, collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Adds the database indexes that find a list's invitation of a user or of a recipient (inviting someone again, and
+    /// personal data export and erasure, which find a user's invitations), and that count the day's invitation e-mails
+    /// by when they were sent or reminded. Indexes only: no column or row changes.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddInvitationRecipientIndexesAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyInvitationIndex>(AddInvitationRecipientIndexes, collection: SurveysConstants.CollectionName);
+    }
+
+    internal static void AddInvitationRecipientIndexes(IAlterTableCommand table)
+    {
+        table.CreateIndex("IDX_SurveyInvitationIndex_User", "UserId", "CollectorId");
+        table.CreateIndex("IDX_SurveyInvitationIndex_Recipient", "RecipientRef", "CollectorId");
+        table.CreateIndex("IDX_SurveyInvitationIndex_Sent", "SentUtc");
+        table.CreateIndex("IDX_SurveyInvitationIndex_Reminded", "LastReminderUtc");
     }
 
     private static async Task CreateSurveyTagTableAsync(ISchemaBuilder schemaBuilder)

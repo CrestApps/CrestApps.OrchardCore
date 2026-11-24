@@ -9,6 +9,11 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// versions list shows them without loading versions. The content of a version does not change. Until a version is
 /// reached, the list reads it itself. <see cref="SurveysMigrations"/> asks for it when it adds the columns.
 /// </summary>
+/// <remarks>
+/// Each version is saved as it was loaded, with YesSql's concurrency check (<see cref="SurveyVersionStore.SaveUnchangedAsync"/>),
+/// so a save that lands while the run holds the page is never overwritten: the run's commit fails and the next run reads
+/// the page again.
+/// </remarks>
 internal sealed class SurveyVersionsReindexStep : IResumableStep
 {
     /// <summary>
@@ -37,5 +42,5 @@ internal sealed class SurveyVersionsReindexStep : IResumableStep
     public Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
         => SurveyUpgradePages.RunAsync(
             context,
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _versionStore, SurveysConstants.CollectionName, cursor, _ => true, index => index.PublishedBy == null, cancellationToken: cancellationToken));
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _versionStore, SurveysConstants.CollectionName, cursor, _ => true, index => index.PublishedBy == null, save: _versionStore.SaveUnchangedAsync, cancellationToken: cancellationToken));
 }

@@ -486,6 +486,41 @@ public sealed class SurveyMaintenanceTests
     }
 
     [Fact]
+    public async Task Run_AFailureWhoseRowALaterPageReadsAgain_IsCountedOnceInTheRun()
+    {
+        // Arrange: two overdue responses with the same deadline, a batch of two. The first one's submit fails, and counting
+        // the failure writes its index row again under a larger id, behind the second; the second one's survey fails
+        // because of the server, so the walk reads another page, which used to hold the first response again (R6-L7).
+        var poisonedId = string.Empty;
+        var surveyB = string.Empty;
+        var failure = new SaveFailureIndexProvider<SurveyResponse>(SurveysConstants.ResponsesCollectionName, response =>
+            response.Status == SurveyResponseStatus.InProgress ? null
+            : response.ItemId == poisonedId ? new InvalidOperationException("index provider failed")
+            : response.SurveyId == surveyB ? new SurveyAnonymitySecretUnreadableException()
+            : null);
+        await using var harness = await CreateWithSaveFailureAsync(failure);
+        var a = await harness.PublishAsync(TimedDefinition());
+        var b = await harness.PublishAsync(TimedDefinition());
+        var poisoned = (await harness.StartAsync(a, "u1")).Response;
+        var environmental = (await harness.StartAsync(b, "u2")).Response;
+
+        poisonedId = poisoned.ItemId;
+        surveyB = b.ItemId;
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddMinutes(10);
+
+        // Act
+        await RunMaintenanceAsync(harness, batchSize: 2);
+
+        // Assert
+        var failed = await harness.FindAsync(poisoned.ItemId);
+
+        Assert.Equal(poisoned.DeadlineUtc, environmental.DeadlineUtc);
+        Assert.Equal(SurveyResponseStatus.InProgress, failed.Status);
+        Assert.Equal(1, failed.UpkeepFailures);
+        Assert.Equal(0, (await harness.FindAsync(environmental.ItemId)).UpkeepFailures);
+    }
+
+    [Fact]
     public async Task Run_AResponseWhoseFailureCantBeCounted_DoesNotBlockTheBatch()
     {
         // Arrange: the first overdue response fails, and so does the write of its failure count; a batch of one (R5-L2).
