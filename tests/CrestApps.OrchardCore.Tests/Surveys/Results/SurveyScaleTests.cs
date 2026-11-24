@@ -382,7 +382,7 @@ public sealed class SurveyScaleTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task VL11_TheReindexStep_IndexesALegacyRow_AndNeverOverwritesASurveyChangedMeanwhile()
+    public async Task VL11_TheReindexStep_IndexesLegacyRows()
     {
         // Arrange: two legacy rows.
         await using (var write = _store.OpenSession())
@@ -395,28 +395,17 @@ public sealed class SurveyScaleTests : IAsyncLifetime
         await ClearAnonymityColumnAsync("legacy-a");
         await ClearAnonymityColumnAsync("legacy-b");
 
-        // Act 1: a run whose surveys another save changed after it loaded them (their stored version moved on).
-        await using (var racing = _store.OpenSession())
-        {
-            Assert.True(await new CrestApps.OrchardCore.Surveys.Migrations.SurveysReindexStep(racing, new SurveyStore(racing)).RunAsync(new CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext(), TestContext.Current.CancellationToken));
+        // A save made while a run holds its page is covered, with a real racing save, by
+        // SurveyReindexStepsConcurrencyTests.SurveysReindexStep_KeepsASurveySavedMeanwhile.
 
-            var transaction = await racing.BeginTransactionAsync(TestContext.Current.CancellationToken);
-            var configuration = _store.Store.Configuration;
-            var documents = configuration.TableNameConvention.GetDocumentTable(SurveysConstants.CollectionName);
-            await transaction.Connection.ExecuteAsync($"UPDATE \"{configuration.TablePrefix}{documents}\" SET \"Version\" = \"Version\" + 1", transaction: transaction);
-
-            // Assert 1: the run's commit fails rather than overwrite them.
-            await Assert.ThrowsAsync<ConcurrencyException>(() => racing.SaveChangesAsync(TestContext.Current.CancellationToken));
-        }
-
-        // Act 2: the next run, with nothing changed meanwhile.
+        // Act: a run.
         await using (var run = _store.OpenSession())
         {
             await new CrestApps.OrchardCore.Surveys.Migrations.SurveysReindexStep(run, new SurveyStore(run)).RunAsync(new CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext(), TestContext.Current.CancellationToken);
             await run.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
-        // Assert 2: both rows are indexed.
+        // Assert: both rows are indexed.
         await using var session = _store.OpenSession();
         var owned = await session.QueryIndex<SurveyIndex>(index => index.OwnerId == "kim-id", collection: SurveysConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
 
