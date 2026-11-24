@@ -33,11 +33,11 @@
                     <span class="hint">@T["{0} of {1} texts are translated. Respondents see a translation once the survey is published, when their language or the link's culture matches.", Model.Translated, Model.Entries.Count]</span>
                     @if (Model.Outdated > 0)
                     {
-                        <span class="hint text-warning">@T["{0} translations are out of date: their original text changed after they were translated. Change each one to mark it current.", Model.Outdated]</span>
+                        <span class="hint text-warning">@T["{0} translations are out of date: their original text changed after they were translated. Change each one, or tick Mark current when it still fits, then save.", Model.Outdated]</span>
                     }
                     @if (Model.Unchecked > 0)
                     {
-                        <span class="hint text-warning">@T["{0} translations were saved before changes to the original text were tracked, so they may be out of date. Check them, then save to mark them current.", Model.Unchecked]</span>
+                        <span class="hint text-warning">@T["{0} translations were saved before changes to the original text were tracked, so they may be out of date. Check each one, then change it or tick Mark current, and save.", Model.Unchecked]</span>
                     }
                 </div>
             </div>
@@ -60,7 +60,7 @@
 
 <form method="post" asp-action="Index" asp-route-id="@Model.Survey.ItemId" class="no-multisubmit">
     <input type="hidden" asp-for="Culture" />
-    <input type="hidden" asp-for="DraftModifiedUtc" />
+    <input type="hidden" asp-for="DraftStamp" />
 
     @foreach (var group in Model.Entries.Select((entry, index) => (entry, index)).GroupBy(item => item.entry.Group))
     {
@@ -103,6 +103,14 @@
                                     else
                                     {
                                         <input id="translation-@index" name="Entries[@index].Translation" value="@entry.Translation" class="form-control" lang="@Model.Culture" />
+                                    }
+                                    @if ((entry.Outdated || entry.Unchecked) && !string.IsNullOrWhiteSpace(entry.Translation))
+                                    {
+                                        <div class="form-check mt-1">
+                                            <input type="checkbox" class="form-check-input" id="translation-confirm-@index" name="Entries[@index].Confirmed" value="true" />
+                                            <label class="form-check-label" for="translation-confirm-@index">@T["Mark current"]</label>
+                                            <span class="hint dashed">@T["The translation still fits the original text as it is now."]</span>
+                                        </div>
                                     }
                                 </div>
                             </div>

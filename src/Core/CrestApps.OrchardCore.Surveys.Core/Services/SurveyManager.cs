@@ -129,14 +129,15 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         ArgumentNullException.ThrowIfNull(survey);
         ArgumentNullException.ThrowIfNull(draft);
 
-        if (expectedDraftModifiedUtc is { } expected && survey.DraftModifiedUtc is { } actual && Truncate(actual) != Truncate(expected))
+        // The stamp is compared to the tick: two saves in the same second are told apart.
+        if (expectedDraftModifiedUtc is { } expected && survey.DraftModifiedUtc is { } actual && actual.Ticks != expected.Ticks)
         {
             return SurveyErrorCode.Busy;
         }
 
         SurveyDefinitions.EnsureBasics(draft);
         survey.Draft = draft;
-        survey.DraftModifiedUtc = _clock.UtcNow;
+        survey.DraftModifiedUtc = NextDraftStamp(survey.DraftModifiedUtc);
         survey.HasUnpublishedChanges = true;
 
         await UpdateAsync(survey, data: null, cancellationToken);
@@ -440,6 +441,14 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         return candidate;
     }
 
-    private static DateTime Truncate(DateTime value)
-        => new(value.Ticks - (value.Ticks % TimeSpan.TicksPerSecond), DateTimeKind.Unspecified);
+    // The draft stamp of a save: now, and always later than the stamp it replaces, so every save gives a new stamp (an
+    // editor that loaded the draft before it is refused) even when two saves read the same clock tick.
+    private DateTime NextDraftStamp(DateTime? previous)
+    {
+        var now = _clock.UtcNow;
+
+        return previous is { } before && before.Ticks >= now.Ticks
+            ? new DateTime(before.Ticks + 1, DateTimeKind.Utc)
+            : now;
+    }
 }

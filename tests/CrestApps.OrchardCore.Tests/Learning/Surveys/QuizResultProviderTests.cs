@@ -71,6 +71,7 @@ public sealed class QuizResultProviderTests
         Assert.Null(result.Score);
         Assert.Null(result.Passed);
         Assert.True(result.ResetScore);
+        Assert.False(result.CompletedWithoutPassDecision);
     }
 
     [Fact]
@@ -110,6 +111,20 @@ public sealed class QuizResultProviderTests
         Assert.Equal(100, result.Score);
         Assert.Null(result.Passed);
         Assert.True(result.PassDecided);
+
+        // R6-M8: nothing decides a pass, so "When the learner passes" completes the item, neither passed nor failed.
+        Assert.True(result.CompletedWithoutPassDecision);
+    }
+
+    [Fact]
+    public void R6M8_APassMark_DecidesThePass_SoTheItemNeverCompletesWithoutIt()
+    {
+        // Act
+        var result = new QuizResultProvider().Build(Quiz(GradingMethod.Highest), new Enrollment { ItemId = "e1" }, Definition(passMark: 70), [Graded("r1", 50, 1)]);
+
+        // Assert
+        Assert.False(result.Passed);
+        Assert.False(result.CompletedWithoutPassDecision);
     }
 
     private static ContentItem Quiz(GradingMethod method)

@@ -11,7 +11,8 @@ namespace CrestApps.OrchardCore.Learning.Surveys.Core;
 
 /// <summary>
 /// Creates the survey a course survey or choice owns when the item is first saved, and keeps the survey's title in step
-/// with the item's. A copied item gets a copy of the original's survey.
+/// with the item's. A copied item gets a copy of the original's survey. An item whose survey is gone (such as one
+/// restored from the audit trail after its removal purged the survey) gets a new one when it is next saved.
 /// </summary>
 public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPart>
 {
@@ -37,11 +38,11 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
 
     /// <inheritdoc />
     public override Task CreatingAsync(CreateContentContext context, CourseSurveyPart part)
-        => EnsureSurveyAsync(part);
+        => EnsureSurveyAsync(part, recreateMissing: false);
 
     /// <inheritdoc />
     public override Task UpdatingAsync(UpdateContentContext context, CourseSurveyPart part)
-        => EnsureSurveyAsync(part);
+        => EnsureSurveyAsync(part, recreateMissing: true);
 
     /// <inheritdoc />
     public override async Task CloningAsync(CloneContentContext context, CourseSurveyPart part)
@@ -61,11 +62,13 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
         context.CloneContentItem.Apply(clone);
     }
 
-    private async Task EnsureSurveyAsync(CourseSurveyPart part)
+    // A new item keeps the survey id it comes with (an import may bring the survey after the item); a saved item whose
+    // survey is gone gets a new one.
+    private async Task EnsureSurveyAsync(CourseSurveyPart part, bool recreateMissing)
     {
         var legacy = LegacyCourseSurveyUpgrade.ReadLegacyPart(part.ContentItem);
 
-        if (!string.IsNullOrEmpty(part.SurveyId) && legacy is null)
+        if (!string.IsNullOrEmpty(part.SurveyId) && legacy is null && !recreateMissing)
         {
             return;
         }

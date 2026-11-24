@@ -899,6 +899,12 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
                 {
                     item.State = CourseItemState.Failed;
                 }
+                else if (result is { CompletedWithoutPassDecision: true })
+                {
+                    // Nothing decides a pass (no pass mark and no deciding band, or an anonymous survey): the work is
+                    // done, so the item is completed, neither passed nor failed.
+                    item.State = CourseItemState.Completed;
+                }
 
                 break;
 

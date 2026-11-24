@@ -16,7 +16,9 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Upgrades;
 
 /// <summary>
 /// Finishes the upgrade of a site from the first Learning release in the background, a batch at a time: it deletes the
-/// content items of the removed question types, then gives every quiz a scored survey with its first-release settings.
+/// content items of the removed question types (the first-release questions and question bank items, whose questions
+/// are not carried over; the log records how many), then gives every quiz a scored survey with its first-release
+/// settings.
 /// A quiz points at its survey as soon as the survey exists, so a failure never leaves a survey nothing points at (and a
 /// second one made when the quiz is next saved). The step is safe to run again.
 /// </summary>
@@ -31,6 +33,7 @@ public sealed class LegacyQuizUpgradeStep : IResumableStep
     private const string PhaseKey = "phase";
     private const string CursorKey = "after";
     private const string QuizzesPhase = "quizzes";
+    private const string RemovedKey = "removed";
 
     private readonly ISession _session;
     private readonly ILearningSurveyService _learningSurveys;
@@ -77,6 +80,18 @@ public sealed class LegacyQuizUpgradeStep : IResumableStep
             foreach (var item in removed)
             {
                 _session.Delete(item);
+            }
+
+            var total = (context.Data.TryGetValue(RemovedKey, out var counted) && int.TryParse(counted, NumberStyles.Integer, CultureInfo.InvariantCulture, out var before) ? before : 0) + removed.Count;
+
+            context.Data[RemovedKey] = total.ToString(CultureInfo.InvariantCulture);
+
+            if (removed.Count > 0)
+            {
+                _logger.LogWarning(
+                    "The Learning upgrade deleted {Count} first-release question and question bank items ({Total} so far); their questions are not carried over to the quizzes' surveys.",
+                    removed.Count,
+                    total);
             }
 
             if (removed.Count == ItemsPerRun)

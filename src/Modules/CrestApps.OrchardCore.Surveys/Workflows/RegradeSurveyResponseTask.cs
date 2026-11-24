@@ -6,7 +6,9 @@ using OrchardCore.Workflows.Services;
 namespace CrestApps.OrchardCore.Surveys.Workflows;
 
 /// <summary>
-/// Scores a survey response again with its version's key, such as after a key was fixed.
+/// Scores a survey response again with its version's key, such as after a key was fixed. It runs no score change check
+/// (<see cref="ISurveyScoreChangeCheck"/>, such as Learning's Override grades): whoever may edit workflows configures it,
+/// so that right should go only to people who may change grades.
 /// </summary>
 public sealed class RegradeSurveyResponseTask : SurveyTaskActivity<RegradeSurveyResponseTask>
 {

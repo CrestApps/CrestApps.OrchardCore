@@ -28,6 +28,13 @@ public sealed class CourseItemResult
     public bool PassDecided { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the source makes no pass decision for work that is done, so the <c>Passed</c> completion mode
+    /// counts the item as completed, neither passed nor failed: a quiz scored with neither a pass mark nor a deciding score
+    /// band, or an anonymous survey, whose result is its completion only.
+    /// </summary>
+    public bool CompletedWithoutPassDecision { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the learner handed the work in, for the <c>Submitted</c> completion mode.
     /// </summary>
     public bool Submitted { get; set; }

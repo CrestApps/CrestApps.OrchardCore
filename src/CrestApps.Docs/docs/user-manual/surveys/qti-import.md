@@ -24,7 +24,7 @@ QTI is the standard file format that many learning and testing tools use to exch
 4. Select **Check the file**. The page says how many questions can be imported and lists the items that cannot, so nothing is added yet.
 5. Select **Import**. The page says how many questions were added and how many were updated.
 
-Importing the same package again into the same bank updates the questions it imported before, instead of adding them a second time.
+Importing the same package again into the same bank updates the questions it imported before, instead of adding them a second time. Choices keep matching the answers already given by their text, even when you reorder them or add one at the top.
 
 ## Supported questions
 

@@ -40,7 +40,7 @@ Inputs include `ResponseId`, `Number`, `Status`, `Grading`, `VersionNumber`, `At
 | Close Survey | Done, Failed | Closes a survey |
 | Open Survey | Done, Failed | Opens a survey again |
 | Void Survey Response | Done, NotFound, Failed | Voids a response with a reason |
-| Regrade Survey Response | Done, NotFound, Failed | Scores a response again with a reason |
+| Regrade Survey Response | Done, NotFound, Failed | Scores a response again with a reason. It runs no score change check (`ISurveyScoreChangeCheck`, such as Learning's **Override grades**): whoever may edit workflows decides |
 | Grant Survey Accommodation | Done, Failed | Grants extra minutes or attempts with a reason |
 | Set Survey Response Property | Done, NotFound, Failed | Writes a value into the response's properties |
 

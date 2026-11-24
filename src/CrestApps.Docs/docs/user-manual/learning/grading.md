@@ -20,14 +20,16 @@ Most quiz questions are scored automatically. Essays and coursework need a perso
 
 1. Go to **Learning** → **Grading**. The list shows the quiz attempts and coursework that wait for a grader in the courses you may grade.
 2. Open a quiz attempt. The Surveys grading page shows each question with the learner's answer.
-3. Enter the points of each question that needs a grader and an optional comment, add overall feedback if you like, then select **Save grades**. When every question has a score, the attempt is graded and the course records the quiz grade.
+3. Enter the points of each question that needs a grader and an optional comment, add overall feedback if you like, then select **Save grades**. When every question has a score, the attempt is graded and the course records the quiz grade. Without **Override grades** you can't change the points of a question that already has a score (one the site scored, or one another grader graded): its points box is read-only.
 
 ## Regrade or void a quiz attempt
 
 - **Score again** scores the attempt with the key of its version, such as after a key was found wrong. Give the reason.
 - **Change score** sets the total score, with a reason.
 - **Score again**, **Change score**, changing the grades of an attempt that is already graded, and **Regrade versions** (in the survey's menu) need **Override grades**. Without it you see a graded attempt without these buttons.
-- To void an attempt, open the survey's **Responses**, choose the response and void it with a reason. A voided attempt does not count in the quiz grade.
+- To void an attempt, open the survey's **Responses**, choose the response and void it with a reason. A voided attempt does not count in the quiz grade. Voiding or deleting a quiz attempt, or a response of a course survey that gives a score, needs **Override grades** too, because the grade can change.
+- A workflow's **Regrade Survey Response** task doesn't ask for **Override grades**: whoever sets up workflows decides when it runs.
+- An anonymous quiz or course survey counts toward the course as done once the learner finishes it. Its score never goes to the gradebook, and grading it later changes nobody's progress.
 
 Each change is kept in the attempt's score history and the Audit Trail. If the course was already completed and the change lowers the result, the enrollment stays completed and shows **Needs review**: a training manager opens it, decides what follows and clears the review with a note.
 

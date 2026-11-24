@@ -11,7 +11,9 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 /// <summary>
 /// Records a quiz's result from the learner's attempts: the attempts combined with the quiz's grading method, passed by
 /// the survey's own rule (<see cref="SurveyPassRule"/>: its score bands, then its pass mark, else no pass decision), so
-/// the course, the attempt and the credential rule agree; submitted once an attempt ended. A method that picks one attempt
+/// the course, the attempt and the credential rule agree; submitted once an attempt ended. A scored quiz with no pass
+/// decision (neither a pass mark nor a deciding band) completes the item under "When the learner passes", neither passed
+/// nor failed. A method that picks one attempt
 /// takes that attempt's own pass, decided against its own version.
 /// </summary>
 public sealed class QuizResultProvider : ILearningSurveyItemResultProvider
@@ -35,6 +37,9 @@ public sealed class QuizResultProvider : ILearningSurveyItemResultProvider
             Score = score,
             Passed = passed,
             PassDecided = true,
+
+            // A scored quiz whose survey has neither a pass mark nor a deciding band: completed, neither passed nor failed.
+            CompletedWithoutPassDecision = score is not null && passed is null,
             Submitted = counted.Any(response => response.CompletedUtc is not null && response.Status is SurveyResponseStatus.Completed or SurveyResponseStatus.ScreenedOut),
             Graded = score is not null,
             Attempts = counted.Count(response => response.Status != SurveyResponseStatus.InProgress),
