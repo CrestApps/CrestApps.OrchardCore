@@ -14,7 +14,7 @@
 
     @if (Model.Checked)
     {
-        <div class="alert alert-info">@T["The file holds {0} questions that can be imported.", Model.ReadCount]</div>
+        <div class="alert alert-info">@T["The file holds {0} questions that can be imported. Importing it adds {1} questions and updates {2}.", Model.ReadCount, Model.Created, Model.Updated]</div>
     }
     else if (Model.Created > 0 || Model.Updated > 0)
     {
@@ -24,7 +24,14 @@
     @if (Model.Notices.Count > 0)
     {
         <div class="alert alert-info">
-            <p class="mb-1">@T["Check these choices and rows: their text changed, so each was matched to the earlier one at the same place, and answers given to that one now count for it."]</p>
+            @if (Model.Checked)
+            {
+                <p class="mb-1">@T["Check these choices and rows before you import: their text changed, so each will be matched to the earlier one at the same place, and answers given to that one will count for it."]</p>
+            }
+            else
+            {
+                <p class="mb-1">@T["Check these choices and rows: their text changed, so each was matched to the earlier one at the same place, and answers given to that one now count for it."]</p>
+            }
             <ul class="mb-0">
                 @foreach (var notice in Model.Notices.Take(200))
                 {
@@ -37,7 +44,7 @@
     @if (Model.Errors.Count > 0)
     {
         <div class="alert alert-warning">
-            <p class="mb-1">@T["These rows or items were not imported:"]</p>
+            <p class="mb-1">@(Model.Checked ? T["These rows or items will not be imported:"] : T["These rows or items were not imported:"])</p>
             <ul class="mb-0">
                 @foreach (var error in Model.Errors.Take(200))
                 {

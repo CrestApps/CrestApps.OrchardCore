@@ -43,7 +43,7 @@ public sealed class CourseCompletedRequirement : ICertificationRequirement
             .Where(CompletionEvidence.CountsAsEvidence)
             .Where(enrollment => !CompletionEvidence.RestsOnABrowserResult(enrollment))
             .Where(enrollment => context.SinceUtc is null || enrollment.CompletedUtc >= context.SinceUtc)
-            .Where(enrollment => context.Requirement.MinimumGrade is null || (enrollment.Grade ?? enrollment.Completion?.Grade) >= context.Requirement.MinimumGrade)
+            .Where(enrollment => context.Requirement.MinimumGrade is null || (enrollment.Grade ?? enrollment.Completion?.Grade) is not { } grade || grade >= context.Requirement.MinimumGrade)
             .OrderByDescending(enrollment => enrollment.CompletedUtc)
             .FirstOrDefault();
 

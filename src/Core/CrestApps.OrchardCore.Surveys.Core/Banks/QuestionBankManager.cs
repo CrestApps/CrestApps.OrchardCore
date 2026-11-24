@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -229,7 +230,16 @@ public sealed partial class QuestionBankManager : IQuestionBankManager
     }
 
     /// <inheritdoc />
-    public async Task<QuestionBankImportSummary> ImportAsync(string bankId, IEnumerable<BankQuestion> questions, CancellationToken cancellationToken = default)
+    public Task<QuestionBankImportSummary> ImportAsync(string bankId, IEnumerable<BankQuestion> questions, CancellationToken cancellationToken = default)
+        => ImportAsync(bankId, questions, check: false, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<QuestionBankImportSummary> CheckImportAsync(string bankId, IEnumerable<BankQuestion> questions, CancellationToken cancellationToken = default)
+        => ImportAsync(bankId, questions, check: true, cancellationToken);
+
+    // An import, or its dry run: the dry run matches, validates and reports exactly as the import does (what it would add
+    // and update, the errors and the choices and rows matched by their place), but saves nothing.
+    private async Task<QuestionBankImportSummary> ImportAsync(string bankId, IEnumerable<BankQuestion> questions, bool check, CancellationToken cancellationToken)
     {
         var summary = new QuestionBankImportSummary();
 
@@ -255,7 +265,10 @@ public sealed partial class QuestionBankManager : IQuestionBankManager
                 ? null
                 : await _questionStore.FindBySourceAsync(bankId, imported.SourceIdentifier, cancellationToken);
 
-            var target = existing ?? await NewQuestionAsync(bankId, imported.Question.ControlType, cancellationToken);
+            // A dry run changes a copy, so the stored question the session tracks is left as it is.
+            var target = existing is null
+                ? await NewQuestionAsync(bankId, imported.Question.ControlType, cancellationToken)
+                : check ? JsonSerializer.Deserialize<BankQuestion>(JsonSerializer.Serialize(existing)) : existing;
 
             // The bank question keeps its id; the question inside takes it, so versions that drew it keep matching. A file
             // read again gives every choice and row a new id, so an update keeps the ids of the matching choices and rows
@@ -279,7 +292,9 @@ public sealed partial class QuestionBankManager : IQuestionBankManager
             // A question the author retired stays retired when the file is imported again.
             target.Retired = existing?.Retired ?? false;
 
-            var result = await SaveQuestionAsync(target, existing is null, cancellationToken);
+            var result = check
+                ? await ValidateQuestionAsync(target, cancellationToken)
+                : await SaveQuestionAsync(target, existing is null, cancellationToken);
 
             if (!result.Succeeded)
             {

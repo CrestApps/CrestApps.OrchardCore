@@ -86,4 +86,15 @@ public interface IQuestionBankManager
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>What was added and updated.</returns>
     Task<QuestionBankImportSummary> ImportAsync(string bankId, IEnumerable<BankQuestion> questions, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks imported questions against a bank without saving anything: what <see cref="ImportAsync"/> would add and
+    /// update, the questions it would refuse, and each choice or row it would match by its place only (its text changed),
+    /// which then keeps the earlier item's answers and key.
+    /// </summary>
+    /// <param name="bankId">The bank.</param>
+    /// <param name="questions">The questions read from a file.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>What the import would add and update, with its errors and notices.</returns>
+    Task<QuestionBankImportSummary> CheckImportAsync(string bankId, IEnumerable<BankQuestion> questions, CancellationToken cancellationToken = default);
 }

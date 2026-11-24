@@ -33,6 +33,9 @@ public class CoursePartViewModel
 
     public decimal? MinimumGrade { get; set; }
 
+    [BindNever]
+    public bool NoGradeSource { get; set; }
+
     public int? MinimumMinutes { get; set; }
 
     public bool RequireStaffApproval { get; set; }

@@ -632,7 +632,14 @@ public sealed class QuestionBanksController : Controller
 
         if (check)
         {
+            // The dry run matches the questions against the bank as the import would, so the author sees the choices and
+            // rows that would be matched by their place before anything is saved.
+            var dryRun = await _manager.CheckImportAsync(bank.ItemId, read.Questions, HttpContext.RequestAborted);
             model.Checked = true;
+            model.Created = dryRun.Created;
+            model.Updated = dryRun.Updated;
+            model.Errors.AddRange(dryRun.Errors);
+            model.Notices.AddRange(dryRun.Notices);
 
             return View(model);
         }
