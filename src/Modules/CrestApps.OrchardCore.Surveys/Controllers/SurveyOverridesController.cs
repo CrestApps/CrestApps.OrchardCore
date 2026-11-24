@@ -119,7 +119,7 @@ public sealed class SurveyOverridesController : Controller
             Override = item,
             AppliesTo = !string.IsNullOrEmpty(item.UserId)
                 ? userNames.GetValueOrDefault(item.UserId) ?? item.UserId
-                : H["Audience {0}", item.AudienceId].Value,
+                : H.GetString("Audience {0}", item.AudienceId).Value,
             GrantedBy = string.IsNullOrEmpty(item.Actor) ? null : userNames.GetValueOrDefault(item.Actor),
         }).ToList();
 

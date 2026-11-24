@@ -54,7 +54,7 @@ internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
     public Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
         => SurveyUpgradePages.RunAsync(
             context,
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _secrets.EnsureProtected, idempotent: true, cancellationToken: cancellationToken),
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _secrets.EnsureProtected, idempotent: true, save: _surveyStore.SaveUnchangedAsync, cancellationToken: cancellationToken),
             cursor => SurveyUpgradePages.VisitPageAsync(
                 _session,
                 _participationStore,

@@ -311,7 +311,7 @@ public sealed class SurveyInvitationsController : Controller
 
             if (user is null)
             {
-                ModelState.AddModelError(nameof(model.UserNames), H["No user has the user name {0}.", userName].Value);
+                ModelState.AddModelError(nameof(model.UserNames), H.GetString("No user has the user name {0}.", userName).Value);
 
                 continue;
             }
@@ -352,7 +352,7 @@ public sealed class SurveyInvitationsController : Controller
 
             if (!IsEmail(email))
             {
-                ModelState.AddModelError(nameof(model.Emails), H["{0} is not an e-mail address.", email].Value);
+                ModelState.AddModelError(nameof(model.Emails), H.GetString("{0} is not an e-mail address.", email).Value);
 
                 continue;
             }
@@ -507,12 +507,12 @@ public sealed class SurveyInvitationsController : Controller
     {
         if (!RestrictedLiquid.TryValidate(model?.Subject, out var subjectError))
         {
-            ModelState.AddModelError(nameof(model.Subject), H["The subject's Liquid can't be used: {0}", subjectError].Value);
+            ModelState.AddModelError(nameof(model.Subject), H.GetString("The subject's Liquid can't be used: {0}", subjectError).Value);
         }
 
         if (!RestrictedLiquid.TryValidate(model?.Message, out var messageError))
         {
-            ModelState.AddModelError(nameof(model.Message), H["The message's Liquid can't be used: {0}", messageError].Value);
+            ModelState.AddModelError(nameof(model.Message), H.GetString("The message's Liquid can't be used: {0}", messageError).Value);
         }
     }
 

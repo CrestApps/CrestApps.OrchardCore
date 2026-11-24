@@ -74,6 +74,11 @@ internal static class SurveyUpgradePages
     /// has no upper bound, so it also reaches the records saved while it runs (whose index rows are written again under
     /// new ids); a record it saved is read once more and left as it is. Otherwise the walk stops at the last index row
     /// there when it began, which is safe only when a normal save applies the same change.</param>
+    /// <param name="save">Saves a record the visit changed, or <see langword="null"/> for the catalog's own save. A walk
+    /// that writes a record back as it loaded it (a reindex) passes a save with YesSql's concurrency check, such as
+    /// <see cref="CrestApps.OrchardCore.Surveys.Core.Services.SurveyStore.SaveUnchangedAsync"/>: when another save
+    /// changed a record of the page after the walk loaded it, the page's commit fails and writes nothing, rather than
+    /// overwrite that save with the copy the walk loaded, and the next run reads the page again.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The cursor of the next page, or <see langword="null"/> when the walk is done.</returns>
     public static async Task<string> VisitPageAsync<T, TIndex>(
@@ -85,6 +90,7 @@ internal static class SurveyUpgradePages
         Expression<Func<TIndex, bool>> filter = null,
         int pageSize = PageSize,
         bool idempotent = false,
+        Func<T, CancellationToken, ValueTask> save = null,
         CancellationToken cancellationToken = default)
         where T : CatalogItem
         where TIndex : CatalogItemIndex
@@ -132,7 +138,14 @@ internal static class SurveyUpgradePages
         {
             if (visit(record))
             {
-                await catalog.UpdateAsync(record, cancellationToken);
+                if (save is null)
+                {
+                    await catalog.UpdateAsync(record, cancellationToken);
+                }
+                else
+                {
+                    await save(record, cancellationToken);
+                }
             }
         }
 

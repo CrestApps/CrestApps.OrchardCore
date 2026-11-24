@@ -48,7 +48,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 11;
+        return 12;
     }
 
     /// <summary>
@@ -181,5 +181,17 @@ internal sealed class SurveysMigrations : DataMigration
         await _steps.RequestAsync(SurveyVersionsReindexStep.StepName);
 
         return 11;
+    }
+
+    /// <summary>
+    /// Adds the database indexes of the invitation index that find a list's invitation of a user or a recipient, and
+    /// that count the day's invitation e-mails (schema only: the columns are already filled).
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom11Async()
+    {
+        await SurveysIndexSchema.AddInvitationRecipientIndexesAsync(SchemaBuilder);
+
+        return 12;
     }
 }

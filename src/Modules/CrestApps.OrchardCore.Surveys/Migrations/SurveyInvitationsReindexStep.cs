@@ -37,5 +37,5 @@ internal sealed class SurveyInvitationsReindexStep : IResumableStep
     public Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
         => SurveyUpgradePages.RunAsync(
             context,
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _invitationStore, SurveysConstants.CollectionName, cursor, _ => true, cancellationToken: cancellationToken));
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _invitationStore, SurveysConstants.CollectionName, cursor, _ => true, save: _invitationStore.SaveUnchangedAsync, cancellationToken: cancellationToken));
 }

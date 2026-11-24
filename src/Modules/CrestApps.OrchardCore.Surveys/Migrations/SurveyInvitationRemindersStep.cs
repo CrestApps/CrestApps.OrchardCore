@@ -14,6 +14,11 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// ones that used up their reminders. Until a row is reached, the reminder task reads it, sees in the invitation that
 /// no reminder is due and skips it, as before. <see cref="SurveysMigrations"/> asks for it when it adds the columns.
 /// </summary>
+/// <remarks>
+/// Each invitation is saved as it was loaded, with YesSql's concurrency check (<see cref="SurveyInvitationStore.SaveUnchangedAsync"/>):
+/// a reminder, a completion or an opt-out saved while the run holds the page is never overwritten; the run's commit fails
+/// and the next run reads the page again.
+/// </remarks>
 internal sealed class SurveyInvitationRemindersStep : IResumableStep
 {
     /// <summary>
@@ -62,5 +67,6 @@ internal sealed class SurveyInvitationRemindersStep : IResumableStep
                 invitation => invitation.RemindersSent > 0,
                 index => index.Status.IsIn(_open) && index.LastReminderUtc != null && index.RemindersSent == 0,
                 PageSize,
+                save: _invitationStore.SaveUnchangedAsync,
                 cancellationToken: cancellationToken));
 }
