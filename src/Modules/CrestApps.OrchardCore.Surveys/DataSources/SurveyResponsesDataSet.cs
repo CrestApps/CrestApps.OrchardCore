@@ -73,7 +73,7 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
         AddField("Passed", S["Passed"], DataFieldType.Boolean, row => row.Response.Passed, group);
         AddField("Ending", S["Ending"], DataFieldType.Text, row => row.Ending, group);
         AddField("IsTest", S["Test"], DataFieldType.Boolean, row => row.Response.IsTest, group);
-        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, row => ChangedOf(row.Response.SurveyId, row.Response.ModifiedUtc), group);
+        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, row => ChangedOf(row.Response), group);
 
         foreach (var provider in _providers)
         {
@@ -153,4 +153,17 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
 
     protected override SurveyResponse ResponseOf(SurveyResponseDataRow row)
         => row?.Response;
+
+    // The survey's name is the same on every row of a survey, like its id.
+    private protected override bool TryGetSurveyValue(string field, Survey survey, out object value)
+    {
+        if (string.Equals(field, "SurveyName", StringComparison.OrdinalIgnoreCase))
+        {
+            value = survey?.Name;
+
+            return true;
+        }
+
+        return base.TryGetSurveyValue(field, survey, out value);
+    }
 }

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.DataSources;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Reports;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
@@ -628,20 +629,172 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         Assert.Equal(["p0", "p1", "p2", "p3", "r2"], ids.Where(id => id != "r1").Order(StringComparer.Ordinal));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SurveyResponses_AJointKeyThatReachesTheMinimumLater_IsReleasedPastAnIncrementalReadsWatermark(bool readsDocuments)
+    {
+        // Arrange: R8-M6, the usual collector reaches the minimum of 5 by 10 November (r2 and four more), and a new
+        // collector has four responses on 9 November: too few to show, and too few to hide in "Other".
+        await AddPlainAnonymousAsync("p", 4, _day.AddDays(-2));
+        await AddAnonymousAsync("b", 4, _day.AddDays(-1), SurveyResponseStatus.Completed, "late");
+        var extra = DocumentsCondition(readsDocuments);
+        DateTime watermark;
+
+        await using (var session = _store.OpenSession())
+        {
+            var first = await ReadAsync(Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses), "SurveyResponses", TestSecurity.User("kim"), conditions: extra);
+            Assert.DoesNotContain(first.Keys, id => id.StartsWith('b'));
+            watermark = first.Values.Max(row => Assert.IsType<DateTime>(row["ModifiedUtc"]));
+        }
+
+        // The new collector's fifth response comes in on 11 November.
+        await AddAnonymousAsync("b", 1, _day.AddDays(1), SurveyResponseStatus.Completed, "late", start: 4);
+
+        // Act: the next run keeps the rows changed after the largest change time the first run read.
+        await using var next = _store.OpenSession();
+        var rows = (await ReadAsync(Source(next, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses), "SurveyResponses", TestSecurity.User("kim"), conditions: [.. extra, After(watermark)]))
+            .Where(row => Assert.IsType<DateTime>(row.Value["ModifiedUtc"]) > watermark)
+            .ToDictionary(row => row.Key, row => row.Value, StringComparer.Ordinal);
+
+        // Assert: the collector's four earlier rows are released when its fifth response's day ends, and read that moment,
+        // so the incremental read gets them; the rows the first run read aren't read again.
+        Assert.Equal(["b0", "b1", "b2", "b3", "b4"], rows.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(_day.Date.AddDays(2), Assert.IsType<DateTime>(rows["b0"]["ModifiedUtc"]));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SurveyResponses_AStatusThatReachesTheMinimumLater_IsReleasedPastAnIncrementalReadsWatermark(bool readsDocuments)
+    {
+        // Arrange: R8-M6, six completed responses, and four abandoned ones on 9 November (too few to show).
+        await AddPlainAnonymousAsync("p", 5, _day.AddDays(-2));
+        await AddAnonymousAsync("x", 4, _day.AddDays(-1), SurveyResponseStatus.Abandoned);
+        var extra = DocumentsCondition(readsDocuments);
+        DateTime watermark;
+
+        await using (var session = _store.OpenSession())
+        {
+            var first = await ReadAsync(Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses), "SurveyResponses", TestSecurity.User("kim"), conditions: extra);
+            Assert.DoesNotContain(first.Keys, id => id.StartsWith('x'));
+            watermark = first.Values.Max(row => Assert.IsType<DateTime>(row["ModifiedUtc"]));
+        }
+
+        // The fifth abandoned response comes in on 11 November.
+        await AddAnonymousAsync("x", 1, _day.AddDays(1), SurveyResponseStatus.Abandoned, start: 4);
+
+        // Act
+        await using var next = _store.OpenSession();
+        var rows = (await ReadAsync(Source(next, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses), "SurveyResponses", TestSecurity.User("kim"), conditions: [.. extra, After(watermark)]))
+            .Where(row => Assert.IsType<DateTime>(row.Value["ModifiedUtc"]) > watermark)
+            .ToDictionary(row => row.Key, row => row.Value, StringComparer.Ordinal);
+
+        // Assert: the status shows once its fifth response's day ends, and its earlier rows read that moment.
+        Assert.Equal(["x0", "x1", "x2", "x3", "x4"], rows.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(_day.Date.AddDays(2), Assert.IsType<DateTime>(rows["x0"]["ModifiedUtc"]));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SurveyResponses_TodaysResponses_DoNotCountTowardAStatusReachingTheMinimum(bool readsDocuments)
+    {
+        // Arrange: R8-M6, a released survey with one abandoned response from 9 November and four abandoned today.
+        await AddPlainAnonymousAsync("p", 5, _day.AddDays(-2));
+        await AddAnonymousAsync("old", 1, _day.AddDays(-1), SurveyResponseStatus.Abandoned);
+        await AddAnonymousAsync("now", 4, DateTime.UtcNow, SurveyResponseStatus.Abandoned);
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+        var abandoned = new DataCondition { Field = "Status", Operator = DataFilterOperator.In, Values = [nameof(SurveyResponseStatus.Abandoned)] };
+
+        // Act
+        var ids = await ReadIdsAsync(source, "SurveyResponses", [.. DocumentsCondition(readsDocuments), abandoned]);
+
+        // Assert: only one abandoned response has ended its day, so the status doesn't show yet (counted with today's,
+        // the old response would show as a group of one).
+        Assert.DoesNotContain("old0", ids);
+        Assert.DoesNotContain(ids, id => id.StartsWith("now", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SurveyResponses_APreviewOfAnotherSurvey_DoesNotReadTheAnonymousSurveysResponses()
+    {
+        // Arrange: R8-M7, a released anonymous survey besides the identified one.
+        await AddPlainAnonymousAsync("p", 20, _day);
+        await using var session = _store.OpenSession();
+        var recorder = new RecordingFieldProvider();
+        var source = Source(session, new ServiceCollection().BuildServiceProvider(), [recorder], SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act: a ten-row preview of the identified survey.
+        var ids = await ReadIdsAsync(source, "SurveyResponses", 10, new DataCondition { Field = "SurveyId", Operator = DataFilterOperator.Equals, Values = ["survey1"] });
+
+        // Assert: the condition rules the anonymous survey out before its count, so none of its responses is read.
+        Assert.Equal(["r1"], ids);
+        Assert.DoesNotContain("survey2", recorder.Surveys);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AReadWithoutConditions_CountsTheAnonymousSurveyInSql_AndReadsEachResponseOnce()
+    {
+        // Arrange: R8-M7, a released anonymous survey of 21 responses.
+        await AddPlainAnonymousAsync("p", 20, _day);
+        await using var session = _store.OpenSession();
+        var recorder = new RecordingFieldProvider();
+        var source = Source(session, new ServiceCollection().BuildServiceProvider(), [recorder], SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var ids = await ReadIdsAsync(source, "SurveyResponses", 100);
+
+        // Assert: every row shows, and each response is read once, for its row (the count reads the index only).
+        Assert.Equal(22, ids.Count);
+        Assert.Equal(21, recorder.Surveys.Count(id => id == "survey2"));
+    }
+
+    // A condition every response passes that the data set evaluates on its documents, so the anonymous survey's count
+    // reads them instead of the index.
+    private static DataCondition[] DocumentsCondition(bool readsDocuments)
+        => readsDocuments ? [new DataCondition { Field = "Grading", Operator = DataFilterOperator.IsNotEmpty }] : [];
+
+    // A pipeline's watermark condition: rows changed after the last run.
+    private static DataCondition After(DateTime watermark)
+        => new() { Field = "ModifiedUtc", Operator = DataFilterOperator.GreaterThan, Values = [watermark] };
+
     // Adds completed responses to the anonymous survey on its usual collector and with no context, the group r2 is in.
-    private async Task AddPlainAnonymousAsync(string prefix, int count, DateTime changedUtc)
+    private Task AddPlainAnonymousAsync(string prefix, int count, DateTime changedUtc)
+        => AddAnonymousAsync(prefix, count, changedUtc, SurveyResponseStatus.Completed);
+
+    // Adds responses to the anonymous survey, with no context.
+    private async Task AddAnonymousAsync(string prefix, int count, DateTime changedUtc, SurveyResponseStatus status, string collectorId = "collector1", int start = 0)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
 
         await using var session = _store.OpenSession();
 
-        for (var index = 0; index < count; index++)
+        for (var index = start; index < start + count; index++)
         {
-            var response = ResultsSqliteStore.Response($"{prefix}{index}", Version("v2", "survey2"), SurveyResponseStatus.Completed, changedUtc, ("q1", new SurveyAnswer { Values = ["red"] }));
+            var response = ResultsSqliteStore.Response($"{prefix}{index}", Version("v2", "survey2"), status, changedUtc, ("q1", new SurveyAnswer { Values = ["red"] }));
+            response.CollectorId = collectorId;
             await session.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
         }
 
         await session.SaveChangesAsync(cancellationToken);
+    }
+
+    // Records the survey of every response whose row the data set completes, which happens once per document read.
+    private sealed class RecordingFieldProvider : ISurveyResponseFieldProvider
+    {
+        public List<string> Surveys { get; } = [];
+
+        public IEnumerable<(string Name, string DisplayName, DataFieldType Type)> DescribeFields()
+            => [];
+
+        public Task WriteFieldsAsync(SurveyResponse response, IDictionary<string, object> row, CancellationToken cancellationToken = default)
+        {
+            Surveys.Add(response.SurveyId);
+
+            return Task.CompletedTask;
+        }
     }
 
     // The services of a site in one time zone whose viewer picked another for themselves.
@@ -661,6 +814,9 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         => Source(session, new ServiceCollection().BuildServiceProvider(), grants);
 
     private static SurveysDataSource Source(ISession session, IServiceProvider services, params Permission[] grants)
+        => Source(session, services, [], grants);
+
+    private static SurveysDataSource Source(ISession session, IServiceProvider services, ISurveyResponseFieldProvider[] providers, params Permission[] grants)
     {
         var authorization = TestSecurity.Granting(grants);
         var reader = new SurveyIndexReader(session, new SurveyStore(session));
@@ -671,19 +827,19 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
 
         ISurveysDataSet[] sets =
         [
-            new SurveyResponsesDataSet(session, authorization, access, [], names, versions, new SurveyCollectorStore(session), RecipeRoundTrip.Localizer<SurveyResponsesDataSet>()),
+            new SurveyResponsesDataSet(session, authorization, access, providers, names, versions, new SurveyCollectorStore(session), RecipeRoundTrip.Localizer<SurveyResponsesDataSet>()),
             new SurveyAnswersDataSet(session, authorization, access, new ResultsVersionCache(versions), registry, RecipeRoundTrip.Localizer<SurveyAnswersDataSet>()),
         ];
 
         return new SurveysDataSource(sets, new SurveyWideDataSetFactory(session, authorization, access, new SurveyStore(session), versions, registry, names, RecipeRoundTrip.Localizer<SurveyWideDataSet>()));
     }
 
-    private static async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>> ReadAsync(SurveysDataSource source, string dataSet, ClaimsPrincipal user, string key = "Id", DataCondition[] conditions = null)
+    private static async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>> ReadAsync(SurveysDataSource source, string dataSet, ClaimsPrincipal user, string key = "Id", DataCondition[] conditions = null, int maxRows = 100)
     {
         var query = new DataSourceQuery
         {
             DataSet = dataSet,
-            MaxRows = 100,
+            MaxRows = maxRows,
             Context = new DataSourceContext { User = user },
         };
 
