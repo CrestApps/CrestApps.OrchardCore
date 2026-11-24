@@ -43,9 +43,11 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
         }
 
         // The card is the one the channel's capability groups its settings on ("Text messages" for SMS), so the agents
-        // sit beside the rest of that channel's settings for the address.
+        // sit beside the rest of that channel's settings for the address. A card is matched by the name it is placed
+        // on, which the channel's own drivers write untranslated, so the capability's untranslated name is used here
+        // too; its translation would put the agents on a card of their own on a site in another language.
         var cardName = channels
-            .Select(channel => _addressOptions.Capabilities.TryGetValue(channel, out var capability) ? capability.CardName?.Value : null)
+            .Select(channel => _addressOptions.Capabilities.TryGetValue(channel, out var capability) ? capability.CardName?.Name : null)
             .FirstOrDefault(name => !string.IsNullOrEmpty(name)) ?? "Text messages";
 
         return Initialize<MessagingLineEndpointViewModel>("MessagingLineEndpoint_Edit", model =>

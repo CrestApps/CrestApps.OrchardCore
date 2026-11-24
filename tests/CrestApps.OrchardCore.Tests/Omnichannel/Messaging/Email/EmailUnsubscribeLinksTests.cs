@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
+using CrestApps.OrchardCore.Tests.Omnichannel.Messaging.Email.Deliverability;
 using Microsoft.AspNetCore.DataProtection;
 using Moq;
 using OrchardCore.Settings;
@@ -40,6 +42,33 @@ public sealed class EmailUnsubscribeLinksTests
     }
 
     [Fact]
+    public async Task TryRead_RefusesALinkPastItsLifetime()
+    {
+        // Arrange
+        var clock = new DeliverabilityClock { UtcNow = DateTime.UtcNow };
+        var links = CreateLinks("https://contoso.com", clock);
+        var url = await links.CreateUrlAsync("ann@example.com", "support@contoso.com", TestContext.Current.CancellationToken);
+        var token = url.Substring(url.LastIndexOf('/') + 1);
+
+        // Act
+        clock.UtcNow = clock.UtcNow.Add(EmailUnsubscribeLinks.Lifetime).AddDays(1);
+
+        // Assert
+        Assert.False(links.TryRead(token, out _, out _));
+    }
+
+    [Fact]
+    public void TryRead_RefusesATokenThatIsNotBase64()
+    {
+        // Arrange
+        var links = CreateLinks("https://contoso.com");
+
+        // Act & Assert
+        Assert.False(links.TryRead("a", out _, out _));
+        Assert.False(links.TryRead("a!b@c", out _, out _));
+    }
+
+    [Fact]
     public async Task CreateUrlAsync_WithoutAPublicBaseUrl_GivesNoLink()
     {
         // Arrange
@@ -52,7 +81,7 @@ public sealed class EmailUnsubscribeLinksTests
         Assert.Null(url);
     }
 
-    private static EmailUnsubscribeLinks CreateLinks(string baseUrl)
+    private static EmailUnsubscribeLinks CreateLinks(string baseUrl, DeliverabilityClock clock = null)
     {
         var site = new Mock<ISite>();
         site.SetupGet(value => value.BaseUrl).Returns(baseUrl);
@@ -60,6 +89,8 @@ public sealed class EmailUnsubscribeLinksTests
         var siteService = new Mock<ISiteService>();
         siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
-        return new EmailUnsubscribeLinks(new EphemeralDataProtectionProvider(), siteService.Object);
+        var signedTokens = new SignedTokenService(new EphemeralDataProtectionProvider(), clock ?? new DeliverabilityClock { UtcNow = DateTime.UtcNow });
+
+        return new EmailUnsubscribeLinks(signedTokens, siteService.Object);
     }
 }

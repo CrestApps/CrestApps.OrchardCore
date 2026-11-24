@@ -1,34 +1,40 @@
-using System.Security.Cryptography;
-using System.Text;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.WebUtilities;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 
 /// <summary>
-/// The default <see cref="IEmailUnsubscribeLinks"/>: the token is the addresses, protected with the tenant's data
-/// protection keys, so it needs no storage and cannot be forged.
+/// The default <see cref="IEmailUnsubscribeLinks"/>: the token is the addresses, signed with
+/// <see cref="SignedTokenService"/>, so it needs no storage and cannot be forged.
 /// </summary>
+/// <remarks>
+/// A link works for <see cref="Lifetime"/>, as the marketing unsubscribe links do: far longer than the 30 days the
+/// anti-spam laws ask an unsubscribe link to keep working, so an old email can still be unsubscribed from.
+/// </remarks>
 public sealed class EmailUnsubscribeLinks : IEmailUnsubscribeLinks
 {
+    /// <summary>
+    /// How long an unsubscribe link keeps working.
+    /// </summary>
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(400);
+
     private const string Version = "1";
     private const char Separator = '\n';
 
-    private readonly IDataProtector _protector;
+    private readonly SignedTokenService _signedTokens;
     private readonly ISiteService _siteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailUnsubscribeLinks"/> class.
     /// </summary>
-    /// <param name="dataProtectionProvider">The tenant's data protection provider.</param>
+    /// <param name="signedTokens">The service the tokens are signed and read with.</param>
     /// <param name="siteService">The site service the public base URL is read from.</param>
     public EmailUnsubscribeLinks(
-        IDataProtectionProvider dataProtectionProvider,
+        SignedTokenService signedTokens,
         ISiteService siteService)
     {
-        _protector = dataProtectionProvider.CreateProtector(EmailChannelConstants.UnsubscribeProtectorPurpose);
+        _signedTokens = signedTokens;
         _siteService = siteService;
     }
 
@@ -52,7 +58,9 @@ public sealed class EmailUnsubscribeLinks : IEmailUnsubscribeLinks
         }
 
         var payload = string.Join(Separator, Version, contact, OmnichannelEmailAddress.Normalize(serviceAddress) ?? string.Empty);
-        var token = WebEncoders.Base64UrlEncode(_protector.Protect(Encoding.UTF8.GetBytes(payload)));
+
+        // The token is URL-safe as it comes, so it goes into the path as it is.
+        var token = _signedTokens.Protect(EmailChannelConstants.UnsubscribeProtectorPurpose, payload, Lifetime);
         var route = EmailChannelConstants.UnsubscribeRoute.Replace("{token}", token, StringComparison.Ordinal);
 
         return $"{baseUri.AbsoluteUri.TrimEnd('/')}/{route}";
@@ -69,24 +77,28 @@ public sealed class EmailUnsubscribeLinks : IEmailUnsubscribeLinks
             return false;
         }
 
+        string payload;
+
         try
         {
-            var payload = Encoding.UTF8.GetString(_protector.Unprotect(WebEncoders.Base64UrlDecode(token)));
-            var parts = payload.Split(Separator);
-
-            if (parts.Length != 3 || parts[0] != Version || string.IsNullOrEmpty(parts[1]))
-            {
-                return false;
-            }
-
-            contactAddress = parts[1];
-            serviceAddress = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
-
-            return true;
+            payload = _signedTokens.Unprotect(EmailChannelConstants.UnsubscribeProtectorPurpose, token);
         }
-        catch (Exception ex) when (ex is CryptographicException or FormatException)
+        catch (FormatException)
+        {
+            // The token comes from the URL as anybody typed it; one that is not even Base64 is simply not a link.
+            return false;
+        }
+
+        var parts = payload?.Split(Separator);
+
+        if (parts is not { Length: 3 } || parts[0] != Version || string.IsNullOrEmpty(parts[1]))
         {
             return false;
         }
+
+        contactAddress = parts[1];
+        serviceAddress = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
+
+        return true;
     }
 }

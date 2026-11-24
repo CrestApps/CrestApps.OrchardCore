@@ -62,6 +62,10 @@ else
     <label asp-for="MailgunSigningKey" class="form-label">@T["Mailgun HTTP webhook signing key"]</label>
     <input asp-for="MailgunSigningKey" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasMailgunSigningKey ? T["Stored; leave empty to keep it"] : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
     <span class="hint">@T["When set, a Mailgun call must also carry a valid signature. Find it in Mailgun under Sending > Webhooks."]</span>
+    @if (!Model.HasMailgunSigningKey)
+    {
+        <div class="alert alert-warning mt-2 mb-0">@T["No signing key is set, so Mailgun calls are accepted on the webhook key alone and each one is logged as a warning. Set the key if you use Mailgun."]</div>
+    }
     @if (Model.HasMailgunSigningKey)
     {
         <div class="form-check mt-1">
@@ -75,4 +79,8 @@ else
     <label asp-for="AmazonSnsTopicArns" class="form-label">@T["Allowed Amazon SNS topics"]</label>
     <textarea asp-for="AmazonSnsTopicArns" class="form-control" rows="2" placeholder="arn:aws:sns:us-east-1:123456789012:inbound-email"></textarea>
     <span class="hint">@T["One topic ARN per line. When any are listed, Amazon SES mail from another topic is refused. The SES receipt rule's SNS action must use UTF-8 or Base64 encoding so the email is included."]</span>
+    @if (string.IsNullOrWhiteSpace(Model.AmazonSnsTopicArns))
+    {
+        <div class="alert alert-warning mt-2 mb-0">@T["No topics are listed, so any Amazon SNS topic is accepted and its subscription confirmed, and each call is logged as a warning. List your topics if you use Amazon SES."]</div>
+    }
 </div>

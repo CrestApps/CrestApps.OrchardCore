@@ -2,10 +2,14 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
+using CrestApps.OrchardCore.Tests.Omnichannel.Messaging.Email.Deliverability;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging.Email;
 
@@ -53,6 +57,10 @@ public sealed class InboundEmailWebhookParserTests
     [InlineData("https://evil.example.com/sns.us-east-1.amazonaws.com/cert.pem", false)]
     [InlineData("https://sns.us-east-1.amazonaws.com.evil.example/cert.pem", false)]
     [InlineData("https://s3.amazonaws.com/cert.pem", false)]
+    [InlineData("https://sns.attacker.s3.amazonaws.com/cert.pem", false)]
+    [InlineData("https://sns.amazonaws.com/cert.pem", false)]
+    [InlineData("https://sns..amazonaws.com/cert.pem", false)]
+    [InlineData("https://sns.us-east-1.amazonaws.com.cn.evil.example/cert.pem", false)]
     public void AmazonSns_IsAmazonSnsUrl_OnlyTrustsAmazonSnsHostsOverHttps(string url, bool expected)
     {
         // Act & Assert
@@ -172,6 +180,70 @@ public sealed class InboundEmailWebhookParserTests
         Assert.Equal("sg-1@example.com", email.MessageId);
         Assert.Equal("root@contoso.com", email.InReplyTo);
         Assert.Contains("help@contoso.com", email.DeliveredTo);
+    }
+
+    [Fact]
+    public async Task AmazonSes_ASubscriptionFromATopicNotListed_IsRefusedWithoutBeingConfirmed()
+    {
+        // Arrange
+        var httpClientFactory = new Mock<IHttpClientFactory>(MockBehavior.Strict);
+        var parser = new AmazonSesInboundEmailParser(
+            new AmazonSnsMessageVerifier(httpClientFactory.Object, new DeliverabilityClock()),
+            NullLogger<AmazonSesInboundEmailParser>.Instance);
+
+        // Act
+        var result = await parser.ParseAsync(SnsSubscriptionRequest("arn:aws:sns:us-east-1:2:someone-else"), TopicSettings(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsUnauthorized);
+        httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AmazonSesDeliveryEvents_ASubscriptionFromATopicNotListed_IsRefusedWithoutBeingConfirmed()
+    {
+        // Arrange
+        var httpClientFactory = new Mock<IHttpClientFactory>(MockBehavior.Strict);
+        var parser = new AmazonSesDeliveryEventParser(
+            new AmazonSnsMessageVerifier(httpClientFactory.Object, new DeliverabilityClock()),
+            NullLogger<AmazonSesDeliveryEventParser>.Instance);
+
+        // Act
+        var result = await parser.ParseAsync(SnsSubscriptionRequest("arn:aws:sns:us-east-1:2:someone-else"), TopicSettings(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsUnauthorized);
+        httpClientFactory.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
+    }
+
+    private static EmailInboundSettings TopicSettings()
+        => new()
+        {
+            AmazonSnsTopicArns = ["arn:aws:sns:us-east-1:1:inbound"],
+        };
+
+    // A subscription confirmation as Amazon SNS posts it, from the given topic.
+    private static HttpRequest SnsSubscriptionRequest(string topicArn)
+    {
+        var body = JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["Type"] = "SubscriptionConfirmation",
+            ["MessageId"] = "m-1",
+            ["Token"] = "t-1",
+            ["TopicArn"] = topicArn,
+            ["Message"] = "You have chosen to subscribe to the topic.",
+            ["SubscribeURL"] = "https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription&Token=t-1",
+            ["Timestamp"] = "2026-10-09T12:00:00.000Z",
+            ["SignatureVersion"] = "1",
+            ["Signature"] = "c2lnbmF0dXJl",
+            ["SigningCertURL"] = "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-abc.pem",
+        });
+
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = "text/plain; charset=UTF-8";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+
+        return context.Request;
     }
 
     private static string Sign(string key, string timestamp, string token)

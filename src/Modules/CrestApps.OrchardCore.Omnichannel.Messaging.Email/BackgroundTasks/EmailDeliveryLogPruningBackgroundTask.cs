@@ -26,8 +26,6 @@ public sealed class EmailDeliveryLogPruningBackgroundTask : IBackgroundTask
 {
     private const int BatchSize = 500;
 
-    private static readonly TimeSpan _retention = TimeSpan.FromDays(30);
-
     // A run stops after this long even with entries left, well inside the ten minutes its lock lasts and before the next
     // run; that run carries on where this one stopped.
     private static readonly TimeSpan _timeBudget = TimeSpan.FromMinutes(4);
@@ -37,7 +35,7 @@ public sealed class EmailDeliveryLogPruningBackgroundTask : IBackgroundTask
         var log = serviceProvider.GetRequiredService<IEmailDeliveryLog>();
         var session = serviceProvider.GetRequiredService<ISession>();
         var clock = serviceProvider.GetRequiredService<IClock>();
-        var cutoff = clock.UtcNow.Subtract(_retention);
+        var cutoff = clock.UtcNow.Subtract(EmailHealthPolicy.DeliveryLogRetention);
         var started = Stopwatch.GetTimestamp();
         var deleted = 0;
 
@@ -66,7 +64,7 @@ public sealed class EmailDeliveryLogPruningBackgroundTask : IBackgroundTask
 
             if (logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("Deleted {Count} email delivery log entries older than {Days} days.", deleted, (int)_retention.TotalDays);
+                logger.LogInformation("Deleted {Count} email delivery log entries older than {Days} days.", deleted, (int)EmailHealthPolicy.DeliveryLogRetention.TotalDays);
             }
         }
     }

@@ -410,6 +410,40 @@ public sealed class EmailInboundReceiverTests
         Assert.Null(message.GetEmailMetadata().ReplyTo);
     }
 
+    [Fact]
+    public async Task ReceiveAsync_AnOutOfOfficeReply_IsMarkedAsAnAutomaticMessage()
+    {
+        // Arrange
+        var inbox = new RecordingInbox();
+        var receiver = CreateReceiver(inbox);
+
+        var email = Email();
+        email.Headers["Auto-Submitted"] = "auto-replied";
+
+        // Act
+        var result = await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(EmailInboundStatus.Accepted, result.Status);
+        var message = JsonSerializer.Deserialize<OmnichannelMessage>(Assert.Single(inbox.Accepted).Payload);
+        Assert.True(message.IsAutomatic());
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_AnEmailAPersonWrote_IsNotMarkedAsAnAutomaticMessage()
+    {
+        // Arrange
+        var inbox = new RecordingInbox();
+        var receiver = CreateReceiver(inbox);
+
+        // Act
+        await receiver.ReceiveAsync(Email(), "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        var message = JsonSerializer.Deserialize<OmnichannelMessage>(Assert.Single(inbox.Accepted).Payload);
+        Assert.False(message.IsAutomatic());
+    }
+
     private static IEmailDeliveryEventProcessor RecordingProcessor(List<EmailDeliveryEvent> events)
     {
         var processor = new Mock<IEmailDeliveryEventProcessor>();

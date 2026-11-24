@@ -37,7 +37,10 @@ internal static class MessagingOutboxBackfill
                 var page = await session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
                         index => !index.IsInbound && index.CreatedUtc >= since,
                         collection: OmnichannelConstants.CollectionName)
+                    // The index row breaks ties, so messages sent in the same instant are neither skipped nor read twice
+                    // where a page ends.
                     .OrderBy(index => index.CreatedUtc)
+                    .ThenBy(index => index.Id)
                     .Skip(skip)
                     .Take(PageSize)
                     .ListAsync();

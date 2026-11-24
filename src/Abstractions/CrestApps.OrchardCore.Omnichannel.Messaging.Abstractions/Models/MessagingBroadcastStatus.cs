@@ -1,8 +1,8 @@
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 
 /// <summary>
-/// The lifecycle state of a broadcast (a one-composer, many-recipient send that fans out to individual
-/// 1:1 threads — the compliant default, with no cross-recipient visibility).
+/// The lifecycle state of a broadcast (a one-composer, many-recipient send in which each recipient gets the message on
+/// their own, with no cross-recipient visibility; a conversation opens when a recipient replies).
 /// </summary>
 public enum MessagingBroadcastStatus
 {
@@ -22,7 +22,8 @@ public enum MessagingBroadcastStatus
     Running,
 
     /// <summary>
-    /// Every recipient has been processed.
+    /// Every recipient has been processed. Messages the channel held back may still be queued; such a broadcast is
+    /// shown as still sending until they are sent.
     /// </summary>
     Completed,
 

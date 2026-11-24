@@ -61,7 +61,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     [
         ("IDX_OCEmail_DocumentId", ["DocumentId"]),
 
-        // An inbound email, an unsubscribe and a privacy request look a record up by one of its addresses.
+        // An inbound email and an unsubscribe look a record up by any of its addresses.
         ("IDX_OCEmail_Address", ["NormalizedEmailAddress", "Published", "Latest"]),
         ("IDX_OCEmail_ContentItem", ["ContentItemId", "Published", "Latest"]),
     ];
@@ -357,7 +357,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
     /// <summary>
     /// Adds the email address index, which holds one row for every email address of a contact or lead, so an inbound
-    /// email, an unsubscribe or a privacy request finds the record by any of its addresses. The table starts empty: the
+    /// email or an unsubscribe finds the record by any of its addresses. The table starts empty: the
     /// records already saved are indexed again by <see cref="ContactEmailAddressIndexStep"/>, outside activation, which
     /// also fills their canonical primary email.
     /// </summary>

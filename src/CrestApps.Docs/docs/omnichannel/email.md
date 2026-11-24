@@ -29,10 +29,11 @@ The channel works with any email provider. Each address picks how it sends, and 
 - Two-way email in the workspace: subjects, threaded replies (`Re:` and, with the SMTP transport, `In-Reply-To` and `References`), attachments of any document or picture format the workspace knows, and the history a reply quoted folded away under **Show quoted text**.
 - Email **entry points** that route each address's mail with the workspace's distribution, opening hours and auto-replies.
 - Inbound email from provider webhooks and from mailboxes, committed to the durable provider inbox and recognised by its `Message-ID`, so a redelivered email is never recorded or answered twice.
-- Bounce handling: a delivery report marks the email it bounced as failed, and a hard bounce suppresses the address.
+- Bounce handling: a delivery report about an email the site sent marks that email as failed, and a hard bounce suppresses the address.
 - Sending limits, warm-up, pacing by receiving domain, a suppression list, bounce and complaint webhooks, and pauses when servers push back or sending health turns bad (see [Send email at volume](#send-email-at-volume)).
 - Loop protection: automatic mail (out-of-office replies, bulk mail, bounces) is recorded but never auto-replied to, and mail from one of the business's own addresses is ignored.
-- One-click unsubscribe on broadcasts and campaign email, which marks every contact holding the address **Do not email**.
+- One-click unsubscribe on broadcasts and campaign email, which opts the address out of email, whoever holds it, and marks every contact holding it **Do not email**.
+- A personal-data export or erasure covers the person's emails, attachments, delivery log and suppression note (see [Personal data](#personal-data)).
 - Email on Load Activities, subject flows and the activity report filters.
 
 **Email Omnichannel Automation**
@@ -45,21 +46,22 @@ The channel works with any email provider. Each address picks how it sends, and 
 
 ## Enable the features
 
-1. In the admin, go to **Tools > Features**.
+1. In the admin, go to **Tools** → **Features**.
 2. Enable **Email Messaging Channel**. It brings in the Omnichannel Messaging workspace, the Contact Center provider inbox and Orchard Core's Email feature.
 3. To let the AI work email, enable **Email Omnichannel Automation**. It brings in the AI features, Omnichannel Management and Contact Center Business Hours.
 
 ## Add an email address
 
-1. Go to **Omnichannel > Omnichannel Addresses** and add an address of type **Email address**, such as `support@contoso.com`. Tick **Email**.
+1. Go to **Interaction Center** → **Management** → **Omnichannel Addresses** and add an address of type **Email address**, such as `support@contoso.com`. Tick **Email**.
 2. On the **Email** card, set how it sends:
    - **Sender name**, shown to the customer, and a **Signature** added below every email.
    - **Send through**:
-     - **Orchard Core email service** uses the site's email settings (**Settings > Communication > Email**). Pick a provider, or leave it on the site's default. The provider must be allowed to send from this address (for SMTP, the mailbox's credentials; for Azure Communication Services, a verified sender domain).
-     - **The address's own SMTP server** sends from the mailbox itself, for example `smtp.office365.com` on port 587 with STARTTLS, or `smtp.gmail.com`. Use **Test connection** to check the sign-in before saving. This transport sets the threading headers, so replies stay threaded in every mail client.
+     - **Orchard Core email service** uses the site's email settings (**Settings** → **Communication** → **Email**). Pick a provider, or leave it on the site's default. The provider must be allowed to send from this address (for SMTP, the mailbox's credentials; for Azure Communication Services, a verified sender domain). It cannot add the one-click unsubscribe header (`List-Unsubscribe`) that Gmail and Yahoo require of bulk senders, and the card warns about it, so an address that sends broadcasts or campaigns should use its own SMTP server.
+     - **The address's own SMTP server** sends from the mailbox itself, for example `smtp.office365.com` on port 587 with STARTTLS, or `smtp.gmail.com`. Use **Test connection** to check the sign-in before saving. This transport sets the threading headers, so replies stay threaded in every mail client, and the one-click unsubscribe header on bulk mail. A sending service's SMTP relay (Amazon SES, SendGrid, Mailgun, Postmark) works here too.
+   - The SMTP and IMAP passwords are stored and never shown again; leave the box empty to keep the stored one. The stored password is used (by **Test connection** and on save) only while the host, port, security and user name are the ones it was saved with. Change any of them and type the password again.
    - **Default subject**, used for a new email that is not a reply and was given none.
 3. Set how mail reaches the workspace in **Receive mail by** (see below), and save.
-4. Add the address to an **email entry point** (**Contact Center > Entry Points**, then **Create > Email**) to say who answers it: a queue, an agent or an AI agent.
+4. Add the address to an **email entry point** (**Interaction Center** → **Management** → **Inbound Entry Points**, then **Create** → **Email**) to say who answers it: a queue, an agent or an AI agent.
 5. Optionally list the agents who send from the address on the same card, so the composer starts their new email conversations from it.
 
 Addresses are stored and matched in lower case, so mail to `Support@Contoso.com` reaches `support@contoso.com`.
@@ -68,16 +70,16 @@ Addresses are stored and matched in lower case, so mail to `Support@Contoso.com`
 
 ### Webhook
 
-Choose **My email provider posts it to a webhook**. The webhook addresses are on the address's Email card and on **Settings > Communication > Email**, under **Inbound email**. Save that settings page once to create the site's webhook key; every webhook address carries it, so keep the addresses private, and use **Create a new webhook key** if one leaks.
+Choose **My email provider posts it to a webhook**. The webhook addresses are on the address's Email card and on **Settings** → **Communication** → **Email**, under **Inbound Email**. Save that settings page once to create the site's webhook key; every webhook address carries it, so keep the addresses private, and use **Create a new webhook key** if one leaks.
 
 The route is `POST ~/api/omnichannel/email/inbound/{provider}?key=…`. The key can also be sent in an `X-Webhook-Key` header.
 
 | Provider | `{provider}` | Set up in the provider |
 | --- | --- | --- |
-| SendGrid | `sendgrid` | **Settings > Inbound Parse**: add the receiving domain and the webhook address. Ticking **POST the raw, full MIME message** is recommended. |
-| Mailgun | `mailgun` | **Receiving > Routes**: a route whose action is `forward("…webhook address…")`. The parsed fields are read, and the raw message (`body-mime`) when the forwarding address ends in `mime`. Paste the **HTTP webhook signing key** in the site's inbound email settings so every call's signature is checked. |
+| SendGrid | `sendgrid` | **Settings** → **Inbound Parse**: add the receiving domain and the webhook address. Ticking **POST the raw, full MIME message** is recommended. |
+| Mailgun | `mailgun` | **Receiving** → **Routes**: a route whose action is `forward("…webhook address…")`. The parsed fields are read, and the raw message (`body-mime`) when the forwarding address ends in `mime`. Paste the **HTTP webhook signing key** in the site's inbound email settings so every call's signature is checked; until it is set, every unsigned call is logged as a warning. |
 | Postmark | `postmark` | The inbound stream's **Webhook** setting. |
-| Amazon SES | `ses` | A receipt rule with an **SNS** action whose **encoding** is UTF-8 or Base64, and an HTTPS subscription of that topic to the webhook address. The subscription is confirmed automatically. List the topic ARN under **Allowed Amazon SNS topics** to refuse any other topic. |
+| Amazon SES | `ses` | A receipt rule with an **SNS** action whose **encoding** is UTF-8 or Base64, and an HTTPS subscription of that topic to the webhook address. The subscription is confirmed automatically. List the topic ARN under **Allowed Amazon SNS topics** to refuse any other topic; until the list is set, every call is logged as a warning. |
 | Raw MIME | `mime` | Anything that can relay the raw RFC 822 message: a Cloudflare Email Worker, an AWS Lambda, a mail server's pipe-to-script. Post the message as the body, or as an `email` form field or file. Pass the envelope recipient as the `to` query value or the `X-Envelope-To` header when the headers may not name the address (a Bcc). |
 | JSON | `json` | Automation platforms (Power Automate's "When a new email arrives" on Microsoft 365, Zapier, Make, n8n, a Google Apps Script on a Gmail inbox). See the shape below. |
 
@@ -111,10 +113,12 @@ Choose **Reading the mailbox (IMAP)** when the provider cannot post inbound mail
 
 The **Email Mailbox Reader** background task reads each mailbox every minute, receives the mail that arrived since the last read, then marks it as read or moves it to a folder. The first read receives only mail that arrives after the mailbox is connected, unless **On first connect** asks for the unread mail of the last few days. A mailbox that fails (a changed password, a server that is down) is retried less and less often, up to once an hour, and the error shows on the address's Email card.
 
+An email over 30 MB is not downloaded, and an email that cannot be read or received is passed over: both are left unread where they are, for a person to open in their mail client, and the log says why. The next email is received as usual, so one bad email never holds up the mailbox. A dropped connection ends the read instead, and the next read starts again from the same email.
+
 ### What happens to an inbound email
 
-1. Mail from one of the business's own addresses is ignored, so two mailboxes never answer each other.
-2. A bounce marks the email it bounced as failed (when the address sends with the SMTP transport, which sets the `Message-ID` the bounce names) and is not received as a message.
+1. Mail from one of the business's own addresses is ignored, so two mailboxes never answer each other, unless its `Reply-To` names somebody else (a form on the business's own site relaying a visitor's message; see below).
+2. A delivery report (a bounce) is never received as a message. Anybody can email one, so it is believed only when it names an email this site sent (by its `Message-ID`, which the SMTP transport sets) and the recipient that email went to; any other report is ignored. A failure (`Action: failed`) or a delay (`delayed`) is then read as a provider's bounce report is (see [What the channel does](#what-the-channel-does)): a hard bounce marks the email failed and suppresses the recipient. Success notices (`delivered`, `relayed`, `expanded`) and read receipts are ignored.
 3. The address is found among the delivery headers (`Delivered-To`, `X-Original-To`, the envelope), `To` and `Cc`, so a Bcc or a forwarding alias still reaches its address.
 4. The files are kept in the workspace's encrypted attachment store. A picture the HTML body shows inline (a logo in a signature) is left out.
 5. The new reply is separated from the quoted history (the "On … wrote:" and Outlook header blocks of the common mail clients, and lines quoted with `>`).
@@ -123,11 +127,15 @@ The **Email Mailbox Reader** background task reads each mailbox every minute, re
 
 The conversation is with the address the email came from. A `Reply-To` naming somebody else decides the conversation only when one of the business's own addresses sent the email, as a form on the business's own site relays a visitor's message; from anyone else it is kept on the message for the record, because anybody can write any `Reply-To`.
 
+The customer is matched to the contact or lead that holds the address among any of its email addresses, not only the first. On an upgraded site, the contacts and leads saved before this was added are indexed in the background by the **Resumable upgrade steps** task, up to 2,000 a minute.
+
 ## Answer email in the workspace
 
 Email conversations show under the envelope tab of a customer. Each message shows its subject, and **Show quoted text** opens the history it quoted. The reply composer suggests `Re:` and the latest subject, is taller than the SMS one, and keeps Enter for new lines: press **Ctrl+Enter** to send. Files of any document or picture format can be attached, up to ten and 20 MB per email.
 
-**New message** shows a **Subject** line when the address picked is an email address, and so do broadcasts. A broadcast email carries the one-click unsubscribe link and header unless the address turns them off.
+**New message** shows a **Subject** line when the address picked is an email address, and so do broadcasts. A broadcast email carries the unsubscribe link unless the address turns it off, and the one-click unsubscribe header when the address sends through its own SMTP server.
+
+A broadcast opens no conversation for each recipient. Each recipient gets the email on their own, and a conversation opens when one of them replies, with the broadcast in it. A recipient who already has a conversation gets the email in it, without it being reopened, marked read or given to someone else. An email refused for good (a suppressed or opted-out address) to someone who has no conversation leaves nothing behind. An email the address's sending limits hold back is counted on the broadcast list as queued, apart from the sent ones, and the broadcast shows **Sending** until the queued emails have gone out.
 
 ## Automate email (AI)
 
@@ -139,7 +147,16 @@ With **Email Omnichannel Automation** on:
 - A reply that only asks to unsubscribe ("unsubscribe", "remove me", "stop") marks the contact **Do not email** and cancels the activity.
 - Cadence follow-ups reply under the opening email's subject, within business hours, and carry the unsubscribe link.
 - A handoff copies the transcript and a short summary to a workspace conversation on the target queue, as for SMS.
-- On an email entry point, **Route to > AI agent** lets an AI profile answer a customer's first email. The same rules as for texts decide when a person takes the message instead: the entry point is closed, a person already has an open conversation with the customer, or the customer's last AI conversation ended less than an hour ago.
+- On an email entry point, choosing **AI agent** under **Route to** lets an AI profile answer a customer's first email. The same rules as for texts decide when a person takes the message instead: the entry point is closed, a person already has an open conversation with the customer, or the customer's last AI conversation ended less than an hour ago.
+
+Anybody can write to an address, so automated replies have safeguards:
+
+- The subject of the customer's email reaches the AI inside the customer's own message, on one line of at most 200 characters, never as an instruction.
+- The AI profile's own tools are not offered on an automated email reply. The only tool is the transfer to a person, when one is available.
+- A message that reaches the AI twice (a provider's redelivery under the same `Message-ID`) is answered once.
+- The AI sends at most five messages in a conversation within an hour, its opening email and follow-ups included. Past that it stops replying and hands the conversation to a person when one is available, so two automated mailboxes never write to each other forever.
+- When the check of whether a reply is warranted cannot decide (no chat deployment, a failed call), the AI sends nothing. It hands the conversation to a person when one is available; otherwise the message stays owed, and the lost-reply recovery may try again while it is recent.
+- Automated replies count against the address's hourly and daily limits and wait while its bulk mail is paused (see [Send email at volume](#send-email-at-volume)).
 
 The AI's requests are recorded under the **Email** category of the AI usage report.
 
@@ -149,36 +166,62 @@ Mailbox providers (Gmail, Outlook, Yahoo) judge a sender by its sending history:
 
 ### What the channel does
 
-- **Sending limits.** Each email address has a limit per hour, per day and per receiving domain, and a minimum gap between bulk emails, on the address's **Email** card. Broadcasts, campaign opening emails and follow-ups over a limit wait for their turn instead of failing: they go out as fast as the minimum gap allows until a limit is reached, then wait for their turns, spread out at the address's pace (two hundred an hour is one every 18 seconds), so a campaign of ten thousand drains over hours rather than bursting. Replies to customers count against the limits but are never held back.
-- **Warm-up.** **Warm up this address** starts a new address at a small daily limit (50 by default) and doubles it every day until it reaches the daily limit, spreading each day's allowance over twelve hours.
+- **Sending limits.** Each email address has a limit per hour, per day and per receiving domain, and a minimum gap between bulk emails, on the address's **Email** card. Broadcasts, campaign opening emails and follow-ups go out as fast as the minimum gap allows until a limit is reached; then they wait for their turns instead of failing, spread out at the address's pace (two hundred an hour is one every 18 seconds), so a campaign of ten thousand drains over hours rather than bursting. Automated replies (the AI or a workflow answering in a conversation) wait for room under the hourly and daily limits and for the address's pauses, but not for the gap, the per-domain limit or bulk mail's turns. A person's own replies count against the limits but are never held back.
+- **Warm-up.** **Warm up this address** starts a new address at a small daily limit (50 by default) and doubles it every day until it reaches the daily limit, spreading each day's allowance over twelve hours. The warm-up counts from the day it was turned on; an address saved or imported with it on and no start date starts its warm-up that day.
 - **Reacting to the server.** A failed send is read by its SMTP code and enhanced status code:
 
   | The server says | The channel |
   | --- | --- |
-  | `5.1.x`, `5.2.1` (no such mailbox, disabled) | Suppresses the address and never retries it. |
-  | `5.7.x` (policy, reputation, authentication) | Keeps the recipient, and pauses the address's bulk mail for an hour, then 2, 4… up to a day if it repeats. |
-  | `421`, `4.7.x`, "rate limit", "too many" | Pauses bulk mail for 15 minutes, then 30, 60… up to 4 hours; held mail is sent when the pause ends. |
-  | Other `4xx` | Retries later as an ordinary failure. |
+  | `5.1.x`, `5.2.1`, `5.4.x`, `5.0.0` (no such mailbox or domain, a disabled mailbox) | Suppresses the recipient and never retries it. A `5.0.0` or `5.4.x` whose words say the sender was refused (a block list, a policy) is a block, `5.1.7` and `5.1.8` (about the sender's own address) are blocks, `5.4.5` is a throttle and `5.4.7` (expired in the queue) is temporary. A `550` without an enhanced code suppresses only when its words, or a refused recipient, say the mailbox does not exist; otherwise it is a block. |
+  | `5.3.x`, `5.5.x`, `5.6.x`, `5.2.3`, a `552` without an enhanced code (too large, refused content or format) | Only that email fails. The recipient is not suppressed and bulk mail is not paused, unless the words say the mailbox does not exist. |
+  | `5.7.x` (policy, reputation, authentication) | Keeps the recipient, and pauses the address's bulk mail for an hour, then 2, 4… up to a day if it happens again after the pause ended. |
+  | `4.7.x`, `4.2.1`, `4.4.5`, `5.4.5`, "rate limit", "too many", "try again later", a `421` without an enhanced code | Pauses bulk mail for 15 minutes, then 30, 60… up to 4 hours; held mail is sent when the pause ends. |
+  | A full mailbox (`4.2.2`, `5.2.2`, or a `552` whose words say so) and other `4xx` | Retries later as an ordinary failure. A full mailbox reported with its code is about one recipient, so it never pauses the address. |
 
-- **Suppression list.** A hard bounce, a third soft bounce in two weeks, or a spam complaint puts the address on **Interaction Center > Management > Email Suppressions**, and nothing is sent to it again from any address. Automated activities to a suppressed address are cancelled before anything is composed. An address can be taken off the list, or added by hand, on that page.
-- **Bounce and complaint webhooks.** A provider that reports what happened after the email left posts it to `POST ~/api/omnichannel/email/events/{provider}?key=…` (`sendgrid`, `mailgun`, `postmark`, `ses`, `json`), listed under **Settings > Communication > Email**, **Inbound email**. Point SendGrid's Event Webhook, Mailgun's webhooks, Postmark's bounce and spam complaint webhooks, or an Amazon SES bounce and complaint SNS topic at it. A complaint also marks every contact with the address **Do not email**. Bounce reports that come back to a mailbox the channel reads are handled the same way.
+  The same push-back reported again while its pause runs (a batch of bounce reports, mail already on its way) belongs to that pause: it neither moves the end nor makes the next pause longer. Only push-back after a pause ended does, and a bulk email that gets through starts the backoff again. A pause never cuts a longer one short: a throttle during a day-long block leaves the block in place.
+
+  Bounce reports, from a provider's webhook or back in a mailbox, are read by the same codes: a refusal of the sender pauses the address instead of suppressing the recipient, a refusal of the one email fails only that email, and a permanent full-mailbox answer (`5.2.2`) counts toward the recipient's soft bounces. A temporary failure (`4.x.x`) is never a hard bounce: one the provider is still retrying, such as each Mailgun temporary failure, is a deferral, and one a provider reports as a hard bounce counts as a soft bounce.
+
+- **Suppression list.** A hard bounce, a third email to soft-bounce within two weeks, or a spam complaint puts the address on **Interaction Center** → **Management** → **Email Suppressions**, and nothing is sent to it again from any address. The list is also a source of consent, so every send path that asks whether an address may be emailed, broadcasts and campaigns among them, skips a suppressed address. Automated activities to a suppressed address are cancelled before anything is composed. An address can be taken off the list, or added by hand, on that page. The **Email Suppression List** deployment step exports the list, and the `EmailSuppressions` recipe step adds addresses to another site's list (an address already on it keeps its first reason):
+
+  ```json
+  {
+    "name": "EmailSuppressions",
+    "Suppressions": [
+      { "Address": "ann@example.com", "Reason": "HardBounce", "Detail": "5.1.1 User unknown" }
+    ]
+  }
+  ```
+
+  `Reason` is `HardBounce`, `RepeatedSoftBounces`, `Complaint` or `Manual` (the default).
+
+- **Bounce and complaint webhooks.** A provider that reports what happened after the email left posts it to `POST ~/api/omnichannel/email/events/{provider}?key=…` (`sendgrid`, `mailgun`, `postmark`, `ses`, `json`), listed under **Settings** → **Communication** → **Email**, **Inbound Email**. Point SendGrid's Event Webhook, Mailgun's webhooks, Postmark's bounce and spam complaint webhooks, or an Amazon SES bounce and complaint SNS topic at it. A complaint also opts the address out of email and marks every contact holding it **Do not email**. Bounce reports that come back to a mailbox the channel reads are handled the same way, once they are checked against the email they name (see [What happens to an inbound email](#what-happens-to-an-inbound-email)).
 - **Receiving domains that push back.** When one receiving domain defers or soft-bounces three emails within half an hour, bulk mail to that domain waits half an hour while mail to every other domain goes on.
-- **Sending health.** The **Email** card shows the last seven days: emails sent, the bounce and complaint rates, and where the address stands against its limits. When 5% of a week's emails bounce, or 0.3% are reported as spam (Gmail asks bulk senders to stay under 0.1%), bulk sending pauses until someone ticks **Resume bulk sending** after cleaning the list. Replies are never paused.
-- **Unsubscribe.** Broadcasts and campaign email carry one-click unsubscribe (see [Answer email in the workspace](#answer-email-in-the-workspace)).
+- **Sending health.** The **Email** card shows the last seven days: emails sent, the bounce and complaint rates, and where the address stands against its limits. When 5% of a week's emails bounce, or 0.3% are reported as spam (Gmail asks bulk senders to stay under 0.1%), bulk sending pauses until someone ticks **Resume bulk sending** after cleaning the list. Health is then measured from the resume, so the bounces and complaints before it do not pause the address again. Automated replies wait while bulk mail is paused; a person's replies are never paused. The delivery log these figures are counted from keeps 30 days; the **Email Delivery Log Pruning** background task removes older entries every ten minutes.
+- **Unsubscribe.** Broadcasts and campaign email carry an unsubscribe link, and the one-click unsubscribe header (`List-Unsubscribe`) when the address sends through its own SMTP server (see [Answer email in the workspace](#answer-email-in-the-workspace)). An unsubscribe link works for 400 days, like a campaign's. Unsubscribing opts the address itself out of email, whoever holds it (a contact's second address, or an address no contact holds), and marks every contact holding it, among any of its email addresses, **Do not email**.
 
 :::note[Throughput]
-Limits apply to campaign and broadcast mail. A campaign larger than the address's daily limit takes more than a day; that is the point. Raise the limits gradually as the address builds a history, and only on a dedicated sending service.
+Limits apply to campaign and broadcast mail, and the hourly and daily limits to automated replies. A campaign larger than the address's daily limit takes more than a day; that is the point. Raise the limits gradually as the address builds a history, and only on a dedicated sending service.
 :::
 
 ### What you set up outside the platform
 
 - **Authenticate the sending domain.** Publish SPF, sign with DKIM, and publish a DMARC policy, with the DKIM domain aligned with the From address. Gmail and Yahoo refuse bulk mail without them. Your sending provider gives the records.
-- **Use a sending service for campaigns.** A mailbox host limits one mailbox: Microsoft 365 takes about 30 messages a minute and 10,000 recipients a day, Google Workspace about 2,000 a day. For campaigns, use a dedicated sending service (Amazon SES, SendGrid, Mailgun, Postmark, Azure Communication Services) through Orchard Core's email service or its SMTP relay, and connect its bounce and complaint webhook.
+- **Use a sending service for campaigns.** A mailbox host limits one mailbox: Microsoft 365 takes about 30 messages a minute and 10,000 recipients a day, Google Workspace about 2,000 a day. For campaigns, use a dedicated sending service (Amazon SES, SendGrid, Mailgun, Postmark, Azure Communication Services) through its SMTP relay, set as the address's own SMTP server so campaign mail carries the one-click unsubscribe header, and connect its bounce and complaint webhook.
 - **Keep campaign mail apart.** Send campaigns from their own address on their own subdomain (for example `news.contoso.com`), so a campaign that goes badly cannot hurt the address customers reply to or the mail your business depends on. Each address has its own limits, health and pause.
 - **Warm up gradually, and start with your most engaged contacts.** Recipients who open and reply build the history; old or bought lists tear it down.
 - **Do not rotate addresses or domains to get around a block.** Providers recognise the pattern and the content, and rotating looks more like spam, not less.
 
 The channel does not measure inbox placement (accepted by the server is not the same as delivered to the inbox), monitor blocklists, or check the domain's DNS records; use your sending service's tools and Google Postmaster Tools for those.
+
+## Personal data
+
+The channel takes part in personal-data requests (see [Personal data](../modules/personal-data.md)), and finds what it keeps about a person by their email addresses:
+
+- **The emails exchanged with them**, with their attachments. Erasing keeps each email as an empty record, so a conversation's message count and response times still add up, but clears its body, subject and quoted history, the sender's name, the addresses copied and the address it was exchanged with, and deletes its files from the attachment store.
+- **The delivery log** of the mail sent to them. Erasing keeps the sending address, kind, time and receiving domain, which limits and health are counted from, and removes the recipient and what the server said.
+- **Their suppression.** It stays, and only its note (what the server or provider said) is cleared, so a complaint or a hard bounce is never mailed again.
+- **The AI conversations** an automated activity held with them, exported with the activity and deleted when it is erased (by the Omnichannel Activities contributor).
 
 ## Extend the channel
 

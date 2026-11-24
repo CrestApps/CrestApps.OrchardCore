@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using OrchardCore.Modules;
 
@@ -12,7 +13,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 /// host over HTTPS, and the message's canonical string must verify against it (SHA1 for signature version 1, SHA256 for
 /// version 2).
 /// </summary>
-public sealed class AmazonSnsMessageVerifier
+public sealed partial class AmazonSnsMessageVerifier
 {
     /// <summary>
     /// The name of the HTTP client the signing certificates and subscription confirmations are fetched with.
@@ -56,11 +57,9 @@ public sealed class AmazonSnsMessageVerifier
             return false;
         }
 
-        var host = uri.Host;
-
-        return host.StartsWith("sns.", StringComparison.OrdinalIgnoreCase) &&
-            (host.EndsWith(".amazonaws.com", StringComparison.OrdinalIgnoreCase) ||
-             host.EndsWith(".amazonaws.com.cn", StringComparison.OrdinalIgnoreCase));
+        // The host Amazon documents for SNS, one region label between "sns." and the domain. A looser prefix and suffix
+        // check also took hosts such as sns.attacker.s3.amazonaws.com, which anybody with an AWS account can serve.
+        return SnsHostRegex().IsMatch(uri.Host);
     }
 
     /// <summary>
@@ -194,6 +193,9 @@ public sealed class AmazonSnsMessageVerifier
 
         return certificate;
     }
+
+    [GeneratedRegex(@"^sns\.[a-z0-9-]+\.amazonaws\.com(\.cn)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex SnsHostRegex();
 
     private static string GetString(JsonElement element, string name)
         => element.ValueKind == JsonValueKind.Object &&

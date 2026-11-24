@@ -208,8 +208,9 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         settings.Limits.WarmUpFirstDayLimit = model.WarmUpFirstDayLimit;
         settings.Limits.PauseOnPoorHealth = model.PauseOnPoorHealth;
 
-        // The warm-up counts its days from when it was turned on; turning it off and on again starts it over.
-        if (model.WarmUp && !settings.Limits.WarmUp)
+        // The warm-up counts its days from when it was turned on; turning it off and on again starts it over. One
+        // turned on without a date (by a recipe or an import) is dated on this save, so it starts to ramp at last.
+        if (model.WarmUp && (!settings.Limits.WarmUp || settings.Limits.WarmUpStartedUtc is null))
         {
             settings.Limits.WarmUpStartedUtc = _clock.UtcNow;
         }

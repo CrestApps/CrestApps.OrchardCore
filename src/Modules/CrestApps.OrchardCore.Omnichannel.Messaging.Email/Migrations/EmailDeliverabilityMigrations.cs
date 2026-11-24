@@ -18,6 +18,13 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
     /// </summary>
     internal const string SendingStateAddressUniqueIndexName = "UQ_EmailSendingState_Address";
 
+    /// <summary>
+    /// The unique index that keeps an address on the suppression list once, so two reports suppressing it at the same
+    /// moment cannot each add a record. The delivery log's event id gets no such index: its send entries carry no event
+    /// id, and SQL Server lets a unique index hold only one empty value, so the processor's check stays the guard there.
+    /// </summary>
+    internal const string SuppressionAddressUniqueIndexName = "UQ_EmailSuppression_Address";
+
     private const string Collection = EmailChannelConstants.DeliverabilityCollectionName;
 
     private readonly IStore _store;
@@ -83,8 +90,9 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
             collection: Collection);
 
         await CreateSendingStateUniqueIndexAsync();
+        await CreateSuppressionUniqueIndexAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -99,6 +107,87 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
         await CreateSendingStateUniqueIndexAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Keeps each address on the suppression list once: deletes every record of an address but its oldest, which holds
+    /// the first reason, then makes the address unique. Two reports suppressing an address at the same moment could each
+    /// add a record.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await RemoveDuplicateSuppressionsAsync();
+        await CreateSuppressionUniqueIndexAsync();
+
+        return 3;
+    }
+
+    private async Task CreateSuppressionUniqueIndexAsync()
+    {
+        // A second app instance activating the tenant at the same time may have created it already.
+        if (await IndexTableIndexCreation.ExistsAsync(SchemaBuilder, typeof(EmailSuppressionIndex), SuppressionAddressUniqueIndexName, Collection))
+        {
+            return;
+        }
+
+        await IndexMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(EmailSuppressionIndex),
+            Collection,
+            SuppressionAddressUniqueIndexName,
+            "Address");
+    }
+
+    private async Task RemoveDuplicateSuppressionsAsync()
+    {
+        var dialect = SchemaBuilder.Dialect;
+        var indexTable = IndexMigrationSql.GetQuotedTableName(SchemaBuilder, _store, typeof(EmailSuppressionIndex), Collection);
+        var documentTable = dialect.QuoteForTableName(
+            SchemaBuilder.TablePrefix + SchemaBuilder.TableNameConvention.GetDocumentTable(Collection),
+            _store.Configuration.Schema);
+        var idColumn = dialect.QuoteForColumnName("Id");
+        var documentIdColumn = dialect.QuoteForColumnName("DocumentId");
+        var addressColumn = dialect.QuoteForColumnName("Address");
+
+        // The list can be long, so only the records of addresses listed more than once (and any that name no address)
+        // are read; the database groups them by its own collation, the one the unique index compares with. Ids are read
+        // as whatever integer the column holds, since older tenants have 32-bit identity columns.
+        var rows = new List<(long Id, long DocumentId, string Address)>();
+
+        await using (var command = SchemaBuilder.Connection.CreateCommand())
+        {
+            command.Transaction = SchemaBuilder.Transaction;
+            command.CommandText =
+                $"SELECT {idColumn}, {documentIdColumn}, {addressColumn} FROM {indexTable} " +
+                $"WHERE {addressColumn} IS NULL OR {addressColumn} IN (SELECT {addressColumn} FROM {indexTable} GROUP BY {addressColumn} HAVING COUNT(*) > 1)";
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                rows.Add((
+                    Convert.ToInt64(reader.GetValue(0), CultureInfo.InvariantCulture),
+                    Convert.ToInt64(reader.GetValue(1), CultureInfo.InvariantCulture),
+                    reader.IsDBNull(2) ? null : Convert.ToString(reader.GetValue(2), CultureInfo.InvariantCulture)));
+            }
+        }
+
+        // The oldest record of each address stays. A record that names no address is never found, and two of them would
+        // break the unique index on the databases that treat nulls as equal, so it goes too.
+        var kept = rows
+            .Where(row => !string.IsNullOrEmpty(row.Address))
+            .GroupBy(row => row.Address, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.MinBy(row => row.Id).Id)
+            .ToHashSet();
+
+        foreach (var row in rows.Where(row => !kept.Contains(row.Id)))
+        {
+            // The index row goes first: on SQL Server it has a foreign key to its document.
+            await IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {indexTable} WHERE {idColumn} = @Id", ("@Id", row.Id));
+            await IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {documentTable} WHERE {idColumn} = @DocumentId", ("@DocumentId", row.DocumentId));
+        }
     }
 
     private async Task CreateSendingStateUniqueIndexAsync()

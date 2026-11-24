@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
@@ -11,19 +12,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 /// Reads Mailgun's webhooks: a JSON object with <c>signature</c> and <c>event-data</c>. A <c>failed</c> event is a hard
 /// bounce when its severity is permanent and a deferral otherwise, since Mailgun reports each temporary failure of an
 /// email it is still trying (a greylisting server, say) and only the permanent one ends it; an ESP block is a block.
-/// When the tenant has the Mailgun signing key, the signature is checked.
+/// When the tenant has the Mailgun signing key, the signature is checked; without it, every call is logged as unsigned.
 /// </summary>
 public sealed class MailgunDeliveryEventParser : IEmailDeliveryEventParser
 {
     private readonly IEmailSecretProtector _secretProtector;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     public MailgunDeliveryEventParser(
         IEmailSecretProtector secretProtector,
-        IClock clock)
+        IClock clock,
+        ILogger<MailgunDeliveryEventParser> logger)
     {
         _secretProtector = secretProtector;
         _clock = clock;
+        _logger = logger;
     }
 
     public string Name => EmailChannelConstants.Providers.Mailgun;
@@ -42,6 +46,12 @@ public sealed class MailgunDeliveryEventParser : IEmailDeliveryEventParser
         if (!string.IsNullOrEmpty(signingKey) && !HasValidSignature(root, signingKey))
         {
             return EmailDeliveryEventParseResult.Unauthorized("The Mailgun signature is missing, wrong or too old.");
+        }
+
+        // Without the signing key only the webhook key protects the call, so every call says so until the key is set.
+        if (string.IsNullOrEmpty(signingKey))
+        {
+            _logger.LogWarning("The email delivery events webhook accepted a Mailgun call without checking its signature because no Mailgun signing key is set in the email settings.");
         }
 
         if (document is null)

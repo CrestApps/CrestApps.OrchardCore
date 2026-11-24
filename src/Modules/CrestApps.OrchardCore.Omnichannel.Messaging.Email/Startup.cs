@@ -1,4 +1,7 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Consent;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -6,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
@@ -14,10 +18,12 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.PersonalData;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Recipes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -27,9 +33,11 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email;
@@ -58,6 +66,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IEmailDispatcher, EmailDispatcher>();
         services.AddScoped(sp => new Lazy<IEmailDispatcher>(sp.GetRequiredService<IEmailDispatcher>));
         services.AddScoped<IEmailSecretProtector, EmailSecretProtector>();
+
+        // The unsubscribe links are signed, expiring tokens from the shared signed-link service.
+        services.AddSignedLinks();
         services.AddScoped<IEmailUnsubscribeLinks, EmailUnsubscribeLinks>();
         services.AddScoped<IEmailOptOutService, EmailOptOutService>();
         services.AddScoped<IEmailWebhookUrls, EmailWebhookUrls>();
@@ -120,6 +131,12 @@ public sealed class Startup : StartupBase
         services.AddPersonalDataContributor<EmailPersonalDataContributor>();
         services.AddDisplayDriver<EmailSuppression, EmailSuppressionDisplayDriver>();
 
+        // The suppression list travels between sites, so another site stops sending to the same addresses.
+        services.AddRecipeExecutionStep<EmailSuppressionsStep>();
+        services.AddScoped<IRecipeStep, EmailSuppressionsRecipeStepSchema>();
+        services.AddDeployment<EmailSuppressionsDeploymentSource, EmailSuppressionsDeploymentStep, SummaryDeploymentStepDisplayDriver<EmailSuppressionsDeploymentStep>>();
+        services.AddDeploymentStepSchema<EmailSuppressionsDeploymentStepSchema>();
+
         // The mailbox reader, for the mail hosts that cannot call a webhook.
         services.AddScoped<IEmailMailboxReader, ImapEmailMailboxReader>();
         services.AddScoped<IEmailMailboxPoller, EmailMailboxPoller>();
@@ -136,6 +153,9 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<OmnichannelChannelEndpoint, EmailAddressSettingsDisplayDriver>();
         services.AddScoped<IChannelEndpointRule, EmailAddressSettingsRule>();
+
+        // A warm-up turned on without a start date (by a recipe or an import) is dated on save, so it ramps up.
+        services.AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, EmailAddressWarmUpHandler>();
         services.AddSiteDisplayDriver<EmailInboundSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(EmailInboundSettingsDisplayDriver.EmailSettingsGroupId, OmnichannelConstants.Permissions.ManageChannelEndpoints);
 

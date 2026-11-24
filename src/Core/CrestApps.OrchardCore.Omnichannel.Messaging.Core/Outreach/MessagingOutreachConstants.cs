@@ -16,7 +16,8 @@ public static class MessagingOutreachConstants
     public const string BroadcastAudienceSource = "MessagingBroadcastRecipients";
 
     /// <summary>
-    /// The channel sender that sends on the messaging channels, each recipient in their own 1:1 thread.
+    /// The channel sender that sends on the messaging channels, each recipient on their own, opening no conversation
+    /// until the recipient replies.
     /// </summary>
     public const string Sender = "Messaging";
 }

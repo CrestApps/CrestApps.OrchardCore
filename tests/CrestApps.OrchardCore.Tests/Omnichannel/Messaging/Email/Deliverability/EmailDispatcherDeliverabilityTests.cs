@@ -77,6 +77,25 @@ public sealed class EmailDispatcherDeliverabilityTests
     }
 
     [Fact]
+    public async Task SendAsync_ThroughATransportThatSendsNoHeaders_IsLoggedWithoutTheUnsentMessageId()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Transport.SupportsHeaders = false;
+        harness.Transport.NextResult = MessageDispatchResult.Success();
+
+        // Act
+        var result = await harness.Dispatcher.SendAsync(Message("ann@example.com", MessagingOutboundPurpose.Outreach), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        var entry = Assert.Single(harness.Log.Entries);
+        Assert.Equal(EmailDeliveryEventKind.Sent, entry.Kind);
+        Assert.Null(entry.MessageId);
+    }
+
+    [Fact]
     public async Task SendAsync_ARecipientTheServerDoesNotKnow_IsSuppressedAndNotRetried()
     {
         // Arrange
@@ -323,7 +342,7 @@ public sealed class EmailDispatcherDeliverabilityTests
 
         public LocalizedString DisplayName => new(TransportName, TransportName);
 
-        public bool SupportsHeaders => true;
+        public bool SupportsHeaders { get; set; } = true;
 
         public Task<MessageDispatchResult> SendAsync(EmailTransportMessage message, EmailAddressSettings settings, CancellationToken cancellationToken = default)
         {

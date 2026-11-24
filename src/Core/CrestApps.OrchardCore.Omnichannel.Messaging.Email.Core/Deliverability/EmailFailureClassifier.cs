@@ -39,8 +39,9 @@ public enum EmailFailureKind
 /// <summary>
 /// Reads a failed send's answer (the SMTP code, the enhanced status code, and the words around them) and decides what
 /// it means. The enhanced code decides when there is one: 5.0.0, 5.1.x, 5.2.1 and 5.4.x are a dead address, 5.7.x a
-/// block, 5.3.x, 5.5.x and 5.6.x a refusal of the one email, 4.7.x and the rate words a throttle. A bare 550 is only a
-/// dead address when the words say so, because mail servers also answer 550 to blocks.
+/// block, 5.3.x, 5.5.x and 5.6.x a refusal of the one email, 4.7.x and the rate words a throttle. Without an enhanced
+/// code, a 421 is a throttle, a 552 a full mailbox or an email too large to take, and a 550 is only a dead address
+/// when the words say so, because mail servers also answer 550 to blocks.
 /// </summary>
 public static partial class EmailFailureClassifier
 {
@@ -139,7 +140,9 @@ public static partial class EmailFailureClassifier
 
         var lower = text.ToLowerInvariant();
 
-        if (ContainsAny(lower, _throttleWords) && !ContainsAny(lower, _fullMailboxWords))
+        // A 421 is the server closing the connection on the sender, which is how many hosts say "slow down" when they
+        // give no enhanced code. A short pause and a resend is the right answer whatever the reason.
+        if ((ContainsAny(lower, _throttleWords) || BasicThrottlePattern().IsMatch(text)) && !ContainsAny(lower, _fullMailboxWords))
         {
             return EmailFailureKind.Throttled;
         }
@@ -149,6 +152,19 @@ public static partial class EmailFailureClassifier
 
         if (isPermanent)
         {
+            // A full mailbox may empty, as with 5.2.2: it is tried again and never counts against the recipient or the
+            // sender.
+            if (ContainsAny(lower, _fullMailboxWords))
+            {
+                return EmailFailureKind.Temporary;
+            }
+
+            // A 552 is an email the mailbox could not take (its size, the storage it needs): only that email fails.
+            if (BasicTooLargePattern().IsMatch(text))
+            {
+                return MessageUnlessUnknownRecipient(lower);
+            }
+
             // A permanent answer is about the sender as often as about the recipient; only the words tell them apart.
             if (ContainsAny(lower, _blockWords) && !ContainsAny(lower, _unknownRecipientWords))
             {
@@ -300,4 +316,10 @@ public static partial class EmailFailureClassifier
 
     [GeneratedRegex(@"\b4[0-9]{2}\b", RegexOptions.CultureInvariant)]
     private static partial Regex BasicTemporaryPattern();
+
+    [GeneratedRegex(@"\b421\b", RegexOptions.CultureInvariant)]
+    private static partial Regex BasicThrottlePattern();
+
+    [GeneratedRegex(@"\b552\b", RegexOptions.CultureInvariant)]
+    private static partial Regex BasicTooLargePattern();
 }

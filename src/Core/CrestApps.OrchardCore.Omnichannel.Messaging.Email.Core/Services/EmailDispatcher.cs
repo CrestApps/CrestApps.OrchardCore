@@ -165,7 +165,12 @@ public sealed class EmailDispatcher : IEmailDispatcher
 
         if (result.Succeeded)
         {
-            await _governor.RecordSentAsync(endpoint, contactAddress, result.ProviderMessageId ?? transportMessage.MessageId, isBulk, cancellationToken);
+            // A transport that cannot set headers (Orchard Core's email service) never sends the Message-ID made here, so
+            // logging it would point bounce reports at an id no mail carries; such an email is logged under the id the
+            // provider gave back, if any, and its reports are matched by recipient.
+            var sentMessageId = result.ProviderMessageId ?? (transport.SupportsHeaders ? transportMessage.MessageId : null);
+
+            await _governor.RecordSentAsync(endpoint, contactAddress, sentMessageId, isBulk, cancellationToken);
         }
         else
         {

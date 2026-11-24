@@ -167,9 +167,18 @@ public sealed class EmailMessagingChannel : IMessagingChannel
 
         // Every address of a record has a row, so mail from (or an unsubscribe of) a contact's second address finds
         // the contact as surely as its first.
-        var matches = await _session.QueryIndex<OmnichannelContactEmailAddressIndex>(
+        IEnumerable<IOmnichannelContactMatch> matches = await _session.QueryIndex<OmnichannelContactEmailAddressIndex>(
                 index => index.NormalizedEmailAddress == normalized && index.Published)
             .ListAsync(cancellationToken);
+
+        // Records saved before the per-address index existed get their rows from a background backfill. Until it reaches
+        // them, they are still found by their primary address, as before.
+        if (!matches.Any())
+        {
+            matches = await _session.QueryIndex<OmnichannelContactIndex>(
+                    index => index.Published && index.NormalizedPrimaryEmailAddress == normalized)
+                .ListAsync(cancellationToken);
+        }
 
         // Contacts come before leads and converted leads are left out, so a sender who is both a contact and a lead is
         // linked to the contact, and callers that take the first match always take the same one.

@@ -76,8 +76,8 @@ Every source produces a normalized `InboundEmail` and hands it to `IEmailInbound
 
 The receiver:
 
-1. Drops mail from our own addresses (loops).
-2. Turns a bounce (delivery status notification) into a failed delivery receipt on the original message.
+1. Drops mail from our own addresses (loops), unless one of them relays a visitor's message with a `Reply-To` naming somebody else; that address is then the customer. From anybody else a `Reply-To` is only kept for the record.
+2. Turns a bounce (delivery status notification) into a delivery event on the original message, only when the report names an email this site sent to that recipient; only a failure or a delay of a delivery status report acts (a report that names no type is taken for one), and success notices and read receipts do not.
 3. Finds our address among the envelope, `To`, `Cc`, `Delivered-To` and `X-Original-To` recipients.
 4. Stores the attachments in the encrypted attachment store, skipping inline images the HTML references.
 5. Strips the quoted history from the reply and keeps it as folded quoted text.
@@ -99,7 +99,7 @@ The inbox handler raises `EmailReceived` on the Omnichannel event bus. The works
 
 ### Omnichannel changes
 
-- Email addresses are stored and matched in lower case: the address editor, the address store, and a new `NormalizedPrimaryEmailAddress` contact index column (backfilled by a migration).
+- Email addresses are stored and matched in lower case: the address editor, the address store, a new `NormalizedPrimaryEmailAddress` contact index column, and `OmnichannelContactEmailAddressIndex`, one row per email address of a contact or lead, which inbound email and unsubscribes read so a contact is found by any of its addresses. The migration adds both empty; `ContactEmailAddressIndexStep`, a resumable step run by the **Resumable upgrade steps** background task, saves the existing contacts again outside activation, 2,000 a minute, which fills both.
 - Load Activities, subject flows and the report filter list the channels in `ActivityChannelOptions` instead of a fixed list. The Email channel feature adds Email.
 - Email activities store their destination in lower case so a reply matches its activity.
 
@@ -107,6 +107,7 @@ The inbox handler raises `EmailReceived` on the Omnichannel event bus. The works
 
 - Opening email: the profile's opening message is rendered as for SMS; a first line `Subject: …` becomes the subject, otherwise the address's default subject is used.
 - Replies: no typing delay; a short settle so several emails sent together get one answer; the should-respond gate, conclusion, dispositions, lead conversion and handoff are the shared ones.
+- Safeguards: the sender's subject reaches the model inside the customer's message, never as an instruction; the profile's tools are not offered (only the transfer to a person, when one is available); a replayed message id is not answered twice; at most 5 automated messages per conversation per hour, and no reply when the should-respond check fails, handing off when a person is available.
 - Opt-out: a reply that only asks to unsubscribe, or the unsubscribe link, sets **Do not email** and cancels the activity.
 - Campaign and cadence emails carry an unsubscribe link and the one-click `List-Unsubscribe` header (SMTP transport).
 
@@ -125,11 +126,11 @@ The inbox handler raises `EmailReceived` on the Omnichannel event bus. The works
 
 Added after the channel landed, to keep bulk mail from getting an address blocked:
 
-- `IEmailSendingGovernor` is asked before every send. Replies are checked only against the suppression list; bulk mail (broadcasts, opening emails, follow-ups) is also held to the address's `EmailSendingLimits` (per hour, per day, per receiving domain, minimum gap, warm-up) and to its pause. Held mail is a deferral (`MessageDispatchResult.Deferred`, `OmnichannelActivityDeferredException`) rescheduled without spending an attempt, spread by a per-address turn cursor (`EmailSendingState.NextBulkSlotUtc`).
-- The delivery log (`EmailDeliveryLogEntry`, own YesSql collection `EmailDelivery`, pruned after 30 days) records every send and every bounce, complaint, block, throttle and deferral; limits and health are counted from it.
-- `EmailFailureClassifier` reads SMTP and enhanced status codes: 5.1.x and 5.2.1 suppress; 5.7.x pauses the address (1 h doubling to 24 h); 421 and 4.7.x pause it (15 min doubling to 4 h).
-- Delivery events webhook (`api/omnichannel/email/events/{provider}`: SendGrid, Mailgun, Postmark, SES, JSON) commits batches to the provider inbox; `IEmailDeliveryEventProcessor` acts on them, idempotent by event id.
-- Health: 5% hard bounces (100+ sent) or 0.3% complaints (300+ sent) in 7 days pauses bulk mail until resumed; warnings at 2% and 0.1%.
+- `IEmailSendingGovernor` is asked before every send. A person's replies are checked only against the suppression list; automated replies (`EmailSendKind.Automated`) also wait for the hourly and daily limits and the pause; bulk mail (broadcasts, opening emails, follow-ups) is also held to the address's `EmailSendingLimits` (per hour, per day, per receiving domain, minimum gap, warm-up) and to its pause. Held mail is a deferral (`MessageDispatchResult.Deferred`, `OmnichannelActivityDeferredException`) rescheduled without spending an attempt, spread by a per-address turn cursor (`EmailSendingState.NextBulkSlotUtc`).
+- The delivery log (`EmailDeliveryLogEntry`, own YesSql collection `EmailDelivery`, pruned after 30 days by a task that runs every 10 minutes and deletes in batches until done) records every send and every bounce, complaint, block, throttle and deferral; limits and health are counted from it.
+- `EmailFailureClassifier` reads SMTP and enhanced status codes and the words around them: 5.0.0, 5.1.x, 5.2.1 and 5.4.x suppress (unless the words say the sender was refused); 5.3.x, 5.5.x, 5.6.x and 5.2.3 fail only that email (`EmailFailureKind.Rejected`); 5.7.x pauses the address (1 h doubling to 24 h); 421 and 4.7.x pause it (15 min doubling to 4 h); a full mailbox is never a throttle. The same push-back while its pause runs does not escalate, a pause is never shortened, and only a bulk send that gets through resets the run.
+- Delivery events webhook (`api/omnichannel/email/events/{provider}`: SendGrid, Mailgun, Postmark, SES, JSON) commits batches to the provider inbox; `IEmailDeliveryEventProcessor` acts on them, idempotent by event id. A temporary (4.x.x) failure the provider is still retrying, Mailgun's included, is a deferral; repeated soft bounces are counted by distinct email. `EmailSuppressionConsentSource` makes the suppression list a consent source, so every path that asks `IConsentService` skips a suppressed address.
+- Health: 5% hard bounces (100+ sent) or 0.3% complaints (300+ sent) in 7 days pauses bulk mail until resumed, and a resume measures health from then on; warnings at 2% and 0.1%.
 - The messaging outbox now reads `MessagingOutboxIndex` (only waiting messages); it used to scan the oldest outbound messages and missed retries once a tenant had sent more than one batch.
 
 ## Open follow-ups

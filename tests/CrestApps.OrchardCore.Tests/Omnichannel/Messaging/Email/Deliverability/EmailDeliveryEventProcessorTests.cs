@@ -56,6 +56,39 @@ public sealed class EmailDeliveryEventProcessorTests
     }
 
     [Fact]
+    public async Task ProcessAsync_AnEventDatedOutsideTheLogsRetention_IsLoggedWithinIt()
+    {
+        // Arrange
+        var harness = new Harness();
+        var future = new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.Complaint, Recipient = "fay@example.com", EventId = "evt-future", Provider = "sendgrid", OccurredUtc = harness.Clock.UtcNow.AddYears(5) };
+        var ancient = new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.Complaint, Recipient = "abe@example.com", EventId = "evt-ancient", Provider = "sendgrid", OccurredUtc = harness.Clock.UtcNow.AddYears(-5) };
+        var recent = new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.Complaint, Recipient = "rae@example.com", EventId = "evt-recent", Provider = "sendgrid", OccurredUtc = harness.Clock.UtcNow.AddHours(-2) };
+
+        // Act
+        await harness.Processor.ProcessAsync([future, ancient, recent], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(harness.Clock.UtcNow, harness.Log.Entries.Single(entry => entry.Recipient == "fay@example.com").OccurredUtc);
+        Assert.Equal(harness.Clock.UtcNow.Subtract(EmailHealthPolicy.DeliveryLogRetention), harness.Log.Entries.Single(entry => entry.Recipient == "abe@example.com").OccurredUtc);
+        Assert.Equal(harness.Clock.UtcNow.AddHours(-2), harness.Log.Entries.Single(entry => entry.Recipient == "rae@example.com").OccurredUtc);
+    }
+
+    [Fact]
+    public void CreateEventId_UsesTheTimeTheProviderSent_SoAFutureDatedEventIsStillRecognised()
+    {
+        // Arrange
+        var deliveryEvent = new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.HardBounce, Recipient = "fay@example.com", Provider = "postmark", OccurredUtc = new DateTime(2031, 1, 1, 0, 0, 0, DateTimeKind.Utc) };
+
+        // Act
+        var first = EmailDeliveryEventProcessor.CreateEventId(deliveryEvent, "fay@example.com", "m-1@contoso.com");
+        var second = EmailDeliveryEventProcessor.CreateEventId(deliveryEvent, "fay@example.com", "m-1@contoso.com");
+
+        // Assert
+        Assert.Equal(first, second);
+        Assert.NotEqual(first, EmailDeliveryEventProcessor.CreateEventId(new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.HardBounce, Recipient = "fay@example.com", Provider = "postmark", OccurredUtc = new DateTime(2026, 10, 9, 12, 0, 0, DateTimeKind.Utc) }, "fay@example.com", "m-1@contoso.com"));
+    }
+
+    [Fact]
     public async Task InboxHandler_ARedeliveredBatch_ChangesNothingTheSecondTime()
     {
         // Arrange

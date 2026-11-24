@@ -59,6 +59,7 @@ public sealed class AmazonSesInboundEmailParser : IInboundEmailWebhookParser
 
             var allowedTopics = settings?.AmazonSnsTopicArns?.Where(topic => !string.IsNullOrWhiteSpace(topic)).ToArray() ?? [];
 
+            // A subscription to a topic that is not listed is refused here, before it can be confirmed.
             if (allowedTopics.Length > 0 && !allowedTopics.Contains(topicArn, StringComparer.Ordinal))
             {
                 return InboundEmailWebhookResult.Unauthorized("The Amazon SNS topic is not one the tenant allows.");
@@ -67,6 +68,15 @@ public sealed class AmazonSesInboundEmailParser : IInboundEmailWebhookParser
             if (!await _verifier.VerifyAsync(root, cancellationToken))
             {
                 return InboundEmailWebhookResult.Unauthorized("The Amazon SNS signature is missing or wrong.");
+            }
+
+            // The list is optional, but without it any topic signed by Amazon SNS is accepted (and its subscription
+            // confirmed), so every signed call says so until the topic is listed.
+            if (allowedTopics.Length == 0)
+            {
+                _logger.LogWarning(
+                    "The inbound email webhook accepted Amazon SNS topic {TopicArn} because no Amazon SNS topics are listed in the email settings. List the topic to refuse any other.",
+                    (topicArn ?? "(none)").SanitizeLogValue());
             }
 
             switch (GetString(root, "Type"))

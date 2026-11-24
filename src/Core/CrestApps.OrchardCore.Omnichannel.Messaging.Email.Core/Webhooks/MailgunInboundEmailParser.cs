@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
@@ -14,7 +15,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 /// Reads a Mailgun Route's <c>forward()</c> action: form fields (<c>sender</c>, <c>recipient</c>, <c>subject</c>,
 /// <c>body-plain</c>, <c>stripped-text</c>, <c>message-headers</c> and the files), or the whole message in
 /// <c>body-mime</c> when the route forwards to a URL ending in <c>mime</c>. When the tenant has the Mailgun signing key,
-/// the call must carry a valid signature no older than fifteen minutes.
+/// the call must carry a valid signature no older than fifteen minutes; without it, every call is logged as unsigned.
 /// </summary>
 public sealed class MailgunInboundEmailParser : IInboundEmailWebhookParser
 {
@@ -22,18 +23,22 @@ public sealed class MailgunInboundEmailParser : IInboundEmailWebhookParser
 
     private readonly IEmailSecretProtector _secretProtector;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MailgunInboundEmailParser"/> class.
     /// </summary>
     /// <param name="secretProtector">The protector the signing key is read with.</param>
     /// <param name="clock">The clock the signature's age is judged by.</param>
+    /// <param name="logger">The logger.</param>
     public MailgunInboundEmailParser(
         IEmailSecretProtector secretProtector,
-        IClock clock)
+        IClock clock,
+        ILogger<MailgunInboundEmailParser> logger)
     {
         _secretProtector = secretProtector;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -53,6 +58,12 @@ public sealed class MailgunInboundEmailParser : IInboundEmailWebhookParser
             !IsSignatureValid(signingKey, form["timestamp"].ToString(), form["token"].ToString(), form["signature"].ToString(), _clock.UtcNow))
         {
             return InboundEmailWebhookResult.Unauthorized("The Mailgun signature is missing, wrong or too old.");
+        }
+
+        // Without the signing key only the webhook key protects the call, so every call says so until the key is set.
+        if (string.IsNullOrEmpty(signingKey))
+        {
+            _logger.LogWarning("The inbound email webhook accepted a Mailgun call without checking its signature because no Mailgun signing key is set in the email settings.");
         }
 
         if (!request.HasFormContentType)

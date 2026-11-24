@@ -13,8 +13,8 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging.Email.Deliverability;
 
 /// <summary>
-/// Runs the deliverability storage against a real database: one sending state per address, the migration that makes it
-/// so, the delivery log's prune and the suppression list's removal.
+/// Runs the deliverability storage against a real database: one sending state per address and one suppression per
+/// address, the migrations that make it so, the delivery log's prune and the suppression list's removal.
 /// </summary>
 public sealed class EmailDeliverabilitySqliteTests
 {
@@ -74,6 +74,63 @@ public sealed class EmailDeliverabilitySqliteTests
                     .ToArray();
 
                 Assert.Equal(["first", "other"], states);
+            },
+            uniqueIndex: false);
+    }
+
+    [Fact]
+    public async Task CreateAsync_MakesTheSuppressionAddressUnique()
+    {
+        await WithStoreAsync(async store =>
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+
+            await SeedSuppressionsAsync(store, Suppression("s-1", "ann@example.com", EmailSuppressionReason.HardBounce));
+
+            await using var session = store.CreateSession();
+            await session.SaveAsync(Suppression("s-2", "ann@example.com", EmailSuppressionReason.Complaint), collection: Collection, cancellationToken: cancellationToken);
+
+            await Assert.ThrowsAnyAsync<Exception>(() => session.SaveChangesAsync(cancellationToken));
+        });
+    }
+
+    [Fact]
+    public async Task UpdateFrom2Async_KeepsTheOldestSuppressionOfEachAddressAndMakesTheAddressUnique()
+    {
+        await WithStoreAsync(
+            async store =>
+            {
+                var cancellationToken = TestContext.Current.CancellationToken;
+
+                // What version 2 allowed: two reports suppressed one address at the same moment.
+                await SeedSuppressionsAsync(store, Suppression("s-1", "ann@example.com", EmailSuppressionReason.HardBounce));
+                await SeedSuppressionsAsync(
+                    store,
+                    Suppression("s-2", "ann@example.com", EmailSuppressionReason.Complaint),
+                    Suppression("s-3", "bob@example.com", EmailSuppressionReason.Manual));
+
+                await using (var session = store.CreateSession())
+                {
+                    var transaction = await session.BeginTransactionAsync(cancellationToken);
+                    var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+                    var migration = CreateMigration(store, schemaBuilder);
+
+                    Assert.Equal(3, await migration.UpdateFrom2Async());
+
+                    // A second app instance activating the tenant at the same time finds the work done.
+                    Assert.Equal(3, await migration.UpdateFrom2Async());
+                    Assert.True(await IndexTableIndexCreation.ExistsAsync(schemaBuilder, typeof(EmailSuppressionIndex), EmailDeliverabilityMigrations.SuppressionAddressUniqueIndexName, Collection));
+
+                    await transaction.CommitAsync(cancellationToken);
+                }
+
+                await using var check = store.CreateSession();
+                var suppressions = (await check.Query<EmailSuppression>(collection: Collection).ListAsync(cancellationToken))
+                    .OrderBy(suppression => suppression.ItemId, StringComparer.Ordinal)
+                    .ToArray();
+
+                Assert.Equal(["s-1", "s-3"], suppressions.Select(suppression => suppression.ItemId).ToArray());
+                Assert.Equal(EmailSuppressionReason.HardBounce, suppressions[0].Reason);
             },
             uniqueIndex: false);
     }
@@ -229,7 +286,7 @@ public sealed class EmailDeliverabilitySqliteTests
         {
             var cancellationToken = TestContext.Current.CancellationToken;
 
-            // Two reports suppressed the address at the same moment.
+            // A list kept before the address was made unique holds two records of it.
             await using (var seed = store.CreateSession())
             {
                 await seed.SaveAsync(new EmailSuppression { ItemId = "s-1", Address = "ann@example.com", Reason = EmailSuppressionReason.HardBounce, CreatedUtc = DateTime.UtcNow }, collection: Collection, cancellationToken: cancellationToken);
@@ -252,7 +309,31 @@ public sealed class EmailDeliverabilitySqliteTests
             Assert.True(removed);
             Assert.Null(await CreateSuppressionList(check).FindAsync("ann@example.com", cancellationToken));
             Assert.Empty(await check.Query<EmailSuppression>(collection: Collection).ListAsync(cancellationToken));
-        });
+        },
+        uniqueIndex: false);
+    }
+
+    private static EmailSuppression Suppression(string itemId, string address, EmailSuppressionReason reason)
+        => new()
+        {
+            ItemId = itemId,
+            Address = address,
+            Reason = reason,
+            CreatedUtc = new DateTime(2026, 10, 9, 12, 0, 0, DateTimeKind.Utc),
+        };
+
+    private static async Task SeedSuppressionsAsync(IStore store, params EmailSuppression[] suppressions)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var session = store.CreateSession();
+
+        foreach (var suppression in suppressions)
+        {
+            await session.SaveAsync(suppression, collection: Collection, cancellationToken: cancellationToken);
+        }
+
+        await session.SaveChangesAsync(cancellationToken);
     }
 
     private static EmailDeliveryLogEntry Entry(string itemId, DateTime occurredUtc)
@@ -289,8 +370,8 @@ public sealed class EmailDeliverabilitySqliteTests
         await session.SaveChangesAsync(cancellationToken);
     }
 
-    // A store with the deliverability tables as the migration creates them; without the unique index, as version 1 left
-    // them, when asked.
+    // A store with the deliverability tables as the migration creates them; without the unique indexes, as version 1
+    // left them, when asked.
     private static async Task WithStoreAsync(Func<IStore, Task> test, bool uniqueIndex = true)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -310,12 +391,15 @@ public sealed class EmailDeliverabilitySqliteTests
                 var transaction = await session.BeginTransactionAsync(cancellationToken);
                 var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
-                Assert.Equal(2, await CreateMigration(store, schemaBuilder).CreateAsync());
+                Assert.Equal(3, await CreateMigration(store, schemaBuilder).CreateAsync());
 
                 if (!uniqueIndex)
                 {
                     await schemaBuilder.AlterIndexTableAsync<EmailSendingStateIndex>(
                         table => table.DropIndex(EmailDeliverabilityMigrations.SendingStateAddressUniqueIndexName),
+                        collection: Collection);
+                    await schemaBuilder.AlterIndexTableAsync<EmailSuppressionIndex>(
+                        table => table.DropIndex(EmailDeliverabilityMigrations.SuppressionAddressUniqueIndexName),
                         collection: Collection);
                 }
 

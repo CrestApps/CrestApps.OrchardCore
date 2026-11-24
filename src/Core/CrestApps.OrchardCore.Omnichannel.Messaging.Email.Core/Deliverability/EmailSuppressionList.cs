@@ -56,6 +56,11 @@ public interface IEmailSuppressionList
 /// <summary>
 /// The default <see cref="IEmailSuppressionList"/>, stored as documents in the deliverability collection.
 /// </summary>
+/// <remarks>
+/// The address is unique in the database, so when two reports suppress one address at the same moment, the second
+/// commit fails instead of adding a second record; the provider inbox retries that report, which then finds the address
+/// already listed.
+/// </remarks>
 public sealed class EmailSuppressionList : IEmailSuppressionList
 {
     private const string Collection = EmailChannelConstants.DeliverabilityCollectionName;
@@ -126,7 +131,7 @@ public sealed class EmailSuppressionList : IEmailSuppressionList
             return false;
         }
 
-        // Every record of the address goes: two reports suppressing it at the same moment can each add one, and taking
+        // Every record of the address goes: a list kept before the address was made unique can hold two, and taking
         // the address off the list must not leave the other behind still refusing it.
         var suppressions = await _session.Query<EmailSuppression, EmailSuppressionIndex>(index => index.Address == key, collection: Collection)
             .ListAsync(cancellationToken);
@@ -153,8 +158,12 @@ public sealed class EmailSuppressionList : IEmailSuppressionList
             : _session.Query<EmailSuppression, EmailSuppressionIndex>(index => index.Address.Contains(term), collection: Collection);
 
         var total = await query.CountAsync(cancellationToken);
+
+        // Addresses suppressed in the same instant are ordered by record too, so reading page after page (the list, or
+        // a deployment exporting it) never skips or repeats one.
         var items = await query
             .OrderByDescending(index => index.CreatedUtc)
+            .ThenByDescending(index => index.DocumentId)
             .Skip(skip)
             .Take(size)
             .ListAsync(cancellationToken);

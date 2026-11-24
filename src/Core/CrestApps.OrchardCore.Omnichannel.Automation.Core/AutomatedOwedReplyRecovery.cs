@@ -98,6 +98,10 @@ public sealed class AutomatedOwedReplyRecovery
         var cutoff = _clock.UtcNow.Subtract(MaxOwedReplyAge);
         var documentId = _cursors.OwedReply;
         var wrapped = documentId == 0;
+
+        // After going round, the pass reads only up to where it started, so no conversation is examined twice.
+        var upTo = long.MaxValue;
+        var startedAt = documentId;
         var examined = 0;
         var recovered = 0;
 
@@ -107,7 +111,8 @@ public sealed class AutomatedOwedReplyRecovery
                     index.Status == ActivityStatus.AwaitingCustomerAnswer &&
                     index.InteractionType == ActivityInteractionType.Automated &&
                     index.Channel.IsIn(channelNames) &&
-                    index.DocumentId > documentId,
+                    index.DocumentId > documentId &&
+                    index.DocumentId <= upTo,
                     collection: OmnichannelConstants.CollectionName)
                 .OrderBy(index => index.DocumentId)
                 .Take(BatchSize)
@@ -125,6 +130,7 @@ public sealed class AutomatedOwedReplyRecovery
                 }
 
                 wrapped = true;
+                upTo = startedAt;
                 documentId = 0;
 
                 continue;
@@ -132,6 +138,12 @@ public sealed class AutomatedOwedReplyRecovery
 
             foreach (var activity in activities)
             {
+                // The cap holds within a batch too, so a pass never examines more than its share.
+                if (examined >= MaxConversationsPerPass)
+                {
+                    break;
+                }
+
                 if (_clock.UtcNow >= deadlineUtc)
                 {
                     _cursors.OwedReply = documentId;

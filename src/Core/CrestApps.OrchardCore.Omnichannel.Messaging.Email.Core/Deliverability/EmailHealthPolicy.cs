@@ -74,6 +74,11 @@ public static class EmailHealthPolicy
     public static readonly TimeSpan DomainBackoff = TimeSpan.FromMinutes(30);
 
     /// <summary>
+    /// How long delivery log entries are kept: longer than any window sending limits and health are counted over.
+    /// </summary>
+    public static readonly TimeSpan DeliveryLogRetention = TimeSpan.FromDays(30);
+
+    /// <summary>
     /// The emails the address may send in 24 hours at <paramref name="utcNow"/>, warm-up included.
     /// </summary>
     /// <param name="limits">The address's limits.</param>

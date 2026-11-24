@@ -7,13 +7,13 @@ using OrchardCore.BackgroundTasks;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks;
 
 /// <summary>
-/// Periodically hands queued broadcasts to the outreach engine, which sends each recipient an individual 1:1 thread and
+/// Periodically hands queued broadcasts to the outreach engine, which sends each recipient the message on their own and
 /// keeps its progress, so a restart resumes without re-sending. The sweep is a no-op when no broadcast is waiting.
 /// </summary>
 [BackgroundTask(
     Title = "Messaging Broadcast Fan-out",
     Schedule = "* * * * *",
-    Description = "Starts sending queued broadcasts through the outreach engine, each recipient in an individual 1:1 thread.",
+    Description = "Starts sending queued broadcasts through the outreach engine; each recipient gets the message on their own, and a conversation opens when one replies.",
     LockTimeout = 5_000,
     LockExpiration = 300_000)]
 public sealed class MessagingBroadcastBackgroundTask : IBackgroundTask

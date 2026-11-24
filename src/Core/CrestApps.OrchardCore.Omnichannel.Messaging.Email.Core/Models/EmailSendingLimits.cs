@@ -40,7 +40,8 @@ public sealed class EmailSendingLimits
     public bool WarmUp { get; set; }
 
     /// <summary>
-    /// Gets or sets when the warm-up started. Set when warm-up is turned on.
+    /// Gets or sets when the warm-up started. Set when warm-up is turned on, and on the next save of an address that a
+    /// recipe or an import turned it on for without a date.
     /// </summary>
     public DateTime? WarmUpStartedUtc { get; set; }
 

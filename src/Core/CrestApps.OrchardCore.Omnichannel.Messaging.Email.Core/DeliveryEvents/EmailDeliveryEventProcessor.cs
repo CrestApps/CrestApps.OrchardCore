@@ -39,6 +39,8 @@ public interface IEmailDeliveryEventProcessor
 /// The event-id check and the record that follows it are not atomic, so the same event delivered at the same moment to
 /// two app instances can be acted on twice. Every action is safe to repeat (a suppression or an opt-out that exists is
 /// kept, a pause already running is not lengthened, an email's retries count once), so the cost is a second log line.
+/// The event id cannot be made unique in the database instead: the log's send entries carry no event id, and SQL Server
+/// lets a unique index hold only one empty value.
 /// </remarks>
 public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
 {
@@ -126,7 +128,7 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
                 Recipient = recipient,
                 RecipientDomain = domain,
                 MessageId = messageId,
-                OccurredUtc = deliveryEvent.OccurredUtc ?? _clock.UtcNow,
+                OccurredUtc = ClampOccurredUtc(deliveryEvent.OccurredUtc, _clock.UtcNow),
                 Detail = detail,
                 EventId = eventId,
             },
@@ -200,7 +202,7 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
     // recipient for it would lose a good address; a temporary failure (4.x.x) the provider is still trying is a deferral,
     // and one it gave up on is a bounce of that one email, never a dead address; a full mailbox (5.2.2) may empty; and a
     // refusal of the one email (its size, its content) says nothing about the recipient or the sender. That last one is
-    // logged as a soft bounce, the nearest kind, and flagged so it neither counts toward suppression nor slows the domain.
+    // logged as a rejected email, which neither counts toward suppression nor slows the domain.
     internal static (EmailDeliveryEventKind Kind, bool IsRejectedEmail) Reclassify(EmailDeliveryEvent deliveryEvent)
     {
         if (deliveryEvent.Kind is not (EmailDeliveryEventKind.HardBounce or EmailDeliveryEventKind.SoftBounce))
@@ -238,6 +240,26 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
             EmailFailureKind.Throttled => (EmailDeliveryEventKind.Deferred, false),
             _ => (deliveryEvent.Kind, false),
         };
+    }
+
+    // When the event happened, as the provider says, kept between the log's retention and now. A provider's clock (or a
+    // forged call) can date an event in the future, and a future entry would count in every window and never be pruned;
+    // one older than the retention would only be pruned at once. Only the logged time is clamped: the event id is built
+    // from the time the provider sent, so a redelivered event is still recognised.
+    internal static DateTime ClampOccurredUtc(DateTime? occurredUtc, DateTime utcNow)
+    {
+        if (occurredUtc is not { } occurred)
+        {
+            return utcNow;
+        }
+
+        var earliest = utcNow.Subtract(EmailHealthPolicy.DeliveryLogRetention);
+
+        return occurred > utcNow
+            ? utcNow
+            : occurred < earliest
+                ? earliest
+                : occurred;
     }
 
     private async Task CheckHealthAsync(string addressId, CancellationToken cancellationToken)

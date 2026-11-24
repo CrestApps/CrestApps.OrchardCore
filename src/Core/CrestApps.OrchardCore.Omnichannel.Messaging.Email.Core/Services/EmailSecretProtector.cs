@@ -1,15 +1,16 @@
-using System.Security.Cryptography;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 
 /// <summary>
-/// The default <see cref="IEmailSecretProtector"/>, over the tenant's data protection keys.
+/// The default <see cref="IEmailSecretProtector"/>, over the tenant's data protection keys through
+/// <see cref="ProtectedSettingExtensions"/>, with the channel's one purpose so the secrets already stored stay readable.
 /// </summary>
 public sealed class EmailSecretProtector : IEmailSecretProtector
 {
-    private readonly IDataProtector _protector;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -21,33 +22,17 @@ public sealed class EmailSecretProtector : IEmailSecretProtector
         IDataProtectionProvider dataProtectionProvider,
         ILogger<EmailSecretProtector> logger)
     {
-        _protector = dataProtectionProvider.CreateProtector(EmailChannelConstants.SecretProtectorPurpose);
+        _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
     }
 
     /// <inheritdoc/>
     public string Protect(string secret)
-        => string.IsNullOrEmpty(secret) ? null : _protector.Protect(secret);
+        => string.IsNullOrEmpty(secret) ? null : _dataProtectionProvider.ProtectSetting(EmailChannelConstants.SecretProtectorPurpose, secret);
 
     /// <inheritdoc/>
     public string Unprotect(string protectedSecret)
-    {
-        if (string.IsNullOrEmpty(protectedSecret))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _protector.Unprotect(protectedSecret);
-        }
-        catch (CryptographicException ex)
-        {
-            // The keys the secret was protected with are gone (a copied database, a reset key ring). The secret has to
-            // be entered again; saying so is better than failing every send with an unexplained error.
-            _logger.LogWarning(ex, "An email channel secret could not be read with the tenant's data protection keys and has to be entered again.");
-
-            return null;
-        }
-    }
+        // A secret protected with keys the tenant no longer has (a copied database, a reset key ring) has to be entered
+        // again; it reads as not entered, with a warning, rather than failing every send with an unexplained error.
+        => _dataProtectionProvider.UnprotectSettingOrDefault(EmailChannelConstants.SecretProtectorPurpose, protectedSecret, _logger, "email channel secret");
 }
