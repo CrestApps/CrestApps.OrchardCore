@@ -1,65 +1,184 @@
+@using System.Text.Json
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
 @model FollowUpRoutingSubjectActionViewModel
 
 @{
-    var targetId = Html.IdFor(m => m.Target);
+    var sectionId = Html.IdFor(m => m.DialWith) + "_Section";
 }
 
-<div class="ocat-wrapper">
-    <label asp-for="Target" class="ocat-label">@T["Next activity by"]</label>
-    <div class="ocat-end">
-        <select asp-for="Target" class="form-select" data-follow-up-route="@targetId">
-            <option value="@nameof(FollowUpRoutingTarget.SameAsBefore)">@T["Same as before (a dialer activity goes back to the dialer)"]</option>
-            <option value="@nameof(FollowUpRoutingTarget.Agent)">@T["An agent: a manual activity the dialer never calls"]</option>
-            <option value="@nameof(FollowUpRoutingTarget.Dialer)">@T["The dialer, under a dialer profile"]</option>
-        </select>
-        <span class="hint">@T["Who works the follow-up activity. Giving a dialer activity to an agent takes it off the dialer, so the agent works it by hand."]</span>
+<div id="@sectionId" data-follow-up-section>
+    <div class="ocat-wrapper">
+        <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+        <div class="ocat-end">
+            <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select"></select>
+            <span class="hint">@T["The campaign the follow-up belongs to. A dialer queues it on this campaign's dialer queue."]</span>
+        </div>
     </div>
-</div>
 
-<div class="ocat-wrapper">
-    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
-    <div class="ocat-end">
-        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select"></select>
-        <span class="hint">@T["The campaign the follow-up belongs to. The dialer queues it on this campaign's dialer queue."]</span>
+    <div class="ocat-wrapper" asp-validation-class-for="DialWith">
+        <label asp-for="DialWith" class="ocat-label">@T["Dial with"]</label>
+        <div class="ocat-end">
+            <select asp-for="DialWith" class="form-select" data-follow-up-dial-with>
+                <option value="@FollowUpRoutingSubjectActionViewModel.DialWithInherited">@T["Its dialer profile, if it had one"]</option>
+                <option value="@FollowUpRoutingSubjectActionViewModel.DialWithNone">@T["No dialer (an agent works it)"]</option>
+                @if (Model.DialerProfiles.Count > 0)
+                {
+                    <optgroup label="@T["Dialer profiles"]">
+                        @foreach (var profile in Model.DialerProfiles)
+                        {
+                            <option value="@profile.Value" selected="@(profile.Value == Model.DialWith)">@profile.Text</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+            <span asp-validation-for="DialWith" class="text-danger"></span>
+            <span class="hint">@T["Its dialer profile: a dialer activity goes back to the dialer under the same profile, and other work stays manual. No dialer: the follow-up is a manual activity the dialer never calls. A dialer profile: the dialer calls it under that profile and offers it to whichever agent signed in to the campaign is free."]</span>
+        </div>
     </div>
-</div>
 
-<div class="ocat-wrapper" asp-validation-class-for="DialerProfileId" data-follow-up-route-show="@targetId" data-follow-up-route-value="@nameof(FollowUpRoutingTarget.Dialer)">
-    <label asp-for="DialerProfileId" class="ocat-label ocat-label-required">@T["Dialer profile"]</label>
-    <div class="ocat-end">
-        <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select"></select>
-        <span asp-validation-for="DialerProfileId"></span>
-        <span class="hint">@T["The dialer offers the follow-up to whichever agent signed in to the campaign is free, so the assignment above does not apply."]</span>
-    </div>
-</div>
+    <div data-follow-up-assignment>
+        <div class="ocat-wrapper">
+            <label asp-for="AssignTo" class="ocat-label">@T["Assign to"]</label>
+            <div class="ocat-end">
+                <select asp-for="AssignTo" class="form-select" data-follow-up-assign-to>
+                    <option value="@nameof(SubjectActionOwnerAssignmentType.SameOwner)">@T["The user who completed the activity"]</option>
+                    <option value="@nameof(SubjectActionOwnerAssignmentType.CallAgent)">@T["The agent the dialer called for"]</option>
+                    <option value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)">@T["A specific user"]</option>
+                    @if (Model.PoolAvailable)
+                    {
+                        <option value="@nameof(SubjectActionOwnerAssignmentType.Pool)">@T["A pool of agents"]</option>
+                    }
+                </select>
+                <span class="hint">@T["The agent the dialer called for: the agent a dialer call was placed or connected for, even when the system applied the disposition; otherwise the user who completed the activity. When nobody is found, any agent can take the follow-up."]</span>
+            </div>
+        </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="Source" data-follow-up-route-show="@targetId" data-follow-up-route-value="@nameof(FollowUpRoutingTarget.Agent)">
-    <label asp-for="Source" class="ocat-label">@T["Source"]</label>
-    <div class="ocat-end">
-        <select asp-for="Source" asp-items="Model.Sources" class="form-select"></select>
-        <span asp-validation-for="Source"></span>
-        <span class="hint">@T["The agent who owns it is the one the assignment type above picks: the user who completed the activity (Same owner), the user you name (Specific owner), the agent the dialer called for, or one user of a pool. When it picks nobody, any agent can take the activity."]</span>
+        <div class="ocat-wrapper" asp-validation-class-for="NormalizedUserName" data-follow-up-assign-to-value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)">
+            <label asp-for="NormalizedUserName" class="ocat-label ocat-label-required">@T["User"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("ItemSelector", new
+                {
+                    id = $"{Html.IdFor(m => m.NormalizedUserName)}_Selector",
+                    inputName = Html.NameFor(m => m.NormalizedUserName),
+                    endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "normalizedUserName", audience = "Staff" }),
+                    initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
+                    multiple = false,
+                    enableSearch = true,
+                    enableSelectAll = false,
+                    enableDeselectAll = true,
+                    buttonText = T["Browse users"].Value,
+                    searchPlaceholder = T["Search users"].Value,
+                    emptyResultsText = T["No users found."].Value,
+                    noSelectionText = T["No user selected."].Value,
+                    loadingText = T["Loading users..."].Value,
+                    loadErrorText = T["Unable to load users."].Value,
+                    resultsTextFormat = T["Found {0} user(s)."].Value,
+                    selectedItemsLabel = T["Selected user"].Value,
+                    availableItemsLabel = T["Available users"].Value,
+                    searchButtonText = T["Search"].Value,
+                })
+                <span asp-validation-for="NormalizedUserName" class="text-danger"></span>
+            </div>
+        </div>
+
+        @if (Model.PoolAvailable)
+        {
+            <div data-follow-up-assign-to-value="@nameof(SubjectActionOwnerAssignmentType.Pool)">
+                <div class="ocat-wrapper">
+                    <label asp-for="PoolSource" class="ocat-label">@T["Pool"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="PoolSource" class="form-select" data-follow-up-pool-source>
+                            <option value="@nameof(FollowUpOwnerPoolSource.Team)">@T["Members of a team"]</option>
+                            <option value="@nameof(FollowUpOwnerPoolSource.Roles)">@T["Users in roles"]</option>
+                            <option value="@nameof(FollowUpOwnerPoolSource.Users)">@T["Specific users"]</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper" asp-validation-class-for="PoolTeamId" data-follow-up-pool-source-value="@nameof(FollowUpOwnerPoolSource.Team)">
+                    <label asp-for="PoolTeamId" class="ocat-label ocat-label-required">@T["Team"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="PoolTeamId" asp-items="Model.Teams" class="form-select">
+                            <option value="">@T["Choose a team"]</option>
+                        </select>
+                        <span asp-validation-for="PoolTeamId" class="text-danger"></span>
+                        <span class="hint">@T["The members of the team and of the teams under it."]</span>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper" asp-validation-class-for="PoolRoleNames" data-follow-up-pool-source-value="@nameof(FollowUpOwnerPoolSource.Roles)">
+                    <label asp-for="PoolRoleNames" class="ocat-label ocat-label-required">@T["Roles"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="PoolRoleNames" asp-items="Model.Roles" class="form-select" multiple size="5"></select>
+                        <span asp-validation-for="PoolRoleNames" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper" asp-validation-class-for="PoolUserIds" data-follow-up-pool-source-value="@nameof(FollowUpOwnerPoolSource.Users)">
+                    <label asp-for="PoolUserIds" class="ocat-label ocat-label-required">@T["Users"]</label>
+                    <div class="ocat-end">
+                        @await Component.InvokeAsync("UserPicker", new
+                        {
+                            audience = "Staff",
+                            name = Html.NameFor(m => m.PoolUserIds).ToString(),
+                            selectedValues = Model.PoolUserIds,
+                            valueType = "userId",
+                            multiple = true,
+                            buttonText = T["Select users"].Value,
+                            searchPlaceholder = T["Search users"].Value,
+                            smallButton = false,
+                        })
+                        <span asp-validation-for="PoolUserIds" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="ocat-wrapper">
+                    <label asp-for="PoolStrategy" class="ocat-label">@T["Pick"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="PoolStrategy" class="form-select">
+                            <option value="@nameof(FollowUpOwnerPoolStrategy.RoundRobin)">@T["Round robin: the user given an activity longest ago"]</option>
+                            <option value="@nameof(FollowUpOwnerPoolStrategy.FewestOpenActivities)">@T["Fewest open activities"]</option>
+                        </select>
+                        <span class="hint">@T["When the pool has nobody to pick, any agent can take the follow-up."]</span>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
 <script at="Foot">
     (function () {
-        const target = document.querySelector('[data-follow-up-route="@targetId"]');
+        const section = document.getElementById('@sectionId');
 
-        if (!target) {
+        if (!section) {
             return;
         }
 
+        const dialWith = section.querySelector('[data-follow-up-dial-with]');
+        const assignTo = section.querySelector('[data-follow-up-assign-to]');
+        const poolSource = section.querySelector('[data-follow-up-pool-source]');
+        const assignment = section.querySelector('[data-follow-up-assignment]');
+
         const toggle = () => {
-            document.querySelectorAll('[data-follow-up-route-show="@targetId"]').forEach(element => {
-                element.classList.toggle('d-none', element.getAttribute('data-follow-up-route-value') !== target.value);
+            // A dialer profile offers the follow-up to whichever agent is free, so it has no owner to choose.
+            const byProfile = dialWith.value !== '@FollowUpRoutingSubjectActionViewModel.DialWithInherited' && dialWith.value !== '@FollowUpRoutingSubjectActionViewModel.DialWithNone';
+            assignment.classList.toggle('d-none', byProfile);
+
+            section.querySelectorAll('[data-follow-up-assign-to-value]').forEach(element => {
+                element.classList.toggle('d-none', element.getAttribute('data-follow-up-assign-to-value') !== assignTo.value);
+            });
+
+            section.querySelectorAll('[data-follow-up-pool-source-value]').forEach(element => {
+                element.classList.toggle('d-none', !poolSource || element.getAttribute('data-follow-up-pool-source-value') !== poolSource.value);
             });
         };
 
-        target.addEventListener('change', toggle);
+        dialWith.addEventListener('change', toggle);
+        assignTo.addEventListener('change', toggle);
+        poolSource?.addEventListener('change', toggle);
         toggle();
     })();
 </script>

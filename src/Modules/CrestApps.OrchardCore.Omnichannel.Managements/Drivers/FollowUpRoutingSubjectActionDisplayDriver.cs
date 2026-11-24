@@ -3,28 +3,53 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Teams.Services;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Security.Services;
+using OrchardCore.Users.Indexes;
+using OrchardCore.Users.Models;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 /// <summary>
-/// Edits who makes the call a "Try again" or "New activity" subject action creates: an agent, the dialer under a
-/// dialer profile, or the same as before, and on which campaign.
+/// Edits the follow-up section of a "Try again" or "New activity" subject action: the campaign of the follow-up, how it
+/// is dialed, and who owns it.
 /// </summary>
+/// <remarks>
+/// How the follow-up is dialed and who owns it depend on each other: a follow-up a dialer profile calls is offered to
+/// whichever agent signed in to the campaign is free, so it has no owner of its own. They are edited together, in that
+/// order, and the owner choices are hidden when a dialer profile is picked.
+/// </remarks>
 internal sealed class FollowUpRoutingSubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 {
     private readonly BulkActivityAdminFormOptionsProvider _formOptions;
+    private readonly ISession _session;
+    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IRoleService _roleService;
+    private readonly ITeamManager _teamManager;
 
     internal readonly IStringLocalizer S;
 
     public FollowUpRoutingSubjectActionDisplayDriver(
         BulkActivityAdminFormOptionsProvider formOptions,
+        ISession session,
+        IDisplayNameProvider displayNameProvider,
+        IRoleService roleService,
+        IEnumerable<ITeamManager> teamManagers,
         IStringLocalizer<FollowUpRoutingSubjectActionDisplayDriver> stringLocalizer)
     {
         _formOptions = formOptions;
+        _session = session;
+        _displayNameProvider = displayNameProvider;
+        _roleService = roleService;
+        _teamManager = teamManagers.FirstOrDefault();
         S = stringLocalizer;
     }
 
@@ -42,22 +67,58 @@ internal sealed class FollowUpRoutingSubjectActionDisplayDriver : DisplayDriver<
                 routing = new FollowUpRoutingMetadata();
             }
 
-            model.Target = routing.Target;
-            model.CampaignId = routing.CampaignId;
-            model.DialerProfileId = routing.DialerProfileId;
-            model.Source = routing.Source;
-            model.Campaigns = await _formOptions.GetCampaignOptionsAsync(routing.CampaignId, S["Keep its campaign"]);
-            model.DialerProfiles = await _formOptions.GetDialerProfileOptionsAsync(routing.DialerProfileId, S["Choose a dialer profile"]);
+            if (!action.TryGet<FollowUpOwnerPoolMetadata>(out var pool))
+            {
+                pool = new FollowUpOwnerPoolMetadata();
+            }
 
-            var selectedSource = string.IsNullOrWhiteSpace(routing.Source) ? ActivitySources.Manual : routing.Source;
-            model.Sources = _formOptions.GetManuallyAssignableSourceOptions(S["Manual"])
-                .Where(source => !string.IsNullOrEmpty(source.Value) && FollowUpRoutes.IsAgentSource(source.Value))
+            var (assignmentType, normalizedUserName) = ReadAssignment(action);
+
+            model.CampaignId = routing.CampaignId;
+            model.DialWith = routing.Target switch
+            {
+                FollowUpRoutingTarget.Agent => FollowUpRoutingSubjectActionViewModel.DialWithNone,
+                FollowUpRoutingTarget.Dialer => routing.DialerProfileId,
+                _ => FollowUpRoutingSubjectActionViewModel.DialWithInherited,
+            };
+            model.AssignTo = SubjectActionOwnerAssignmentTypeResolver.Resolve(assignmentType, normalizedUserName);
+            model.NormalizedUserName = normalizedUserName;
+            model.PoolSource = pool.Source;
+            model.PoolTeamId = pool.TeamId;
+            model.PoolRoleNames = pool.RoleNames ?? [];
+            model.PoolUserIds = pool.UserIds ?? [];
+            model.PoolStrategy = pool.Strategy;
+            model.PoolAvailable = _teamManager is not null;
+
+            model.Campaigns = await _formOptions.GetCampaignOptionsAsync(routing.CampaignId, S["Keep its campaign"]);
+            model.DialerProfiles = (await _formOptions.GetDialerProfileOptionsAsync(routing.DialerProfileId, S["Choose a dialer profile"]))
+                .Where(option => !string.IsNullOrEmpty(option.Value))
                 .ToList();
 
-            foreach (var source in model.Sources)
+            if (!string.IsNullOrWhiteSpace(normalizedUserName))
             {
-                source.Selected = string.Equals(source.Value, selectedSource, StringComparison.OrdinalIgnoreCase);
+                var user = await _session.Query<User, UserIndex>(index => index.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync();
+
+                model.SelectedUsers =
+                [
+                    new SelectListItem(user is null ? S["(Unknown user)"] : await _displayNameProvider.GetAsync(user), normalizedUserName),
+                ];
             }
+
+            if (_teamManager is not null)
+            {
+                model.Teams = (await _teamManager.GetAllAsync())
+                    .OrderBy(team => team.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(team => new SelectListItem(team.Name, team.ItemId, string.Equals(team.ItemId, pool.TeamId, StringComparison.Ordinal)))
+                    .ToList();
+            }
+
+            model.Roles = (await _roleService.GetRoleNamesAsync())
+                .Where(role => !string.Equals(role, OrchardCoreConstants.Roles.Anonymous, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(role, OrchardCoreConstants.Roles.Authenticated, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(role => role, StringComparer.OrdinalIgnoreCase)
+                .Select(role => new SelectListItem(role, role, model.PoolRoleNames.Contains(role, StringComparer.OrdinalIgnoreCase)))
+                .ToList();
         }).Location("Content:6");
     }
 
@@ -72,33 +133,112 @@ internal sealed class FollowUpRoutingSubjectActionDisplayDriver : DisplayDriver<
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (model.Target == FollowUpRoutingTarget.Dialer && string.IsNullOrWhiteSpace(model.DialerProfileId))
+        var dialWith = model.DialWith?.Trim() ?? string.Empty;
+        var dialedByProfile = dialWith.Length > 0 && dialWith != FollowUpRoutingSubjectActionViewModel.DialWithNone;
+
+        if (dialedByProfile && !await _formOptions.DialerProfileExistsAsync(dialWith))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Choose the dialer profile that calls the follow-up."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialWith), S["The selected dialer profile no longer exists."]);
         }
 
-        if (model.Target == FollowUpRoutingTarget.Agent &&
-            !string.IsNullOrWhiteSpace(model.Source) &&
-            !FollowUpRoutes.IsAgentSource(model.Source))
+        // A dialer profile offers the follow-up to whichever agent is free, so it keeps no owner of its own.
+        var assignTo = dialedByProfile ? SubjectActionOwnerAssignmentType.SameOwner : model.AssignTo;
+        var normalizedUserName = assignTo == SubjectActionOwnerAssignmentType.SpecificOwner ? model.NormalizedUserName?.Trim() : null;
+
+        if (assignTo == SubjectActionOwnerAssignmentType.SpecificOwner && string.IsNullOrEmpty(normalizedUserName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["Choose a source an agent's call may have."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.NormalizedUserName), S["Choose the user who owns the follow-up."]);
+        }
+
+        if (assignTo == SubjectActionOwnerAssignmentType.Pool)
+        {
+            switch (model.PoolSource)
+            {
+                case FollowUpOwnerPoolSource.Team when string.IsNullOrWhiteSpace(model.PoolTeamId):
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.PoolTeamId), S["Choose the team whose members get the follow-up."]);
+                    break;
+
+                case FollowUpOwnerPoolSource.Roles when Clean(model.PoolRoleNames).Length == 0:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.PoolRoleNames), S["Choose at least one role."]);
+                    break;
+
+                case FollowUpOwnerPoolSource.Users when Clean(model.PoolUserIds).Length == 0:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.PoolUserIds), S["Choose at least one user."]);
+                    break;
+            }
         }
 
         action.Put(new FollowUpRoutingMetadata
         {
-            Target = model.Target,
-            CampaignId = Normalize(model.CampaignId),
-            DialerProfileId = model.Target == FollowUpRoutingTarget.Dialer ? Normalize(model.DialerProfileId) : null,
-            Source = model.Target == FollowUpRoutingTarget.Agent ? Normalize(model.Source) : null,
+            Target = dialWith.Length == 0
+                ? FollowUpRoutingTarget.SameAsBefore
+                : dialedByProfile ? FollowUpRoutingTarget.Dialer : FollowUpRoutingTarget.Agent,
+            CampaignId = string.IsNullOrWhiteSpace(model.CampaignId) ? null : model.CampaignId.Trim(),
+            DialerProfileId = dialedByProfile ? dialWith : null,
         });
+
+        action.Put(new FollowUpOwnerPoolMetadata
+        {
+            Source = model.PoolSource,
+            TeamId = assignTo == SubjectActionOwnerAssignmentType.Pool && model.PoolSource == FollowUpOwnerPoolSource.Team ? model.PoolTeamId?.Trim() : null,
+            RoleNames = assignTo == SubjectActionOwnerAssignmentType.Pool && model.PoolSource == FollowUpOwnerPoolSource.Roles ? Clean(model.PoolRoleNames) : [],
+            UserIds = assignTo == SubjectActionOwnerAssignmentType.Pool && model.PoolSource == FollowUpOwnerPoolSource.Users ? Clean(model.PoolUserIds) : [],
+            Strategy = model.PoolStrategy,
+        });
+
+        WriteAssignment(action, assignTo, normalizedUserName);
 
         return Edit(action, context);
     }
 
+    // The owner is stored on the action type's own metadata, where the executor and older actions read it.
+    private static (SubjectActionOwnerAssignmentType AssignmentType, string NormalizedUserName) ReadAssignment(SubjectAction action)
+    {
+        if (IsTryAgain(action))
+        {
+            return action.TryGet<TryAgainActionMetadata>(out var tryAgain)
+                ? (tryAgain.AssignmentType, tryAgain.NormalizedUserName)
+                : (SubjectActionOwnerAssignmentType.SameOwner, null);
+        }
+
+        return action.TryGet<NewActivityActionMetadata>(out var newActivity)
+            ? (newActivity.AssignmentType, newActivity.NormalizedUserName)
+            : (SubjectActionOwnerAssignmentType.SameOwner, null);
+    }
+
+    private static void WriteAssignment(SubjectAction action, SubjectActionOwnerAssignmentType assignmentType, string normalizedUserName)
+    {
+        if (IsTryAgain(action))
+        {
+            if (!action.TryGet<TryAgainActionMetadata>(out var tryAgain))
+            {
+                tryAgain = new TryAgainActionMetadata();
+            }
+
+            tryAgain.AssignmentType = assignmentType;
+            tryAgain.NormalizedUserName = normalizedUserName;
+            action.Put(tryAgain);
+
+            return;
+        }
+
+        if (!action.TryGet<NewActivityActionMetadata>(out var newActivity))
+        {
+            newActivity = new NewActivityActionMetadata();
+        }
+
+        newActivity.AssignmentType = assignmentType;
+        newActivity.NormalizedUserName = normalizedUserName;
+        action.Put(newActivity);
+    }
+
+    private static bool IsTryAgain(SubjectAction action)
+        => string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.OrdinalIgnoreCase);
+
     private static bool CreatesFollowUp(SubjectAction action)
-        => string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.OrdinalIgnoreCase) ||
+        => IsTryAgain(action) ||
             string.Equals(action.Source, OmnichannelConstants.ActionTypes.NewActivity, StringComparison.OrdinalIgnoreCase);
 
-    private static string Normalize(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string[] Clean(IEnumerable<string> values)
+        => (values ?? []).Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.Ordinal).ToArray();
 }

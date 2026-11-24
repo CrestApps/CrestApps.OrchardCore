@@ -322,6 +322,5 @@ public sealed class FollowUpOwnerPoolStartup : StartupBase
     {
         services.AddScoped<FollowUpOwnerPicker>();
         services.AddTeamMemberLoadSource<OmnichannelActivityTeamLoadSource>();
-        services.AddDisplayDriver<SubjectAction, FollowUpOwnerPoolSubjectActionDisplayDriver>();
     }
 }

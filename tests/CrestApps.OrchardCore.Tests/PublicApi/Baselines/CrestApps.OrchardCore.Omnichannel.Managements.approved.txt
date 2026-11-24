@@ -1791,32 +1791,32 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string SubjectContentType { get; set; }
         public string SubjectDisplayName { get; set; }
     }
-    public class FollowUpOwnerPoolSubjectActionViewModel
-    {
-        public FollowUpOwnerPoolSubjectActionViewModel() { }
-        public string[] RoleNames { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Roles { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolSource Source { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolStrategy Strategy { get; set; }
-        public string TeamId { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Teams { get; set; }
-        public string[] UserIds { get; set; }
-    }
     public class FollowUpRoutingSubjectActionViewModel
     {
+        public const string DialWithInherited = "";
+        public const string DialWithNone = "__none__";
         public FollowUpRoutingSubjectActionViewModel() { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionOwnerAssignmentType AssignTo { get; set; }
         public string CampaignId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Campaigns { get; set; }
-        public string DialerProfileId { get; set; }
+        public string DialWith { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> DialerProfiles { get; set; }
-        public string Source { get; set; }
+        public string NormalizedUserName { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Sources { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpRoutingTarget Target { get; set; }
+        public bool PoolAvailable { get; set; }
+        public string[] PoolRoleNames { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolSource PoolSource { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolStrategy PoolStrategy { get; set; }
+        public string PoolTeamId { get; set; }
+        public string[] PoolUserIds { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Roles { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SelectedUsers { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Teams { get; set; }
     }
     public class LeadAIConversionViewModel
     {

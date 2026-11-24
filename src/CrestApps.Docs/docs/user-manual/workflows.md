@@ -94,7 +94,7 @@ When the dialer dispositions a call, what happens next is up to the disposition.
 
 Use one or the other for the same disposition, or the contact gets two follow-up activities. A **Schedule Dialer Retry** that runs after the dialer already retried the call on its own finds that attempt and does not create another.
 
-To have an agent work the next activity instead of the dialer, set **Next activity by** on the subject flow's **Try Again** or **New Activity** action; see [Who works the next activity](subject-flows.md#who-works-the-next-activity).
+To have an agent work the next activity instead of the dialer, set **Dial with** to *No dialer* on the subject flow's **Try Again** or **New Activity** action; see [Campaign, dialer and owner of the follow-up](subject-flows.md#campaign-dialer-and-owner-of-the-follow-up).
 
 To retry a busy line after 15 minutes from a workflow:
 
