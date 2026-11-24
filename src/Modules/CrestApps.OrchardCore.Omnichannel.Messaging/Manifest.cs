@@ -18,7 +18,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = MessagingConstants.Feature.Workspace,
     Name = "Omnichannel Messaging Workspace",
-    Description = "Adds the human messaging workspace: a customer-centric inbox where each customer's conversations on every enabled channel sit side by side, routing to agents and queues through inbound entry points, templates, broadcasts, and its own SignalR hub for real-time messaging. It carries no channel of its own — enable a channel feature such as SMS Messaging Channel to send and receive. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature) and the inbound entry points, which say where each number's messages go.",
+    Description = "Adds the human messaging workspace: a customer-centric inbox where each customer's conversations on every enabled channel sit side by side, routing to agents and queues through inbound entry points, routing rules that assign conversations nobody owns to agents (signed-in queue agents, queue members, teams, roles or users, by round robin or fewest open conversations), templates, broadcasts, and its own SignalR hub for real-time messaging. It carries no channel of its own — enable a channel feature such as SMS Messaging Channel to send and receive. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature) and the inbound entry points, which say where each number's messages go.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -26,6 +26,7 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.AgentServices,
         ContactCenterConstants.Feature.EntryPoints,
         OrchardCoreFeatureIds.SignalR,
+        TeamsConstants.Features.Teams,
         OutreachConstants.Feature,
     ]
 )]
@@ -42,15 +43,3 @@ using OrchardCore.Modules.Manifest;
     ]
 )]
 
-[assembly: Feature(
-    Id = MessagingConstants.Feature.RoutingRules,
-    Name = "Omnichannel Messaging Routing Rules",
-    Description = "Assigns conversations nobody owns to agents by rules you define: when a contact starts a conversation or replies to one a workflow or broadcast started, or after the contact has waited, a rule gives it to an agent signed in to a queue, a member of a queue or of teams, a user in a role or a named user, by round robin or by the fewest open conversations.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        MessagingConstants.Feature.Workspace,
-        ContactCenterConstants.Feature.Queues,
-        TeamsConstants.Features.Teams,
-    ]
-)]

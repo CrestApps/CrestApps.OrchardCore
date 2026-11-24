@@ -67,7 +67,7 @@ Every notification the server sends is logged at the `Information` level (delive
 1. Go to **Tools** → **Features**.
 2. Enable **SMS Messaging Channel**. This also enables the **Omnichannel Messaging Workspace** and everything it needs (Channel Endpoints, Contact Center Agent Services, Provider Webhook Inbox, SignalR, Orchard Core SMS).
 3. Optionally enable **Omnichannel Messaging Routed Distribution** to push department conversations to the least-loaded available agent. This needs Contact Center Work Distribution.
-4. Optionally enable **Omnichannel Messaging Routing Rules** to assign conversations nobody owns, such as the ones a workflow starts, to agents by your own rules. See [Routing rules](#routing-rules). This also enables **Teams**.
+4. Optionally add [routing rules](#routing-rules) at **Messaging** → **Routing Rules** to assign conversations nobody owns, such as the ones a workflow starts, to agents. They are part of the workspace; it enables the Teams feature they pick through.
 
 Enabling the workspace on its own gives you the inbox with nothing to send or receive on. That is expected: channels come from channel features.
 
@@ -145,7 +145,7 @@ The conversation also records the activity's campaign (`MessagingConversation.Ca
 
 A conversation nobody owns waits in the inbox until someone claims it. That includes every conversation a workflow's **Send Text Message** task or a broadcast starts without naming an agent: when the contact replies, the reply lands in a conversation that belongs to nobody, and a lead can go cold before anyone notices. **Routing rules** give such conversations to an agent automatically.
 
-Manage them at **Messaging** → **Routing Rules** (permission `ManageMessagingRoutingRules`). Enabled rules are tried from the lowest **Order** up. The first rule that applies and finds an agent assigns the conversation; a rule that applies but finds nobody passes it to the next rule, and a conversation no rule assigns stays where it is, exactly as without rules. A conversation that already has an agent, or is a person's own, is never touched.
+Routing rules are part of the messaging workspace and work on every messaging channel: a rule's **Channels** condition picks channels, and leaving it empty takes them all, so a channel added later, such as email or WhatsApp, is routed by the same rules. Manage them at **Messaging** → **Routing Rules** (permission `ManageMessagingRoutingRules`). Enabled rules are tried from the lowest **Order** up. The first rule that applies and finds an agent assigns the conversation; a rule that applies but finds nobody passes it to the next rule, and a conversation no rule assigns stays where it is, exactly as without rules. A conversation that already has an agent, or is a person's own, is never touched.
 
 ### When a rule applies
 
@@ -222,7 +222,7 @@ Rules travel through the **Messaging routing rules** deployment step and the `Me
 | `SendGroupMessages` | Send group messages | Send broadcasts and multi-recipient messages. |
 | `SendMessagesDuringQuietHours` | Send messages outside business hours | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
 | `ManageMessaging` | Manage the messaging workspace | Manage templates (**Messaging** → **Templates**). |
-| `ManageMessagingRoutingRules` | Manage messaging routing rules | Manage the routing rules (**Messaging** → **Routing Rules**). Given to the **Administrator** and **Supervisor** roles when the Routing Rules feature is enabled. |
+| `ManageMessagingRoutingRules` | Manage messaging routing rules | Manage the routing rules (**Messaging** → **Routing Rules**). Given to the **Administrator** and **Supervisor** roles. |
 
 The three conversation permissions narrow like Orchard Core's **View all content** and **View own content**: `ViewAllMessagingConversations` includes the queue permission, which includes the own permission. A conversation is always authorized against `ViewAllMessagingConversations`; for anybody who does not hold it, an authorization handler grants the conversations that are theirs through the narrower permissions. An agent never sees a conversation a colleague has claimed. None of the other permissions implies another. By default the **Agent** role gets `UseMessagingWorkspace` and `ViewQueueMessagingConversations`, and the **Supervisor** role gets `UseMessagingWorkspace`, `ViewAllMessagingConversations`, `SendGroupMessages`, `SendMessagesDuringQuietHours` and `ManageMessaging`. A role given `ViewOwnMessagingConversations` instead of the queue permission sees only its users' own conversations, which suits people who text from their own number and serve no queue.
 

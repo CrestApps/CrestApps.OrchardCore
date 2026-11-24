@@ -38,7 +38,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging;
 /// message, the hook on automated sends, the sweep that retries waiting conversations, and their recipe and deployment
 /// steps.
 /// </summary>
-[Feature(MessagingConstants.Feature.RoutingRules)]
+[Feature(MessagingConstants.Feature.Workspace)]
 public sealed class RoutingRulesStartup : StartupBase
 {
     /// <inheritdoc/>

@@ -249,17 +249,17 @@ public sealed class MessagingFeatureActivationTests
     }
 
     [Fact]
-    public async Task FreshTenant_RoutingRules_EnablesTeamsAndQueues_AndRoutesAConversationNobodyOwns()
+    public async Task FreshTenant_MessagingWorkspace_HasRoutingRules_AndEnablesTeamsAndQueues()
     {
         // Arrange
-        // The routing rules pick through Teams assignment and read queue sign-ins, so the feature brings both by
-        // dependency, and its catalog, router and evaluator resolve on a fresh tenant.
+        // The routing rules are part of the workspace. They pick through Teams assignment and read queue sign-ins, so
+        // the workspace brings both by dependency, and the rules' catalog, router and evaluator resolve on a fresh tenant.
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
         var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
         {
             Id = "messaging-routing-rules",
             ProviderProfile = "none",
-            Features = [MessagingConstants.Feature.Sms, MessagingConstants.Feature.RoutingRules],
+            Features = [MessagingConstants.Feature.Sms],
         });
 
         await host.ExecuteInTenantScopeAsync(tenant, async services =>

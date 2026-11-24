@@ -5,11 +5,8 @@
         "CrestApps.OrchardCore.ContactCenter.AgentServices",
         "CrestApps.OrchardCore.ContactCenter.EntryPoints",
         "OrchardCore.SignalR",
-        "CrestApps.OrchardCore.Outreach"}, Description=@"Adds the human messaging workspace: a customer-centric inbox where each customer's conversations on every enabled channel sit side by side, routing to agents and queues through inbound entry points, templates, broadcasts, and its own SignalR hub for real-time messaging. It carries no channel of its own — enable a channel feature such as SMS Messaging Channel to send and receive. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature) and the inbound entry points, which say where each number's messages go.", Id="CrestApps.OrchardCore.Omnichannel.Messaging", Name="Omnichannel Messaging Workspace")]
-[assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
-        "CrestApps.OrchardCore.Omnichannel.Messaging",
-        "CrestApps.OrchardCore.ContactCenter.Queues",
-        "CrestApps.OrchardCore.Teams"}, Description=@"Assigns conversations nobody owns to agents by rules you define: when a contact starts a conversation or replies to one a workflow or broadcast started, or after the contact has waited, a rule gives it to an agent signed in to a queue, a member of a queue or of teams, a user in a role or a named user, by round robin or by the fewest open conversations.", Id="CrestApps.OrchardCore.Omnichannel.Messaging.RoutingRules", Name="Omnichannel Messaging Routing Rules")]
+        "CrestApps.OrchardCore.Teams",
+        "CrestApps.OrchardCore.Outreach"}, Description=@"Adds the human messaging workspace: a customer-centric inbox where each customer's conversations on every enabled channel sit side by side, routing to agents and queues through inbound entry points, routing rules that assign conversations nobody owns to agents (signed-in queue agents, queue members, teams, roles or users, by round robin or fewest open conversations), templates, broadcasts, and its own SignalR hub for real-time messaging. It carries no channel of its own — enable a channel feature such as SMS Messaging Channel to send and receive. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature) and the inbound entry points, which say where each number's messages go.", Id="CrestApps.OrchardCore.Omnichannel.Messaging", Name="Omnichannel Messaging Workspace")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
         "CrestApps.OrchardCore.Omnichannel.Messaging",
         "CrestApps.OrchardCore.ContactCenter.Queues"}, Description="Push-assigns new department conversations, on every messaging channel, to the lea" +
@@ -93,7 +90,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging
         public RoutedDistributionStartup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
-    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging.RoutingRules")]
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
     public sealed class RoutingRulesStartup : OrchardCore.Modules.StartupBase
     {
         public RoutingRulesStartup() { }
@@ -205,7 +202,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Set(string id, bool favorite, string name) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
-    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging.RoutingRules")]
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
     public sealed class RoutingRulesController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule>
     {
         public RoutingRulesController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.RoutingRulesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.RoutingRulesController> stringLocalizer) { }

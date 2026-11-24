@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers;
 /// Manages the messaging routing rules.
 /// </summary>
 [Admin]
-[Feature(MessagingConstants.Feature.RoutingRules)]
+[Feature(MessagingConstants.Feature.Workspace)]
 public sealed class RoutingRulesController : CatalogAdminController<MessagingRoutingRule>
 {
     /// <summary>
