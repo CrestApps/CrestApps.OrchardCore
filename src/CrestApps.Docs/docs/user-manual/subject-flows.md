@@ -85,19 +85,28 @@ Extra fields on **Try Again** and **New Activity**:
 | **Pool of agents**, **Pick** | For **A pool of agents**: where the users come from (**Members of a team**, **Users in roles** or **Specific users**) and how one is picked: **Round robin** (the user given an activity longest ago) or **Fewest open activities**. When the pool has nobody to pick, the follow-up is left for any agent. |
 | **Default schedule hours** | How many hours later the follow-up is scheduled. The agent can change the date on the Complete page. When empty, a Try Again for dialer campaign work is dialed after the dialer profile's **Retry delay**, and other follow-ups are scheduled 24 hours later. |
 
-### Who makes the next call
+### Who works the next activity
 
-**Try Again** and **New Activity** also have **Next call by**, which decides how the follow-up is worked:
+**Try Again** and **New Activity** also have **Next activity by**, which decides how the follow-up activity is worked:
 
 | Choice | What happens |
 | --- | --- |
-| **Same as before** | The default. A dialer record goes back to the dialer, in the same campaign under the same dialer profile; other work stays as it was. |
-| **An agent (manual call)** | The follow-up is a manual call with the **Source** you pick (*Manual* by default) and the owner the assignment picks: with **Same owner**, the agent who completed the call. The dialer never calls it, even when the call it follows was a dialer call. |
-| **The dialer** | The follow-up is queued on its campaign's dialer queue under the **Dialer profile** you pick, and offered to whichever agent signed in to the campaign is free. Manual work can be handed to the dialer this way. |
+| **Same as before** | The default. A dialer activity goes back to the dialer, in the same campaign under the same dialer profile; other work stays as it was. |
+| **An agent** | The follow-up is a manual activity with the **Source** you pick (*Manual* by default). The dialer never calls it, even when the activity it follows was a dialer call. |
+| **The dialer** | The follow-up is queued on its campaign's dialer queue under the **Dialer profile** you pick, and offered to whichever agent signed in to the campaign is free; it has no owner of its own. Manual work can be handed to the dialer this way. |
 
 **Campaign** moves the follow-up to another campaign with any of the three; empty keeps its campaign.
 
-For example, to have an agent call back a contact the dialer reached: on the dialer campaign's subject, give the *Call back* disposition a **Try Again** action with **Next call by** set to *An agent (manual call)* and **Assignment type** *The agent the dialer called for*. The agent the dialer connected or held for the call gets the call back on their own list, and the dialer does not dial the contact again. To spread call backs across a team instead, pick **A pool of agents**.
+With **An agent**, the owner is the one the action's **Assignment type** picks:
+
+| Assignment type | Owner of the follow-up |
+| --- | --- |
+| **Same owner** | The user who completed the activity, such as the agent who chose the disposition. When the system completed it (for example a dialer call nobody answered), it has no owner and any agent can take it. |
+| **Specific owner** | The user you pick in **Assign to user**. |
+| **The agent the dialer called for** | The agent a dialer call was placed or connected for, even when the system applied the disposition; with no such agent, the user who completed the activity. |
+| **A pool of agents** | One user of the team, roles or users you pick, by round robin or fewest open activities; when the pool has nobody, any agent can take it. |
+
+For example, to have an agent call back a contact the dialer reached: on the dialer campaign's subject, give the *Call back* disposition a **Try Again** action with **Next activity by** set to *An agent* and **Assignment type** *The agent the dialer called for*. The agent the dialer connected or held for the call gets the call back on their own list, and the dialer does not dial the contact again. To spread call backs across a team instead, pick **A pool of agents**.
 
 ## When no contact matches the caller
 

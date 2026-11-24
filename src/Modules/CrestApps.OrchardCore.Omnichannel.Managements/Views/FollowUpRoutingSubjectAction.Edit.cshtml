@@ -8,14 +8,14 @@
 }
 
 <div class="ocat-wrapper">
-    <label asp-for="Target" class="ocat-label">@T["Next call by"]</label>
+    <label asp-for="Target" class="ocat-label">@T["Next activity by"]</label>
     <div class="ocat-end">
         <select asp-for="Target" class="form-select" data-follow-up-route="@targetId">
-            <option value="@nameof(FollowUpRoutingTarget.SameAsBefore)">@T["Same as before (a dialer record goes back to the dialer)"]</option>
-            <option value="@nameof(FollowUpRoutingTarget.Agent)">@T["An agent (manual call): the dialer does not call it again"]</option>
+            <option value="@nameof(FollowUpRoutingTarget.SameAsBefore)">@T["Same as before (a dialer activity goes back to the dialer)"]</option>
+            <option value="@nameof(FollowUpRoutingTarget.Agent)">@T["An agent: a manual activity the dialer never calls"]</option>
             <option value="@nameof(FollowUpRoutingTarget.Dialer)">@T["The dialer, under a dialer profile"]</option>
         </select>
-        <span class="hint">@T["Who makes the follow-up call. Moving a dialer call back to an agent takes it off the dialer, so the contact is called by hand."]</span>
+        <span class="hint">@T["Who works the follow-up activity. Giving a dialer activity to an agent takes it off the dialer, so the agent works it by hand."]</span>
     </div>
 </div>
 
@@ -41,7 +41,7 @@
     <div class="ocat-end">
         <select asp-for="Source" asp-items="Model.Sources" class="form-select"></select>
         <span asp-validation-for="Source"></span>
-        <span class="hint">@T["The follow-up goes to the owner the assignment above picks; with the same owner, that is the agent who completed the call."]</span>
+        <span class="hint">@T["The agent who owns it is the one the assignment type above picks: the user who completed the activity (Same owner), the user you name (Specific owner), the agent the dialer called for, or one user of a pool. When it picks nobody, any agent can take the activity."]</span>
     </div>
 </div>
 
