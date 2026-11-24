@@ -51,7 +51,7 @@ internal sealed class FollowUpRoutingSubjectActionDisplayDriver : DisplayDriver<
 
             var selectedSource = string.IsNullOrWhiteSpace(routing.Source) ? ActivitySources.Manual : routing.Source;
             model.Sources = _formOptions.GetManuallyAssignableSourceOptions(S["Manual"])
-                .Where(source => !string.IsNullOrEmpty(source.Value) && ActivityRerouter.IsAgentSource(source.Value))
+                .Where(source => !string.IsNullOrEmpty(source.Value) && FollowUpRoutes.IsAgentSource(source.Value))
                 .ToList();
 
             foreach (var source in model.Sources)
@@ -79,7 +79,7 @@ internal sealed class FollowUpRoutingSubjectActionDisplayDriver : DisplayDriver<
 
         if (model.Target == FollowUpRoutingTarget.Agent &&
             !string.IsNullOrWhiteSpace(model.Source) &&
-            !ActivityRerouter.IsAgentSource(model.Source))
+            !FollowUpRoutes.IsAgentSource(model.Source))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["Choose a source an agent's call may have."]);
         }

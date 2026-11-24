@@ -266,8 +266,7 @@ public sealed class AIActivityWorkflowsStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the Update Contact workflow task, which sets fields on a contact or lead without validating the record, and
-/// the Reroute Activity workflow task, which moves an activity between the dialer and an agent.
+/// Registers the Update Contact workflow task, which sets fields on a contact or lead without validating the record.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Activities)]
 [RequireFeatures(OrchardCoreFeatureIds.Workflows)]
@@ -277,11 +276,5 @@ public sealed class ContactWorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<Workflows.Models.UpdateContactTask, Workflows.Drivers.UpdateContactTaskDisplayDriver>();
-        services.AddScoped<ActivityRerouter>();
-
-        // The task's editor lists campaigns, dialer profiles and sources: this startup runs without the feature that
-        // registers the provider too.
-        services.TryAddScoped<BulkActivityAdminFormOptionsProvider>();
-        services.AddActivity<Workflows.Models.RerouteActivityTask, Workflows.Drivers.RerouteActivityTaskDisplayDriver>();
     }
 }

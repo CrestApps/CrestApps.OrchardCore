@@ -251,7 +251,7 @@ The agent receives a call only when it is something they can act on: a customer 
 
 A number not in service is also added to [Numbers Not In Service](numbers-not-in-service.md) and never dialed again. With answering-machine screening off, a call a voicemail answers is connected to the agent like any answered call, and is theirs to disposition. In Preview mode the agent clicks **Dial**, so they see the call ring; if it ends before they are connected, the dialer dispositions it the same way and the agent goes back to Ready.
 
-The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again). To give the next call to an agent instead, or to another campaign or dialer profile, use the **Reroute Activity** task; see [Decide who makes the next call](workflows.md#decide-who-makes-the-next-call).
+The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again). To give the next call to an agent instead, or to another campaign or dialer profile, set **Next call by** on the action; see [Who makes the next call](subject-flows.md#who-makes-the-next-call).
 
 ### Retries and the attempt limit
 

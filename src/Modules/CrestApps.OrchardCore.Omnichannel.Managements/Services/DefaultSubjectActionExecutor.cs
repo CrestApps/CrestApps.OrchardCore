@@ -478,11 +478,11 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         switch (routing.Target)
         {
             case FollowUpRoutingTarget.Agent:
-                var source = string.IsNullOrWhiteSpace(routing.Source) || !ActivityRerouter.IsAgentSource(routing.Source)
+                var source = string.IsNullOrWhiteSpace(routing.Source) || !FollowUpRoutes.IsAgentSource(routing.Source)
                     ? ActivitySources.Manual
                     : routing.Source.Trim();
 
-                ActivityRerouter.ApplyAgentRoute(followUp, source, campaignId, ownerId: null, ownerName: null, _clock.UtcNow);
+                FollowUpRoutes.ApplyAgentRoute(followUp, source, campaignId, ownerId: null, ownerName: null, _clock.UtcNow);
 
                 return FollowUpRoutingTarget.Agent;
 
@@ -516,7 +516,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
                     return FollowUpRoutingTarget.SameAsBefore;
                 }
 
-                ActivityRerouter.ApplyDialerRoute(followUp, profile, campaignId, destination);
+                FollowUpRoutes.ApplyDialerRoute(followUp, profile, campaignId, destination);
 
                 return FollowUpRoutingTarget.Dialer;
 

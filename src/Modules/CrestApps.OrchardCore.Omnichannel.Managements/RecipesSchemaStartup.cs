@@ -46,16 +46,3 @@ public sealed class CrmWorkflowRecipeSchemasStartup : StartupBase
             .AddWorkflowActivitySchema<LeadConvertedEventSchema>();
     }
 }
-
-/// <summary>
-/// Describes the activity workflow tasks to CrestApps Recipes.
-/// </summary>
-[Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
-public sealed class ActivityWorkflowRecipeSchemasStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddWorkflowActivitySchema<RerouteActivityTaskSchema>();
-    }
-}
