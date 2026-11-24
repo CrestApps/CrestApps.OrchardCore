@@ -214,6 +214,35 @@ public sealed class PlaidClient
     }
 
     /// <summary>
+    /// Changes the webhook URL Plaid sends an item's webhooks to. Safe to send again: the same URL gives the same item.
+    /// </summary>
+    /// <param name="credentials">The credentials.</param>
+    /// <param name="accessToken">The item's access token.</param>
+    /// <param name="webhookUrl">The new webhook URL, an absolute address.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The item, with the webhook URL Plaid now holds.</returns>
+    public async Task<PlaidItemInfo> UpdateItemWebhookAsync(PlaidCredentials credentials, string accessToken, string webhookUrl, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(accessToken);
+        ArgumentException.ThrowIfNullOrEmpty(webhookUrl);
+
+        if (!Uri.TryCreate(webhookUrl, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        {
+            throw new ArgumentException("The webhook URL must be an absolute HTTP or HTTPS address.", nameof(webhookUrl));
+        }
+
+        var body = new JsonObject
+        {
+            ["access_token"] = accessToken,
+            ["webhook"] = uri.AbsoluteUri,
+        };
+
+        var response = await SendAsync<PlaidItemResponse>(credentials, "item/webhook/update", body, retryable: true, cancellationToken);
+
+        return response.Item;
+    }
+
+    /// <summary>
     /// Removes an item, so its access token stops working and Plaid stops billing for it.
     /// </summary>
     /// <param name="credentials">The credentials.</param>
@@ -267,7 +296,7 @@ public sealed class PlaidClient
 
             try
             {
-                error = await response.Content.ReadFromJsonAsync<PlaidError>(cancellationToken);
+                error = await response.Content.ReadFromJsonAsync<PlaidError>(PlaidJsonSerializerOptions.Default, cancellationToken);
             }
             catch (JsonException)
             {
@@ -277,7 +306,7 @@ public sealed class PlaidClient
             throw new PlaidApiException(response.StatusCode, error);
         }
 
-        return await response.Content.ReadFromJsonAsync<T>(cancellationToken)
+        return await response.Content.ReadFromJsonAsync<T>(PlaidJsonSerializerOptions.Default, cancellationToken)
             ?? throw new PlaidApiException(response.StatusCode, new PlaidError { ErrorType = "API_ERROR", ErrorCode = "EMPTY_RESPONSE" });
     }
 

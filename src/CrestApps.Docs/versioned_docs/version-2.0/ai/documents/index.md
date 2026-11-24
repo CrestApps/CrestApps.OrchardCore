@@ -22,7 +22,7 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 
 - **Unified Document Store**: A single `IAIDocumentStore` for storing and querying documents across all reference types (chat interactions, profiles)
 - **Text Extraction**: Automatic text extraction from uploaded documents via registered `IngestionDocumentReader` implementations (from `Microsoft.Extensions.DataIngestion`)
-- **Settings UI**: Admin settings page for configuring the default document index and default document retrieval mode (**Settings > Artificial Intelligence**)
+- **Settings UI**: Admin settings page for configuring the default document index and default document retrieval mode (**Settings** → **Artificial Intelligence**)
 - **Document Processing Tools**: AI tools for listing, reading, and searching documents
 - **RAG Search Tool**: Semantic vector search across uploaded documents
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
@@ -87,8 +87,8 @@ The orchestrator supports various document-related operations:
 ### Getting Started
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
-2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
+2. **Create an index**: Navigate to **Search** → **Indexing** and create a new index (e.g., "AI Documents").
+3. **Configure settings**: Navigate to **Settings** → **Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Chat Interaction Documents` in the admin dashboard.
 5. Start using the Documents tab in your chat interactions.
 
@@ -149,7 +149,7 @@ There are no separate API endpoints for profile document management — everythi
 ### Getting Started
 
 1. Enable the `AI Documents for Profiles` feature in the Orchard Core admin dashboard.
-2. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
+2. Navigate to **Artificial Intelligence** → **AI Profiles** and edit a profile.
 3. Use the **Documents** tab to upload text-based documents.
 4. Configure **Document Top N** and, when needed, **Document retrieval mode** to control how much document context is injected and whether the response uses chunk-level or hierarchical retrieval.
 
@@ -180,7 +180,7 @@ Unlike profile documents (which persist across all sessions), chat session docum
 
 Because document processing is resource-intensive, document upload is **not enabled by default** even when the feature is active. Administrators must explicitly opt in for each AI Profile:
 
-1. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
+1. Navigate to **Artificial Intelligence** → **AI Profiles** and edit a profile.
 2. In the **Documents** section, enable **Allow session document uploads**, **Allow session image uploads**, or both, depending on the experience you want to allow.
 3. Save the profile.
 
@@ -190,15 +190,15 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 
 | UI | Where | Notes |
 |----|-------|-------|
-| **AI Chat Session** | Admin > Artificial Intelligence > AI Chat | Full session page |
+| **AI Chat Session** | **Admin** → **Artificial Intelligence** → **AI Chat** | Full session page |
 | **AI Chat Admin Widget** | Floating admin widget | Compact chat widget on admin pages |
 | **AI Chat Widget** | Frontend content widget | Public-facing chat widget |
 
 ### Getting Started
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
-2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. Use **Allow document uploads** and **Allow image uploads** to control which file types chat interactions can accept. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
+2. **Create an index**: Navigate to **Search** → **Indexing** and create a new index (e.g., "AI Documents").
+3. **Configure settings**: Navigate to **Settings** → **Artificial Intelligence** and select your new index and default document retrieval mode. Use **Allow document uploads** and **Allow image uploads** to control which file types chat interactions can accept. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
 5. **Opt in per profile**: Edit the desired AI Profile and enable **Allow session document uploads**, **Allow session image uploads**, or both.
 6. Open a chat session. The attach button and drag-and-drop zone are available when at least one upload type is enabled for the profile. Image uploads also require a configured vision deployment.
@@ -256,8 +256,8 @@ This ensures the AI document indexes stay free of orphaned entries when their pa
 
 ### "Index Not Configured" Warning
 
-If you see this warning, navigate to **Settings > Artificial Intelligence** and select an index profile.
-If no index profiles are available, go to **Search > Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
+If you see this warning, navigate to **Settings** → **Artificial Intelligence** and select an index profile.
+If no index profiles are available, go to **Search** → **Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
 
 ### "Embedding Search Service Not Available" Warning
 

@@ -47,6 +47,19 @@ public sealed class EFileSubmission : CatalogItem, IModifiedUtcAwareModel
     public bool IsManual { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the submission went to the agency's test system (acceptance testing). The
+    /// agency's acceptance of a test files nothing: the document is not marked as filed and can be filed for real.
+    /// </summary>
+    public bool IsTest { get; set; }
+
+    /// <summary>
+    /// Gets or sets the choices made when the document was submitted, such as whether the agency debits the payment and on
+    /// which day. The format and the channel read them; a pack adds them with a display driver of
+    /// <see cref="EFileSubmissionRequest"/>.
+    /// </summary>
+    public Dictionary<string, string> Options { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the name of the file built.
     /// </summary>
     public string FileName { get; set; }
@@ -122,7 +135,8 @@ public enum EFileSubmissionStatus
     Submitted,
 
     /// <summary>
-    /// The agency accepted the document; the document is marked as filed.
+    /// The agency accepted the document; the document is marked as filed, unless the submission is a test
+    /// (<see cref="EFileSubmission.IsTest"/>).
     /// </summary>
     Accepted,
 
@@ -232,7 +246,49 @@ public sealed class EFileTransportResult
     public DateOnly? FiledOn { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the channel sent the file to the agency's test system, such as a channel set
+    /// up for acceptance testing. The submission is then recorded as a test, whatever was asked.
+    /// </summary>
+    public bool IsTest { get; set; }
+
+    /// <summary>
     /// Gets the messages of the channel and the agency.
     /// </summary>
     public IList<string> Messages { get; } = [];
+}
+
+/// <summary>
+/// What a person asks for when they file a document electronically: the format, the channel, whether it is a test, and
+/// the choices a pack's format or channel needs. The submit form is built from it through
+/// <c>IDisplayManager&lt;EFileSubmissionRequest&gt;</c>: E-Filing's driver edits the format, the channel and the test
+/// flag, and a pack adds a display driver that edits its own choices into <see cref="Options"/> (checking
+/// <see cref="Target"/> so it shows only for its documents).
+/// </summary>
+public sealed class EFileSubmissionRequest
+{
+    /// <summary>
+    /// Gets or sets the document to file.
+    /// </summary>
+    public EFileTarget Target { get; set; }
+
+    /// <summary>
+    /// Gets or sets the format's name.
+    /// </summary>
+    public string Format { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel's name.
+    /// </summary>
+    public string Transport { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the file goes to the agency's test system. Only a channel that takes test
+    /// submissions accepts it.
+    /// </summary>
+    public bool IsTest { get; set; }
+
+    /// <summary>
+    /// Gets the choices for the format and the channel, kept on the submission as <see cref="EFileSubmission.Options"/>.
+    /// </summary>
+    public IDictionary<string, string> Options { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 }

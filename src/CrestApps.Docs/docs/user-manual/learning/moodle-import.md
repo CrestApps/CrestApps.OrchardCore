@@ -10,7 +10,7 @@ Moodle can back up a course into one file, a course backup with the `.mbz` exten
 
 | | |
 | --- | --- |
-| **Menu** | Content > Bulk Import (or the import page of the **Course** content type) |
+| **Menu** | **Content** → **Bulk Import** (or the import page of the **Course** content type) |
 | **Permission** | Import the Course content type and the item types (SCORM package, quiz, file, link and page lessons) |
 | **Feature** | Learning Moodle Import (it turns on Learning Assessments, Learning SCORM Packages, Course Categories, Content Transfer and Media) |
 
@@ -18,7 +18,7 @@ Moodle can back up a course into one file, a course backup with the `.mbz` exten
 
 ## Back up the course in Moodle
 
-1. In Moodle, open the course and go to **Course reuse > Backup** (in older versions, **Administration > Backup**).
+1. In Moodle, open the course and go to **Course reuse** → **Backup** (in older versions, **Administration** → **Backup**).
 2. Keep **Include activities and resources**, **Include blocks** and **Include files**. You do not need the users or their attempts: learners are not moved by this import.
 3. Finish the backup and download the `.mbz` file from **Course backup area**.
 

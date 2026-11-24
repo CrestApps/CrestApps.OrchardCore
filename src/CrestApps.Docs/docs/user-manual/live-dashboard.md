@@ -12,7 +12,7 @@ The **live dashboard** is the supervisor's real-time view of the contact center:
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Live dashboard |
+| **Menu** | **Interaction Center** → **Live Dashboard** |
 | **Permissions** | Monitor the Contact Center in real time (to watch, listen, whisper, barge and message). Take over, end, transfer and record live Contact Center calls, and set agents' state (for the other actions). The *Supervisor* role has both. |
 | **Feature** | Contact Center Supervision & Live Dashboard |
 

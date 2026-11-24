@@ -30,7 +30,7 @@ A learner's attempt is a `SurveyResponse` started through the learner's own enro
 
 Response properties carry the course (and, for identified responses, the enrollment), so workflow events, webhooks and data sets know them.
 
-Course items' surveys are left out of the admin **Surveys** list by default; **Show > Also surveys owned by other features** lists them too.
+Course items' surveys are left out of the admin **Surveys** list by default; **Show** → **Also surveys owned by other features** lists them too.
 
 ## What Learning adds to Surveys
 

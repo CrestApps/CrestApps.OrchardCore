@@ -11,7 +11,7 @@ When agents are not taking work, they pick a reason from their presence menu: *L
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Agent states |
+| **Menu** | **Interaction Center** → **Management** → **Agent States** |
 | **Permission** | Manage Contact Center agents |
 | **Feature** | Contact Center Agents |
 
@@ -25,7 +25,7 @@ When agents are not taking work, they pick a reason from their presence menu: *L
 
 <YouTube video="contact-center-agent-states" title="Video of creating a reason code with a name, a state and a sort order" start={73} end={106} />
 
-1. Open **Interaction Center > Management > Agent states** and click **Add reason code**.
+1. Open **Interaction Center** → **Management** → **Agent States** and click **Add reason code**.
 2. Enter a **Name**, for example *Customer visit*, and an optional **Description**.
 3. Choose which state it **Applies to state**: Break, Away, Do not disturb, Meeting, Training, or After-hours unavailable.
 4. Set a **Sort order**. Lower numbers appear higher in the presence menu.

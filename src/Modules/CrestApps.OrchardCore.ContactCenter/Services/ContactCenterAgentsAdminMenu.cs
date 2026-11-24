@@ -30,7 +30,7 @@ public sealed class ContactCenterAgentsAdminMenu : AdminNavigationProvider
                 .Add(S["Management"], S["Management"].PrefixPosition(), management => management
                     .AddClass("interaction-center-management")
                     .Id("interactionCenterManagement")
-                    .Add(S["Agent states"], S["Agent states"].PrefixPosition(), agentStates => agentStates
+                    .Add(S["Agent States"], S["Agent States"].PrefixPosition(), agentStates => agentStates
                     .AddClass("contact-center-agent-states")
                     .Id("contactCenterAgentStates")
                     .Action("Index", "AgentStateReasonCodes", "CrestApps.OrchardCore.ContactCenter")

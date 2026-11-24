@@ -19,7 +19,7 @@ To give tools to an AI assistant in the web browser instead, on the pages a sign
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Model Context Protocol > MCP Hosts, Prompts, Resources; Settings > Artificial Intelligence (the **MCP Server** section) |
+| **Menu** | **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts**, Prompts, Resources; **Settings** → **Artificial Intelligence (the **MCP Server** section)** |
 | **Permission** | Manage MCP Connections; Manage MCP Prompts; Manage MCP Resources; Manage the MCP Server settings; Access the MCP Server (for apps that connect) |
 | **Feature** | Model Context Protocol (MCP) Client; Model Context Protocol (MCP) Local Client; Model Context Protocol (MCP) Server; Model Context Protocol (MCP) FTP Resource; Model Context Protocol (MCP) SFTP Resource |
 
@@ -35,7 +35,7 @@ Each part is its own feature, so you only see the menus of the features that are
 
 <YouTube video="ai-mcp" title="Video of adding an MCP connection" start={96} end={151} />
 
-1. Open **Artificial Intelligence > Model Context Protocol > MCP Hosts** and click **Add Connection**.
+1. Open **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts** and click **Add Connection**.
 2. In **Available Sources**, click **Add** on the kind of server:
    - **Server-Sent Events**: a server on the web.
    - **Standard Input/Output**: a program that runs on the site's own server (see [below](#connect-to-a-local-program)).
@@ -87,7 +87,7 @@ Secrets are stored securely and never shown again. When you edit a connection, l
 
 A connection does nothing until an assistant uses it:
 
-1. Open **Artificial Intelligence > Profiles** and edit the profile.
+1. Open **Artificial Intelligence** → **Profiles** and edit the profile.
 2. On the **Capabilities** tab, tick the connection under **MCP Connections**.
 3. Click **Save**.
 
@@ -103,7 +103,7 @@ A tool can change things on the other system. Give a connection only to the assi
 
 With the **Model Context Protocol (MCP) Server** feature on, apps outside the site can use the tools you choose:
 
-1. Open **Settings > Artificial Intelligence** and find the **MCP Server** section.
+1. Open **Settings** → **Artificial Intelligence** and find the **MCP Server** section.
 2. Choose the **Authentication type**: **OpenID Connect**, **API key** or **None (Anonymous access)**. Use **None** only for testing.
 3. With **API key**, enter the key that apps must send. With **OpenID Connect**, tick **Require access permission** to also ask for the **Access the MCP Server** permission.
 4. Under **Tools** (and **Tool Instances**, when that feature is on), tick what to share, or use **Select All Tools**. Nothing is shared until you pick it.
@@ -117,7 +117,7 @@ With the **Model Context Protocol (MCP) Server** feature on, apps outside the si
 
 A **prompt** is a ready-made instruction that other AI apps can offer to their users, with blanks to fill in.
 
-1. Open **Artificial Intelligence > Model Context Protocol > Prompts** and click **Add Prompt**.
+1. Open **Artificial Intelligence** → **Model Context Protocol** → **Prompts** and click **Add Prompt**.
 2. Enter a **Title**, a unique **Name** (other apps ask for the prompt by it), and a **Description** that says what it does.
 3. Under **Arguments**, click **Add Argument** for each blank. Give it a **Name**, and optionally a **Title** and **Description**, and tick **Required** when the app must supply it.
 4. Under **Messages**, click **Add Message**. Choose a **Role**, **User** or **Assistant**, and write the **Content**. An argument's name in double curly braces is replaced by the value the app supplies.
@@ -135,7 +135,7 @@ The video shows what resources are, the types below, and how to add a File, a Me
 
 <YouTube video="ai-mcp-resources" title="Video of the resource types" start={57} end={99} />
 
-Open **Artificial Intelligence > Model Context Protocol > Resources** and click **Add Resource**. **Available Resource Types** lists:
+Open **Artificial Intelligence** → **Model Context Protocol** → **Resources** and click **Add Resource**. **Available Resource Types** lists:
 
 - **File** shares files from the site's `App_Data/Sites/{tenant}/McpFiles` folder. Ask whoever runs the server to put the files there.
 - **Media** shares files of the media library.

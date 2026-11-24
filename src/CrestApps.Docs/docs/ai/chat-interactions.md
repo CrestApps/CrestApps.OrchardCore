@@ -37,14 +37,14 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
 - Prompt-template composition — add multiple reusable prompt templates from a searchable picker and provide per-template JSON parameters
-- Upload controls driven by site settings — the Knowledge tab only exposes document and image extensions that are enabled in **Settings > Artificial Intelligence**, and image uploads also require a configured vision deployment
+- Upload controls driven by site settings — the Knowledge tab only exposes document and image extensions that are enabled in **Settings** → **Artificial Intelligence**, and image uploads also require a configured vision deployment
 
 ## Getting Started
 
-Enable the **AI Chat Interactions** feature (`CrestApps.OrchardCore.AI.Chat.Interactions`). It adds **Artificial Intelligence > Chat Interactions**, which requires `ListChatInteractions` (`ListChatInteractionsForOthers` to see other users' interactions). **New Chat** creates and saves an interaction immediately, and settings changes are saved over SignalR through the `IChatInteractionSettingsHandler` pipeline. The screen is described in [Chat interactions](../user-manual/ai/chat-interactions.md).
+Enable the **AI Chat Interactions** feature (`CrestApps.OrchardCore.AI.Chat.Interactions`). It adds **Artificial Intelligence** → **Chat Interactions**, which requires `ListChatInteractions` (`ListChatInteractionsForOthers` to see other users' interactions). **New Chat** creates and saves an interaction immediately, and settings changes are saved over SignalR through the `IChatInteractionSettingsHandler` pipeline. The screen is described in [Chat interactions](../user-manual/ai/chat-interactions.md).
 
 :::tip
-Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings > Artificial Intelligence > Default Deployments**). For chat interactions, the global fallback is **Default Chat Deployment**.
+Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings** → **Artificial Intelligence** → **Default Deployments**). For chat interactions, the global fallback is **Default Chat Deployment**.
 :::
 
 When a response cites uploaded or indexed content, the interaction UI renders `[doc:N]` markers as superscript citations and shows the resolved references beneath the assistant message.
@@ -60,8 +60,8 @@ You can attach a document to a single interaction and ask questions about its co
 To enable this experience:
 
 1. Enable the **AI Documents (Elasticsearch)** (or **AI Documents (Azure AI Search)**) feature so a vector store is available.
-2. In **Search > Indexing**, add an **AI Documents** index that uses an embedding deployment.
-3. In **Settings > Artificial Intelligence**, select that index profile under the document settings, choose a **Document retrieval mode**, and enable **Allow document uploads in chat interactions**.
+2. In **Search** → **Indexing**, add an **AI Documents** index that uses an embedding deployment.
+3. In **Settings** → **Artificial Intelligence**, select that index profile under the document settings, choose a **Document retrieval mode**, and enable **Allow document uploads in chat interactions**.
 4. Start a new chat interaction, open the **Knowledge** tab, and upload your file.
 
 The User Manual page [Chat interactions](../user-manual/ai/chat-interactions.md#knowledge-tab) shows this flow in a screencast.
@@ -92,13 +92,13 @@ Chat Interactions supports configurable chat modes that control how users intera
 
 ### Prerequisites
 
-- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
+- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings** → **Artificial Intelligence** → **Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
 - **Conversation** is carried by a realtime (speech-to-speech) deployment when one resolves — the interaction's own **Conversation deployment**, then the site's default realtime deployment, then the first realtime-capable deployment. See [Realtime Voice](realtime-voice.md). When none resolves it falls back to the client-driven speech-to-text plus text-to-speech cascade, which requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment**.
-- Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. The voice list always includes the current culture, even if no site cultures are configured.
+- Optionally, set a **Default Text-to-Speech Voice** in **Settings** → **Artificial Intelligence** → **Default Deployments**. The voice list always includes the current culture, even if no site cultures are configured.
 
 ### Configuring Chat Mode
 
-The chat mode is a site setting: **Chat mode** in the **Chat Interactions** section of **Settings → Artificial Intelligence** (options **Text input**, **Audio input**, **Conversation**; the voice options only appear when the required default deployments are configured). Changing it requires the `EditChatInteractions` permission. See [Site settings for chat interactions](../user-manual/ai/chat-interactions.md#site-settings-for-chat-interactions-administrators).
+The chat mode is a site setting: **Chat mode** in the **Chat Interactions** section of **Settings** → **Artificial Intelligence** (options **Text input**, **Audio input**, **Conversation**; the voice options only appear when the required default deployments are configured). Changing it requires the `EditChatInteractions` permission. See [Site settings for chat interactions](../user-manual/ai/chat-interactions.md#site-settings-for-chat-interactions-administrators).
 
 The selected chat mode applies to all Chat Interaction UIs. An interaction has no chat mode of its own, so naming a **Conversation deployment** on the interaction is how that interaction asks to speak while the site is in Conversation mode. The **Voice** picker beside it is per-interaction and lists the voices of whichever model resolves; leaving it empty uses the default voice configured in site settings (or the provider's default).
 
@@ -116,7 +116,7 @@ Text-to-speech synthesis occurs after the full response text has been received �
 
 You can enable on-demand text-to-speech playback independently of the Conversation chat mode. When enabled, a playback button (🔊) appears on each AI-generated message, allowing users to click and listen to the response.
 
-TTS playback for Chat Interactions is the **Enable text-to-speech playback** site setting in the **Chat Interactions** section of **Settings → Artificial Intelligence**. A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments** for the playback button to appear.
+TTS playback for Chat Interactions is the **Enable text-to-speech playback** site setting in the **Chat Interactions** section of **Settings** → **Artificial Intelligence**. A **Default Text-to-Speech Deployment** must be configured in **Settings** → **Artificial Intelligence** → **Default Deployments** for the playback button to appear.
 
 Playback behaves as in AI Chat: starting playback on a different message stops the current one, and in Conversation mode the per-message playback button is hidden so the live voice flow remains uninterrupted.
 
@@ -126,7 +126,7 @@ Playback behaves as in AI Chat: starting playback on a different message stops t
 
 For persistent private memory across chat interactions, see the [AI Memory documentation](memory).
 
-Chat Interaction memory is controlled by **Enable user memory** in the **Memory** section of **Settings → Artificial Intelligence** (permission `ManageChatInteractionSettings`). It is:
+Chat Interaction memory is controlled by **Enable user memory** in the **Memory** section of **Settings** → **Artificial Intelligence** (permission `ManageChatInteractionSettings`). It is:
 
 - **enabled by default**
 - **available only to authenticated users**
@@ -153,8 +153,8 @@ To enable image generation, create an `AIDeployment` record for your image model
 
 **Option 1: Admin UI**
 
-1. Navigate to **Artificial Intelligence > Deployments** and create a new deployment (for example, name `dall-e-3`, connection `openai-main`). On its **Model capabilities** card, enable **Image output**.
-2. Optionally, set it as the **Default image deployment** in **Settings > Artificial Intelligence**.
+1. Navigate to **Artificial Intelligence** → **Deployments** and create a new deployment (for example, name `dall-e-3`, connection `openai-main`). On its **Model capabilities** card, enable **Image output**.
+2. Optionally, set it as the **Default image deployment** in **Settings** → **Artificial Intelligence**.
 
 **Option 2: Configuration (appsettings.json)**
 
@@ -192,5 +192,5 @@ To enable image generation, create an `AIDeployment` record for your image model
 ```
 
 The image deployment is the one declaring `imageOutput`. Assign it to the `image` slot by selecting it as the
-**Default image deployment** under **Settings** -> **Artificial Intelligence** so image generation picks it
+**Default image deployment** under **Settings** → **Artificial Intelligence** so image generation picks it
 up. See [Model capabilities](model-capabilities.md) for the full list of features and slots.

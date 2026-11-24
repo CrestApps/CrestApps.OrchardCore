@@ -10,7 +10,7 @@ Disbursements are the payments the business sends out: pay deposits, vendor paym
 
 | | |
 | --- | --- |
-| **Menu** | Banking > Disbursements, Banking > Disbursement Batches |
+| **Menu** | **Banking** → **Disbursements**, **Banking** → **Disbursement Batches** |
 | **Permission** | View disbursements; Manage disbursements |
 | **Feature** | Disbursements (Banking module); Direct Deposit for ACH bank files to US dollar accounts |
 
@@ -18,7 +18,7 @@ Disbursements are the payments the business sends out: pay deposits, vendor paym
 
 ## Set up bank files
 
-1. Open **Banking > Bank Accounts** and the business's account payments leave from.
+1. Open **Banking** → **Bank Accounts** and the business's account payments leave from.
 2. In **Bank file (ACH)**, tick **Send bank files from this account** and fill in what your bank gave you: company name, company identification, immediate origin, and the bank that receives the file if it isn't this account's bank.
 3. Choose **Save**.
 
@@ -26,7 +26,7 @@ Disbursements are the payments the business sends out: pay deposits, vendor paym
 
 Payments from features such as Payroll appear on their own. To record one by hand:
 
-1. Open **Banking > Disbursements** and choose **Record a disbursement**.
+1. Open **Banking** → **Disbursements** and choose **Record a disbursement**.
 2. Choose how it is sent, the account it leaves from, the amount and, for a bank file, the payee's verified bank account.
 3. Choose **Record**.
 
@@ -34,11 +34,11 @@ Recording the same payment twice gives the same disbursement, so a feature that 
 
 ## Send a batch
 
-1. In **Banking > Disbursements**, tick the pending payments. Leave **Arrives** empty to keep their own date, such as a pay run's pay date, or set the date the money should reach the payees. A batch arrives on one day: payments due on different days arrive on the last of them, so batch them apart to keep each day.
+1. In **Banking** → **Disbursements**, tick the pending payments. Leave **Arrives** empty to keep their own date, such as a pay run's pay date, or set the date the money should reach the payees. A batch arrives on one day: payments due on different days arrive on the last of them, so batch them apart to keep each day.
 2. Choose **Batch to send by** and how they are sent. Payments sent another way, or from another account, stay pending.
-3. Open **Banking > Disbursement Batches**, and in the batch's menu choose **Release**.
+3. Open **Banking** → **Disbursement Batches**, and in the batch's menu choose **Release**.
 
-For a bank file, choose **Download the bank file** and send it to your bank, or let your administrator set up a data pipeline that delivers it. The file holds account numbers: keep it safe. For checks, print them from **Banking > Checks**.
+For a bank file, choose **Download the bank file** and send it to your bank, or let your administrator set up a data pipeline that delivers it. The file holds account numbers: keep it safe. For checks, print them from **Banking** → **Checks**.
 
 ## When the bank pays or returns a payment
 

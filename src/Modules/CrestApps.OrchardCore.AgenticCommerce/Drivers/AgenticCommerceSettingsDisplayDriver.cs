@@ -12,7 +12,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.AgenticCommerce.Drivers;
 
 /// <summary>
-/// Settings › Commerce › Agentic commerce: how long agent checkouts last, how many a platform may keep open, and how
+/// Settings › Commerce › Agentic Commerce: how long agent checkouts last, how many a platform may keep open, and how
 /// agents pay.
 /// </summary>
 public sealed class AgenticCommerceSettingsDisplayDriver : SiteDisplayDriver<AgenticCommerceSettings>

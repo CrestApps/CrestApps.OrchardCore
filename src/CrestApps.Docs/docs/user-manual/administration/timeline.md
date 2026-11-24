@@ -10,7 +10,7 @@ Many record pages, such as a work order or an order, have a **Notes** card: the 
 
 | | |
 | --- | --- |
-| **Menu** | On the page of the record, such as **Field Service > Work Orders** or **Commerce > Orders** |
+| **Menu** | On the page of the record, such as **Field Service** → **Work Orders** or **Commerce** → **Orders** |
 | **Permission** | Whatever lets you see and work on that record; **Redact timeline entries** to redact |
 | **Feature** | Timeline, turned on by the features that use it |
 

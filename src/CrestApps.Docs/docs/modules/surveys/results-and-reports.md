@@ -13,7 +13,7 @@ When a response is completed (and is not a test), `SurveyAnswerIndex` gets one r
 
 ## Reports
 
-With the Reports feature on, these reports are under **Reports > Surveys**:
+With the Reports feature on, these reports are under **Reports** → **Surveys**:
 
 | Report | Name | Shows |
 | --- | --- | --- |
@@ -50,7 +50,7 @@ Every row-level output of an anonymous survey follows one small-group rule (`Sur
 - Data sets count the responses that pass the conditions Report Builder passes down to them (equals and lists, text matches, number and date ranges, not empty), so a filter on an answer or on the status can't narrow a released survey to one person. Conditions on fields a data set doesn't know count nothing. Report Builder shares a read of a Surveys data set between the views of one report only when their filters are the same (`IReportSharedReadPolicy`), so a second view or a dashboard click with more filters is read, and counted, on its own filters. Report Builder applies some filters only after reading (such as "not equal"), and a view can group rows by any field, so a viewer with **View responses** on an anonymous survey can still build small groups there: grant it, and the data sets, only to people trusted with the raw answers.
 - Response numbers come from one sequence for the whole site, so an anonymous response shows a code instead: the start of its random id (`SurveyAnonymity.ResponseLabel`), which orders nothing. Lists, the report, the API and the grading queue of an anonymous survey are in random-id order, not start order, and the list's search matches the code. Webhook payloads and workflow input leave the number empty on anonymous surveys, and the audit trail records the code. The stored number is unchanged and still shown to the respondent. The public results page applies the minimum to the total and to each question, and the AI summary and `get_survey_results` use the site's floor too. Aggregate reports hide smaller groups and segments. Times of anonymous responses show the day only (data sets give the start of the day in the site's time zone), and the context of an anonymous response shows its kind only.
 
-The minimum is the survey's own value, never below the site's floor (**Settings > Surveys > Smallest group size allowed**, 5 by default, at least 1), which also applies to surveys saved before the floor was raised.
+The minimum is the survey's own value, never below the site's floor (**Settings** → **Surveys** → **Smallest group size allowed**, 5 by default, at least 1), which also applies to surveys saved before the floor was raised.
 
 ### Survey Responses
 

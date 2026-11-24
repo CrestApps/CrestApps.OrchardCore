@@ -21,7 +21,7 @@ Enabling this feature automatically enables the core **Phone Number Verification
 
 ## Configuration
 
-Configure the provider under **Settings** -> **Phone Number Verifications** on the **Twilio** tab. The tab only appears when this feature is enabled.
+Configure the provider under **Settings** → **Phone Number Verifications** on the **Twilio** tab. The tab only appears when this feature is enabled.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
@@ -100,8 +100,8 @@ The User Manual walks administrators through these screens on [Phone Number Veri
 
 1. Create or select a Twilio account and enable access to [Twilio Lookup](https://www.twilio.com/docs/lookup).
 2. Create an API key in the [Twilio Console API keys page](https://www.twilio.com/console/project/api-keys), or copy the Account SID and Auth Token from the [Twilio Console](https://www.twilio.com/console) for local testing.
-3. Enable the **Twilio Phone Number Verification** feature under **Tools** -> **Features**.
-4. Open **Settings** -> **Phone Number Verifications**, select the **Twilio** tab, switch on **Enable this provider**, choose the authentication type, enter the matching credentials, and save.
+3. Enable the **Twilio Phone Number Verification** feature under **Tools** → **Features**.
+4. Open **Settings** → **Phone Number Verifications**, select the **Twilio** tab, switch on **Enable this provider**, choose the authentication type, enter the matching credentials, and save.
 5. On the **General** tab, select **Twilio** as the default provider.
 
 ## Troubleshooting

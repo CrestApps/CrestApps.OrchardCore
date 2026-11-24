@@ -19,11 +19,11 @@ Besides the [browser extension and the Windows app](phone-apps.md), the soft pho
 
 ## On the admin pages
 
-The button appears on every admin page for users who may use the soft phone, while **Enable the soft phone** and **Show the soft phone on the admin dashboard** are ticked under **Settings > Communication > Telephony > Soft Phone**. Untick **Enable the soft phone** to switch the phone off for the whole site at once. See [Soft Phone](soft-phone.md#administrator-options) for every option.
+The button appears on every admin page for users who may use the soft phone, while **Enable the soft phone** and **Show the soft phone on the admin dashboard** are ticked under **Settings** → **Communication** → **Telephony** → **Soft Phone**. Untick **Enable the soft phone** to switch the phone off for the whole site at once. See [Soft Phone](soft-phone.md#administrator-options) for every option.
 
 ## On your public site
 
-To show the phone to visitors who are signed in and allowed to use it, add the **Soft Phone** widget to a zone under **Design > Widgets**, the way you add any widget, and publish it. The same permission applies: a visitor without it sees nothing.
+To show the phone to visitors who are signed in and allowed to use it, add the **Soft Phone** widget to a zone under **Design** → **Widgets**, the way you add any widget, and publish it. The same permission applies: a visitor without it sees nothing.
 
 ## Click to dial
 

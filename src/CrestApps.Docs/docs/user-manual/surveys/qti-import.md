@@ -10,7 +10,7 @@ QTI is the standard file format that many learning and testing tools use to exch
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Question banks, then **Import** in a bank |
+| **Menu** | **Surveys** → **Question Banks**, then **Import** in a bank |
 | **Permission** | Manage question banks |
 | **Feature** | QTI Question Import |
 
@@ -18,7 +18,7 @@ QTI is the standard file format that many learning and testing tools use to exch
 
 ## Import a file
 
-1. Go to **Surveys > Question banks** and open the bank.
+1. Go to **Surveys** → **Question Banks** and open the bank.
 2. Select **Import**.
 3. Under **Format**, pick **QTI package or item (zip or XML)**, and choose the **File**: a package (a `.zip` file with its list of contents) or a single question (an `.xml` file).
 4. Select **Check the file**. The page says how many questions can be imported and lists the items that cannot, so nothing is added yet.

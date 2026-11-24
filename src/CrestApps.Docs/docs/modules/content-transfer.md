@@ -30,7 +30,7 @@ features, permissions, configuration, hosting limits and extension points.
 1. Enable `CrestApps.OrchardCore.ContentTransfer` (**Content Transfer**). It provides CSV support.
 2. Enable `CrestApps.OrchardCore.ContentTransfer.OpenXml` (**Content Transfer (OpenXml)**) when you also want Excel workbook (`.xlsx`) support.
 3. Grant the [permissions](#permissions) to the roles that import or export.
-4. The admin menu gains **Content** -> **Import** (the **Bulk Import** list) and **Content** -> **Export** (the **Bulk Export** list).
+4. The admin menu gains **Content** → **Import** (the **Bulk Import** list) and **Content** → **Export** (the **Bulk Export** list).
 
 Every content type takes part by default. The content type settings `AllowBulkImport` and `AllowBulkExport`
 (**Allow bulk import** / **Allow bulk export** in the content type editor) default to `true`; set one to
@@ -40,11 +40,11 @@ Every content type takes part by default. The content type settings `AllowBulkIm
 
 | Permission | Key | Grants |
 | --- | --- | --- |
-| List content transfer entries | `ListContentTransferEntries` | The **Content** -> **Import** menu and the **Bulk Import** list. |
+| List content transfer entries | `ListContentTransferEntries` | The **Content** → **Import** menu and the **Bulk Import** list. |
 | Delete content transfer entries | `DeleteContentTransferEntries` | Deleting entries. Implies `ListContentTransferEntries`. |
 | Import content items from file | `ImportContentFromFile` | Importing any content type, downloading templates and error files, pausing and resuming imports. |
 | Import *type* content items from file | `ImportContentFromFile_{ContentType}` | The same for one content type. Implied by `ImportContentFromFile`. |
-| Export content items from file | `ExportContentFromFile` | The **Content** -> **Export** menu and exporting any content type. |
+| Export content items from file | `ExportContentFromFile` | The **Content** → **Export** menu and exporting any content type. |
 | Export *type* content items from file | `ExportContentFromFile_{ContentType}` | The same for one content type. Implied by `ExportContentFromFile`. |
 
 The four permissions that are not per content type are granted to the **Administrator** role by default.

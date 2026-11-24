@@ -12,7 +12,7 @@ You connect your store to the partners you use, choose whether paid orders go to
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Fulfillment partners; Commerce > Fulfillment requests |
+| **Menu** | **Settings** → **Commerce** → **Fulfillment Partners**; **Commerce** → **Fulfillment Requests** |
 | **Permission** | **Manage fulfillment partners and their credentials** for the settings page. **Ship orders and update their shipments** to send orders and see what was sent. |
 | **Feature** | Fulfillment Partners, and one feature for each partner. Shipping is turned on with it. |
 
@@ -22,7 +22,7 @@ Each partner is added to your site separately, so the partners you see depend on
 
 ## See which partners are connected
 
-Open **Settings > Commerce > Fulfillment partners**. The top of the page lists each partner that is turned on for your store, with **Connected** or **Not connected** beside it.
+Open **Settings** → **Commerce** → **Fulfillment Partners**. The top of the page lists each partner that is turned on for your store, with **Connected** or **Not connected** beside it.
 
 If the list is empty, no partner is turned on yet. Ask your administrator to turn on the partner you use.
 
@@ -34,7 +34,7 @@ Some partners also add a card to the product editor, where you choose which of t
 
 ## Send an order to a partner
 
-1. Open the paid order under **Commerce > Orders**.
+1. Open the paid order under **Commerce** → **Orders**.
 2. In the **Fulfillment partners** card, click **Send to fulfillment partners**.
 
 Each partner receives only the items it makes that are still available to ship. Your store ships bundles itself. A bundle can share an order with items a partner ships. If only bundles remain, the card shows **Nothing to send** and you receive no fulfillment alert.
@@ -60,7 +60,7 @@ When the partner ships the parcel, open the order, find the pending shipment not
 
 ## Follow every order sent to partners
 
-Open **Commerce > Fulfillment requests**. The list shows every order sent, or to be sent, to a partner, most recently changed first, with the partner, the status, why, and when it last changed.
+Open **Commerce** → **Fulfillment Requests**. The list shows every order sent, or to be sent, to a partner, most recently changed first, with the partner, the status, why, and when it last changed.
 
 - Search by order number, and filter by status from the list's toolbar, for example to see only **Needs attention**.
 - Click the order number to open the order.
@@ -72,6 +72,6 @@ When the Notifications feature is on, everyone who may ship orders gets a notifi
 
 ## Send paid orders automatically
 
-Select **Send paid orders automatically** and click **Save**. Each paid order is then sent within a few minutes, and the order's **Fulfillment partners** card shows the result. Check **Commerce > Fulfillment requests** for orders marked **Needs attention**.
+Select **Send paid orders automatically** and click **Save**. Each paid order is then sent within a few minutes, and the order's **Fulfillment partners** card shows the result. Check **Commerce** → **Fulfillment Requests** for orders marked **Needs attention**.
 
 When it is off, send each order from its page.

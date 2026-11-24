@@ -11,7 +11,7 @@ Create a survey from a template, then design its questions and set who may respo
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys |
+| **Menu** | **Surveys** → **Surveys** |
 | **Permission** | Manage own surveys, or Manage all surveys |
 | **Feature** | Surveys |
 
@@ -19,7 +19,7 @@ Create a survey from a template, then design its questions and set who may respo
 
 ## Create a survey
 
-1. Go to **Surveys > Surveys** and select **Add survey**.
+1. Go to **Surveys** → **Surveys** and select **Add survey**.
 2. Enter a **Title**. You can enter a **Technical name** (lowercase letters, digits and dashes), or leave it empty to make one from the title.
 3. Under **Start from**, pick a template. **Blank survey** is always there. The others are the site's [survey templates](./templates.md): out of the box **Customer satisfaction**, **Net Promoter Score**, **Employee engagement**, **Event feedback**, **Quiz** and **Poll**, plus **Course feedback** when Learning surveys are on. **Manage templates** opens the template list.
 4. Select **Create**. The designer opens.
@@ -52,7 +52,7 @@ Open the survey's menu and select **Access and settings**. These settings apply 
 | --- | --- |
 | **Title**, **Technical name**, **Notes**, **Tags** | What staff see. Tags filter the survey list. The technical name can't change once the survey is published: reports use it. |
 | **Audience** | **Anyone with the link**, **Signed-in users**, **Members of chosen audiences** or **Only invited people**. |
-| **Audiences** | Tick the audiences whose members may respond, when the audience is **Members of chosen audiences**. Audiences are kept in **Content > User Audiences**. |
+| **Audiences** | Tick the audiences whose members may respond, when the audience is **Members of chosen audiences**. Audiences are kept in **Content** → **User Audiences**. |
 | **CAPTCHA** | Ask respondents who are not signed in to pass a CAPTCHA. People you invited by name, user, e-mail or phone skip it; a personal link made for nobody in particular still asks. |
 | **Responses** | **Identified: record who responded**, or **Anonymous: record nobody**. Choose before the first response: this can't change once the survey has responses. If this page warns that the server can't read the survey's anonymity secret, ask your administrator to restore the site's keys before you use **Reset the anonymity secret**. On a site that runs on several servers that don't share their keys, a reset only moves the problem to the other servers. |
 | **IP address** | Record the IP address of identified responses. |

@@ -10,7 +10,7 @@ Roles decide what each person can see and do. Use this page when someone cannot 
 
 | | |
 | --- | --- |
-| **Menu** | Access Control > Roles; Access Control > Users |
+| **Menu** | **Access Control** → **Roles**; **Access Control** → **Users** |
 | **Permission** | Manage Roles; Manage users |
 | **Feature** | Roles (Orchard Core); Enhanced Roles adds the role picker for content items |
 
@@ -37,15 +37,15 @@ The User Manual pages list the permission each screen needs in the table at the 
 
 Most of the time you only need step 1.
 
-1. **Give the person a role.** Open **Access Control > Users**, edit the user, tick the role that already has the access they need, and save.
-2. **Or add the permission to a role.** Open **Access Control > Roles**, edit the role, tick the permission in the list (it is grouped by feature), and save. Everyone who holds that role gets it.
-3. **Or create a new role.** On **Access Control > Roles**, click **Add Role**, enter a **Name** and a **Description**, and click **Save & Configure** to go straight to its permissions. Tick **Allow** for each permission the role needs (the **Search permissions** box finds one by name), save, and give the role to the right users.
+1. **Give the person a role.** Open **Access Control** → **Users**, edit the user, tick the role that already has the access they need, and save.
+2. **Or add the permission to a role.** Open **Access Control** → **Roles**, edit the role, tick the permission in the list (it is grouped by feature), and save. Everyone who holds that role gets it.
+3. **Or create a new role.** On **Access Control** → **Roles**, click **Add Role**, enter a **Name** and a **Description**, and click **Save & Configure** to go straight to its permissions. Tick **Allow** for each permission the role needs (the **Search permissions** box finds one by name), save, and give the role to the right users.
 
 :::tip
 Prefer roles that match job titles, such as *Agent*, *Supervisor* and *Manager*. Changing one role then updates everyone in that job at once.
 :::
 
-If the screen still does not appear after you give the permission, the feature may be off. Features are turned on under **Tools > Features**.
+If the screen still does not appear after you give the permission, the feature may be off. Features are turned on under **Tools** → **Features**.
 
 For the role editor itself, see the [Orchard Core Roles documentation](https://docs.orchardcore.net/en/latest/reference/modules/Roles/).
 
@@ -57,7 +57,7 @@ The **Enhanced Roles** feature adds a **Role Picker** part. Add it to a content 
 
 ### Add the role picker to a content type
 
-1. Open **Design > Content Definition > Content Types** and edit the content type.
+1. Open **Design** → **Content Definition** → **Content Types** and edit the content type.
 2. Click **Add Parts**, tick **Role Picker**, and save.
 3. Edit the **Role Picker** part on the content type to set the options below, and save.
 

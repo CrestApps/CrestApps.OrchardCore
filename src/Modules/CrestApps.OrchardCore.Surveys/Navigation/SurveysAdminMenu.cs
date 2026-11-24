@@ -32,7 +32,7 @@ public sealed class SurveysAdminMenu : AdminNavigationProvider
                 .Action("Index", "Surveys", SurveysConstants.Features.Surveys)
                 .Permission(SurveysPermissions.ManageOwnSurveys)
                 .LocalNav())
-            .Add(S["Question banks"], S["Question banks"].PrefixPosition("2"), banks => banks
+            .Add(S["Question Banks"], S["Question Banks"].PrefixPosition("2"), banks => banks
                 .Id("surveysQuestionBanks")
                 .Action("Index", "QuestionBanks", SurveysConstants.Features.Surveys)
                 .Permission(SurveysPermissions.ViewQuestionBanks)

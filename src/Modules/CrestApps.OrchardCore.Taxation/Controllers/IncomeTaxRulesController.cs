@@ -19,7 +19,7 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Taxation.Controllers;
 
 /// <summary>
-/// Commerce &gt; Taxation &gt; Income tax rules: the rules the built-in income tax provider works taxes on income out with. They are the
+/// Commerce &gt; Taxation &gt; Income Tax Rules: the rules the built-in income tax provider works taxes on income out with. They are the
 /// same for every payer, and editing them is setup, so they need their own permission.
 /// </summary>
 [Admin]

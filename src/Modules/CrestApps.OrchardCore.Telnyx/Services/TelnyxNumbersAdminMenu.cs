@@ -26,7 +26,7 @@ public sealed class TelnyxNumbersAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Settings"], settings => settings
                 .Add(S["Communication"], S["Communication"].PrefixPosition(), communication => communication
-                    .Add(S["Telnyx numbers"], S["Telnyx numbers"].PrefixPosition(), numbers => numbers
+                    .Add(S["Telnyx Numbers"], S["Telnyx Numbers"].PrefixPosition(), numbers => numbers
                         .Id("telnyxNumbers")
                         .Action("Index", "TelnyxNumbers", TelnyxConstants.Feature.Area)
                         .Permission(TelephonyPermissions.ManageTelephonySettings)

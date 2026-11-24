@@ -34,7 +34,7 @@ dotnet add package CrestApps.OrchardCore.AI.Chat
 dotnet add package CrestApps.OrchardCore.OpenAI
 ```
 
-After installing packages, enable the required features in **Tools -> Features** inside the Orchard admin.
+After installing packages, enable the required features in **Tools** → **Features** inside the Orchard admin.
 
 ## Release notes
 

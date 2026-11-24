@@ -40,7 +40,7 @@ dotnet add package CrestApps.OrchardCore.AI.Chat
 dotnet add package CrestApps.OrchardCore.OpenAI
 ```
 
-After installing packages, enable the required features in **Tools -> Features** inside the Orchard admin.
+After installing packages, enable the required features in **Tools** → **Features** inside the Orchard admin.
 
 Modules that need connection strings, API keys or tuning values read them from `appsettings.json`, environment variables or a secret store. The [Configuration Reference](configuration.md) lists every section, the environment-variable form of each key, and which source wins when a value is set in more than one place.
 

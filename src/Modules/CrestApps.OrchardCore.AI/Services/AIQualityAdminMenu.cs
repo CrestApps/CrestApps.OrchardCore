@@ -32,7 +32,7 @@ public sealed class AIQualityAdminMenu : AdminNavigationProvider
                     .Permission(AIPermissions.ManageAIQuality)
                     .LocalNav()
                 )
-                .Add(S["Alert rules"], S["Alert rules"].PrefixPosition(), alerts => alerts
+                .Add(S["Alert Rules"], S["Alert Rules"].PrefixPosition(), alerts => alerts
                     .AddClass("ai-alerts")
                     .Id("aiAlerts")
                     .Action("Index", "AIAlertRules", AIConstants.Feature.Area)

@@ -10,7 +10,7 @@ An agent checkout must be the store's checkout. If a protocol priced items, held
 
 | Feature | ID | What it adds |
 | --- | --- | --- |
-| Agentic Commerce | `CrestApps.OrchardCore.AgenticCommerce` | Agent platforms (**Commerce > AI agents**), settings (**Settings > Commerce > Agentic commerce**), the store's signing keys, the agent checkout, the hand-off link, order updates and payment handlers. |
+| Agentic Commerce | `CrestApps.OrchardCore.AgenticCommerce` | Agent platforms (**Commerce > AI Agents**), settings (**Settings > Commerce > Agentic Commerce**), the store's signing keys, the agent checkout, the hand-off link, order updates and payment handlers. |
 | Universal Commerce Protocol | `CrestApps.OrchardCore.AgenticCommerce.Ucp` | `/.well-known/ucp`, `ucp/v1` checkout sessions and orders, signed order webhooks. |
 | UCP Account Linking | `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | Buyers link their account through the OpenID server. |
 | UCP Catalog and Cart | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | Catalog search and lookup, and the UCP cart. |
@@ -29,7 +29,7 @@ Commerce, Store Profile, Checkout, Orders, Products and Webhooks. Payments go th
 
 1. Enable **Agentic Commerce** and the protocols of the platforms you sell through, or run the `AgenticCommerceSample` recipe on a test site.
 2. Fill in **Website and policies** under **Settings > Commerce > Store**, and connect Stripe.
-3. Add each platform under **Commerce > AI agents** and give it an API key.
+3. Add each platform under **Commerce > AI Agents** and give it an API key.
 
 ## Extension points
 

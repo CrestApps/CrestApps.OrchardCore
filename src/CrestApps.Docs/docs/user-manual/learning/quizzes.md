@@ -10,7 +10,7 @@ A quiz is a course item with scored questions. Its questions, question pools, ti
 
 | | |
 | --- | --- |
-| **Menu** | A course's outline for the quiz; on the quiz, **Edit questions** and **Accommodations**; Surveys > Question banks |
+| **Menu** | A course's outline for the quiz; on the quiz, **Edit questions** and **Accommodations**; **Surveys** → **Question Banks** |
 | **Permission** | Manage courses or Manage the courses you teach to add the quiz; Manage question banks to write bank questions |
 | **Feature** | Learning Assessments (with Surveys) |
 
@@ -24,9 +24,9 @@ A quiz is a course item with scored questions. Its questions, question pools, ti
 4. In the designer's settings, set the **Scoring** (the pass mark, immediate feedback) and when learners may review their answers, the score and the right answers. Whether a score passes is decided by the survey alone: a score band marked as passing or failing decides first, otherwise the pass mark. A quiz with neither gives no pass, so a quiz completed **When the learner passes** needs a pass mark or a passing score band. The quiz item has no pass mark of its own. On **Access and settings**, set how many attempts are allowed, the delay between them and when the quiz opens and closes.
 5. Select **Publish**. Learners can attempt the quiz only once its survey is published.
 
-A quiz's survey has no public link: only learners enrolled in the course can take it, from the course, while the quiz is published. Copying a quiz copies its questions into a survey of its own. Quiz surveys show in **Surveys > Surveys** only when **Show** is set to **Also surveys owned by other features**.
+A quiz's survey has no public link: only learners enrolled in the course can take it, from the course, while the quiz is published. Copying a quiz copies its questions into a survey of its own. Quiz surveys show in **Surveys** → **Surveys** only when **Show** is set to **Also surveys owned by other features**.
 
-Questions that many quizzes share are written once in **Surveys > Question banks**. Questions written in another system can be imported into a bank from a spreadsheet or, with the **QTI Question Import** feature, from QTI files. See [Surveys](/docs/user-manual/surveys).
+Questions that many quizzes share are written once in **Surveys** → **Question Banks**. Questions written in another system can be imported into a bank from a spreadsheet or, with the **QTI Question Import** feature, from QTI files. See [Surveys](/docs/user-manual/surveys).
 
 ## Taking a quiz
 

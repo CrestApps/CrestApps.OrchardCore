@@ -10,7 +10,7 @@ Most quiz questions are scored automatically. Essays and coursework need a perso
 
 | | |
 | --- | --- |
-| **Menu** | Learning > Grading; Learning > Gradebook. Course staff with Manage the courses you teach see both, for their own courses. |
+| **Menu** | **Learning** → **Grading**; **Learning** → **Gradebook**. Course staff with Manage the courses you teach see both, for their own courses. |
 | **Permission** | Grade the work of every course, or Manage the courses you teach for a course's graders, instructors and assistants; Grade survey responses to grade quiz answers; a course's graders, instructors and assistants grade the quizzes of their own course without it |
 | **Feature** | Learning Assessments; Learning Gradebook for the gradebook |
 
@@ -18,7 +18,7 @@ Most quiz questions are scored automatically. Essays and coursework need a perso
 
 ## Grade a quiz attempt
 
-1. Go to **Learning > Grading**. The list shows the quiz attempts and coursework that wait for a grader in the courses you may grade.
+1. Go to **Learning** → **Grading**. The list shows the quiz attempts and coursework that wait for a grader in the courses you may grade.
 2. Open a quiz attempt. The Surveys grading page shows each question with the learner's answer.
 3. Enter the points of each question that needs a grader and an optional comment, add overall feedback if you like, then select **Save grades**. When every question has a score, the attempt is graded and the course records the quiz grade.
 
@@ -39,7 +39,7 @@ Coursework takes up to 20 files a hand-in unless your administrator changes it.
 
 ## Gradebook and grade scales
 
-**Learning > Grade scales** maps a percentage to a grade, such as A to F or Pass and Fail. The **Gradebook** of a course shows every learner and the result of each graded item.
+**Learning** → **Grade Scales** maps a percentage to a grade, such as A to F or Pass and Fail. The **Gradebook** of a course shows every learner and the result of each graded item.
 
 The course grade is the weighted mean of the graded items. On the course editor, the **Pass mark (%)** under **Completion and grade** is the course grade a learner needs to pass; leave it empty for a course without a grade. To weigh groups of items, such as homework and exams, add rows to the **Grade categories** card: a **Category**, its **Weight** and how many of its lowest scores to **Drop lowest**. Choose each graded item's **Grade category** on its **Course item** card. A category's score is the mean of its items after the lowest are dropped, and the course grade is the weighted mean of the categories. See [Grade categories](./courses.md#grade-categories).
 

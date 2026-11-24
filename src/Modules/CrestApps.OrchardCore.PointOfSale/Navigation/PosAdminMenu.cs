@@ -7,7 +7,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.PointOfSale.Navigation;
 
 /// <summary>
-/// Commerce › Point of sale › Registers, Shifts and Departments.
+/// Commerce › Point of Sale › Registers, Shifts and Departments.
 /// </summary>
 public sealed class PosAdminMenu : AdminNavigationProvider
 {
@@ -43,7 +43,7 @@ public sealed class PosAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Point of sale"], S["Point of sale"].PrefixPosition("7"), pos => pos
+                .Add(S["Point of Sale"], S["Point of Sale"].PrefixPosition("7"), pos => pos
                     .Id("pointOfSale")
                     .Add(S["Registers"], S["Registers"].PrefixPosition("1"), registers => registers
                         .Action(_registers)

@@ -10,7 +10,7 @@ A question bank holds questions you reuse. A pool on a survey page can draw ques
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Question banks |
+| **Menu** | **Surveys** → **Question Banks** |
 | **Permission** | Manage question banks (View question banks to read them) |
 | **Feature** | Surveys; QTI Question Import for QTI files |
 
@@ -18,7 +18,7 @@ A question bank holds questions you reuse. A pool on a survey page can draw ques
 
 ## Create a bank and add questions
 
-1. Go to **Surveys > Question banks** and select **Add question bank**. Enter a **Title**, a **Technical name**, a **Description** and **Tags**, then **Save**.
+1. Go to **Surveys** → **Question Banks** and select **Add question bank**. Enter a **Title**, a **Technical name**, a **Description** and **Tags**, then **Save**.
 2. Open the bank and select **Add question**. Choose the type, write the question in the same editor as the designer, and set its **Tags**, **Difficulty** (1 to 5) and **Retired**.
 3. Select **Save**. Each save makes a new revision.
 

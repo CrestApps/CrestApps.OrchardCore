@@ -51,6 +51,11 @@ public static class PlaidConstants
     public const string WebhookRouteName = "CrestApps.Plaid.Webhook";
 
     /// <summary>
+    /// The webhook endpoint's path, under the tenant's address.
+    /// </summary>
+    public const string WebhookPath = "plaid/webhook";
+
+    /// <summary>
     /// The features.
     /// </summary>
     public static class Features

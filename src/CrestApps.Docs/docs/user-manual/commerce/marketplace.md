@@ -10,7 +10,7 @@ Sell products for other sellers, called vendors. Your store takes the payment, k
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Vendors; Settings > Commerce > Marketplace |
+| **Menu** | **Commerce** → **Vendors**; **Settings** → **Commerce** → **Marketplace** |
 | **Permission** | Manage the marketplace |
 | **Feature** | Marketplace, with Marketplace payouts with Stripe Connect to pay vendors |
 
@@ -20,13 +20,13 @@ This video shows the Marketplace and Classifieds modules: the settings, adding a
 
 <YouTube video="marketplace-classifieds" title="Narrated video overview of the Marketplace and Classifieds modules" />
 
-To try it, run the **Marketplace sample** recipe under **Configuration > Recipes**. It adds a vendor and a Handmade Ceramic Mug sold for it.
+To try it, run the **Marketplace sample** recipe under **Configuration** → **Recipes**. It adds a vendor and a Handmade Ceramic Mug sold for it.
 
 ## Set your commission and hold
 
 <YouTube video="marketplace-classifieds" title="Video of the Marketplace settings" start={99} end={145} />
 
-Under **Settings > Commerce > Marketplace**:
+Under **Settings** → **Commerce** → **Marketplace**:
 
 - **Commission (%)**: what the store keeps of each vendor's sale, after discounts. A vendor can have its own.
 - **Days held**: how long a sale is held after it's paid, such as for returns, before the vendor can be paid for it.
@@ -38,7 +38,7 @@ Under **Settings > Commerce > Marketplace**:
 
 <YouTube video="marketplace-classifieds" title="Video of adding a vendor" start={145} end={193} />
 
-1. Under **Commerce > Vendors**, choose **Add vendor**.
+1. Under **Commerce** → **Vendors**, choose **Add vendor**.
 2. Enter its **Name** and **Email** (where Stripe's setup and the vendor's notices go), and under **People who run it**, the usernames of the people who sell through it.
 3. Leave **Commission (%)** empty to use the store's, or enter the vendor's own. **Country** and **Status** are below it: set the **Status** to suspend a vendor.
 
@@ -60,7 +60,7 @@ Your Stripe account needs **Connect** turned on, in your Stripe dashboard, befor
 
 A sale is ready to pay once its hold ends and, for goods, its order is fulfilled. To pay one sooner, such as a service already delivered, open the vendor and choose **Release now** next to its order. **Pay out what's ready** pays the vendor everything that's ready. It shows once the vendor has a payout account: until then the vendor's page says it hasn't set up payouts yet.
 
-Each payout is also a disbursement: you find it under **Banking > Disbursements**, sent by **Stripe Connect transfer**, with Stripe's transfer number as its trace, or Stripe's reason when it was refused. A refused payout is tried again with the next **Pay out what's ready**.
+Each payout is also a disbursement: you find it under **Banking** → **Disbursements**, sent by **Stripe Connect transfer**, with Stripe's transfer number as its trace, or Stripe's reason when it was refused. A refused payout is tried again with the next **Pay out what's ready**.
 
 When you refund an order, the vendor's share of the refund comes off what they're owed.
 

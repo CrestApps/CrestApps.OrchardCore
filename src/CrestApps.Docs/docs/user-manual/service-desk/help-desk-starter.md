@@ -10,7 +10,7 @@ The **Help desk starter** recipe sets up a working service desk you can try and 
 
 | | |
 | --- | --- |
-| **Menu** | Configuration > Recipes |
+| **Menu** | **Configuration** → **Recipes** |
 | **Permission** | Manage recipes |
 | **Feature** | Tickets |
 
@@ -18,8 +18,8 @@ The **Help desk starter** recipe sets up a working service desk you can try and 
 
 ## Run it
 
-1. Turn on **Tickets** under **Tools > Features**.
-2. Go to **Configuration > Recipes**, find **Help desk starter** and select **Run**.
+1. Turn on **Tickets** under **Tools** → **Features**.
+2. Go to **Configuration** → **Recipes**, find **Help desk starter** and select **Run**.
 
 ## What it sets up
 

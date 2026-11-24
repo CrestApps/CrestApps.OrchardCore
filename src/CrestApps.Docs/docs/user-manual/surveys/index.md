@@ -10,7 +10,7 @@ Surveys lets you build surveys, polls, forms and quizzes, share them, and read t
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys |
+| **Menu** | **Surveys** → **Surveys** |
 | **Permission** | Manage own surveys, or Manage all surveys |
 | **Feature** | Surveys |
 
@@ -33,11 +33,11 @@ Surveys lets you build surveys, polls, forms and quizzes, share them, and read t
 | Item | What it is for |
 | --- | --- |
 | **Surveys** | The list of surveys, with their designer, links, responses and results |
-| **Question banks** | Questions you reuse in many surveys and quizzes |
+| **Question Banks** | Questions you reuse in many surveys and quizzes |
 | **Grading** | Answers that wait for a person to score them |
 | **Templates** | The survey templates new surveys start from (with **Manage survey templates**) |
 
-Reports are under **Reports > Surveys**. The defaults for new surveys are under **Settings > Surveys**.
+Reports are under **Reports** → **Surveys**. The defaults for new surveys are under **Settings** → **Surveys**.
 
 ## Surveys of courses and other features
 

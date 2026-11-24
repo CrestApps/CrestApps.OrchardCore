@@ -10,7 +10,7 @@ Surveys AI helps you read answers, translate surveys and grade. A person always 
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then the survey's menu; Surveys > Grading |
+| **Menu** | **Surveys** → **Surveys**, then the survey's menu; **Surveys** → **Grading** |
 | **Permission** | Manage own surveys, or Manage all surveys; Grade survey responses (or Grade responses of own surveys) for scoring help |
 | **Feature** | Surveys AI |
 

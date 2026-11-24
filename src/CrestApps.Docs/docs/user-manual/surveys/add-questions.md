@@ -11,7 +11,7 @@ The designer shows the pages and questions on the left and the editor on the rig
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then **Design** |
+| **Menu** | **Surveys** → **Surveys**, then **Design** |
 | **Permission** | Manage own surveys, or Manage all surveys |
 | **Feature** | Surveys |
 

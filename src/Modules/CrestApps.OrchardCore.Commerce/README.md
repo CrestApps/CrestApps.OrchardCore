@@ -22,7 +22,7 @@ is enabled.
   Transactions, Taxation, Exchange Rates and Customers depend on it, so a site with Invoicing alone does not turn on
   the store.
 - **Commerce** (`CrestApps.OrchardCore.Commerce`) — The store layer, on top of Commerce Foundation: the store's setup
-  guide (Commerce > Set up your store), its permission and the roles it adds for a store's staff. The store modules
+  guide (Commerce > Set Up Your Store), its permission and the roles it adds for a store's staff. The store modules
   (Products, Carts, Checkout, Orders, Shipping, Inventory and the others that sell) depend on it.
 
 ## Contributing to the Commerce menu

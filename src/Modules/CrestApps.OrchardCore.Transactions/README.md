@@ -18,7 +18,7 @@ show it to the customer, remind them, let them settle it online, and report on w
 - **Transaction Reminders** (`...Notification`) — chases unpaid balances on a configured cadence (or staged steps before, on and after the due date, in the site's daytime hours, never for a paused transaction) through
   each user's preferred notification channel.
 - **Payment Terms** (`...PaymentTerms`) — the catalog of payment terms (net days, due on receipt, end of month,
-  a day of the next month, an early-payment discount) under **Commerce > Payment terms**, read through
+  a day of the next month, an early-payment discount) under **Commerce > Payment Terms**, read through
   `IPaymentTermManager` and turned into local due dates by `IPaymentTermCalculator`.
 
 ## What a transaction records

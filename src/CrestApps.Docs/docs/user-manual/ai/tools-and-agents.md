@@ -18,7 +18,7 @@ Out of the box an assistant can only talk. **Tools** let it act: look up an orde
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Tool Instances; Artificial Intelligence > Model Context Protocol > MCP Hosts; Artificial Intelligence > Agent to Agent Hosts |
+| **Menu** | **Artificial Intelligence** → **Tool Instances**; **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts**; **Artificial Intelligence** → **Agent to Agent Hosts** |
 | **Permission** | Manage AI tool instances; Manage MCP Connections; Manage Agent-to-Agent Connections; Access any AI tool, or Access AI tool - *tool name*, to use a tool |
 | **Feature** | Orchard Core AI Agent (built-in tools), AI Tool Instances, Model Context Protocol (MCP) Client, Agent-to-Agent (A2A) Client |
 
@@ -60,7 +60,7 @@ Who can use a tool depends on where it is ticked.
 - **On an AI profile** (and on the agents it calls), the profile decides. Everyone who can chat with the profile gets every tool ticked on it, including visitors who are not signed in. The tools do not check the person's own permissions, so a tool that changes the site, such as deleting content, can be used by anyone who can reach the assistant. Only tick tools that are safe for everyone the profile serves.
 - **In a chat interaction**, the person chooses the tools, so each one needs a permission. A person can only use a tool when their role has **Access any AI tool**, or the permission for that one tool, **Access AI tool - *tool name***. A tool the person may not use is quietly left out, and the assistant answers without it. That often looks like a vague answer or "I can't do that".
 
-When a chat interaction works for an administrator but not for someone else, check that person's role under **Access Control > Roles**. **Access any AI tool** is a powerful permission and is given only to administrators by default; prefer granting the individual tools.
+When a chat interaction works for an administrator but not for someone else, check that person's role under **Access Control** → **Roles**. **Access any AI tool** is a powerful permission and is given only to administrators by default; prefer granting the individual tools.
 
 ## Tool instances
 
@@ -70,7 +70,7 @@ A tool instance is a tool that you set up yourself, from a ready-made kind, with
 
 ### Create a tool instance
 
-1. Open **Artificial Intelligence > Tool Instances** and click **Add Tool Instance**.
+1. Open **Artificial Intelligence** → **Tool Instances** and click **Add Tool Instance**.
 2. In **Available Sources**, click **Add** on the kind of tool you need (see below).
 3. Enter a **Name** and a **Description**, fill in the fields of that kind, and click **Save**.
 
@@ -159,15 +159,15 @@ The Agent-to-Agent (A2A) protocol lets AI agents on different systems work toget
 
 ## Share your tools with other AI apps
 
-With the **Model Context Protocol (MCP) Server** feature on, AI apps outside the site, such as a desktop AI assistant, can use selected tools of this site. You choose the **Authentication type** and tick the tools to share in the **MCP Server** section of **Settings > Artificial Intelligence**, and you can offer reusable prompts and files as well. See [Share your tools with other AI apps](mcp.md#share-your-tools-with-other-ai-apps), [Share prompts](mcp.md#share-prompts) and [Share resources](mcp.md#share-resources).
+With the **Model Context Protocol (MCP) Server** feature on, AI apps outside the site, such as a desktop AI assistant, can use selected tools of this site. You choose the **Authentication type** and tick the tools to share in the **MCP Server** section of **Settings** → **Artificial Intelligence**, and you can offer reusable prompts and files as well. See [Share your tools with other AI apps](mcp.md#share-your-tools-with-other-ai-apps), [Share prompts](mcp.md#share-prompts) and [Share resources](mcp.md#share-resources).
 
 <YouTube video="ai-walkthroughs" title="Video of the admin chat working with content and tools through the MCP server integration" start={425} end={500} />
 
-1. Open **Settings > Artificial Intelligence** and find the **MCP Server** section.
+1. Open **Settings** → **Artificial Intelligence** and find the **MCP Server** section.
 2. Choose the **Authentication type** your technical team asks for: **OpenID Connect**, **API key** or **None (Anonymous access)**. Use **None** only for testing.
 3. Tick the tools and tool instances to share under **Tools** and **Tool Instances**. Nothing is shared until you pick it. **Expose all tools** shares every tool; use it only when you trust every app that connects.
 4. Click **Save**. The site reloads its settings.
 
 You need the **Manage the MCP Server settings** permission. How outside apps connect is described in the [Technical Manual](../../ai/mcp/server.md).
 
-The server can also share reusable prompts and data with those apps. Manage them under **Artificial Intelligence > Model Context Protocol > Prompts** (**Add Prompt**: a **Title**, a **Name**, a **Description**, optional **Arguments**, and the **Messages** with their **Role** and **Content**) and **Resources** (**Add Resource**, then a type (**File**, **Content Item**, **Content Type**, **Media**, **Recipe**, **Recipe Schema** or **Recipe Step Schema**, and **FTP** or **SFTP** when their features are on), and a **Display Text**, **Name**, **Path**, **Description** and **MIME Type**). These menus appear only with the MCP Server feature on.
+The server can also share reusable prompts and data with those apps. Manage them under **Artificial Intelligence** → **Model Context Protocol** → **Prompts** (**Add Prompt**: a **Title**, a **Name**, a **Description**, optional **Arguments**, and the **Messages** with their **Role** and **Content**) and **Resources** (**Add Resource**, then a type (**File**, **Content Item**, **Content Type**, **Media**, **Recipe**, **Recipe Schema** or **Recipe Step Schema**, and **FTP** or **SFTP** when their features are on), and a **Display Text**, **Name**, **Path**, **Description** and **MIME Type**). These menus appear only with the MCP Server feature on.

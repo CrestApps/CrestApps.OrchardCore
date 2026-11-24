@@ -27,7 +27,7 @@ public sealed class PurchaseOrdersAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Purchase orders"], S["Purchase orders"].PrefixPosition("0.31"), orders => orders
+                .Add(S["Purchase Orders"], S["Purchase Orders"].PrefixPosition("0.31"), orders => orders
                     .Id("purchaseOrders")
                     .Action(_routeValues)
                     .Permission(InventoryPermissions.ViewInventory)

@@ -47,6 +47,10 @@ public sealed class PlaidTenantClient : IPlaidClient
         => await _client.GetInstitutionAsync(await GetCredentialsAsync(cancellationToken), institutionId, countryCodes, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<PlaidItemInfo> UpdateItemWebhookAsync(string accessToken, string webhookUrl, CancellationToken cancellationToken = default)
+        => await _client.UpdateItemWebhookAsync(await GetCredentialsAsync(cancellationToken), accessToken, webhookUrl, cancellationToken);
+
+    /// <inheritdoc />
     public async Task RemoveItemAsync(string accessToken, CancellationToken cancellationToken = default)
         => await _client.RemoveItemAsync(await GetCredentialsAsync(cancellationToken), accessToken, cancellationToken);
 

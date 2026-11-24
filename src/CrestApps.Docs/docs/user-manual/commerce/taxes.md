@@ -10,7 +10,7 @@ The **Taxation** screens decide which taxes your site charges and how much. You 
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > Categories, Types, Jurisdictions, Rules, Tables and Tax registrations |
+| **Menu** | **Commerce** → **Taxation** → **Categories**, Types, Jurisdictions, Sales Tax Rules, Tables and Tax Registrations |
 | **Permission** | Manage taxation |
 | **Feature** | Taxation |
 
@@ -28,7 +28,7 @@ This video walks through tax categories, jurisdictions, rules, the tax origin, c
 
 A **category** groups what you sell for tax purposes, for example *Electronics*, *Food* or *Tobacco*. Rules can target a category, and products are classified with one.
 
-1. Open **Commerce > Taxation > Categories** and click **Add Tax Category**.
+1. Open **Commerce** → **Taxation** → **Categories** and click **Add Tax Category**.
 2. Fill in the fields and click **Save**.
 
 | Field | What it does |
@@ -42,7 +42,7 @@ A **category** groups what you sell for tax purposes, for example *Electronics*,
 
 A **tax type** is a label for the kind of tax a rule produces, such as *SalesTax* or *VAT*. It groups taxes in reports and never changes the amount.
 
-Your site starts with a list of common types: *SalesTax*, *VAT*, *GST*, *HST*, *PST*, *QST*, *ExciseTax*, *AlcoholTax*, *TobaccoTax*, *TourismTax*, *LodgingTax*, *EnvironmentalTax*, *DigitalServicesTax*, *ImportDuty* and *Other*. To add one, open **Commerce > Taxation > Types**, click **Add Tax Type**, enter a **Name** and an optional **Description**, and click **Save**. Delete the ones you never use to keep the rule editor short.
+Your site starts with a list of common types: *SalesTax*, *VAT*, *GST*, *HST*, *PST*, *QST*, *ExciseTax*, *AlcoholTax*, *TobaccoTax*, *TourismTax*, *LodgingTax*, *EnvironmentalTax*, *DigitalServicesTax*, *ImportDuty* and *Other*. To add one, open **Commerce** → **Taxation** → **Types**, click **Add Tax Type**, enter a **Name** and an optional **Description**, and click **Save**. Delete the ones you never use to keep the rule editor short.
 
 ## 3. Create jurisdictions
 
@@ -50,7 +50,7 @@ Your site starts with a list of common types: *SalesTax*, *VAT*, *GST*, *HST*, *
 
 A **jurisdiction** is a place that taxes, such as a country, a state or a city.
 
-1. Open **Commerce > Taxation > Jurisdictions** and click **Add Tax Jurisdiction**.
+1. Open **Commerce** → **Taxation** → **Jurisdictions** and click **Add Tax Jurisdiction**.
 2. Fill in the fields and click **Save**.
 
 | Field | What it does |
@@ -69,7 +69,7 @@ A **jurisdiction** is a place that taxes, such as a country, a state or a city.
 
 A **tax table** is a list of amount ranges, each with its own rate. You need one only for the **Tax table lookup**, **Progressive** and **Threshold** rules. Skip this step if all your taxes are a simple percentage or a fixed amount.
 
-1. Open **Commerce > Taxation > Tables** and click **Add Tax Table**.
+1. Open **Commerce** → **Taxation** → **Tables** and click **Add Tax Table**.
 2. Enter a **Name** and, optionally, **Effective from** and **Effective to** dates. A rule only uses the table on dates inside that window.
 3. Click **Add row** for each range and fill it in. Use the trash button to remove a row.
 4. Click **Save**. Rows are sorted by their minimum when saved.
@@ -89,7 +89,7 @@ Ranges cannot overlap, and only one row can be open-ended. A table that a rule u
 
 A **rule** is one tax: what it applies to, and how it is worked out. Several rules can apply to the same item; for example a general sales tax and an extra tobacco tax.
 
-1. Open **Commerce > Taxation > Sales tax rules** and click **Add Tax Rule**.
+1. Open **Commerce** → **Taxation** → **Sales Tax Rules** and click **Add Tax Rule**.
 2. In **Select a calculation method**, click **Add** on the method you want. The method cannot be changed later.
 3. Fill in the fields and click **Save**.
 
@@ -134,19 +134,19 @@ A rule tied to a **Jurisdiction** only charges buyers whose address is in that j
 
 ## Tax registrations
 
-Under **Commerce > Taxation > Tax registrations**, record each jurisdiction where your business is registered to collect a tax, with the number the agency gave. Once you add a registration, only the jurisdictions and tax types you are registered for collect tax; with none, every rule collects. With Tax Returns on, a registration also says how often you file and when returns are due; see [Tax returns](../finance/tax-returns.md).
+Under **Commerce** → **Taxation** → **Tax Registrations**, record each jurisdiction where your business is registered to collect a tax, with the number the agency gave. Once you add a registration, only the jurisdictions and tax types you are registered for collect tax; with none, every rule collects. With Tax Returns on, a registration also says how often you file and when returns are due; see [Tax returns](../finance/tax-returns.md).
 
 ## Where you sell from
 
 <YouTube video="taxation" title="Video of the tax origin settings" start={231} end={244} />
 
-Some taxes are charged where the seller is rather than where the buyer is. Under **Settings > Commerce > Tax origin**, enter your store's **Country**, **State or province** and, if your taxes depend on them, county, city and postal code. Leave the country blank when every tax you collect is based on where the buyer is.
+Some taxes are charged where the seller is rather than where the buyer is. Under **Settings** → **Commerce** → **Tax Origin**, enter your store's **Country**, **State or province** and, if your taxes depend on them, county, city and postal code. Leave the country blank when every tax you collect is based on where the buyer is.
 
 Customers you mark **Exempt from tax** under [Customers](customers.md) pay no tax when they check out signed in.
 
 ## Choose how tax is rounded
 
-Open **Settings > Commerce > Tax calculation** (permission **Manage taxation**) to choose where tax is rounded to the cent. The checkout and [invoices](invoicing.md) both use this setting, so a cart and an invoice with the same lines come to the same tax.
+Open **Settings** → **Commerce** → **Tax Calculation** (permission **Manage taxation**) to choose where tax is rounded to the cent. The checkout and [invoices](invoicing.md) both use this setting, so a cart and an invoice with the same lines come to the same tax.
 
 | **Round tax at** | What it does |
 | --- | --- |
@@ -166,13 +166,13 @@ Rules only apply to items that carry the **Taxation** part. Add it to each conte
 
 | | |
 | --- | --- |
-| **Menu** | Design > Content Definition > Content Types |
+| **Menu** | **Design** → **Content Definition** → **Content Types** |
 | **Permission** | Edit content types |
 | **Feature** | Taxation |
 
 <AskYourAdmin />
 
-1. Open **Design > Content Definition > Content Types** and edit the content type.
+1. Open **Design** → **Content Definition** → **Content Types** and edit the content type.
 2. Click **Add Parts**, tick **Taxation**, and save.
 3. Click **Edit** next to the **Taxation** part, set the options below, and save.
 
@@ -181,6 +181,8 @@ Rules only apply to items that carry the **Taxation** part. Add it to each conte
 | **Default tax category** | The category new items of this type start with. |
 | **Default tax classification** | An optional, more specific category new items start with, for example *Television* under *Electronics*. |
 | **Allow editors to override the classification** | Ticked (the default): editors can pick a different category on each item. Cleared: every item always uses the defaults above. |
+| **Show the tax classification** | Ticked (the default): editors also see **Tax classification**. Clear it for a type that only needs a category; each item keeps the classification it has. |
+| **Show the external tax code** | Ticked (the default): editors see **External tax code**. Clear it for a type taxed only by your own tax rules. |
 
 Create your categories first: these drop-downs only list existing categories, plus **None**.
 
@@ -190,8 +192,8 @@ On each item, the **Taxation** part shows:
 | --- | --- |
 | **Taxable** | Ticked by default. Clear it for an item that is never taxed. |
 | **Tax category** | The item's category. Shown only when editors may override the classification. |
-| **Tax classification** | An optional, more specific category. Shown only when editors may override the classification. |
-| **External tax code** | Optional. A code used by an outside tax service. |
+| **Tax classification** | An optional, more specific category. Shown only when editors may override the classification and the type shows it. |
+| **External tax code** | Optional. A code used by an outside tax service. Shown unless the type hides it. |
 
 ### Classify many products at once with a taxonomy
 
@@ -229,9 +231,9 @@ An order keeps the taxes it was charged: their names, types, places, rates, what
 
 The **EU VAT standard rates** recipe sets up VAT for the European Union in one step. It adds the 27 EU member states as jurisdictions (level **Country**), and a **Percentage** rule for each, with **Tax type** *VAT*, **Display name** *VAT*, the country's standard rate, and **Applies to shipping charges** ticked.
 
-1. Open **Configuration > Recipes**.
+1. Open **Configuration** → **Recipes**.
 2. Find **EU VAT standard rates** and click **Run**.
-3. Open **Commerce > Taxation > Sales tax rules** to see the rules, named after their countries, such as *Germany VAT*.
+3. Open **Commerce** → **Taxation** → **Sales Tax Rules** to see the rules, named after their countries, such as *Germany VAT*.
 
 :::caution[Check the rates]
 VAT rates change. Check each country's rate before you sell there, and add reduced rates for the products they apply to, such as books or food, as rules for those [categories](#1-create-tax-categories).
@@ -257,13 +259,13 @@ Sellers in the EU who sell to buyers in other EU countries declare the VAT on th
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Commerce > VAT one-stop shop (OSS) |
+| **Menu** | **Reports** → **Commerce** → **VAT one-stop shop (OSS)** |
 | **Permission** | Manage orders |
 | **Feature** | Orders and Reports |
 
 <AskYourAdmin />
 
-1. Set your store's country under **Settings > Commerce > Tax origin** (see [Where you sell from](#where-you-sell-from)).
+1. Set your store's country under **Settings** → **Commerce** → **Tax Origin** (see [Where you sell from](#where-you-sell-from)).
 2. Open the report and choose the quarter's first and last day as the period. Click **Show**.
 
 For the orders paid in the period, the report adds up the VAT charged on orders to EU countries other than your own, by the country they went to (the shipping address, or the billing address when nothing shipped) and the rate. For each currency you sold in it shows the **VAT due**, the number of countries, and a table with each country and rate: the orders, the **Taxable amount** and the **VAT**, with a total. A refund takes its share of the order's VAT off.
@@ -276,14 +278,14 @@ For sales tax in the United States, where rates change by state, county and city
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > TaxJar |
+| **Menu** | **Settings** → **Commerce** → **TaxJar** |
 | **Permission** | Manage taxation |
 | **Feature** | TaxJar |
 
 <AskYourAdmin />
 
-1. In TaxJar, get an API token under **Account > TaxJar API**.
-2. Open **Settings > Commerce > TaxJar**, fill in the fields (below), and save.
+1. In TaxJar, get an API token under **Account** → **TaxJar API**.
+2. Open **Settings** → **Commerce** → **TaxJar**, fill in the fields (below), and save.
 
 | Field | What it does |
 | --- | --- |
@@ -294,6 +296,6 @@ For sales tax in the United States, where rates change by state, county and city
 
 Saving restarts your site, so the new settings are used at once. This takes a moment.
 
-For an order to one of those countries, with prices that don't include tax, TaxJar works out the tax on each item and on shipping from your store's address (**Settings > Commerce > Tax origin**) and the address the order goes to. The order summary shows it as *Sales tax* (*VAT* for a country other than the United States), with the combined rate of the places that tax the address. Your own rules aren't used for that order. Orders to other countries, and orders in a market whose prices include tax, use your own rules.
+For an order to one of those countries, with prices that don't include tax, TaxJar works out the tax on each item and on shipping from your store's address (**Settings** → **Commerce** → **Tax Origin**) and the address the order goes to. The order summary shows it as *Sales tax* (*VAT* for a country other than the United States), with the combined rate of the places that tax the address. Your own rules aren't used for that order. Orders to other countries, and orders in a market whose prices include tax, use your own rules.
 
 If TaxJar can't be reached, or can't work out the tax, your own tax rules work it out instead, so the sale goes on, and the problem is written to the site's log. Customers marked **Exempt from tax** are sent to TaxJar as exempt.

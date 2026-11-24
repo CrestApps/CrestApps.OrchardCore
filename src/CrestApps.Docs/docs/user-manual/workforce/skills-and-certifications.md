@@ -12,7 +12,7 @@ The same skills are used across the site. When Contact Center is on, the agents'
 
 | | |
 | --- | --- |
-| **Menu** | Content > Skills, Content > Certification Types, Content > Certificates |
+| **Menu** | **Content** → **Skills**, **Content** → **Certification Types**, **Content** → **Certificates** |
 | **Permission** | Manage skills and certifications (the lists of skills and certifications), Assign skills and record certifications (giving people skills and recording their certificates), View skills and certifications |
 | **Feature** | Skills |
 
@@ -20,7 +20,7 @@ The same skills are used across the site. When Contact Center is on, the agents'
 
 ## Add a skill
 
-Open **Content > Skills** and choose **Add skill**.
+Open **Content** → **Skills** and choose **Add skill**.
 
 | Field | What it does |
 | --- | --- |
@@ -32,17 +32,17 @@ Open **Content > Skills** and choose **Add skill**.
 
 Deleting a skill takes it away from everyone who held it.
 
-To add many skills at once, such as the competency frameworks of a Moodle site, click **Import** on **Content > Skills**. See [Competencies](../learning/competencies.md).
+To add many skills at once, such as the competency frameworks of a Moodle site, click **Import** on **Content** → **Skills**. See [Competencies](../learning/competencies.md).
 
 ## Give a person their skills
 
-Open the person under **Access Control > Users**, edit them, and find the **Skills** section. Choose a level for each skill they hold, from **1 - Trainee** to **5 - Expert**, or **Doesn't hold it**, and save. Only people who can assign skills see the section.
+Open the person under **Access Control** → **Users**, edit them, and find the **Skills** section. Choose a level for each skill they hold, from **1 - Trainee** to **5 - Expert**, or **Doesn't hold it**, and save. Only people who can assign skills see the section.
 
-Contact Center agents' skills are also set on **Interaction Center > Management > Agent entitlements**. Both screens change the same skills.
+Contact Center agents' skills are also set on **Interaction Center** → **Management** → **Agent Entitlements**. Both screens change the same skills.
 
 ## Add a certification
 
-Open **Content > Certification Types** and choose **Add certification type**. A certification type is a credential people can hold, such as *Gas safety*; a certificate is one person holding it.
+Open **Content** → **Certification Types** and choose **Add certification type**. A certification type is a credential people can hold, such as *Gas safety*; a certificate is one person holding it.
 
 | Field | What it does |
 | --- | --- |
@@ -56,7 +56,7 @@ Open **Content > Certification Types** and choose **Add certification type**. A 
 
 ## Record a certificate
 
-Open **Content > Certificates** and choose **Add certificate**.
+Open **Content** → **Certificates** and choose **Add certificate**.
 
 | Field | What it does |
 | --- | --- |
@@ -71,7 +71,7 @@ Open **Content > Certificates** and choose **Add certificate**.
 
 ## Check, withdraw and find certificates
 
-In **Content > Certificates**, each certificate's menu has **Mark as checked** (for one waiting to be checked), **Withdraw** (for a valid one that should no longer count) and **Delete**.
+In **Content** → **Certificates**, each certificate's menu has **Mark as checked** (for one waiting to be checked), **Withdraw** (for a valid one that should no longer count) and **Delete**.
 
 Use the filters above the list to show one certification, one status, or **Expiring in 60 days**, which lists the valid certificates that run out in the next 60 days, soonest first. Search finds a person's name or a certificate number.
 

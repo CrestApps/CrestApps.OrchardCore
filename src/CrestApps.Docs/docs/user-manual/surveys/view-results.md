@@ -11,7 +11,7 @@ Read each response, and the totals in the survey reports.
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then **Responses** or **Results** in the survey's menu; Reports > Surveys |
+| **Menu** | **Surveys** → **Surveys**, then **Responses** or **Results** in the survey's menu; **Reports** → **Surveys** |
 | **Permission** | View responses of own surveys, or View responses of all surveys |
 | **Feature** | Surveys; Reports for the reports |
 
@@ -29,7 +29,7 @@ When that happens, a warning on the **Responses** list says how many responses i
 
 ## Reports
 
-Select **Results** in the survey's menu, or go to **Reports > Surveys**:
+Select **Results** in the survey's menu, or go to **Reports** → **Surveys**:
 
 | Report | Shows |
 | --- | --- |

@@ -10,7 +10,7 @@ A **ticket type** is a kind of ticket, such as a general **Ticket** or an **IT r
 
 | | |
 | --- | --- |
-| **Menu** | Design > Content Definition > Content Types; Content > Taxonomies for categories |
+| **Menu** | **Design** → **Content Definition** → **Content Types**; **Content** → **Taxonomies for categories** |
 | **Permission** | Edit content types; manage the taxonomy's content items |
 | **Feature** | Tickets, and Taxonomies for categories |
 
@@ -20,7 +20,7 @@ A **ticket type** is a kind of ticket, such as a general **Ticket** or an **IT r
 
 The Tickets feature makes a **Ticket** type whose title is the **Subject**. Add fields to it, or make more types to ask for different things:
 
-1. Go to **Content Definition > Content Types** and select **Create new type**.
+1. Go to **Content Definition** → **Content Types** and select **Create new type**.
 2. Give it a name, such as *IT request*, and add the **Ticket** part.
 3. Add the fields it should ask for, such as a **Text** field for the laptop model. Give a text field the **TextArea** editor for answers longer than a line.
 4. Save. Agents now find it under **New ticket**.
@@ -57,9 +57,9 @@ The questions appear as people choose the category and answer, on the agents' **
 
 Categories come from a taxonomy, so you edit them like any other list of terms. People choose one when they open a ticket, one level at a time, and the category can send the ticket to the right desk and team with the right priority and service level.
 
-1. Turn on **Taxonomies**, open **Content > Content Items**, choose **New** and **Taxonomy**, and create one, such as *IT categories*, with **Ticket category** as its term type. Add its categories, and sub-categories under them.
+1. Turn on **Taxonomies**, open **Content** → **Content Items**, choose **New** and **Taxonomy**, and create one, such as *IT categories*, with **Ticket category** as its term type. Add its categories, and sub-categories under them.
 2. Edit a category to set what its new tickets start with: **Desk**, **Team**, **Priority** and **Service-level policy**. Leave a value empty to take it from the category above. Tick **Only agents can choose it** for categories customers shouldn't see (and those under it), and write a **Description for customers** to tell them what to have ready. Changes to categories take effect once you **Publish** the taxonomy.
-3. Open **Content Definition > Content Types**, edit the ticket type and, on its **Ticket** part, choose the taxonomy under **Categories**. Tick **A category is required** to make people choose one, and **Only the most specific category** so they pick Hardware > Laptop rather than Hardware.
+3. Open **Content Definition** → **Content Types**, edit the ticket type and, on its **Ticket** part, choose the taxonomy under **Categories**. Tick **A category is required** to make people choose one, and **Only the most specific category** so they pick Hardware > Laptop rather than Hardware.
 
 What a ticket starts with comes first from what the agent chose on the form, then from its category, then from the ticket type. A customer's request moves to the category's desk only when that desk serves customers too.
 

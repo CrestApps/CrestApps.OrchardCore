@@ -28,7 +28,7 @@ public sealed class ContactCenterCallRecordingsAdminMenu : AdminNavigationProvid
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Call recordings"], S["Call recordings"].PrefixPosition("3"), recordings => recordings
+                .Add(S["Call Recordings"], S["Call Recordings"].PrefixPosition("3"), recordings => recordings
                     .AddClass("contact-center-call-recordings")
                     .Id("contactCenterCallRecordings")
                     .Action("Index", "CallRecordings", "CrestApps.OrchardCore.ContactCenter")

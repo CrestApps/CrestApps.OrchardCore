@@ -42,6 +42,7 @@ public sealed class TaxReturnsStartup : StartupBase
         services.AddDisplayDriver<MerchantTaxRegistration, MerchantTaxRegistrationFilingDisplayDriver>();
         services.AddDisplayDriver<TaxReturnPeriodSummary, TaxReturnPeriodSummaryDisplayDriver>();
         services.AddDisplayDriver<TaxReturn, TaxReturnDisplayDriver>();
+        services.AddDisplayDriver<TaxReturnPaymentEntry, TaxReturnPaymentEntryDisplayDriver>();
         services.AddNavigationProvider<TaxReturnsAdminMenu>();
         services.AddPermissionProvider<TaxReturnsPermissionsProvider>();
     }
@@ -102,6 +103,7 @@ public sealed class EFilingStartup : StartupBase
         services.AddDataMigration<EFilingMigrations>()
             .AddIndexProvider<EFileSubmissionIndexProvider>();
         services.AddDisplayDriver<TaxReturn, TaxReturnEFilingDisplayDriver>();
+        services.AddDisplayDriver<EFileSubmissionRequest, EFileSubmissionRequestDisplayDriver>();
         services.AddSingleton<IBackgroundTask, EFileAcknowledgementBackgroundTask>();
     }
 }
@@ -174,7 +176,7 @@ internal sealed class EFileAcknowledgementBackgroundTask : IBackgroundTask
 }
 
 /// <summary>
-/// Adds Commerce &gt; Taxation &gt; Tax returns.
+/// Adds Commerce &gt; Taxation &gt; Tax Returns.
 /// </summary>
 internal sealed class TaxReturnsAdminMenu : AdminNavigationProvider
 {
@@ -188,7 +190,7 @@ internal sealed class TaxReturnsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder.AddTaxation(S, taxation => taxation
-            .Add(S["Tax returns"], S["Tax returns"].PrefixPosition(), returns => returns
+            .Add(S["Tax Returns"], S["Tax Returns"].PrefixPosition(), returns => returns
                 .Id("taxationReturns")
                 .Action("Index", "TaxReturns", "CrestApps.OrchardCore.Taxation")
                 .Permission(TaxationPermissions.ManageTaxReturns)

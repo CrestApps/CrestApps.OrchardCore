@@ -18,11 +18,11 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 
 ### Enabling Analytics
 
-1. Go to **Tools** > **Features** in the admin menu.
+1. Go to **Tools** → **Features** in the admin menu.
 2. Search for **AI Chat Session Analytics** and enable it.
 3. Open each **AI Profile** where you want to collect metrics.
 4. In the **Analytics** section of the profile editor, check **Enable Session Metrics**.
-5. Navigate to **Artificial Intelligence** > **Chat Session Analytics** in the admin menu.
+5. Navigate to **Artificial Intelligence** → **Chat Session Analytics** in the admin menu.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
 
@@ -222,7 +222,7 @@ Analytics events are stored as documents in the YesSql database using the AI col
 
 Session metrics collection is **disabled by default**. To enable it for a specific AI profile:
 
-1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
+1. Edit the AI profile in **Artificial Intelligence** → **Profiles**.
 2. Open the **Analytics** section.
 3. Check **Enable Session Metrics**.
 4. Save the profile.
@@ -261,7 +261,7 @@ Conversion metrics allow you to define **custom goals** for each AI profile and 
 
 #### Configuring Conversion Goals
 
-1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
+1. Edit the AI profile in **Artificial Intelligence** → **Profiles**.
 2. Open the **Analytics** section.
 3. Check **Enable Conversion Metrics**.
 4. Define one or more goals:
@@ -404,7 +404,7 @@ Post-session processing runs after a chat session is closed and performs AI-powe
 
 ### Configuring Tasks
 
-1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
+1. Edit the AI profile in **Artificial Intelligence** → **Profiles**.
 2. Open the **Data Processing** tab.
 3. Check **Enable Post-Session Processing**.
 4. Click **Add Task** to create a new task in the **Tasks** tab.

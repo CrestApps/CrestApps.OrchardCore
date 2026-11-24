@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Transactions.Navigation;
 
 /// <summary>
-/// Adds <b>Commerce &gt; Payment terms</b> to the admin menu.
+/// Adds <b>Commerce &gt; Payment Terms</b> to the admin menu.
 /// </summary>
 public sealed class PaymentTermsAdminMenu : AdminNavigationProvider
 {
@@ -33,7 +33,7 @@ public sealed class PaymentTermsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Payment terms"], S["Payment terms"].PrefixPosition("7"), terms => terms
+                .Add(S["Payment Terms"], S["Payment Terms"].PrefixPosition("7"), terms => terms
                     .Id("paymentTerms")
                     .Action("Index", "PaymentTerms", _routeValues)
                     .Permission(TransactionsPermissions.ManagePaymentTerms)

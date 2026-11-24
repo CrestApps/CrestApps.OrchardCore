@@ -10,7 +10,7 @@ A collector is a way to reach respondents. A survey can have many.
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then **Collect responses** in the survey's menu |
+| **Menu** | **Surveys** → **Surveys**, then **Collect responses** in the survey's menu |
 | **Permission** | Manage own surveys, or Manage all surveys; for invitations, Manage survey invitations, or Manage invitations of own surveys for your own surveys |
 | **Feature** | Surveys; Survey Invitations for invitations; Survey Embedding for pages and widgets |
 
@@ -42,7 +42,7 @@ Select **Add kiosk** for a tablet at a front desk. After each response the endin
 
 One invite reaches at most 5,000 people. For a bigger audience, invite the rest in another batch.
 
-The site sends a limited number of invitation and reminder e-mails a day, set in **Settings > Surveys > Invitation e-mails a day** (2,000 unless you change it). The day starts at midnight in the site's time zone. Invitations over the limit wait and go out by themselves on a later day; nothing is lost. The limit holds even when several people send invitations at the same moment, or the site runs on several servers (your administrator turns on the Redis Lock feature for that). If another send is still going out, yours waits for the next hourly run. A very large send also stops after a few minutes, and the rest go out with the hourly run. After **Invite**, the page tells you how many invitations will be sent later. Invitations to users of the site go to their notifications and don't count. If the mail server is down, the invitations wait and are tried again every hour; an address that keeps failing is shown as **Bounced** after five tries. To try a bounced or opted-out person again, invite them again. If e-mail isn't set up on the site, **Invite** tells you instead of sending.
+The site sends a limited number of invitation and reminder e-mails a day, set in **Settings** → **Surveys** → **Invitation e-mails a day** (2,000 unless you change it). The day starts at midnight in the site's time zone. Invitations over the limit wait and go out by themselves on a later day; nothing is lost. The limit holds even when several people send invitations at the same moment, or the site runs on several servers (your administrator turns on the Redis Lock feature for that). If another send is still going out, yours waits for the next hourly run. A very large send also stops after a few minutes, and the rest go out with the hourly run. After **Invite**, the page tells you how many invitations will be sent later. Invitations to users of the site go to their notifications and don't count. If the mail server is down, the invitations wait and are tried again every hour; an address that keeps failing is shown as **Bounced** after five tries. To try a bounced or opted-out person again, invite them again. If e-mail isn't set up on the site, **Invite** tells you instead of sending.
 
 Each person gets a personal link. **Settings** sets the e-mail **Subject** and **Message**, **Links expire after (days)**, the **Number of reminders** and the **Days between reminders**. **Send reminders now** reminds everyone who has not completed the survey. The list shows each invitation's status.
 

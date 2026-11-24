@@ -40,12 +40,12 @@ For the admin screens, see the User Manual page [Installment Plans](../user-manu
 | **Transactions** | Each payment is a transaction with the source `installment-plan`. |
 | **Transaction Reminders** (optional) | Tells the customer before each payment falls due and chases overdue ones. Invoiced payments rely on it: it sends the invoice and its pay link. See [Reminders](transactions#reminders). |
 | **Send Payment Receipts** (optional) | Sends a receipt after every payment and a notice after every refund. Printable receipts and invoices need only the Receipts module, which Subscriptions already enables. See [Payment receipts](transactions#payment-receipts). |
-| A public **Base URL** (**Settings > General**) | Pay links in reminders are absolute URLs built from it. When it is empty, a link made outside a request (by the background task) is left out. |
+| A public **Base URL** (**Settings** → **General**) | Pay links in reminders are absolute URLs built from it. When it is empty, a link made outside a request (by the background task) is left out. |
 | Background tasks running | The schedule is driven by a background task. See [The background task](#the-background-task). |
 
 ## Configuration
 
-The settings are site settings, edited on **Settings > Installment Plans** (site settings group `installment-plans`). Editing them requires the *Manage installment plans and charge customers' saved cards* permission. The *Manage subscriptions settings* permission also still lets a user edit them, because they used to be a card on **Settings > Subscriptions**.
+The settings are site settings, edited on **Settings** → **Installment Plans** (site settings group `installment-plans`). Editing them requires the *Manage installment plans and charge customers' saved cards* permission. The *Manage subscriptions settings* permission also still lets a user edit them, because they used to be a card on **Settings** → **Subscriptions**.
 
 | Setting | Property | Default | Meaning |
 | --- | --- | --- | --- |
@@ -201,7 +201,7 @@ Every change is recorded in the plan's history as an `InstallmentPlanEvent`, wit
 - It closes a draft's open checkout session.
 - It tells a customer whose plan had started (any status but `Draft`) *Your payment plan was canceled*.
 
-Money already collected is refunded separately, from **Commerce > Payments**.
+Money already collected is refunded separately, from **Commerce** → **Payments**.
 
 ## Installments at checkout
 
@@ -315,7 +315,7 @@ A payment plan charges a card without the customer present, so the feature is bu
 
 Payments charged to the card are charged by the **Saved Card Charges** task of the Transactions feature, every hour at half past: within the hour after the due time (00:00 UTC on the due date), and a retry within the hour of its retry time.
 
-Like every Orchard Core background task, its schedule can be changed, or the task disabled, for each tenant under **Configuration > Tasks**. Disabling it stops invoiced payments falling due and plans being brought up to date; disabling **Saved Card Charges** stops the card charges.
+Like every Orchard Core background task, its schedule can be changed, or the task disabled, for each tenant under **Configuration** → **Tasks**. Disabling it stops invoiced payments falling due and plans being brought up to date; disabling **Saved Card Charges** stops the card charges.
 
 ## Customer notices
 
@@ -560,7 +560,7 @@ Plan payments use the Transactions services. Each can be replaced like any other
 
 | Service | Default | Replace it to |
 | --- | --- | --- |
-| `IFinancialDocumentNumberGenerator` | `SequentialFinancialDocumentNumberGenerator`: an adapter over the shared number series, one series per kind of document with a format the site chooses under **Settings > Business documents > Number series** (`R-{seq}` for receipts, `INV-{seq}` for invoices, from 1001), numbered in the caller's unit of work under the series lock. | Take numbers from somewhere else, such as an accounting system. A yearly series is a format, not a replacement. |
+| `IFinancialDocumentNumberGenerator` | `SequentialFinancialDocumentNumberGenerator`: an adapter over the shared number series, one series per kind of document with a format the site chooses under **Settings** → **Business Documents** → **Number Series** (`R-{seq}` for receipts, `INV-{seq}` for invoices, from 1001), numbered in the caller's unit of work under the series lock. | Take numbers from somewhere else, such as an accounting system. A yearly series is a format, not a replacement. |
 | `ITransactionInvoiceService` | Gives a transaction its invoice number the first time its owner is told about it. | Change when invoices are numbered. |
 | `ITransactionPayLinkService` | Signed links to `/transactions/pay/{token}` that expire after 60 days. | Change the link's format or lifetime. |
 
@@ -577,9 +577,9 @@ The plan's own notices are sent through `ICustomerOwnerNotifier`, the same notif
 
 ## Operations
 
-- **Reconciling a plan.** Every plan payment is a transaction, and each attempt the gateway accepted or declined is listed in **Commerce > Payments** with a link to its transaction.
+- **Reconciling a plan.** Every plan payment is a transaction, and each attempt the gateway accepted or declined is listed in **Commerce** → **Payments** with a link to its transaction.
 - **A plan is stuck in `Draft`.** The first payment was never completed. Open the plan and take the payment again, or cancel the plan. A plan a customer chose at checkout is closed automatically once its checkout expires.
-- **Payments are not being charged.** Check that background tasks run on the tenant, and that `InstallmentPlanBackgroundTask` is not disabled under **Configuration > Tasks**. Then check the plan's history for declines.
+- **Payments are not being charged.** Check that background tasks run on the tenant, and that `InstallmentPlanBackgroundTask` is not disabled under **Configuration** → **Tasks**. Then check the plan's history for declines.
 - **Reminders have no pay link.** Set the site's **Base URL**.
 - **An auto-charge plan switched to invoicing.** The provider did not keep the card used for the down payment, for example because the card or wallet does not allow future use. The plan's history says so.
 

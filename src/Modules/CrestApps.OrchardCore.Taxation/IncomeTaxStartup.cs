@@ -162,7 +162,7 @@ public sealed class CanadaIncomeTaxStartup : StartupBase
 }
 
 /// <summary>
-/// Adds Commerce &gt; Taxation &gt; Income tax rules, with the rest of Taxation's setup.
+/// Adds Commerce &gt; Taxation &gt; Income Tax Rules, with the rest of Taxation's setup.
 /// </summary>
 internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
 {
@@ -176,7 +176,7 @@ internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder.AddTaxation(S, taxation => taxation
-            .Add(S["Income tax rules"], S["Income tax rules"].PrefixPosition(), rules => rules
+            .Add(S["Income Tax Rules"], S["Income Tax Rules"].PrefixPosition(), rules => rules
                 .Id("taxationIncomeTaxRules")
                 .Action("Index", "IncomeTaxRules", "CrestApps.OrchardCore.Taxation")
                 .Permission(global::CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.ManageIncomeTaxRules)

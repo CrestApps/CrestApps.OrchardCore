@@ -10,7 +10,7 @@ The AI can remember each customer from one conversation to the next, on every ch
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > AI Profiles, Design > Workflows, and your contacts |
+| **Menu** | **Artificial Intelligence** → **AI Profiles**, **Design** → **Workflows**, and your contacts |
 | **Permission** | Manage AI profiles, Manage workflows, and edit contacts |
 | **Feature** | AI Services and Omnichannel Management. Workflows for the webhooks and integrations. |
 
@@ -35,7 +35,7 @@ To see or correct a note, open the contact. **What the AI remembers** shows the 
 
 To build a note from a contact's past conversations, for example after turning memory on, tick **Rebuild from past conversations** on the contact and save. The note is written again from the contact's past AI calls, texts and chats, oldest first, as if each had just ended (at most the 50 oldest). It runs after the save, so reload the contact a moment later to see it.
 
-What the AI keeps in a note follows built-in instructions. To change them, for example to keep only open orders or to write the note in another language, go to **Settings > Artificial Intelligence** and write your own **Memory instructions** under **Contact memory**. Leave them empty to go back to the built-in ones. The note is kept to 2,000 characters either way.
+What the AI keeps in a note follows built-in instructions. To change them, for example to keep only open orders or to write the note in another language, go to **Settings** → **Artificial Intelligence** and write your own **Memory instructions** under **Contact memory**. Leave them empty to go back to the built-in ones. The note is kept to 2,000 characters either way.
 
 :::note[Payment details and secrets]
 The note is written by the utility model, which is told never to keep card numbers, passwords or other secrets. Still, check the notes of profiles that handle sensitive matters, and leave **Save to contact memory** off where it is not needed.
@@ -74,7 +74,7 @@ For example, start a workflow with **AI Conversation Evaluated**, tick **Only co
 
 ## Webhook subscriptions
 
-With the **AI Webhooks** feature on, AI events are offered to the webhooks under **Configuration > Webhooks**, next to the commerce events, and are sent to another system without a workflow. Click **Add webhook**, enter the **URL** (HTTPS), and tick the events to send under **AI**; the webhook's page shows the **Signing secret** to copy into the receiver. Webhooks you had added under **Artificial Intelligence > Webhooks** were moved there, with the same secret:
+With the **AI Webhooks** feature on, AI events are offered to the webhooks under **Configuration** → **Webhooks**, next to the commerce events, and are sent to another system without a workflow. Click **Add webhook**, enter the **URL** (HTTPS), and tick the events to send under **AI**; the webhook's page shows the **Signing secret** to copy into the receiver. Webhooks you had added under **Artificial Intelligence** → **Webhooks** were moved there, with the same secret:
 
 | Event | Sent when |
 | --- | --- |

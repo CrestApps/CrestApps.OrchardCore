@@ -11,7 +11,7 @@ user_manual: user-manual/commerce/set-up-your-store
 | **Category** | Commerce |
 | **Seams it adds** | `IStoreSetupStep` |
 
-**Commerce > Set up your store** (`commerce/setup` in the admin, permission `SetUpStore`) takes a new owner from a blank site to a first paid order. Each commerce module adds the steps about what it does, so a store sees only the steps of the features it has on. The screens are described in the [User Manual](../user-manual/commerce/set-up-your-store.md).
+**Commerce** → **Set Up Your Store** (`commerce/setup` in the admin, permission `SetUpStore`) takes a new owner from a blank site to a first paid order. Each commerce module adds the steps about what it does, so a store sees only the steps of the features it has on. The screens are described in the [User Manual](../user-manual/commerce/set-up-your-store.md).
 
 ## Setup steps
 

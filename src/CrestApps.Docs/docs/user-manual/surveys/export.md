@@ -11,7 +11,7 @@ Export responses from the **Survey Responses** report, or read them in data pipe
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Surveys > Survey Responses |
+| **Menu** | **Reports** → **Surveys** → **Survey Responses** |
 | **Permission** | View responses of own surveys, or View responses of all surveys |
 | **Feature** | Surveys and Reports; Data Pipelines for pipelines |
 
@@ -19,7 +19,7 @@ Export responses from the **Survey Responses** report, or read them in data pipe
 
 ## Export to CSV or Excel
 
-1. Go to **Reports > Surveys > Survey Responses**, or select **Results** in the survey's menu and switch to that report.
+1. Go to **Reports** → **Surveys** → **Survey Responses**, or select **Results** in the survey's menu and switch to that report.
 2. Pick the survey and the filters.
 3. Export to CSV or Excel. Each response is a row and each question a column, across every version. The export holds every response that matches the filters, not only the page on screen. On an identified survey it names who responded; on an anonymous survey it names nobody, shows days only, and has no rows until enough responses match (the survey's minimum group size).
 

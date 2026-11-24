@@ -10,7 +10,7 @@ Logic shows each respondent only what applies to them.
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then **Design** |
+| **Menu** | **Surveys** → **Surveys**, then **Design** |
 | **Permission** | Manage own surveys, or Manage all surveys |
 | **Feature** | Surveys |
 
@@ -33,7 +33,7 @@ In the page editor, under **Branches**, select **Add branch**, set the rule and 
 
 ## Endings
 
-In **Survey settings > Endings**, each ending has a **Title**, a **Message**, an optional **Redirect to**, an **Outcome** (**Completed** or **Screened out**) and **Use this ending when**. After the last page, the first ending whose rule holds is used, else the **Default ending**.
+In **Survey settings** → **Endings**, each ending has a **Title**, a **Message**, an optional **Redirect to**, an **Outcome** (**Completed** or **Screened out**) and **Use this ending when**. After the last page, the first ending whose rule holds is used, else the **Default ending**.
 
 ## Pools and random order
 

@@ -5,7 +5,7 @@ description: "The Tickets help desk: tickets as content items of any ticket type
 user_manual: user-manual/service-desk/index
 ---
 
-**Tickets** is a help desk. A ticket is a content item of a ticket type, filed under a desk (such as IT, HR or customer support) that decides who may see and work on it. The admin menu is **Service Desk**: **Tickets** and **Boards**, and for those who manage it, **Desks**, **Statuses**, **Priorities** and **Views**; its site settings, the notification templates and (with AI on) the AI profile for replies, are under **Settings > Service Desk**. A ticket's page shows its **Conversation** (replies and internal notes, `Reply` and `Note` entries) apart from its **History** (every change: status, assignee, priority, links and the rest, `Event` entries), each paged on its own. Replies, internal notes and every change are kept on the ticket's [timeline](./timeline); first response and resolution targets run on [service levels](./service-levels) counted in [business hours](./business-hours); new tickets go to a team's members through [Teams](./teams).
+**Tickets** is a help desk. A ticket is a content item of a ticket type, filed under a desk (such as IT, HR or customer support) that decides who may see and work on it. The admin menu is **Service Desk**: **Tickets** and **Boards**, and for those who manage it, **Desks**, **Statuses**, **Priorities** and **Views**; its site settings, the notification templates and (with AI on) the AI profile for replies, are under **Settings** → **Service Desk**. A ticket's page shows its **Conversation** (replies and internal notes, `Reply` and `Note` entries) apart from its **History** (every change: status, assignee, priority, links and the rest, `Event` entries), each paged on its own. Replies, internal notes and every change are kept on the ticket's [timeline](./timeline); first response and resolution targets run on [service levels](./service-levels) counted in [business hours](./business-hours); new tickets go to a team's members through [Teams](./teams).
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ user_manual: user-manual/service-desk/index
 
 | Page | Covers |
 | --- | --- |
-| [Desks and settings records](./tickets/desks-and-settings) | Desks and their settings, statuses and status categories, priorities and the priority matrix, saved views, **Settings > Service Desk** |
+| [Desks and settings records](./tickets/desks-and-settings) | Desks and their settings, statuses and status categories, priorities and the priority matrix, saved views, **Settings** → **Service Desk** |
 | [Ticket types and categories](./tickets/ticket-types-and-categories) | Ticket types and `TicketPartSettings`, the New ticket page, the Details card, categories and the questions that follow them |
 | [Assignment and life cycle](./tickets/assignment-and-life-cycle) | The ticket service, assignment and availability, the background tasks, planning values, presence, problems and incidents |
 | [Permissions](./tickets/permissions) | Desk permissions and view scopes, the other permissions, `TicketScopeFilter` |

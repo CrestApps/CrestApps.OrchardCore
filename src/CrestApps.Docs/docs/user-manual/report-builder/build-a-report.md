@@ -14,7 +14,7 @@ Watch the short video, then follow the steps below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder > New Report |
+| **Menu** | **Reports** → **Report Builder** → **New Report** |
 | **Permission** | Build reports and manage own custom reports and views |
 | **Feature** | Report Builder |
 
@@ -22,7 +22,7 @@ Watch the short video, then follow the steps below.
 
 ## Design a report
 
-1. Open **Reports > Report Builder** and click **New Report**.
+1. Open **Reports** → **Report Builder** and click **New Report**.
 2. The builder opens on **Design**. Give the report a title on the **Settings** tab, the first tab, where you can also add a description and pick the [group](share-and-run.md#organize-reports-into-groups) it is listed under.
 3. Click **Add data set**. Pick a data source on the left (or **All**), then click **Add** on the data set's card. Its fields appear in the **Data** pane on the left, grouped by part.
 4. Drag fields onto **Columns**. You can also click the column icon next to a field. Numbers are added as a **Sum** by default; text, dates and identifiers become dimensions.

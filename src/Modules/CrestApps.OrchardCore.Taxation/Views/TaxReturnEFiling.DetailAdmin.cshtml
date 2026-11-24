@@ -27,9 +27,10 @@
                         {
                             var status = submission.Status switch
                             {
+                                EFileSubmissionStatus.Submitted when submission.IsTest => T["Test: waiting for the agency's answer"],
                                 EFileSubmissionStatus.Submitted => submission.IsManual ? T["Waiting for the agency's answer to be recorded"] : T["Waiting for the agency's answer"],
-                                EFileSubmissionStatus.Accepted => T["Accepted"],
-                                EFileSubmissionStatus.Rejected => T["Rejected"],
+                                EFileSubmissionStatus.Accepted => submission.IsTest ? T["Accepted as a test: nothing was filed"] : T["Accepted"],
+                                EFileSubmissionStatus.Rejected => submission.IsTest ? T["Test rejected"] : T["Rejected"],
                                 EFileSubmissionStatus.Failed => T["Not sent"],
                                 _ => T["Created"],
                             };
@@ -116,18 +117,12 @@
         {
             <p class="hint mb-0">@Model.NotFileableReason</p>
         }
-        else if (Model.CanFile && Model.Options.Count > 0)
+        else if (Model.SubmitEditor is not null)
         {
             <form asp-action="Submit" asp-controller="EFiling" method="post" class="no-multisubmit">
                 <input type="hidden" name="targetType" value="@TaxationConstants.TaxReturnEFileTargetType" />
                 <input type="hidden" name="targetId" value="@taxReturn.ItemId" />
-                <div class="ocat-wrapper">
-                    <label for="eFileOption" class="ocat-label">@T["File as"]</label>
-                    <div class="ocat-end">
-                        <select id="eFileOption" name="option" asp-items="Model.Options" class="form-select"></select>
-                        <span class="hint">@T["The file format and the channel it goes through. The manual channel hands over the file to file on the agency's site."]</span>
-                    </div>
-                </div>
+                @await DisplayAsync(Model.SubmitEditor)
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
                         <button type="submit" class="btn btn-secondary">@T["File electronically"]</button>

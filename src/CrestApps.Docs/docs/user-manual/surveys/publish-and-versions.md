@@ -11,7 +11,7 @@ You change a survey in its draft. Publishing makes a numbered version that respo
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then **Design** |
+| **Menu** | **Surveys** → **Surveys**, then **Design** |
 | **Permission** | Publish, restore and close surveys, or Publish, restore and close own surveys for your own surveys |
 | **Feature** | Surveys |
 

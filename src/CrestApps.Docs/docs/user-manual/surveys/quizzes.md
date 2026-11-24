@@ -10,7 +10,7 @@ A quiz is a survey whose answers earn points.
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then **Design** |
+| **Menu** | **Surveys** → **Surveys**, then **Design** |
 | **Permission** | Manage own surveys, or Manage all surveys |
 | **Feature** | Surveys |
 
@@ -18,7 +18,7 @@ A quiz is a survey whose answers earn points.
 
 ## Turn on scoring
 
-1. Create the survey from the **Quiz** template, or open **Survey settings > Scoring** and tick **Score responses**.
+1. Create the survey from the **Quiz** template, or open **Survey settings** → **Scoring** and tick **Score responses**.
 2. Set the **Pass mark**, the **Default points**, and **Take points away for wrong choices** if you want penalties.
 3. Choose when **Answers are checked**: **At the end**, or **One at a time, then locked**.
 4. Save the draft.
@@ -46,5 +46,5 @@ If respondents may change a finished response (**Navigation**), they can't see t
 ## Time and attempts
 
 - **Time limit**: **Time to finish** in minutes, and **Submit unfinished responses when time runs out**. A page can also have its own **Time on the page**. A response submitted when time runs out, or when the survey closes, is scored on every page the respondent still had ahead of them, following the branches their answers chose: the pages they never reached score 0, so leaving after the first page doesn't pass the quiz.
-- **Attempts**: in **Access and settings > Limits**, set **In total** and **Wait between responses**.
+- **Attempts**: in **Access and settings** → **Limits**, set **In total** and **Wait between responses**.
 - **Accommodations**: give a person extra time, extra attempts or another window. Open the survey's menu, select **Accommodations**, then **Grant accommodation**, and enter a **Reason**.

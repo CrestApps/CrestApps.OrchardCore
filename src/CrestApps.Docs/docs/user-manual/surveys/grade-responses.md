@@ -10,7 +10,7 @@ Some answers, such as long texts and file uploads, need a person to score them.
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Grading |
+| **Menu** | **Surveys** → **Grading** |
 | **Permission** | Grade survey responses, or Grade responses of own surveys for your own surveys |
 | **Feature** | Surveys |
 
@@ -18,7 +18,7 @@ Some answers, such as long texts and file uploads, need a person to score them.
 
 ## Grade a response
 
-1. Go to **Surveys > Grading**. The list shows the responses waiting for a grader.
+1. Go to **Surveys** → **Grading**. The list shows the responses waiting for a grader.
 2. Open a response. For each answer, read the **Guidance**, enter the **Points** and a **Comment**.
 3. Enter **Overall feedback** and select **Save grades**.
 

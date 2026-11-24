@@ -10,7 +10,7 @@ description: The webhooks building block, both ways. Outbound, modules declare a
 | **Core** | `CrestApps.OrchardCore.Webhooks.Core` |
 | **Abstractions** | `CrestApps.OrchardCore.Webhooks.Abstractions` |
 | **Category** | Webhooks |
-| **Admin** | Configuration > Webhooks (permission **Manage webhooks**, `ManageCommerceWebhooks`) |
+| **Admin** | **Configuration** → **Webhooks** (permission **Manage webhooks**, `ManageCommerceWebhooks`) |
 | **Depends on** | Nothing |
 
 The Webhooks module owns webhooks in both directions: [outbound events](#outbound-webhooks) the site posts to other
@@ -129,7 +129,7 @@ AI Webhooks:
   nothing is rewritten on upgrade.
 - The `CrestApps.OrchardCore.Commerce.Webhooks` and `CrestApps.OrchardCore.AI.Webhooks` feature IDs are unchanged; both
   now depend on `CrestApps.OrchardCore.Webhooks`.
-- The admin moved from **Commerce > Webhooks** (`/Admin/commerce/webhooks`) to **Configuration > Webhooks**
+- The admin moved from **Commerce** → **Webhooks** (`/Admin/commerce/webhooks`) to **Configuration** → **Webhooks**
   (`/Admin/webhooks`). The permission keeps its name, `ManageCommerceWebhooks`, so the roles that had it keep it.
 - The AI webhook subscriptions and their pending deliveries are moved into the Webhooks feature once (the
   `AIWebhookIndexMigrations` step 2), with their ids and secrets, and the old pending rows are settled so they are never

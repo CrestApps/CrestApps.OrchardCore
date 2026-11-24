@@ -172,7 +172,7 @@ precedence than your `appsettings.json` — an environment variable such as
 `OrchardCore__CrestApps__AI__Connections__0__Name`, for instance — replaces the connection in that slot
 rather than adding one beside it.
 
-Assign deployments directly on profiles and interactions when you need explicit model selection. For tenant-wide fallbacks, configure **Settings -> Artificial Intelligence -> Default Deployments**.
+Assign deployments directly on profiles and interactions when you need explicit model selection. For tenant-wide fallbacks, configure **Settings** → **Artificial Intelligence** → **Default Deployments**.
 
 ## Implementing a Custom Provider
 

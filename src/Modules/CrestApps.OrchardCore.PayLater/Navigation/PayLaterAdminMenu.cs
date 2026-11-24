@@ -34,7 +34,7 @@ public sealed class PayLaterAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                    .Add(S["Offline payments"], S["Offline payments"].PrefixPosition(), payLater => payLater
+                    .Add(S["Offline Payments"], S["Offline Payments"].PrefixPosition(), payLater => payLater
                         .Id("payLaterSettings")
                         .Action("Index", "Admin", _settingsRouteValues)
                         .Permission(TransactionsPermissions.ManageTransactionSettings)

@@ -7,7 +7,7 @@
             <label asp-for="Frequency" class="ocat-label">@T["Filing frequency"]</label>
             <div class="ocat-end">
                 <select asp-for="Frequency" asp-items="Model.Frequencies" class="form-select"></select>
-                <span class="hint">@T["How often the business files a return under this registration. Its periods and due dates are listed under Commerce &gt; Taxation &gt; Tax returns."]</span>
+                <span class="hint">@T["How often the business files a return under this registration. Its periods and due dates are listed under Commerce &gt; Taxation &gt; Tax Returns."]</span>
                 <span asp-validation-for="Frequency" class="text-danger"></span>
             </div>
         </div>

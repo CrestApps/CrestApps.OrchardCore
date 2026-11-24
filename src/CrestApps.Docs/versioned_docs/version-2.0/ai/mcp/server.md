@@ -130,7 +130,7 @@ Use only for local development and testing.
 
 ## Getting started
 
-1. Enable **Model Context Protocol (MCP) Server** under **Tools -> Features**.
+1. Enable **Model Context Protocol (MCP) Server** under **Tools** → **Features**.
 2. Choose and configure an authentication mode.
 3. Grant the `AccessMcpServer` permission when you use `OpenId` with access checks enabled.
 4. Connect an MCP client to the SSE endpoint.

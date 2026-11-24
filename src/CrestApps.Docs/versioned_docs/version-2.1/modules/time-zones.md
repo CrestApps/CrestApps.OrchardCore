@@ -16,7 +16,7 @@ Provides friendly named time zone maps so editors can pick labels like `Eastern 
 
 The module adds:
 
-- an admin UI under **Tools -> Time Zones**
+- an admin UI under **Tools** → **Time Zones**
 - a catalog-backed store of unique named time zone maps
 - an `ITimeZoneSelectListProvider` override that replaces Orchard Core's default time zone select-list implementation
 - recipe import support through `TimeZoneMaps`
@@ -33,7 +33,7 @@ Each map stores:
 
 ## Admin management
 
-Enable the feature, then open **Configuration -> Time Zones**.
+Enable the feature, then open **Configuration** → **Time Zones**.
 
 Create one map entry for each friendly label you want to expose. Names are unique and immutable after creation. The admin list shows the mapped `TimeZoneId`, the author display name, and the latest created or modified timestamp as badges so editors can scan changes quickly.
 

@@ -30,8 +30,8 @@ When AI profiles are configured with data sources, the system needs to search an
 ## Getting Started
 
 1. Enable the **AI Data Sources - Elasticsearch** feature in the Orchard Core admin dashboard.
-2. Create an Elasticsearch knowledge base index via **Search > Indexes** using the "AI Knowledge Base Index" type.
-3. Configure an AI data source under **Artificial Intelligence > Data Sources**, selecting either an Orchard-managed Elasticsearch source index profile or the **Elasticsearch** external source type and the knowledge base index.
+2. Create an Elasticsearch knowledge base index via **Search** → **Indexes** using the "AI Knowledge Base Index" type.
+3. Configure an AI data source under **Artificial Intelligence** → **Data Sources**, selecting either an Orchard-managed Elasticsearch source index profile or the **Elasticsearch** external source type and the knowledge base index.
 4. For external Elasticsearch sources, choose the environment and authentication mode that matches the target cluster:
    - **Self-managed** with URL
    - **Cloud-hosted** with Elastic Cloud ID

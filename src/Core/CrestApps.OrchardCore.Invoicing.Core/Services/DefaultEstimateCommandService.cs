@@ -132,7 +132,7 @@ public sealed class DefaultEstimateCommandService : IEstimateCommandService
 
             if (number is null)
             {
-                result.Fail(S["The estimate number series keeps giving numbers other estimates already hold. Change its format under Settings > Business documents > Number series."]);
+                result.Fail(S["The estimate number series keeps giving numbers other estimates already hold. Change its format under Settings > Business Documents > Number Series."]);
 
                 return null;
             }

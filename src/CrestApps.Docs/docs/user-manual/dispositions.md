@@ -12,7 +12,7 @@ A **disposition** is the outcome of an activity: *No answer*, *Call back*, *Lead
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Dispositions |
+| **Menu** | **Interaction Center** → **Management** → **Dispositions** |
 | **Permission** | Manage dispositions |
 | **Feature** | Omnichannel Management |
 
@@ -26,7 +26,7 @@ A **disposition** is the outcome of an activity: *No answer*, *Call back*, *Lead
 
 <YouTube video="contact-center-dispositions" title="Video of creating three dispositions" start={60} end={118} />
 
-1. Open **Interaction Center > Management > Dispositions** and click **Add Disposition**.
+1. Open **Interaction Center** → **Management** → **Dispositions** and click **Add Disposition**.
 2. Enter a **Name** and an optional **Description**.
 3. Pick an **Outcome** if the disposition has a special meaning (see below). Names must be unique.
 4. Optionally, pick **Set lead status** (when the CRM features are on). When an activity that belongs to a lead is completed with this disposition, in any subject, the lead moves to that status. A subject action for the disposition that sets its own lead status takes precedence. It has no effect on contacts. Leave it on **Leave the status as it is** otherwise.

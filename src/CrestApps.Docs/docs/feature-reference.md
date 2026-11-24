@@ -9,7 +9,7 @@ user_manual:
 # Feature ID Reference
 
 Every feature ID declared by a module under `src/Modules`, grouped by the **Category** the manifest gives it.
-That category is the heading the feature appears under in **Tools → Features**, so this page reads in the same
+That category is the heading the feature appears under in **Tools** → **Features**, so this page reads in the same
 order as that screen.
 
 A module whose manifest declares no explicit `[Feature]` still contributes one feature whose ID is the module

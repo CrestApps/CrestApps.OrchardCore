@@ -13,7 +13,7 @@ A template is what a new survey starts from under **Start from**: its pages, que
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Templates |
+| **Menu** | **Surveys** → **Templates** |
 | **Permission** | Manage survey templates, or Manage all surveys |
 | **Feature** | Surveys |
 
@@ -28,14 +28,14 @@ You can change or remove any of these. A survey made from a template keeps its q
 ## Save a survey as a template
 
 1. Design a survey the way you want new surveys to start.
-2. In **Surveys > Surveys**, open the row menu of the survey and select **Save as a template**.
+2. In **Surveys** → **Surveys**, open the row menu of the survey and select **Save as a template**.
 3. Check the **Title**, **Description**, **Kind**, **Icon** and **Position**, then select **Save**.
 
 The template copies the survey's draft. Surveys you create from it get their own copy, with new ids.
 
 ## Add or change a template
 
-1. Go to **Surveys > Templates** and select **Add template**, or **Edit** on a row.
+1. Go to **Surveys** → **Templates** and select **Add template**, or **Edit** on a row.
 2. Enter a **Title** and, if you like, a **Technical name** (lowercase letters, digits and dashes) and a **Description**.
 3. Pick the **Kind** (**Survey**, **Quiz** or **Poll**), an **Icon** (a Font Awesome class) and a **Position**: templates with a lower position come first.
 4. For a new template, pick a survey under **Copy questions from**, or leave it empty to start with an empty page.

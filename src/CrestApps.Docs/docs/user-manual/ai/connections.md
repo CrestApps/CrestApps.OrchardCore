@@ -13,7 +13,7 @@ Before anyone can chat with an assistant, the site needs to reach an AI service,
 
 | | |
 | --- | --- |
-| **Menu** | Artificial Intelligence > Provider Connections; Artificial Intelligence > Deployments; Settings > Artificial Intelligence |
+| **Menu** | **Artificial Intelligence** → **Provider Connections**; **Artificial Intelligence** → **Deployments**; **Settings** → **Artificial Intelligence** |
 | **Permission** | Manage AI Provider Connections; Manage AI deployments; Manage AI profiles (for the settings) |
 | **Feature** | AI Services and AI Connection Management, plus a provider feature: OpenAI Chat, Azure OpenAI Chat, Azure AI Inference Chat or Ollama AI Chat |
 
@@ -31,7 +31,7 @@ A connection holds the address and the key the site uses to reach one AI service
 
 <YouTube video="ai-connections-deployments" title="Video of adding a connection" start={99} end={154} />
 
-1. Open **Artificial Intelligence > Provider Connections** and click **Add Connection**.
+1. Open **Artificial Intelligence** → **Provider Connections** and click **Add Connection**.
 2. In **Available Providers**, click **Add** on your provider.
 3. Fill in the fields below and click **Save**.
 
@@ -60,7 +60,7 @@ A deployment is one model you use through a connection, such as `gpt-4.1-mini` f
 
 <YouTube video="ai-connections-deployments" title="Video of adding chat and embedding deployments" start={154} end={213} />
 
-1. Open **Artificial Intelligence > Deployments** and click **Add Deployment**.
+1. Open **Artificial Intelligence** → **Deployments** and click **Add Deployment**.
 2. In **Available Providers**, click **Add** on the provider of the model.
 3. Fill in the fields below and click **Save**.
 
@@ -135,7 +135,7 @@ The estimate uses your prices, not your bill. Your provider's discounts and cred
 
 <YouTube video="ai-connections-deployments" title="Video of choosing the default models" start={258} end={299} />
 
-Open **Settings > Artificial Intelligence** and fill in the **Default Deployments** section. A profile or chat left on **Default** uses these. Each list only shows deployments with the right capability.
+Open **Settings** → **Artificial Intelligence** and fill in the **Default Deployments** section. A profile or chat left on **Default** uses these. Each list only shows deployments with the right capability.
 
 | Field | What it is used for |
 | --- | --- |

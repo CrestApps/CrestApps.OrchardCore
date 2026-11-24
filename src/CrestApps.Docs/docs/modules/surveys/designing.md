@@ -11,7 +11,7 @@ A survey's content is a `SurveyDefinition`. The draft (`Survey.Draft`) and every
 
 ## Templates
 
-A new survey starts from a template. Templates are `SurveyTemplate` catalog records (name, title, description, kind, icon, position and a `SurveyDefinition`), managed under **Surveys > Templates** (permission `ManageSurveyTemplates`). A new survey copies the template's definition with new ids; **Save as a template** on a survey's row menu copies its draft into a new template.
+A new survey starts from a template. Templates are `SurveyTemplate` catalog records (name, title, description, kind, icon, position and a `SurveyDefinition`), managed under **Surveys** → **Templates** (permission `ManageSurveyTemplates`). A new survey copies the template's definition with new ids; **Save as a template** on a survey's row menu copies its draft into a new template.
 
 The built-in `ISurveyTemplateProvider` offers **Blank survey** (from code, always there) and every stored template. Surveys seeds **Customer satisfaction**, **Net Promoter Score**, **Employee engagement**, **Event feedback**, **Quiz** and **Poll** through a migration that runs `Migrations/survey-templates.recipe.json` when the feature is first enabled; their names are constants in `SurveyTemplateNames`. Learning Surveys seeds **Course feedback** (`LearningSurveysConstants.CourseFeedbackTemplate`) the same way from its own migration recipe. A module adds its own templates with a `SurveyTemplates` recipe step in a migration, or offers templates from code with `services.AddSurveyTemplateProvider<T>()` ([Extending](./extending.md)). Code that starts from a template that was removed gets a blank survey.
 

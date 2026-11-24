@@ -107,7 +107,7 @@ The core **AI Memory** feature is enabled by dependency when one of those provid
 ### 2. Create a memory index
 
 1. Enable the corresponding Orchard Core search feature for your provider.
-2. Navigate to **Search → Indexing**.
+2. Navigate to **Search** → **Indexing**.
 3. Create a new index using either:
    - **AI Memory (Azure AI Search)**
    - **AI Memory (Elasticsearch)**
@@ -117,7 +117,7 @@ The selected embedding deployment is only configurable when the memory index pro
 
 ### 3. Configure global memory settings
 
-In the **Memory** section of **Settings → Artificial Intelligence**, configure:
+In the **Memory** section of **Settings** → **Artificial Intelligence**, configure:
 
 - **Index profile** — the master memory index used for storing memories
 - **Default top N** — the default number of matching memories returned by searches (1–20)
@@ -134,7 +134,7 @@ These are the `AIMemorySettings` site settings. Orchard Core's `Settings` recipe
 }
 ```
 
-Preemptive memory retrieval itself is controlled separately in the **General** section of **Settings → Artificial Intelligence** through **Enable preemptive memory retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
+Preemptive memory retrieval itself is controlled separately in the **General** section of **Settings** → **Artificial Intelligence** through **Enable preemptive memory retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
 
 :::warning
 After you start storing production memory data, avoid changing the configured master index unless you plan a full re-index.
@@ -162,7 +162,7 @@ This makes it easy to preconfigure memory behavior when you create reusable chat
 
 #### Chat Interactions
 
-Chat Interactions add a site setting to the **Memory** section of **Settings → Artificial Intelligence** (permission `ManageChatInteractionSettings`):
+Chat Interactions add a site setting to the **Memory** section of **Settings** → **Artificial Intelligence** (permission `ManageChatInteractionSettings`):
 
 - **Enable user memory**
 - Default: **enabled**

@@ -10,7 +10,7 @@ Each article ends with **Was this helpful?**. The **Knowledge Base Feedback** re
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Knowledge Base Feedback |
+| **Menu** | **Reports** → **Knowledge Base Feedback** |
 | **Permission** | View knowledge base feedback |
 | **Feature** | Knowledge Base and Reports |
 
@@ -25,7 +25,7 @@ Each article ends with **Was this helpful?**. The **Knowledge Base Feedback** re
 
 ## The report
 
-Go to **Reports > Knowledge Base Feedback**, choose the days, and select **Show**. The report shows:
+Go to **Reports** → **Knowledge Base Feedback**, choose the days, and select **Show**. The report shows:
 
 | Section | Shows |
 | --- | --- |

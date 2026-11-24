@@ -11,7 +11,7 @@ Sell what's booked for a date: a tour or a class with seats, a room or a rental 
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Bookings |
+| **Menu** | **Commerce** → **Bookings** |
 | **Permission** | Manage bookings |
 | **Feature** | Bookings (it needs Orders, Customers and Transactions) |
 
@@ -21,7 +21,7 @@ This video shows the three kinds of booking, the rules of a product, what buyers
 
 <YouTube video="bookings" title="Narrated video overview of Bookings" />
 
-To try it, run the **Bookings sample** recipe under **Configuration > Recipes**. It adds three products:
+To try it, run the **Bookings sample** recipe under **Configuration** → **Recipes**. It adds three products:
 
 - An Alpine Lakes Tour with four departures and a deposit.
 - A massage booked by the hour.
@@ -63,7 +63,7 @@ Under **Cancellation policy**, add a rule for each step (**Canceled at least (da
 
 <YouTube video="bookings" title="Video of managing a booking" start={331} end={375} />
 
-Buyers see the policy on the product's page. To cancel a booking, open it under **Commerce > Bookings**. **Cancel** shows how many days before the date it is, what the policy keeps, and what's refunded of what was paid. Change the refund to give back more or less, add a reason, and choose **Cancel the booking**. Here's what happens:
+Buyers see the policy on the product's page. To cancel a booking, open it under **Commerce** → **Bookings**. **Cancel** shows how many days before the date it is, what the policy keeps, and what's refunded of what was paid. Change the refund to give back more or less, add a reason, and choose **Cancel the booking**. Here's what happens:
 
 - The money goes back to how they paid.
 - What's still owed is let go.
@@ -72,17 +72,17 @@ Buyers see the policy on the product's page. To cancel a booking, open it under 
 
 ## Confirm each booking first
 
-Tick **Confirm each booking before it's paid** for bookings you accept one by one. The buyer's cart then offers **Request to book** instead of checkout. They send a message, their dates are held, and the request shows under **Commerce > Bookings** as *Requested*. To accept it, open its order and choose **Send quote**. The buyer gets a link to pay, and the booking is confirmed when they do.
+Tick **Confirm each booking before it's paid** for bookings you accept one by one. The buyer's cart then offers **Request to book** instead of checkout. They send a message, their dates are held, and the request shows under **Commerce** → **Bookings** as *Requested*. To accept it, open its order and choose **Send quote**. The buyer gets a link to pay, and the booking is confirmed when they do.
 
 ## Travelers
 
-Tick **Ask for each traveler's details at checkout** to ask for each person's details, such as their name as it is on their passport. Add the fields to the **Traveler** content type under **Content Definition > Content Types**. The details show on the booking's page.
+Tick **Ask for each traveler's details at checkout** to ask for each person's details, such as their name as it is on their passport. Add the fields to the **Traveler** content type under **Content Definition** → **Content Types**. The details show on the booking's page.
 
 ## Bookings
 
 <YouTube video="bookings" title="Video of the bookings list and calendar" start={305} end={331} />
 
-**Commerce > Bookings** lists bookings from today on. Filter by status, show any date, or search by buyer or product. **Calendar** shows each day's dates with what's taken.
+**Commerce** → **Bookings** lists bookings from today on. Filter by status, show any date, or search by buyer or product. **Calendar** shows each day's dates with what's taken.
 
 A paid booking is **Confirmed**, and the buyer gets an email with what they booked and when the rest is due. After the date, mark it **Complete**, or **No-show** if they didn't come.
 
@@ -102,11 +102,11 @@ When the **Calendars** feature is on too, every booking also goes on a **Booking
 
 - A held or requested booking shows as *Tentative*, and a booked one as *Confirmed*.
 - When a booking moves to other dates, its event moves too. When it's canceled or its hold runs out, the event is cancelled.
-- Each event shows the product and the buyer's name. It can't be changed on the calendar: change the booking under **Commerce > Bookings** instead.
+- Each event shows the product and the buyer's name. It can't be changed on the calendar: change the booking under **Commerce** → **Bookings** instead.
 
-The Bookings calendar is created with the first booking after Calendars is turned on. It's private: calendar administrators see it, and they can share it with your staff under **Calendars > Manage Calendars**. See [Calendars](../calendars/calendars.md) for how to share and view calendars.
+The Bookings calendar is created with the first booking after Calendars is turned on. It's private: calendar administrators see it, and they can share it with your staff under **Calendars** → **Manage Calendars**. See [Calendars](../calendars/calendars.md) for how to share and view calendars.
 
-On **Commerce > Bookings > Calendar**:
+On **Commerce** → **Bookings** → **Calendar**:
 
 - **Sync to calendar** adds every booking from today on to the Bookings calendar, or updates its event there. Use it once after turning Calendars on, for bookings made before. Running it again does no harm.
 - **Open in calendar** opens the Bookings calendar in the calendar view, on the same month. It appears once the Bookings calendar exists.

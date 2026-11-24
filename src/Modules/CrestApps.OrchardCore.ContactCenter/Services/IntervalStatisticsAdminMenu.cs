@@ -26,7 +26,7 @@ public sealed class IntervalStatisticsAdminMenu : AdminNavigationProvider
         builder
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .Add(S["Management"], S["Management"].PrefixPosition(), management => management
-                    .Add(S["Interval statistics"], S["Interval statistics"].PrefixPosition(), statistics => statistics
+                    .Add(S["Interval Statistics"], S["Interval Statistics"].PrefixPosition(), statistics => statistics
                         .Id("contactCenterIntervalStatistics")
                         .Action("Index", "IntervalStatistics", "CrestApps.OrchardCore.ContactCenter")
                         .Permission(ContactCenterPermissions.ViewReports)

@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Taxation.Migrations;
 /// Keeps rounding each line for a site that already charges tax. A new site rounds each tax and rate once on the summed
 /// amount (the default of <see cref="TaxCalculationSettings"/>); a site that had tax rules before this setting existed
 /// rounded each line, so it keeps doing that and no checkout total changes on upgrade. Staff can switch under
-/// Settings > Commerce > Tax calculation.
+/// Settings > Commerce > Tax Calculation.
 /// </summary>
 internal sealed class TaxCalculationSettingsMigrations : DataMigration
 {

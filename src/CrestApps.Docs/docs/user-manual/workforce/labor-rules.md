@@ -10,7 +10,7 @@ Labor rules keep schedules within the limits your teams must follow, such as the
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Labor Rules, Workforce > Rule Overrides, Workforce > Time Management > Predictability Pay |
+| **Menu** | **Workforce** → **Labor Rules**, **Workforce** → **Rule Overrides**, **Workforce** → **Time Management** → **Predictability Pay** |
 | **Permission** | Manage labor rules, Override labor rules, Approve predictability pay, Manage the whole workforce |
 | **Feature** | Workforce Labor Rules (it needs Workforce Shift Planning) |
 
@@ -22,7 +22,7 @@ Laws change and differ from place to place, so no rule set is set up for you. Ch
 
 ## Rule sets
 
-Open **Workforce > Labor Rules** and choose **Add rule set**.
+Open **Workforce** → **Labor Rules** and choose **Add rule set**.
 
 | Field | What it does |
 | --- | --- |
@@ -75,7 +75,7 @@ Claims of [open shifts](./shift-planning.md#open-shifts), [shift trades](./shift
 
 ## Rule overrides
 
-**Workforce > Rule Overrides** lists every broken rule that went ahead with an override, newest first: the rule, the worker, what was broken, the reason, who allowed it and when. Choose **Schedule** to open the schedule it was published in.
+**Workforce** → **Rule Overrides** lists every broken rule that went ahead with an override, newest first: the rule, the worker, what was broken, the reason, who allowed it and when. Choose **Schedule** to open the schedule it was published in.
 
 ## Predictability pay
 
@@ -89,7 +89,7 @@ Add the **Predictability pay** rule to a rule set to record a premium when the e
 
 Changes a worker asked for, such as trades, claims and time off, owe nothing.
 
-Open **Workforce > Time Management > Predictability Pay** to see what is owed for the teams you manage. Choose **Approve** to have it paid, or give the reason it isn't owed, such as an emergency closure, and choose **Waive**. Filter by status to see approved, waived and exported entries.
+Open **Workforce** → **Time Management** → **Predictability Pay** to see what is owed for the teams you manage. Choose **Approve** to have it paid, or give the reason it isn't owed, such as an emergency closure, and choose **Waive**. Filter by status to see approved, waived and exported entries.
 
 ## Permissions
 

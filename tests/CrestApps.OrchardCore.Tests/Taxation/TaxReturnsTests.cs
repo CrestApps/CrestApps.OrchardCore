@@ -281,6 +281,160 @@ public sealed class TaxReturnsTests
     }
 
     [Fact]
+    public async Task MarkFiled_RefusesADayBeforeThePeriodEnds_AndTakesItsLastDay()
+    {
+        // Arrange
+        await using var harness = await CreateHarnessAsync();
+        var user = CalendarTestHarness.User("filer", TaxationPermissions.FileTaxReturns.Name);
+        var prepared = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnService>().PrepareAsync(RegistrationId, "2026-10", annualReconciliation: false, user));
+
+        // Act
+        var (early, onLastDay) = await harness.RunAsync(async services =>
+        {
+            var service = services.GetRequiredService<ITaxReturnService>();
+            var taxReturn = await services.GetRequiredService<ITaxReturnManager>().FindByIdAsync(prepared.Return.ItemId);
+            var refused = await service.MarkFiledAsync(taxReturn, new DateOnly(2026, 10, 15), null, null, user);
+            var filed = await service.MarkFiledAsync(taxReturn, new DateOnly(2026, 10, 31), null, null, user);
+
+            return (refused, filed);
+        });
+
+        // Assert
+        Assert.False(early.Succeeded);
+        Assert.StartsWith("A return is filed once its period is over", Assert.Single(early.Errors), StringComparison.Ordinal);
+        Assert.True(onLastDay.Succeeded, string.Join(" ", onLastDay.Errors));
+        Assert.Equal((TaxReturnStatus.Filed, new DateOnly(2026, 10, 31)), (onLastDay.Return.Status, onLastDay.Return.FiledOn));
+    }
+
+    [Fact]
+    public async Task EFiling_ARunningPeriod_IsNotFileableYet()
+    {
+        // Arrange: today is 2 November, so November is still running.
+        await using var harness = await CreateHarnessAsync();
+        var user = CalendarTestHarness.User("filer", TaxationPermissions.FileTaxReturns.Name);
+        var prepared = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnService>().PrepareAsync(RegistrationId, "2026-11", annualReconciliation: false, user));
+
+        // Act
+        var reason = await harness.RunAsync(async services =>
+        {
+            var taxReturn = await services.GetRequiredService<ITaxReturnManager>().FindByIdAsync(prepared.Return.ItemId);
+
+            await services.GetRequiredService<ITaxReturnService>().MarkReadyAsync(taxReturn, user);
+
+            return (await services.GetRequiredService<IEFilingService>().FindTargetAsync(TaxationConstants.TaxReturnEFileTargetType, prepared.Return.ItemId)).NotFileableReason;
+        });
+
+        // Assert
+        Assert.StartsWith("The period ends on", reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TestSubmission_IsAcceptedWithoutFilingTheReturn_AndCarriesTheChoicesToTheFormatAndChannel()
+    {
+        // Arrange
+        await using var harness = await CreateHarnessAsync(AddGateway);
+        var user = CalendarTestHarness.User("filer", TaxationPermissions.FileTaxReturns.Name);
+        var gateway = harness.Services.GetRequiredService<GatewayTransport>();
+        var format = harness.Services.GetRequiredService<ChoicesFormat>();
+        var prepared = await PrepareReadyAsync(harness, user);
+
+        // Act
+        var test = await harness.RunAsync(async services =>
+        {
+            var eFiling = services.GetRequiredService<IEFilingService>();
+            var request = new EFileSubmissionRequest
+            {
+                Target = await eFiling.FindTargetAsync(TaxationConstants.TaxReturnEFileTargetType, prepared),
+                Format = ChoicesFormat.FormatName,
+                Transport = GatewayTransport.TransportName,
+                IsTest = true,
+            };
+
+            request.Options["DebitPayment"] = "true";
+            request.Options["DebitOn"] = " 2026-11-20 ";
+
+            return await eFiling.SubmitAsync(request, user);
+        });
+
+        var afterTest = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnManager>().FindByIdAsync(prepared).AsTask(), commit: false);
+
+        var real = await harness.RunAsync(async services =>
+        {
+            var eFiling = services.GetRequiredService<IEFilingService>();
+            var target = await eFiling.FindTargetAsync(TaxationConstants.TaxReturnEFileTargetType, prepared);
+
+            return await eFiling.SubmitAsync(target, ChoicesFormat.FormatName, GatewayTransport.TransportName, user);
+        });
+
+        var filed = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnManager>().FindByIdAsync(prepared).AsTask(), commit: false);
+
+        // Assert
+        Assert.True(test.Succeeded, string.Join(" ", test.Errors));
+        Assert.Equal((EFileSubmissionStatus.Accepted, true, "GW-1"), (test.Submission.Status, test.Submission.IsTest, test.Submission.ConfirmationNumber));
+        Assert.Equal("2026-11-20", test.Submission.Options["DebitOn"]);
+        Assert.Equal(("true", true), (format.Written[0].Options["DebitPayment"], format.Written[0].IsTest));
+        Assert.True(gateway.Sent[0].IsTest);
+        Assert.Equal(TaxReturnStatus.Ready, afterTest.Status);
+        Assert.True(real.Succeeded, string.Join(" ", real.Errors));
+        Assert.False(real.Submission.IsTest);
+        Assert.Empty(real.Submission.Options);
+        Assert.Equal((TaxReturnStatus.Filed, "GW-1"), (filed.Status, filed.ConfirmationNumber));
+    }
+
+    [Fact]
+    public async Task TestSubmission_IsRefusedByAChannelThatTakesNoTests()
+    {
+        // Arrange
+        await using var harness = await CreateHarnessAsync();
+        var user = CalendarTestHarness.User("filer", TaxationPermissions.FileTaxReturns.Name);
+        var prepared = await PrepareReadyAsync(harness, user);
+
+        // Act
+        var result = await harness.RunAsync(async services =>
+        {
+            var eFiling = services.GetRequiredService<IEFilingService>();
+
+            return await eFiling.SubmitAsync(new EFileSubmissionRequest
+            {
+                Target = await eFiling.FindTargetAsync(TaxationConstants.TaxReturnEFileTargetType, prepared),
+                Format = TaxReturnJsonEFileFormat.FormatName,
+                Transport = ManualEFileTransport.TransportName,
+                IsTest = true,
+            }, user);
+        });
+
+        // Assert
+        Assert.Equal(["The filing channel chosen does not take test submissions."], result.Errors);
+        Assert.Null(result.Submission);
+    }
+
+    [Fact]
+    public async Task ChannelSetUpForTesting_RecordsTheSubmissionAsATest_EvenWhenNoTestWasAsked()
+    {
+        // Arrange
+        await using var harness = await CreateHarnessAsync(AddGateway);
+        var user = CalendarTestHarness.User("filer", TaxationPermissions.FileTaxReturns.Name);
+        harness.Services.GetRequiredService<GatewayTransport>().AnswersAsTest = true;
+        var prepared = await PrepareReadyAsync(harness, user);
+
+        // Act
+        var result = await harness.RunAsync(async services =>
+        {
+            var eFiling = services.GetRequiredService<IEFilingService>();
+            var target = await eFiling.FindTargetAsync(TaxationConstants.TaxReturnEFileTargetType, prepared);
+
+            return await eFiling.SubmitAsync(target, ChoicesFormat.FormatName, GatewayTransport.TransportName, user);
+        });
+
+        var taxReturn = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnManager>().FindByIdAsync(prepared).AsTask(), commit: false);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        Assert.Equal((EFileSubmissionStatus.Accepted, true), (result.Submission.Status, result.Submission.IsTest));
+        Assert.Equal(TaxReturnStatus.Ready, taxReturn.Status);
+    }
+
+    [Fact]
     public async Task JsonFormat_RefusesAReturnWithoutARegistrationNumber()
     {
         // Arrange
@@ -293,16 +447,41 @@ public sealed class TaxReturnsTests
         };
 
         // Act
-        var payload = await format.WriteAsync(target, TestContext.Current.CancellationToken);
+        var payload = await format.WriteAsync(target, new EFileSubmission(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["The registration has no registration number: add the number the agency gave."], payload.Problems);
     }
 
-    private static Task<CalendarTestHarness> CreateHarnessAsync()
+    // Prepares October and marks it ready to file; returns its id.
+    private static async Task<string> PrepareReadyAsync(CalendarTestHarness harness, ClaimsPrincipal user)
+    {
+        var prepared = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnService>().PrepareAsync(RegistrationId, "2026-10", annualReconciliation: false, user));
+
+        await harness.RunAsync(async services =>
+        {
+            var taxReturn = await services.GetRequiredService<ITaxReturnManager>().FindByIdAsync(prepared.Return.ItemId);
+
+            Assert.True((await services.GetRequiredService<ITaxReturnService>().MarkReadyAsync(taxReturn, user)).Succeeded);
+        });
+
+        return prepared.Return.ItemId;
+    }
+
+    private static void AddGateway(IServiceCollection services)
+    {
+        services.AddSingleton<GatewayTransport>();
+        services.AddSingleton<IEFileTransport>(provider => provider.GetRequiredService<GatewayTransport>());
+        services.AddSingleton<ChoicesFormat>();
+        services.AddSingleton<IEFileFormat>(provider => provider.GetRequiredService<ChoicesFormat>());
+    }
+
+    private static Task<CalendarTestHarness> CreateHarnessAsync(Action<IServiceCollection> configure = null)
         => CalendarTestHarness.CreateAsync(
             services =>
             {
+                configure?.Invoke(services);
+
                 var registrations = new InMemoryMerchantTaxRegistrationStore();
 
                 registrations.CreateAsync(new MerchantTaxRegistration
@@ -396,6 +575,78 @@ public sealed class TaxReturnsTests
             FiledOn = context.FiledOn;
 
             return _generic.ComputeAsync(context, cancellationToken);
+        }
+    }
+
+    // A state gateway that answers at once: accepted, or, set up for acceptance testing, accepted as a test.
+    private sealed class GatewayTransport : IEFileTransport
+    {
+        public const string TransportName = "TestGateway";
+
+        public List<EFileSubmission> Sent { get; } = [];
+
+        public bool AnswersAsTest { get; set; }
+
+        public string Name
+            => TransportName;
+
+        [JsonIgnore]
+        public LocalizationSource DisplayName
+            => LocalizationSource.Create<GatewayTransport>("State gateway");
+
+        public bool IsManual
+            => false;
+
+        public bool SupportsTestSubmissions
+            => true;
+
+        public bool CanSend(EFileTarget target, string format)
+            => true;
+
+        public Task<EFileTransportResult> SendAsync(EFileSubmission submission, EFilePayload payload, CancellationToken cancellationToken = default)
+        {
+            Sent.Add(submission);
+
+            return Task.FromResult(new EFileTransportResult
+            {
+                Status = EFileSubmissionStatus.Accepted,
+                ConfirmationNumber = "GW-1",
+                FiledOn = new DateOnly(2026, 11, 2),
+                IsTest = AnswersAsTest,
+            });
+        }
+
+        public Task<EFileTransportResult> CheckAsync(EFileSubmission submission, CancellationToken cancellationToken = default)
+            => Task.FromResult(new EFileTransportResult { Status = EFileSubmissionStatus.Submitted });
+    }
+
+    // Remembers the choices and the test flag of each submission it writes.
+    private sealed class ChoicesFormat : IEFileFormat
+    {
+        public const string FormatName = "Choices";
+
+        public List<(Dictionary<string, string> Options, bool IsTest)> Written { get; } = [];
+
+        public string Name
+            => FormatName;
+
+        [JsonIgnore]
+        public LocalizationSource DisplayName
+            => LocalizationSource.Create<ChoicesFormat>("Choices");
+
+        public bool CanWrite(EFileTarget target)
+            => target?.Document is TaxReturn;
+
+        public Task<EFilePayload> WriteAsync(EFileTarget target, EFileSubmission submission, CancellationToken cancellationToken = default)
+        {
+            Written.Add((new Dictionary<string, string>(submission.Options), submission.IsTest));
+
+            return Task.FromResult(new EFilePayload
+            {
+                FileName = "return.txt",
+                ContentType = "text/plain",
+                Content = Encoding.UTF8.GetBytes("return"),
+            });
         }
     }
 

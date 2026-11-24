@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Taxation.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -128,6 +129,12 @@ public class TaxReturnDetailViewModel
     /// Gets or sets a value indicating whether the user may file the return and record its payments.
     /// </summary>
     public bool CanFile { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payment form, built from the drivers of <see cref="TaxReturnPaymentEntry"/>, or
+    /// <see langword="null"/> when no payment can be recorded.
+    /// </summary>
+    public IShape PaymentEditor { get; set; }
 }
 
 /// <summary>
@@ -169,4 +176,64 @@ public class TaxReturnEFilingViewModel
     /// Gets or sets a value indicating whether the user may file the return.
     /// </summary>
     public bool CanFile { get; set; }
+
+    /// <summary>
+    /// Gets or sets the submit form, built from the drivers of <see cref="EFileSubmissionRequest"/>, or
+    /// <see langword="null"/> when the return can't be filed now.
+    /// </summary>
+    public IShape SubmitEditor { get; set; }
+}
+
+/// <summary>
+/// The fields of a tax return's payment form.
+/// </summary>
+public class TaxReturnPaymentEntryViewModel
+{
+    /// <summary>
+    /// Gets or sets the amount, as typed, with a dot for decimals.
+    /// </summary>
+    public string Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the day it was paid.
+    /// </summary>
+    public DateOnly? PaidOn { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reference, such as the agency's payment number.
+    /// </summary>
+    public string Reference { get; set; }
+
+    /// <summary>
+    /// Gets or sets how it was paid, such as ACH debit or check.
+    /// </summary>
+    public string Method { get; set; }
+}
+
+/// <summary>
+/// The fields of the form that files a document electronically.
+/// </summary>
+public class EFileSubmissionRequestViewModel
+{
+    /// <summary>
+    /// Gets or sets the pair of format and channel chosen, as <c>format|channel</c>.
+    /// </summary>
+    public string Option { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the file goes to the agency's test system.
+    /// </summary>
+    public bool IsTest { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pairs of format and channel offered.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Options { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the names of the channels offered that take test submissions.
+    /// </summary>
+    [BindNever]
+    public IList<string> TestChannels { get; set; } = [];
 }

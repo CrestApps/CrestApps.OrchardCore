@@ -10,7 +10,7 @@ Adherence tells you whether contact center agents are doing what their published
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Contact Center Agents; Workforce > Adherence > Real-time, Exceptions, Rule Sets |
+| **Menu** | **Workforce** → **Contact Center Agents**; **Workforce** → **Adherence** → **Real-Time**, Exceptions, Rule Sets |
 | **Permission** | Manage workers; View adherence; Manage adherence rules and exceptions |
 | **Feature** | Workforce for Contact Center, Contact Center Sign-in Punches, Workforce Adherence |
 
@@ -20,7 +20,7 @@ Adherence tells you whether contact center agents are doing what their published
 
 An agent is scheduled, takes time off and is paid as a worker. A new agent gets a worker when it is added. For agents that existed before:
 
-1. Go to **Workforce > Contact Center Agents**. Agents without a worker come first.
+1. Go to **Workforce** → **Contact Center Agents**. Agents without a worker come first.
 2. Choose the **team for the new workers**, then **Create workers**.
 
 An agent and a worker are linked through their user account, so a worker who already has the agent's user is used as is.
@@ -31,7 +31,7 @@ With **Contact Center Sign-in Punches** turned on, an agent who signs in to the 
 
 ## Watch the real-time board
 
-Go to **Workforce > Adherence > Real-time**. Each agent in the teams you manage shows:
+Go to **Workforce** → **Adherence** → **Real-Time**. Each agent in the teams you manage shows:
 
 - what their schedule has them doing now, and next;
 - their contact center state, and for how long;
@@ -57,13 +57,13 @@ With the My Work portal on, an agent who has saved days has **Adherence** in the
 
 Some time shouldn't count against an agent, such as coaching or a phone outage.
 
-1. Select **Add exception** on the board, a worker's day or **Workforce > Adherence > Exceptions**.
+1. Select **Add exception** on the board, a worker's day or **Workforce** → **Adherence** → **Exceptions**.
 2. Choose the worker, the day and the times, in the worker's time zone, and the reason.
 3. Select **Add**. Compute the worker's day again if it is already saved.
 
 ## Set the rules
 
-Go to **Workforce > Adherence > Rule Sets** and choose **Add rule set**. Name it and choose its teams; their sub-teams use it too. For each activity:
+Go to **Workforce** → **Adherence** → **Rule Sets** and choose **Add rule set**. Name it and choose its teams; their sub-teams use it too. For each activity:
 
 | Field | What it does |
 | --- | --- |
@@ -78,4 +78,4 @@ A team without a rule set uses the defaults: work is available, offered work, bu
 
 ## Reports
 
-In **Reports > Report Builder**, the **Workforce** data source has **Adherence days** and **Adherence segments**. An AI profile with the **Who's out of adherence** tool can tell supervisors who's out of adherence now in their teams.
+In **Reports** → **Report Builder**, the **Workforce** data source has **Adherence days** and **Adherence segments**. An AI profile with the **Who's out of adherence** tool can tell supervisors who's out of adherence now in their teams.
