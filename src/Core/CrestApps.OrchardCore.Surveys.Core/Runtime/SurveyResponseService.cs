@@ -1088,16 +1088,9 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
     // Writes a respondent's change to an invitation (started, completed) on a copy read again now, not on the copy the
     // request loaded earlier: a send or a reminder may have committed its marks (sent time, reminder count, last reminder,
     // hold) since, and saving the earlier copy would write them back as they were (R8-M3, the respondent's side). Only the
-    // respondent's own fields are applied. The lead may switch this to SurveyInvitationStore.UpdateCurrentAsync.
-    private async Task UpdateInvitationAsync(SurveyInvitation loaded, Func<SurveyInvitation, bool> apply, CancellationToken cancellationToken)
-    {
-        var current = await _invitationStore.ReloadAsync(loaded.ItemId, cancellationToken);
-
-        if (current is not null && apply(current))
-        {
-            await _invitationStore.UpdateAsync(current, cancellationToken);
-        }
-    }
+    // respondent's own fields are applied.
+    private Task<SurveyInvitation> UpdateInvitationAsync(SurveyInvitation loaded, Func<SurveyInvitation, bool> apply, CancellationToken cancellationToken)
+        => _invitationStore.UpdateCurrentAsync(loaded, apply, cancellationToken: cancellationToken);
 
     // Whether a response keeps only the kind of its context (an anonymous survey's identifying context), so a lookup of
     // its respondent's accommodations can't match one granted for that context.
