@@ -217,7 +217,7 @@ public sealed class MailingListSignupController : Controller
         var target = Url.Content(back);
         var separator = target.Contains('?') ? '&' : '?';
 
-        return Redirect($"{target}{separator}{FormQueryName}={Uri.EscapeDataString(widgetId)}&{ResultQueryName}={Uri.EscapeDataString(code)}#mailing-list-signup-{widgetId}");
+        return LocalRedirect($"{target}{separator}{FormQueryName}={Uri.EscapeDataString(widgetId)}&{ResultQueryName}={Uri.EscapeDataString(code)}#mailing-list-signup-{widgetId}");
     }
 
     private async Task<bool> IsAccountEmailAsync(string email)

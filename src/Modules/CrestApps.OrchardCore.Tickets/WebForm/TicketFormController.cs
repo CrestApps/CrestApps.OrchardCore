@@ -217,8 +217,8 @@ public sealed class TicketFormController : Controller
         return ValueTask.CompletedTask;
     }
 
-    private RedirectResult Back(string url, string widgetId, string key, string value)
-        => Redirect(Location(Url, url, widgetId, key, value));
+    private LocalRedirectResult Back(string url, string widgetId, string key, string value)
+        => LocalRedirect(Location(Url, url, widgetId, key, value));
 
     private static string Location(IUrlHelper urlHelper, string url, string widgetId, string key, string value)
     {

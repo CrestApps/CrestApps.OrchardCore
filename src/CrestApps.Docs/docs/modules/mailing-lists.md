@@ -136,7 +136,7 @@ The module sends three [templated e-mail](templated-emails.md) kinds in the `Mai
 | `mailing-list-welcome` | Welcome | A person is subscribed and the list sends a welcome e-mail, or a welcome coupon was issued. |
 | `mailing-list-coupon-claim` | Claim the welcome coupon | A person is subscribed on a list without confirmation whose coupon waits for verification. Its link verifies the address and gives the code. |
 
-The site rewrites them under **Settings > Mailing Lists** (**E-mail templates**, the shared `TemplatedEmailTemplatesEditor`), kept in `MailingListEmailSettings` and served by `MailingListEmailTemplateSource`. A template reads:
+The site rewrites them under **Settings** → **Mailing Lists** (**E-mail templates**, the shared `TemplatedEmailTemplatesEditor`), kept in `MailingListEmailSettings` and served by `MailingListEmailTemplateSource`. A template reads:
 
 | Value | What it is |
 | --- | --- |
@@ -231,12 +231,12 @@ A list whose confirmation is **The provider sends its own confirmation e-mail** 
 
 | Screen | Route | Permission |
 | --- | --- | --- |
-| **Mailing lists > Lists** | `Admin/mailing-lists` | View the members of mailing lists |
+| **Mailing Lists** → **Lists** | `Admin/mailing-lists` | View the members of mailing lists |
 | A list's editor (**Add mailing list**, **Edit**) | `Admin/mailing-lists/create`, `Admin/mailing-lists/edit/{id}` | Manage mailing lists |
 | A list's members | `Admin/mailing-lists/{listId}/members` | View the members of mailing lists; bulk actions need Manage the members of mailing lists |
 | A member's page | `Admin/mailing-lists/{listId}/members/{id}` | View the members of mailing lists; **Send a new link**, **Unsubscribe** and **Erase** need Manage the members of mailing lists |
 | **Add member** | `Admin/mailing-lists/{listId}/add-member` | Manage the members of mailing lists |
-| **Settings > Mailing Lists** | `Admin/Settings/mailing-lists` | Manage the mailing lists settings |
+| **Settings** → **Mailing Lists** | `Admin/Settings/mailing-lists` | Manage the mailing lists settings |
 
 The lists and members render through Orchard Core's `AdminList` (rows from display drivers with `SummaryAdmin` and `SummaryAdminGrid` locations). The members list searches by e-mail address in the action bar, and filters in the toolbar by status (all, Subscribed, Pending, Unsubscribed, Cleaned, Not synced) and by how members joined (all sources, Sign-up widget, Workflow, Added by an admin, Import, The provider). Its bulk actions are **Unsubscribe**, **Send a new confirmation link**, **Retry sync** (on a list kept at an outside provider) and **Erase (privacy request)**. The editor is `IDisplayManager<MailingList>`, so other features add their own cards.
 

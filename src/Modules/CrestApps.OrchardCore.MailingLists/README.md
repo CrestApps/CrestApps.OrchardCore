@@ -19,7 +19,7 @@ Mailing lists people sign up to, with or without commerce: double opt-in by e-ma
 
 ## Installation
 
-Reference the `CrestApps.OrchardCore.MailingLists` package (or `CrestApps.OrchardCore.Cms.Core.Targets`), then turn on **Mailing Lists** under **Tools > Features**, and the sign-up widget and welcome coupon features when you need them. Set up the site's e-mail and its base URL (**Settings > General**): unsubscribe links are built on it.
+Reference the `CrestApps.OrchardCore.MailingLists` package (or `CrestApps.OrchardCore.Cms.Core.Targets`), then turn on **Mailing Lists** under **Tools** → **Features**, and the sign-up widget and welcome coupon features when you need them. Set up the site's e-mail and its base URL (**Settings** → **General**): unsubscribe links are built on it.
 
 ## Configuration
 
@@ -41,11 +41,11 @@ Optional, in `OrchardCore:CrestApps:MailingLists` (a tenant's own `appsettings.j
 }
 ```
 
-The e-mail templates are under **Settings > Mailing Lists** (permission `ManageMailingListSettings`).
+The e-mail templates are under **Settings** → **Mailing Lists** (permission `ManageMailingListSettings`).
 
 ## Usage
 
-1. Create a list under **Mailing lists > Lists**: its name, consent text, how sign-ups are confirmed, and where it lives.
+1. Create a list under **Mailing Lists** → **Lists**: its name, consent text, how sign-ups are confirmed, and where it lives.
 2. Add a **Mailing List Sign-up** widget to a page, or sign people up from a workflow with the **Subscribe to Mailing List** task.
 3. See and manage members on the list's **Members** page.
 

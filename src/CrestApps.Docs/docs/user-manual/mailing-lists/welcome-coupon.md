@@ -10,7 +10,7 @@ A mailing list can thank each new subscriber with a discount code, such as *15% 
 
 | | |
 | --- | --- |
-| **Menu** | Mailing lists > Lists, then **Edit** on a list |
+| **Menu** | **Mailing Lists** → **Lists**, then **Edit** on a list |
 | **Permission** | Manage mailing lists |
 | **Feature** | Mailing List Welcome Coupon (it needs Checkout) |
 
@@ -25,7 +25,7 @@ The codes are made from one of your [coupons](../commerce/coupons.md), and work 
 
 ## Turn on the welcome coupon
 
-1. On **Mailing lists > Lists**, click **Edit** on the list.
+1. On **Mailing Lists** → **Lists**, click **Edit** on the list.
 2. In the **Welcome coupon** card, tick **Give each new address a welcome coupon**.
 3. Fill in the fields below.
 4. Click **Save**.

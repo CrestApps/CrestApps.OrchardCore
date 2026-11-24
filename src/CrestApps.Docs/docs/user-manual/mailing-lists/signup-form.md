@@ -10,7 +10,7 @@ A **Mailing List Sign-up** widget puts a newsletter sign-up form on a page of yo
 
 | | |
 | --- | --- |
-| **Menu** | Design > Widgets (layers), or a page's flow |
+| **Menu** | **Design** → **Widgets** (layers), or a page's flow |
 | **Permission** | Manage widgets, or edit the page |
 | **Feature** | Mailing List Sign-up Widget |
 
@@ -18,7 +18,7 @@ A **Mailing List Sign-up** widget puts a newsletter sign-up form on a page of yo
 
 ## Add the form
 
-1. Create the list first, under **Mailing lists > Lists**. See [Mailing Lists](index.md).
+1. Create the list first, under **Mailing Lists** → **Lists**. See [Mailing Lists](index.md).
 2. Add a **Mailing List Sign-up** widget where visitors should find it (a layer, or a page's flow).
 3. Fill in the **Sign-up form** card (see below).
 4. Publish.

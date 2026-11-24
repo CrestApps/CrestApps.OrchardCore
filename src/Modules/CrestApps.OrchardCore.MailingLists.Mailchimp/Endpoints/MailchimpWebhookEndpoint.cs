@@ -98,13 +98,6 @@ internal static class MailchimpWebhookEndpoint
             return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
-        if (context.Request.ContentLength > MaxBodyLength)
-        {
-            receipt.Result = MailchimpTelemetry.WebhookRejectedBody;
-
-            return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
-        }
-
         var limiter = context.RequestServices.GetService<IProviderWebhookIngressLimiter>();
         ProviderWebhookIngressLease concurrencyLease = null;
         ProviderWebhookIngressLease rateLease = null;

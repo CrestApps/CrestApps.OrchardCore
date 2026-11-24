@@ -14,7 +14,7 @@ None. Mailing Lists and Marketing depend on it and turn it on. Orchard Core Reci
 
 ## Installation
 
-Reference the `CrestApps.OrchardCore.Consent` package (it comes with Mailing Lists, Marketing and `CrestApps.OrchardCore.Cms.Core.Targets`). The feature turns on with the features that need it. Set the site's base URL (**Settings > General**): the links are built on it.
+Reference the `CrestApps.OrchardCore.Consent` package (it comes with Mailing Lists, Marketing and `CrestApps.OrchardCore.Cms.Core.Targets`). The feature turns on with the features that need it. Set the site's base URL (**Settings** → **General**): the links are built on it.
 
 ## Configuration
 

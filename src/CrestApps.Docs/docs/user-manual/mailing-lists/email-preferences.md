@@ -48,4 +48,4 @@ The page also accepts the one-click unsubscribe that mail apps such as Gmail sen
 
 A link works for about 400 days. An old or damaged link shows *This link doesn't work any more.* and asks the person to use the link in a newer e-mail.
 
-The links need your site's base URL (**Settings > General**). Without it, mailing list e-mails go without the unsubscribe link, and Marketing campaigns don't go out.
+The links need your site's base URL (**Settings** → **General**). Without it, mailing list e-mails go without the unsubscribe link, and Marketing campaigns don't go out.

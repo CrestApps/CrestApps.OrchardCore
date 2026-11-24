@@ -10,7 +10,7 @@ Each mailing list has a list of its members: the people who signed up, with thei
 
 | | |
 | --- | --- |
-| **Menu** | Mailing lists > Lists, then **Members** on a list |
+| **Menu** | **Mailing Lists** → **Lists**, then **Members** on a list |
 | **Permission** | View the members of mailing lists (to see members), Manage the members of mailing lists (to add, unsubscribe and erase) |
 | **Feature** | Mailing Lists |
 
@@ -18,7 +18,7 @@ Each mailing list has a list of its members: the people who signed up, with thei
 
 ## See the members of a list
 
-1. On **Mailing lists > Lists**, click the list's name, or **Members**.
+1. On **Mailing Lists** → **Lists**, click the list's name, or **Members**.
 2. To find a person, type their address in **Search by e-mail address** and press Enter.
 3. To see only some members, choose in **Show**: **All members**, **Subscribed**, **Pending**, **Unsubscribed**, **Cleaned** or **Not synced**.
 4. To see only the people who joined one way, choose in **Joined through**: **All sources**, **Sign-up widget**, **Workflow**, **Added by an admin**, **Import** or **The provider**.
@@ -39,7 +39,7 @@ Each row shows the address and name, the status, when the status last changed, a
 | **Waiting for the provider** | The outside service's feature is off, or the service is not set up. The change waits on the site and goes to the service once it is back. Point at the badge to see why. |
 | **Not synced** | The last change didn't reach the outside service. Point at the badge to see why. |
 
-The **Mailing lists > Lists** page shows, for each list, how many people are subscribed, how many are pending, and how many are not synced.
+The **Mailing Lists** → **Lists** page shows, for each list, how many people are subscribed, how many are pending, and how many are not synced.
 
 ## A person's page
 
@@ -90,7 +90,7 @@ The site tells you how many memberships changed.
 
 With bulk import on, you can add many people who gave their consent elsewhere, such as the sign-ups of another system.
 
-1. On **Content > Import**, choose **Mailing list members**. You need **Manage the members of mailing lists**.
+1. On **Content** → **Import**, choose **Mailing list members**. You need **Manage the members of mailing lists**.
 2. Upload a spreadsheet with the columns **List** (the list's technical name or ID), **Email**, **Name** (optional) and **Status** (**Subscribed**, the default, or **Pending**).
 3. Start the import. See [Bulk Import and Export](../administration/import-and-export.md).
 
@@ -120,7 +120,7 @@ On a list kept at an outside service, each change is sent to the service at once
 
 1. On the list's members, choose **Not synced** in **Show**.
 2. Point at a **Not synced** badge, or open the person, to read the service's error.
-3. Fix the cause, such as the connection settings on **Settings > Mailing Lists**, or the list's settings at the service.
+3. Fix the cause, such as the connection settings on **Settings** → **Mailing Lists**, or the list's settings at the service.
 4. Tick the people, choose **Retry sync**, and confirm. Each person's current state is sent to the service again.
 
 The next change of a person is also sent again.

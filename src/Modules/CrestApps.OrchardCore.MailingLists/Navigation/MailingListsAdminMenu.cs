@@ -24,7 +24,7 @@ internal sealed class MailingListsAdminMenu : AdminNavigationProvider
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder.Add(S["Mailing lists"], S["Mailing lists"].PrefixPosition("8"), lists => lists
+        builder.Add(S["Mailing Lists"], S["Mailing Lists"].PrefixPosition("8"), lists => lists
             .Id("mailingLists")
             .AddClass("mailing-lists")
             .AddClass("icon-class-fa-solid")

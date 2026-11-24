@@ -6,7 +6,7 @@ The Mailchimp provider of mailing lists. A list whose provider is Mailchimp keep
 
 | Feature | Id | Description |
 | --- | --- | --- |
-| Mailing Lists Mailchimp | `CrestApps.OrchardCore.MailingLists.Mailchimp` | The `Mailchimp` provider, the **Mailchimp** card on **Settings > Mailing Lists** and on the list editor, and the webhook endpoint `mailing-lists/mailchimp/webhooks/{listId}/{secret}`. |
+| Mailing Lists Mailchimp | `CrestApps.OrchardCore.MailingLists.Mailchimp` | The `Mailchimp` provider, the **Mailchimp** card on **Settings** → **Mailing Lists** and on the list editor, and the webhook endpoint `mailing-lists/mailchimp/webhooks/{listId}/{secret}`. |
 
 ## Dependencies
 
@@ -16,12 +16,12 @@ The Mailchimp provider of mailing lists. A list whose provider is Mailchimp keep
 
 ## Installation
 
-Reference the `CrestApps.OrchardCore.MailingLists.Mailchimp` package (or `CrestApps.OrchardCore.Cms.Core.Targets`) and turn on **Mailing Lists Mailchimp** under **Tools > Features**. The site needs a base URL that Mailchimp can reach over HTTPS for the webhooks.
+Reference the `CrestApps.OrchardCore.MailingLists.Mailchimp` package (or `CrestApps.OrchardCore.Cms.Core.Targets`) and turn on **Mailing Lists Mailchimp** under **Tools** → **Features**. The site needs a base URL that Mailchimp can reach over HTTPS for the webhooks.
 
 ## Configuration
 
-1. Create an API key in Mailchimp (**Profile > Extras > API keys**) and save it as an Orchard Core text secret, such as `Mailchimp.ApiKey`.
-2. On **Settings > Mailing Lists**, choose the secret in **API key secret**, set **Server prefix** when the key doesn't end with its data center, save, and click **Test the connection**.
+1. Create an API key in Mailchimp (**Profile** → **Extras** → **API keys**) and save it as an Orchard Core text secret, such as `Mailchimp.ApiKey`.
+2. On **Settings** → **Mailing Lists**, choose the secret in **API key secret**, set **Server prefix** when the key doesn't end with its data center, save, and click **Test the connection**.
 
 Or in a recipe (create the secret with the `Secrets` step first):
 

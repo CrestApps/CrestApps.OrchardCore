@@ -702,7 +702,7 @@ OrchardCore__Default__CrestApps__MailingLists__ConfirmationCap=5
 | `ConfirmationCap` | 3 | How many confirmation and claim e-mails one address may be sent for one list within `ConfirmationCapMinutes`. 0 turns the cap off. |
 | `ConfirmationCapMinutes` | 15 | The window of `ConfirmationCap`, in minutes. |
 
-The Mailchimp connection is not configuration: it is a site setting (**Settings > Mailing Lists**) that names an Orchard Core secret. See [Mailing Lists](./modules/mailing-lists#configuration) and [Mailchimp](./modules/mailing-lists-mailchimp#set-it-up).
+The Mailchimp connection is not configuration: it is a site setting (**Settings** → **Mailing Lists**) that names an Orchard Core secret. See [Mailing Lists](./modules/mailing-lists#configuration) and [Mailchimp](./modules/mailing-lists-mailchimp#set-it-up).
 
 ## MCP and A2A
 

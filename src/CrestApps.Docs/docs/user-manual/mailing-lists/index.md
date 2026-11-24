@@ -10,7 +10,7 @@ A mailing list collects the e-mail addresses of people who want your news, such 
 
 | | |
 | --- | --- |
-| **Menu** | Mailing lists > Lists |
+| **Menu** | **Mailing Lists** → **Lists** |
 | **Permission** | View the members of mailing lists (to see the lists), Manage mailing lists (to add and change lists) |
 | **Feature** | Mailing Lists |
 
@@ -30,7 +30,7 @@ The site keeps every list and every person on it, with the proof of what they ag
 
 ## Create a list
 
-1. On **Mailing lists > Lists**, click **Add mailing list**.
+1. On **Mailing Lists** → **Lists**, click **Add mailing list**.
 2. Fill in the **General** card. Give the list a **Name** people see, such as *Weekly news*, and a **Technical name**, such as *weekly-news*.
 3. In the **Confirmation** card, choose how a sign-up is confirmed (see [How a sign-up is confirmed](#how-a-sign-up-is-confirmed)).
 4. In the **Provider** card, choose **Where the list lives**. Keep **This site** unless you use an outside service.
@@ -100,13 +100,13 @@ You can replace the e-mails the site writes with your own.
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Mailing Lists |
+| **Menu** | **Settings** → **Mailing Lists** |
 | **Permission** | Manage the mailing lists settings |
 | **Feature** | Mailing Lists |
 
 <AskYourAdmin />
 
-1. On **Settings > Mailing Lists**, find the **E-mail templates** card.
+1. On **Settings** → **Mailing Lists**, find the **E-mail templates** card.
 2. Optionally, fill in a **Layout**: HTML around every mailing list e-mail, such as your logo and address, with `{{ Content }}` where the e-mail goes.
 3. For each e-mail you want to change, tick **Use my template**, then write the **Subject** and the **Body**.
 4. Click **Save**.
@@ -140,14 +140,14 @@ On a list kept at an outside service, people can also unsubscribe there. The ser
 
 ## Delete a list
 
-On **Mailing lists > Lists**, click **Delete** in the list's actions, then confirm. The people on it are kept until you erase them, so a list deleted by mistake can be restored from a recipe without losing the proof of consent.
+On **Mailing Lists** → **Lists**, click **Delete** in the list's actions, then confirm. The people on it are kept until you erase them, so a list deleted by mistake can be restored from a recipe without losing the proof of consent.
 
 ## Troubleshooting
 
 | Problem | What to do |
 | --- | --- |
 | Nobody gets the e-mails | Your site's e-mail must be set up. Ask your administrator. |
-| The e-mails have no unsubscribe link | Your site needs its base URL (**Settings > General**). |
-| The list shows **Provider not available** | The outside service's feature is off. Sign-ups still work, and the changes wait on your site until the feature is on again; then they go to the service. Ask your administrator to turn the feature on under **Tools > Features**. |
+| The e-mails have no unsubscribe link | Your site needs its base URL (**Settings** → **General**). |
+| The list shows **Provider not available** | The outside service's feature is off. Sign-ups still work, and the changes wait on your site until the feature is on again; then they go to the service. Ask your administrator to turn the feature on under **Tools** → **Features**. |
 | The list shows **not synced** | Some changes didn't reach the outside service. See [Members](members.md#people-marked-not-synced). |
 | The list isn't on the sign-up form | Check that **Offer the list to people** is on, and that the form offers the list. |

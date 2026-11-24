@@ -27,9 +27,9 @@ The provider has the capabilities `ConfirmsAddresses`, `DeliversWelcomeOffer`, `
 
 ## Set it up
 
-1. In Mailchimp, create an API key (**Profile > Extras > API keys**). A Mailchimp API key gives full access to the account and never expires.
-2. Save it as an Orchard Core **text secret**, for example named `Mailchimp.ApiKey` (**Security > Secrets**, or the `Secrets` recipe step).
-3. On **Settings > Mailing Lists**, in the **Mailchimp** card, choose the secret in **API key secret**, and fill in **Server prefix** when the key doesn't end with its data center. Save, then click **Test the connection**.
+1. In Mailchimp, create an API key (**Profile** → **Extras** → **API keys**). A Mailchimp API key gives full access to the account and never expires.
+2. Save it as an Orchard Core **text secret**, for example named `Mailchimp.ApiKey` (**Security** → **Secrets**, or the `Secrets` recipe step).
+3. On **Settings** → **Mailing Lists**, in the **Mailchimp** card, choose the secret in **API key secret**, and fill in **Server prefix** when the key doesn't end with its data center. Save, then click **Test the connection**.
 4. On a list's editor, set **Where the list lives** to **Mailchimp**, save, and fill in the **Mailchimp** card: the audience, the tags, and **Register the webhook**.
 
 The connection is `MailchimpSettings` in the site settings, edited on the `mailing-lists` settings group (permission `ManageMailingListSettings`):
