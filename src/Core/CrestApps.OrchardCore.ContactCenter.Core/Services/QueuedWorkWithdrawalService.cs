@@ -160,6 +160,10 @@ public sealed class QueuedWorkWithdrawalService : IQueuedWorkWithdrawalService
         {
             reason = QueuedWorkWithdrawalReasons.For(activity.Status);
         }
+        else if (IsMovedOffDialer(queueItem, activity))
+        {
+            reason = QueuedWorkWithdrawalReasons.MovedOffDialer;
+        }
         else
         {
             return false;
@@ -171,6 +175,22 @@ public sealed class QueuedWorkWithdrawalService : IQueuedWorkWithdrawalService
 
         return true;
     }
+
+    /// <summary>
+    /// Whether a record waiting in a campaign's dialer queue belongs to an activity that is no longer dialer work.
+    /// </summary>
+    /// <remarks>
+    /// A record moved to an agent, or to another source, from a workflow or the activity screens is taken out of the
+    /// dialer queue when it moves. A record queued again a moment later -- the next attempt a disposition's "Try again"
+    /// queues once its completion commits -- would still be dialed, though the activity now says an agent calls it, so
+    /// routing drops it here before offering or dialing it. A callback waits under its own profile and its own source,
+    /// so it is left alone.
+    /// </remarks>
+    internal static bool IsMovedOffDialer(QueueItem queueItem, OmnichannelActivity activity)
+        => ContactCenterConstants.IsCampaignQueue(queueItem.QueueId) &&
+            !string.IsNullOrEmpty(queueItem.DialerProfileId) &&
+            !QueueCallbackDialerProfile.IsCallbackProfile(queueItem.DialerProfileId) &&
+            !DialerActivitySourceHelper.IsDialerSource(activity.Source);
 
     private async Task<QueuedWorkWithdrawalOutcome> WithdrawWaitingAsync(
         QueueItem queueItem,

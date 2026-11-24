@@ -48,7 +48,7 @@ You can use these in any field that takes Liquid, for example `{{ Workflow.Input
 | `InteractionId` | The call or conversation the event is about. |
 | `AggregateType`, `AggregateId` | The record the event is about, such as an activity. Activity tasks take `{{ Workflow.Input.AggregateId }}`. |
 | `ActorId`, `ActorType` | Who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform itself (`system`). |
-| `AgentId`, `AgentUserId` | Which agent the change is about, whoever made it. |
+| `AgentId`, `AgentUserId`, `AgentUserName` | Which agent the change is about, whoever made it, by agent profile, user id and user name. On a call the dialer placed for an agent, this is that agent: the one a Power or Progressive dial reserved before dialing, or the one a Predictive call was connected to once a person answered. A Predictive call nobody answered never had an agent, so these are empty. |
 | `SourceComponent` | The part of the platform that raised the event. |
 | `Data` | The event's own details, for example `{{ Workflow.Input.Data.PhoneNumber }}`. See the two events below. |
 
@@ -93,6 +93,27 @@ When the dialer dispositions a call, what happens next is up to the disposition.
 - **In a workflow.** Use the **Schedule Dialer Retry** task. It does the same, but the workflow decides when: set **Delay in minutes** (empty uses the profile's retry delay, and a shorter delay is raised to it). It ends with **Scheduled** (the next activity is in `{{ Workflow.Output.NextActivityItemId }}`), **Exhausted** when no attempt is left, or **Failed**.
 
 Use one or the other for the same disposition, or the contact gets two follow-up activities. A **Schedule Dialer Retry** that runs after the dialer already retried the call on its own finds that attempt and does not create another.
+
+### Decide who makes the next call
+
+The **Reroute Activity** task moves an activity between the dialer and an agent, or to another campaign or dialer profile, so a workflow decides how the contact is called next. Set **Next call by** to:
+
+- **An agent (manual call)**: the activity is taken out of the dialer queue and becomes a manual call. **Agent** names who makes it (Liquid, for example `{{ Workflow.Input.AgentUserName }}`); empty keeps the owner the activity has, or leaves it for any agent. **Source** is *Manual* unless you pick another.
+- **The dialer**: the activity is queued on its campaign under the **Dialer profile** you pick, and the dialer offers it to whichever agent signed in to the campaign is free.
+- **Same as before**: only the **Campaign** changes. A dialer record moves to the new campaign's dialer queue with its profile.
+
+**Campaign** is optional for the first two; empty keeps the activity's campaign. When the **Activity** is finished, as it is on **Activity disposition applied**, the task moves its open follow-ups: the activities for the same contact and subject that are not started yet, such as the next attempt a **Try Again** action just queued. When there is none, **Create the next call when none is waiting** creates the next attempt already moved, due after **Delay in minutes** (empty is due now). A record the dialer is dialing, or an agent is on a call for, is left as it is.
+
+The task ends with **Rerouted** (the activities are in `{{ Workflow.Output.ReroutedActivityItemIds }}`), **Nothing To Reroute** when the activity is finished, has no open follow-up and no next call was to be created, or **Failed**. Once an activity is moved to an agent the dialer never calls it, even when the subject flow queues its next attempt for the dialer a moment later.
+
+### Example: give the call back to the agent the dialer called for
+
+1. Create a workflow and add the **Contact Center Event** event with the event type **Activity disposition applied**.
+2. Add an **If/Else** task with the condition `input("Data").DispositionName == "Call back"`, and connect the event's **Matched** outcome to it.
+3. Add a **Reroute Activity** task. Leave **Activity** as `{{ Workflow.Input.Data.ActivityItemId }}`, set **Next call by** to *An agent (manual call)* and **Agent** to `{{ Workflow.Input.AgentUserName }}`, then connect the **If/Else** task's **True** outcome to it.
+4. Save the workflow.
+
+The call back is now that agent's manual activity, and the dialer does not call the contact again. To hand a record back to the dialer later, use **Reroute Activity** with **Next call by** set to *The dialer*.
 
 To retry a busy line after 15 minutes from a workflow:
 
@@ -154,6 +175,7 @@ A task only appears in the **Add Task** list when the feature it needs is on. Ev
 | **Hand Off to Live Agent** | Activity, Queue, Reason, Summary | Connected, Waiting In Queue, Callback Scheduled, Failed | Contact Center Work Distribution |
 | **Schedule Callback** | Destination, Delay (minutes), Campaign, Queue, Contact | Done, Failed | Contact Center Outbound Dialer |
 | **Schedule Dialer Retry** | Activity, Delay in minutes | Scheduled, Exhausted, Failed | Contact Center Outbound Dialer |
+| **Reroute Activity** | Activity, Next call by, Campaign, Dialer profile, Source, Agent, Create the next call when none is waiting, Delay in minutes | Rerouted, Nothing To Reroute, Failed | Omnichannel Activities (the dialer choice needs Contact Center Outbound Dialer) |
 | **Start Call Recording** / **Stop Call Recording** | Interaction | Done, Indeterminate, Failed | Contact Center Call Recording |
 
 <YouTube video="omnichannel-workflows" title="Video of every outcome a task can end in" start={294} end={337} />
@@ -172,6 +194,7 @@ The [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#automate
 - **Enqueue Activity** puts an activity on a queue for routing. **Priority** is optional; *Use queue default* keeps the queue's own priority. If the activity or the queue does not exist, the task ends in **Failed**.
 - **Hand Off to Live Agent** moves an automated (AI) conversation to people: a live call is put in a queue and offered to an agent, and a text conversation becomes a queue-owned conversation in the messaging workspace. Leave **Queue** empty to use the hand-off queue of the subject flow. **Reason** is shown to the agent who takes it, and **Summary** gives them the conversation so far. It ends in **Connected** (put straight through), **Waiting In Queue**, or **Callback Scheduled** (for example after hours), so you can handle each case differently. It does nothing to a call a person is already handling.
 - **Schedule Dialer Retry** creates the next attempt of a dialer call, as the **Try Again** action of a subject flow does: a new activity in the same campaign with the same dialer profile, due after the **Delay in minutes** and never sooner than the profile's retry delay. It ends in **Scheduled**, **Exhausted** when the contact has no attempts left, or **Failed**. See [Call a contact again](#call-a-contact-again).
+- **Reroute Activity** moves an activity, or the next call after a finished one, to an agent or to the dialer, or to another campaign or dialer profile. See [Decide who makes the next call](#decide-who-makes-the-next-call).
 - **Schedule Callback** schedules a callback to the **Destination** number. **Delay (minutes)** of 0 makes it due now. **Campaign**, **Queue** and **Contact** are optional.
 - **Start Call Recording** and **Stop Call Recording** end in **Indeterminate** when the provider may have made the change but the platform could not confirm it. Use that outcome to alert someone or check the recording, rather than assuming it worked.
 

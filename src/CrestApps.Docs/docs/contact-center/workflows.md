@@ -25,9 +25,9 @@ The activity offers two outcomes:
 - **Matched** - the published event matches the selected type, or **Any event type** is selected.
 - **Ignored** - the published event does not match the selected type.
 
-When a workflow starts, the triggering event is available on the workflow input, including `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId`, and `SourceComponent`. Task activities read these values through Liquid expressions such as `{{ Workflow.Input.InteractionId }}`.
+When a workflow starts, the triggering event is available on the workflow input, including `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId`, `AgentUserName`, and `SourceComponent`. Task activities read these values through Liquid expressions such as `{{ Workflow.Input.InteractionId }}`.
 
-`ActorId` and `ActorType` say who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform (`system`). `AgentId` (the agent profile) and `AgentUserId` (the agent's user) say which agent the change is about, whoever made it. A workflow that acts on the agent, such as **Set Agent Presence**, reads `{{ Workflow.Input.AgentUserId }}`: when the platform reserves an agent or starts their wrap-up, the actor is the platform, not the agent.
+`ActorId` and `ActorType` say who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform (`system`). `AgentId` (the agent profile), `AgentUserId` (the agent's user) and `AgentUserName` (that user's name) say which agent the change is about, whoever made it. When the event's payload names no agent, they come from the call the event is about: the agent a Power or Progressive dial reserved before dialing, or the agent a Predictive call was connected to once a person answered. A Predictive call nobody answered never had an agent, so they are empty. A workflow that acts on the agent, such as **Set Agent Presence**, reads `{{ Workflow.Input.AgentUserId }}`: when the platform reserves an agent or starts their wrap-up, the actor is the platform, not the agent.
 
 ### Event payloads used for follow-ups
 
@@ -50,6 +50,7 @@ Each task exposes its identifier fields as Liquid expressions so they can bind t
 | **Enqueue Activity** | `CrestApps.OrchardCore.ContactCenter.Queues` | Adds a CRM activity to a queue for routing, with an optional priority override. The target queue and the CRM activity must both exist; a resolved identifier that matches neither takes the **Failed** outcome instead of creating an orphan queue item. |
 | **Schedule Callback** | `CrestApps.OrchardCore.ContactCenter.Dialer` | Schedules a customer callback - for example, after an abandoned call - with an optional delay, campaign, queue, and contact. |
 | **Schedule Dialer Retry** | `CrestApps.OrchardCore.ContactCenter.Dialer` | Schedules the next attempt of a dialer activity, as the dialer's own retry would, but when the workflow decides. It does nothing when the dialer already retried the call. |
+| **Reroute Activity** | `CrestApps.OrchardCore.Omnichannel.Activities` (the dialer choice also needs `CrestApps.OrchardCore.ContactCenter.Dialer`) | Moves an activity to an agent (a manual call: it leaves the campaign's dialer queue, and routing never dials a record whose activity is no longer dialer work) or to the dialer under a dialer profile, or only to another campaign. A finished activity's open follow-ups for the same contact and subject are moved instead, and when it has none its next attempt can be created already moved. Writes the moved ids to `Workflow.Output.ReroutedActivityItemIds`. |
 | **Start Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Starts recording for a resolved interaction. |
 | **Stop Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Stops recording for a resolved interaction. |
 | **Place Call or Send Message** | `CrestApps.OrchardCore.ContactCenter` | Starts an automated omnichannel activity immediately, instead of waiting for the periodic automated-activities pass to pick it up. The activity's own channel selects the processor, so the same task places the outbound call for a Phone activity and sends the opening message for an SMS activity. |
@@ -68,6 +69,7 @@ Text inputs accept Liquid that resolves the identifier or value, so they can bin
 | **Enqueue Activity** | **Activity**, **Queue**, **Priority** (optional picker) | Done, Failed |
 | **Schedule Callback** | **Destination**, **Delay (minutes)** (number), **Campaign**, **Queue**, **Contact** (the last three optional) | Done, Failed |
 | **Schedule Dialer Retry** | **Activity**, **Delay in minutes** (number, optional: empty uses the dialer profile's retry delay, and a shorter delay is raised to it) | Scheduled, Exhausted, Failed |
+| **Reroute Activity** | **Activity**, **Next call by** (picker: an agent, the dialer, or same as before), **Campaign** (picker, optional), **Dialer profile** (picker), **Source** (picker), **Agent** (optional), **Create the next call when none is waiting** (checkbox), **Delay in minutes** (optional) | Rerouted, Nothing To Reroute, Failed |
 | **Start Call Recording** / **Stop Call Recording** | **Interaction** | Done, Indeterminate, Failed |
 | **Place Call or Send Message** | **Activity** | Done, Already Started, Failed |
 | **Hand Off to Live Agent** | **Activity**, **Queue**, **Reason**, **Summary** (the last three optional) | Connected, Waiting In Queue, Callback Scheduled, Failed |

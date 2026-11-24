@@ -13,6 +13,12 @@ public static class QueuedWorkWithdrawalReasons
     public const string ActivityDeleted = "ActivityDeleted";
 
     /// <summary>
+    /// The activity was moved off the dialer, to an agent or to work the dialer does not drive, while it waited in its
+    /// campaign's dialer queue.
+    /// </summary>
+    public const string MovedOffDialer = "MovedOffDialer";
+
+    /// <summary>
     /// Gets the reason for an activity that reached <paramref name="status"/>, such as <c>ActivityPurged</c>.
     /// </summary>
     /// <param name="status">The activity's status.</param>
