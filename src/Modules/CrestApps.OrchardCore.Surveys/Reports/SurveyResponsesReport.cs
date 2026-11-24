@@ -110,8 +110,10 @@ internal sealed class SurveyResponsesReport : IReport
             scope.ResultsScope.ExcludedStatuses = decision.HiddenStatuses.ToList();
 
             // A response whose joint key (collector, version, context kind) is in a group too small to show leaves the
-            // query itself, so the total and the pages leave it out too (SurveyAnonymousAttributes).
-            if (await _groups.HiddenGroupsAsync(scope.Survey, cancellationToken) is not { } hiddenGroups)
+            // query itself, so the total and the pages leave it out too (SurveyAnonymousAttributes). With a collector,
+            // version or context kind filter, a masked response (shown as "Other") leaves too, or the filter would tell
+            // its real collector, version or context kind (SurveyAnonymousGroups.ConcealedGroupsAsync).
+            if (await _groups.ConcealedGroupsAsync(scope.Survey, scope.ResultsScope, cancellationToken) is not { } hiddenGroups)
             {
                 return _data.TooFewResponses(scope);
             }

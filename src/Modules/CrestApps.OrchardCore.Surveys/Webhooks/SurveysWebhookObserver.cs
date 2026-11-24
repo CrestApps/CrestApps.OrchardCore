@@ -31,7 +31,10 @@ internal sealed class SurveysWebhookObserver : ISurveyResponseObserver, ISurveyO
             return;
         }
 
-        _sender.Publish(SurveyWebhookEvents.ResponseCompleted, response.ItemId + ":completed", await PayloadAsync(context.Survey, response));
+        if (await PayloadAsync(context.Survey, response) is { } payload)
+        {
+            _sender.Publish(SurveyWebhookEvents.ResponseCompleted, response.ItemId + ":completed", payload);
+        }
     }
 
     /// <inheritdoc />
@@ -42,7 +45,10 @@ internal sealed class SurveysWebhookObserver : ISurveyResponseObserver, ISurveyO
             return;
         }
 
-        _sender.Publish(SurveyWebhookEvents.ResponseGraded, response.ItemId + ":graded:" + response.ScoreHistory.Count, await PayloadAsync(context.Survey, response));
+        if (await PayloadAsync(context.Survey, response) is { } payload)
+        {
+            _sender.Publish(SurveyWebhookEvents.ResponseGraded, response.ItemId + ":graded:" + response.ScoreHistory.Count, payload);
+        }
     }
 
     /// <inheritdoc />
@@ -58,10 +64,12 @@ internal sealed class SurveysWebhookObserver : ISurveyResponseObserver, ISurveyO
         return Task.CompletedTask;
     }
 
+    // A response every output leaves out (SurveyRowAttributes.Hidden) publishes nothing: a payload with blank marks among
+    // payloads that carry them would still single it out (the one person on a link sent to them), so null.
     private async Task<Dictionary<string, object>> PayloadAsync(Survey survey, SurveyResponse response)
     {
         var (shows, timeZone) = await SurveyPayloadAnonymity.ReadAsync(_services, survey, response);
 
-        return SurveyWebhookPayloads.Response(survey, response, shows, timeZone);
+        return shows is { Hidden: true } ? null : SurveyWebhookPayloads.Response(survey, response, shows, timeZone);
     }
 }

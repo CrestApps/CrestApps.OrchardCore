@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using YesSql;
 
@@ -12,47 +13,69 @@ namespace CrestApps.OrchardCore.Surveys.Core.Access;
 public static class SurveyAnonymousNumbers
 {
     /// <summary>
-    /// Clears the number of every response of a survey, a page at a time.
+    /// Clears the number of every response of a survey, a page at a time: each page is saved through the response store
+    /// (with its concurrency check), written, and let go of before the next is read, so a large survey is never held in
+    /// memory at once.
     /// </summary>
-    /// <param name="session">The session the responses are saved in.</param>
+    /// <param name="responses">The response store the responses are saved through.</param>
     /// <param name="surveyId">The survey.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>How many responses lost their number.</returns>
-    public static async Task<int> ClearAsync(ISession session, string surveyId, CancellationToken cancellationToken = default)
+    public static async Task<int> ClearAsync(SurveyResponseStore responses, string surveyId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(responses);
 
         if (string.IsNullOrEmpty(surveyId))
         {
             return 0;
         }
 
-        var cleared = new HashSet<string>(StringComparer.Ordinal);
+        var session = responses.YesSqlSession;
 
-        while (true)
+        // Saving writes a response's index row again under a new id, so the walk stops at the last row there when it
+        // began: a saved response is never read twice.
+        var last = await session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId, collection: SurveysConstants.ResponsesCollectionName)
+            .OrderByDescending(index => index.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        var upToId = last?.Id ?? 0;
+        var afterId = 0L;
+        var cleared = 0;
+
+        while (afterId < upToId)
         {
-            // Each page is saved before the next is read (a query flushes the session first), so the responses saved no
-            // longer match; the ids already cleared stop the walk should a save not reach the index.
-            var page = (await session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Number != null, collection: SurveysConstants.ResponsesCollectionName)
-                .OrderBy(index => index.ItemId)
+            var from = afterId;
+            var rows = (await session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Number != null && index.Id > from && index.Id <= upToId, collection: SurveysConstants.ResponsesCollectionName)
+                .OrderBy(index => index.Id)
                 .Take(SurveysConstants.PageSize)
                 .ListAsync(cancellationToken))
-                .Where(response => !cleared.Contains(response.ItemId ?? string.Empty))
                 .ToList();
 
-            if (page.Count == 0)
+            if (rows.Count == 0)
             {
-                return cleared.Count;
+                break;
             }
 
-            foreach (var response in page)
+            afterId = rows[^1].Id;
+
+            var page = (await responses.GetAsync(rows.Select(row => row.ItemId).ToArray(), cancellationToken))
+                .Where(response => response is not null)
+                .ToList();
+
+            foreach (var response in page.Where(response => response.Number is not null))
             {
                 response.Number = null;
-                cleared.Add(response.ItemId ?? string.Empty);
-                await session.SaveAsync(response, collection: SurveysConstants.ResponsesCollectionName, cancellationToken: cancellationToken);
+                await responses.UpdateAsync(response, cancellationToken);
+                cleared++;
             }
 
             await session.FlushAsync(cancellationToken);
+
+            foreach (var response in page)
+            {
+                session.Detach(response, SurveysConstants.ResponsesCollectionName);
+            }
         }
+
+        return cleared;
     }
 }

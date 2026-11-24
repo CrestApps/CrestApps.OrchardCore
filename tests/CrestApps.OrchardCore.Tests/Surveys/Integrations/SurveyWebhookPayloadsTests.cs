@@ -35,7 +35,8 @@ public sealed class SurveyWebhookPayloadsTests
         // Assert
         Assert.Equal(hasIdentity, payload["userId"] is not null);
         Assert.Equal(hasIdentity, payload["respondent"] is not null);
-        Assert.Equal("Ticket:t1", payload["context"]);
+        // R8-Mi19: an anonymous response carries the context's kind only, never its id.
+        Assert.Equal(hasIdentity ? "Ticket:t1" : "Ticket", payload["context"]);
         Assert.DoesNotContain("10.0.0.1", json, StringComparison.Ordinal);
         Assert.DoesNotContain("never-sent", json, StringComparison.Ordinal);
     }

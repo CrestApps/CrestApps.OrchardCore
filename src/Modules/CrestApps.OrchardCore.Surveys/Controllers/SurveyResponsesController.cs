@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Core.Services;
@@ -188,22 +189,32 @@ public sealed class SurveyResponsesController : Controller
         // upkeep) without the status filter: nothing lists until the completed, non-test responses reach the minimum
         // group size, and a status too few real responses share is left out (all of the list when it is the status
         // filtered to), so filtering to Abandoned can't single out the one person who gave up.
+        //
+        // A response whose joint key (collector, version, context kind) is in a group too small to show isn't listed, as
+        // Details refuses it (SurveyAnonymousAttributes); it leaves the query, so the count and pages leave it out. With a
+        // Collector or Version filter, a masked response (shown as "Other") leaves too, or the filter would tell its real
+        // collector or version (SurveyAnonymousGroups.ConcealedGroupsAsync). The status counts leave out the same groups.
         var filtersStatus = Enum.TryParse<SurveyResponseStatus>(options.Status, out var shown);
-        var decision = await SurveyGroupGate.DecideAsync(survey, await SettingsAsync(), filtersStatus ? [shown] : [], async other => await CountRealAsync(surveyId, versionNumber, options, other, anonymous, labelMatches));
+        var narrowing = new SurveyResultsScope
+        {
+            CollectorId = options.Collector,
+            VersionNumbers = int.TryParse(options.Version, out _) ? [versionNumber] : [],
+        };
 
-        // A response whose joint key (collector, version, context kind) is in a group too small to show isn't listed,
-        // as Details refuses it (SurveyAnonymousAttributes); it leaves the query, so the count and pages leave it out.
-        IReadOnlyList<SurveyResponseGroup> hiddenGroups = anonymous && !decision.HidesAll
-            ? await _serviceProvider.GetRequiredService<SurveyAnonymousGroups>().HiddenGroupsAsync(survey, HttpContext.RequestAborted)
+        IReadOnlyList<SurveyResponseGroup> concealed = anonymous
+            ? await _serviceProvider.GetRequiredService<SurveyAnonymousGroups>().ConcealedGroupsAsync(survey, narrowing, HttpContext.RequestAborted)
             : [];
 
-        if (hiddenGroups is null)
+        SurveyGroupDecision decision;
+
+        if (concealed is null)
         {
-            decision = new SurveyGroupDecision { MinimumGroupSize = decision.MinimumGroupSize, HidesAll = true };
+            decision = new SurveyGroupDecision { MinimumGroupSize = await _serviceProvider.GetRequiredService<SurveyAnonymousGroups>().MinimumGroupSizeAsync(survey), HidesAll = true };
         }
         else
         {
-            query = query.Excluding(hiddenGroups);
+            decision = await SurveyGroupGate.DecideAsync(survey, await SettingsAsync(), filtersStatus ? [shown] : [], async other => await CountRealAsync(surveyId, versionNumber, options, other, anonymous, labelMatches, concealed));
+            query = query.Excluding(concealed);
         }
 
         if (decision.HidesAll)
@@ -723,7 +734,7 @@ public sealed class SurveyResponsesController : Controller
     private async Task<SurveySettings> SettingsAsync()
         => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
 
-    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options, SurveyResponseStatus status, bool anonymous, IReadOnlyList<string> labelMatches)
+    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options, SurveyResponseStatus status, bool anonymous, IReadOnlyList<string> labelMatches, IReadOnlyList<SurveyResponseGroup> concealed)
     {
         var statusName = status.ToString();
         var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == statusName && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
@@ -749,7 +760,9 @@ public sealed class SurveyResponsesController : Controller
             query = query.Where(index => index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures);
         }
 
-        return await query.CountAsync(HttpContext.RequestAborted);
+        // The groups the list leaves out don't count towards a status either, or a status would show on responses the
+        // list can't list.
+        return await query.Excluding(concealed).CountAsync(HttpContext.RequestAborted);
     }
 
     // An anonymous survey shows no response number (see SurveyAnonymity.ResponseLabel), so it can't be searched by one

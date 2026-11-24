@@ -44,7 +44,10 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
             return;
         }
 
-        var input = await InputAsync(context);
+        if (await InputAsync(context) is not { } input)
+        {
+            return;
+        }
 
         _trigger.Trigger(nameof(SurveyResponseCompletedEvent), input, context.Response.ItemId);
         _trigger.Trigger(nameof(SurveyResponseMatchesConditionEvent), new Dictionary<string, object>(input, StringComparer.Ordinal), context.Response.ItemId);
@@ -70,7 +73,10 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
             return;
         }
 
-        var input = await InputAsync(context);
+        if (await InputAsync(context) is not { } input)
+        {
+            return;
+        }
 
         _trigger.Trigger(nameof(SurveyResponseGradedEvent), input, context.Response.ItemId);
 
@@ -121,15 +127,20 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
             return;
         }
 
-        _trigger.Trigger(eventName, await InputAsync(context), context.Response.ItemId);
+        if (await InputAsync(context) is { } input)
+        {
+            _trigger.Trigger(eventName, input, context.Response.ItemId);
+        }
     }
 
     // The input of a response event: an anonymous response's collector, version and context follow the small-group rule
-    // of every other output, and its day is the site's.
+    // of every other output, and its day is the site's. A response every output leaves out (its group is too small to
+    // show, and the small groups too few together to hide in) starts no workflow: an event with blank marks among events
+    // that carry them would still single it out (the one person on a link sent to them), so null.
     private async Task<Dictionary<string, object>> InputAsync(SurveyResponseEventContext context)
     {
         var (shows, timeZone) = await SurveyPayloadAnonymity.ReadAsync(_services, context.Survey, context.Response);
 
-        return _inputBuilder.ForResponse(context, shows, timeZone);
+        return shows is { Hidden: true } ? null : _inputBuilder.ForResponse(context, shows, timeZone);
     }
 }

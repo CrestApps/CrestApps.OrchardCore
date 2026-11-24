@@ -80,6 +80,12 @@ public sealed class SurveyAnonymousAttributes
     public bool Hides(SurveyResponseGroup group)
         => MinimumGroupSize > 0 && !OtherIsLarge && !Shows(group);
 
-    private bool Shows(SurveyResponseGroup group)
-        => _counts.GetValueOrDefault(group) >= MinimumGroupSize;
+    /// <summary>
+    /// Gets whether the attributes of a group show as themselves: no minimum, or at least the minimum of the survey's
+    /// completed, non-test responses share the group. A group that doesn't show is masked as "Other" or hidden.
+    /// </summary>
+    /// <param name="group">The group.</param>
+    /// <returns><see langword="true"/> when it shows.</returns>
+    public bool Shows(SurveyResponseGroup group)
+        => MinimumGroupSize <= 0 || _counts.GetValueOrDefault(group) >= MinimumGroupSize;
 }

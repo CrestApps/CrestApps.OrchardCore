@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -52,7 +53,8 @@ internal sealed class SurveyPageVisitsDataSet : SurveyResponseChildDataSet
                 ["PageName"] = pages.GetValueOrDefault(pageId ?? string.Empty) ?? pageId,
                 ["EnteredUtc"] = TimeOf(response.SurveyId, visit.EnteredUtc),
                 ["LeftUtc"] = TimeOf(response.SurveyId, visit.LeftUtc),
-                ["Seconds"] = visit.LeftUtc is { } left && left >= visit.EnteredUtc ? (long)(left - visit.EnteredUtc).TotalSeconds : null,
+                // In whole minutes on an anonymous survey, as the response's own duration (SurveyAnonymity.ShownDuration).
+                ["Seconds"] = visit.LeftUtc is { } left && left >= visit.EnteredUtc ? (long)SurveyAnonymity.ShownDuration(left - visit.EnteredUtc, IsAnonymous(response.SurveyId)).TotalSeconds : null,
             };
         }
     }

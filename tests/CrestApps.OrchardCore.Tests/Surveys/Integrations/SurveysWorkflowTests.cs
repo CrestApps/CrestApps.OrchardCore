@@ -2,9 +2,13 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Surveys.Webhooks;
 using CrestApps.OrchardCore.Surveys.Workflows;
+using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using CrestApps.OrchardCore.Records;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -83,6 +87,62 @@ public sealed class SurveysWorkflowTests
         // can't be shown to be shared by enough people, so they are left out.
         Assert.Null(input["ContextKind"]);
         Assert.Null(input["CollectorId"]);
+    }
+
+    [Fact]
+    public async Task R8Mi19_AResponseInTheOneSmallGroup_StartsNoWorkflowAndSendsNoWebhook_WhileTheOthersDo()
+    {
+        // Arrange: an anonymous survey (minimum 5) with five completed responses on the main link and Bob's on a link sent
+        // to him, the only small group: an event with an empty collector would name him.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var results = await ResultsSqliteStore.CreateAsync();
+        var version = ResultsSqliteStore.Version("v1", "s1", 1, ResultsSqliteStore.ChoiceQuestion("q1", "q_sat", "1", "5"));
+
+        await using (var write = results.OpenSession())
+        {
+            foreach (var id in new[] { "a0", "a1", "a2", "a3", "a4", "bob" })
+            {
+                var stored = ResultsSqliteStore.Response(id, version, SurveyResponseStatus.Completed, new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc));
+                stored.CollectorId = id == "bob" ? "for-bob" : "main";
+                await write.SaveAsync(stored, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = results.OpenSession();
+        var services = new ServiceCollection()
+            .AddSingleton(new SurveyAnonymousGroups(new SurveyResultsQueries(session), new ServiceCollection().BuildServiceProvider()))
+            .BuildServiceProvider();
+        var trigger = new RecordingTrigger();
+        var sender = new RecordingSender();
+        var workflows = new SurveysWorkflowObserver(new SurveyWorkflowInputBuilder(Registry()), trigger, services);
+        var webhooks = new SurveysWebhookObserver(sender, services);
+
+        static SurveyResponseEventContext Event(string id, string collectorId)
+        {
+            var context = CompletedContext(AnonymityMode.Anonymous, "c1");
+            context.Survey.Access.MinimumGroupSize = 5;
+            context.Response.ItemId = id;
+            context.Response.CollectorId = collectorId;
+            context.Response.VersionNumber = 1;
+            context.Response.Context = null;
+
+            return context;
+        }
+
+        // Act
+        await workflows.CompletedAsync(Event("bob", "for-bob"));
+        await webhooks.CompletedAsync(Event("bob", "for-bob"));
+        await workflows.CompletedAsync(Event("a0", "main"));
+        await webhooks.CompletedAsync(Event("a0", "main"));
+
+        // Assert: Bob's response starts nothing and sends nothing; a main-link response does, with its collector.
+        Assert.NotEmpty(trigger.Events);
+        Assert.All(trigger.Events, item => Assert.Equal("a0", item.CorrelationId));
+        Assert.Equal("main", trigger.Events[0].Input[SurveyWorkflowInput.CollectorId]);
+        Assert.Null(trigger.Events[0].Input["ContextId"]);
+        Assert.Equal("a0:completed", Assert.Single(sender.Published).EventId);
     }
 
     [Fact]
@@ -321,6 +381,14 @@ public sealed class SurveysWorkflowTests
             [],
             null,
             []);
+
+    private sealed class RecordingSender : ISurveyWebhookSender
+    {
+        public List<(string EventName, string EventId, object Payload)> Published { get; } = [];
+
+        public void Publish(string eventName, string eventId, object payload)
+            => Published.Add((eventName, eventId, payload));
+    }
 
     private sealed class RecordingTrigger : ISurveyWorkflowTrigger
     {

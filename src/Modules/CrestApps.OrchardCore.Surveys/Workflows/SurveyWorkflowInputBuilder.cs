@@ -52,8 +52,9 @@ internal sealed class SurveyWorkflowInputBuilder
         input["VersionNumber"] = attributes.ShowsVersion ? response.VersionNumber : null;
         input[SurveyWorkflowInput.CollectorId] = attributes.ShowsCollector ? response.CollectorId : null;
         input[SurveyWorkflowInput.ContextKind] = attributes.ShowsContextKind ? response.Context?.Kind : null;
-        input["ContextId"] = attributes.ShowsContextKind ? response.Context?.Id : null;
-        input["Context"] = attributes.ShowsContextKind ? response.Context?.ToString() : null;
+        // An anonymous response carries its context kind only, never the id, as the data sets and the API.
+        input["ContextId"] = anonymous || !attributes.ShowsContextKind ? null : response.Context?.Id;
+        input["Context"] = anonymous || !attributes.ShowsContextKind ? null : response.Context?.ToString();
         input["UserId"] = anonymous ? null : response.UserId;
         input["Respondent"] = anonymous ? null : response.Respondent?.ToString();
         input["Status"] = response.Status.ToString();
