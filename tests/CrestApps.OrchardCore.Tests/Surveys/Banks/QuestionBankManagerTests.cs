@@ -417,6 +417,40 @@ public sealed class QuestionBankManagerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task R8Mi28_CheckImportAsync_ListsAChoiceMatchedByItsPlace_AndSavesNothing()
+    {
+        // Arrange: v1 is A;B;C.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _store.Store.CreateSession();
+        var manager = BanksTestStore.Manager(session);
+        var bank = await CreateBankAsync(manager, "letters-check");
+
+        await manager.ImportAsync(bank.ItemId, [Positional("src-q", "A", "A", "B", "C")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Act: check v2 (A;B;D, a typo fix by place) plus a new question.
+        var summary = await manager.CheckImportAsync(bank.ItemId, [Positional("src-q", "A", "A", "B", "D"), Imported("src-new", "Capital of Spain?")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Assert: the dry run reports what the import would do, and the bank is unchanged.
+        Assert.Equal(1, summary.Created);
+        Assert.Equal(1, summary.Updated);
+        var notice = Assert.Single(summary.Notices);
+        Assert.Contains("\"D\"", notice);
+        Assert.Contains("\"C\"", notice);
+
+        // The same session too: the dry run changed a copy, not the stored question the session tracks.
+        await using var other = _store.Store.CreateSession();
+
+        foreach (var reader in new[] { session, other })
+        {
+            var stored = await new BankQuestionStore(reader).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+            Assert.Equal(["A", "B", "C"], stored.Question.Choices.Select(choice => choice.Text));
+            Assert.Null(await new BankQuestionStore(reader).FindBySourceAsync(bank.ItemId, "src-new", cancellationToken));
+        }
+    }
+
+    [Fact]
     public void R7M10_KeepIds_BringsARetiredChoiceBackOnlyByItsText()
     {
         // Arrange: C was dropped earlier and kept, retired.

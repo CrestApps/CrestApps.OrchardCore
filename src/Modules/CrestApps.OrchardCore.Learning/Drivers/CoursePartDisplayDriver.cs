@@ -1,12 +1,16 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.ViewModels;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -28,6 +32,8 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
     private readonly IUserSearchService _userSearchService;
     private readonly LearningSecretStore _keyStore;
     private readonly ILocalClock _localClock;
+    private readonly ICourseStructureService _courseStructure;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -38,6 +44,8 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         IUserSearchService userSearchService,
         LearningSecretStore keyStore,
         ILocalClock localClock,
+        ICourseStructureService courseStructure,
+        IServiceProvider serviceProvider,
         IStringLocalizer<CoursePartDisplayDriver> stringLocalizer)
     {
         _editorOptions = editorOptions;
@@ -46,6 +54,8 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         _userSearchService = userSearchService;
         _keyStore = keyStore;
         _localClock = localClock;
+        _courseStructure = courseStructure;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
@@ -70,6 +80,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.PassMark = part.PassMark;
             model.MinimumGrade = ReadDecimal(part, LearningRuleNames.MinimumGrade, "Grade");
             model.MinimumMinutes = (int?)ReadDecimal(part, LearningRuleNames.MinimumTime, "Minutes");
+            model.NoGradeSource = (model.MinimumGrade is not null || model.PassMark is not null) && part.ContentItem.Id != 0 && !await HasGradeSourceAsync(part);
             model.RequireStaffApproval = part.CompletionCriteria.Any(rule => rule.Name == LearningRuleNames.StaffApproval);
             model.ApprovalRole = CompletionApprovers.RoleOf(part);
             model.NeverCompletes = part.NeverCompletes;
@@ -319,6 +330,38 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         }
 
         return categories;
+    }
+
+    // Whether anything in the course can give a score toward the course grade: an item that counts toward the grade with
+    // a weight, unless its survey is anonymous (an anonymous survey records the learner's completion only). Without one,
+    // every learner's course grade is empty, so the minimum course grade is met without a check and the pass mark
+    // decides nothing (see MinimumGradeCriterion and CourseGradeCalculator).
+    private async Task<bool> HasGradeSourceAsync(CoursePart part)
+    {
+        var outline = await _courseStructure.GetOutlineAsync(part.ContentItem);
+        var counting = (outline?.Entries ?? [])
+            .Where(entry => entry.Part?.Gradable == true && entry.Part.Weight > 0 && !string.IsNullOrEmpty(entry.Item?.ContentItemId))
+            .Select(entry => entry.Item.ContentItemId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (counting.Count == 0)
+        {
+            return false;
+        }
+
+        if (_serviceProvider.GetService<ISurveyManager>() is not { } surveys)
+        {
+            return true;
+        }
+
+        var owners = counting.Select(LearningSurveyContexts.Owner).ToList();
+        var anonymous = (await surveys.ListByOwnersAsync(owners))
+            .Where(survey => survey?.Access?.Anonymity == AnonymityMode.Anonymous && survey.Owner is not null)
+            .Select(survey => survey.Owner.Value.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return counting.Any(itemId => !anonymous.Contains(itemId));
     }
 
     private async Task<DateTime?> ToLocalAsync(DateTime? utc)

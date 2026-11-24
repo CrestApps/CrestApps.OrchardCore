@@ -28,7 +28,7 @@ Select questions in the list to retire, restore, move them (**Move selected ques
 
 1. In the bank, select **Import**.
 2. Choose the **File** and its **Format**. A spreadsheet (CSV or Excel, up to 10 MB) has the columns Id, Type, Question, Choices, Correct, Points, Tags, Difficulty and Feedback.
-3. Select **Check the file** to see what can be imported, then **Import**. A question whose Id is already in the bank is updated.
+3. Select **Check the file** to see what can be imported, how many questions it would add and update, and which choices or rows would take the place of earlier ones because their text changed. Then select **Import**. A question whose Id is already in the bank is updated.
 
 For QTI files from other learning and testing tools, see [Import QTI questions](./qti-import.md).
 

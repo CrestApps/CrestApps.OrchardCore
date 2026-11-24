@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 
@@ -19,6 +20,7 @@ public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
 {
     private readonly ILearningSurveyService _learningSurveys;
     private readonly ISurveyManager _surveyManager;
+    private readonly ILogger _logger;
     private readonly HashSet<string> _importing = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -26,10 +28,12 @@ public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
     /// </summary>
     /// <param name="learningSurveys">The Learning survey service.</param>
     /// <param name="surveyManager">The survey manager.</param>
-    public QuizPartHandler(ILearningSurveyService learningSurveys, ISurveyManager surveyManager)
+    /// <param name="logger">The logger.</param>
+    public QuizPartHandler(ILearningSurveyService learningSurveys, ISurveyManager surveyManager, ILogger<QuizPartHandler> logger)
     {
         _learningSurveys = learningSurveys;
         _surveyManager = surveyManager;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -86,6 +90,12 @@ public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
             && (!recreateMissing || await _surveyManager.FindByIdAsync(part.SurveyId) is not null))
         {
             return;
+        }
+
+        // A saved quiz whose survey is gone is healed with a new blank survey: the warning lets the lost survey be traced.
+        if (!string.IsNullOrEmpty(part.SurveyId))
+        {
+            _logger.LogWarning("The survey '{SurveyId}' of the quiz '{ContentItemId}' was not found, so the quiz was given a new blank survey.", part.SurveyId, part.ContentItem.ContentItemId);
         }
 
         var survey = await _learningSurveys.CreateOwnedSurveyAsync(part.ContentItem, SurveyKinds.Quiz, SurveyTemplateNames.Quiz);

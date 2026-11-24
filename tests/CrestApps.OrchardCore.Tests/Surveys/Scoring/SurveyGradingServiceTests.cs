@@ -184,6 +184,57 @@ public sealed class SurveyGradingServiceTests : IAsyncLifetime
         Assert.Null(response.Answers["q1"].ManualScore);
     }
 
+    [Fact]
+    public async Task R8M4_GradingAPendingAttempt_AfterRegradeVersions_KeepsTheRegradedScores()
+    {
+        // Arrange: version 2 fixes q1's key (1 point instead of 2), and Regrade versions scores the pending version-1
+        // attempt with it.
+        var fixedKey = ScoringDefinitions.Quiz(("q1", 1m), ("essay", 4m));
+        _versions.Versions["version2"] = new SurveyVersion { ItemId = "version2", SurveyId = "survey1", Number = 2, Definition = fixedKey };
+        await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version2", "lead", "Key fix"));
+        var regraded = await LoadAsync();
+        Assert.Equal("version2", regraded.ScoredWithVersionId);
+        Assert.Equal(1m, regraded.Answers["q1"].Score);
+        Assert.Equal(GradingStatus.Pending, regraded.Grading);
+
+        // Act: a grader grades the essay; the page posts the regraded q1 points unchanged.
+        var result = await RunAsync(service => service.GradeAsync("response1", new Dictionary<string, decimal> { ["q1"] = 1, ["essay"] = 3 }, null, null, "grader1"));
+
+        // Assert: q1 keeps the regraded score, as an automatic score, and only the essay has a "Graded" entry.
+        Assert.True(result.Succeeded);
+
+        var response = await LoadAsync();
+        Assert.Equal(1m, response.Answers["q1"].Score);
+        Assert.Null(response.Answers["q1"].ManualScore);
+        Assert.Equal(4m, response.Score);
+        Assert.Equal(5m, response.MaxScore);
+        Assert.Equal(GradingStatus.Graded, response.Grading);
+        Assert.Equal("essay", Assert.Single(response.ScoreHistory, change => change.Kind == ScoreChangeKind.Graded).QuestionId);
+
+        // Score again scores with the regraded key too.
+        Assert.True((await RunAsync(service => service.RegradeAsync("response1", "lead", "Check"))).Succeeded);
+        var rescored = await LoadAsync();
+        Assert.Equal(1m, rescored.Answers["q1"].Score);
+        Assert.Equal(4m, rescored.Score);
+    }
+
+    [Fact]
+    public async Task R8M4_RegradeVersionsWithTheOwnVersion_ScoresWithTheOwnKeyAgain()
+    {
+        // Arrange
+        var fixedKey = ScoringDefinitions.Quiz(("q1", 1m), ("essay", 4m));
+        _versions.Versions["version2"] = new SurveyVersion { ItemId = "version2", SurveyId = "survey1", Number = 2, Definition = fixedKey };
+        await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version2", "lead", "Key fix"));
+
+        // Act
+        await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version1", "lead", "Undo"));
+
+        // Assert
+        var response = await LoadAsync();
+        Assert.Null(response.ScoredWithVersionId);
+        Assert.Equal(2m, response.Answers["q1"].Score);
+    }
+
     private async Task<T> RunAsync<T>(Func<SurveyGradingService, Task<T>> operation)
     {
         await using var session = _store.Store.CreateSession();

@@ -1,3 +1,4 @@
+@using System.Globalization
 @using CrestApps.OrchardCore.Surveys.ViewModels
 
 @model GradeResponseViewModel
@@ -67,11 +68,11 @@
                             @if (!Model.CanChangeScores && !question.NeedsGrading)
                             {
                                 @* A read-only score is not posted, so saving never turns it into a grader's score. *@
-                                <input id="points-@question.QuestionId" type="number" class="form-control" value="@question.Points" readonly />
+                                <input id="points-@question.QuestionId" type="number" class="form-control" value="@question.Points?.ToString(CultureInfo.InvariantCulture)" readonly />
                             }
                             else
                             {
-                                <input id="points-@question.QuestionId" name="Points[@question.QuestionId]" type="number" min="0" max="@question.MaxPoints" step="any" class="form-control" value="@question.Points" />
+                                <input id="points-@question.QuestionId" name="Points[@question.QuestionId]" type="number" min="0" max="@question.MaxPoints.ToString(CultureInfo.InvariantCulture)" step="any" class="form-control" value="@question.Points?.ToString(CultureInfo.InvariantCulture)" />
                             }
                             <span class="input-group-text">@T["of {0}", question.MaxPoints]</span>
                         </div>
@@ -131,7 +132,8 @@
                 <div class="ocat-wrapper">
                     <label asp-for="NewScore" class="ocat-label">@T["New score"]</label>
                     <div class="ocat-end">
-                        <input asp-for="NewScore" type="number" min="0" max="@Model.Response.MaxScore" step="any" class="form-control" />
+                        @* A number input reads only invariant numbers: "2,5" in a decimal-comma culture would show as blank. *@
+                        <input asp-for="NewScore" type="number" min="0" max="@Model.Response.MaxScore?.ToString(CultureInfo.InvariantCulture)" step="any" class="form-control" value="@Model.NewScore?.ToString(CultureInfo.InvariantCulture)" />
                     </div>
                 </div>
                 <div class="ocat-wrapper">

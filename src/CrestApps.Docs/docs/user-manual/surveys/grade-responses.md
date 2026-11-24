@@ -19,7 +19,7 @@ Some answers, such as long texts and file uploads, need a person to score them.
 ## Grade a response
 
 1. Go to **Surveys** → **Grading**. The list shows the responses waiting for a grader.
-2. Open a response. For each answer, read the **Guidance**, enter the **Points** and a **Comment**. When changing a given score needs more than grading (on a Learning quiz, **Override grades**) and you don't have it, you can only give points to the answers that need grading: the points of the others, scored by the site or by another grader, are read-only.
+2. Open a response. For each answer, read the **Guidance**, enter the **Points** and a **Comment**. Points equal to the score the site gave stay the site's score, so a later **Score again** after a key fix still moves them; use **Change score** to set a total by hand. After **Regrade versions**, grading and **Score again** keep using the key the regrade used. When changing a given score needs more than grading (on a Learning quiz, **Override grades**) and you don't have it, you can only give points to the answers that need grading: the points of the others, scored by the site or by another grader, are read-only.
 3. Enter **Overall feedback** and select **Save grades**.
 
 With Surveys AI, **Suggest a score with AI** fills in a suggestion; you decide and save. Tick **I used AI help to grade this answer** when you used it.

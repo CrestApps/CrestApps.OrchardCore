@@ -76,7 +76,8 @@ public sealed class LegacyCourseSurveyUpgradeTests
         var handler = new CrestApps.OrchardCore.Learning.Surveys.Core.CourseSurveyPartHandler(
             Moq.Mock.Of<CrestApps.OrchardCore.Learning.Core.Surveys.ILearningSurveyService>(),
             Moq.Mock.Of<global::OrchardCore.ContentManagement.Metadata.IContentDefinitionManager>(),
-            manager.Object);
+            manager.Object,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<CrestApps.OrchardCore.Learning.Surveys.Core.CourseSurveyPartHandler>.Instance);
 
         // Act
         await handler.UpdatingAsync(new global::OrchardCore.ContentManagement.Handlers.UpdateContentContext(item), item.GetOrCreate<CourseSurveyPart>());

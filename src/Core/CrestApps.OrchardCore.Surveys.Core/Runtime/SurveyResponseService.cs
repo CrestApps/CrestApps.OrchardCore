@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Formulas;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
+using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Telemetry;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -1857,7 +1858,8 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             {
                 var scoringStarted = Stopwatch.GetTimestamp();
 
-                scoring.Score(definition, response);
+                // A reopened response that Regrade versions scored with another version's key keeps that key.
+                scoring.Score(await SurveyScoringKeys.ScoringDefinitionAsync(_versionCache, response, version, definition, cancellationToken), response);
                 SurveysTelemetry.ScoringDuration.Record(Stopwatch.GetElapsedTime(scoringStarted).TotalSeconds);
             }
             else if (definition.Scoring?.Enabled != true)

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Surveys.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
@@ -15,13 +16,16 @@ namespace CrestApps.OrchardCore.Learning.Surveys.Core;
 /// restored from the audit trail after its removal purged the survey) gets a new one when it is next saved. An import
 /// keeps the survey id it brings, also when it updates an item the site has: a deployment may run its content step before
 /// the Surveys step that brings the survey, and a new survey made then would leave the item pointing at a blank survey
-/// while the imported one is orphaned.
+/// while the imported one is orphaned. That holds for an item of the first Learning release whose questions are still in
+/// the legacy part too: the part stays until the survey arrives. A saved item whose survey is gone is healed with a new
+/// blank survey, and a warning is logged, so the lost survey can be traced.
 /// </summary>
 public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPart>
 {
     private readonly ILearningSurveyService _learningSurveys;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISurveyManager _surveyManager;
+    private readonly ILogger _logger;
     private readonly HashSet<string> _importing = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -30,14 +34,17 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
     /// <param name="learningSurveys">The Learning survey service.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="surveyManager">The survey manager.</param>
+    /// <param name="logger">The logger.</param>
     public CourseSurveyPartHandler(
         ILearningSurveyService learningSurveys,
         IContentDefinitionManager contentDefinitionManager,
-        ISurveyManager surveyManager)
+        ISurveyManager surveyManager,
+        ILogger<CourseSurveyPartHandler> logger)
     {
         _learningSurveys = learningSurveys;
         _contentDefinitionManager = contentDefinitionManager;
         _surveyManager = surveyManager;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -103,6 +110,19 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
 
         if (survey is null)
         {
+            // A new or imported item keeps the survey id it brings while that survey isn't there yet (an import may run
+            // its Surveys step after the content step), with its legacy part: a blank survey made now would take the
+            // legacy questions and leave the imported survey orphaned.
+            if (!string.IsNullOrEmpty(part.SurveyId) && !recreateMissing)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(part.SurveyId))
+            {
+                _logger.LogWarning("The survey '{SurveyId}' of the course item '{ContentItemId}' was not found, so the item was given a new blank survey.", part.SurveyId, part.ContentItem.ContentItemId);
+            }
+
             var (kind, template) = await KindAndTemplateAsync(part.ContentItem.ContentType);
 
             survey = await _learningSurveys.CreateOwnedSurveyAsync(part.ContentItem, kind, template);

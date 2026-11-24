@@ -90,6 +90,9 @@ public sealed class LearningSurveyAccessProvidersTests
         Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Abandoned }));
         Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Completed, Grading = GradingStatus.NotScored }));
         Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Voided, Grading = GradingStatus.Graded }));
+
+        // R8-Mi29: a test attempt never reaches course progress, so removing it changes no given grade.
+        Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { IsTest = true, Status = SurveyResponseStatus.Completed, Grading = GradingStatus.Graded }));
     }
 
     [Theory]

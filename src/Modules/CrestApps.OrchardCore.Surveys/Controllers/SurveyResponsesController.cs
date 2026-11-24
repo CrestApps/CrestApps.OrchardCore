@@ -269,6 +269,17 @@ public sealed class SurveyResponsesController : Controller
                 new SelectListItem(S["Void"], VoidAction),
                 new SelectListItem(S["Delete"], DeleteAction),
             ];
+
+            // Each row offers Void and Delete only when the user may remove that response.
+            var rowActions = _serviceProvider.GetRequiredService<SurveyResponseRowActions>();
+
+            foreach (var item in items)
+            {
+                if (await MayRemoveAsync(survey, item))
+                {
+                    rowActions.RemovableIds.Add(item.ItemId);
+                }
+            }
         }
 
         var routeData = new RouteData();
@@ -315,6 +326,7 @@ public sealed class SurveyResponsesController : Controller
 
         var actor = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var done = 0;
+        var refused = 0;
 
         foreach (var responseId in itemIds?.Take(SurveysConstants.PageSize) ?? [])
         {
@@ -322,8 +334,15 @@ public sealed class SurveyResponsesController : Controller
 
             // Nobody voids or deletes their own response, which would give a failed attempt back; a given grade changes
             // only for whoever may change scores.
-            if (response is null || response.SurveyId != survey.ItemId || SurveyOwnWork.IsOwn(User, response) || !await MayRemoveAsync(survey, response))
+            if (response is null || response.SurveyId != survey.ItemId)
             {
+                continue;
+            }
+
+            if (!await MayRemoveAsync(survey, response))
+            {
+                refused++;
+
                 continue;
             }
 
@@ -340,7 +359,13 @@ public sealed class SurveyResponsesController : Controller
             }
         }
 
+        // The notice counts only the responses that changed, and says how many were left alone and why.
         await _notifier.SuccessAsync(H["{0} responses were changed.", done]);
+
+        if (refused > 0)
+        {
+            await _notifier.WarningAsync(H["{0} responses were left as they were: they are your own, or they carry a grade you aren't allowed to change.", refused]);
+        }
 
         return RedirectToAction(nameof(Index), new { id });
     }
@@ -426,7 +451,8 @@ public sealed class SurveyResponsesController : Controller
             ShowsVersion = attributes.ShowsVersion,
             Questions = await _shapes.BuildReviewAsync(survey, version, response, ReviewShows.All),
             Extensions = await _displayManager.BuildDisplayAsync(response, _updateModelAccessor.ModelUpdater, "DetailAdmin"),
-            CanDelete = await AuthorizeAsync(survey, SurveyOperation.DeleteResponses),
+            // Void and Delete show only when the user may use them on this response.
+            CanDelete = await AuthorizeAsync(survey, SurveyOperation.DeleteResponses) && await MayRemoveAsync(survey, response),
         };
 
         foreach (var page in version.Definition.Pages)
@@ -465,16 +491,16 @@ public sealed class SurveyResponsesController : Controller
             return Forbid();
         }
 
-        if (!await MayRemoveAsync(survey, response))
-        {
-            return Forbid();
-        }
-
         if (SurveyOwnWork.IsOwn(User, response))
         {
             await _notifier.ErrorAsync(H["You can't void your own response. Someone else must."]);
 
             return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (!await MayRemoveAsync(survey, response))
+        {
+            return Forbid();
         }
 
         var result = await _responses.VoidAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier), reason);
@@ -513,16 +539,16 @@ public sealed class SurveyResponsesController : Controller
             return Forbid();
         }
 
-        if (!await MayRemoveAsync(survey, response))
-        {
-            return Forbid();
-        }
-
         if (SurveyOwnWork.IsOwn(User, response))
         {
             await _notifier.ErrorAsync(H["You can't delete your own response. Someone else must."]);
 
             return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (!await MayRemoveAsync(survey, response))
+        {
+            return Forbid();
         }
 
         await _responses.DeleteAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -748,12 +774,14 @@ public sealed class SurveyResponsesController : Controller
         => _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures, collection: SurveysConstants.ResponsesCollectionName)
             .CountAsync(HttpContext.RequestAborted);
 
-    // Voiding or deleting a completed, scored response changes a given grade: every score change check must allow it
-    // (with Learning Assessments, Override grades on a survey a course item owns).
+    // Nobody voids or deletes their own response, which would give a failed attempt back. Voiding or deleting a
+    // completed, scored response changes a given grade: every score change check must allow it (with Learning
+    // Assessments, Override grades on a survey a course item owns).
     private async Task<bool> MayRemoveAsync(Survey survey, SurveyResponse response)
-        => !SurveyScoreChangeChecks.RemovingChangesGivenScore(response)
+        => !SurveyOwnWork.IsOwn(User, response)
+            && (!SurveyScoreChangeChecks.RemovingChangesGivenScore(response)
             || _serviceProvider.GetService<SurveyScoreChangeChecks>() is not { } checks
-            || await checks.AllowAsync(User, survey, response, HttpContext.RequestAborted);
+            || await checks.AllowAsync(User, survey, response, HttpContext.RequestAborted));
 
     private async Task<bool> AuthorizeAsync(Survey survey, SurveyOperation operation)
     {

@@ -25,11 +25,19 @@ internal sealed class SurveyCourseGradeDisplayDriver : DisplayDriver<Survey>
 
     /// <inheritdoc />
     public override IDisplayResult Edit(Survey survey, BuildEditorContext context)
-        => Initialize<SurveyCourseGradeViewModel>("SurveyCourseGrade_Edit", async model =>
+    {
+        // A survey no course item owns has no course grade to warn about: no content query runs for it.
+        if (!LearningSurveyContexts.IsContentOwner(survey?.Owner))
+        {
+            return null;
+        }
+
+        return Initialize<SurveyCourseGradeViewModel>("SurveyCourseGrade_Edit", async model =>
         {
             var item = await _learningSurveys.FindLatestOwnerItemAsync(survey);
 
             model.Gradable = item?.TryGet<CourseItemPart>(out var part) == true && part.Gradable;
             model.Anonymous = survey.Access?.Anonymity == AnonymityMode.Anonymous;
         }).Location("Content:4").OnGroup(SurveysConstants.AccessEditorGroupId);
+    }
 }

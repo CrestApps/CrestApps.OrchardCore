@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -245,7 +244,7 @@ public sealed class SurveyGradingService : ISurveyGradingService
                 continue;
             }
 
-            var (definition, kept) = WithKeyOf(version.Definition, keyVersion.Definition);
+            var (definition, kept) = SurveyScoringKeys.WithKeyOf(version.Definition, keyVersion.Definition);
 
             foreach (var question in kept)
             {
@@ -286,6 +285,10 @@ public sealed class SurveyGradingService : ISurveyGradingService
                     var wasGrading = response.Grading;
 
                     ScoreKeeping(definition, response, kept);
+
+                    // Every later scoring of the response (grading a pending attempt, Score again, finishing it again)
+                    // scores with this key, so none of them brings the old key back.
+                    response.ScoredWithVersionId = string.Equals(keyVersion.ItemId, version.ItemId, StringComparison.Ordinal) ? null : keyVersion.ItemId;
 
                     var change = new ScoreChange
                     {
@@ -441,8 +444,9 @@ public sealed class SurveyGradingService : ISurveyGradingService
         var survey = await _surveys.FindByIdAsync(response.SurveyId, cancellationToken);
         var version = await _versionCache.GetAsync(response.SurveyVersionId, cancellationToken);
 
-        // A preview response may run the draft, which has no stored version.
-        var definition = version?.Definition ?? survey?.Draft;
+        // A preview response may run the draft, which has no stored version. A response that Regrade versions scored
+        // with another version's key is scored with that key again.
+        var definition = await SurveyScoringKeys.ScoringDefinitionAsync(_versionCache, response, version, version?.Definition ?? survey?.Draft, cancellationToken);
 
         if (definition is null)
         {
@@ -491,73 +495,6 @@ public sealed class SurveyGradingService : ISurveyGradingService
                 answer.AutoScore = auto;
             }
         }
-    }
-
-    private static (SurveyDefinition Definition, IReadOnlyList<SurveyQuestion> Kept) WithKeyOf(SurveyDefinition definition, SurveyDefinition keyDefinition)
-    {
-        var copy = JsonSerializer.Deserialize<SurveyDefinition>(JsonSerializer.Serialize(definition));
-        var kept = new List<SurveyQuestion>();
-        var keys = keyDefinition.Pages
-            .SelectMany(page => page.Questions)
-            .Where(question => !string.IsNullOrEmpty(question?.Id))
-            .GroupBy(question => question.Id, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-
-        foreach (var question in copy.Pages.SelectMany(page => page.Questions))
-        {
-            // Only questions of an unchanged type take the other version's key: a changed type scores differently.
-            if (question?.Id is null
-                || !keys.TryGetValue(question.Id, out var key)
-                || !string.Equals(key.ControlType, question.ControlType, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            // A key that names choices or rows this version does not have (a bank imported again before choices kept
-            // their ids) would score every answer 0, so the question keeps its own key and its scores.
-            if (!KeyFits(question, key.Scoring))
-            {
-                kept.Add(question);
-
-                continue;
-            }
-
-            question.Scoring = JsonSerializer.Deserialize<SurveyQuestionScoring>(JsonSerializer.Serialize(key.Scoring ?? new SurveyQuestionScoring()));
-        }
-
-        return (copy, kept);
-    }
-
-    private static bool KeyFits(SurveyQuestion question, SurveyQuestionScoring key)
-    {
-        if (key is null)
-        {
-            return true;
-        }
-
-        // Only ids the question lists can be checked: a yes/no question keys "true" or "false", and a question whose
-        // choices come from another one has none of its own.
-        var choiceIds = (question.Choices ?? []).Where(choice => !string.IsNullOrEmpty(choice?.Id)).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);
-        var rowIds = (question.Rows ?? []).Where(row => !string.IsNullOrEmpty(row?.Id)).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-
-        if (choiceIds.Count > 0)
-        {
-            var named = (key.CorrectChoiceIds ?? [])
-                .Concat(key.ChoicePoints?.Keys ?? Enumerable.Empty<string>())
-                .Concat(key.Pairs?.Values ?? Enumerable.Empty<string>());
-
-            if (named.Any(id => !string.IsNullOrEmpty(id) && !choiceIds.Contains(id)))
-            {
-                return false;
-            }
-        }
-
-        if (rowIds.Count > 0 && (key.Pairs?.Keys ?? Enumerable.Empty<string>()).Any(id => !string.IsNullOrEmpty(id) && !rowIds.Contains(id)))
-        {
-            return false;
-        }
-
-        return true;
     }
 
     private static SurveyResponseResult Fail(SurveyErrorCode error, SurveyResponse response)

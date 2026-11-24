@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -13,14 +14,17 @@ namespace CrestApps.OrchardCore.Surveys.Drivers;
 public sealed class SurveyResponseDisplayDriver : DisplayDriver<SurveyResponse>
 {
     private readonly SurveyRespondentNames _names;
+    private readonly SurveyResponseRowActions _rowActions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyResponseDisplayDriver"/> class.
     /// </summary>
     /// <param name="names">The respondent names, which also give the label staff see for a response.</param>
-    public SurveyResponseDisplayDriver(SurveyRespondentNames names)
+    /// <param name="rowActions">The responses the user may void and delete, filled by the list.</param>
+    public SurveyResponseDisplayDriver(SurveyRespondentNames names, SurveyResponseRowActions rowActions)
     {
         _names = names;
+        _rowActions = rowActions;
     }
 
     /// <inheritdoc />
@@ -52,6 +56,10 @@ public sealed class SurveyResponseDisplayDriver : DisplayDriver<SurveyResponse>
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Started:5"),
             View("SurveyResponse_Buttons_SummaryAdmin", response).Location("Actions:5"),
-            View("SurveyResponse_ActionsMenu_SummaryAdmin", response).Location("ActionsMenu:10"));
+            // Void and Delete show only on a response the user may remove (not their own, and a given grade only for
+            // whoever may change scores), so nobody is offered an action that ends on the access denied page.
+            View("SurveyResponse_ActionsMenu_SummaryAdmin", response)
+                .Location("ActionsMenu:10")
+                .RenderWhen(() => Task.FromResult(_rowActions.RemovableIds.Contains(response.ItemId))));
     }
 }

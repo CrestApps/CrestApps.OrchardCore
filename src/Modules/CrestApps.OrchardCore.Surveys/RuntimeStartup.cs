@@ -42,6 +42,7 @@ public sealed class RuntimeStartup : StartupBase
         services.TryAddScoped<SurveyRunnerShapes>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILoginFormEvent, SurveyResumeCookiesLoginEvent>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILogoutFormEvent, SurveyResumeCookiesLogoutEvent>());
+        services.TryAddScoped<SurveyResponseRowActions>();
         services.AddDisplayDriver<SurveyResponse, SurveyResponseDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SurveyDeadlineBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SurveyMaintenanceBackgroundTask>());

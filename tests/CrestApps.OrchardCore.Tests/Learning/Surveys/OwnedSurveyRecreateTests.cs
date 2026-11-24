@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
@@ -25,7 +26,7 @@ public sealed class OwnedSurveyRecreateTests
     {
         // Arrange
         var (item, learningSurveys, manager) = Arrange<QuizPart>(part => part.SurveyId = "purged");
-        var handler = new QuizPartHandler(learningSurveys.Object, manager.Object);
+        var handler = new QuizPartHandler(learningSurveys.Object, manager.Object, NullLogger<QuizPartHandler>.Instance);
 
         // Act
         await handler.UpdatingAsync(new UpdateContentContext(item), item.GetOrCreate<QuizPart>());
@@ -40,7 +41,7 @@ public sealed class OwnedSurveyRecreateTests
     {
         // Arrange
         var (item, learningSurveys, manager) = Arrange<QuizPart>(part => part.SurveyId = "imported-later");
-        var handler = new QuizPartHandler(learningSurveys.Object, manager.Object);
+        var handler = new QuizPartHandler(learningSurveys.Object, manager.Object, NullLogger<QuizPartHandler>.Instance);
 
         // Act
         await handler.CreatingAsync(new CreateContentContext(item), item.GetOrCreate<QuizPart>());
@@ -56,7 +57,7 @@ public sealed class OwnedSurveyRecreateTests
         // Arrange
         var (item, learningSurveys, manager) = Arrange<QuizPart>(part => part.SurveyId = "survey1");
         manager.Setup(service => service.FindByIdAsync("survey1", It.IsAny<CancellationToken>())).ReturnsAsync(new Survey { ItemId = "survey1" });
-        var handler = new QuizPartHandler(learningSurveys.Object, manager.Object);
+        var handler = new QuizPartHandler(learningSurveys.Object, manager.Object, NullLogger<QuizPartHandler>.Instance);
 
         // Act
         await handler.UpdatingAsync(new UpdateContentContext(item), item.GetOrCreate<QuizPart>());
@@ -71,7 +72,7 @@ public sealed class OwnedSurveyRecreateTests
     {
         // Arrange
         var (item, learningSurveys, manager) = Arrange<CourseSurveyPart>(part => part.SurveyId = "purged");
-        var handler = new CourseSurveyPartHandler(learningSurveys.Object, Mock.Of<IContentDefinitionManager>(), manager.Object);
+        var handler = new CourseSurveyPartHandler(learningSurveys.Object, Mock.Of<IContentDefinitionManager>(), manager.Object, NullLogger<CourseSurveyPartHandler>.Instance);
 
         // Act
         await handler.UpdatingAsync(new UpdateContentContext(item), item.GetOrCreate<CourseSurveyPart>());

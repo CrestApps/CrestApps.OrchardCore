@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Claims;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Services;
@@ -217,6 +218,61 @@ public sealed class QuizGradingRulesTests
         // Assert: refused (the access denied page, not the response page a void returns to), and the attempt stays.
         Assert.DoesNotContain($"surveys/responses/{responseId}", voided.Headers.Location?.OriginalString ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(SurveyResponseStatus.Completed, response.Status);
+    }
+
+    [Fact]
+    public async Task R8Mi29_AnInstructorWithoutOverrideGrades_IsOfferedVoidAndDeleteOnlyWhereTheyCanUseThem()
+    {
+        // Arrange: a pending attempt (it carries a grade) of a course quiz instructor1 teaches.
+        var setup = await CreateQuizAsync(anonymous: false, enrollInstructor: false, CompletionModes.Graded, definition => { });
+        var responseId = await AnswerAsync(setup.QuizId);
+        var surveyId = await _fixture.InTenantAsync(async services =>
+            LearningSurveyTestSupport.SurveyIdOf(await services.GetRequiredService<IContentManager>().GetAsync(setup.QuizId, VersionOptions.Latest)));
+        using var instructor = await _fixture.CreateClientAsync("instructor1");
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Act: the instructor opens the attempt and the list, then voids it from the list's bulk actions.
+        var details = await instructor.GetStringAsync($"Admin/surveys/responses/{responseId}", cancellationToken);
+        var list = await instructor.GetStringAsync($"Admin/surveys/{surveyId}/responses", cancellationToken);
+        var bulk = await instructor.PostAsync($"Admin/surveys/{surveyId}/responses", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = LearningSiteFixture.Token(list),
+            ["BulkAction"] = "Void",
+            ["itemIds"] = responseId,
+            ["submit.BulkAction"] = "submit.BulkAction",
+        }), cancellationToken);
+        var afterBulk = await instructor.GetStringAsync($"Admin/surveys/{surveyId}/responses", cancellationToken);
+        var kept = await ReadResponseAsync(responseId);
+
+        // The same attempt as a test attempt never reaches course progress, so the instructor may void it.
+        await _fixture.InTenantAsync(async services =>
+        {
+            var responses = services.GetRequiredService<ICatalog<SurveyResponse>>();
+            var response = await responses.FindByIdAsync(responseId, cancellationToken);
+
+            response.IsTest = true;
+            await responses.UpdateAsync(response, cancellationToken);
+        });
+
+        var testDetails = await instructor.GetStringAsync($"Admin/surveys/responses/{responseId}", cancellationToken);
+        var voided = await instructor.PostAsync($"Admin/surveys/responses/{responseId}/void", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = LearningSiteFixture.Token(testDetails),
+            ["reason"] = "A test run",
+        }), cancellationToken);
+
+        // Assert: neither page offers Void or Delete on the graded attempt, the bulk action leaves it and says so, and
+        // the test attempt offers both and is voided.
+        Assert.DoesNotContain($"surveys/responses/{responseId}/void", details, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain($"surveys/responses/{responseId}/delete", details, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain($"surveys/responses/{responseId}/void", list, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.Redirect, bulk.StatusCode);
+        Assert.Contains("0 responses were changed.", afterBulk);
+        Assert.Contains("1 responses were left as they were", afterBulk);
+        Assert.Equal(SurveyResponseStatus.Completed, kept.Status);
+        Assert.Contains($"surveys/responses/{responseId}/void", testDetails, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"surveys/responses/{responseId}", voided.Headers.Location?.OriginalString ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(SurveyResponseStatus.Voided, (await ReadResponseAsync(responseId)).Status);
     }
 
     [Fact]
