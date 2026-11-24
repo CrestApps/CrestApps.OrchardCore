@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Results;
 
@@ -59,6 +60,12 @@ public sealed class SurveyResultsScope
     /// responses share (see <see cref="Access.SurveyGroupGate"/>). Test responses of these statuses are still read.
     /// </summary>
     public List<SurveyResponseStatus> ExcludedStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the groups (collector, version, context kind) whose non-test responses are left out, such as the
+    /// groups of an anonymous survey too small to show (see <see cref="Access.SurveyAnonymousGroups.HiddenGroupsAsync"/>).
+    /// </summary>
+    public List<SurveyResponseGroup> HiddenGroups { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether documents are read in the order of their random ids rather than the order they were

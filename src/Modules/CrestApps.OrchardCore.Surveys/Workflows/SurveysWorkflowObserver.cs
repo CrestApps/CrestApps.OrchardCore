@@ -10,18 +10,22 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
 {
     private readonly SurveyWorkflowInputBuilder _inputBuilder;
     private readonly ISurveyWorkflowTrigger _trigger;
+    private readonly IServiceProvider _services;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysWorkflowObserver"/> class.
     /// </summary>
     /// <param name="inputBuilder">The input builder.</param>
     /// <param name="trigger">The trigger.</param>
+    /// <param name="services">The services, for the small-group rule and the site's time zone of anonymous responses.</param>
     public SurveysWorkflowObserver(
         SurveyWorkflowInputBuilder inputBuilder,
-        ISurveyWorkflowTrigger trigger)
+        ISurveyWorkflowTrigger trigger,
+        IServiceProvider services)
     {
         _inputBuilder = inputBuilder;
         _trigger = trigger;
+        _services = services;
     }
 
     /// <inheritdoc />
@@ -33,19 +37,17 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
         => Response(nameof(SurveyPageCompletedEvent), context);
 
     /// <inheritdoc />
-    public Task CompletedAsync(SurveyResponseEventContext context)
+    public async Task CompletedAsync(SurveyResponseEventContext context)
     {
         if (context?.Response is null || context.Response.IsTest)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var input = _inputBuilder.ForResponse(context);
+        var input = await InputAsync(context);
 
         _trigger.Trigger(nameof(SurveyResponseCompletedEvent), input, context.Response.ItemId);
         _trigger.Trigger(nameof(SurveyResponseMatchesConditionEvent), new Dictionary<string, object>(input, StringComparer.Ordinal), context.Response.ItemId);
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -61,14 +63,14 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
         => Response(nameof(SurveyResponseNeedsGradingEvent), context);
 
     /// <inheritdoc />
-    public Task GradedAsync(SurveyResponseEventContext context)
+    public async Task GradedAsync(SurveyResponseEventContext context)
     {
         if (context?.Response is null || context.Response.IsTest)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var input = _inputBuilder.ForResponse(context);
+        var input = await InputAsync(context);
 
         _trigger.Trigger(nameof(SurveyResponseGradedEvent), input, context.Response.ItemId);
 
@@ -76,8 +78,6 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
         {
             _trigger.Trigger(passed ? nameof(SurveyResponsePassedEvent) : nameof(SurveyResponseFailedEvent), new Dictionary<string, object>(input, StringComparer.Ordinal), context.Response.ItemId);
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -114,15 +114,22 @@ internal sealed class SurveysWorkflowObserver : ISurveyResponseObserver, ISurvey
         return Task.CompletedTask;
     }
 
-    private Task Response(string eventName, SurveyResponseEventContext context)
+    private async Task Response(string eventName, SurveyResponseEventContext context)
     {
         if (context?.Response is null || context.Response.IsTest)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        _trigger.Trigger(eventName, _inputBuilder.ForResponse(context), context.Response.ItemId);
+        _trigger.Trigger(eventName, await InputAsync(context), context.Response.ItemId);
+    }
 
-        return Task.CompletedTask;
+    // The input of a response event: an anonymous response's collector, version and context follow the small-group rule
+    // of every other output, and its day is the site's.
+    private async Task<Dictionary<string, object>> InputAsync(SurveyResponseEventContext context)
+    {
+        var (shows, timeZone) = await SurveyPayloadAnonymity.ReadAsync(_services, context.Survey, context.Response);
+
+        return _inputBuilder.ForResponse(context, shows, timeZone);
     }
 }

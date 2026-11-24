@@ -663,6 +663,17 @@ public sealed class SurveyMaintenanceTests
         Assert.Null(response.RespondentKey);
     }
 
+    [Fact]
+    public void Anonymize_ClearsTheSiteWideResponseNumber()
+    {
+        // Arrange: R7-Mi15, the number comes from one sequence for the whole site, in the order responses start.
+        var response = new SurveyResponse { Number = "R0000042" };
+
+        // Act and assert
+        Assert.True(SurveyMaintenanceService.Anonymize(response));
+        Assert.Null(response.Number);
+    }
+
     private static async Task<RuntimeTestHarness> CreateWithSaveFailureAsync(SaveFailureIndexProvider<SurveyResponse> failure, Action<IServiceCollection> configure = null)
     {
         var harness = await RuntimeTestHarness.CreateAsync(services =>

@@ -107,6 +107,80 @@ public sealed class SurveyGradingQueueTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListAsync_LeavesOutAResponseWhoseCollectorVersionAndContextAreHidden()
+    {
+        // Arrange: R7-M3, five responses to grade on the main link of an anonymous quiz, and one on a link sent to Bob.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await SavePendingAsync("quiz", AnonymityMode.Anonymous, 5);
+
+        await using (var write = _store.Store.CreateSession())
+        {
+            await write.SaveAsync(new SurveyResponse
+            {
+                ItemId = "quiz-bob",
+                SurveyId = "quiz",
+                CollectorId = "for-bob",
+                Status = SurveyResponseStatus.Completed,
+                Grading = GradingStatus.Pending,
+                StartedUtc = DateTime.UtcNow,
+                CompletedUtc = DateTime.UtcNow,
+            }, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        // Act
+        var query = await ListAsync(PermissionClaimsAuthorizationService.UserWith(SurveysPermissions.GradeSurveyResponses.Name), []);
+
+        await using var session = _store.Store.CreateSession();
+        var (count, items) = await new SurveyResponseQueries(session).ListAsync(query, cancellationToken);
+
+        // Assert: the queue leaves Bob's group out of the query itself (as the Grade page refuses it), so neither the
+        // list nor its count shows it; the main link's five are listed.
+        Assert.Equal([SurveyResponseGroup.Create("quiz", "for-bob", 0, null)], query.HiddenGroups);
+        Assert.Equal(5, count);
+        Assert.DoesNotContain(items, item => item.ItemId == "quiz-bob");
+    }
+
+    [Fact]
+    public async Task ShowsAsync_TheGradeAndDetailsCheck_RefusesAResponseWhoseGroupIsHidden()
+    {
+        // Arrange: R7-M3, the check the Grade page (RefuseAsync), Details and the scoring assistant make before opening
+        // one response: five completed responses on the main link and one on a link sent to Bob.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await SavePendingAsync("quiz", AnonymityMode.Anonymous, 5);
+        var bob = new SurveyResponse
+        {
+            ItemId = "quiz-bob",
+            SurveyId = "quiz",
+            CollectorId = "for-bob",
+            Status = SurveyResponseStatus.Completed,
+            Grading = GradingStatus.Pending,
+            StartedUtc = DateTime.UtcNow,
+            CompletedUtc = DateTime.UtcNow,
+        };
+
+        await using (var write = _store.Store.CreateSession())
+        {
+            await write.SaveAsync(bob, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.Store.CreateSession();
+        var groups = new SurveyAnonymousGroups(new SurveyResultsQueries(session), new ServiceCollection().BuildServiceProvider());
+        var survey = await new SurveyStore(session).FindByIdAsync("quiz", cancellationToken);
+        var main = await new SurveyResponseQueries(session).FindByIdAsync("quiz-0", cancellationToken);
+
+        // Act
+        var opensBob = await groups.ShowsAsync(survey, bob, cancellationToken);
+        var opensMain = await groups.ShowsAsync(survey, main, cancellationToken);
+
+        // Assert: the survey has enough completed responses (the status rule alone would open Bob's), but his group is
+        // one person; the main link's responses open.
+        Assert.False(opensBob);
+        Assert.True(opensMain);
+    }
+
+    [Fact]
     public void IsOwn_MatchesTheSignedInUsersResponseOnly()
     {
         // Arrange

@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 
@@ -26,8 +27,12 @@ internal sealed class SurveyWorkflowInputBuilder
     /// Builds the input of a response event.
     /// </summary>
     /// <param name="context">The event.</param>
+    /// <param name="shows">What an anonymous response may show of its collector, version and context kind
+    /// (<see cref="SurveyAnonymousAttributes"/>), or <see langword="null"/> for all of them.</param>
+    /// <param name="timeZone">The site's time zone, which an anonymous response's day is read in, or
+    /// <see langword="null"/> for UTC.</param>
     /// <returns>The input.</returns>
-    public Dictionary<string, object> ForResponse(SurveyResponseEventContext context)
+    public Dictionary<string, object> ForResponse(SurveyResponseEventContext context, SurveyRowAttributes? shows = null, TimeZoneInfo timeZone = null)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -35,29 +40,33 @@ internal sealed class SurveyWorkflowInputBuilder
         var survey = context.Survey;
         var definition = context.Version?.Definition;
         var anonymous = survey?.Access?.Anonymity == AnonymityMode.Anonymous;
+        var attributes = anonymous ? shows ?? SurveyRowAttributes.All : SurveyRowAttributes.All;
         var input = ForSurvey(survey);
 
         input["ResponseId"] = response.ItemId;
         // No site-wide response number on an anonymous survey: it would sit next to a named response's number.
         input["Number"] = anonymous ? null : response.Number;
-        input["VersionNumber"] = response.VersionNumber;
-        input[SurveyWorkflowInput.CollectorId] = response.CollectorId;
-        input[SurveyWorkflowInput.ContextKind] = response.Context?.Kind;
-        input["ContextId"] = response.Context?.Id;
-        input["Context"] = response.Context?.ToString();
+
+        // An anonymous response's collector, version and context show only when enough completed responses share their
+        // joint key: a link sent to one person, or a version one person answered through a link, would name them.
+        input["VersionNumber"] = attributes.ShowsVersion ? response.VersionNumber : null;
+        input[SurveyWorkflowInput.CollectorId] = attributes.ShowsCollector ? response.CollectorId : null;
+        input[SurveyWorkflowInput.ContextKind] = attributes.ShowsContextKind ? response.Context?.Kind : null;
+        input["ContextId"] = attributes.ShowsContextKind ? response.Context?.Id : null;
+        input["Context"] = attributes.ShowsContextKind ? response.Context?.ToString() : null;
         input["UserId"] = anonymous ? null : response.UserId;
         input["Respondent"] = anonymous ? null : response.Respondent?.ToString();
         input["Status"] = response.Status.ToString();
         input["Grading"] = response.Grading.ToString();
         // An anonymous response carries no attempt number (it ties a person's responses together) and its completion
-        // time by the day only (in UTC), as every other output of an anonymous survey.
+        // time by the day only (in the site's time zone), as every other output of an anonymous survey.
         input["AttemptNumber"] = anonymous ? null : response.AttemptNumber;
         input["Score"] = response.Score;
         input["MaxScore"] = response.MaxScore;
         input["Percent"] = response.Percent;
         input["Passed"] = response.Passed;
         input["IsTest"] = response.IsTest;
-        input["CompletedUtc"] = (anonymous ? DayOf(response.CompletedUtc) : response.CompletedUtc)?.ToString("O", CultureInfo.InvariantCulture);
+        input["CompletedUtc"] = (anonymous ? DayOf(response.CompletedUtc, timeZone) : response.CompletedUtc)?.ToString("O", CultureInfo.InvariantCulture);
         input[SurveyWorkflowInput.Actor] = context.CausedByWorkflow ? SurveyWorkflowInput.WorkflowActor : context.ActorId ?? (anonymous ? null : response.UserId);
         input[SurveyWorkflowInput.CausedByWorkflow] = context.CausedByWorkflow;
         input[SurveyWorkflowInput.Anonymous] = anonymous;
@@ -87,12 +96,14 @@ internal sealed class SurveyWorkflowInputBuilder
     }
 
     /// <summary>
-    /// Gets the start of the day (in UTC) of a time, as anonymous responses show their times.
+    /// Gets the start of the day of a time in the site's time zone, as UTC, as every output of an anonymous response
+    /// shows its times (<see cref="SurveyAnonymousDays"/>): one definition of the day, whichever output it is.
     /// </summary>
     /// <param name="utc">The time, in UTC.</param>
+    /// <param name="timeZone">The site's time zone, or <see langword="null"/> for UTC.</param>
     /// <returns>The start of its day, or <see langword="null"/>.</returns>
-    internal static DateTime? DayOf(DateTime? utc)
-        => utc is { } value ? DateTime.SpecifyKind(DateTime.SpecifyKind(value, DateTimeKind.Utc).Date, DateTimeKind.Utc) : null;
+    internal static DateTime? DayOf(DateTime? utc, TimeZoneInfo timeZone = null)
+        => utc is { } value ? SurveyAnonymity.StartOfDayUtc(value, timeZone) : null;
 
     /// <summary>
     /// Builds the input of a survey event.

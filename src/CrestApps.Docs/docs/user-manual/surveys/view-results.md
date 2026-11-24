@@ -50,7 +50,7 @@ Filter by survey, version, link, test responses and more. The dates you pick mat
 
 - On an identified survey, anyone who may see a survey's responses, or grade them, sees who gave each one: their name, **Guest** when they didn't sign in, or **Deleted user** when the account is gone.
 - On an anonymous survey nobody is named; responses show **Anonymous**.
-- An anonymous survey shows nothing until enough responses match your filters: its minimum group size. A status that fewer responses share (a lone abandoned response, for example) is left out, even when you filter to it. Times show the day only, and responses show a code instead of a number.
+- An anonymous survey shows nothing until enough responses match your filters: its minimum group size. A status that fewer responses share (a lone abandoned response, for example) is left out, even when you filter to it. Times show the day only, in the site's time zone (even when your own profile uses another one), how long a response took shows in whole minutes, and responses show a code instead of a number.
 - On an anonymous survey, a date filter counts whole days, whatever time of day you pick.
-- On an anonymous survey, a link (collector), version or context that fewer responses share than the minimum shows as **Other** (or blank), and there is no attempt number. If those small groups are still too few together, their responses aren't listed.
+- On an anonymous survey, when fewer responses than the minimum share a response's link (collector), version and context together, all three show as **Other** (or blank), and there is no attempt number. If those small groups are still too few together, their responses aren't listed or counted, and they don't open for viewing or grading.
 - In Report Builder and pipelines, today's responses to an anonymous survey appear tomorrow, once the day is over.

@@ -132,30 +132,38 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
     protected override SurveyResponse ResponseOf(SurveyResponseChildRow row)
         => row?.Response;
 
-    protected override async IAsyncEnumerable<SurveyResponseChildRow> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
+    // Sets the label, the respondent and what an anonymous row shows of its version and context kind before the
+    // conditions are evaluated for its group sizes, so a condition on one of them counts the rows the consumer keeps.
+    protected override async IAsyncEnumerable<SurveyResponseChildRow> CompleteAsync(SurveyResponseChildRow row, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var row in base.LoadAsync(query, cancellationToken))
+        var shows = AttributesOf(row.Response);
+
+        row.Values["Number"] = LabelOf(row.Response);
+
+        if (!shows.ShowsVersion)
         {
-            var shows = AttributesOf(row.Response);
-
-            row.Values["Number"] = LabelOf(row.Response);
-
-            if (!shows.ShowsVersion)
-            {
-                row.Values["VersionNumber"] = null;
-            }
-
-            if (!shows.ShowsContextKind && row.Response.Context is not null)
-            {
-                row.Values["ContextKind"] = _other;
-            }
-
-            row.Values["Respondent"] = ShowsIdentity(row.Response.SurveyId)
-                ? await _names.GetUserAsync(row.Response.UserId, cancellationToken)
-                : await _names.GetAsync(row.Response, Surveys.GetValueOrDefault(row.Response.SurveyId ?? string.Empty), cancellationToken);
-
-            yield return row;
+            row.Values["VersionNumber"] = null;
         }
+
+        if (!shows.ShowsContextKind && row.Response.Context is not null)
+        {
+            row.Values["ContextKind"] = _other;
+        }
+
+        row.Values["Respondent"] = ShowsIdentity(row.Response.SurveyId)
+            ? await _names.GetUserAsync(row.Response.UserId, cancellationToken)
+            : await _names.GetAsync(row.Response, Surveys.GetValueOrDefault(row.Response.SurveyId ?? string.Empty), cancellationToken);
+
+        yield return row;
+    }
+
+    protected override System.Linq.Expressions.Expression<Func<SurveyResponseIndex, bool>> AnonymousRowsOf(string surveyId)
+    {
+        var own = _survey.ItemId;
+
+        return string.Equals(surveyId, own, StringComparison.Ordinal)
+            ? index => index.SurveyId == own && !index.IsTest
+            : index => index.SurveyId == null && index.SurveyId != null;
     }
 
     protected override IQueryIndex<SurveyResponseIndex> OfSurveys(IQueryIndex<SurveyResponseIndex> rows, string[] surveyIds)

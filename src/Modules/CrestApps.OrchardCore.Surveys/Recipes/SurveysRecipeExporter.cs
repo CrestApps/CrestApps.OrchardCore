@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -18,6 +19,7 @@ internal sealed class SurveysRecipeExporter
     private readonly BankQuestionStore _bankQuestionStore;
     private readonly SurveyStore _surveyStore;
     private readonly ISurveyUserLookup _userLookup;
+    private readonly SurveyAnonymousDays _days;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysRecipeExporter"/> class.
@@ -27,18 +29,21 @@ internal sealed class SurveysRecipeExporter
     /// <param name="bankQuestionStore">The bank question store.</param>
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="userLookup">The user lookup, which turns user ids into user names and back.</param>
+    /// <param name="days">The site's days, which an anonymous response's times are cut to; UTC days without it.</param>
     public SurveysRecipeExporter(
         SurveyVersionStore versionStore,
         SurveyCollectorStore collectorStore,
         BankQuestionStore bankQuestionStore,
         SurveyStore surveyStore,
-        ISurveyUserLookup userLookup)
+        ISurveyUserLookup userLookup,
+        SurveyAnonymousDays days = null)
     {
         _versionStore = versionStore;
         _collectorStore = collectorStore;
         _bankQuestionStore = bankQuestionStore;
         _surveyStore = surveyStore;
         _userLookup = userLookup;
+        _days = days;
     }
 
     /// <summary>
@@ -137,6 +142,7 @@ internal sealed class SurveysRecipeExporter
             .Where(survey => survey.Access?.Anonymity == AnonymityMode.Anonymous)
             .Select(survey => survey.ItemId)
             .ToHashSet(StringComparer.Ordinal);
+        var timeZone = anonymous.Count > 0 && _days is not null ? await _days.TimeZoneAsync() : TimeZoneInfo.Utc;
 
         // A collector's id differs between sites (the personal-links collector is made on each), so it travels by name too.
         foreach (var surveyId in responses.Select(response => response.SurveyId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
@@ -171,9 +177,9 @@ internal sealed class SurveysRecipeExporter
                 node.Remove(nameof(SurveyResponse.Number));
 
                 // Exact times would line an anonymous response up with what an identified response, or anything else
-                // that says when a person finished, records: its times go out by the day only (in UTC, a machine format),
-                // and the time of each answer not at all.
-                DaysOnly(node);
+                // that says when a person finished, records: its times go out by the day only (the start of the site's
+                // day, in UTC, a machine format), and the time of each answer not at all.
+                DaysOnly(node, timeZone);
             }
 
             if (!string.IsNullOrEmpty(response.CollectorId) && collectorNames.TryGetValue(response.CollectorId, out var collectorName))
@@ -213,10 +219,12 @@ internal sealed class SurveysRecipeExporter
 
     /// <summary>
     /// Cuts every time of an exported anonymous response (each property whose name ends in <c>Utc</c>, at any depth) to
-    /// the start of its day in UTC, and removes the times of its answers.
+    /// the start of its day in the site's time zone (as UTC), the one definition of an anonymous response's day, and
+    /// removes the times of its answers.
     /// </summary>
     /// <param name="node">The exported response.</param>
-    internal static void DaysOnly(JsonNode node)
+    /// <param name="timeZone">The site's time zone, or <see langword="null"/> for UTC.</param>
+    internal static void DaysOnly(JsonNode node, TimeZoneInfo timeZone = null)
     {
         switch (node)
         {
@@ -225,7 +233,7 @@ internal sealed class SurveysRecipeExporter
                 {
                     if (!name.EndsWith("Utc", StringComparison.OrdinalIgnoreCase))
                     {
-                        DaysOnly(child);
+                        DaysOnly(child, timeZone);
                     }
                     else if (_droppedTimes.Contains(name))
                     {
@@ -233,12 +241,12 @@ internal sealed class SurveysRecipeExporter
                     }
                     else if (child is JsonValue time && time.TryGetValue<DateTime>(out var utc))
                     {
-                        value[name] = DateTime.SpecifyKind(DateTime.SpecifyKind(utc, DateTimeKind.Utc).Date, DateTimeKind.Utc);
+                        value[name] = SurveyAnonymity.StartOfDayUtc(utc, timeZone);
                     }
                     else if (child is JsonValue text && text.TryGetValue<string>(out var raw)
                         && DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var parsed))
                     {
-                        value[name] = DateTime.SpecifyKind(parsed.Date, DateTimeKind.Utc);
+                        value[name] = SurveyAnonymity.StartOfDayUtc(parsed, timeZone);
                     }
                 }
 
@@ -247,7 +255,7 @@ internal sealed class SurveysRecipeExporter
             case JsonArray items:
                 foreach (var item in items)
                 {
-                    DaysOnly(item);
+                    DaysOnly(item, timeZone);
                 }
 
                 break;

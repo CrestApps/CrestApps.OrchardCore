@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -87,20 +88,17 @@ internal sealed class SurveyDataSetAccess
             : Task.FromResult(SurveyAccessScope.None);
 
     /// <summary>
-    /// Reads the site settings of Surveys and the site's time zone, each optional.
+    /// Reads the site settings of Surveys and the time zone the days of anonymous responses are read in: always the
+    /// site's (<see cref="SurveyAnonymousDays"/>), never the reader's own time zone, which <c>ILocalClock</c> follows when
+    /// users pick one. A reader who could change it would watch where a response's day flips, and so learn its hour.
     /// </summary>
-    /// <returns>The settings, or <see langword="null"/>, and the time zone (UTC when unknown).</returns>
+    /// <returns>The settings, or <see langword="null"/>, and the site's time zone (UTC when unknown).</returns>
     public async Task<(SurveySettings Settings, TimeZoneInfo TimeZone)> AnonymityAsync()
     {
         var settings = _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
-        var timeZone = TimeZoneInfo.Utc;
-
-        if (_serviceProvider.GetService<ILocalClock>() is { } localClock
-            && (await localClock.GetLocalTimeZoneAsync())?.TimeZoneId is { Length: > 0 } timeZoneId
-            && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var found))
-        {
-            timeZone = found;
-        }
+        var timeZone = _serviceProvider.GetService<SurveyAnonymousDays>() is { } days
+            ? await days.TimeZoneAsync()
+            : await new SurveyAnonymousDays(_serviceProvider).TimeZoneAsync();
 
         return (settings, timeZone);
     }

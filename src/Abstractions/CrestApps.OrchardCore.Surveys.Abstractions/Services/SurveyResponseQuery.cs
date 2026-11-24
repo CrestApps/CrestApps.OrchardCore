@@ -43,6 +43,12 @@ public sealed class SurveyResponseQuery
     public List<SurveyResponseStatus> ExcludedStatuses { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the groups (survey, collector, version, context kind) whose real responses are left out, such as the
+    /// groups of an anonymous survey too small to show (<see cref="SurveyResponseGroup"/>). Test responses stay.
+    /// </summary>
+    public List<SurveyResponseGroup> HiddenGroups { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the surveys to leave out. Left out of named surveys, they are simply not read; left out of every
     /// survey (no <see cref="SurveyIds"/>), at most 1,000 can be, so a caller with more names the surveys it reads.
     /// </summary>

@@ -1,12 +1,13 @@
 @model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResponseDetailsViewModel
 @inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames RespondentNames
+@inject CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousDays AnonymousDays
 
 @{
     var response = Model.Response;
 
-    // An anonymous survey names nobody and shows its times by the day only.
+    // An anonymous survey names nobody and shows its times by the day only, in the site's time zone, preformatted so
+    // nothing converts it again in the viewer's.
     var anonymous = Model.Survey.Access?.Anonymity == AnonymityMode.Anonymous;
-    var timeFormat = anonymous ? "d" : "g";
 }
 
 <zone Name="Title">
@@ -28,11 +29,11 @@
             <dt class="col-sm-3">@T["Respondent"]</dt>
             <dd class="col-sm-9">@await RespondentNames.GetAsync(response, Model.Survey)</dd>
             <dt class="col-sm-3">@T["Started"]</dt>
-            <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: timeFormat))</dd>
+            <dd class="col-sm-9">@if (anonymous) { @await AnonymousDays.TextAsync(response.StartedUtc) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g")) }</dd>
             @if (response.CompletedUtc is { } completed)
             {
                 <dt class="col-sm-3">@T["Completed"]</dt>
-                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: timeFormat)) @(response.AutoSubmitted ? T["(at the deadline)"].Value : string.Empty)</dd>
+                <dd class="col-sm-9">@if (anonymous) { @await AnonymousDays.TextAsync(completed) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) } @(response.AutoSubmitted ? T["(at the deadline)"].Value : string.Empty)</dd>
             }
             @if (response.Score is not null)
             {
@@ -112,7 +113,7 @@
             @foreach (var change in response.ScoreHistory)
             {
                 <li class="list-group-item">
-                    <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: timeFormat))</span>
+                    <span class="text-muted small">@if (anonymous) { @await AnonymousDays.TextAsync(change.ChangedUtc) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g")) }</span>
                     @change.Kind: @(change.From?.ToString("0.##") ?? "-") &rarr; @(change.To?.ToString("0.##") ?? "-") @change.Reason
                 </li>
             }

@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Settings;
 
@@ -16,6 +16,7 @@ public sealed class SurveyAnonymousGroups
     private readonly SurveyResultsQueries _queries;
     private readonly IServiceProvider _serviceProvider;
     private readonly Dictionary<string, SurveyAnonymousAttributes> _attributes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IReadOnlyList<SurveyResponseGroup>> _hiddenGroups = new(StringComparer.Ordinal);
     private SurveySettings _settings;
     private bool _settingsRead;
 
@@ -69,8 +70,10 @@ public sealed class SurveyAnonymousGroups
     }
 
     /// <summary>
-    /// Gets whether one response of a survey may be opened on its own: a test response always, a real response of an
-    /// anonymous survey only when its status may show among all of the survey's responses.
+    /// Gets whether one response of a survey may be opened on its own (Details, Grade, the scoring assistant): a test
+    /// response always; a real response of an anonymous survey only when its status may show among all of the survey's
+    /// responses and its joint key (collector, version, context kind) isn't hidden (<see cref="SurveyAnonymousAttributes"/>).
+    /// Both refusals are one answer, so a refusal doesn't tell which of a response's groups is small.
     /// </summary>
     /// <param name="survey">The survey.</param>
     /// <param name="response">The response.</param>
@@ -85,13 +88,22 @@ public sealed class SurveyAnonymousGroups
             return true;
         }
 
-        return (await DecideAsync(survey, null, [response.Status], cancellationToken)).Shows(response.Status, response.IsTest);
+        return (await DecideAsync(survey, null, [response.Status], cancellationToken)).Shows(response.Status, response.IsTest)
+            && !(await AttributesAsync(survey, cancellationToken)).Of(response).Hidden;
     }
 
     /// <summary>
+    /// Gets the minimum group size of a survey, or 0 for an identified survey.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <returns>The minimum.</returns>
+    public async Task<int> MinimumGroupSizeAsync(Survey survey)
+        => SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
+
+    /// <summary>
     /// Gets the small-group rule of the attributes each row of a survey prints (collector, version, context kind),
-    /// counted on all of the survey's completed, non-test responses: <see cref="SurveyAnonymousAttributes.Open"/> for an
-    /// identified survey. Counted once per survey and scope.
+    /// counted by their joint key on all of the survey's completed, non-test responses:
+    /// <see cref="SurveyAnonymousAttributes.Open"/> for an identified survey. Counted once per survey and scope.
     /// </summary>
     /// <param name="survey">The survey.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -109,12 +121,41 @@ public sealed class SurveyAnonymousGroups
         {
             _attributes[survey.ItemId] = attributes = SurveyAnonymousAttributes.Create(
                 minimum,
-                await _queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.CollectorId), cancellationToken),
-                await _queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.VersionNumber), cancellationToken),
-                await _queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.ContextKind), cancellationToken));
+                await _queries.CountByGroupAsync(survey.ItemId, completedOnly: true, cancellationToken));
         }
 
         return attributes;
+    }
+
+    /// <summary>
+    /// Lists the groups (collector, version, context kind) of a survey whose real responses every list leaves out
+    /// (<see cref="SurveyAnonymousAttributes.Hides"/>), among the groups its responses of any status are in, so a list's
+    /// query, count and pages leave them out (<see cref="Indexes.SurveyResponseGroupFilter"/>). Empty for an identified
+    /// survey, or when the small groups are large enough together to hide in.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The groups, or <see langword="null"/> when there are more than one query can leave out
+    /// (<see cref="Indexes.SurveyResponseGroupFilter.MaxGroups"/>), so the caller lists none of the survey's responses.</returns>
+    public async Task<IReadOnlyList<SurveyResponseGroup>> HiddenGroupsAsync(Survey survey, CancellationToken cancellationToken = default)
+    {
+        var attributes = await AttributesAsync(survey, cancellationToken);
+
+        if (attributes.MinimumGroupSize == 0 || attributes.OtherIsLarge)
+        {
+            return [];
+        }
+
+        if (!_hiddenGroups.TryGetValue(survey.ItemId, out var hidden))
+        {
+            var groups = (await _queries.CountByGroupAsync(survey.ItemId, completedOnly: false, cancellationToken)).Keys
+                .Where(attributes.Hides)
+                .ToList();
+
+            _hiddenGroups[survey.ItemId] = hidden = groups.Count > Indexes.SurveyResponseGroupFilter.MaxGroups ? null : groups;
+        }
+
+        return hidden;
     }
 
     private static SurveyResultsScope RealOf(Survey survey, SurveyResultsScope narrowing)

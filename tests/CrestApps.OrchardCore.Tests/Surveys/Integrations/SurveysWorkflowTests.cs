@@ -64,7 +64,7 @@ public sealed class SurveysWorkflowTests
     {
         // Arrange
         var trigger = new RecordingTrigger();
-        var observer = new SurveysWorkflowObserver(new SurveyWorkflowInputBuilder(Registry()), trigger);
+        var observer = new SurveysWorkflowObserver(new SurveyWorkflowInputBuilder(Registry()), trigger, new ServiceCollection().BuildServiceProvider());
         var context = CompletedContext(AnonymityMode.Anonymous, "c1");
 
         // Act
@@ -78,7 +78,11 @@ public sealed class SurveysWorkflowTests
         Assert.Null(input["UserId"]);
         Assert.Null(input["Respondent"]);
         Assert.Equal("Very unhappy", ((IDictionary<string, string>)input["Answers"])["q_sat"]);
-        Assert.Equal("LearningEnrollment", input["ContextKind"]);
+
+        // R7-Mi20: with no small-group rule to count the survey's responses, its collector, version and context kind
+        // can't be shown to be shared by enough people, so they are left out.
+        Assert.Null(input["ContextKind"]);
+        Assert.Null(input["CollectorId"]);
     }
 
     [Fact]
@@ -86,7 +90,7 @@ public sealed class SurveysWorkflowTests
     {
         // Arrange
         var trigger = new RecordingTrigger();
-        var observer = new SurveysWorkflowObserver(new SurveyWorkflowInputBuilder(Registry()), trigger);
+        var observer = new SurveysWorkflowObserver(new SurveyWorkflowInputBuilder(Registry()), trigger, new ServiceCollection().BuildServiceProvider());
         var test = CompletedContext(AnonymityMode.Identified, "c1");
         test.Response.IsTest = true;
         var graded = CompletedContext(AnonymityMode.Identified, "c1");
@@ -107,7 +111,7 @@ public sealed class SurveysWorkflowTests
     {
         // Arrange
         var trigger = new RecordingTrigger();
-        var observer = new SurveysWorkflowObserver(new SurveyWorkflowInputBuilder(Registry()), trigger);
+        var observer = new SurveysWorkflowObserver(new SurveyWorkflowInputBuilder(Registry()), trigger, new ServiceCollection().BuildServiceProvider());
         await observer.CompletedAsync(CompletedContext(AnonymityMode.Identified, "c1"));
         var unhappy = trigger.Events.Single(item => item.Name == nameof(SurveyResponseMatchesConditionEvent)).Input;
         trigger.Events.Clear();

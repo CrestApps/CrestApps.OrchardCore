@@ -174,7 +174,9 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
                 answer.AttachmentIds = [];
             }
 
-            // The answers stay for results; nothing that names the person, or points back to them, does.
+            // The answers stay for results; nothing that names the person, or points back to them, does (the site-wide
+            // number, in the order responses start, would point back to them next to their other responses' numbers).
+            response.Number = null;
             response.UserId = null;
             response.Respondent = null;
             response.IpAddress = null;

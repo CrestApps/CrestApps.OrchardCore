@@ -201,8 +201,8 @@ public sealed class SurveyMaintenanceService
         };
 
     /// <summary>
-    /// Removes who responded from a response: user, respondent, IP address, invitation and the key its participation
-    /// was counted under, and the answers' references to files (the caller removes the files themselves, whose uploader
+    /// Removes who responded from a response: user, respondent, IP address, invitation, site-wide number and the key its
+    /// participation was counted under, and the answers' references to files (the caller removes the files themselves, whose uploader
     /// names the respondent).
     /// </summary>
     /// <param name="response">The response.</param>
@@ -211,8 +211,11 @@ public sealed class SurveyMaintenanceService
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        var changed = response.UserId is not null || response.Respondent is not null || response.IpAddress is not null || response.InvitationId is not null || response.RespondentKey is not null || response.Accommodation is not null;
+        var changed = response.UserId is not null || response.Respondent is not null || response.IpAddress is not null || response.InvitationId is not null || response.RespondentKey is not null || response.Accommodation is not null || response.Number is not null;
 
+        // The number comes from one sequence for the whole site, in the order responses start: next to a named
+        // response's number it would still tell who gave this one.
+        response.Number = null;
         response.UserId = null;
         response.Respondent = null;
         response.IpAddress = null;

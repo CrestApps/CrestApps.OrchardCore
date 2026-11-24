@@ -306,9 +306,16 @@ internal static class SurveysApiEndpoints
         var services = httpContext.RequestServices;
         var withIdentity = await services.GetRequiredService<SurveyRespondentNames>().CanSeeIdentityAsync(httpContext.User, survey, httpContext.RequestAborted);
         var anonymous = SurveyAnonymity.IsAnonymous(survey);
-        var decision = await services.GetRequiredService<SurveyAnonymousGroups>().DecideAsync(survey, null, [], httpContext.RequestAborted);
+        var groups = services.GetRequiredService<SurveyAnonymousGroups>();
+        var decision = await groups.DecideAsync(survey, null, [], httpContext.RequestAborted);
 
-        if (decision.HidesAll)
+        // The version and context kind of an anonymous response are a group with its collector, decided on their joint
+        // key (SurveyAnonymousAttributes): in a group too few completed responses share, they are left out, and a response
+        // whose small group can't hide it is left out of the query itself, so the count and the pages leave it out too
+        // and a link or a version only one person answered can't point to their row.
+        IReadOnlyList<SurveyResponseGroup> hiddenGroups = decision.HidesAll ? [] : await groups.HiddenGroupsAsync(survey, httpContext.RequestAborted);
+
+        if (decision.HidesAll || hiddenGroups is null)
         {
             return Results.Ok(new { count = 0, hidden = true, items = Array.Empty<object>() });
         }
@@ -317,23 +324,20 @@ internal static class SurveysApiEndpoints
         {
             SurveyIds = [survey.ItemId],
             ExcludedStatuses = decision.HiddenStatuses.ToList(),
+            HiddenGroups = [.. hiddenGroups],
             OrderById = anonymous,
             Skip = Math.Max(skip ?? 0, 0),
             Take = Math.Clamp(take ?? 50, 1, SurveysConstants.PageSize),
         }, httpContext.RequestAborted);
 
-        var timeZone = anonymous && services.GetService<ILocalClock>() is { } localClock
-            && TimeZoneInfo.TryFindSystemTimeZoneById((await localClock.GetLocalTimeZoneAsync())?.TimeZoneId ?? string.Empty, out var found)
-            ? found
-            : TimeZoneInfo.Utc;
+        // Days in the site's time zone, never the caller's (SurveyAnonymousDays): a caller who could change the zone
+        // would see where a response's day flips, and so its hour.
+        var timeZone = anonymous ? await (services.GetService<SurveyAnonymousDays>() ?? new SurveyAnonymousDays(services)).TimeZoneAsync() : TimeZoneInfo.Utc;
 
         DateTime? Shown(DateTime? utc)
             => utc is not { } value ? null : anonymous ? SurveyAnonymity.StartOfDayUtc(value, timeZone) : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
-        // The version and context kind of an anonymous response are groups of their own (SurveyAnonymousAttributes): a
-        // value too few completed responses share is left out, and a response whose small groups can't hide it is not
-        // listed, so a link or a version only one person answered can't point to their row.
-        var attributes = await services.GetRequiredService<SurveyAnonymousGroups>().AttributesAsync(survey, httpContext.RequestAborted);
+        var attributes = await groups.AttributesAsync(survey, httpContext.RequestAborted);
         var names = services.GetRequiredService<SurveyRespondentNames>();
         var rows = new List<object>(items.Count);
 

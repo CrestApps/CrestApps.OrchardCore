@@ -269,6 +269,31 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
         Assert.Equal(6, section.Rows.Count);
     }
 
+    [Fact]
+    public async Task RunAsync_AnAnonymousSurvey_ItsTotalLeavesOutAHiddenGroup()
+    {
+        // Arrange: R7-Mi18, five responses on the main link and one on a link sent to Bob.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 5);
+
+        await using (var write = _store.OpenSession())
+        {
+            var bob = ResultsSqliteStore.Response("anon-bob", ResultsSqliteStore.Version("anon-v1", "anon", 1, ResultsSqliteStore.ChoiceQuestion("q1", "color", "red", "blue")), SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["blue"] }));
+            bob.CollectorId = "for-bob";
+            await write.SaveAsync(bob, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+
+        // Act
+        var section = Assert.Single((await Report(session).RunAsync(Context("anon"), cancellationToken)).Sections);
+
+        // Assert: Bob's response is left out of the query, so the total is 5 and no "of 6" tells a row is hidden.
+        Assert.Equal(5, section.Rows.Count);
+        Assert.DoesNotContain("of 6", section.Description ?? string.Empty, StringComparison.Ordinal);
+    }
+
     private static SurveyResponsesReport Report(ISession session)
     {
         var authorization = TestSecurity.Granting(SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);

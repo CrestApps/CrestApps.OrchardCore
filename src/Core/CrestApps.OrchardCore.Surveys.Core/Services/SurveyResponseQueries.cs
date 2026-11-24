@@ -216,6 +216,8 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
             q = q.Where(index => index.Number.Contains(search));
         }
 
-        return q;
+        // The groups of an anonymous survey too small to show leave the query itself, so the count and the pages leave
+        // them out too.
+        return q.Excluding(query.HiddenGroups);
     }
 }

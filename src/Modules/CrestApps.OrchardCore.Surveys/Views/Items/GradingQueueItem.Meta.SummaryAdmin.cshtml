@@ -1,8 +1,10 @@
 @using CrestApps.OrchardCore.Surveys.ViewModels
+@inject CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousDays AnonymousDays
 
 @model ShapeViewModel<GradingQueueItem>
 
 @if (Model.Value.Response.CompletedUtc is { } completed)
 {
-    <span class="badge ta-badge fw-normal" title="@T["Completed"]"><i class="fa-regular fa-clock" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: Model.Value.IsAnonymous ? "d" : "g"))</span>
+    @* An anonymous response's day is in the site's time zone, preformatted so it isn't converted again in the viewer's. *@
+    <span class="badge ta-badge fw-normal" title="@T["Completed"]"><i class="fa-regular fa-clock" aria-hidden="true"></i> @if (Model.Value.IsAnonymous) { @await AnonymousDays.TextAsync(completed) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) }</span>
 }

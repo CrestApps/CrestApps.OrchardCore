@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
@@ -22,6 +23,7 @@ internal sealed class SurveyResponsesDeploymentSource : DeploymentSourceBase<Sur
     private readonly SurveysRecipeExporter _exporter;
     private readonly SurveysExportAuthorizer _authorizer;
     private readonly ISurveyAuditTrail _auditTrail;
+    private readonly SurveyAnonymousDays _days;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyResponsesDeploymentSource"/> class.
@@ -31,18 +33,21 @@ internal sealed class SurveyResponsesDeploymentSource : DeploymentSourceBase<Sur
     /// <param name="exporter">The exporter.</param>
     /// <param name="authorizer">The export authorizer.</param>
     /// <param name="auditTrail">The audit trail.</param>
+    /// <param name="days">The site's days, which the step's dates are read in.</param>
     public SurveyResponsesDeploymentSource(
         ISession session,
         SurveyStore surveyStore,
         SurveysRecipeExporter exporter,
         SurveysExportAuthorizer authorizer,
-        ISurveyAuditTrail auditTrail)
+        ISurveyAuditTrail auditTrail,
+        SurveyAnonymousDays days)
     {
         _session = session;
         _surveyStore = surveyStore;
         _exporter = exporter;
         _authorizer = authorizer;
         _auditTrail = auditTrail;
+        _days = days;
     }
 
     /// <inheritdoc />
@@ -58,7 +63,9 @@ internal sealed class SurveyResponsesDeploymentSource : DeploymentSourceBase<Sur
         if (await _authorizer.CanExportResponsesAsync())
         {
             await ReadAsync(step, responses);
-            await _authorizer.ExportedAsync(_auditTrail, SurveyAuditEvents.ResponsesExported, responses.Count);
+
+            // The audit entry says what was exported, not only how much: which surveys and which days.
+            await _authorizer.ExportedAsync(_auditTrail, SurveyAuditEvents.ResponsesExported, responses.Count, Scope(step));
         }
         else
         {
@@ -68,7 +75,33 @@ internal sealed class SurveyResponsesDeploymentSource : DeploymentSourceBase<Sur
         result.Steps.Add(recipeStep);
     }
 
-    private async Task ReadAsync(SurveyResponsesDeploymentStep step, JsonArray responses)
+    // What the step exports, for the audit entry: its surveys (by name, or all), its days, and what it adds.
+    internal static string Scope(SurveyResponsesDeploymentStep step)
+    {
+        var parts = new List<string>
+        {
+            "surveys: " + (step.IncludeAll ? "all" : string.Join(", ", step.SurveyNames ?? [])),
+        };
+
+        if (step.FromDate is not null || step.ToDate is not null)
+        {
+            parts.Add($"days: {step.FromDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "any"} to {step.ToDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "any"}");
+        }
+
+        if (step.IncludeInProgress)
+        {
+            parts.Add("in progress");
+        }
+
+        if (step.IncludeTest)
+        {
+            parts.Add("test");
+        }
+
+        return string.Join("; ", parts);
+    }
+
+    internal async Task ReadAsync(SurveyResponsesDeploymentStep step, JsonArray responses)
     {
         string[] surveyIds = null;
         HashSet<string> anonymous;
@@ -113,23 +146,30 @@ internal sealed class SurveyResponsesDeploymentSource : DeploymentSourceBase<Sur
         // surveys, an anonymous row would otherwise tell when it came in. Their times are cut to the day by the exporter.
         IEnumerable<string[]> chunks = surveyIds is null ? [null] : SurveyIdChunks.Of(surveyIds.Where(id => !anonymous.Contains(id)));
 
+        // The step's dates are days of the site's time zone (SurveyAnonymousDays), the one definition of the day every
+        // output uses, for identified and anonymous surveys alike.
+        var timeZone = await _days.TimeZoneAsync();
+
         foreach (var chunk in chunks)
         {
-            await ReadPagesAsync(step, chunk, byId: false, row => !anonymous.Contains(row.SurveyId ?? string.Empty), responses);
+            await ReadPagesAsync(step, chunk, byId: false, row => !anonymous.Contains(row.SurveyId ?? string.Empty), timeZone, includeInProgress: step.IncludeInProgress, responses);
         }
 
+        // An anonymous survey's in-progress responses are never exported: their times go out by the day only and their
+        // answers without the time each was checked, so on import a timed response would look expired or idle and its
+        // locked answers would unlock.
         foreach (var surveyId in anonymous.Where(id => surveyIds is null || surveyIds.Contains(id, StringComparer.Ordinal)).Order(StringComparer.Ordinal))
         {
-            await ReadPagesAsync(step, [surveyId], byId: true, _ => true, responses);
+            await ReadPagesAsync(step, [surveyId], byId: true, _ => true, timeZone, includeInProgress: false, responses);
         }
     }
 
     // Reads the responses of some surveys (every survey when none are named, at most one IN list of them otherwise) a
     // page at a time, in the order they were stored or of their ids, and writes those a filter keeps.
-    private async Task ReadPagesAsync(SurveyResponsesDeploymentStep step, string[] chunk, bool byId, Func<SurveyResponse, bool> keep, JsonArray responses)
+    private async Task ReadPagesAsync(SurveyResponsesDeploymentStep step, string[] chunk, bool byId, Func<SurveyResponse, bool> keep, TimeZoneInfo timeZone, bool includeInProgress, JsonArray responses)
     {
-        var from = step.FromDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var to = step.ToDate?.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        DateTime? from = step.FromDate is { } fromDate ? SurveyAnonymity.StartOfDayUtc(fromDate, timeZone) : null;
+        DateTime? to = step.ToDate is { } toDate ? SurveyAnonymity.StartOfDayUtc(toDate.AddDays(1), timeZone) : null;
         var inProgress = nameof(SurveyResponseStatus.InProgress);
         var skip = 0;
 
@@ -147,7 +187,7 @@ internal sealed class SurveyResponsesDeploymentSource : DeploymentSourceBase<Sur
                 query = query.Where(index => !index.IsTest);
             }
 
-            if (!step.IncludeInProgress)
+            if (!includeInProgress)
             {
                 query = query.Where(index => index.Status != inProgress);
             }

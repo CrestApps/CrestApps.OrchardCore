@@ -61,4 +61,7 @@ internal sealed class SurveyPageVisitsDataSet : SurveyResponseChildDataSet
         => surveyIds is null
             ? rows.Where(index => !index.IsTest)
             : rows.Where(index => index.SurveyId.IsIn(surveyIds) && !index.IsTest);
+
+    protected override System.Linq.Expressions.Expression<Func<SurveyResponseIndex, bool>> AnonymousRowsOf(string surveyId)
+        => index => index.SurveyId == surveyId && !index.IsTest;
 }

@@ -184,10 +184,45 @@ public static class SurveyAnonymity
     public static DateTime EndOfDayUtc(DateTime utc, TimeZoneInfo timeZone)
     {
         var zone = timeZone ?? TimeZoneInfo.Utc;
+
+        if (utc >= DateTime.MaxValue.AddDays(-2))
+        {
+            return DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc);
+        }
+
         var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone);
 
-        return CalendarTime.ToUtc(local.Date.AddDays(1), zone.Id);
+        // The TimeZoneInfo overload: the id overload falls back to UTC for a zone id it doesn't know.
+        return CalendarTime.ToUtc(local.Date.AddDays(1), zone);
     }
+
+    /// <summary>
+    /// Gets how long a response took as an output shows it: exact on an identified survey, in whole minutes on an
+    /// anonymous survey, so the seconds can't line it up with a time recorded elsewhere.
+    /// </summary>
+    /// <param name="duration">How long it took.</param>
+    /// <param name="anonymous">Whether the survey is anonymous.</param>
+    /// <returns>The duration to show.</returns>
+    public static TimeSpan ShownDuration(TimeSpan duration, bool anonymous)
+        => anonymous ? TimeSpan.FromMinutes(Math.Round(duration.TotalMinutes, MidpointRounding.AwayFromZero)) : duration;
+
+    /// <summary>
+    /// Gets the day a time falls on in a time zone.
+    /// </summary>
+    /// <param name="utc">The time, in UTC.</param>
+    /// <param name="timeZone">The time zone the day is read in, or <see langword="null"/> for UTC.</param>
+    /// <returns>The day.</returns>
+    public static DateOnly Day(DateTime utc, TimeZoneInfo timeZone)
+        => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), timeZone ?? TimeZoneInfo.Utc));
+
+    /// <summary>
+    /// Gets the start of a day in a time zone, as UTC.
+    /// </summary>
+    /// <param name="day">The day.</param>
+    /// <param name="timeZone">The time zone the day is read in, or <see langword="null"/> for UTC.</param>
+    /// <returns>The start of the day, in UTC.</returns>
+    public static DateTime StartOfDayUtc(DateOnly day, TimeZoneInfo timeZone)
+        => CalendarTime.ToUtc(day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), timeZone ?? TimeZoneInfo.Utc);
 
     /// <summary>
     /// Gets a time of an anonymous response shown by the day only: the start of its day in a time zone, as UTC.
@@ -198,9 +233,16 @@ public static class SurveyAnonymity
     public static DateTime StartOfDayUtc(DateTime utc, TimeZoneInfo timeZone)
     {
         var zone = timeZone ?? TimeZoneInfo.Utc;
+
+        if (utc <= DateTime.MinValue.AddDays(2))
+        {
+            return DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+        }
+
         var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone);
 
-        // A midnight a daylight-saving change skips starts the day when the clocks move forward.
-        return CalendarTime.ToUtc(local.Date, zone.Id);
+        // A midnight a daylight-saving change skips starts the day when the clocks move forward. The TimeZoneInfo
+        // overload: the id overload falls back to UTC for a zone id it doesn't know.
+        return CalendarTime.ToUtc(local.Date, zone);
     }
 }
