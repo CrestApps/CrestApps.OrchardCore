@@ -36,7 +36,8 @@ public static class SurveysIndexSchema
             .Column<int?>("MinimumGroupSize", column => column.Nullable())
             .Column<int?>("RetentionDays", column => column.Nullable())
             .Column<DateTime?>("ClosesUtc", column => column.Nullable())
-            .Column<int?>("TotalLimit", column => column.Nullable()),
+            .Column<int?>("TotalLimit", column => column.Nullable())
+            .Column<DateTime?>("DeletingUtc", column => column.Nullable()),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
@@ -358,6 +359,23 @@ public static class SurveysIndexSchema
 
         await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
             table.CreateIndex("IDX_SurveyIndex_Retention", "RetentionDays"),
+            collection: SurveysConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Adds the delete mark of the survey index, so a start reads it by the index (R8-Mi5). Schema only: a survey marked
+    /// as being deleted when the column is added is still read as not marked by a start until it is saved again; the
+    /// delete then finishes by its own follow-up, and its counts after the mark still stop it for a response that
+    /// started meanwhile.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddSurveyDeletingColumnAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyIndex>(table =>
+            table.AddColumn<DateTime?>("DeletingUtc", column => column.Nullable()),
             collection: SurveysConstants.CollectionName);
     }
 

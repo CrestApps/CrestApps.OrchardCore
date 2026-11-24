@@ -438,7 +438,13 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             // Staff may have started deleting the survey since this start read it: the delete counts the responses again
             // once its mark is committed, and once more after it removed the survey's records, so a response committed
             // after the first count would outlive its invitations, accommodations and participation. Read the mark again,
-            // as committed, just before the response is written: from here to the commit below is the only window left.
+            // as committed, just before the response is written. A window remains from this read to the commit below: the
+            // response, the participation and pool-counter rows, the invitation's Started mark and the deadline work item
+            // are all written inside it. A delete whose mark commits in that window still counts the responses again
+            // after the mark, and once more after it removed the survey's records, so a response committed meanwhile
+            // stops it. Only what commits after the delete's last count can outlive the survey; upkeep's follow-up of
+            // the delete then removes the invitations, participation rows, counters and test responses written for it
+            // (SurveyDataPurger).
             if (await IsBeingDeletedAsync(survey.ItemId, cancellationToken))
             {
                 return new SurveyStartResult { Error = SurveyErrorCode.NotFound };
@@ -453,8 +459,17 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
                 if (invitation is not null && invitation.Status is SurveyInvitationStatus.Pending or SurveyInvitationStatus.Sent or SurveyInvitationStatus.Opened)
                 {
-                    invitation.Status = SurveyInvitationStatus.Started;
-                    await _invitationStore.UpdateAsync(invitation, cancellationToken);
+                    await UpdateInvitationAsync(invitation, current =>
+                    {
+                        if (current.Status is not (SurveyInvitationStatus.Pending or SurveyInvitationStatus.Sent or SurveyInvitationStatus.Opened))
+                        {
+                            return false;
+                        }
+
+                        current.Status = SurveyInvitationStatus.Started;
+
+                        return true;
+                    }, cancellationToken);
                 }
             }
 
@@ -1058,15 +1073,29 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             ? null
             : new SurveyResponseAccommodation { ClosesUtc = surveyOverride.ClosesUtc, ExtraAttempts = Math.Max(surveyOverride.ExtraAttempts, 0) };
 
-    // Whether the survey is gone or marked as being deleted, read as committed: on a session of its own, since this
-    // scope's session hands back the survey it loaded at the start.
+    // Whether the survey is gone or marked as being deleted, read as committed by the index row (R8-Mi5): an index query
+    // isn't served from the session's identity map, so this scope's own session reads what the delete committed, without
+    // loading the survey and without a second connection that could wait on this transaction's own locks (R8-Mi33).
     private async Task<bool> IsBeingDeletedAsync(string surveyId, CancellationToken cancellationToken)
     {
-        await using var session = _session.Store.CreateSession();
+        var row = await _session.QueryIndex<SurveyIndex>(index => index.ItemId == surveyId, SurveysConstants.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var current = await session.Query<Survey, SurveyIndex>(index => index.ItemId == surveyId, SurveysConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
+        return row is null || row.DeletingUtc is not null;
+    }
 
-        return current is null || current.DeletingUtc is not null;
+    // Writes a respondent's change to an invitation (started, completed) on a copy read again now, not on the copy the
+    // request loaded earlier: a send or a reminder may have committed its marks (sent time, reminder count, last reminder,
+    // hold) since, and saving the earlier copy would write them back as they were (R8-M3, the respondent's side). Only the
+    // respondent's own fields are applied. The lead may switch this to SurveyInvitationStore.UpdateCurrentAsync.
+    private async Task UpdateInvitationAsync(SurveyInvitation loaded, Func<SurveyInvitation, bool> apply, CancellationToken cancellationToken)
+    {
+        var current = await _invitationStore.ReloadAsync(loaded.ItemId, cancellationToken);
+
+        if (current is not null && apply(current))
+        {
+            await _invitationStore.UpdateAsync(current, cancellationToken);
+        }
     }
 
     // Whether a response keeps only the kind of its context (an anonymous survey's identifying context), so a lookup of
@@ -1908,14 +1937,19 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
                 if (invitation is not null)
                 {
-                    invitation.Status = SurveyInvitationStatus.Completed;
+                    var keepResponse = survey.Access?.Anonymity != AnonymityMode.Anonymous;
 
-                    if (survey.Access?.Anonymity != AnonymityMode.Anonymous)
+                    await UpdateInvitationAsync(invitation, current =>
                     {
-                        invitation.ResponseId = response.ItemId;
-                    }
+                        current.Status = SurveyInvitationStatus.Completed;
 
-                    await _invitationStore.UpdateAsync(invitation, cancellationToken);
+                        if (keepResponse)
+                        {
+                            current.ResponseId = response.ItemId;
+                        }
+
+                        return true;
+                    }, cancellationToken);
                 }
 
                 // The seal has done its work: a completed anonymous response keeps nothing of its invitation.
@@ -2099,7 +2133,10 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             if (!string.IsNullOrEmpty(identity.UserId) && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides)
             {
                 // The same rule as OverrideForAsync: finding none means none, unless the response keeps its context
-                // hidden, when the lookup can't match an accommodation granted for that context and the one kept stays.
+                // hidden, when the lookup can't match an accommodation granted for that context. Nothing is kept for such
+                // a response by then (the completion cleared it on purpose, as it could single the person out on an
+                // anonymous survey), so a reopened anonymous response with a hidden context gets only the accommodations
+                // the lookup finds without the context, such as one granted for the whole survey (R8-Mi3).
                 var found = await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, response.Context, cancellationToken);
 
                 if (found is not null || !HasHiddenContext(survey, response))

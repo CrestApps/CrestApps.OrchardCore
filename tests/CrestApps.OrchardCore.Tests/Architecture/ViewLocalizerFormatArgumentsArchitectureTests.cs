@@ -17,7 +17,8 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
 {
     private static readonly Regex _placeholderRegex = new(@"\{\d+[,:}]", RegexOptions.Compiled);
 
-    private static readonly Regex _htmlLocalizerDeclarationRegex = new(@"\bIHtmlLocalizer(?:\s*<[^<>]+>)?\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\b", RegexOptions.Compiled);
+    // The type argument may itself be generic (IHtmlLocalizer<A<B>>): the angle brackets are matched as balanced pairs.
+    private static readonly Regex _htmlLocalizerDeclarationRegex = new(@"\bIHtmlLocalizer(?:\s*<(?>[^<>]+|<(?<depth>)|>(?<-depth>))*(?(depth)(?!))>)?\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\b", RegexOptions.Compiled);
 
     [Fact]
     public void Views_DoNotReadTheUnformattedValueOfALocalizedStringWithArguments()
@@ -63,12 +64,12 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
     public void Code_DoesNotReadTheUnformattedValueOfAnHtmlLocalizedStringWithArguments(string projects)
     {
         // Arrange: an IHtmlLocalizer's L["...{0}...", args].Value is the unformatted string as well, whatever the field,
-        // property or injected name of the localizer (H by convention).
+        // property or injected name of the localizer (H by convention). A name may be declared in another file than the
+        // one that uses it (a base class), so every name declared anywhere in the projects is looked for in every file.
         var repositoryRoot = FindRepositoryRoot();
         var violations = new List<string>();
-        var scannedFileCount = 0;
+        var sources = new List<(string Path, string Source)>();
 
-        // Act
         foreach (var root in new[] { Path.Combine(repositoryRoot, "src", "Modules"), Path.Combine(repositoryRoot, "src", "Core") })
         {
             foreach (var directory in Directory.EnumerateDirectories(root, projects))
@@ -80,24 +81,24 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
                         continue;
                     }
 
-                    scannedFileCount++;
-
-                    var relativePath = Path.GetRelativePath(repositoryRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/');
-                    var source = File.ReadAllText(fullPath);
-
-                    foreach (var localizer in HtmlLocalizerNames(source))
-                    {
-                        foreach (var line in FindFormattedValueReads(source, localizer))
-                        {
-                            violations.Add($"{relativePath}:{line} ({localizer})");
-                        }
-                    }
+                    sources.Add((Path.GetRelativePath(repositoryRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/'), File.ReadAllText(fullPath)));
                 }
             }
         }
 
+        var localizers = HtmlLocalizerNames(sources.Select(file => file.Source));
+
+        // Act
+        foreach (var (relativePath, source) in sources)
+        {
+            foreach (var violation in FindHtmlValueReads(source, localizers))
+            {
+                violations.Add($"{relativePath}:{violation}");
+            }
+        }
+
         // Assert
-        Assert.True(scannedFileCount > 0, $"No {projects} source files were found, so the guard would pass vacuously.");
+        Assert.True(sources.Count > 0, $"No {projects} source files were found, so the guard would pass vacuously.");
         Assert.True(
             violations.Count == 0,
             "These files read .Value from H[\"...{0}...\", args] (an IHtmlLocalizer), which is the unformatted string, so " +
@@ -111,13 +112,31 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
     [InlineData("""public IHtmlLocalizer Html { get; }""", "Html")]
     [InlineData("""@inject IHtmlLocalizer<Startup> Labels""", "Labels")]
     [InlineData("""private readonly IStringLocalizer S;""", "H")]
+    [InlineData("""private readonly IHtmlLocalizer<SurveyPage<SurveyQuestion>> Labels;""", "Labels")]
+    [InlineData("""IHtmlLocalizer<Dictionary<string, List<int>>> nested""", "nested")]
     public void HtmlLocalizerNames_FindsEveryNameAnHtmlLocalizerIsDeclaredUnder(string source, string expected)
     {
         // Act
-        var names = HtmlLocalizerNames(source);
+        var names = HtmlLocalizerNames([source]);
 
         // Assert
         Assert.Contains(expected, names);
+    }
+
+    [Fact]
+    public void FindHtmlValueReads_FindsANameDeclaredInABaseClassInAnotherFile()
+    {
+        // Arrange (R8-Mi6): the base class declares the localizer under a name other than H; the derived class, in its
+        // own file, reads .Value from it.
+        const string baseClass = """public abstract class SurveyControllerBase { protected IHtmlLocalizer<SurveyControllerBase> Html { get; } }""";
+        const string derived = """public sealed class SurveyController : SurveyControllerBase { void M() { var text = Html["{0} people", count].Value; } }""";
+        var localizers = HtmlLocalizerNames([baseClass, derived]);
+
+        // Act
+        var violations = FindHtmlValueReads(derived, localizers);
+
+        // Assert
+        Assert.Single(violations);
     }
 
     [Theory]
@@ -129,7 +148,7 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
     public void FindFormattedValueReads_OfTheHtmlLocalizer_FlagsOnlyValueReadsWithArguments(string source, int expectedCount)
     {
         // Act
-        var lines = HtmlLocalizerNames(source).SelectMany(localizer => FindFormattedValueReads(source, localizer)).ToList();
+        var lines = FindHtmlValueReads(source, HtmlLocalizerNames([source]));
 
         // Assert
         Assert.Equal(expectedCount, lines.Count);
@@ -213,20 +232,33 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
         => FindIndexers(source, (hasArguments, readsValue, _) => hasArguments && readsValue, localizer);
 
     /// <summary>
-    /// Returns every name an <c>IHtmlLocalizer</c> is declared under in a source file (a field, a property, a parameter
-    /// or a view's <c>@inject</c>), and <c>H</c>, the conventional name, which a base class may declare.
+    /// Returns every name an <c>IHtmlLocalizer</c> is declared under in a set of source files (a field, a property, a
+    /// parameter or a view's <c>@inject</c>), and <c>H</c>, the conventional name, which a base class outside them may
+    /// declare.
     /// </summary>
-    private static HashSet<string> HtmlLocalizerNames(string source)
+    private static HashSet<string> HtmlLocalizerNames(IEnumerable<string> sources)
     {
         var names = new HashSet<string>(StringComparer.Ordinal) { "H" };
 
-        foreach (Match match in _htmlLocalizerDeclarationRegex.Matches(source))
+        foreach (var source in sources)
         {
-            names.Add(match.Groups["name"].Value);
+            foreach (Match match in _htmlLocalizerDeclarationRegex.Matches(source))
+            {
+                names.Add(match.Groups["name"].Value);
+            }
         }
 
         return names;
     }
+
+    /// <summary>
+    /// Returns, as <c>line (localizer)</c>, every <c>L["...{N}...", args].Value</c> in a source file, for each of the
+    /// names an <c>IHtmlLocalizer</c> is declared under.
+    /// </summary>
+    private static List<string> FindHtmlValueReads(string source, IEnumerable<string> localizers)
+        => localizers
+            .SelectMany(localizer => FindFormattedValueReads(source, localizer).Select(line => $"{line} ({localizer})"))
+            .ToList();
 
     /// <summary>
     /// Returns the 1-based line of every <c>@T["...{N}..."]</c> or <c>@(T["...{N}..."])</c> with no arguments: written

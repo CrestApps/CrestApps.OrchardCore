@@ -37,6 +37,7 @@ public sealed class SurveyIndexProvider : IndexProvider<Survey>
                 RetentionDays = item.Retention?.Days is > 0 and var days ? days : 0,
                 ClosesUtc = item.Access?.ClosesUtc,
                 TotalLimit = item.Access?.Limits?.Total,
+                DeletingUtc = item.DeletingUtc,
             });
 
     private static string Cut(string value, int length)
