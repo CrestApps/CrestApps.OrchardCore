@@ -84,6 +84,20 @@ Extra fields on **Try Again** and **New Activity**:
 | **Assign to user** | The owner when **Specific owner** is chosen. Required then. |
 | **Default schedule hours** | How many hours later the follow-up is scheduled. The agent can change the date on the Complete page. When empty, a Try Again for dialer campaign work is dialed after the dialer profile's **Retry delay**, and other follow-ups are scheduled 24 hours later. |
 
+### Who makes the next call
+
+**Try Again** and **New Activity** also have **Next call by**, which decides how the follow-up is worked:
+
+| Choice | What happens |
+| --- | --- |
+| **Same as before** | The default. A dialer record goes back to the dialer, in the same campaign under the same dialer profile; other work stays as it was. |
+| **An agent (manual call)** | The follow-up is a manual call with the **Source** you pick (*Manual* by default) and the owner the assignment picks: with **Same owner**, the agent who completed the call. The dialer never calls it, even when the call it follows was a dialer call. |
+| **The dialer** | The follow-up is queued on its campaign's dialer queue under the **Dialer profile** you pick, and offered to whichever agent signed in to the campaign is free. Manual work can be handed to the dialer this way. |
+
+**Campaign** moves the follow-up to another campaign with any of the three; empty keeps its campaign.
+
+For example, to have an agent call back a contact the dialer reached: on the dialer campaign's subject, give the *Call back* disposition a **Try Again** action with **Next call by** set to *An agent (manual call)* and **Assignment type** *Same owner*. The agent who took the call gets the call back on their own list, and the dialer does not dial the contact again.
+
 ## When no contact matches the caller
 
 The actions act on the activity's contact, so they run only once it has one. On an inbound call from a number that matches no contact, or more than one, the agent picks the contact on the Complete page.

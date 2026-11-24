@@ -28,6 +28,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly IEnumerable<ISubjectActionHandler> _handlers;
     private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
     private readonly INamedCatalog<LeadStatus> _leadStatuses;
+    private readonly IActivityDialerContributor _dialerContributor;
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
@@ -41,7 +42,8 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ILogger<DefaultSubjectActionExecutor> logger,
         IEnumerable<ISubjectActionHandler> handlers = null,
         IEnumerable<IFollowUpActivityHandler> followUpHandlers = null,
-        INamedCatalog<LeadStatus> leadStatuses = null)
+        INamedCatalog<LeadStatus> leadStatuses = null,
+        IEnumerable<IActivityDialerContributor> dialerContributors = null)
     {
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -55,6 +57,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _handlers = handlers ?? [];
         _followUpHandlers = followUpHandlers ?? [];
         _leadStatuses = leadStatuses;
+        _dialerContributor = dialerContributors?.FirstOrDefault();
     }
 
     public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
@@ -306,10 +309,14 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
+        var route = await ApplyRoutingAsync(action, nextAttempt);
+
         // Whatever carried the first attempt takes the next one in too -- a dialer campaign queues it again -- or
-        // refuses it when no attempt is left.
+        // refuses it when no attempt is left. A follow-up the action gave to an agent stays off the dialer, and one it
+        // sent to the dialer is queued on its own campaign under its own profile.
         var followUp = new FollowUpActivityContext
         {
+            Route = route,
             PreviousActivity = activity,
             FollowUpActivity = nextAttempt,
             CreatedBy = OmnichannelConstants.ActionTypes.TryAgain,
@@ -414,8 +421,110 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             newActivity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(context.Contact, _contactMethods.Get(context.Contact), newActivity.Channel);
         }
 
+        // A new activity the action sends to the dialer is queued on its campaign by the same handlers that queue a
+        // dialer retry, so it is dialed under the profile the action names.
+        if (await ApplyRoutingAsync(action, newActivity) == FollowUpRoutingTarget.Dialer)
+        {
+            var followUp = new FollowUpActivityContext
+            {
+                PreviousActivity = activity,
+                FollowUpActivity = newActivity,
+                CreatedBy = OmnichannelConstants.ActionTypes.NewActivity,
+                Route = FollowUpRoutingTarget.Dialer,
+                HasChosenSchedule = true,
+            };
+
+            foreach (var handler in _followUpHandlers)
+            {
+                await handler.CreatingAsync(followUp);
+            }
+
+            if (followUp.Cancel)
+            {
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Did not create the new activity of activity {ActivityId} for the dialer: {Reason}",
+                        activity.ItemId,
+                        followUp.CancelReason);
+                }
+
+                return;
+            }
+        }
+
         await _session.SaveAsync(newActivity, collection: OmnichannelConstants.CollectionName);
         context.CreatedActivities[action.ItemId] = newActivity;
+    }
+
+    /// <summary>
+    /// Routes the follow-up the action created the way the action says: to an agent (off the dialer), to the dialer
+    /// under a profile, or only to another campaign.
+    /// </summary>
+    /// <remarks>
+    /// A call back the dialer placed used to go back to the dialer whatever the subject flow wanted: "Try again" queued
+    /// the next attempt in the same campaign under the same profile. The action can now give the call to an agent, so
+    /// the dialer never calls it again, send manual work to the dialer, or move it to another campaign.
+    /// </remarks>
+    private async Task<FollowUpRoutingTarget> ApplyRoutingAsync(SubjectAction action, OmnichannelActivity followUp)
+    {
+        if (!action.TryGet<FollowUpRoutingMetadata>(out var routing) || !routing.ChangesRouting())
+        {
+            return FollowUpRoutingTarget.SameAsBefore;
+        }
+
+        var campaignId = string.IsNullOrWhiteSpace(routing.CampaignId) ? followUp.CampaignId : routing.CampaignId.Trim();
+
+        switch (routing.Target)
+        {
+            case FollowUpRoutingTarget.Agent:
+                var source = string.IsNullOrWhiteSpace(routing.Source) || !ActivityRerouter.IsAgentSource(routing.Source)
+                    ? ActivitySources.Manual
+                    : routing.Source.Trim();
+
+                ActivityRerouter.ApplyAgentRoute(followUp, source, campaignId, ownerId: null, ownerName: null, _clock.UtcNow);
+
+                return FollowUpRoutingTarget.Agent;
+
+            case FollowUpRoutingTarget.Dialer:
+                var profile = _dialerContributor is null || string.IsNullOrWhiteSpace(routing.DialerProfileId)
+                    ? null
+                    : await _dialerContributor.FindByIdAsync(routing.DialerProfileId.Trim());
+
+                if (profile is null)
+                {
+                    _logger.LogWarning(
+                        "Subject action {SubjectActionId} sends its follow-up to dialer profile '{DialerProfileId}', which does not exist or the dialer is off; the follow-up is routed as before.",
+                        action.ItemId,
+                        routing.DialerProfileId);
+
+                    followUp.CampaignId = campaignId;
+
+                    return FollowUpRoutingTarget.SameAsBefore;
+                }
+
+                var destination = await ActivityDialDestinations.FindAsync(followUp, _contentManager, _contactMethods);
+
+                if (string.IsNullOrWhiteSpace(destination))
+                {
+                    _logger.LogWarning(
+                        "Subject action {SubjectActionId} sends its follow-up to the dialer, but the contact has no number the dialer can call; the follow-up is routed as before.",
+                        action.ItemId);
+
+                    followUp.CampaignId = campaignId;
+
+                    return FollowUpRoutingTarget.SameAsBefore;
+                }
+
+                ActivityRerouter.ApplyDialerRoute(followUp, profile, campaignId, destination);
+
+                return FollowUpRoutingTarget.Dialer;
+
+            default:
+                followUp.CampaignId = campaignId;
+
+                return FollowUpRoutingTarget.SameAsBefore;
+        }
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsForSubjectAsync(string subjectContentType)

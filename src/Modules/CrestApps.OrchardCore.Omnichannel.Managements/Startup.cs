@@ -128,6 +128,7 @@ public sealed class Startup : StartupBase
         services
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
+            .AddDisplayDriver<SubjectAction, FollowUpRoutingSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>();
 
         // The rows of the Subject Flows pages and of the numbers known not to be in service.

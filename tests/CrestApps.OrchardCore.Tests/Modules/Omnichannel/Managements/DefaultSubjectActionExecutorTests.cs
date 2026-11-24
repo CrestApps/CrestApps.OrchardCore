@@ -739,6 +739,89 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.Equal("closed", GetLeadStatusId(contact));
     }
 
+    [Fact]
+    public async Task ExecuteAsync_TryAgainRoutedToAnAgent_TheDialerCallBackBecomesTheAgentsManualCall()
+    {
+        // Arrange: a dialer call the agent dispositioned "Call back", whose Try Again gives the call to an agent.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        action.Put(new FollowUpRoutingMetadata { Target = FollowUpRoutingTarget.Agent });
+
+        OmnichannelActivity saved = null;
+        var session = new Mock<ISession>();
+        SetupSave(session, value => saved = value);
+
+        FollowUpActivityContext followUp = null;
+        var handler = new Mock<IFollowUpActivityHandler>();
+        handler
+            .Setup(x => x.CreatingAsync(It.IsAny<FollowUpActivityContext>(), It.IsAny<CancellationToken>()))
+            .Callback<FollowUpActivityContext, CancellationToken>((value, _) => followUp = value)
+            .Returns(Task.CompletedTask);
+
+        var executor = CreateExecutor(action, session, followUpHandlers: [handler.Object]);
+        var context = CreateContext();
+        context.Activity.Source = ActivitySources.PowerDial;
+        context.Activity.DialerProfileId = "profile-1";
+        context.Activity.CampaignId = "campaign-1";
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert: the dialer is told the follow-up is an agent's, and it is that agent's manual call.
+        Assert.Equal(FollowUpRoutingTarget.Agent, followUp.Route);
+        Assert.NotNull(saved);
+        Assert.Equal(ActivitySources.Manual, saved.Source);
+        Assert.Null(saved.DialerProfileId);
+        Assert.Equal("campaign-1", saved.CampaignId);
+        Assert.Equal("completing-user-id", saved.AssignedToId);
+        Assert.Equal(ActivityInteractionType.Manual, saved.InteractionType);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NewActivityRoutedToTheDialer_IsQueuedOnTheCampaignUnderTheProfile()
+    {
+        // Arrange: manual work whose New Activity hands the next call to the dialer on another campaign.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.NewActivity, SubjectActionOwnerAssignmentType.SameOwner);
+        action.Put(new FollowUpRoutingMetadata
+        {
+            Target = FollowUpRoutingTarget.Dialer,
+            DialerProfileId = "profile-2",
+            CampaignId = "campaign-2",
+        });
+
+        OmnichannelActivity saved = null;
+        var session = new Mock<ISession>();
+        SetupSave(session, value => saved = value);
+
+        FollowUpActivityContext followUp = null;
+        var handler = new Mock<IFollowUpActivityHandler>();
+        handler
+            .Setup(x => x.CreatingAsync(It.IsAny<FollowUpActivityContext>(), It.IsAny<CancellationToken>()))
+            .Callback<FollowUpActivityContext, CancellationToken>((value, _) => followUp = value)
+            .Returns(Task.CompletedTask);
+
+        var dialer = new Mock<IActivityDialerContributor>();
+        dialer
+            .Setup(x => x.FindByIdAsync("profile-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityDialerProfileDescriptor { ProfileId = "profile-2", DisplayName = "Power", ActivitySource = ActivitySources.PowerDial });
+
+        var executor = CreateExecutor(action, session, followUpHandlers: [handler.Object], dialerContributor: dialer.Object);
+        var context = CreateContext();
+        context.Activity.Channel = OmnichannelConstants.Channels.Phone;
+        context.Activity.PreferredDestination = "+17025550100";
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(followUp);
+        Assert.Equal(FollowUpRoutingTarget.Dialer, followUp.Route);
+        Assert.NotNull(saved);
+        Assert.Equal(ActivitySources.PowerDial, saved.Source);
+        Assert.Equal("profile-2", saved.DialerProfileId);
+        Assert.Equal("campaign-2", saved.CampaignId);
+        Assert.Null(saved.AssignedToId);
+    }
+
     private static INamedCatalog<LeadStatus> CreateLeadStatuses()
     {
         var statuses = new Mock<INamedCatalog<LeadStatus>>();
@@ -766,7 +849,8 @@ public sealed class DefaultSubjectActionExecutorTests
         Mock<IContentManager> contentManager = null,
         IEnumerable<IFollowUpActivityHandler> followUpHandlers = null,
         INamedCatalog<LeadStatus> leadStatuses = null,
-        INotInServiceNumberService notInServiceNumbers = null)
+        INotInServiceNumberService notInServiceNumbers = null,
+        IActivityDialerContributor dialerContributor = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
@@ -792,7 +876,8 @@ public sealed class DefaultSubjectActionExecutorTests
             TestContactMethods.Accessor,
             NullLogger<DefaultSubjectActionExecutor>.Instance,
             followUpHandlers: followUpHandlers,
-            leadStatuses: leadStatuses);
+            leadStatuses: leadStatuses,
+            dialerContributors: dialerContributor is null ? null : [dialerContributor]);
     }
 
     private static SubjectAction CreateAction(

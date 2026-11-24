@@ -736,6 +736,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool HasNamedOwner { get; set; }
         public int? MaxAttempts { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity PreviousActivity { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpRoutingTarget Route { get; set; }
+    }
+    public sealed class FollowUpRoutingMetadata
+    {
+        public FollowUpRoutingMetadata() { }
+        public string CampaignId { get; set; }
+        public string DialerProfileId { get; set; }
+        public string Source { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpRoutingTarget Target { get; set; }
+        public bool ChangesRouting() { }
+    }
+    public enum FollowUpRoutingTarget
+    {
+        SameAsBefore = 0,
+        Agent = 1,
+        Dialer = 2,
     }
     public enum HandoffAvailability
     {

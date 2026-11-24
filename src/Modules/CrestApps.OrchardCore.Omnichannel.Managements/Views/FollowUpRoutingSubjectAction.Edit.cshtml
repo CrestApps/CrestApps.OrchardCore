@@ -1,0 +1,65 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model FollowUpRoutingSubjectActionViewModel
+
+@{
+    var targetId = Html.IdFor(m => m.Target);
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="Target" class="ocat-label">@T["Next call by"]</label>
+    <div class="ocat-end">
+        <select asp-for="Target" class="form-select" data-follow-up-route="@targetId">
+            <option value="@nameof(FollowUpRoutingTarget.SameAsBefore)">@T["Same as before (a dialer record goes back to the dialer)"]</option>
+            <option value="@nameof(FollowUpRoutingTarget.Agent)">@T["An agent (manual call): the dialer does not call it again"]</option>
+            <option value="@nameof(FollowUpRoutingTarget.Dialer)">@T["The dialer, under a dialer profile"]</option>
+        </select>
+        <span class="hint">@T["Who makes the follow-up call. Moving a dialer call back to an agent takes it off the dialer, so the contact is called by hand."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select"></select>
+        <span class="hint">@T["The campaign the follow-up belongs to. The dialer queues it on this campaign's dialer queue."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DialerProfileId" data-follow-up-route-show="@targetId" data-follow-up-route-value="@nameof(FollowUpRoutingTarget.Dialer)">
+    <label asp-for="DialerProfileId" class="ocat-label ocat-label-required">@T["Dialer profile"]</label>
+    <div class="ocat-end">
+        <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select"></select>
+        <span asp-validation-for="DialerProfileId"></span>
+        <span class="hint">@T["The dialer offers the follow-up to whichever agent signed in to the campaign is free, so the assignment above does not apply."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Source" data-follow-up-route-show="@targetId" data-follow-up-route-value="@nameof(FollowUpRoutingTarget.Agent)">
+    <label asp-for="Source" class="ocat-label">@T["Source"]</label>
+    <div class="ocat-end">
+        <select asp-for="Source" asp-items="Model.Sources" class="form-select"></select>
+        <span asp-validation-for="Source"></span>
+        <span class="hint">@T["The follow-up goes to the owner the assignment above picks; with the same owner, that is the agent who completed the call."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const target = document.querySelector('[data-follow-up-route="@targetId"]');
+
+        if (!target) {
+            return;
+        }
+
+        const toggle = () => {
+            document.querySelectorAll('[data-follow-up-route-show="@targetId"]').forEach(element => {
+                element.classList.toggle('d-none', element.getAttribute('data-follow-up-route-value') !== target.value);
+            });
+        };
+
+        target.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>
