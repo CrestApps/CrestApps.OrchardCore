@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Core.Services;
+using CrestApps.OrchardCore.Payroll.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.Core.UnitedStates;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -27,7 +28,7 @@ public sealed class ContractorPaymentsTests
     {
         var rules = new[]
         {
-            new IncomeTaxRule { ItemId = "bwh", TaxCode = Form1099Nec.BackupWithholdingCode, Name = "Backup withholding", Jurisdiction = "US", Category = IncomeTaxCategories.ContractorWithholding, Method = "Percentage", Rate = 24, EffectiveFrom = new DateOnly(2026, 1, 1) },
+            new IncomeTaxRule { ItemId = "bwh", TaxCode = UnitedStatesTaxForms.BackupWithholdingCode, Name = "Backup withholding", Jurisdiction = "US", Category = IncomeTaxCategories.ContractorWithholding, Method = "Percentage", Rate = 24, EffectiveFrom = new DateOnly(2026, 1, 1) },
             new IncomeTaxRule { ItemId = "ss", TaxCode = "US-SS-EE", Name = "Social Security", Jurisdiction = "US", Category = IncomeTaxCategories.SocialInsurance, Method = "Percentage", Rate = 6.2m, EffectiveFrom = new DateOnly(2026, 1, 1) },
         };
         var manager = new Mock<IIncomeTaxRuleManager>();
@@ -52,7 +53,7 @@ public sealed class ContractorPaymentsTests
         var employee = await provider.CalculateAsync(Request(PayWorkerType.Employee, withhold: true), TestContext.Current.CancellationToken);
 
         // 24% of 1000, and no social insurance on a contractor.
-        Assert.Equal((Form1099Nec.BackupWithholdingCode, 240m), (Assert.Single(withheld.Lines).TaxCode, withheld.Lines[0].Amount));
+        Assert.Equal((UnitedStatesTaxForms.BackupWithholdingCode, 240m), (Assert.Single(withheld.Lines).TaxCode, withheld.Lines[0].Amount));
         Assert.Empty(none.Lines);
         Assert.Equal(["US-SS-EE"], employee.Lines.Select(line => line.TaxCode));
     }
@@ -78,13 +79,8 @@ public sealed class ContractorPaymentsTests
     [Fact]
     public async Task Form1099Nec_ListsContractorsOverTheThresholdOrWithheldOn_AndTheW2AndReturnsLeaveThemOut()
     {
-        await using var harness = await PayRunTests.CreateHarnessAsync(services =>
-        {
-            services.AddPayrollFilingsCore();
-            services.AddPayrollFilingForm<Form941>();
-            services.AddPayrollFilingForm<FormW2>();
-            services.AddPayrollFilingForm<Form1099Nec>();
-        });
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => services.AddPayrollFilingsCore());
+        await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.UnitedStates, UnitedStatesTaxForms.Form941, UnitedStatesTaxForms.FormW2, UnitedStatesTaxForms.Form1099Nec);
         var setup = await PayRunTests.SetUpAsync(harness);
         var filer = CalendarTestHarness.User("filer", PayrollPermissions.ManagePayrollFilings.Name);
         var members = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -127,7 +123,7 @@ public sealed class ContractorPaymentsTests
 
                 if (withheld > 0)
                 {
-                    lines.Add(new PayStatementLine { Type = PayLineType.Tax, TaxCode = Form1099Nec.BackupWithholdingCode, TaxCategory = IncomeTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = paid, Amount = withheld });
+                    lines.Add(new PayStatementLine { Type = PayLineType.Tax, TaxCode = UnitedStatesTaxForms.BackupWithholdingCode, TaxCategory = IncomeTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = paid, Amount = withheld });
                 }
 
                 await store.CreateAsync(new PayStatement
@@ -158,9 +154,9 @@ public sealed class ContractorPaymentsTests
             var employer = await services.GetRequiredService<IEmployerManager>().FindByIdAsync(setup.EmployerId);
 
             return (
-                (await service.PrepareAsync(employer, Form1099Nec.FormName, 2026, 0, filer)).Filing,
-                (await service.PrepareAsync(employer, FormW2.FormName, 2026, 0, filer)).Filing,
-                (await service.PrepareAsync(employer, Form941.FormName, 2026, 4, filer)).Filing);
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form1099Nec, 2026, 0, filer)).Filing,
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.FormW2, 2026, 0, filer)).Filing,
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form941, 2026, 4, filer)).Filing);
         });
 
         Assert.Equal(["Alex Design LLC", "Casey Notin"], forms1099.People.Select(person => person.Name).Order(StringComparer.Ordinal));
@@ -172,10 +168,16 @@ public sealed class ContractorPaymentsTests
         Assert.Empty(w2.People);
         Assert.Equal(0m, q4.Boxes["2"]);
 
-        var pdf = Form1099NecDocument.Write(forms1099, forms1099.People[0], new Employer { Name = "Contoso", TaxId = "12-3456789" }, ["1 Main St"], new Form1099NecTexts());
+        // The statement prints the form's two boxes with their labels; the threshold is the form's yearly value.
+        var form = PayrollTaxFormRecipes.Form(PayrollTaxFormRecipes.UnitedStates, UnitedStatesTaxForms.Form1099Nec);
+        var employer = new Employer { Name = "Contoso", TaxId = "12-3456789" };
+        var texts = PayrollTaxStatementDocument.TextsFor(form, forms1099.People[0], employer);
+        var pdf = PayrollTaxStatementDocument.Write(forms1099, forms1099.People[0], employer, ["1 Main St"], texts);
 
+        Assert.Equal(["1 Nonemployee compensation", "4 Federal income tax withheld"], texts.Boxes.Select(box => box.Label));
+        Assert.Equal(("Payer's TIN", "12-3456789", "1099-NEC-2026.pdf"), (texts.EmployerTaxIdLabel, texts.EmployerTaxId, PayrollTaxStatementDocument.FileName(form, forms1099)));
         Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(pdf, 0, 4));
-        Assert.Equal(2000m, Form1099Nec.ThresholdFor(2026));
-        Assert.Equal(600m, Form1099Nec.ThresholdFor(2025));
+        Assert.Equal(2000m, PayrollTaxFormFormulaContext.ValueFor(form, "ReportingThreshold", 2026));
+        Assert.Equal(600m, PayrollTaxFormFormulaContext.ValueFor(form, "ReportingThreshold", 2025));
     }
 }

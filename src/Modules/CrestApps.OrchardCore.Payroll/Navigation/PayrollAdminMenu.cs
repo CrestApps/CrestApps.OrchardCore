@@ -112,6 +112,11 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
                         .Add(S["Employers"], S["Employers"].PrefixPosition("5"), item => item
                             .Id("payrollEmployers")
                             .Action("Index", "Employers", PayrollConstants.Features.Payroll)
+                            .LocalNav())
+                        .Add(S["Tax Forms"], S["Tax Forms"].PrefixPosition("30"), item => item
+                            .Id("payrollTaxForms")
+                            .Action("Index", "PayrollTaxForms", PayrollConstants.Features.Payroll)
+                            .Permission(PayrollPermissions.ManagePayrollSettings)
                             .LocalNav()));
                 }
             });

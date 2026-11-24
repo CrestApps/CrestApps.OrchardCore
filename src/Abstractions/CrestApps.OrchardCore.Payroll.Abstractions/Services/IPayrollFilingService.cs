@@ -64,8 +64,23 @@ public interface ITaxLiabilityService
 }
 
 /// <summary>
-/// A tax form a country pack prepares from the final statements, such as a quarterly return or the year's wage
-/// statements. Register one with <c>services.AddPayrollFilingForm&lt;T&gt;()</c>.
+/// Manages the tax forms made on the Tax Forms page or by a recipe.
+/// </summary>
+public interface IPayrollTaxFormManager : ICatalogManager<PayrollTaxForm>
+{
+    /// <summary>
+    /// Finds a form by its stored name, ignoring case, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="name">The name, such as US-941.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The form.</returns>
+    Task<PayrollTaxForm> FindByNameAsync(string name, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// A tax form prepared from the final statements, such as a quarterly return or the year's wage statements. Most forms
+/// are <see cref="PayrollTaxForm"/> records made on the Tax Forms page or by a recipe; a module can still add one in
+/// code with <c>services.AddPayrollFilingForm&lt;T&gt;()</c>.
 /// </summary>
 public interface IPayrollFilingForm
 {
@@ -133,11 +148,21 @@ public sealed class PayrollFilingContext
 public interface IPayrollFilingService
 {
     /// <summary>
-    /// Gets the forms an employer can file: those of the jurisdictions it is registered in.
+    /// Gets the forms an employer can file: the enabled tax forms and those a module adds in code, of the jurisdictions
+    /// it is registered in.
     /// </summary>
     /// <param name="employer">The employer.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The forms.</returns>
-    IReadOnlyList<IPayrollFilingForm> FormsFor(Employer employer);
+    Task<IReadOnlyList<IPayrollFilingForm>> FormsForAsync(Employer employer, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds a form by its stored name, enabled or not and whatever the employer, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="name">The form's stored name.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The form.</returns>
+    Task<IPayrollFilingForm> FindFormAsync(string name, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Prepares a form for a period: a new draft, or the draft prepared again. A filed form is amended instead.

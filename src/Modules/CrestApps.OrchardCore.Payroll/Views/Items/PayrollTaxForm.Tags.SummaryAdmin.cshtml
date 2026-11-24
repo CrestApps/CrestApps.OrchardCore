@@ -1,0 +1,17 @@
+@model ShapeViewModel<PayrollTaxForm>
+
+@{
+    var form = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-flag text-secondary me-1" aria-hidden="true"></i>@form.Jurisdiction</span>
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@(form.IsQuarterly ? T["Every quarter"] : T["Every year"])</span>
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-table-cells text-secondary me-1" aria-hidden="true"></i>@T.Plural(form.Fields.Count, "1 field", "{0} fields")</span>
+@if (form.HasPersonStatements)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@T["A statement per person"]</span>
+}
+@if (!form.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]</span>
+}

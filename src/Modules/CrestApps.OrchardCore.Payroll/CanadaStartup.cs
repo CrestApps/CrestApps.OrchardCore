@@ -1,20 +1,23 @@
 using CrestApps.OrchardCore.Payroll.Core.Canada;
+using CrestApps.OrchardCore.Payroll.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Drivers;
+using CrestApps.OrchardCore.Payroll.Migrations;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Taxation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Payroll;
 
 /// <summary>
-/// Canada Payroll Filings: the T4 slips and Summary, and the RL-1 slips and Summary, made from pay statements. The
-/// source deductions are Taxation's Canada Income Tax, remitted on the schedule of the employer's CA and CA-QC
-/// registrations.
+/// Canada Payroll Filings: adds the T4 and RL-1 tax forms as tax form records from the Canada tax forms recipe the first
+/// time the feature is on, the DENTALCODE() formula function and the employer's Canada card. The source deductions are
+/// Taxation's Canada Income Tax, remitted on the schedule of the employer's CA and CA-QC registrations.
 /// </summary>
 [Feature(PayrollConstants.Features.Canada)]
 public sealed class CanadaStartup : StartupBase
@@ -22,8 +25,9 @@ public sealed class CanadaStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddPayrollFilingForm<FormT4>();
-        services.AddPayrollFilingForm<FormRl1>();
+        services.AddPayrollTaxFormFunctions<CanadaTaxFormFunctions>();
+        services.TryAddScoped<PayrollTaxFormRecipeSeeder>();
+        services.AddDataMigration<CanadaTaxFormsMigrations>();
         services.AddDisplayDriver<Employer, EmployerCanadaDisplayDriver>();
     }
 }

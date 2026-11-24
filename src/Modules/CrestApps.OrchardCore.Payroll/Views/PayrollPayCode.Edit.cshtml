@@ -161,10 +161,10 @@
         @if (Model.FormBoxOptions.Count > 0)
         {
             <div class="ocat-wrapper">
-                <label asp-for="FormBoxes" class="ocat-label">@T["Tax form boxes"]</label>
+                <label asp-for="FormBoxes" class="ocat-label">@T["Tax form fields"]</label>
                 <div class="ocat-end">
                     <select asp-for="FormBoxes" asp-items="Model.FormBoxOptions" class="form-select" multiple size="5" style="max-width: 24rem"></select>
-                    <span class="hint">@T["The boxes of year-end and quarterly forms the amounts are reported in."]</span>
+                    <span class="hint">@T["The fields (boxes and lines) of the tax forms the amounts are reported in, such as W-2 box 12D."]</span>
                 </div>
             </div>
         }

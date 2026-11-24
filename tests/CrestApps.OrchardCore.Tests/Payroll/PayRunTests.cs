@@ -725,8 +725,9 @@ public sealed class PayRunTests
                 await IncomeTaxRuleIndexSchema.CreateAsync(schemaBuilder);
                 await GarnishmentOrderIndexSchema.CreateAsync(schemaBuilder);
                 await PayrollFilingIndexSchema.CreateAsync(schemaBuilder);
+                await CrestApps.OrchardCore.Payroll.Core.TaxForms.PayrollTaxFormIndexSchema.CreateAsync(schemaBuilder);
             },
-            [.. PayrollIndexSchema.Providers(), new IncomeTaxRuleIndexProvider(), new GarnishmentOrderIndexProvider(), new PayrollFilingIndexProvider(), new PayrollFilingRecordIndexProvider()]);
+            [.. PayrollIndexSchema.Providers(), new IncomeTaxRuleIndexProvider(), new GarnishmentOrderIndexProvider(), new PayrollFilingIndexProvider(), new PayrollFilingRecordIndexProvider(), new CrestApps.OrchardCore.Payroll.Core.TaxForms.PayrollTaxFormIndexProvider()]);
 
     /// <summary>
     /// Names approvers by the permission a rule gives, through the harness's claim authorization.

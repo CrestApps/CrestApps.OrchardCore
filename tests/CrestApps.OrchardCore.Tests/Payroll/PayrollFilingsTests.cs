@@ -55,9 +55,9 @@ public sealed class PayrollFilingsTests
             var service = services.GetRequiredService<IPayrollFilingService>();
 
             return (
-                (await service.PrepareAsync(employer, Form941.FormName, 2026, 4, preparer)).Filing,
-                (await service.PrepareAsync(employer, Form940.FormName, 2026, 0, preparer)).Filing,
-                (await service.PrepareAsync(employer, FormW2.FormName, 2026, 0, preparer)).Filing,
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form941, 2026, 4, preparer)).Filing,
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form940, 2026, 0, preparer)).Filing,
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.FormW2, 2026, 0, preparer)).Filing,
                 await services.GetRequiredService<ITaxLiabilityService>().ListAsync(setup.EmployerId, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)));
         });
 
@@ -97,11 +97,11 @@ public sealed class PayrollFilingsTests
         var (again, amendment, first) = await harness.RunAsync(async services =>
         {
             var service = services.GetRequiredService<IPayrollFilingService>();
-            var draft = (await service.PrepareAsync(employer, Form941.FormName, 2026, 4, filer)).Filing;
+            var draft = (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form941, 2026, 4, filer)).Filing;
 
             Assert.True((await service.MarkFiledAsync(draft, new DateOnly(2027, 1, 20), "CONF-1", filer)).Succeeded);
 
-            var prepared = await service.PrepareAsync(employer, Form941.FormName, 2026, 4, filer);
+            var prepared = await service.PrepareAsync(employer, UnitedStatesTaxForms.Form941, 2026, 4, filer);
             var amended = await service.AmendAsync(draft, filer);
 
             Assert.True((await service.MarkFiledAsync(amended.Filing, new DateOnly(2027, 2, 1), "CONF-2", filer)).Succeeded);
@@ -144,7 +144,7 @@ public sealed class PayrollFilingsTests
             var statement = (await services.GetRequiredService<PayStatementStore>().ListAsync(index => index.EmployerId == setup.EmployerId))[0];
             var voiding = await runs.VoidStatementAsync(statement, CalendarTestHarness.User("voider", PayrollPermissions.VoidPayStatements.Name), "Wrong");
 
-            return (first, second, opened, voiding, await services.GetRequiredService<IPayrollFilingManager>().FindCurrentAsync(setup.EmployerId, FormW2.FormName, 2026, 0));
+            return (first, second, opened, voiding, await services.GetRequiredService<IPayrollFilingManager>().FindCurrentAsync(setup.EmployerId, UnitedStatesTaxForms.FormW2, 2026, 0));
         });
 
         Assert.False(blocked.Succeeded);
@@ -204,8 +204,8 @@ public sealed class PayrollFilingsTests
             PayrollFilingPerson Lee(decimal wages)
                 => new() { StaffMemberId = setup.StaffMemberId, ProfileId = profileId, Name = "Lee Park", Boxes = new Dictionary<string, decimal>(StringComparer.Ordinal) { ["1"] = wages } };
 
-            var filed = new PayrollFiling { ItemId = "w2filed000000000000000001", EmployerId = setup.EmployerId, Form = FormW2.FormName, Year = 2026, Status = PayrollFilingStatus.Filed, FiledOn = new DateOnly(2027, 1, 20), People = [Lee(7500)] };
-            var amendment = new PayrollFiling { ItemId = "w2amend000000000000000001", EmployerId = setup.EmployerId, Form = FormW2.FormName, Year = 2026, Status = PayrollFilingStatus.Draft, AmendsId = filed.ItemId, People = [Lee(7600)] };
+            var filed = new PayrollFiling { ItemId = "w2filed000000000000000001", EmployerId = setup.EmployerId, Form = UnitedStatesTaxForms.FormW2, Year = 2026, Status = PayrollFilingStatus.Filed, FiledOn = new DateOnly(2027, 1, 20), People = [Lee(7500)] };
+            var amendment = new PayrollFiling { ItemId = "w2amend000000000000000001", EmployerId = setup.EmployerId, Form = UnitedStatesTaxForms.FormW2, Year = 2026, Status = PayrollFilingStatus.Draft, AmendsId = filed.ItemId, People = [Lee(7600)] };
 
             await filings.CreateAsync(filed);
             await filings.CreateAsync(amendment);
@@ -292,12 +292,8 @@ public sealed class PayrollFilingsTests
     [Fact]
     public async Task BackupWithholding_IsItsOwnLiability_OnForm945_AndStaysOutOfForm941()
     {
-        await using var harness = await PayRunTests.CreateHarnessAsync(services =>
-        {
-            services.AddPayrollFilingsCore();
-            services.AddPayrollFilingForm<Form941>();
-            services.AddPayrollFilingForm<Form945>();
-        });
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => services.AddPayrollFilingsCore());
+        await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.UnitedStates, UnitedStatesTaxForms.Form941, UnitedStatesTaxForms.Form945);
         var setup = await PayRunTests.SetUpAsync(harness);
         var filer = CalendarTestHarness.User("filer", PayrollPermissions.ManagePayrollFilings.Name);
 
@@ -328,7 +324,7 @@ public sealed class PayrollFilingsTests
                 Lines =
                 [
                     new PayStatementLine { Type = PayLineType.Earning, PayCodeId = setup.BonusCodeId, Amount = 3000 },
-                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = Form1099Nec.BackupWithholdingCode, TaxCategory = IncomeTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 720 },
+                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = UnitedStatesTaxForms.BackupWithholdingCode, TaxCategory = IncomeTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 720 },
                 ],
             });
 
@@ -349,8 +345,8 @@ public sealed class PayrollFilingsTests
 
             return (
                 await services.GetRequiredService<ITaxLiabilityService>().ListAsync(setup.EmployerId, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)),
-                (await service.PrepareAsync(employer, Form941.FormName, 2026, 4, filer)).Filing,
-                (await service.PrepareAsync(employer, Form945.FormName, 2026, 0, filer)).Filing);
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form941, 2026, 4, filer)).Filing,
+                (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form945, 2026, 0, filer)).Filing);
         });
 
         var period = Assert.Single(liabilities);
@@ -367,7 +363,7 @@ public sealed class PayrollFilingsTests
         var (setup, employer) = await SeedAsync(harness);
         var filer = CalendarTestHarness.User("filer", PayrollPermissions.ManagePayrollFilings.Name);
 
-        await harness.RunAsync(async services => await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, FormW2.FormName, 2026, 0, filer));
+        await harness.RunAsync(async services => await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, UnitedStatesTaxForms.FormW2, 2026, 0, filer));
 
         async Task<System.Text.Json.Nodes.JsonObject> ExportAsync(System.Security.Claims.ClaimsPrincipal user, bool sensitive)
             => await harness.RunAsync(async services =>
@@ -385,7 +381,7 @@ public sealed class PayrollFilingsTests
         var revealer = CalendarTestHarness.User("revealer", PayrollPermissions.ExportPayrollData.Name, PayrollPermissions.ViewTaxIds.Name);
 
         System.Text.Json.Nodes.JsonObject W2(System.Text.Json.Nodes.JsonObject step)
-            => step["Filings"]!.AsArray().Select(node => node!.AsObject()).Single(node => node["Form"]!.GetValue<string>() == FormW2.FormName);
+            => step["Filings"]!.AsArray().Select(node => node!.AsObject()).Single(node => node["Form"]!.GetValue<string>() == UnitedStatesTaxForms.FormW2);
 
         Assert.False(W2(await ExportAsync(revealer, sensitive: false)).ContainsKey("People"));
         Assert.False(W2(await ExportAsync(exporter, sensitive: true)).ContainsKey("People"));
@@ -401,7 +397,7 @@ public sealed class PayrollFilingsTests
         var otherClerk = CalendarTestHarness.User("other", PayrollPermissionTemplates.For(PayrollPermissions.ManagePayrollFilings, "fabrikam").Name);
         var clerk = CalendarTestHarness.User("clerk", PayrollPermissionTemplates.For(PayrollPermissions.ManagePayrollFilings, setup.EmployerId).Name);
 
-        var filingId = await harness.RunAsync(async services => (await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, Form941.FormName, 2026, 4, filer)).Filing.ItemId);
+        var filingId = await harness.RunAsync(async services => (await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, UnitedStatesTaxForms.Form941, 2026, 4, filer)).Filing.ItemId);
 
         var results = await harness.RunAsync(async services => (
             await Controller(services, clerk).Details(filingId),
@@ -537,12 +533,12 @@ public sealed class PayrollFilingsTests
         return (setup, employer);
     }
 
-    private static Task<CalendarTestHarness> CreateHarnessAsync()
-        => PayRunTests.CreateHarnessAsync(services =>
-        {
-            services.AddPayrollFilingsCore();
-            services.AddPayrollFilingForm<Form941>();
-            services.AddPayrollFilingForm<Form940>();
-            services.AddPayrollFilingForm<FormW2>();
-        });
+    private static async Task<CalendarTestHarness> CreateHarnessAsync()
+    {
+        var harness = await PayRunTests.CreateHarnessAsync(services => services.AddPayrollFilingsCore());
+
+        await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.UnitedStates, UnitedStatesTaxForms.Form941, UnitedStatesTaxForms.Form940, UnitedStatesTaxForms.FormW2);
+
+        return harness;
+    }
 }

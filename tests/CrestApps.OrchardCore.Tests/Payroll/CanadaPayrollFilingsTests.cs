@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.Core.Services;
+using CrestApps.OrchardCore.Payroll.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -49,7 +50,7 @@ public sealed class CanadaPayrollFilingsTests
             await deposits.CreateAsync(deposit);
 
             return (
-                (await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, FormT4.FormName, 2026, 0, filer)).Filing,
+                (await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, CanadaTaxForms.FormT4, 2026, 0, filer)).Filing,
                 await services.GetRequiredService<ITaxLiabilityService>().ListAsync(setup.EmployerId, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)));
         });
 
@@ -86,8 +87,8 @@ public sealed class CanadaPayrollFilingsTests
             var filings = services.GetRequiredService<IPayrollFilingService>();
 
             return (
-                (await filings.PrepareAsync(employer, FormRl1.FormName, 2026, 0, filer)).Filing,
-                (await filings.PrepareAsync(employer, FormT4.FormName, 2026, 0, filer)).Filing,
+                (await filings.PrepareAsync(employer, CanadaTaxForms.FormRl1, 2026, 0, filer)).Filing,
+                (await filings.PrepareAsync(employer, CanadaTaxForms.FormT4, 2026, 0, filer)).Filing,
                 await services.GetRequiredService<ITaxLiabilityService>().ListAsync(setup.EmployerId, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)));
         });
 
@@ -178,7 +179,7 @@ public sealed class CanadaPayrollFilingsTests
 
             employer.Put(new CanadaEmployerSettings());
 
-            return (await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, FormT4.FormName, 2026, 0, filer)).Filing;
+            return (await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, CanadaTaxForms.FormT4, 2026, 0, filer)).Filing;
         });
 
         Assert.Equal([("CA-ON", 5000m, 900m), ("CA-BC", 3000m, 480m)], t4.People.Select(person => (person.Jurisdiction, person.Boxes["14"], person.Boxes["22"])));
@@ -219,10 +220,10 @@ public sealed class CanadaPayrollFilingsTests
                 Lines = province is null ? [] : [new PayStatementLine { Type = PayLineType.Tax, TaxCode = province + "-PIT", Jurisdiction = province, Amount = 1 }],
             };
 
-        var groups = FormT4.ByProvinceOfEmployment([Statement(20, "CA-AB"), Statement(6, null), Statement(13, "CA-ON"), Statement(27, null)]);
+        var groups = PayrollFilingSums.ByJurisdictionUnder([Statement(20, "CA-AB"), Statement(6, null), Statement(13, "CA-ON"), Statement(27, null)], "CA");
 
         // The first statement has none before it: the first province after it.
-        Assert.Equal([("ON", 2), ("AB", 2)], groups.Select(group => (group.Province, group.Statements.Count)));
+        Assert.Equal([("CA-ON", 2), ("CA-AB", 2)], groups.Select(group => (group.Jurisdiction, group.Statements.Count)));
     }
 
     [Fact]
@@ -335,14 +336,16 @@ public sealed class CanadaPayrollFilingsTests
             return new PayStatement { PayDate = pay, Lines = lines };
         }).ToList();
 
-        var boxes = FormT4.Boxes(statements, new Dictionary<string, PayCode> { ["reg"] = regular });
+        var t4 = PayrollTaxFormRecipes.Form(PayrollTaxFormRecipes.Canada, CanadaTaxForms.FormT4);
+        var codes = new Dictionary<string, PayCode> { ["reg"] = regular };
+        var boxes = PayrollTaxFormRecipes.PersonFields(t4, statements, codes, 2026);
 
         // EI was worked out on 70,000 (the period reaching the maximum on all its pay): box 24 is 68,900. The pensionable
         // earnings are 91,000: box 26 is the YAMPE, 85,000.
         Assert.Equal((91000m, 68900m, 85000m), (boxes["14"], boxes["24"], boxes["26"]));
 
         // A person who paid no CPP or QPP has no pensionable earnings.
-        Assert.Equal(0m, FormT4.Boxes([new PayStatement { PayDate = new DateOnly(2026, 3, 13), Lines = [new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 1000 }] }], new Dictionary<string, PayCode> { ["reg"] = regular })["26"]);
+        Assert.Equal(0m, PayrollTaxFormRecipes.PersonFields(t4, [new PayStatement { PayDate = new DateOnly(2026, 3, 13), Lines = [new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 1000 }] }], codes, 2026)["26"]);
     }
 
     [Fact]
@@ -603,13 +606,18 @@ public sealed class CanadaPayrollFilingsTests
         return (setup, employer);
     }
 
-    private static Task<CalendarTestHarness> CreateHarnessAsync()
-        => PayRunTests.CreateHarnessAsync(services =>
+    private static async Task<CalendarTestHarness> CreateHarnessAsync()
+    {
+        var harness = await PayRunTests.CreateHarnessAsync(services =>
         {
             services.AddPayrollFilingsCore();
-            services.AddPayrollFilingForm<FormT4>();
-            services.AddPayrollFilingForm<FormRl1>();
+            services.AddPayrollTaxFormFunctions<CanadaTaxFormFunctions>();
         });
+
+        await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.Canada);
+
+        return harness;
+    }
 
     private sealed class NamedProvider : IIncomeTaxProvider
     {

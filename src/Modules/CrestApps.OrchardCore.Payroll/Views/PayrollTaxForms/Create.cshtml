@@ -1,0 +1,17 @@
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollTaxFormsCreate" title="@T["New tax form"]">
+        <breadcrumb-item id="PayrollTaxForms" action="Index" controller="PayrollTaxForms" area="CrestApps.OrchardCore.Payroll" permission="@PayrollPermissions.ManagePayrollSettings.Name">@T["Tax forms"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

@@ -287,6 +287,7 @@ public sealed class PayCodeRulesTests
             Mock.Of<IPayCodeManager>(),
             Options.Create(categories),
             Options.Create(new PayrollFormBoxOptions()),
+            Mock.Of<IPayrollTaxFormManager>(),
             Mock.Of<IStringLocalizerFactory>(),
             new PassThroughStringLocalizer<PayrollPayCodeDisplayDriver>());
     }

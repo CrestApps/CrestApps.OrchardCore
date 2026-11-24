@@ -91,6 +91,11 @@ public static class PayrollConstants
     public const string FilingsRecipeStepName = "PayrollFilings";
 
     /// <summary>
+    /// The name of the recipe and deployment step of tax forms.
+    /// </summary>
+    public const string TaxFormsRecipeStepName = "PayrollTaxForms";
+
+    /// <summary>
     /// The name of the recipe step of tax deposits.
     /// </summary>
     public const string TaxDepositsRecipeStepName = "PayrollTaxDeposits";
@@ -192,14 +197,14 @@ public static class PayrollConstants
         public const string AI = "CrestApps.OrchardCore.Payroll.AI";
 
         /// <summary>
-        /// United States Payroll Filings: Forms 941, 940, 945, W-2 and W-3, 1099-NEC and 1096, the EFW2 file and year
-        /// end, over Taxation's United States Income Tax.
+        /// United States Payroll Filings: adds Forms 941, 940, 945, W-2 and W-3, 1099-NEC and 1096 as tax forms from its
+        /// recipe, and the EFW2 file, over Taxation's United States Income Tax.
         /// </summary>
         public const string UnitedStates = "CrestApps.OrchardCore.Payroll.UnitedStates";
 
         /// <summary>
-        /// Canada Payroll Filings: source deductions remittances to the CRA and Revenu Québec, T4 and RL-1 slips with
-        /// their summaries, and the T4 XML file, over Taxation's Canada Income Tax.
+        /// Canada Payroll Filings: source deductions remittances to the CRA and Revenu Québec, the T4 and RL-1 tax forms
+        /// from its recipe, and the T4 XML file, over Taxation's Canada Income Tax.
         /// </summary>
         public const string Canada = "CrestApps.OrchardCore.Payroll.Canada";
 
