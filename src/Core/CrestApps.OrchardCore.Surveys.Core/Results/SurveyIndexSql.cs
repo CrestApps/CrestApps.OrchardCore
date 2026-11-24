@@ -32,6 +32,15 @@ internal sealed class SurveyIndexSql
     public string Column(string name)
         => _dialect.QuoteForColumnName(name);
 
+    /// <summary>
+    /// Quotes a column alias for the dialect. A bare alias can be a reserved word (<c>Percent</c> on SQL Server), and
+    /// PostgreSQL folds a bare alias to lower case, so every alias a statement reads a row back by is quoted.
+    /// </summary>
+    /// <param name="name">The alias.</param>
+    /// <returns>The quoted alias.</returns>
+    public string Alias(string name)
+        => _dialect.QuoteForAliasName(name);
+
     public ISqlBuilder Builder<TIndex>(string collection)
     {
         var builder = new SqlBuilder(_configuration.TablePrefix, _dialect);
@@ -127,7 +136,9 @@ internal sealed class SurveyIndexSql
         var transaction = await _session.BeginTransactionAsync(cancellationToken);
         var rows = await transaction.Connection.QueryAsync(new CommandDefinition(builder.ToSqlString(), parameters, transaction, cancellationToken: cancellationToken));
 
-        return rows.Select(row => (IDictionary<string, object>)row).ToList();
+        // Read by name without regard to case as well: the aliases are quoted, but a dialect that still folds them (or a
+        // statement written elsewhere) must not read every value back as missing.
+        return rows.Select(row => (IDictionary<string, object>)new Dictionary<string, object>((IDictionary<string, object>)row, StringComparer.OrdinalIgnoreCase)).ToList();
     }
 
     public static IDictionary<string, object> First(IReadOnlyList<IDictionary<string, object>> rows)

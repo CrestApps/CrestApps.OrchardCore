@@ -44,7 +44,7 @@ public sealed class SurveyResultsQueries
         {
             var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector($"{id} AS RowNumber, {_sql.Column(nameof(SurveyResponseIndex.ItemId))} AS ResponseId, {_sql.Column(nameof(SurveyResponseIndex.Status))} AS Status, {_sql.Column(nameof(SurveyResponseIndex.UserId))} AS UserId, {_sql.Column(nameof(SurveyResponseIndex.VersionNumber))} AS VersionNumber, {_sql.Column(nameof(SurveyResponseIndex.StartedUtc))} AS StartedUtc, {_sql.Column(nameof(SurveyResponseIndex.CompletedUtc))} AS CompletedUtc, {_sql.Column(nameof(SurveyResponseIndex.Percent))} AS Percent, {_sql.Column(nameof(SurveyResponseIndex.Passed))} AS Passed");
+            builder.Selector($"{id} AS {_sql.Alias("RowNumber")}, {_sql.Column(nameof(SurveyResponseIndex.ItemId))} AS {_sql.Alias("ResponseId")}, {_sql.Column(nameof(SurveyResponseIndex.Status))} AS {_sql.Alias("Status")}, {_sql.Column(nameof(SurveyResponseIndex.UserId))} AS {_sql.Alias("UserId")}, {_sql.Column(nameof(SurveyResponseIndex.VersionNumber))} AS {_sql.Alias("VersionNumber")}, {_sql.Column(nameof(SurveyResponseIndex.StartedUtc))} AS {_sql.Alias("StartedUtc")}, {_sql.Column(nameof(SurveyResponseIndex.CompletedUtc))} AS {_sql.Alias("CompletedUtc")}, {_sql.Column(nameof(SurveyResponseIndex.Percent))} AS {_sql.Alias("Percent")}, {_sql.Column(nameof(SurveyResponseIndex.Passed))} AS {_sql.Alias("Passed")}");
             Where(builder, parameters, scope);
             builder.WhereAnd($"{id} > @AfterId");
             parameters.Add("AfterId", afterId);
@@ -115,7 +115,7 @@ public sealed class SurveyResultsQueries
                 var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
                 var parameters = new DynamicParameters();
 
-                builder.Selector($"{documentId} AS DocumentId, {_sql.Column(nameof(SurveyResponseIndex.ItemId))} AS ResponseId");
+                builder.Selector($"{documentId} AS {_sql.Alias("DocumentId")}, {_sql.Column(nameof(SurveyResponseIndex.ItemId))} AS {_sql.Alias("ResponseId")}");
                 Where(builder, parameters, scope);
                 builder.WhereAnd($"{documentId} > @AfterDocumentId");
                 parameters.Add("AfterDocumentId", afterDocumentId);
@@ -209,7 +209,7 @@ public sealed class SurveyResultsQueries
         var status = _sql.Column(nameof(SurveyResponseIndex.Status));
         var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
         var parameters = new DynamicParameters();
-        builder.Selector($"{status} AS Status, COUNT(*) AS Total");
+        builder.Selector($"{status} AS {_sql.Alias("Status")}, COUNT(*) AS {_sql.Alias("Total")}");
         Where(builder, parameters, scope);
         builder.GroupBy(status);
 
@@ -241,7 +241,7 @@ public sealed class SurveyResultsQueries
         var kind = _sql.Column(nameof(SurveyResponseIndex.ContextKind));
         var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
         var parameters = new DynamicParameters();
-        builder.Selector($"{collector} AS CollectorId, {version} AS VersionNumber, {kind} AS ContextKind, COUNT(*) AS Total");
+        builder.Selector($"{collector} AS {_sql.Alias("CollectorId")}, {version} AS {_sql.Alias("VersionNumber")}, {kind} AS {_sql.Alias("ContextKind")}, COUNT(*) AS {_sql.Alias("Total")}");
         Where(builder, parameters, new SurveyResultsScope { SurveyId = surveyId, CompletedOnly = completedOnly, IncludeTest = false });
         builder.GroupBy($"{collector}, {version}, {kind}");
 
@@ -262,6 +262,44 @@ public sealed class SurveyResultsQueries
     }
 
     /// <summary>
+    /// Gets when the n-th earliest change among the responses of a scope (and of one joint key, if given) happened, with
+    /// one paged query and without loading a document: the moment the n-th of them last changed.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="n">Which change, from 1 (the earliest).</param>
+    /// <param name="group">The joint key (collector, version number, context kind) the responses share, or
+    /// <see langword="null"/> for every one.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The change time in UTC, or <see langword="null"/> when fewer than <paramref name="n"/> responses match.</returns>
+    public async Task<DateTime?> NthEarliestChangeAsync(SurveyResultsScope scope, int n, SurveyResponseGroup? group = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentOutOfRangeException.ThrowIfLessThan(n, 1);
+
+        var modified = _sql.Column(nameof(SurveyResponseIndex.ModifiedUtc));
+        var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
+        var parameters = new DynamicParameters();
+        builder.Selector($"{modified} AS {_sql.Alias("ModifiedUtc")}");
+        Where(builder, parameters, scope);
+
+        if (group is { } key)
+        {
+            WhereGroup(builder, parameters, key);
+        }
+
+        builder.OrderBy(modified);
+
+        if (n > 1)
+        {
+            builder.Skip(SurveyIndexSql.Number(n - 1));
+        }
+
+        builder.Take("1");
+
+        return SurveyIndexSql.Date(SurveyIndexSql.First(await _sql.QueryAsync(builder, parameters, cancellationToken))?["ModifiedUtc"]);
+    }
+
+    /// <summary>
     /// Lists the scores of the scored questions of the completed responses that match a filter.
     /// </summary>
     /// <param name="filter">The filter.</param>
@@ -277,7 +315,7 @@ public sealed class SurveyResultsQueries
         {
             var builder = _sql.Builder<SurveyAnswerIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector($"{_sql.Column(nameof(SurveyAnswerIndex.ResponseId))} AS ResponseId, {_sql.Column(nameof(SurveyAnswerIndex.QuestionId))} AS QuestionId, {_sql.Column(nameof(SurveyAnswerIndex.Score))} AS Score, {_sql.Column(nameof(SurveyAnswerIndex.MaxPoints))} AS MaxPoints");
+            builder.Selector($"{_sql.Column(nameof(SurveyAnswerIndex.ResponseId))} AS {_sql.Alias("ResponseId")}, {_sql.Column(nameof(SurveyAnswerIndex.QuestionId))} AS {_sql.Alias("QuestionId")}, {_sql.Column(nameof(SurveyAnswerIndex.Score))} AS {_sql.Alias("Score")}, {_sql.Column(nameof(SurveyAnswerIndex.MaxPoints))} AS {_sql.Alias("MaxPoints")}");
             _sql.WhereAnswers(builder, parameters, filter, chunk);
             builder.WhereAnd($"{_sql.Column(nameof(SurveyAnswerIndex.Score))} IS NOT NULL");
             builder.WhereAnd($"{_sql.Column(nameof(SurveyAnswerIndex.MaxPoints))} IS NOT NULL");
@@ -311,7 +349,7 @@ public sealed class SurveyResultsQueries
         {
             var builder = _sql.Builder<SurveyAnswerIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector($"{_sql.Column(nameof(SurveyAnswerIndex.CompletedUtc))} AS CompletedUtc, {number} AS Value");
+            builder.Selector($"{_sql.Column(nameof(SurveyAnswerIndex.CompletedUtc))} AS {_sql.Alias("CompletedUtc")}, {number} AS {_sql.Alias("Value")}");
             _sql.WhereAnswers(builder, parameters, filter, chunk);
             builder.WhereAnd($"{_sql.Column(nameof(SurveyAnswerIndex.QuestionId))} = @QuestionId");
             builder.WhereAnd($"{number} IS NOT NULL");
@@ -355,7 +393,7 @@ public sealed class SurveyResultsQueries
         var surveyId = _sql.Column(nameof(SurveyResponseIndex.SurveyId));
         var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
         var parameters = new DynamicParameters();
-        builder.Selector($"{surveyId} AS SurveyId");
+        builder.Selector($"{surveyId} AS {_sql.Alias("SurveyId")}");
         builder.Distinct();
         builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Grading))} = @Grading");
         builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.Status))} = @Status");
@@ -391,7 +429,7 @@ public sealed class SurveyResultsQueries
             {
                 var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
                 var parameters = new DynamicParameters();
-                builder.Selector($"{surveyId} AS SurveyId, COUNT(*) AS Total");
+                builder.Selector($"{surveyId} AS {_sql.Alias("SurveyId")}, COUNT(*) AS {_sql.Alias("Total")}");
                 builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.IsTest))} = @IsTest");
                 parameters.Add("IsTest", false);
 
@@ -569,6 +607,30 @@ public sealed class SurveyResultsQueries
         WhereNotHidden(builder, parameters, scope.HiddenGroups);
     }
 
+    // Keeps the responses of one joint key, with null-safe comparisons: an empty collector or context kind matches a
+    // missing one.
+    private void WhereGroup(ISqlBuilder builder, DynamicParameters parameters, SurveyResponseGroup group)
+    {
+        string Same(string column, string value, string name)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return $"({column} IS NULL OR {column} = '')";
+            }
+
+            parameters.Add(name, value);
+
+            return $"{column} = @{name}";
+        }
+
+        builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.SurveyId))} = @GroupSurvey");
+        builder.WhereAnd(Same(_sql.Column(nameof(SurveyResponseIndex.CollectorId)), group.CollectorId, "GroupCollector"));
+        builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.VersionNumber))} = @GroupVersion");
+        builder.WhereAnd(Same(_sql.Column(nameof(SurveyResponseIndex.ContextKind)), group.ContextKind, "GroupKind"));
+        parameters.Add("GroupSurvey", group.SurveyId ?? string.Empty);
+        parameters.Add("GroupVersion", group.VersionNumber);
+    }
+
     // Leaves the real responses of the hidden groups out (as SurveyResponseGroupFilter does on a YesSql query), with
     // null-safe comparisons so a missing collector or context kind never makes the condition unknown.
     private void WhereNotHidden(ISqlBuilder builder, DynamicParameters parameters, List<SurveyResponseGroup> groups)
@@ -578,6 +640,8 @@ public sealed class SurveyResultsQueries
             return;
         }
 
+        // Up to four parameters per group: with the scope's other filters (no IN list of ids here), well under SQL
+        // Server's limit of 2,100 (see SurveyResponseGroupFilter.MaxGroups for the budget).
         if (groups.Count > SurveyResponseGroupFilter.MaxGroups)
         {
             throw new ArgumentException($"At most {SurveyResponseGroupFilter.MaxGroups} groups can be left out of one query.", nameof(groups));

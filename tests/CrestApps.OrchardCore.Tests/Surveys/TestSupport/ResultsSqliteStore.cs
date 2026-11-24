@@ -25,6 +25,7 @@ internal sealed class ResultsSqliteStore : IAsyncDisposable
     private readonly MemoryCache _memoryCache = new(new MemoryCacheOptions());
 
     private ParameterLimitedSqliteConnectionFactory _connections;
+    private Func<ValueTask> _drop;
 
     public IStore Store { get; private set; }
 
@@ -35,22 +36,38 @@ internal sealed class ResultsSqliteStore : IAsyncDisposable
     /// </summary>
     public int? ParameterLimit
     {
-        get => _connections.ParameterLimit;
-        set => _connections.ParameterLimit = value;
+        get => _connections?.ParameterLimit;
+        set => (_connections ?? throw new InvalidOperationException("Only a SQLite store limits its parameters.")).ParameterLimit = value;
     }
 
-    public static async Task<ResultsSqliteStore> CreateAsync()
+    public static Task<ResultsSqliteStore> CreateAsync()
     {
-        var cancellationToken = TestContext.Current.CancellationToken;
         var result = new ResultsSqliteStore();
         var connectionString = $"Data Source={result._databasePath};Pooling=False";
 
         result._connections = new ParameterLimitedSqliteConnectionFactory(connectionString);
-        result.Store = StoreFactory.Create(configuration =>
+
+        return result.InitializeAsync(configuration =>
         {
             configuration.UseSqLite(connectionString);
             configuration.ConnectionFactory = result._connections;
         });
+    }
+
+    /// <summary>
+    /// Creates the same store on another database, such as SQL Server.
+    /// </summary>
+    /// <param name="useDatabase">Points the store's configuration at the database.</param>
+    /// <param name="drop">Removes the database once the store is disposed.</param>
+    /// <returns>The store.</returns>
+    public static Task<ResultsSqliteStore> CreateAsync(Action<global::YesSql.IConfiguration> useDatabase, Func<ValueTask> drop)
+        => new ResultsSqliteStore { _drop = drop }.InitializeAsync(useDatabase);
+
+    private async Task<ResultsSqliteStore> InitializeAsync(Action<global::YesSql.IConfiguration> useDatabase)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var result = this;
+        result.Store = StoreFactory.Create(useDatabase);
         result.Store.RegisterIndexes(
             [
                 new SurveyIndexProvider(),
@@ -112,9 +129,16 @@ internal sealed class ResultsSqliteStore : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _memoryCache.Dispose();
-        TemporarySqliteDatabase.DisposeAndDelete(Store, _databasePath);
 
-        await Task.CompletedTask;
+        if (_drop is not null)
+        {
+            Store?.Dispose();
+            await _drop();
+
+            return;
+        }
+
+        TemporarySqliteDatabase.DisposeAndDelete(Store, _databasePath);
     }
 
     public static SurveyQuestion ChoiceQuestion(string id, string name, params string[] choices)

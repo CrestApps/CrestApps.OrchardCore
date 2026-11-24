@@ -17,7 +17,10 @@ namespace CrestApps.OrchardCore.Surveys.DataSources;
 /// One survey's responses, one row each, with a field per question across its versions (joined by question id, named as
 /// in the newest version): the data set reports and pipelines export most. It names the respondent (display name, Guest
 /// or Deleted user) on an identified survey; an anonymous survey names nobody, shows its times by the day only and
-/// shows no context id.
+/// shows no context id. It has no modified field (nor date column), so an incremental read can follow only the completion
+/// time: a response changed after its completion day (graded, regraded, edited after submit), or an anonymous row held back
+/// until its group grew, is not read again by a run past that day. Incremental pipelines read SurveyResponses by its
+/// modified time and join on the response id.
 /// </summary>
 internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, SurveyResponseIndex, SurveyResponseChildRow>
 {

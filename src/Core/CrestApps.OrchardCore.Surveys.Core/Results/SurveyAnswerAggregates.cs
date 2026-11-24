@@ -36,7 +36,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         {
             var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector("COUNT(*) AS Total");
+            builder.Selector($"COUNT(*) AS {_sql.Alias("Total")}");
             WhereResponses(builder, parameters, filter, chunk);
 
             var rows = await _sql.QueryAsync(builder, parameters, cancellationToken);
@@ -57,7 +57,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         {
             var builder = _sql.Builder<SurveyAnswerIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector($"COUNT(DISTINCT {_sql.Column(nameof(SurveyAnswerIndex.ResponseId))}) AS Total");
+            builder.Selector($"COUNT(DISTINCT {_sql.Column(nameof(SurveyAnswerIndex.ResponseId))}) AS {_sql.Alias("Total")}");
             _sql.WhereAnswers(builder, parameters, filter, chunk);
             WhereQuestion(builder, parameters, questionId);
             builder.WhereAnd($"({_sql.Column(nameof(SurveyAnswerIndex.ChoiceId))} IS NOT NULL OR {_sql.Column(nameof(SurveyAnswerIndex.NumberValue))} IS NOT NULL OR {_sql.Column(nameof(SurveyAnswerIndex.DateValue))} IS NOT NULL OR {_sql.Column(nameof(SurveyAnswerIndex.TextValue))} IS NOT NULL)");
@@ -82,7 +82,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         {
             var builder = _sql.Builder<SurveyAnswerIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector($"{row} AS RowId, {choice} AS ChoiceId, COUNT(*) AS Total");
+            builder.Selector($"{row} AS {_sql.Alias("RowId")}, {choice} AS {_sql.Alias("ChoiceId")}, COUNT(*) AS {_sql.Alias("Total")}");
             _sql.WhereAnswers(builder, parameters, filter, chunk);
             WhereQuestion(builder, parameters, questionId);
             builder.WhereAnd($"{choice} IS NOT NULL");
@@ -119,7 +119,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
 
             foreach (var chunk in SurveyIndexSql.Chunks(filter))
             {
-                var builder = NumberQuery(filter, questionId, rowId, chunk, $"{number} AS Value", out var parameters);
+                var builder = NumberQuery(filter, questionId, rowId, chunk, $"{number} AS {_sql.Alias("Value")}", out var parameters);
 
                 values.AddRange((await _sql.QueryAsync(builder, parameters, cancellationToken)).Select(item => SurveyIndexSql.Decimal(item["Value"]) ?? 0));
             }
@@ -127,7 +127,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
             return SurveyNumberSummary.Summarize(values);
         }
 
-        var totals = NumberQuery(filter, questionId, rowId, null, $"COUNT({number}) AS Total, AVG({number}) AS Average, MIN({number}) AS Lowest, MAX({number}) AS Highest", out var totalParameters);
+        var totals = NumberQuery(filter, questionId, rowId, null, $"COUNT({number}) AS {_sql.Alias("Total")}, AVG({number}) AS {_sql.Alias("Average")}, MIN({number}) AS {_sql.Alias("Lowest")}, MAX({number}) AS {_sql.Alias("Highest")}", out var totalParameters);
         var summary = SurveyIndexSql.First(await _sql.QueryAsync(totals, totalParameters, cancellationToken));
         var statistics = new SurveyNumberStatistics
         {
@@ -143,7 +143,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         statistics.Min = SurveyIndexSql.Decimal(summary["Lowest"]);
         statistics.Max = SurveyIndexSql.Decimal(summary["Highest"]);
 
-        var distribution = NumberQuery(filter, questionId, rowId, null, $"{number} AS Value, COUNT(*) AS Total", out var distributionParameters);
+        var distribution = NumberQuery(filter, questionId, rowId, null, $"{number} AS {_sql.Alias("Value")}, COUNT(*) AS {_sql.Alias("Total")}", out var distributionParameters);
         distribution.GroupBy(number);
         distribution.OrderBy(number);
 
@@ -161,7 +161,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         }
 
         // The median is read in order from the middle, which every dialect can page.
-        var middle = NumberQuery(filter, questionId, rowId, null, $"{number} AS Value", out var middleParameters);
+        var middle = NumberQuery(filter, questionId, rowId, null, $"{number} AS {_sql.Alias("Value")}", out var middleParameters);
         middle.OrderBy(number);
         middle.Skip(SurveyIndexSql.Number((int)((statistics.Count - 1) / 2)));
         middle.Take(statistics.Count % 2 == 0 ? "2" : "1");
@@ -190,7 +190,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         {
             var builder = _sql.Builder<SurveyAnswerIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector($"{text} AS TextValue, {completed} AS CompletedUtc");
+            builder.Selector($"{text} AS {_sql.Alias("TextValue")}, {completed} AS {_sql.Alias("CompletedUtc")}");
             _sql.WhereAnswers(builder, parameters, filter, chunk);
             WhereQuestion(builder, parameters, questionId);
             builder.WhereAnd($"{text} IS NOT NULL");
@@ -221,7 +221,7 @@ public sealed class SurveyAnswerAggregates : ISurveyAnswerAggregates
         {
             var builder = _sql.Builder<SurveyAnswerIndex>(SurveysConstants.ResponsesCollectionName);
             var parameters = new DynamicParameters();
-            builder.Selector($"{response} AS ResponseId");
+            builder.Selector($"{response} AS {_sql.Alias("ResponseId")}");
             builder.Distinct();
             _sql.WhereAnswers(builder, parameters, filter, chunk);
             WhereQuestion(builder, parameters, questionId);
