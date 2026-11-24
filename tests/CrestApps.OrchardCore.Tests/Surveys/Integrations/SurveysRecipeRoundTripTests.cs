@@ -240,6 +240,87 @@ public sealed class SurveysRecipeRoundTripTests
     }
 
     [Fact]
+    public async Task ARecipeThatTurnsASurveyAnonymous_ClearsItsResponsesNumbers()
+    {
+        // Arrange: R7-Mi15, an identified survey whose responses took numbers from the site-wide sequence.
+        await using var target = await IntegrationsTestHarness.CreateAsync();
+        await target.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyStore>().CreateAsync(IntegrationsTestHarness.NewSurvey("turning", "turning"));
+
+            for (var index = 0; index < 3; index++)
+            {
+                await services.GetRequiredService<SurveyResponseStore>().CreateAsync(new SurveyResponse { ItemId = $"turning-{index}", SurveyId = "turning", Number = $"R000000{index}", Status = SurveyResponseStatus.Completed });
+            }
+        });
+
+        var step = new JsonObject
+        {
+            ["name"] = SurveysRecipeSteps.Surveys,
+            [SurveysRecipeSteps.SurveysSection] = new JsonArray(new JsonObject
+            {
+                ["ItemId"] = "turning",
+                ["Name"] = "turning",
+                ["Access"] = new JsonObject { ["Anonymity"] = nameof(AnonymityMode.Anonymous) },
+            }),
+        };
+
+        // Act
+        var errors = await target.ImportAsync<SurveysRecipeStep>(step);
+
+        // Assert: next to a named response's number, an anonymous response's number would tell who gave it.
+        Assert.Empty(errors);
+        var responses = await target.RunAsync(async services => await services.GetRequiredService<SurveyResponseStore>().GetAllAsync());
+        Assert.Equal(3, responses.Count(response => response.Number is null));
+    }
+
+    [Fact]
+    public async Task ResponsesExport_LeavesOutAnAnonymousSurveysInProgressResponses_AndSaysWhatItExported()
+    {
+        // Arrange: R7-Mi19 and R7-Mi21, an anonymous survey with a completed response and one still in progress.
+        await using var source = await IntegrationsTestHarness.CreateAsync();
+        await source.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyStore>().CreateAsync(IntegrationsTestHarness.NewSurvey("anon-survey", "pulse", AnonymityMode.Anonymous));
+
+            foreach (var (id, status) in new[] { ("anon-done", SurveyResponseStatus.Completed), ("anon-going", SurveyResponseStatus.InProgress) })
+            {
+                await services.GetRequiredService<SurveyResponseStore>().CreateAsync(new SurveyResponse
+                {
+                    ItemId = id,
+                    SurveyId = "anon-survey",
+                    Status = status,
+                    StartedUtc = new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc),
+                    DeadlineUtc = new DateTime(2026, 11, 10, 13, 0, 0, DateTimeKind.Utc),
+                });
+            }
+        });
+
+        var step = new CrestApps.OrchardCore.Surveys.Deployments.SurveyResponsesDeploymentStep { IncludeAll = true, IncludeInProgress = true };
+
+        // Act
+        var exported = await source.RunAsync(async services =>
+        {
+            var responses = new JsonArray();
+            var deployment = new CrestApps.OrchardCore.Surveys.Deployments.SurveyResponsesDeploymentSource(
+                services.GetRequiredService<global::YesSql.ISession>(),
+                services.GetRequiredService<SurveyStore>(),
+                services.GetRequiredService<SurveysRecipeExporter>(),
+                null,
+                null,
+                new CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousDays(services));
+
+            await deployment.ReadAsync(step, responses);
+
+            return responses;
+        });
+
+        // Assert: cut to the day, an in-progress response would look expired on import and its locked answers unlock.
+        Assert.Equal(["anon-done"], exported.Select(node => node!["ItemId"]!.GetValue<string>()));
+        Assert.Equal("surveys: all; in progress", CrestApps.OrchardCore.Surveys.Deployments.SurveyResponsesDeploymentSource.Scope(step));
+    }
+
+    [Fact]
     public async Task Responses_RoundTrip_ByUserName_AndUnknownPeopleAreErrors()
     {
         // Arrange

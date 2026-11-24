@@ -24,6 +24,7 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
     private readonly ISurveyUserLookup _userLookup;
     private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
+    private readonly global::YesSql.ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysRecipeStep"/> class.
@@ -34,15 +35,18 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
     /// <param name="userLookup">The user lookup, which turns user ids into user names and back.</param>
     /// <param name="secrets">The anonymity secrets.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="session">The YesSql session, for the responses of a survey that becomes anonymous.</param>
     public SurveysRecipeStep(
         SurveyStore surveyStore,
         SurveyVersionStore versionStore,
         SurveyCollectorStore collectorStore,
         ISurveyUserLookup userLookup,
         SurveyAnonymitySecrets secrets,
-        IClock clock)
+        IClock clock,
+        global::YesSql.ISession session)
         : base(SurveysRecipeSteps.Surveys)
     {
+        _session = session;
         _surveyStore = surveyStore;
         _versionStore = versionStore;
         _collectorStore = collectorStore;
@@ -98,7 +102,16 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
             }
             else
             {
+                var wasAnonymous = SurveyAnonymity.IsAnonymous(survey);
+
                 SurveysRecipeJson.Populate(survey, token, handled);
+
+                // A recipe that turns an identified survey anonymous clears its responses' site-wide numbers, which an
+                // anonymous survey never shows next to a named response's number.
+                if (!wasAnonymous && SurveyAnonymity.IsAnonymous(survey))
+                {
+                    await SurveyAnonymousNumbers.ClearAsync(_session, survey.ItemId);
+                }
             }
 
             survey.Name = name;

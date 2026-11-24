@@ -65,10 +65,21 @@ internal sealed class SurveysExportAuthorizer
     /// <param name="count">How many records were written.</param>
     /// <returns>A task.</returns>
     public Task ExportedAsync(ISurveyAuditTrail auditTrail, string eventName, int count)
+        => ExportedAsync(auditTrail, eventName, count, null);
+
+    /// <summary>
+    /// Records an export in the audit trail with what it exported, such as its surveys and days.
+    /// </summary>
+    /// <param name="auditTrail">The audit trail.</param>
+    /// <param name="eventName">The event.</param>
+    /// <param name="count">How many records were written.</param>
+    /// <param name="scope">What was exported, or <see langword="null"/>.</param>
+    /// <returns>A task.</returns>
+    public Task ExportedAsync(ISurveyAuditTrail auditTrail, string eventName, int count, string scope)
         => auditTrail.RecordAsync(eventName, new SurveyAuditEntry
         {
             ActorId = CurrentUserId(),
-            Detail = count.ToString(CultureInfo.InvariantCulture),
+            Detail = string.IsNullOrEmpty(scope) ? count.ToString(CultureInfo.InvariantCulture) : $"{count.ToString(CultureInfo.InvariantCulture)} ({scope})",
         });
 
     /// <summary>

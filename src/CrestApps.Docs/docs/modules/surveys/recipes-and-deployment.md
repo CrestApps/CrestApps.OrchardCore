@@ -76,7 +76,7 @@ Survey site settings travel in Orchard Core's `Settings` step as `SurveySettings
 
 ## Responses, accommodations and invitations
 
-The `SurveyResponses` deployment step is opt-in, with options for the surveys, a date range, test responses and responses in progress. It reads pages of 500, needs Export survey responses with respondent identity, and is recorded in the Audit Trail. People travel by user name; a user name the site does not have is a recipe error. A raw `UserId` without a `UserName` is kept only when it names a user of the site; otherwise the response is imported without a user and a recipe error says so. Anonymous responses travel without identity.
+The `SurveyResponses` deployment step is opt-in, with options for the surveys, a date range (days of the site's time zone), test responses and responses in progress (never an anonymous survey's, whose times go out by the day only). It reads pages of 500, needs Export survey responses with respondent identity, and is recorded in the Audit Trail with the number of responses, the surveys and the days. People travel by user name; a user name the site does not have is a recipe error. A raw `UserId` without a `UserName` is kept only when it names a user of the site; otherwise the response is imported without a user and a recipe error says so. Anonymous responses travel without identity.
 
 ## Sample recipe and schema
 
