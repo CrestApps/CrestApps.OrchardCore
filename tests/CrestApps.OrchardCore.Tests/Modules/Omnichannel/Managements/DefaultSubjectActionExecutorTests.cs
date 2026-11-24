@@ -822,6 +822,91 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.Null(saved.AssignedToId);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_CallAgentAssignment_GivesTheFollowUpToTheAgentTheDialerCalledFor()
+    {
+        // Arrange: the system applied the disposition, so nobody completed the activity; the call names the agent.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.CallAgent);
+        var session = CreateSessionWithUser(new User { UserId = "agent-user-id", UserName = "agent" });
+        OmnichannelActivity saved = null;
+        SetupSave(session, value => saved = value);
+
+        var resolver = new Mock<IActivityCallAgentResolver>();
+        resolver.Setup(x => x.FindAgentUserIdAsync("activity-id", It.IsAny<CancellationToken>())).ReturnsAsync("agent-user-id");
+
+        var executor = CreateExecutor(action, session, callAgentResolver: resolver.Object);
+        var context = CreateContext();
+        context.Activity.CompletedById = null;
+        context.Activity.CompletedByUsername = null;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(saved);
+        Assert.Equal("agent-user-id", saved.AssignedToId);
+        Assert.Equal("agent", saved.AssignedToUsername);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CallAgentAssignment_WithoutAnAgentOnTheCall_GivesItToWhoeverCompletedIt()
+    {
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.CallAgent);
+        var session = new Mock<ISession>();
+        OmnichannelActivity saved = null;
+        SetupSave(session, value => saved = value);
+
+        var executor = CreateExecutor(action, session, callAgentResolver: Mock.Of<IActivityCallAgentResolver>());
+
+        await executor.ExecuteAsync(CreateContext(), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(saved);
+        Assert.Equal("completing-user-id", saved.AssignedToId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PoolAssignment_GivesTheFollowUpToTheUserTheTeamServicePicks()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.NewActivity, SubjectActionOwnerAssignmentType.Pool);
+        action.Put(new FollowUpOwnerPoolMetadata
+        {
+            Source = FollowUpOwnerPoolSource.Users,
+            UserIds = ["user-a", "user-b"],
+            Strategy = FollowUpOwnerPoolStrategy.RoundRobin,
+        });
+
+        var session = new Mock<ISession>();
+        OmnichannelActivity saved = null;
+        SetupSave(session, value => saved = value);
+
+        global::CrestApps.OrchardCore.Teams.Models.TeamAssignmentRequest request = null;
+        var teams = new Mock<global::CrestApps.OrchardCore.Teams.Services.ITeamAssignmentService>();
+        teams
+            .Setup(x => x.SelectAsync(It.IsAny<global::CrestApps.OrchardCore.Teams.Models.TeamAssignmentRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<global::CrestApps.OrchardCore.Teams.Models.TeamAssignmentRequest, CancellationToken>((value, _) => request = value)
+            .ReturnsAsync(new global::CrestApps.OrchardCore.Teams.Models.TeamMember { UserId = "user-b" });
+
+        var users = new Mock<global::Microsoft.AspNetCore.Identity.IUserStore<global::OrchardCore.Users.IUser>>();
+        users.Setup(x => x.FindByIdAsync("user-b", It.IsAny<CancellationToken>())).ReturnsAsync(new User { UserId = "user-b", UserName = "bea" });
+        users.Setup(x => x.GetUserNameAsync(It.IsAny<global::OrchardCore.Users.IUser>(), It.IsAny<CancellationToken>())).ReturnsAsync((global::OrchardCore.Users.IUser user, CancellationToken _) => ((User)user).UserName);
+        var userManager = new global::Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>(users.Object, null, null, null, null, null, null, null, NullLogger<global::Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>.Instance);
+        var picker = new FollowUpOwnerPicker(teams.Object, userManager, NullLogger<FollowUpOwnerPicker>.Instance);
+
+        var executor = CreateExecutor(action, session, ownerPicker: picker);
+
+        // Act
+        await executor.ExecuteAsync(CreateContext(), TestContext.Current.CancellationToken);
+
+        // Assert: the pool's users are offered with the activity load source's work kind.
+        Assert.Equal(["user-a", "user-b"], request.CandidateUserIds);
+        Assert.Equal(FollowUpOwnerPicker.WorkKind, request.WorkKind);
+        Assert.Equal(global::CrestApps.OrchardCore.Teams.Models.TeamAssignmentStrategies.RoundRobin, request.Strategy);
+        Assert.NotNull(saved);
+        Assert.Equal("user-b", saved.AssignedToId);
+        Assert.Equal("bea", saved.AssignedToUsername);
+    }
+
     private static INamedCatalog<LeadStatus> CreateLeadStatuses()
     {
         var statuses = new Mock<INamedCatalog<LeadStatus>>();
@@ -850,7 +935,9 @@ public sealed class DefaultSubjectActionExecutorTests
         IEnumerable<IFollowUpActivityHandler> followUpHandlers = null,
         INamedCatalog<LeadStatus> leadStatuses = null,
         INotInServiceNumberService notInServiceNumbers = null,
-        IActivityDialerContributor dialerContributor = null)
+        IActivityDialerContributor dialerContributor = null,
+        IActivityCallAgentResolver callAgentResolver = null,
+        FollowUpOwnerPicker ownerPicker = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
@@ -877,7 +964,9 @@ public sealed class DefaultSubjectActionExecutorTests
             NullLogger<DefaultSubjectActionExecutor>.Instance,
             followUpHandlers: followUpHandlers,
             leadStatuses: leadStatuses,
-            dialerContributors: dialerContributor is null ? null : [dialerContributor]);
+            dialerContributors: dialerContributor is null ? null : [dialerContributor],
+            callAgentResolvers: callAgentResolver is null ? null : [callAgentResolver],
+            ownerPickers: ownerPicker is null ? null : [ownerPicker]);
     }
 
     private static SubjectAction CreateAction(

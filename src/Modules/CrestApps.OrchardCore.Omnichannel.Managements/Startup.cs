@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Teams;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -307,5 +308,20 @@ public sealed class ReportsStartup : StartupBase
             OmnichannelConstants.Permissions.ViewReports,
             typeof(EnterpriseActivityReportProvider),
             serviceProvider => _enterpriseReportFactory(serviceProvider, [kind]))));
+    }
+}
+
+/// <summary>
+/// Lets a "Try again" or "New activity" subject action give its follow-up to one user of a pool -- a team's members, the
+/// users in roles, or a list of users -- through the Teams assignment service.
+/// </summary>
+[RequireFeatures(TeamsConstants.Features.Teams)]
+public sealed class FollowUpOwnerPoolStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<FollowUpOwnerPicker>();
+        services.AddTeamMemberLoadSource<OmnichannelActivityTeamLoadSource>();
+        services.AddDisplayDriver<SubjectAction, FollowUpOwnerPoolSubjectActionDisplayDriver>();
     }
 }

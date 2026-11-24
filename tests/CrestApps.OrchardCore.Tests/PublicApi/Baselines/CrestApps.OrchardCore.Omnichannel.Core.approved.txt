@@ -738,6 +738,26 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity PreviousActivity { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpRoutingTarget Route { get; set; }
     }
+    public sealed class FollowUpOwnerPoolMetadata
+    {
+        public FollowUpOwnerPoolMetadata() { }
+        public string[] RoleNames { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolSource Source { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolStrategy Strategy { get; set; }
+        public string TeamId { get; set; }
+        public string[] UserIds { get; set; }
+    }
+    public enum FollowUpOwnerPoolSource
+    {
+        Team = 0,
+        Roles = 1,
+        Users = 2,
+    }
+    public enum FollowUpOwnerPoolStrategy
+    {
+        RoundRobin = 0,
+        FewestOpenActivities = 1,
+    }
     public sealed class FollowUpRoutingMetadata
     {
         public FollowUpRoutingMetadata() { }
@@ -1453,6 +1473,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         SameOwner = 0,
         SpecificOwner = 1,
+        CallAgent = 2,
+        Pool = 3,
     }
     public static class SubjectActionOwnerAssignmentTypeResolver
     {
@@ -1599,6 +1621,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         string Source { get; }
         System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IActivityCallAgentResolver
+    {
+        System.Threading.Tasks.Task<string> FindAgentUserIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityDialerContributor
     {

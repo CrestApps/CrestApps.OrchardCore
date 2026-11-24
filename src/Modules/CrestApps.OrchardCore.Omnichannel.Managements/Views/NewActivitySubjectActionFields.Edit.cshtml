@@ -49,8 +49,13 @@
                 aria-expanded="@(Model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner ? "true" : "false")">
             <option value="@nameof(SubjectActionOwnerAssignmentType.SameOwner)">@T["Same owner"]</option>
             <option value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)">@T["Specific owner"]</option>
+            <option value="@nameof(SubjectActionOwnerAssignmentType.CallAgent)">@T["The agent the dialer called for"]</option>
+            @if (Context.RequestServices.GetService(typeof(CrestApps.OrchardCore.Teams.Services.ITeamAssignmentService)) is not null)
+            {
+                <option value="@nameof(SubjectActionOwnerAssignmentType.Pool)">@T["A pool of agents"]</option>
+            }
         </select>
-        <span class="hint">@T["Choose whether the new activity stays with the completing user or is assigned to a specific user."]</span>
+        <span class="hint">@T["Same owner: the user who completed the activity. The agent the dialer called for: the agent a dialer call was placed or connected for, even when the system applied the disposition; otherwise the user who completed it. A pool of agents: one user of a team, roles or a list, by round robin or fewest open activities."]</span>
     </div>
 </div>
 

@@ -80,8 +80,9 @@ Extra fields on **Try Again** and **New Activity**:
 | **Target subject type** | New Activity only: the subject of the new activity. Empty means the same subject. |
 | **Maximum attempts** | Try Again only: how many tries in total. For dialer campaign work it replaces the dialer profile's **Max attempts**. Empty means no limit of the subject's own: dialer work then stops at the profile's **Max attempts**, and other work has no limit. |
 | **Urgency level** | The follow-up's urgency, from **Very low** to **Very high**. **Use original activity's urgency level** keeps the original. |
-| **Assignment type** | **Same owner** gives the follow-up to the user who completes the current activity. **Specific owner** gives it to the user you pick. |
+| **Assignment type** | **Same owner** gives the follow-up to the user who completes the current activity. **Specific owner** gives it to the user you pick. **The agent the dialer called for** gives it to the agent a dialer call was placed or connected for (the agent a Power or Progressive dial reserved, or the one a Predictive call was connected to), even when the system applied the disposition because nobody answered; with no such agent, the user who completed the activity gets it. **A pool of agents** gives it to one user of a team, of roles, or of a list of users (needs the Teams feature). |
 | **Assign to user** | The owner when **Specific owner** is chosen. Required then. |
+| **Pool of agents**, **Pick** | For **A pool of agents**: where the users come from (**Members of a team**, **Users in roles** or **Specific users**) and how one is picked: **Round robin** (the user given an activity longest ago) or **Fewest open activities**. When the pool has nobody to pick, the follow-up is left for any agent. |
 | **Default schedule hours** | How many hours later the follow-up is scheduled. The agent can change the date on the Complete page. When empty, a Try Again for dialer campaign work is dialed after the dialer profile's **Retry delay**, and other follow-ups are scheduled 24 hours later. |
 
 ### Who makes the next call
@@ -96,7 +97,7 @@ Extra fields on **Try Again** and **New Activity**:
 
 **Campaign** moves the follow-up to another campaign with any of the three; empty keeps its campaign.
 
-For example, to have an agent call back a contact the dialer reached: on the dialer campaign's subject, give the *Call back* disposition a **Try Again** action with **Next call by** set to *An agent (manual call)* and **Assignment type** *Same owner*. The agent who took the call gets the call back on their own list, and the dialer does not dial the contact again.
+For example, to have an agent call back a contact the dialer reached: on the dialer campaign's subject, give the *Call back* disposition a **Try Again** action with **Next call by** set to *An agent (manual call)* and **Assignment type** *The agent the dialer called for*. The agent the dialer connected or held for the call gets the call back on their own list, and the dialer does not dial the contact again. To spread call backs across a team instead, pick **A pool of agents**.
 
 ## When no contact matches the caller
 

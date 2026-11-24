@@ -29,6 +29,8 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
     private readonly INamedCatalog<LeadStatus> _leadStatuses;
     private readonly IActivityDialerContributor _dialerContributor;
+    private readonly IActivityCallAgentResolver _callAgentResolver;
+    private readonly FollowUpOwnerPicker _ownerPicker;
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
@@ -43,7 +45,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         IEnumerable<ISubjectActionHandler> handlers = null,
         IEnumerable<IFollowUpActivityHandler> followUpHandlers = null,
         INamedCatalog<LeadStatus> leadStatuses = null,
-        IEnumerable<IActivityDialerContributor> dialerContributors = null)
+        IEnumerable<IActivityDialerContributor> dialerContributors = null,
+        IEnumerable<IActivityCallAgentResolver> callAgentResolvers = null,
+        IEnumerable<FollowUpOwnerPicker> ownerPickers = null)
     {
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -58,6 +62,8 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _followUpHandlers = followUpHandlers ?? [];
         _leadStatuses = leadStatuses;
         _dialerContributor = dialerContributors?.FirstOrDefault();
+        _callAgentResolver = callAgentResolvers?.FirstOrDefault();
+        _ownerPicker = ownerPickers?.FirstOrDefault();
     }
 
     public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
@@ -720,6 +726,20 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return true;
         }
 
+        if (effectiveAssignmentType == SubjectActionOwnerAssignmentType.CallAgent)
+        {
+            await AssignCallAgentAsync(followUpActivity, completedActivity, assignedToUtc);
+
+            return true;
+        }
+
+        if (effectiveAssignmentType == SubjectActionOwnerAssignmentType.Pool)
+        {
+            await AssignFromPoolAsync(followUpActivity, action, assignedToUtc);
+
+            return true;
+        }
+
         var owner = await _session.Query<User, UserIndex>(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync();
 
         if (owner is null)
@@ -735,6 +755,62 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         AssignOwner(followUpActivity, owner.UserId, owner.UserName, assignedToUtc);
 
         return true;
+    }
+
+    /// <summary>
+    /// Gives the follow-up to the agent the call was placed or connected for. A Power dial that reached an answering
+    /// machine is dispositioned by the system, so nobody completed it; the agent the dialer held for the call is still
+    /// on the call, and is the one who calls back. With no such agent, whoever completed the activity owns it.
+    /// </summary>
+    private async Task AssignCallAgentAsync(OmnichannelActivity followUpActivity, OmnichannelActivity completedActivity, DateTime assignedToUtc)
+    {
+        var userId = _callAgentResolver is null
+            ? null
+            : await _callAgentResolver.FindAgentUserIdAsync(completedActivity.ItemId);
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var agent = await _session.Query<User, UserIndex>(x => x.UserId == userId).FirstOrDefaultAsync();
+
+            if (agent is not null)
+            {
+                AssignOwner(followUpActivity, agent.UserId, agent.UserName, assignedToUtc);
+
+                return;
+            }
+        }
+
+        AssignOwner(followUpActivity, completedActivity.CompletedById, completedActivity.CompletedByUsername, assignedToUtc);
+    }
+
+    /// <summary>
+    /// Gives the follow-up to one user of the action's pool. A pool with nobody to pick leaves the follow-up for any
+    /// agent rather than dropping it.
+    /// </summary>
+    private async Task AssignFromPoolAsync(OmnichannelActivity followUpActivity, SubjectAction action, DateTime assignedToUtc)
+    {
+        if (_ownerPicker is null || !action.TryGet<FollowUpOwnerPoolMetadata>(out var pool))
+        {
+            _logger.LogWarning(
+                "Subject action {SubjectActionId} assigns its follow-up from a pool, but {Reason}; the follow-up is left for any agent.",
+                action.ItemId,
+                _ownerPicker is null ? "the Teams feature is off" : "it names no pool");
+
+            AssignOwner(followUpActivity, null, null, assignedToUtc);
+
+            return;
+        }
+
+        var (userId, userName) = await _ownerPicker.PickAsync(pool);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning(
+                "The pool of subject action {SubjectActionId} has nobody to give the follow-up to; it is left for any agent.",
+                action.ItemId);
+        }
+
+        AssignOwner(followUpActivity, userId, userName, assignedToUtc);
     }
 
     private static void AssignOwner(
