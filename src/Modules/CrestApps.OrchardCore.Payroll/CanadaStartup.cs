@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Payroll.Migrations;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Taxation;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data.Migration;
@@ -25,7 +26,7 @@ public sealed class CanadaStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddPayrollTaxFormFunctions<CanadaTaxFormFunctions>();
+        services.AddTaxFormFunctions<CanadaTaxFormFunctions>();
         services.TryAddScoped<PayrollTaxFormRecipeSeeder>();
         services.AddDataMigration<CanadaTaxFormsMigrations>();
         services.AddDisplayDriver<Employer, EmployerCanadaDisplayDriver>();

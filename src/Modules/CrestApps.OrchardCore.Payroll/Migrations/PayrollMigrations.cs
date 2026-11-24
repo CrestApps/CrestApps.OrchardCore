@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Core.Services;
-using CrestApps.OrchardCore.Payroll.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.Services;
 using OrchardCore.Data.Migration;
 using YesSql;
@@ -33,12 +32,11 @@ internal sealed class PayrollMigrations : DataMigration
     {
         await PayrollIndexSchema.CreateAsync(SchemaBuilder);
         await PayrollFilingIndexSchema.CreateAsync(SchemaBuilder);
-        await PayrollTaxFormIndexSchema.CreateAsync(SchemaBuilder);
         await _seeder.SeedAsync();
         await _policySeeder.SeedAsync();
         await _taxIdHasher.EnsureKeyAsync();
 
-        return 12;
+        return 11;
     }
 
     // Pay profiles and pay items.
@@ -164,13 +162,5 @@ internal sealed class PayrollMigrations : DataMigration
         await _taxIdHasher.EnsureKeyAsync();
 
         return 11;
-    }
-
-    // Tax forms are records now, made on the Tax Forms page or by the country recipes, instead of classes.
-    public async Task<int> UpdateFrom11Async()
-    {
-        await PayrollTaxFormIndexSchema.CreateAsync(SchemaBuilder);
-
-        return 12;
     }
 }

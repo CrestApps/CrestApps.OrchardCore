@@ -92,3 +92,10 @@ using OrchardCore.Modules.Manifest;
         TaxationConstants.Feature.Returns,
     ]
 )]
+
+[assembly: Feature(
+    Id = TaxationConstants.Feature.TaxForms,
+    Name = "Tax Forms",
+    Description = "Tax forms made of fields (their boxes and lines) worked out by formulas, with yearly values, checks and how a recipient's statement is printed, edited under Taxation > Tax Forms and carried by recipes. A module such as Payroll prepares and files them from its own records.",
+    Category = "Finance"
+)]

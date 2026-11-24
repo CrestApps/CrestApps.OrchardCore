@@ -3,11 +3,11 @@ using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Core.TaxForms;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Payroll.Core.UnitedStates;
-using CrestApps.OrchardCore.Payroll.Drivers;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
-using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
@@ -84,41 +84,37 @@ public sealed class PayrollTaxFormTests
     [Fact]
     public async Task AFormPostedFromTheEditor_KeepsItsRowsInOrder_SkipsEmptyRows_AndWorksOutTheFiling()
     {
-        var filings = new Mock<IPayrollFilingManager>();
-
-        filings.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-
-        var driver = new PayrollTaxFormDisplayDriver(filings.Object, PayrollTaxFormRecipes.Functions(), new PassThroughStringLocalizer<PayrollTaxFormDisplayDriver>());
-        var model = new PayrollTaxFormViewModel
+        var driver = Driver();
+        var model = new CrestApps.OrchardCore.Taxation.ViewModels.TaxFormViewModel
         {
             Name = " test-ui ",
             DisplayName = "Made on the page",
             Jurisdiction = "US",
             Period = "Quarter",
-            Workers = "Everyone",
-            HasPersonStatements = true,
+            Source = PayrollConstants.TaxFormSource,
+            HasRecipientStatements = true,
             Enabled = true,
-            PersonCondition = "[W] > 0",
+            RecipientCondition = "[W] > 0",
             Fields =
             [
-                new() { Number = "W", Label = "Wages", Level = "Person", Formula = "WAGES('IncomeTax')", AddToFiling = true, Print = "Always" },
-                new() { Number = "D", Label = "Deferrals", Level = "Person", PayCodes = true, AddToFiling = true, Print = "WhenNotZero" },
+                new() { Number = "W", Label = "Wages", Level = "Recipient", Formula = "WAGES('IncomeTax')", AddToFiling = true, Print = "Always" },
+                new() { Number = "D", Label = "Deferrals", Level = "Recipient", AcceptsReportedAmounts = true, AddToFiling = true, Print = "WhenNotZero" },
                 new(),
-                new() { Number = "N", Label = "People", Level = "Filing", Formula = "PEOPLE()" },
+                new() { Number = "N", Label = "People", Level = "Filing", Formula = "RECIPIENTS()" },
                 new() { Number = "TAX", Label = "Tax at the rate", Level = "Filing", Formula = "ROUND([W] * VALUE('Rate'), 2)" },
             ],
             Values = [new() { Name = "Rate", Year = 2026, Amount = 0.05m }, new()],
             Checks = [new() { Condition = "[N] > 5", Note = "Fewer than six people." }],
         };
         var updater = new FakeUpdateModel(model);
-        var form = new PayrollTaxForm();
+        var form = new TaxForm();
 
         await driver.UpdateAsync(form, new UpdateEditorContext(null, string.Empty, true, string.Empty, null, null, updater));
 
         Assert.Equal(0, updater.ModelState.ErrorCount);
-        Assert.Equal(("TEST-UI", PayrollTaxFormPeriod.Quarter, PayrollTaxFormWorkers.Everyone), (form.Name, form.Period, form.Workers));
+        Assert.Equal(("TEST-UI", TaxFormPeriod.Quarter, "Payroll"), (form.Name, form.Period, form.Source));
         Assert.Equal(["W", "D", "N", "TAX"], form.Fields.Select(box => box.Number));
-        Assert.Equal((PayrollTaxFormFieldLevel.Filing, PayrollTaxFormFieldPrint.WhenNotZero), (form.Fields[2].Level, form.Fields[1].Print));
+        Assert.Equal((TaxFormFieldLevel.Filing, TaxFormFieldPrint.WhenNotZero), (form.Fields[2].Level, form.Fields[1].Print));
         Assert.Equal(0.05m, Assert.Single(form.Values).Amount);
 
         // The pay codes report to the form's name and the box number.
@@ -137,20 +133,17 @@ public sealed class PayrollTaxFormTests
     [Fact]
     public async Task TheEditor_LeavesTheRulesToTheHandler_SoTheManagerRefusesWhatARecipeWouldBeRefused()
     {
-        var filings = new Mock<IPayrollFilingManager>();
-
-        filings.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-
-        var driver = new PayrollTaxFormDisplayDriver(filings.Object, PayrollTaxFormRecipes.Functions(), new PassThroughStringLocalizer<PayrollTaxFormDisplayDriver>());
-        var updater = new FakeUpdateModel(new PayrollTaxFormViewModel
+        var driver = Driver();
+        var updater = new FakeUpdateModel(new CrestApps.OrchardCore.Taxation.ViewModels.TaxFormViewModel
         {
             Name = "TEST-RULES",
             DisplayName = "Rules",
+            Source = PayrollConstants.TaxFormSource,
             Jurisdiction = "US",
             Fields = [new() { Number = "A", Level = "Filing", Formula = "VALUE('Rate') + [A]" }],
             Values = [new() { Name = null, Year = 2026, Amount = 5 }],
         });
-        var form = new PayrollTaxForm { ItemId = "rulesform0000000000000001" };
+        var form = new TaxForm { ItemId = "rulesform0000000000000001" };
 
         await driver.UpdateAsync(form, new UpdateEditorContext(null, string.Empty, true, string.Empty, null, null, updater));
 
@@ -159,7 +152,7 @@ public sealed class PayrollTaxFormTests
 
         await using var harness = await PayRunTests.CreateHarnessAsync(services => services.AddPayrollFilingsCore());
 
-        var errors = await harness.RunAsync(async services => (await services.GetRequiredService<IPayrollTaxFormManager>().ValidateAsync(form)).Errors.Select(error => error.ErrorMessage).ToList());
+        var errors = await harness.RunAsync(async services => (await services.GetRequiredService<ITaxFormManager>().ValidateAsync(form)).Errors.Select(error => error.ErrorMessage).ToList());
 
         Assert.Contains(errors, error => error.Contains("yearly value", StringComparison.Ordinal));
         Assert.Contains(errors, error => error.Contains("reads itself", StringComparison.Ordinal));
@@ -181,21 +174,21 @@ public sealed class PayrollTaxFormTests
     [Fact]
     public void TheCondition_TheirJurisdiction_AndAStatementPerJurisdiction_SayWhoIsReportedAndOnHowManyStatements()
     {
-        var form = new PayrollTaxForm
+        var form = new TaxForm
         {
             Name = "TEST-2",
             DisplayName = "Provincial slips",
             Jurisdiction = "CA",
-            PeopleJurisdiction = "CA",
-            HasPersonStatements = true,
+            Source = PayrollConstants.TaxFormSource,
+            HasRecipientStatements = true,
             StatementPerJurisdiction = true,
-            PersonCondition = "[INC] >= VALUE('Minimum')",
-            Values = [new PayrollTaxFormValue { Name = "Minimum", Year = 2000, Amount = 1000 }],
+            RecipientCondition = "[INC] >= VALUE('Minimum')",
+            Values = [new TaxFormValue { Name = "Minimum", Year = 2000, Amount = 1000 }],
             Fields =
             [
                 Person("INC", "WAGES('IncomeTax')", addToFiling: true),
                 Person("PROV", "TAX('CA-*-PIT') - TAX('CA-QC-PIT')", addToFiling: true),
-                Filing("SLIPS", "PEOPLE()"),
+                Filing("SLIPS", "RECIPIENTS()"),
                 Filing("PROV.CHECK", "TOTAL('PROV')"),
             ],
         };
@@ -212,6 +205,8 @@ public sealed class PayrollTaxFormTests
             Statement("cy", "Cy Young", new DateOnly(2026, 3, 13), Earn(9000), Tax("US-FIT", "US", 9000, 900)),
         };
 
+        form.Put(new PayrollTaxFormSettings { PeopleJurisdiction = "CA" });
+
         var filing = PayrollTaxFormRecipes.Prepare(form, statements, _codes, 2026);
 
         Assert.Equal([("CA-ON", 3000m, 300m), ("CA-AB", 2400m, 150m)], filing.People.Select(person => (person.Jurisdiction, person.Boxes["INC"], person.Boxes["PROV"])));
@@ -226,9 +221,9 @@ public sealed class PayrollTaxFormTests
         form.MissingTaxIdNote = "{0}: no tax id.";
         form.Checks =
         [
-            new PayrollTaxFormCheck { Condition = "ISACCOUNT(ACCOUNT('US'), '##-#######')", Note = "Give the employer's EIN." },
-            new PayrollTaxFormCheck { Condition = "[BAL] = 0", Note = "Taxes are left to deposit." },
-            new PayrollTaxFormCheck { Condition = "FILINGYEAR() >= 2020", Note = "Too old." },
+            new TaxFormCheck { Condition = "ISACCOUNT(ACCOUNT('US'), '##-#######')", Note = "Give the employer's EIN." },
+            new TaxFormCheck { Condition = "[BAL] = 0", Note = "Taxes are left to deposit." },
+            new TaxFormCheck { Condition = "FILINGYEAR() >= 2020", Note = "Too old." },
         ];
 
         var unregistered = PayrollTaxFormRecipes.Prepare(form, WageStatements(), _codes, 2026);
@@ -252,11 +247,11 @@ public sealed class PayrollTaxFormTests
             ["profile-lee"] = new() { ItemId = "profile-lee", StaffMemberId = "lee", WorkerType = PayWorkerType.Employee },
         };
 
-        form.Workers = PayrollTaxFormWorkers.Contractors;
+        form.Put(new PayrollTaxFormSettings { Workers = PayrollTaxFormWorkers.Contractors });
 
         var contractors = PayrollTaxFormRecipes.Prepare(form, WageStatements(), _codes, 2026, profiles: profiles);
 
-        form.Workers = PayrollTaxFormWorkers.Employees;
+        form.Put(new PayrollTaxFormSettings { Workers = PayrollTaxFormWorkers.Employees });
 
         var employees = PayrollTaxFormRecipes.Prepare(form, WageStatements(), _codes, 2026, profiles: profiles);
 
@@ -304,7 +299,7 @@ public sealed class PayrollTaxFormTests
 
         form.Fields.Add(Filing("BAD", formula));
 
-        Assert.Null(PayrollTaxFormFormulas.Compile(form, PayrollTaxFormRecipes.Functions().Functions, new PassThroughStringLocalizer<PayrollTaxForm>(), out var errors));
+        Assert.Null(TaxFormFormulas.Compile(form, PayrollTaxFormRecipes.PayrollFunctions(), new PassThroughStringLocalizer<TaxForm>(), out var errors));
 
         var error = Assert.Single(errors);
 
@@ -319,23 +314,23 @@ public sealed class PayrollTaxFormTests
     [Fact]
     public void TheEditor_RefusesBoxesThatReadEachOther_TwoBoxesOfOneNumber_AndAFilingBoxNamedLikeATotal()
     {
-        static IList<(string Field, string Message)> Errors(params PayrollTaxFormField[] boxes)
+        static IList<(string Field, string Message)> Errors(params TaxFormField[] boxes)
         {
-            var form = new PayrollTaxForm { Name = "T", DisplayName = "T", Jurisdiction = "US", Fields = boxes };
+            var form = new TaxForm { Name = "T", DisplayName = "T", Jurisdiction = "US", Fields = boxes };
 
-            Assert.Null(PayrollTaxFormFormulas.Compile(form, PayrollTaxFormRecipes.Functions().Functions, new PassThroughStringLocalizer<PayrollTaxForm>(), out var errors));
+            Assert.Null(TaxFormFormulas.Compile(form, PayrollTaxFormRecipes.PayrollFunctions(), new PassThroughStringLocalizer<TaxForm>(), out var errors));
 
             return errors;
         }
 
         Assert.Contains(Errors(Filing("A", "[B] + 1"), Filing("B", "[C]"), Filing("C", "[A]")), error => error.Message.Contains("reads itself", StringComparison.Ordinal));
-        Assert.Contains(Errors(Person("1", "GROSS()"), Person("1", "0")), error => error.Message.Contains("Two person fields", StringComparison.Ordinal));
+        Assert.Contains(Errors(Person("1", "GROSS()"), Person("1", "0")), error => error.Message.Contains("Two recipient fields", StringComparison.Ordinal));
         Assert.Contains(Errors(Person("1", "GROSS()", addToFiling: true), Filing("1", "0")), error => error.Field == "1");
 
         // A person box and a filing box may share a number when the person box isn't added up on the filing (Form 1096).
-        var form = new PayrollTaxForm { Name = "T", DisplayName = "T", Jurisdiction = "US", Fields = [Person("4", "TAX('US-BWH')"), Filing("4", "TOTAL('4')")] };
+        var form = new TaxForm { Name = "T", DisplayName = "T", Jurisdiction = "US", Fields = [Person("4", "TAX('US-BWH')"), Filing("4", "TOTAL('4')")] };
 
-        Assert.NotNull(PayrollTaxFormFormulas.Compile(form, PayrollTaxFormRecipes.Functions().Functions, new PassThroughStringLocalizer<PayrollTaxForm>(), out _));
+        Assert.NotNull(TaxFormFormulas.Compile(form, PayrollTaxFormRecipes.PayrollFunctions(), new PassThroughStringLocalizer<TaxForm>(), out _));
     }
 
     [Theory]
@@ -360,7 +355,7 @@ public sealed class PayrollTaxFormTests
     [InlineData("AB-3456789", "@@-#######", true)]
     [InlineData(null, "#", false)]
     public void AnAccountNumber_HasAShape(string account, string shape, bool has)
-        => Assert.Equal(has, PayrollFilingSums.HasShape(account, shape));
+        => Assert.Equal(has, TaxFormFunctions.HasShape(account, shape));
 
     [Fact]
     public async Task TheShippedRecipes_AddEveryFormThroughTheManager_AndTheFormsAreWorkedOutTheSameAsTheirChecksSay()
@@ -368,19 +363,19 @@ public sealed class PayrollTaxFormTests
         await using var harness = await PayRunTests.CreateHarnessAsync(services =>
         {
             services.AddPayrollFilingsCore();
-            services.AddPayrollTaxFormFunctions<CanadaTaxFormFunctions>();
+            services.AddTaxFormFunctions<CanadaTaxFormFunctions>();
         });
 
         // SeedAsync fails when the manager refuses any form, so every shipped formula compiles.
         await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.UnitedStates);
         await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.Canada);
 
-        var names = await harness.RunAsync(async services => (await services.GetRequiredService<IPayrollTaxFormManager>().GetAllAsync()).Select(form => form.Name).Order(StringComparer.Ordinal).ToList());
+        var names = await harness.RunAsync(async services => (await services.GetRequiredService<ITaxFormManager>().GetAllAsync()).Select(form => form.Name).Order(StringComparer.Ordinal).ToList());
 
         Assert.Equal(["CA-RL1", "CA-T4", "US-1099NEC", "US-940", "US-941", "US-945", "US-W2"], names);
 
         // Running a recipe again adds nothing that is there.
-        await harness.RunAsync(async services => Assert.Empty(await PayrollTaxFormRecipeSeeder.SeedAsync(services.GetRequiredService<IPayrollTaxFormManager>(), PayrollTaxFormRecipes.Forms(PayrollTaxFormRecipes.UnitedStates), null)));
+        await harness.RunAsync(async services => Assert.Empty(await PayrollTaxFormRecipeSeeder.SeedAsync(services.GetRequiredService<ITaxFormManager>(), PayrollTaxFormRecipes.Forms(PayrollTaxFormRecipes.UnitedStates), null)));
     }
 
     [Fact]
@@ -390,7 +385,7 @@ public sealed class PayrollTaxFormTests
 
         await harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IPayrollTaxFormManager>();
+            var manager = services.GetRequiredService<ITaxFormManager>();
             var first = WageForm();
 
             Assert.True((await manager.ValidateAsync(first)).Succeeded);
@@ -421,7 +416,7 @@ public sealed class PayrollTaxFormTests
 
         var (offered, prepared, off, broken) = await harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IPayrollTaxFormManager>();
+            var manager = services.GetRequiredService<ITaxFormManager>();
             var form = WageForm();
 
             form.Name = "TEST-SERVICE";
@@ -480,38 +475,58 @@ public sealed class PayrollTaxFormTests
         Assert.Contains(broken.Errors, error => error.Contains("TEST-GONE", StringComparison.Ordinal));
     }
 
-    private static PayrollTaxForm WageForm()
-        => new()
+    private static CrestApps.OrchardCore.Taxation.Drivers.TaxFormDisplayDriver Driver()
+    {
+        var sources = new TaxFormSourceOptions();
+
+        sources.Sources.Add(new TaxFormSource(PayrollConstants.TaxFormSource, null, null, null));
+
+        return new CrestApps.OrchardCore.Taxation.Drivers.TaxFormDisplayDriver(
+            [],
+            PayrollTaxFormRecipes.Functions(),
+            Microsoft.Extensions.Options.Options.Create(sources),
+            Mock.Of<Microsoft.Extensions.Localization.IStringLocalizerFactory>(),
+            new PassThroughStringLocalizer<CrestApps.OrchardCore.Taxation.Drivers.TaxFormDisplayDriver>());
+    }
+
+    private static TaxForm WageForm()
+    {
+        var form = new TaxForm
         {
             ItemId = "testform00000000000000001",
             Name = "TEST-1",
             DisplayName = "Test wage statement",
             Jurisdiction = "US",
-            Period = PayrollTaxFormPeriod.Year,
-            Workers = PayrollTaxFormWorkers.Everyone,
-            HasPersonStatements = true,
+            Period = TaxFormPeriod.Year,
+            Source = PayrollConstants.TaxFormSource,
+            HasRecipientStatements = true,
             MissingTaxIdNote = "{0}: no tax id.",
             Values =
             [
-                new PayrollTaxFormValue { Name = "Rate", Year = 2025, Amount = 0.10m },
-                new PayrollTaxFormValue { Name = "Rate", Year = 2026, Amount = 0.20m },
+                new TaxFormValue { Name = "Rate", Year = 2025, Amount = 0.10m },
+                new TaxFormValue { Name = "Rate", Year = 2026, Amount = 0.20m },
             ],
             Fields =
             [
                 Person("W", "WAGES('IncomeTax')", addToFiling: true),
                 Person("SS", "TAXABLE('US-SS-EE')", addToFiling: true),
                 Person("T", "TAX('US-FIT')", addToFiling: true),
-                new PayrollTaxFormField { Number = "D", Label = "D Deferrals", Level = PayrollTaxFormFieldLevel.Person, PayCodes = true, AddToFiling = true, Print = PayrollTaxFormFieldPrint.WhenNotZero },
+                new TaxFormField { Number = "D", Label = "D Deferrals", Level = TaxFormFieldLevel.Recipient, AcceptsReportedAmounts = true, AddToFiling = true, Print = TaxFormFieldPrint.WhenNotZero },
                 Person("X", "ROUND([W] * VALUE('Rate'), 2)"),
 
                 // The filing boxes read the people's totals, in any order.
                 Filing("AVG", "ROUND([W] / [N], 2)"),
-                Filing("N", "PEOPLE()"),
+                Filing("N", "RECIPIENTS()"),
                 Filing("DEP", "DEPOSITS('US', 'Withholding')"),
                 Filing("BAL", "GREATEST(0, [T] - [DEP])"),
                 Filing("OVER", "GREATEST(0, [DEP] - [T])"),
             ],
         };
+
+        form.Put(new PayrollTaxFormSettings { Workers = PayrollTaxFormWorkers.Everyone });
+
+        return form;
+    }
 
     private static List<PayStatement> WageStatements()
         =>
@@ -555,11 +570,11 @@ public sealed class PayrollTaxFormTests
     private static PayStatementLine Tax(string code, string jurisdiction, decimal taxable, decimal amount)
         => new() { Type = PayLineType.Tax, TaxCode = code, Jurisdiction = jurisdiction, Payer = PayLinePayer.Employee, TaxableWages = taxable, Amount = amount };
 
-    private static PayrollTaxFormField Person(string key, string formula, bool addToFiling = false)
-        => new() { Number = key, Label = key, Level = PayrollTaxFormFieldLevel.Person, Formula = formula, AddToFiling = addToFiling, Print = PayrollTaxFormFieldPrint.Always };
+    private static TaxFormField Person(string key, string formula, bool addToFiling = false)
+        => new() { Number = key, Label = key, Level = TaxFormFieldLevel.Recipient, Formula = formula, AddToFiling = addToFiling, Print = TaxFormFieldPrint.Always };
 
-    private static PayrollTaxFormField Filing(string key, string formula)
-        => new() { Number = key, Label = key, Level = PayrollTaxFormFieldLevel.Filing, Formula = formula };
+    private static TaxFormField Filing(string key, string formula)
+        => new() { Number = key, Label = key, Level = TaxFormFieldLevel.Filing, Formula = formula };
 
     private static PayCode Code(string id, PayCodeClass payCodeClass, Action<PayrollPayCodeSettings> configure = null, string kind = PayCodeKinds.Regular)
     {

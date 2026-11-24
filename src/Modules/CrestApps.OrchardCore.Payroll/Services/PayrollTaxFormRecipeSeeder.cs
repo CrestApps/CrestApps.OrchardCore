@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Taxation;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Extensions;
@@ -13,13 +15,13 @@ namespace CrestApps.OrchardCore.Payroll.Services;
 /// </summary>
 public sealed class PayrollTaxFormRecipeSeeder
 {
-    private readonly IPayrollTaxFormManager _forms;
+    private readonly ITaxFormManager _forms;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IExtensionManager _extensionManager;
     private readonly ILogger _logger;
 
     public PayrollTaxFormRecipeSeeder(
-        IPayrollTaxFormManager forms,
+        ITaxFormManager forms,
         IHostEnvironment hostEnvironment,
         IExtensionManager extensionManager,
         ILogger<PayrollTaxFormRecipeSeeder> logger)
@@ -31,14 +33,14 @@ public sealed class PayrollTaxFormRecipeSeeder
     }
 
     /// <summary>
-    /// Gets the tax forms a recipe adds: the entries of its PayrollTaxForms steps.
+    /// Gets the tax forms a recipe adds: the entries of its TaxForms steps.
     /// </summary>
     /// <param name="recipe">The recipe.</param>
     /// <returns>The forms.</returns>
     public static IEnumerable<JsonObject> Forms(JsonNode recipe)
         => (recipe?["steps"] as JsonArray ?? [])
             .OfType<JsonObject>()
-            .Where(step => string.Equals(step["name"]?.GetValue<string>(), PayrollConstants.TaxFormsRecipeStepName, StringComparison.OrdinalIgnoreCase))
+            .Where(step => string.Equals(step["name"]?.GetValue<string>(), TaxationConstants.TaxFormsRecipeStepName, StringComparison.OrdinalIgnoreCase))
             .SelectMany(step => (step["Forms"] as JsonArray ?? []).OfType<JsonObject>());
 
     /// <summary>
@@ -46,7 +48,7 @@ public sealed class PayrollTaxFormRecipeSeeder
     /// </summary>
     /// <param name="recipeFileName">The recipe's file name in Payroll's Recipes folder.</param>
     /// <returns>The forms added.</returns>
-    public async Task<IReadOnlyList<PayrollTaxForm>> SeedAsync(string recipeFileName)
+    public async Task<IReadOnlyList<TaxForm>> SeedAsync(string recipeFileName)
     {
         ArgumentException.ThrowIfNullOrEmpty(recipeFileName);
 
@@ -81,12 +83,12 @@ public sealed class PayrollTaxFormRecipeSeeder
     /// <param name="forms">The forms, as a recipe writes them.</param>
     /// <param name="logger">The logger.</param>
     /// <returns>The forms added.</returns>
-    public static async Task<IReadOnlyList<PayrollTaxForm>> SeedAsync(IPayrollTaxFormManager manager, IEnumerable<JsonObject> forms, ILogger logger)
+    public static async Task<IReadOnlyList<TaxForm>> SeedAsync(ITaxFormManager manager, IEnumerable<JsonObject> forms, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(manager);
         ArgumentNullException.ThrowIfNull(forms);
 
-        var added = new List<PayrollTaxForm>();
+        var added = new List<TaxForm>();
 
         foreach (var data in forms)
         {

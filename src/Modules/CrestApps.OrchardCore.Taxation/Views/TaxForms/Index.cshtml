@@ -1,7 +1,7 @@
-@model ListCatalogEntryViewModel<CatalogEntryViewModel<PayrollTaxForm>>
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<TaxForm>>
 
 <zone Name="Title">
-    <breadcrumb name="PayrollTaxForms" title="@T["Tax forms"]" />
+    <breadcrumb name="TaxForms" title="@T["Tax forms"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
@@ -22,9 +22,9 @@
         </div>
     </div>
 
-    <admin-list name="PayrollTaxForms" context="Model.List"
+    <admin-list name="TaxForms" context="Model.List"
                 show-select-all="false"
-                empty-message="@T["<strong>Nothing here!</strong> No tax form has been added yet. Add one, or run the United States or Canada tax forms recipe under Configuration › Recipes."]">
+                empty-message="@T["<strong>Nothing here!</strong> No tax form has been added yet. Add one, or run a tax forms recipe under Configuration › Recipes, such as United States Payroll: federal tax forms."]">
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
             <admin-list-column name="Name" position="20" title="@T["Form"]" />

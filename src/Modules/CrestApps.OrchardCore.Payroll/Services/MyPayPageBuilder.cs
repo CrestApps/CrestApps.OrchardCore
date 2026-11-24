@@ -78,8 +78,8 @@ internal sealed class MyPayPageBuilder
         // The person's filed tax forms, such as wage statements.
         if (_services.GetService<IPayrollFilingManager>() is { } filings && model.Profiles.Count > 0)
         {
-            var taxForms = _services.GetService<IPayrollTaxFormManager>() is { } manager
-                ? (await manager.GetAllAsync(cancellationToken)).Where(form => !string.IsNullOrEmpty(form.Name)).GroupBy(form => form.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase)
+            var taxForms = _services.GetService<CrestApps.OrchardCore.Taxation.Services.ITaxFormManager>() is { } manager
+                ? (await manager.ListBySourceAsync(PayrollConstants.TaxFormSource, cancellationToken)).Where(form => !string.IsNullOrEmpty(form.Name)).GroupBy(form => form.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase)
                 : [];
             var forms = (await filings.ListByEmployersAsync([.. model.Profiles.Select(pair => pair.Profile.EmployerId).Distinct(StringComparer.Ordinal)], cancellationToken))
                 .Where(filing => filing.Status == PayrollFilingStatus.Filed)

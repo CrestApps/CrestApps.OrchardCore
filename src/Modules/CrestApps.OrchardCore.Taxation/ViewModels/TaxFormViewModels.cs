@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.Payroll.ViewModels;
+namespace CrestApps.OrchardCore.Taxation.ViewModels;
 
 /// <summary>
 /// The tax form editor.
 /// </summary>
-public class PayrollTaxFormViewModel
+public class TaxFormViewModel
 {
     public string Name { get; set; }
 
@@ -13,25 +14,19 @@ public class PayrollTaxFormViewModel
 
     public string Description { get; set; }
 
+    public string Source { get; set; }
+
     public string Jurisdiction { get; set; }
 
     public string Period { get; set; }
 
-    public string Workers { get; set; }
-
-    public string PeopleJurisdiction { get; set; }
-
-    public bool HasPersonStatements { get; set; }
+    public bool HasRecipientStatements { get; set; }
 
     public bool StatementPerJurisdiction { get; set; }
 
-    public bool ListJurisdictionAmounts { get; set; }
-
-    public string PersonCondition { get; set; }
+    public string RecipientCondition { get; set; }
 
     public string MissingTaxIdNote { get; set; }
-
-    public string PayCodeFieldPrefix { get; set; }
 
     public bool Enabled { get; set; }
 
@@ -45,26 +40,40 @@ public class PayrollTaxFormViewModel
 
     public string TaxIdFormat { get; set; }
 
-    public string EmployerTaxIdLabel { get; set; }
+    public string FilerTaxIdLabel { get; set; }
 
-    public string EmployerAccountJurisdiction { get; set; }
+    public string FilerAccountJurisdiction { get; set; }
 
     public string FileName { get; set; }
 
-    public IList<PayrollTaxFormFieldViewModel> Fields { get; set; } = [];
+    public IList<TaxFormFieldViewModel> Fields { get; set; } = [];
 
-    public IList<PayrollTaxFormValueViewModel> Values { get; set; } = [];
+    public IList<TaxFormValueViewModel> Values { get; set; } = [];
 
-    public IList<PayrollTaxFormCheckViewModel> Checks { get; set; } = [];
+    public IList<TaxFormCheckViewModel> Checks { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets whether a filing of the form was filed, so its name is kept.
+    /// Gets or sets whether something uses the form, such as filings, so its name is kept.
     /// </summary>
     [BindNever]
-    public bool IsFiled { get; set; }
+    public bool IsUsed { get; set; }
 
     /// <summary>
-    /// Gets or sets the functions formulas can call, for the help card: their category, signature and description.
+    /// Gets or sets the sources a form can have.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Sources { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets what the source's records that report amounts to a field are called, such as pay codes; or
+    /// <see langword="null"/> when the source has none.
+    /// </summary>
+    [BindNever]
+    public string ReportedAmountsLabel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the functions the form's formulas can call, for the field dialog: their category, signature and
+    /// description.
     /// </summary>
     [BindNever]
     public IList<(string Category, string Signature, string Description)> Functions { get; set; } = [];
@@ -73,7 +82,7 @@ public class PayrollTaxFormViewModel
 /// <summary>
 /// A field of the tax form editor: one of the form's boxes or lines.
 /// </summary>
-public class PayrollTaxFormFieldViewModel
+public class TaxFormFieldViewModel
 {
     public string Number { get; set; }
 
@@ -85,7 +94,7 @@ public class PayrollTaxFormFieldViewModel
 
     public bool AddToFiling { get; set; }
 
-    public bool PayCodes { get; set; }
+    public bool AcceptsReportedAmounts { get; set; }
 
     public string Print { get; set; }
 }
@@ -93,7 +102,7 @@ public class PayrollTaxFormFieldViewModel
 /// <summary>
 /// A yearly value row of the tax form editor.
 /// </summary>
-public class PayrollTaxFormValueViewModel
+public class TaxFormValueViewModel
 {
     public string Name { get; set; }
 
@@ -105,7 +114,7 @@ public class PayrollTaxFormValueViewModel
 /// <summary>
 /// A check row of the tax form editor.
 /// </summary>
-public class PayrollTaxFormCheckViewModel
+public class TaxFormCheckViewModel
 {
     public string Condition { get; set; }
 

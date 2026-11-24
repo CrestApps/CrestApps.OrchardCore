@@ -290,6 +290,7 @@ const sidebars = {
                 'user-manual/finance/payroll-employees',
                 'user-manual/finance/income-tax',
                 'user-manual/finance/tax-returns',
+                'user-manual/finance/tax-forms',
                 'user-manual/finance/canada-payroll',
                 'user-manual/finance/payroll-garnishments',
                 'user-manual/finance/payroll-filings',

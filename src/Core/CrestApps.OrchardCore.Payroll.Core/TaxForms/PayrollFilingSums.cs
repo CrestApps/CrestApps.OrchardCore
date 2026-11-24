@@ -259,50 +259,6 @@ public static class PayrollFilingSums
             .Sum(line => tax ? line.Amount : line.TaxableWages ?? 0);
     }
 
-    /// <summary>
-    /// Gets whether an account number has a shape: # is a digit, @ a letter, any other character itself (ignoring case);
-    /// spaces and dashes are left out of both first. 123456789RP0001 has the shape #########RP####, and 12-3456789 the shape ##-#######.
-    /// </summary>
-    /// <param name="account">The account number.</param>
-    /// <param name="mask">The shape.</param>
-    /// <returns>Whether it has.</returns>
-    public static bool HasShape(string account, string mask)
-    {
-        if (string.IsNullOrWhiteSpace(account) || string.IsNullOrEmpty(mask))
-        {
-            return false;
-        }
-
-        static string Squeeze(string text)
-            => new([.. text.Where(character => !char.IsWhiteSpace(character) && character != '-')]);
-
-        var value = Squeeze(account);
-
-        mask = Squeeze(mask);
-
-        if (value.Length != mask.Length)
-        {
-            return false;
-        }
-
-        for (var i = 0; i < mask.Length; i++)
-        {
-            var ok = mask[i] switch
-            {
-                '#' => char.IsAsciiDigit(value[i]),
-                '@' => char.IsAsciiLetter(value[i]),
-                _ => char.ToUpperInvariant(value[i]) == char.ToUpperInvariant(mask[i]),
-            };
-
-            if (!ok)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     /// <summary>Gets whether a tax code matches a pattern, ignoring case; * matches any characters.</summary>
     /// <param name="code">The tax code.</param>
     /// <param name="pattern">The pattern.</param>

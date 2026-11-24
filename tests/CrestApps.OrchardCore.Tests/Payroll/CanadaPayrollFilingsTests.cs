@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Taxation.Core.Canada;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -611,7 +612,7 @@ public sealed class CanadaPayrollFilingsTests
         var harness = await PayRunTests.CreateHarnessAsync(services =>
         {
             services.AddPayrollFilingsCore();
-            services.AddPayrollTaxFormFunctions<CanadaTaxFormFunctions>();
+            services.AddTaxFormFunctions<CanadaTaxFormFunctions>();
         });
 
         await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.Canada);

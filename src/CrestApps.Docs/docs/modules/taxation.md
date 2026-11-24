@@ -6,6 +6,7 @@ description: A provider-agnostic, extensible taxation framework for Orchard Core
 user_manual:
   - user-manual/commerce/taxes
   - user-manual/finance/tax-returns
+  - user-manual/finance/tax-forms
 ---
 
 | | |
@@ -620,6 +621,37 @@ A city or other local tax is a flat rate rule of its own jurisdiction. Michigan'
 A resident of a taxing city pays only its resident rate; anyone else who works in a taxing city pays its nonresident rate; with neither, no city tax. The payer must be registered in the city's jurisdiction (or the rule names `CollectedBy`). A contribution such as Massachusetts' paid family and medical leave is a flat rate rule of category `SocialInsurance` with its wage base. Payroll resolves the home jurisdictions from the home address (`US-MI-DETROIT` for a Detroit address) and the work jurisdictions from the work site team or the employer.
 
 Form W-4's election adds **Nonresident alien** (`UnitedStatesIncomeTax.Fields.NonresidentAlien`): for a form from 2020 or later, the rule's `NonresidentAlienAddition` parameter (`UnitedStatesIncomeTax.NonresidentAlienAddition`, 16,100 in the 2026 recipe, from Publication 15-T) is added to the year's wages before withholding.
+
+## Tax forms
+
+**Tax Forms** (`CrestApps.OrchardCore.Taxation.TaxForms`) keeps tax forms as records (`TaxForm`, `ITaxFormManager`, in the `TaxForms` collection) that any module can prepare from its own records: their fields (the boxes and lines), a formula for each field, yearly values, checks and how a recipient's statement is printed. The page is **Commerce** → **Taxation** → **Tax Forms** (`ManageTaxForms`); how to build a form and every formula function are in the user manual's [Tax forms](../user-manual/finance/tax-forms.md).
+
+- **Fields** (`TaxFormField`: `Number`, `Label`, `Level` `Recipient` or `Filing`, `Formula`, `AddToFiling`, `AcceptsReportedAmounts`, `Print`). A recipient field is worked out from one recipient's records; a filing field from every reported recipient's, after the totals of the recipient fields added up on the filing. `TaxFormFormulas.Compile` orders the fields by what their formulas read and refuses a cycle, an unknown field or function, two fields of one number at one level, a filing field numbered like a totaled recipient field, and aggregates. `TaxFormHandler` runs it when a form is saved or imported.
+- **Formulas** are Orchard Core's Data Pipelines formula language (`ExpressionCompiler`, with the built-in functions), over a row whose slot 0 holds a `TaxFormFormulaContext` (the form, the period, the services, the recipients so far and the source's `Data`) and whose other slots hold the fields. Every form can call `VALUE`, `TOTAL`, `RECIPIENTS`, `ISACCOUNT`, `FILINGYEAR` and `FILINGQUARTER` (`TaxFormFunctions`).
+- **Sources.** A module that prepares forms registers a source, `services.AddTaxFormSource(name, displayName, description, reportedAmountsLabel)`, and its functions, `services.AddTaxFormFunctions<T>()`: an `ITaxFormFunctionProvider` whose `Source` names it (or `null` for every form). A form's formulas see the built-ins, every form's functions and its source's (`TaxFormFunctionCatalog.For(source)`), never data pipelines or reports. A function reads what the source handed it with `TaxFormFormulaContext.DataOf<T>(context)`. The source can keep settings on the form (`form.Put(settings)`) and add a card to the editor with a `DisplayDriver<TaxForm>`.
+- **Working a form out.** The source builds `TaxFormRecipientInput`s (what each recipient's formulas read, plus a tag of its own) and what the filing reads, and calls `TaxFormEvaluator.Evaluate`, with `ReportedAmount` for fields that accept reported amounts (pay codes, for Payroll). The result has the recipients reported (each recipient's condition, `RecipientCondition`, or any field not zero), the filing's fields and the notes of the failed checks. The source stores the filing in its own record.
+- **Usage.** `services.AddTaxFormUsage<T>()` (`ITaxFormUsage`) tells the page what uses a form, such as Payroll's filings: a used form keeps its name and is turned off rather than deleted.
+- **Recipes and deployment.** The `TaxForms` step (`Forms`, matched by id then name, replaced with the recipe's, fields included) and the **Tax forms** deployment step, both described to CrestApps Recipes. A source's settings ride in `Properties`.
+
+```json
+{
+  "name": "TaxForms",
+  "Forms": [
+    {
+      "Name": "US-945", "DisplayName": "Form 945 (annual return of withheld federal income tax)", "Source": "Payroll",
+      "Jurisdiction": "US", "Period": "Year",
+      "Properties": { "PayrollTaxFormSettings": { "Workers": "Contractors" } },
+      "Fields": [
+        { "Number": "2", "Label": "2 Backup withholding", "Level": "Filing", "Formula": "TAX('US-BWH')" },
+        { "Number": "4", "Label": "4 Total deposits for the year", "Level": "Filing", "Formula": "DEPOSITS('US', 'NonPayrollWithholding')" },
+        { "Number": "5", "Label": "5 Balance due", "Level": "Filing", "Formula": "GREATEST(0, [2] - [4])" }
+      ]
+    }
+  ]
+}
+```
+
+Payroll is the first source: see [Payroll: tax forms](payroll.md#tax-forms). Sales and use tax returns still work their boxes out with `ITaxReturnForm`.
 
 ## Tax returns
 

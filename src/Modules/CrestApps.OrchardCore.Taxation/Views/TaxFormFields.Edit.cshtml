@@ -1,4 +1,4 @@
-@model PayrollTaxFormViewModel
+@model TaxFormViewModel
 
 @{
     var fieldsName = Html.NameFor(m => m.Fields).ToString();
@@ -6,24 +6,24 @@
     var checksName = Html.NameFor(m => m.Checks).ToString();
 
     // A field's row: what it is, as hidden inputs the modal edits, and a summary of them.
-    async Task FieldRow(string index, PayrollTaxFormFieldViewModel field)
+    async Task FieldRow(string index, TaxFormFieldViewModel field)
     {
         var name = $"{fieldsName}[{index}]";
         <tr data-field-row>
             <td class="fw-semibold" data-field-show="Number">
                 @field.Number
             </td>
-            <td style="min-width: 16rem" data-field-show="Label">@field.Label</td>
-            <td><code class="d-inline-block text-truncate align-middle" style="max-width: 24rem" data-field-show="Formula" title="@field.Formula">@field.Formula</code></td>
-            <td class="text-nowrap" data-field-show="Options"></td>
+            <td style="min-width: 11rem" data-field-show="Label">@field.Label</td>
+            <td><code class="d-inline-block text-truncate align-middle" style="max-width: 16rem" data-field-show="Formula" title="@field.Formula">@field.Formula</code></td>
+            <td style="max-width: 12rem" data-field-show="Options"></td>
             <td class="text-end text-nowrap">
                 <input type="hidden" name="@(fieldsName).Index" value="@index" />
                 <input type="hidden" name="@(name).Number" value="@field.Number" data-field-value="Number" />
                 <input type="hidden" name="@(name).Label" value="@field.Label" data-field-value="Label" />
-                <input type="hidden" name="@(name).Level" value="@(field.Level ?? "Person")" data-field-value="Level" />
+                <input type="hidden" name="@(name).Level" value="@(field.Level ?? "Recipient")" data-field-value="Level" />
                 <input type="hidden" name="@(name).Formula" value="@field.Formula" data-field-value="Formula" />
                 <input type="hidden" name="@(name).AddToFiling" value="@(field.AddToFiling ? "true" : "false")" data-field-value="AddToFiling" />
-                <input type="hidden" name="@(name).PayCodes" value="@(field.PayCodes ? "true" : "false")" data-field-value="PayCodes" />
+                <input type="hidden" name="@(name).AcceptsReportedAmounts" value="@(field.AcceptsReportedAmounts ? "true" : "false")" data-field-value="AcceptsReportedAmounts" />
                 <input type="hidden" name="@(name).Print" value="@(field.Print ?? "Never")" data-field-value="Print" />
                 <button type="button" class="btn btn-sm btn-primary" data-field-edit>@T["Edit"]</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-move="up" title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
@@ -33,7 +33,7 @@
         </tr>
     }
 
-    async Task ValueRow(string index, PayrollTaxFormValueViewModel value)
+    async Task ValueRow(string index, TaxFormValueViewModel value)
     {
         var name = $"{valuesName}[{index}]";
         <tr>
@@ -47,7 +47,7 @@
         </tr>
     }
 
-    async Task CheckRow(string index, PayrollTaxFormCheckViewModel check)
+    async Task CheckRow(string index, TaxFormCheckViewModel check)
     {
         var name = $"{checksName}[{index}]";
         <tr>
@@ -75,10 +75,10 @@
         <div class="ocat-wrapper" asp-validation-class-for="Name">
             <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
             <div class="ocat-end">
-                <input asp-for="Name" class="form-control" maxlength="50" style="max-width: 16rem" readonly="@Model.IsFiled" />
+                <input asp-for="Name" class="form-control" maxlength="50" style="max-width: 16rem" readonly="@Model.IsUsed" />
                 <span asp-validation-for="Name" class="text-danger"></span>
                 <span class="hint">
-                    @if (Model.IsFiled)
+                    @if (Model.IsUsed)
                     {
                         @T["Filings were prepared from the form and keep its name, so it can't change."]
                     }
@@ -100,7 +100,15 @@
             <div class="ocat-end">
                 <input asp-for="Jurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
                 <span asp-validation-for="Jurisdiction" class="text-danger"></span>
-                <span class="hint">@T["An employer registered in this jurisdiction files the form, such as US, CA or CA-QC."]</span>
+                <span class="hint">@T["A filer registered in this jurisdiction files the form, such as US, CA or CA-QC."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Source">
+            <label asp-for="Source" class="ocat-label ocat-label-required">@T["Prepared from"]</label>
+            <div class="ocat-end">
+                <select asp-for="Source" asp-items="Model.Sources" class="form-select" style="max-width: 18rem"></select>
+                <span asp-validation-for="Source" class="text-danger"></span>
+                <span class="hint">@T["The module that prepares and files the form from its own records, such as Payroll from pay statements. It decides which functions the formulas can call; save the form after changing it to see its functions."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
@@ -116,7 +124,7 @@
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="Enabled" />
-                    <label class="form-check-label" asp-for="Enabled">@T["Employers can prepare it"]</label>
+                    <label class="form-check-label" asp-for="Enabled">@T["Filers can prepare it"]</label>
                     <span class="hint dashed">@T["Turn a form off rather than deleting it once filings were prepared from it."]</span>
                 </div>
             </div>
@@ -125,69 +133,47 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header">@T["Who it reports"]</div>
+    <div class="card-header">@T["Recipients"]</div>
     <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Workers" class="ocat-label">@T["Pay of"]</label>
-            <div class="ocat-end">
-                <select asp-for="Workers" class="form-select" style="max-width: 18rem">
-                    <option value="Employees">@T["Employees"]</option>
-                    <option value="Contractors">@T["Contractors"]</option>
-                    <option value="Everyone">@T["Employees and contractors"]</option>
-                </select>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="PeopleJurisdiction" class="ocat-label">@T["Only people taxed in"]</label>
-            <div class="ocat-end">
-                <input asp-for="PeopleJurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
-                <span class="hint">@T["Leave it empty to report everyone; CA-QC reports only people with a tax line of Quebec or under it."]</span>
-            </div>
-        </div>
         <div class="ocat-wrapper">
             <div class="ocat-end-offset">
                 <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="HasPersonStatements" />
-                    <label class="form-check-label" asp-for="HasPersonStatements">@T["Each person gets a statement"]</label>
-                    <span class="hint dashed">@T["Such as a W-2 or a T4 slip: kept on the filing, printed, and sent to the person in My pay once filed. Without it, person fields are only added up on the filing."]</span>
+                    <input type="checkbox" class="form-check-input" asp-for="HasRecipientStatements" />
+                    <label class="form-check-label" asp-for="HasRecipientStatements">@T["Each recipient gets a statement"]</label>
+                    <span class="hint dashed">@T["Such as a W-2, a 1099 or a T4 slip: kept on the filing, printed, and sent to the recipient once filed. Without it, recipient fields are only added up on the filing."]</span>
                 </div>
                 <div class="form-check mt-2">
                     <input type="checkbox" class="form-check-input" asp-for="StatementPerJurisdiction" />
                     <label class="form-check-label" asp-for="StatementPerJurisdiction">@T["A statement for each jurisdiction under the form's"]</label>
-                    <span class="hint dashed">@T["Such as a T4 slip for each province a person was employed in, from their tax lines."]</span>
-                </div>
-                <div class="form-check mt-2">
-                    <input type="checkbox" class="form-check-input" asp-for="ListJurisdictionAmounts" />
-                    <label class="form-check-label" asp-for="ListJurisdictionAmounts">@T["List the income taxes below the country"]</label>
-                    <span class="hint dashed">@T["Such as a W-2's boxes 15 to 20: the wages and income tax of each state and locality a person paid, with the employer's account there, printed as rows."]</span>
+                    <span class="hint dashed">@T["Such as a T4 slip for each province a person was employed in."]</span>
                 </div>
             </div>
         </div>
-        <div class="ocat-wrapper" asp-validation-class-for="PersonCondition">
-            <label asp-for="PersonCondition" class="ocat-label">@T["A person is reported when"]</label>
+        <div class="ocat-wrapper" asp-validation-class-for="RecipientCondition">
+            <label asp-for="RecipientCondition" class="ocat-label">@T["A recipient is reported when"]</label>
             <div class="ocat-end">
-                <input asp-for="PersonCondition" class="form-control font-monospace" />
-                <span class="hint">@T["A formula over the person fields, such as [1] >= VALUE('Threshold') OR [4] > 0. Leave it empty to report a person with any field that isn't zero."]</span>
+                <input asp-for="RecipientCondition" class="form-control font-monospace" />
+                <span class="hint">@T["A formula over the recipient fields, such as [1] >= VALUE('Threshold') OR [4] > 0. Leave it empty to report a recipient with any field that isn't zero."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="MissingTaxIdNote">
             <label asp-for="MissingTaxIdNote" class="ocat-label">@T["Note for no tax id"]</label>
             <div class="ocat-end">
                 <input asp-for="MissingTaxIdNote" class="form-control" />
-                <span class="hint">@T["Added to the filing for a reported person with no tax id on file, {0} being their name. Leave it empty to add none.", "{0}"]</span>
+                <span class="hint">@T["Added to the filing for a reported recipient with no tax id on file, {0} being their name. Leave it empty to add none.", "{0}"]</span>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card mb-3" data-tax-form-fields data-check-url="@Url.RouteUrl("PayrollTaxFormsCheckFormula")">
+<div class="card mb-3" data-tax-form-fields data-check-url="@Url.RouteUrl("TaxFormsCheckFormula")" data-source="@Model.Source">
     <div class="card-header">@T["Fields"]</div>
     <div class="card-body">
-        <p class="hint mb-3">@T["The form's boxes and lines. A person field is worked out from each reported person's statements, a filing field from every reported person's statements. A formula reads other fields of its level by their number in brackets, such as [5a]; a filing field also reads the person fields added up on the filing. Fields are worked out in the order their formulas need, so the order here is only how they are shown."]</p>
+        <p class="hint mb-3">@T["The form's boxes and lines. A recipient field is worked out from each reported recipient's records, a filing field from every reported recipient's records. A formula reads other fields of its level by their number in brackets, such as [5a]; a filing field also reads the recipient fields added up on the filing. Fields are worked out in the order their formulas need, so the order here is only how they are shown."]</p>
 
         @foreach (var (level, title, empty) in new[]
         {
-            ("Person", T["On each person's statement"], T["No field is on a person's statement yet."]),
+            ("Recipient", T["On each recipient's statement"], T["No field is on a recipient's statement yet."]),
             ("Filing", T["On the filing"], T["No field is on the filing yet."]),
         })
         {
@@ -200,7 +186,7 @@
                             <th>@T["Label"]</th>
                             <th>@T["Formula"]</th>
                             <th></th>
-                            <th class="text-end" style="width: 11rem"><span class="visually-hidden">@T["Actions"]</span></th>
+                            <th class="text-end text-nowrap" style="width: 1%"><span class="visually-hidden">@T["Actions"]</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -208,7 +194,7 @@
                         {
                             var field = Model.Fields[i];
 
-                            if ((field.Level == "Filing" ? "Filing" : "Person") == level)
+                            if ((field.Level == "Filing" ? "Filing" : "Recipient") == level)
                             {
                                 await FieldRow(i.ToString(System.Globalization.CultureInfo.InvariantCulture), field);
                             }
@@ -221,16 +207,9 @@
         }
 
         <template data-field-template>
-            @{ await FieldRow("__index__", new PayrollTaxFormFieldViewModel()); }
+            @{ await FieldRow("__index__", new TaxFormFieldViewModel()); }
         </template>
 
-        <div class="ocat-wrapper mt-2">
-            <label asp-for="PayCodeFieldPrefix" class="ocat-label">@T["Pay code prefix"]</label>
-            <div class="ocat-end">
-                <input asp-for="PayCodeFieldPrefix" class="form-control" maxlength="20" style="max-width: 10rem" />
-                <span class="hint">@T["The start of the name a pay code keeps for a field that pay codes report to, such as W2: for W2:12D. Leave it empty to use the form's name and a colon."]</span>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -254,7 +233,7 @@
                     <div class="col-sm-3">
                         <label for="taxFormFieldLevel" class="form-label">@T["On"]</label>
                         <select id="taxFormFieldLevel" class="form-select" data-field-input="Level">
-                            <option value="Person">@T["Each person's statement"]</option>
+                            <option value="Recipient">@T["Each recipient's statement"]</option>
                             <option value="Filing">@T["The filing"]</option>
                         </select>
                     </div>
@@ -263,7 +242,7 @@
                         <textarea id="taxFormFieldFormula" class="form-control font-monospace" rows="4" spellcheck="false" data-field-input="Formula"></textarea>
                         <div class="form-text" data-formula-result aria-live="polite"></div>
                         <div class="d-flex flex-wrap gap-1 mt-2">
-                            @foreach (var (category, signature, description) in Model.Functions.Where(function => function.Category == CrestApps.OrchardCore.Payroll.Core.TaxForms.PayrollTaxFormFunctions.Category))
+                            @foreach (var (category, signature, description) in Model.Functions.Where(function => function.Category is not ("Text" or "Number" or "Date" or "Logical" or "Aggregate")))
                             {
                                 <button type="button" class="btn btn-sm btn-outline-secondary font-monospace" title="@description" data-insert-function="@signature">@signature.Split('(')[0]</button>
                             }
@@ -283,21 +262,28 @@
                             </table>
                         </details>
                     </div>
-                    <div class="col-sm-6" data-person-only>
+                    <div class="col-sm-6" data-recipient-only>
                         <div class="form-check form-switch">
                             <input type="checkbox" class="form-check-input" id="taxFormFieldAddToFiling" data-field-input="AddToFiling" />
                             <label class="form-check-label" for="taxFormFieldAddToFiling">@T["Add up on the filing"]</label>
                             <span class="hint dashed">@T["The filing gets the people's total under the same number."]</span>
                         </div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="form-check form-switch">
-                            <input type="checkbox" class="form-check-input" id="taxFormFieldPayCodes" data-field-input="PayCodes" />
-                            <label class="form-check-label" for="taxFormFieldPayCodes">@T["Pay codes report to it"]</label>
-                            <span class="hint dashed">@T["Pay codes can name the field under Tax form fields; their amounts are added to the formula's."]</span>
+                    @if (Model.ReportedAmountsLabel is not null)
+                    {
+                        <div class="col-sm-6">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" class="form-check-input" id="taxFormFieldReported" data-field-input="AcceptsReportedAmounts" />
+                                <label class="form-check-label" for="taxFormFieldReported">@T["{0} report to it", Model.ReportedAmountsLabel]</label>
+                                <span class="hint dashed">@T["They name the field, and their amounts are added to the formula's."]</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-sm-6" data-person-only>
+                    }
+                    else
+                    {
+                        <input type="checkbox" hidden data-field-input="AcceptsReportedAmounts" />
+                    }
+                    <div class="col-sm-6" data-recipient-only>
                         <label for="taxFormFieldPrint" class="form-label">@T["On the printed statement"]</label>
                         <select id="taxFormFieldPrint" class="form-select" data-field-input="Print">
                             <option value="Never">@T["Not printed"]</option>
@@ -329,7 +315,7 @@
             </tbody>
         </table>
         <template data-row-template="values">
-            @{ await ValueRow("__index__", new PayrollTaxFormValueViewModel()); }
+            @{ await ValueRow("__index__", new TaxFormValueViewModel()); }
         </template>
         <button type="button" class="btn btn-sm btn-secondary" data-add-row="values"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add value"]</button>
     </div>
@@ -349,20 +335,20 @@
             </tbody>
         </table>
         <template data-row-template="checks">
-            @{ await CheckRow("__index__", new PayrollTaxFormCheckViewModel()); }
+            @{ await CheckRow("__index__", new TaxFormCheckViewModel()); }
         </template>
         <button type="button" class="btn btn-sm btn-secondary" data-add-row="checks"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add check"]</button>
     </div>
 </div>
 
 <div class="card mb-3">
-    <div class="card-header">@T["A person's statement"]</div>
+    <div class="card-header">@T["A recipient's statement"]</div>
     <div class="card-body">
         <div class="ocat-wrapper">
             <label asp-for="StatementName" class="ocat-label">@T["Called"]</label>
             <div class="ocat-end">
                 <input asp-for="StatementName" class="form-control" style="max-width: 20rem" />
-                <span class="hint">@T["What a person's statement is called in My pay, such as Form W-2 or T4 slip."]</span>
+                <span class="hint">@T["What a recipient's statement is called where they see it, such as Form W-2 or T4 slip."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
@@ -374,25 +360,25 @@
             <div class="ocat-end"><input asp-for="StatementCopy" class="form-control" /></div>
         </div>
         <div class="ocat-wrapper">
-            <label asp-for="TaxIdLabel" class="ocat-label">@T["Person's tax id label"]</label>
+            <label asp-for="TaxIdLabel" class="ocat-label">@T["Recipient's tax id label"]</label>
             <div class="ocat-end"><input asp-for="TaxIdLabel" class="form-control" style="max-width: 24rem" /></div>
         </div>
         <div class="ocat-wrapper">
             <label asp-for="TaxIdFormat" class="ocat-label">@T["Masked tax id"]</label>
             <div class="ocat-end">
                 <input asp-for="TaxIdFormat" class="form-control" style="max-width: 12rem" />
-                <span class="hint">@T["How the person's tax id is printed, {0} being its last characters, such as XXX-XX-{0}.", "{0}"]</span>
+                <span class="hint">@T["How the recipient's tax id is printed, {0} being its last characters, such as XXX-XX-{0}.", "{0}"]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
-            <label asp-for="EmployerTaxIdLabel" class="ocat-label">@T["Employer's number label"]</label>
-            <div class="ocat-end"><input asp-for="EmployerTaxIdLabel" class="form-control" style="max-width: 24rem" /></div>
+            <label asp-for="FilerTaxIdLabel" class="ocat-label">@T["Filer's number label"]</label>
+            <div class="ocat-end"><input asp-for="FilerTaxIdLabel" class="form-control" style="max-width: 24rem" /></div>
         </div>
         <div class="ocat-wrapper">
-            <label asp-for="EmployerAccountJurisdiction" class="ocat-label">@T["Employer's number from"]</label>
+            <label asp-for="FilerAccountJurisdiction" class="ocat-label">@T["Filer's number from"]</label>
             <div class="ocat-end">
-                <input asp-for="EmployerAccountJurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
-                <span class="hint">@T["The jurisdiction of the employer's registration whose account number is printed, such as CA. Leave it empty to print the employer's tax id."]</span>
+                <input asp-for="FilerAccountJurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
+                <span class="hint">@T["The jurisdiction of the filer's registration whose account number is printed, such as CA. Leave it empty to print the filer's tax id."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
@@ -421,10 +407,10 @@
         const result = modalElement.querySelector('[data-formula-result]');
         const texts = {
             addedUp: @Json.Serialize(T["Added up"].Value),
-            payCodes: @Json.Serialize(T["Pay codes"].Value),
+            reported: @Json.Serialize((Model.ReportedAmountsLabel ?? T["Reported"].Value)),
             printed: @Json.Serialize(T["Printed"].Value),
             printedNotZero: @Json.Serialize(T["Printed when not zero"].Value),
-            noFormula: @Json.Serialize(T["(pay codes)"].Value),
+            noFormula: @Json.Serialize(Model.ReportedAmountsLabel is null ? T["(reported amounts)"].Value : "(" + Model.ReportedAmountsLabel.ToLowerInvariant() + ")"),
             checking: @Json.Serialize(T["Checking the formula..."].Value),
             failed: @Json.Serialize(T["The formula could not be checked."].Value),
         };
@@ -449,23 +435,23 @@
             row.querySelector('[data-field-show="Label"]').textContent = value(row, 'Label').value;
 
             const formula = row.querySelector('[data-field-show="Formula"]');
-            formula.textContent = value(row, 'Formula').value || (value(row, 'PayCodes').value === 'true' ? texts.noFormula : '');
+            formula.textContent = value(row, 'Formula').value || (value(row, 'AcceptsReportedAmounts').value === 'true' ? texts.noFormula : '');
             formula.title = value(row, 'Formula').value;
 
             const options = row.querySelector('[data-field-show="Options"]');
             options.replaceChildren();
 
-            if (level === 'Person' && value(row, 'AddToFiling').value === 'true') {
+            if (level === 'Recipient' && value(row, 'AddToFiling').value === 'true') {
                 options.append(badge(texts.addedUp));
             }
 
-            if (value(row, 'PayCodes').value === 'true') {
-                options.append(badge(texts.payCodes));
+            if (value(row, 'AcceptsReportedAmounts').value === 'true') {
+                options.append(badge(texts.reported));
             }
 
-            if (level === 'Person' && value(row, 'Print').value === 'Always') {
+            if (level === 'Recipient' && value(row, 'Print').value === 'Always') {
                 options.append(badge(texts.printed));
-            } else if (level === 'Person' && value(row, 'Print').value === 'WhenNotZero') {
+            } else if (level === 'Recipient' && value(row, 'Print').value === 'WhenNotZero') {
                 options.append(badge(texts.printedNotZero));
             }
         };
@@ -477,9 +463,9 @@
             });
         };
 
-        const togglePersonOnly = () => {
-            const person = input('Level').value === 'Person';
-            modalElement.querySelectorAll('[data-person-only]').forEach(element => element.hidden = !person);
+        const toggleRecipientOnly = () => {
+            const recipient = input('Level').value === 'Recipient';
+            modalElement.querySelectorAll('[data-recipient-only]').forEach(element => element.hidden = !recipient);
         };
 
         // Checks the formula on the server against the numbers the page has now.
@@ -488,6 +474,7 @@
             timer = setTimeout(async () => {
                 const data = new FormData();
                 data.append('__RequestVerificationToken', form.querySelector('input[name="__RequestVerificationToken"]').value);
+                data.append('Source', card.getAttribute('data-source') || '');
                 data.append('Number', input('Number').value);
                 data.append('Level', input('Level').value);
                 data.append('Formula', input('Formula').value);
@@ -502,7 +489,7 @@
                     if (value(row, 'Level').value === 'Filing') {
                         data.append('FilingNumbers', number);
                     } else {
-                        data.append('PersonNumbers', number);
+                        data.append('RecipientNumbers', number);
 
                         if (value(row, 'AddToFiling').value === 'true') {
                             data.append('TotaledNumbers', number);
@@ -530,9 +517,9 @@
             isNew = created;
 
             ['Number', 'Label', 'Level', 'Formula', 'Print'].forEach(name => input(name).value = value(row, name).value);
-            ['AddToFiling', 'PayCodes'].forEach(name => input(name).checked = value(row, name).value === 'true');
+            ['AddToFiling', 'AcceptsReportedAmounts'].forEach(name => input(name).checked = value(row, name).value === 'true');
 
-            togglePersonOnly();
+            toggleRecipientOnly();
             check();
             modal.show();
         };
@@ -545,8 +532,8 @@
 
             const row = body.lastElementChild;
             value(row, 'Level').value = level;
-            value(row, 'Print').value = level === 'Person' ? 'Always' : 'Never';
-            value(row, 'AddToFiling').value = level === 'Person' ? 'true' : 'false';
+            value(row, 'Print').value = level === 'Recipient' ? 'Always' : 'Never';
+            value(row, 'AddToFiling').value = level === 'Recipient' ? 'true' : 'false';
             open(row, true);
         };
 
@@ -556,7 +543,7 @@
             }
 
             ['Number', 'Label', 'Level', 'Formula', 'Print'].forEach(name => value(editing, name).value = input(name).value.trim());
-            ['AddToFiling', 'PayCodes'].forEach(name => value(editing, name).value = input(name).checked ? 'true' : 'false');
+            ['AddToFiling', 'AcceptsReportedAmounts'].forEach(name => value(editing, name).value = input(name).checked ? 'true' : 'false');
 
             // A field moved to the other level moves to its list.
             const level = value(editing, 'Level').value;
@@ -583,7 +570,7 @@
         });
 
         input('Level').addEventListener('change', () => {
-            togglePersonOnly();
+            toggleRecipientOnly();
             check();
         });
         ['Number', 'Formula'].forEach(name => input(name).addEventListener('input', check));

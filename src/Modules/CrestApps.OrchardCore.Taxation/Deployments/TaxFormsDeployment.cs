@@ -2,26 +2,26 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Core.Recipes;
-using CrestApps.OrchardCore.Payroll.Models;
-using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
 using OrchardCore.Deployment;
 using OrchardCore.Localization;
 
-namespace CrestApps.OrchardCore.Payroll.Deployments;
+namespace CrestApps.OrchardCore.Taxation.Deployments;
 
 /// <summary>
 /// Exports the tax forms: who each reports, its fields and formulas, yearly values, checks and statement texts.
 /// </summary>
-public sealed class PayrollTaxFormsDeploymentStep : DeploymentStep
+public sealed class TaxFormsDeploymentStep : DeploymentStep
 {
-    private static readonly LocalizationSource _category = LocalizationSource.Create<PayrollTaxFormsDeploymentStep>("Payroll");
-    private static readonly LocalizationSource _title = LocalizationSource.Create<PayrollTaxFormsDeploymentStep>("Tax forms");
+    private static readonly LocalizationSource _category = LocalizationSource.Create<TaxFormsDeploymentStep>("Taxation");
+    private static readonly LocalizationSource _title = LocalizationSource.Create<TaxFormsDeploymentStep>("Tax forms");
 
     /// <inheritdoc />
-    public override string Name => PayrollConstants.TaxFormsRecipeStepName;
+    public override string Name => TaxationConstants.TaxFormsRecipeStepName;
 
     /// <inheritdoc />
     [JsonIgnore]
@@ -32,33 +32,33 @@ public sealed class PayrollTaxFormsDeploymentStep : DeploymentStep
     public override LocalizationSource Title => _title;
 }
 
-internal sealed class PayrollTaxFormsDeploymentSource : CatalogDeploymentSource<PayrollTaxFormsDeploymentStep, PayrollTaxForm>
+internal sealed class TaxFormsDeploymentSource : CatalogDeploymentSource<TaxFormsDeploymentStep, TaxForm>
 {
-    public PayrollTaxFormsDeploymentSource(IPayrollTaxFormManager manager)
-        : base(PayrollTaxFormsRecipeStep.EntriesName, manager)
+    public TaxFormsDeploymentSource(ITaxFormManager manager)
+        : base(TaxFormsRecipeStep.EntriesName, manager)
     {
     }
 
-    protected override IEnumerable<PayrollTaxForm> Order(IEnumerable<PayrollTaxForm> entries)
+    protected override IEnumerable<TaxForm> Order(IEnumerable<TaxForm> entries)
         => entries.OrderBy(entry => entry.Name, StringComparer.Ordinal);
 }
 
 /// <summary>
 /// Imports tax forms, matched by id and then by name: a form that exists is replaced with the recipe's, fields included.
 /// </summary>
-internal sealed class PayrollTaxFormsRecipeStep : CatalogRecipeStep<PayrollTaxForm>
+internal sealed class TaxFormsRecipeStep : CatalogRecipeStep<TaxForm>
 {
     public const string EntriesName = "Forms";
 
-    private readonly IPayrollTaxFormManager _manager;
+    private readonly ITaxFormManager _manager;
 
-    public PayrollTaxFormsRecipeStep(IPayrollTaxFormManager manager)
-        : base(PayrollConstants.TaxFormsRecipeStepName, EntriesName, manager)
+    public TaxFormsRecipeStep(ITaxFormManager manager)
+        : base(TaxationConstants.TaxFormsRecipeStepName, EntriesName, manager)
     {
         _manager = manager;
     }
 
-    protected override async ValueTask<PayrollTaxForm> FindExistingAsync(string id, JsonObject data)
+    protected override async ValueTask<TaxForm> FindExistingAsync(string id, JsonObject data)
     {
         if (await base.FindExistingAsync(id, data) is { } byId)
         {
@@ -71,9 +71,9 @@ internal sealed class PayrollTaxFormsRecipeStep : CatalogRecipeStep<PayrollTaxFo
     }
 }
 
-internal sealed class PayrollTaxFormsDeploymentStepSchema : DeploymentStepSchemaDefinitionBase
+internal sealed class TaxFormsDeploymentStepSchema : DeploymentStepSchemaDefinitionBase
 {
-    public override string StepType => nameof(PayrollTaxFormsDeploymentStep);
+    public override string StepType => nameof(TaxFormsDeploymentStep);
 
     protected override string DisplayText => "Tax forms";
 
@@ -84,21 +84,21 @@ internal sealed class PayrollTaxFormsDeploymentStepSchema : DeploymentStepSchema
 }
 
 /// <summary>
-/// Describes the "PayrollTaxForms" recipe step to CrestApps Recipes.
+/// Describes the "TaxForms" recipe step to CrestApps Recipes.
 /// </summary>
-internal sealed class PayrollTaxFormsRecipeStepSchema : IRecipeStep
+internal sealed class TaxFormsRecipeStepSchema : IRecipeStep
 {
     private JsonSchema _cached;
 
-    public string Name => PayrollConstants.TaxFormsRecipeStepName;
+    public string Name => TaxationConstants.TaxFormsRecipeStepName;
 
     public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(PayrollConstants.TaxFormsRecipeStepName).Description("Recipe step discriminator. Must be 'PayrollTaxForms'.")),
-                (PayrollTaxFormsRecipeStep.EntriesName, new JsonSchemaBuilder()
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(TaxationConstants.TaxFormsRecipeStepName).Description("Recipe step discriminator. Must be 'TaxForms'.")),
+                (TaxFormsRecipeStep.EntriesName, new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
@@ -107,17 +107,15 @@ internal sealed class PayrollTaxFormsRecipeStepSchema : IRecipeStep
                             ("Name", Text("The stored name filings keep, such as US-941: no spaces or colons.")),
                             ("DisplayName", Text("What people see, such as Form 941 (quarterly federal return).")),
                             ("Description", Text("What the form is for.")),
-                            ("Jurisdiction", Text("The jurisdiction an employer must be registered in to file it, such as US or CA-QC.")),
+                            ("Source", Text("The tax form source that prepares the form, such as Payroll.")),
+                            ("Jurisdiction", Text("The jurisdiction a filer must be registered in to file it, such as US or CA-QC.")),
                             ("Period", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Year", "Quarter").Description("The period a filing covers.")),
-                            ("Workers", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employees", "Contractors", "Everyone").Description("Whose pay the form reports.")),
-                            ("PeopleJurisdiction", Text("Only people with a tax line of this jurisdiction, or one under it, are reported; empty reports everyone.")),
-                            ("HasPersonStatements", Boolean("Whether each person gets a statement (a W-2, a T4 slip), kept, printed and sent to them once filed.")),
-                            ("StatementPerJurisdiction", Boolean("Whether a person gets a statement for each jurisdiction under the form's they paid tax in, such as a T4 slip per province.")),
-                            ("ListJurisdictionAmounts", Boolean("Whether each person's statement lists the wages and income tax of every jurisdiction below the country, such as a W-2's boxes 15 to 20.")),
-                            ("PersonCondition", Text("A formula over the person fields that says whether a person is reported; empty reports a person with any field not zero.")),
-                            ("MissingTaxIdNote", Text("The note added for a reported person with no tax id on file, {0} being their name; empty adds none.")),
-                            ("PayCodeFieldPrefix", Text("The prefix of the names pay codes report to a field by, such as W2:; empty uses the form's name and a colon.")),
-                            ("Enabled", Boolean("Whether employers can prepare the form.")),
+                            ("HasRecipientStatements", Boolean("Whether each recipient gets a statement (a W-2, a 1099, a T4 slip), kept, printed and sent to them once filed.")),
+                            ("StatementPerJurisdiction", Boolean("Whether a recipient gets a statement for each jurisdiction under the form's, such as a T4 slip per province.")),
+                            ("RecipientCondition", Text("A formula over the recipient fields that says whether a recipient is reported; empty reports a recipient with any field not zero.")),
+                            ("MissingTaxIdNote", Text("The note added for a reported recipient with no tax id on file, {0} being their name; empty adds none.")),
+                            ("Enabled", Boolean("Whether filers can prepare the form.")),
+                            ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).Description("Settings a source keeps on the form, such as PayrollTaxFormSettings (Workers: Employees, Contractors or Everyone; PeopleJurisdiction; ListJurisdictionAmounts; PayCodeFieldPrefix).")),
                             ("Fields", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
                                 .Items(new JsonSchemaBuilder()
@@ -125,11 +123,11 @@ internal sealed class PayrollTaxFormsRecipeStepSchema : IRecipeStep
                                     .Properties(
                                         ("Number", Text("The box or line number, such as 5a or 12D; formulas read it as [5a].")),
                                         ("Label", Text("The label, such as 5a Taxable social security wages.")),
-                                        ("Level", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Person", "Filing").Description("On each person's statement, or on the filing.")),
+                                        ("Level", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Recipient", "Filing").Description("On each recipient's statement, or on the filing.")),
                                         ("Formula", Text("The formula, such as GREATEST(0, TAXABLE('US-SS-EE') - [5b]); empty is zero plus what pay codes report.")),
-                                        ("AddToFiling", Boolean("Whether a person field is also added up on the filing, under the same number.")),
-                                        ("PayCodes", Boolean("Whether pay codes can report their amounts to the field.")),
-                                        ("Print", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Never", "Always", "WhenNotZero").Description("When a person field is printed on the person's statement.")))
+                                        ("AddToFiling", Boolean("Whether a recipient field is also added up on the filing, under the same number.")),
+                                        ("AcceptsReportedAmounts", Boolean("Whether the source's records can report amounts to the field, such as pay codes for Payroll.")),
+                                        ("Print", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Never", "Always", "WhenNotZero").Description("When a recipient field is printed on the recipient's statement.")))
                                     .Required("Number", "Level")
                                     .AdditionalProperties(false))
                                 .Description("The fields (the form's boxes and lines), in the order they are shown.")),
@@ -157,20 +155,20 @@ internal sealed class PayrollTaxFormsRecipeStepSchema : IRecipeStep
                             ("Statement", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Object)
                                 .Properties(
-                                    ("Name", Text("What a person's statement is called, such as Form W-2.")),
+                                    ("Name", Text("What a recipient's statement is called, such as Form W-2.")),
                                     ("Title", Text("The printed title.")),
                                     ("Copy", Text("The line under the title.")),
-                                    ("TaxIdLabel", Text("The label of the person's tax id.")),
+                                    ("TaxIdLabel", Text("The label of the recipient's tax id.")),
                                     ("TaxIdFormat", Text("How the masked tax id is printed, {0} being its last characters.")),
-                                    ("EmployerTaxIdLabel", Text("The label of the employer's number.")),
-                                    ("EmployerAccountJurisdiction", Text("The jurisdiction of the employer registration whose account number is printed; empty prints the employer's tax id.")),
+                                    ("FilerTaxIdLabel", Text("The label of the filer's number.")),
+                                    ("FilerAccountJurisdiction", Text("The jurisdiction of the filer's registration whose account number is printed; empty prints the filer's tax id.")),
                                     ("FileName", Text("The start of the PDF's file name, such as W-2.")))
                                 .AdditionalProperties(false)
-                                .Description("How a person's statement is printed.")))
-                        .Required("Name", "DisplayName", "Jurisdiction", "Fields")
+                                .Description("How a recipient's statement is printed.")))
+                        .Required("Name", "DisplayName", "Source", "Jurisdiction", "Fields")
                         .AdditionalProperties(true))
                     .Description("The tax forms to create, or replace by id or name.")))
-            .Required("name", PayrollTaxFormsRecipeStep.EntriesName)
+            .Required("name", TaxFormsRecipeStep.EntriesName)
             .AdditionalProperties(true)
             .Build();
 

@@ -30,6 +30,10 @@ snapshot rather than re-rating with today's rules.
   day, form, an annual return), the periods it files for, and a return per period from the figures modules give
   through `ITaxReturnDataProvider`, worked out by an `ITaxReturnForm`, with its status (draft, ready, filed, amended),
   payments, amendments and `ITaxReturnObserver`s.
+- **Tax Forms** (`CrestApps.OrchardCore.Taxation.TaxForms`) — tax forms as records (`TaxForm`, `ITaxFormManager`): fields
+  worked out by formulas (`TaxFormFormulas`, `TaxFormEvaluator`), yearly values, checks and statement texts, edited
+  under **Commerce > Taxation > Tax Forms** and carried by the `TaxForms` recipe and deployment steps. A module adds a
+  source (`AddTaxFormSource`) and its functions (`AddTaxFormFunctions`); Payroll is the first.
 - **Tax E-Filing** (`CrestApps.OrchardCore.Taxation.EFiling`) — filing channels (`IEFileTransport`), file formats
   (`IEFileFormat`) and targets (`IEFileTargetProvider`), a manual channel that hands over the file, a JSON format of
   any return, and a task that asks channels for the agency's answers.

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Payroll.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 
@@ -13,12 +14,12 @@ namespace CrestApps.OrchardCore.Payroll.Services;
 public sealed class PayrollTaxFormDocuments
 {
     private readonly IEmployerManager _employers;
-    private readonly IPayrollTaxFormManager _forms;
+    private readonly ITaxFormManager _forms;
     private readonly IServiceProvider _services;
 
     internal readonly IStringLocalizer S;
 
-    public PayrollTaxFormDocuments(IEmployerManager employers, IPayrollTaxFormManager forms, IServiceProvider services, IStringLocalizer<PayrollTaxFormDocuments> stringLocalizer)
+    public PayrollTaxFormDocuments(IEmployerManager employers, ITaxFormManager forms, IServiceProvider services, IStringLocalizer<PayrollTaxFormDocuments> stringLocalizer)
     {
         _employers = employers;
         _forms = forms;

@@ -189,7 +189,7 @@ The Payroll feature adds a **Payroll** card to the pay code editor (shown to `Ma
 | `Supplemental`, `CountsInRegularRate`, `CountsAsHoursWorked`, `InRetroPay` | Flags the engine reads |
 | `PeriodLimit`, `YearLimits` (dated, `YearLimitOn(day)`), `LifetimeLimit` | Limits of the code |
 | `Priority`, `Arrears` (`None`, `CarryForward`), `Proration` (`None`, `WorkingDays`, `CalendarDays`) | Order, shortfall and part-period rules |
-| `FormBoxes` | Fields of tax forms the code reports to: the fields of the tax forms whose **Pay codes report to it** is on (such as `W2:12D`), and any a module registers with `AddPayrollFormBox` |
+| `FormBoxes` | Fields of tax forms the code reports to: the fields of the Payroll tax forms whose **Pay codes report to it** is on (such as `W2:12D`), and any a module registers with `AddPayrollFormBox` |
 
 Tax categories are Taxation's open list: `IncomeTaxCategories` holds `IncomeTax`, `SocialInsurance` and `Unemployment`, and a country pack adds its own with `AddIncomeTaxCategory(name, displayName)` (Canada adds `InsurableEarnings`). A pay code's treatment is set for each.
 
@@ -336,53 +336,13 @@ Payroll calculates and prepares; the business deposits and files (decision 4).
 
 ## Tax forms
 
-A tax form is a record, not code: **Payroll** → **Setup** → **Tax Forms** (`ManagePayrollSettings`) lists them and adds or edits one (the fields in two lists, on each person's statement and on the filing, each edited in a dialog that checks its formula as you type), and the `PayrollTaxForms` recipe step and the **Tax forms** deployment step carry them. A filing keeps the form's name (`PayrollFiling.Form`), so a form with filings keeps its name and can't be deleted (turn it off instead); a draft is worked out again from the form as it is when it is prepared again, and a filed form keeps its amounts.
+Payroll's forms are Taxation [tax forms](taxation.md#tax-forms) whose source is **Payroll** (`PayrollConstants.TaxFormSource`); building them and every formula function are in the user manual's [Tax forms](../user-manual/finance/tax-forms.md). Payroll adds:
 
-A form (`PayrollTaxForm`, `IPayrollTaxFormManager`) has:
-
-- its **name** (such as `US-941`), **title**, **jurisdiction** (an employer registered there files it), and whether it is for a **year** or a **quarter**;
-- who it reports: **employees**, **contractors** or both, optionally only people with a tax line of a jurisdiction or one under it (`PeopleJurisdiction`, such as `CA-QC`);
-- whether **each person gets a statement** (kept on the filing, printed and sent in My pay once filed), one **for each jurisdiction under the form's** (a T4 slip per province, `PayrollFilingPerson.Jurisdiction`), and whether the statement **lists the income taxes below the country** (a W-2's boxes 15 to 20, `PayrollFilingPerson.JurisdictionAmounts`);
-- the **condition** a person is reported on (a formula over the person fields; empty reports a person with any field not zero) and the **note** for a reported person with no tax id on file (`{0}` is their name);
-- its **fields**, the form's boxes and lines, each with its **box or line** number (such as `5a` or `12D`), a label, whether it is on each person's statement or on the filing, a **formula**, whether a person field is **added up on the filing** under the same number, whether **pay codes report to it** (their amounts are added to the formula's; a pay code names the field as the form's prefix and its number, such as `W2:12D`), and when a person field is **printed** on the statement (never, always, or when not zero);
-- **yearly values** (a name, the first year and a value: the latest year at or before the filing's applies, such as a reporting threshold or a yearly maximum) and **checks** (a formula that must be true, or its note is added to the filing, such as a missing account number);
-- how a person's **statement** is named and printed: what it is called in My pay, its title, the line under it, the labels of the person's tax id and the employer's number, how the masked tax id is printed, which registration's account number is the employer's number, and the PDF's file name.
-
-The formulas are Orchard Core's formula language (the one of data pipelines and reports: operators, `IF`, `ROUND`, `GREATEST`, `LEAST`, `COALESCE`, `IN` and the rest; aggregates are refused). A field reads other fields of its level by number, `[5a]`, and a filing field also reads the person fields added up on the filing. Fields are worked out in the order their formulas need, whatever order they are shown in; a field that reads itself through others, an unknown field or function, or two fields of one number at one level are refused when the form is saved or imported. A person field is worked out on the person's statements, a filing field and a check on every reported person's statements. Payroll adds these functions (`PayrollTaxFormFunctions`), and a module adds its own with `services.AddPayrollTaxFormFunctions<T>()` (an `IPayrollTaxFormFunctionProvider`, reading what it works on with `PayrollTaxFormFormulaContext.Current(context)`); they are only for tax forms, never data pipelines or reports:
-
-| Function | Gives |
-| --- | --- |
-| `WAGES(category)` | The wages of a tax category (`'IncomeTax'`, `'SocialInsurance'`, `'Unemployment'`) from the pay code lines: pre-tax deductions taken off as each pay code's tax treatment says, a reversal taken off |
-| `TAX(code, ...)`, `TAXABLE(code, ...)`, `HASTAX(code, ...)` | The amount of the taxes with these codes, the wages they were worked out on, whether there is a line of one; `*` matches any characters (`'CA-*-PIT'`) |
-| `PAYKIND(kind, ...)`, `PAYCODEFIELD(name)`, `GROSS()` | The earnings of pay codes of a kind (`'Tips'`), the amounts of pay codes that report to a field, gross pay |
-| `REGIONWAGES()`, `REGIONTAX()`, `LOCALWAGES()`, `LOCALTAX()` | The wages and the employee's income tax of the jurisdictions below the country: regions such as states, or local ones such as cities |
-| `HEADCOUNT(day)` | The people paid for a pay period including that day of the period's last month |
-| `DEPOSITS(jurisdiction, [group])` | The period's deposits to a jurisdiction, of one group of taxes or all |
-| `PEOPLE()`, `TOTAL(number)` | The people (statements) reported, and a person field's total over them |
-| `VALUE(name, [fallback])` | A yearly value of the form |
-| `RULE(code, field)` | A figure of the income tax rule with that code on the period's last day: `'Rate'`, `'WageBase'`, `'WageThreshold'`, `'YearlyMaximum'`, `'YearlyExemption'`, `'FixedAmount'` or a parameter |
-| `ACCOUNT(jurisdiction)`, `ISACCOUNT(number, shape)` | The employer's account number with a jurisdiction, and whether a number has a shape (`#` a digit, `@` a letter, `'#########RP####'`) |
-| `FILINGYEAR()`, `FILINGQUARTER()` | The filing's year and quarter |
-| `DENTALCODE()` | With Canada Payroll Filings: the employer's dental benefits code (T4 box 45) |
-
-```json
-{
-  "name": "PayrollTaxForms",
-  "Forms": [
-    {
-      "Name": "US-945", "DisplayName": "Form 945 (annual return of withheld federal income tax)", "Jurisdiction": "US",
-      "Period": "Year", "Workers": "Contractors",
-      "Fields": [
-        { "Number": "2", "Label": "2 Backup withholding", "Level": "Filing", "Formula": "TAX('US-BWH')" },
-        { "Number": "4", "Label": "4 Total deposits for the year", "Level": "Filing", "Formula": "DEPOSITS('US', 'NonPayrollWithholding')" },
-        { "Number": "5", "Label": "5 Balance due", "Level": "Filing", "Formula": "GREATEST(0, [2] - [4])" }
-      ]
-    }
-  ]
-}
-```
-
-The step matches a form by id, then by name, and replaces it with the recipe's (its fields, values and checks included). The country forms ship as recipes: **United States Payroll: federal tax forms** (`payroll-united-states-tax-forms.recipe.json`: Forms 941, 940, 945, W-2 and W-3, 1099-NEC and 1096) and **Canada Payroll: T4 and RL-1 tax forms** (`payroll-canada-tax-forms.recipe.json`). Turning on United States or Canada Payroll Filings, or updating a site that had it on, adds the forms of its recipe that the site doesn't have yet (the feature's migration, `PayrollTaxFormRecipeSeeder`, without the recipe's other steps); running the recipe from **Configuration** → **Recipes** puts the shipped fields and formulas back. A module can still add a form in code with `services.AddPayrollFilingForm<T>()` (`IPayrollFilingForm`); a record of the same name takes its place. A form whose formulas stop working (a function whose feature was turned off) fails its preparation with an error rather than filling the filing.
+- **The source's functions** (`PayrollTaxFormFunctions`, with `PayrollTaxFormData`): `WAGES`, `TAX`, `TAXABLE`, `HASTAX` (tax codes take `*`), `PAYKIND`, `PAYCODEFIELD`, `GROSS`, `HEADCOUNT`, `DEPOSITS`, `RULE`, `ACCOUNT`, `REGIONWAGES`, `REGIONTAX`, `LOCALWAGES` and `LOCALTAX`, and with Canada Payroll Filings `DENTALCODE` (`CanadaTaxFormFunctions`).
+- **Recipients**: each reported person (grouped by pay profile), or each person and province for a form with a statement per jurisdiction (`PayrollFilingSums.ByJurisdictionUnder`); a recipient field reads the person's final statements of the period, a filing field every reported statement. Fields that accept reported amounts add the lines of the pay codes whose **Tax form fields** name them (`PayCodeFieldPrefix` and the field's number, such as `W2:12D`).
+- **The Payroll card** of the tax form editor (`PayrollTaxFormSettings` in the form's properties): whose pay the form reports (`Workers`), `PeopleJurisdiction`, `ListJurisdictionAmounts` (a W-2's boxes 15 to 20, `PayrollFilingPerson.JurisdictionAmounts`) and `PayCodeFieldPrefix`.
+- **Filings**: `PayrollTaxFormFiling` wraps each enabled form of the Payroll source as an `IPayrollFilingForm` and keeps the result as a `PayrollFiling` (boxes, people, notes); a person's statement prints as a PDF from the form's statement settings (`PayrollTaxStatementDocument`). `PayrollTaxFormUsage` tells the Tax Forms page which forms have filings.
+- **The country forms** ship as recipes, **United States Payroll: federal tax forms** (`payroll-united-states-tax-forms.recipe.json`) and **Canada Payroll: T4 and RL-1 tax forms** (`payroll-canada-tax-forms.recipe.json`). Turning on United States or Canada Payroll Filings, or updating a site that had it on, adds the forms of its recipe that the site doesn't have yet (the feature's migration, `PayrollTaxFormRecipeSeeder`). A module can still add a form in code with `services.AddPayrollFilingForm<T>()`; a tax form of the same name takes its place.
 
 ## United States
 

@@ -231,7 +231,7 @@ public sealed class PayrollFilingsController : Controller
 
         var employer = await _employers.FindByIdAsync(filing.EmployerId);
         var form = await _service.FindFormAsync(filing.Form, HttpContext.RequestAborted);
-        var record = HttpContext.RequestServices.GetService<IPayrollTaxFormManager>() is { } taxForms
+        var record = HttpContext.RequestServices.GetService<CrestApps.OrchardCore.Taxation.Services.ITaxFormManager>() is { } taxForms
             ? await taxForms.FindByNameAsync(filing.Form, HttpContext.RequestAborted)
             : null;
 
@@ -243,7 +243,7 @@ public sealed class PayrollFilingsController : Controller
             BoxLabels = record?.Fields
                 .Where(box => !string.IsNullOrEmpty(box.Number))
                 .GroupBy(box => (box.Level, box.Number))
-                .ToDictionary(group => (group.Key.Level == PayrollTaxFormFieldLevel.Person ? "person:" : "filing:") + group.Key.Number, group => group.First().Label, StringComparer.Ordinal) ?? [],
+                .ToDictionary(group => (group.Key.Level == CrestApps.OrchardCore.Taxation.Models.TaxFormFieldLevel.Recipient ? "person:" : "filing:") + group.Key.Number, group => group.First().Label, StringComparer.Ordinal) ?? [],
             FiledOn = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime),
             Amends = string.IsNullOrEmpty(filing.AmendsId) ? null : await _filings.FindByIdAsync(filing.AmendsId),
         });

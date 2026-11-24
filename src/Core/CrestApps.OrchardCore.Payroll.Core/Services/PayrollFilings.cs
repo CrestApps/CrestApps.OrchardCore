@@ -8,9 +8,11 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Core.TaxForms;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -553,8 +555,8 @@ public sealed class PayrollFilingService : IPayrollFilingService
 {
     private readonly IPayrollFilingManager _filings;
     private readonly IEnumerable<IPayrollFilingForm> _forms;
-    private readonly IPayrollTaxFormManager _taxForms;
-    private readonly PayrollTaxFormFunctionCatalog _functions;
+    private readonly ITaxFormManager _taxForms;
+    private readonly TaxFormFunctionCatalog _functions;
     private readonly PayStatementStore _statements;
     private readonly IPayCodeManager _codes;
     private readonly IPayProfileManager _profiles;
@@ -569,7 +571,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
     /// <summary>Initializes a new instance of the <see cref="PayrollFilingService"/> class.</summary>
     /// <param name="filings">The filings.</param>
     /// <param name="forms">The forms modules add in code.</param>
-    /// <param name="taxForms">The tax forms made on the Tax Forms page or by a recipe.</param>
+    /// <param name="taxForms">Taxation's tax forms; those of the Payroll source are filed here.</param>
     /// <param name="functions">The functions of the tax forms' formulas.</param>
     /// <param name="statements">The statements.</param>
     /// <param name="codes">The pay codes.</param>
@@ -583,8 +585,8 @@ public sealed class PayrollFilingService : IPayrollFilingService
     public PayrollFilingService(
         IPayrollFilingManager filings,
         IEnumerable<IPayrollFilingForm> forms,
-        IPayrollTaxFormManager taxForms,
-        PayrollTaxFormFunctionCatalog functions,
+        ITaxFormManager taxForms,
+        TaxFormFunctionCatalog functions,
         PayStatementStore statements,
         IPayCodeManager codes,
         IPayProfileManager profiles,
@@ -633,7 +635,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
     // The tax form records, by title, then the forms modules add in code under a name no record has.
     private async Task<IReadOnlyList<IPayrollFilingForm>> AllFormsAsync(bool enabledOnly, CancellationToken cancellationToken)
     {
-        var records = (await _taxForms.GetAllAsync(cancellationToken))
+        var records = (await _taxForms.ListBySourceAsync(PayrollConstants.TaxFormSource, cancellationToken))
             .Where(form => !enabledOnly || form.Enabled)
             .OrderBy(form => form.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(form => (IPayrollFilingForm)new PayrollTaxFormFiling(form, _functions, S))
@@ -983,11 +985,13 @@ public static class PayrollFilingsServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayrollFiling>, PayrollFilingHandler>());
         services.TryAddScoped<ITaxLiabilityService, TaxLiabilityService>();
         services.TryAddScoped<IPayrollFilingService, PayrollFilingService>();
-        services.TryAddScoped<PayrollTaxFormStore>();
-        services.TryAddScoped<IPayrollTaxFormManager, PayrollTaxFormManager>();
-        services.TryAddScoped<ICatalogManager<PayrollTaxForm>>(serviceProvider => serviceProvider.GetRequiredService<IPayrollTaxFormManager>());
-        services.TryAddSingleton<PayrollTaxFormFunctionCatalog>();
-        services.AddPayrollTaxFormFunctions<PayrollTaxFormFunctions>();
+        services.AddTaxFormsCore();
+        services.AddTaxFormSource(
+            PayrollConstants.TaxFormSource,
+            global::OrchardCore.Localization.LocalizationSource.Create<PayrollFilingService>("Payroll"),
+            global::OrchardCore.Localization.LocalizationSource.Create<PayrollFilingService>("Pay statements: the forms an employer files with the final statements of a quarter or a year, such as Forms 941 and W-2 or the T4."),
+            global::OrchardCore.Localization.LocalizationSource.Create<PayrollFilingService>("Pay codes"));
+        services.AddTaxFormFunctions<PayrollTaxFormFunctions>();
 
         return services;
     }

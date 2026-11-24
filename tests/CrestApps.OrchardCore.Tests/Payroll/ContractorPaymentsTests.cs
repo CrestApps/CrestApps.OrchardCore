@@ -177,7 +177,7 @@ public sealed class ContractorPaymentsTests
         Assert.Equal(["1 Nonemployee compensation", "4 Federal income tax withheld"], texts.Boxes.Select(box => box.Label));
         Assert.Equal(("Payer's TIN", "12-3456789", "1099-NEC-2026.pdf"), (texts.EmployerTaxIdLabel, texts.EmployerTaxId, PayrollTaxStatementDocument.FileName(form, forms1099)));
         Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(pdf, 0, 4));
-        Assert.Equal(2000m, PayrollTaxFormFormulaContext.ValueFor(form, "ReportingThreshold", 2026));
-        Assert.Equal(600m, PayrollTaxFormFormulaContext.ValueFor(form, "ReportingThreshold", 2025));
+        Assert.Equal(2000m, CrestApps.OrchardCore.Taxation.Core.TaxForms.TaxFormFormulaContext.ValueFor(form, "ReportingThreshold", 2026));
+        Assert.Equal(600m, CrestApps.OrchardCore.Taxation.Core.TaxForms.TaxFormFormulaContext.ValueFor(form, "ReportingThreshold", 2025));
     }
 }

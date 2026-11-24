@@ -56,6 +56,12 @@ public static class TaxationConstants
         /// built-in manual channel that hands over a file to file on the agency's site.
         /// </summary>
         public const string EFiling = "CrestApps.OrchardCore.Taxation.EFiling";
+
+        /// <summary>
+        /// Tax forms: forms made of fields (their boxes and lines) worked out by formulas, with yearly values and checks,
+        /// that a module such as Payroll prepares from its own records.
+        /// </summary>
+        public const string TaxForms = "CrestApps.OrchardCore.Taxation.TaxForms";
     }
 
     /// <summary>
@@ -67,6 +73,16 @@ public static class TaxationConstants
     /// The kind of e-file target a tax return is.
     /// </summary>
     public const string TaxReturnEFileTargetType = "TaxReturn";
+
+    /// <summary>
+    /// The YesSql collection of tax forms.
+    /// </summary>
+    public const string TaxFormsCollectionName = "TaxForms";
+
+    /// <summary>
+    /// The recipe and deployment step of tax forms.
+    /// </summary>
+    public const string TaxFormsRecipeStepName = "TaxForms";
 
     /// <summary>
     /// The YesSql collection of income tax rules.

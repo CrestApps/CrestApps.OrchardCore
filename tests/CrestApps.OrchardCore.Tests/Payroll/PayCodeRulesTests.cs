@@ -287,7 +287,7 @@ public sealed class PayCodeRulesTests
             Mock.Of<IPayCodeManager>(),
             Options.Create(categories),
             Options.Create(new PayrollFormBoxOptions()),
-            Mock.Of<IPayrollTaxFormManager>(),
+            Mock.Of<CrestApps.OrchardCore.Taxation.Services.ITaxFormManager>(),
             Mock.Of<IStringLocalizerFactory>(),
             new PassThroughStringLocalizer<PayrollPayCodeDisplayDriver>());
     }

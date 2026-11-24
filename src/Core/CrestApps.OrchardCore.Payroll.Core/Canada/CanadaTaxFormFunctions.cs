@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Payroll.Core.TaxForms;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Expressions;
 
@@ -8,8 +9,11 @@ namespace CrestApps.OrchardCore.Payroll.Core.Canada;
 /// The functions Canada Payroll Filings adds to the formulas of tax forms: DENTALCODE(), the employer's dental benefits
 /// code (T4 box 45) from its Canada card.
 /// </summary>
-public sealed class CanadaTaxFormFunctions : IPayrollTaxFormFunctionProvider
+public sealed class CanadaTaxFormFunctions : ITaxFormFunctionProvider
 {
+    /// <inheritdoc />
+    public string Source => PayrollConstants.TaxFormSource;
+
     /// <inheritdoc />
     public IEnumerable<ExpressionFunction> GetFunctions()
     {
@@ -22,7 +26,7 @@ public sealed class CanadaTaxFormFunctions : IPayrollTaxFormFunctionProvider
             MinArguments = 0,
             MaxArguments = 0,
             ReturnType = _ => DataFieldType.Integer,
-            Invoke = (_, expression) => PayrollTaxFormFormulaContext.Current(expression)?.Employer?.GetCanadaSettings().DentalBenefitsCode is { } code ? (long)code : null,
+            Invoke = (_, expression) => TaxFormFormulaContext.DataOf<PayrollTaxFormData>(expression)?.Employer?.GetCanadaSettings().DentalBenefitsCode is { } code ? (long)code : null,
         };
     }
 }

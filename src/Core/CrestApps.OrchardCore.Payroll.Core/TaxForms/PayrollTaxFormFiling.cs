@@ -2,23 +2,23 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.DataSources.Expressions;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Payroll.Core.TaxForms;
 
 /// <summary>
-/// A <see cref="PayrollTaxForm"/> record as a form employers file: prepares a filing by working out each reported
-/// person's boxes from their statements, adding up the person boxes the form totals, then working out the filing boxes
-/// and the checks.
+/// A Taxation tax form whose source is Payroll, as a form employers file: each reported person (or each person and
+/// jurisdiction) is a recipient whose pay statements the recipient fields read, every reported statement is what the
+/// filing fields read, and pay codes report amounts to the fields that accept them.
 /// </summary>
 public sealed class PayrollTaxFormFiling : IPayrollFilingForm
 {
-    private readonly PayrollTaxFormFunctionCatalog _functions;
+    private readonly TaxFormFunctionCatalog _functions;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -27,7 +27,7 @@ public sealed class PayrollTaxFormFiling : IPayrollFilingForm
     /// <param name="form">The form.</param>
     /// <param name="functions">The functions of the formulas.</param>
     /// <param name="localizer">The localizer of the messages.</param>
-    public PayrollTaxFormFiling(PayrollTaxForm form, PayrollTaxFormFunctionCatalog functions, IStringLocalizer localizer)
+    public PayrollTaxFormFiling(TaxForm form, TaxFormFunctionCatalog functions, IStringLocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(form);
         ArgumentNullException.ThrowIfNull(functions);
@@ -36,6 +36,7 @@ public sealed class PayrollTaxFormFiling : IPayrollFilingForm
         Form = form;
         _functions = functions;
         S = localizer;
+
         // The title is what the site's administrator typed, so there is no template to extract.
 #pragma warning disable OCLOC103 // The value of the localization source is not a compile-time constant
         DisplayName = LocalizationSource.Create<PayrollTaxFormFiling>(string.IsNullOrWhiteSpace(form.DisplayName) ? form.Name : form.DisplayName);
@@ -44,7 +45,7 @@ public sealed class PayrollTaxFormFiling : IPayrollFilingForm
 
     /// <summary>Gets the form record.</summary>
     [JsonIgnore]
-    public PayrollTaxForm Form { get; }
+    public TaxForm Form { get; }
 
     /// <inheritdoc />
     public string Name => Form.Name;
@@ -60,14 +61,14 @@ public sealed class PayrollTaxFormFiling : IPayrollFilingForm
     public bool IsQuarterly => Form.IsQuarterly;
 
     /// <inheritdoc />
-    public bool HasPersonStatements => Form.HasPersonStatements;
+    public bool HasPersonStatements => Form.HasRecipientStatements;
 
     /// <inheritdoc />
     public async Task PrepareAsync(PayrollFilingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var formulas = PayrollTaxFormFormulas.Compile(Form, _functions.Functions, S, out var errors)
+        var formulas = TaxFormFormulas.Compile(Form, _functions.For(Form.Source), S, out var errors)
             ?? throw new InvalidOperationException(S["The formulas of {0} don't work: {1}", Form.Name, string.Join(" ", errors.Select(error => error.Message))]);
         var rules = context.Services.GetService<IIncomeTaxRuleManager>() is { } manager
             ? (await manager.ListAsync(cancellationToken)).Where(rule => rule.AppliesOn(context.To)).ToList()
@@ -82,141 +83,107 @@ public sealed class PayrollTaxFormFiling : IPayrollFilingForm
     /// <param name="formulas">The form's compiled formulas.</param>
     /// <param name="context">The filing context.</param>
     /// <param name="rules">The income tax rules that apply on the period's last day.</param>
-    public static void Prepare(PayrollTaxFormFormulas formulas, PayrollFilingContext context, IReadOnlyList<IncomeTaxRule> rules)
+    public static void Prepare(TaxFormFormulas formulas, PayrollFilingContext context, IReadOnlyList<IncomeTaxRule> rules)
     {
         ArgumentNullException.ThrowIfNull(formulas);
         ArgumentNullException.ThrowIfNull(context);
 
         var form = formulas.Form;
+        var settings = form.GetPayrollSettings();
         var reported = Reported(form, context);
-        var formula = new PayrollTaxFormFormulaContext
-        {
-            Form = form,
-            Employer = context.Employer,
-            Filing = context.Filing,
-            From = context.From,
-            To = context.To,
-            Codes = context.Codes,
-            Deposits = context.Deposits,
-            Rules = rules ?? [],
-            Services = context.Services,
-        };
-        var totals = formulas.TotaledFields.ToDictionary(box => box.Number, _ => 0m, StringComparer.Ordinal);
-        var people = reported
+        var filingData = Data(context, rules, reported);
+        var recipients = new List<TaxFormRecipientInput>();
+
+        foreach (var person in reported
             .GroupBy(statement => statement.ProfileId ?? statement.StaffMemberId, StringComparer.Ordinal)
-            .OrderBy(group => group.Last().Snapshot?.EmployeeName, StringComparer.CurrentCultureIgnoreCase);
-
-        if (formulas.PersonFields.Count > 0)
+            .OrderBy(group => group.Last().Snapshot?.EmployeeName, StringComparer.CurrentCultureIgnoreCase))
         {
-            foreach (var person in people)
-            {
-                var all = person.ToList();
-                var latest = all.Where(statement => statement.VoidOf is null).OrderBy(statement => statement.PayDate).LastOrDefault() ?? all[^1];
-                var profile = latest.ProfileId is not null && context.Profiles.TryGetValue(latest.ProfileId, out var found) ? found : null;
-                var noted = false;
-                IReadOnlyList<(string Jurisdiction, IReadOnlyList<PayStatement> Statements)> parts = form.StatementPerJurisdiction
-                    ? PayrollFilingSums.ByJurisdictionUnder(all, form.Jurisdiction)
-                    : [(null, all)];
+            var all = person.ToList();
+            var latest = all.Where(statement => statement.VoidOf is null).OrderBy(statement => statement.PayDate).LastOrDefault() ?? all[^1];
+            var profile = latest.ProfileId is not null && context.Profiles.TryGetValue(latest.ProfileId, out var found) ? found : null;
+            IReadOnlyList<(string Jurisdiction, IReadOnlyList<PayStatement> Statements)> parts = form.StatementPerJurisdiction
+                ? PayrollFilingSums.ByJurisdictionUnder(all, form.Jurisdiction)
+                : [(null, all)];
 
-                foreach (var (jurisdiction, statements) in parts)
+            foreach (var (jurisdiction, statements) in parts)
+            {
+                recipients.Add(new TaxFormRecipientInput
                 {
-                    var (row, boxes) = WorkPerson(formulas, formula, statements);
-
-                    var include = formulas.PersonCondition is { } condition
-                        ? PayrollTaxFormFormulas.IsTrue(condition.Evaluate(new ExpressionContext { Row = row }))
-                        : boxes.Values.Any(value => value != 0);
-
-                    if (!include)
-                    {
-                        continue;
-                    }
-
-                    if (!noted && profile?.TaxId is null && !string.IsNullOrWhiteSpace(form.MissingTaxIdNote))
-                    {
-                        context.Filing.Notes.Add(string.Format(CultureInfo.CurrentCulture, form.MissingTaxIdNote, latest.Snapshot?.EmployeeName));
-                        noted = true;
-                    }
-
-                    foreach (var box in formulas.TotaledFields)
-                    {
-                        totals[box.Number] += (decimal)row[formulas.PersonSlot(box.Number)];
-                    }
-
-                    formula.People.Add(boxes);
-
-                    if (form.HasPersonStatements)
-                    {
-                        context.Filing.People.Add(new PayrollFilingPerson
-                        {
-                            StaffMemberId = latest.StaffMemberId,
-                            ProfileId = latest.ProfileId,
-                            Name = string.IsNullOrEmpty(profile?.LegalName) ? latest.Snapshot?.EmployeeName : profile.LegalName,
-                            Address = [.. latest.Snapshot?.EmployeeAddress ?? []],
-                            TaxIdHint = profile?.TaxId?.Hint,
-                            Jurisdiction = jurisdiction,
-                            Boxes = boxes,
-                            JurisdictionAmounts = form.ListJurisdictionAmounts ? [.. PayrollFilingSums.JurisdictionAmounts(statements, context.Employer)] : [],
-                        });
-                    }
-                }
+                    Data = filingData with { Statements = statements },
+                    Tag = new Recipient(person.Key, latest, profile, jurisdiction, statements),
+                });
             }
         }
 
-        // The filing boxes, worked out on every reported statement, after the totals of the person boxes.
-        formula.Statements = reported;
-
-        var filingRow = formulas.FilingRow(formula);
-
-        foreach (var box in formulas.TotaledFields)
+        var result = TaxFormEvaluator.Evaluate(new TaxFormEvaluation
         {
-            filingRow[formulas.FilingSlot(box.Number)] = totals[box.Number];
-
-            if (!string.IsNullOrWhiteSpace(box.Formula) || totals[box.Number] != 0)
+            Formulas = formulas,
+            Context = new TaxFormFormulaContext
             {
-                context.Filing.Boxes[box.Number] = totals[box.Number];
-            }
-        }
-
-        foreach (var box in formulas.FilingFields)
-        {
-            var value = Work(formulas, box, filingRow, reported, context.Codes);
-
-            filingRow[formulas.FilingSlot(box.Number)] = value;
-
-            if (!string.IsNullOrWhiteSpace(box.Formula) || value != 0)
-            {
-                context.Filing.Boxes[box.Number] = value;
-            }
-        }
+                Form = form,
+                Year = context.Filing.Year,
+                Quarter = context.Filing.Quarter,
+                From = context.From,
+                To = context.To,
+                Services = context.Services,
+            },
+            Recipients = recipients,
+            FilingData = filingData,
+            ReportedAmount = (field, data) => PayrollFilingSums.ReportedTo(((PayrollTaxFormData)data).Statements, context.Codes, form.PayCodeFieldPrefix() + field.Number),
+        });
 
         // A failed check is noted before what the people's statements noted.
-        var position = 0;
-
-        foreach (var (check, condition) in formulas.Checks)
+        foreach (var note in result.FailedChecks)
         {
-            if (!PayrollTaxFormFormulas.IsTrue(condition.Evaluate(new ExpressionContext { Row = filingRow })))
+            context.Filing.Notes.Add(note);
+        }
+
+        var noted = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var reportedRecipient in result.Recipients)
+        {
+            var recipient = (Recipient)reportedRecipient.Input.Tag;
+
+            if (recipient.Profile?.TaxId is null && !string.IsNullOrWhiteSpace(form.MissingTaxIdNote) && noted.Add(recipient.Key ?? string.Empty))
             {
-                context.Filing.Notes.Insert(position++, check.Note ?? check.Condition);
+                context.Filing.Notes.Add(string.Format(CultureInfo.CurrentCulture, form.MissingTaxIdNote, recipient.Latest.Snapshot?.EmployeeName));
             }
+
+            if (form.HasRecipientStatements)
+            {
+                context.Filing.People.Add(new PayrollFilingPerson
+                {
+                    StaffMemberId = recipient.Latest.StaffMemberId,
+                    ProfileId = recipient.Latest.ProfileId,
+                    Name = string.IsNullOrEmpty(recipient.Profile?.LegalName) ? recipient.Latest.Snapshot?.EmployeeName : recipient.Profile.LegalName,
+                    Address = [.. recipient.Latest.Snapshot?.EmployeeAddress ?? []],
+                    TaxIdHint = recipient.Profile?.TaxId?.Hint,
+                    Jurisdiction = recipient.Jurisdiction,
+                    Boxes = new Dictionary<string, decimal>(reportedRecipient.Fields, StringComparer.Ordinal),
+                    JurisdictionAmounts = settings.ListJurisdictionAmounts ? [.. PayrollFilingSums.JurisdictionAmounts(recipient.Statements, context.Employer)] : [],
+                });
+            }
+        }
+
+        foreach (var (number, value) in result.Fields)
+        {
+            context.Filing.Boxes[number] = value;
         }
     }
 
     /// <summary>
-    /// Works out a person's boxes from their statements, as a filing would, whoever the form reports.
+    /// Works out a person's fields from their statements, as a filing would, whoever the form reports.
     /// </summary>
     /// <param name="formulas">The form's compiled formulas.</param>
     /// <param name="context">The formula context.</param>
-    /// <param name="statements">The person's statements.</param>
-    /// <returns>Every person box, zero or not.</returns>
-    public static IReadOnlyDictionary<string, decimal> PersonFields(PayrollTaxFormFormulas formulas, PayrollTaxFormFormulaContext context, IReadOnlyList<PayStatement> statements)
+    /// <param name="data">The person's statements and the period's pay codes, deposits, rules and employer.</param>
+    /// <returns>Every recipient field, zero or not.</returns>
+    public static IReadOnlyDictionary<string, decimal> PersonFields(TaxFormFormulas formulas, TaxFormFormulaContext context, PayrollTaxFormData data)
     {
         ArgumentNullException.ThrowIfNull(formulas);
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(statements);
+        ArgumentNullException.ThrowIfNull(data);
 
-        var (row, _) = WorkPerson(formulas, context, statements);
-
-        return formulas.PersonFields.ToDictionary(box => box.Number, box => (decimal)row[formulas.PersonSlot(box.Number)], StringComparer.Ordinal);
+        return TaxFormEvaluator.RecipientFields(formulas, context, data, (field, scope) => PayrollFilingSums.ReportedTo(((PayrollTaxFormData)scope).Statements, data.Codes, formulas.Form.PayCodeFieldPrefix() + field.Number));
     }
 
     /// <summary>
@@ -225,24 +192,25 @@ public sealed class PayrollTaxFormFiling : IPayrollFilingForm
     /// <param name="form">The form.</param>
     /// <param name="context">The filing context.</param>
     /// <returns>The statements, by pay date.</returns>
-    public static IReadOnlyList<PayStatement> Reported(PayrollTaxForm form, PayrollFilingContext context)
+    public static IReadOnlyList<PayStatement> Reported(TaxForm form, PayrollFilingContext context)
     {
         ArgumentNullException.ThrowIfNull(form);
         ArgumentNullException.ThrowIfNull(context);
 
-        var statements = context.Statements.Where(statement => form.Workers switch
+        var settings = form.GetPayrollSettings();
+        var statements = context.Statements.Where(statement => settings.Workers switch
         {
             PayrollTaxFormWorkers.Employees => !IsContractor(context, statement),
             PayrollTaxFormWorkers.Contractors => IsContractor(context, statement),
             _ => true,
         }).ToList();
 
-        if (string.IsNullOrWhiteSpace(form.PeopleJurisdiction))
+        if (string.IsNullOrWhiteSpace(settings.PeopleJurisdiction))
         {
             return statements;
         }
 
-        var jurisdiction = form.PeopleJurisdiction.Trim();
+        var jurisdiction = settings.PeopleJurisdiction.Trim();
         var people = statements
             .Where(statement => statement.Lines.Any(line => line.Type == PayLineType.Tax && line.Jurisdiction is { } candidate
                 && (string.Equals(candidate, jurisdiction, StringComparison.OrdinalIgnoreCase) || candidate.StartsWith(jurisdiction + "-", StringComparison.OrdinalIgnoreCase))))
@@ -252,44 +220,20 @@ public sealed class PayrollTaxFormFiling : IPayrollFilingForm
         return [.. statements.Where(statement => people.Contains(statement.ProfileId ?? statement.StaffMemberId))];
     }
 
-    // Works out a person's boxes in order: the row the formulas read, and the boxes kept on the statement (a box with
-    // no formula only when a pay code reported to it).
-    private static (object[] Row, Dictionary<string, decimal> Boxes) WorkPerson(PayrollTaxFormFormulas formulas, PayrollTaxFormFormulaContext context, IReadOnlyList<PayStatement> statements)
-    {
-        context.Statements = statements;
-
-        var row = formulas.PersonRow(context);
-        var boxes = new Dictionary<string, decimal>(StringComparer.Ordinal);
-
-        foreach (var box in formulas.PersonFields)
+    private static PayrollTaxFormData Data(PayrollFilingContext context, IReadOnlyList<IncomeTaxRule> rules, IReadOnlyList<PayStatement> statements)
+        => new()
         {
-            var value = Work(formulas, box, row, statements, context.Codes);
-
-            row[formulas.PersonSlot(box.Number)] = value;
-
-            if (!string.IsNullOrWhiteSpace(box.Formula) || value != 0)
-            {
-                boxes[box.Number] = value;
-            }
-        }
-
-        return (row, boxes);
-    }
-
-    private static decimal Work(PayrollTaxFormFormulas formulas, PayrollTaxFormField box, object[] row, IReadOnlyList<PayStatement> statements, IReadOnlyDictionary<string, PayCode> codes)
-    {
-        var value = formulas.Compiled.TryGetValue(box, out var compiled)
-            ? PayrollTaxFormFormulas.Amount(compiled.Evaluate(new ExpressionContext { Row = row }))
-            : 0m;
-
-        if (box.PayCodes)
-        {
-            value += PayrollFilingSums.ReportedTo(statements, codes, formulas.Form.EffectivePayCodeFieldPrefix + box.Number);
-        }
-
-        return value;
-    }
+            Statements = statements,
+            Codes = context.Codes,
+            Deposits = context.Deposits,
+            Rules = rules ?? [],
+            Employer = context.Employer,
+            To = context.To,
+        };
 
     private static bool IsContractor(PayrollFilingContext context, PayStatement statement)
         => statement.ProfileId is not null && context.Profiles.TryGetValue(statement.ProfileId, out var profile) && profile.WorkerType == PayWorkerType.Contractor;
+
+    // A person's statement (or one of them, for a form with a statement per jurisdiction).
+    private sealed record Recipient(string Key, PayStatement Latest, EmployeePayProfile Profile, string Jurisdiction, IReadOnlyList<PayStatement> Statements);
 }

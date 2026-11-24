@@ -64,22 +64,8 @@ public interface ITaxLiabilityService
 }
 
 /// <summary>
-/// Manages the tax forms made on the Tax Forms page or by a recipe.
-/// </summary>
-public interface IPayrollTaxFormManager : ICatalogManager<PayrollTaxForm>
-{
-    /// <summary>
-    /// Finds a form by its stored name, ignoring case, or <see langword="null"/>.
-    /// </summary>
-    /// <param name="name">The name, such as US-941.</param>
-    /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>The form.</returns>
-    Task<PayrollTaxForm> FindByNameAsync(string name, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
 /// A tax form prepared from the final statements, such as a quarterly return or the year's wage statements. Most forms
-/// are <see cref="PayrollTaxForm"/> records made on the Tax Forms page or by a recipe; a module can still add one in
+/// are Taxation tax forms whose source is Payroll, made on the Tax Forms page or by a recipe; a module can still add one in
 /// code with <c>services.AddPayrollFilingForm&lt;T&gt;()</c>.
 /// </summary>
 public interface IPayrollFilingForm

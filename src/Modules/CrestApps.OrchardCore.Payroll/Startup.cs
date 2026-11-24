@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Payroll.AuditTrail;
 using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Core.Services;
-using CrestApps.OrchardCore.Payroll.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.DataPipelines;
 using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Deployments;
@@ -17,6 +16,7 @@ using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Navigation;
 using CrestApps.OrchardCore.Payroll.Recipes;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Staff.Models;
@@ -153,11 +153,9 @@ public sealed class PayrollStartup : StartupBase
         services.AddPayrollFilingsCore();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxDeposit>, TaxDepositHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayrollTaxForm>, PayrollTaxFormHandler>());
         services.AddDataMigration<PayrollMigrations>()
             .AddIndexProvider<PayrollFilingIndexProvider>()
             .AddIndexProvider<PayrollFilingRecordIndexProvider>()
-            .AddIndexProvider<PayrollTaxFormIndexProvider>()
             .AddIndexProvider<EmployerIndexProvider>()
             .AddIndexProvider<PayProfileIndexProvider>()
             .AddIndexProvider<PayItemIndexProvider>()
@@ -172,7 +170,8 @@ public sealed class PayrollStartup : StartupBase
         services.AddDisplayDriver<TaxLiabilityPeriod, TaxLiabilityPeriodDisplayDriver>();
         services.AddDisplayDriver<TaxDeposit, TaxDepositDisplayDriver>();
         services.AddDisplayDriver<PayrollFiling, PayrollFilingDisplayDriver>();
-        services.AddDisplayDriver<PayrollTaxForm, PayrollTaxFormDisplayDriver>();
+        services.AddDisplayDriver<TaxForm, PayrollTaxFormSettingsDisplayDriver>();
+        services.AddTaxFormUsage<PayrollTaxFormUsage>();
         services.AddScoped<PayrollReportReader>();
         CrestApps.OrchardCore.PersonalData.Core.PersonalDataServiceCollectionExtensions.AddPersonalDataContributor<PayrollPersonalDataContributor>(services);
         services.AddScoped<PayRunApprovalPolicySeeder>();
@@ -258,7 +257,6 @@ public sealed class PayrollRecipesStartup : StartupBase
         services.AddRecipeExecutionStep<PayProfilesRecipeStep>();
         services.AddRecipeExecutionStep<TaxDepositsRecipeStep>();
         services.AddRecipeExecutionStep<PayrollFilingsRecipeStep>();
-        services.AddRecipeExecutionStep<PayrollTaxFormsRecipeStep>();
         services.AddRecipeExecutionStep<PayHistoryRecipeStep>();
         services.AddRecipeExecutionStep<PayItemsRecipeStep>();
     }
@@ -277,7 +275,6 @@ public sealed class PayrollDeploymentStartup : StartupBase
         services.AddDeployment<EmployersDeploymentSource, EmployersDeploymentStep, SummaryDeploymentStepDisplayDriver<EmployersDeploymentStep>>();
         services.AddDeployment<PayProfilesDeploymentSource, PayProfilesDeploymentStep, PayProfilesDeploymentStepDisplayDriver>();
         services.AddDeployment<PayrollFilingsDeploymentSource, PayrollFilingsDeploymentStep, PayrollFilingsDeploymentStepDisplayDriver>();
-        services.AddDeployment<PayrollTaxFormsDeploymentSource, PayrollTaxFormsDeploymentStep, SummaryDeploymentStepDisplayDriver<PayrollTaxFormsDeploymentStep>>();
         services.AddDeployment<PayHistoryDeploymentSource, PayHistoryDeploymentStep, PayHistoryDeploymentStepDisplayDriver>();
         services.AddSiteSettingsPropertyDeploymentStep<PayrollSettings, PayrollDeploymentStartup>(
             S => S["Payroll settings"],
@@ -300,12 +297,10 @@ public sealed class PayrollRecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, PayProfilesRecipeStepSchema>();
         services.AddScoped<IRecipeStep, TaxDepositsRecipeStepSchema>();
         services.AddScoped<IRecipeStep, PayrollFilingsRecipeStepSchema>();
-        services.AddScoped<IRecipeStep, PayrollTaxFormsRecipeStepSchema>();
         services.AddScoped<IRecipeStep, PayHistoryRecipeStepSchema>();
         services.AddScoped<IRecipeStep, PayItemsRecipeStepSchema>();
         services.AddDeploymentStepSchema<PayProfilesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<PayrollFilingsDeploymentStepSchema>();
-        services.AddDeploymentStepSchema<PayrollTaxFormsDeploymentStepSchema>();
         services.AddDeploymentStepSchema<PayHistoryDeploymentStepSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, PayrollSettingsSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, PayrollJournalSettingsSchema>();

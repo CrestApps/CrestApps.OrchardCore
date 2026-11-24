@@ -91,9 +91,9 @@ public static class PayrollConstants
     public const string FilingsRecipeStepName = "PayrollFilings";
 
     /// <summary>
-    /// The name of the recipe and deployment step of tax forms.
+    /// The tax form source of the forms Payroll prepares from pay statements.
     /// </summary>
-    public const string TaxFormsRecipeStepName = "PayrollTaxForms";
+    public const string TaxFormSource = "Payroll";
 
     /// <summary>
     /// The name of the recipe step of tax deposits.

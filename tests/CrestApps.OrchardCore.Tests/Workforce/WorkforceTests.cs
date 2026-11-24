@@ -459,7 +459,7 @@ public sealed class WorkforceTests
                 .Concat(TimeClockIndexProviders.All())
                 .Concat(indexProviders ?? [])
                 .ToArray(),
-            new[] { SkillsConstants.CollectionName, TeamsConstants.CollectionName, StaffConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName, WorkforceConstants.TimeOffLedgerCollectionName, PayrollConstants.CollectionName, CrestApps.OrchardCore.Taxation.TaxationConstants.IncomeTaxCollectionName }.Concat(collections ?? []).ToArray());
+            new[] { SkillsConstants.CollectionName, TeamsConstants.CollectionName, StaffConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName, WorkforceConstants.TimeOffLedgerCollectionName, PayrollConstants.CollectionName, CrestApps.OrchardCore.Taxation.TaxationConstants.IncomeTaxCollectionName, CrestApps.OrchardCore.Taxation.TaxationConstants.TaxFormsCollectionName }.Concat(collections ?? []).ToArray());
     }
 
     internal static Task<Team> AddTeamAsync(CalendarTestHarness harness, string name, TeamKind kind, string parentId = null)

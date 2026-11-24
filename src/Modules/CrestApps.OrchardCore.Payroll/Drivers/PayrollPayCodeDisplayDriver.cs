@@ -28,7 +28,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
     private readonly IPayCodeManager _codes;
     private readonly IncomeTaxCategoryOptions _categories;
     private readonly PayrollFormBoxOptions _formBoxes;
-    private readonly IPayrollTaxFormManager _taxForms;
+    private readonly ITaxFormManager _taxForms;
     private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
@@ -39,7 +39,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
         IPayCodeManager codes,
         IOptions<IncomeTaxCategoryOptions> categories,
         IOptions<PayrollFormBoxOptions> formBoxes,
-        IPayrollTaxFormManager taxForms,
+        ITaxFormManager taxForms,
         IStringLocalizerFactory localizerFactory,
         IStringLocalizer<PayrollPayCodeDisplayDriver> stringLocalizer)
     {
@@ -205,11 +205,11 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
     {
         var choices = new List<(string Name, string Label)>();
 
-        foreach (var form in (await _taxForms.GetAllAsync()).Where(form => form.Enabled).OrderBy(form => form.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var form in (await _taxForms.ListBySourceAsync(PayrollConstants.TaxFormSource)).Where(form => form.Enabled).OrderBy(form => form.DisplayName, StringComparer.CurrentCultureIgnoreCase))
         {
-            foreach (var box in form.Fields.Where(box => box.PayCodes && !string.IsNullOrEmpty(box.Number)))
+            foreach (var box in form.Fields.Where(box => box.AcceptsReportedAmounts && !string.IsNullOrEmpty(box.Number)))
             {
-                choices.Add((form.EffectivePayCodeFieldPrefix + box.Number, $"{form.DisplayName}: {box.Label ?? box.Number}"));
+                choices.Add((form.PayCodeFieldPrefix() + box.Number, $"{form.DisplayName}: {box.Label ?? box.Number}"));
             }
         }
 

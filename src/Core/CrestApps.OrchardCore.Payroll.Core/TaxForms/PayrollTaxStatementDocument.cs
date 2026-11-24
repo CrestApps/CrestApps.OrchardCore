@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Pdf;
+using CrestApps.OrchardCore.Taxation.Models;
 
 namespace CrestApps.OrchardCore.Payroll.Core.TaxForms;
 
@@ -61,30 +62,30 @@ public static class PayrollTaxStatementDocument
     /// <param name="person">The person's statement.</param>
     /// <param name="employer">The employer.</param>
     /// <returns>The texts.</returns>
-    public static PayrollTaxStatementTexts TextsFor(PayrollTaxForm form, PayrollFilingPerson person, Employer employer)
+    public static PayrollTaxStatementTexts TextsFor(TaxForm form, PayrollFilingPerson person, Employer employer)
     {
         ArgumentNullException.ThrowIfNull(form);
         ArgumentNullException.ThrowIfNull(person);
 
-        var statement = form.Statement ?? new PayrollTaxFormStatement();
-        var account = string.IsNullOrWhiteSpace(statement.EmployerAccountJurisdiction)
+        var statement = form.Statement ?? new TaxFormStatement();
+        var account = string.IsNullOrWhiteSpace(statement.FilerAccountJurisdiction)
             ? employer?.TaxId
-            : employer?.Registrations.FirstOrDefault(registration => string.Equals(registration.Jurisdiction, statement.EmployerAccountJurisdiction, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(registration.AccountId))?.AccountId?.Trim();
+            : employer?.Registrations.FirstOrDefault(registration => string.Equals(registration.Jurisdiction, statement.FilerAccountJurisdiction, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(registration.AccountId))?.AccountId?.Trim();
         var texts = new PayrollTaxStatementTexts
         {
             Title = string.IsNullOrWhiteSpace(statement.Title) ? form.DisplayName : statement.Title,
             Copy = statement.Copy,
             TaxIdLabel = statement.TaxIdLabel,
             TaxIdFormat = string.IsNullOrWhiteSpace(statement.TaxIdFormat) ? "XXXXX{0}" : statement.TaxIdFormat,
-            EmployerTaxIdLabel = statement.EmployerTaxIdLabel,
+            EmployerTaxIdLabel = statement.FilerTaxIdLabel,
             EmployerTaxId = account,
         };
 
-        foreach (var box in form.Fields.Where(box => box.Level == PayrollTaxFormFieldLevel.Person))
+        foreach (var box in form.Fields.Where(box => box.Level == TaxFormFieldLevel.Recipient))
         {
             var amount = person.Boxes.GetValueOrDefault(box.Number);
 
-            if (box.Print == PayrollTaxFormFieldPrint.Always || (box.Print == PayrollTaxFormFieldPrint.WhenNotZero && amount != 0))
+            if (box.Print == TaxFormFieldPrint.Always || (box.Print == TaxFormFieldPrint.WhenNotZero && amount != 0))
             {
                 texts.Boxes.Add((box.Label ?? box.Number, amount));
             }
@@ -99,7 +100,7 @@ public static class PayrollTaxStatementDocument
     /// <param name="form">The form, or <see langword="null"/> when it is gone.</param>
     /// <param name="filing">The filing.</param>
     /// <returns>The file name.</returns>
-    public static string FileName(PayrollTaxForm form, PayrollFiling filing)
+    public static string FileName(TaxForm form, PayrollFiling filing)
     {
         ArgumentNullException.ThrowIfNull(filing);
 

@@ -56,8 +56,8 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   widgets; webhook events; the pay date calendar source; audit events; notices of returned deposits and changed bank
   accounts; personal data; the opt-in `PayrollPayHistory` step; the scheduled-run workflow recipe.
 - Liabilities and filings (Payroll): tax liabilities by deposit period with recorded deposits, filings prepared by
-  tax forms made under Payroll > Setup > Tax Forms (`PayrollTaxForm`: boxes with formulas, yearly values, checks; the
-  `PayrollTaxForms` recipe and deployment steps), filed and amended, and year end.
+  Taxation tax forms whose source is Payroll (`PayrollTaxFormFunctions`, `PayrollTaxFormSettings`; the forms, their
+  fields and formulas are edited under Commerce > Taxation > Tax Forms), filed and amended, and year end.
 - Garnishments (`CrestApps.OrchardCore.Payroll.Garnishments`): orders withheld within the law's limits and sent to
   their payees by check or deposit.
 - United States Payroll Filings (`CrestApps.OrchardCore.Payroll.UnitedStates`): adds Forms 941, 940, 945, W-2/W-3,

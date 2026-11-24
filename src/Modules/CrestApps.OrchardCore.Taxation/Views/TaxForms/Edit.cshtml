@@ -1,8 +1,8 @@
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <breadcrumb name="PayrollTaxFormsCreate" title="@T["New tax form"]">
-        <breadcrumb-item id="PayrollTaxForms" action="Index" controller="PayrollTaxForms" area="CrestApps.OrchardCore.Payroll" permission="@PayrollPermissions.ManagePayrollSettings.Name">@T["Tax forms"]</breadcrumb-item>
+    <breadcrumb name="TaxFormsEdit" title="@T["Edit {0}", Model.DisplayName]">
+        <breadcrumb-item id="TaxForms" action="Index" controller="TaxForms" area="CrestApps.OrchardCore.Taxation" permission="@CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.ManageTaxForms.Name">@T["Tax forms"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
