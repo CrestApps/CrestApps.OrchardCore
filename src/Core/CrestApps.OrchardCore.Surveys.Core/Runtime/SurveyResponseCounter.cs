@@ -37,22 +37,6 @@ public sealed class SurveyResponseCounter
     }
 
     /// <summary>
-    /// Counts the responses of a user in a context that were not voided, test responses left out.
-    /// </summary>
-    /// <param name="surveyId">The survey.</param>
-    /// <param name="userId">The user.</param>
-    /// <param name="contextRef">The context as Kind:Id, or <see langword="null"/>.</param>
-    /// <returns>The count.</returns>
-    public Task<int> CountForUserAsync(string surveyId, string userId, string contextRef)
-    {
-        var voided = nameof(SurveyResponseStatus.Voided);
-
-        return contextRef is null
-            ? _store.YesSqlSession.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && index.Status != voided && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).CountAsync()
-            : _store.YesSqlSession.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && index.ContextRef == contextRef && index.Status != voided && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).CountAsync();
-    }
-
-    /// <summary>
     /// Counts the completed responses of a user in a context (screened-out, abandoned, voided and test responses left
     /// out, and a reopened response until it completes again).
     /// </summary>
@@ -74,7 +58,8 @@ public sealed class SurveyResponseCounter
     /// every response they submitted) that staff kept. A voided attempt stays used, as an attempt with misconduct does in
     /// Moodle: voiding takes a response out of the results and the grade, but doesn't give the attempt back. Only a
     /// response staff delete gives it back. Counting submitted responses, a voided one counts when it was submitted
-    /// before it was voided (it has a completion time; a screened-out response voided later counts too).
+    /// before it was voided (it has a completion time; a screened-out response voided later counts too). Counting started
+    /// responses, it also numbers attempts: a new attempt is one more than every attempt started before it.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
     /// <param name="userId">The user.</param>

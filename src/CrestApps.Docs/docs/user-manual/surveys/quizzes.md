@@ -45,6 +45,6 @@ If respondents may change a finished response (**Navigation**), they can't see t
 
 ## Time and attempts
 
-- **Time limit**: **Time to finish** in minutes, and **Submit unfinished responses when time runs out**. A page can also have its own **Time on the page**. A response submitted when time runs out, or when the survey closes, is scored on every page the respondent still had ahead of them, following the branches their answers chose: the pages they never reached score 0, so leaving after the first page doesn't pass the quiz.
-- **Attempts**: in **Access and settings** → **Limits**, set **In total** and **Wait between responses**.
+- **Time limit**: **Time to finish** in minutes, and **Submit unfinished responses when time runs out**. A page can also have its own **Time on the page**. The time never runs past the survey's closing date (or the link's, when that comes first): a respondent who starts late gets the time left until then, and a last page sent just before the close still counts. A response submitted when time runs out, or when the survey closes, is scored on every page the respondent still had ahead of them, following the branches their answers chose: the pages they never reached score 0, so leaving after the first page doesn't pass the quiz.
+- **Attempts**: in **Access and settings** → **Limits**, set **In total** and **Wait between responses**. A voided attempt stays used (and keeps its attempt number); a deleted one is given back.
 - **Accommodations**: give a person extra time, extra attempts or another window. Open the survey's menu, select **Accommodations**, then **Grant accommodation**, and enter a **Reason**.

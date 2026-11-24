@@ -117,14 +117,18 @@ public sealed class RespondentLimitsRule : ISurveyAccessRule
         // the others), so "once per person" holds for as long as the survey runs.
         var usedTotal = used.Total;
 
-        // The total of an identified respondent counts the responses kept (started ones, or completed ones), so a
-        // response staff delete gives the attempt back. A voided one stays used, as it does in the participation count
-        // of guests and anonymous respondents (see SurveyResponseCounter.CountAttemptsUsedByUserAsync).
+        // The total of an identified respondent also counts the responses kept (started ones, or completed ones), so
+        // completions whose participation records went before the upgrade that kept them still count. A voided one stays
+        // used, as it does in the participation count of guests and anonymous respondents (see
+        // SurveyResponseCounter.CountAttemptsUsedByUserAsync). The larger of the two counts: retention anonymizes old
+        // responses (they lose their user) but keeps the participation of a survey with a total limit, so "once per
+        // person" holds after it. A response staff delete takes its participation back too, so a delete gives the
+        // attempt back in both counts.
         var userId = context.Response?.UserId ?? context.Identity?.UserId;
 
         if (hasTotalLimit && context.Survey.Access?.Anonymity != AnonymityMode.Anonymous && !string.IsNullOrEmpty(userId))
         {
-            usedTotal = await _counter.CountAttemptsUsedByUserAsync(context.Survey.ItemId, userId, context.Context?.ToString(), countStarted);
+            usedTotal = Math.Max(usedTotal, await _counter.CountAttemptsUsedByUserAsync(context.Survey.ItemId, userId, context.Context?.ToString(), countStarted));
         }
 
         return (counts, used, usedTotal);

@@ -4,6 +4,7 @@ import {
     formatTimeLeft,
     isQuestionHidden,
     isRetryable,
+    kioskActivityEvents,
     lockAttribute,
     readAnswers,
     retryDelay,
@@ -120,5 +121,11 @@ describe('isRetryable', () => {
         expect(isRetryable(200)).toBe(false);
         expect(isRetryable(400)).toBe(false);
         expect(isRetryable(500)).toBe(false);
+    });
+});
+
+describe('kioskActivityEvents', () => {
+    it('counts reading a page (moving the mouse or the focus, scrolling) as being there, not only typing', () => {
+        expect(kioskActivityEvents).toEqual(expect.arrayContaining(['mousemove', 'focusin', 'scroll', 'keydown', 'pointerdown']));
     });
 });

@@ -30,4 +30,8 @@ public sealed class SurveyLogicHiddenQuestionResolver : ISurveyHiddenQuestionRes
 
         return _logic.Evaluate(definition, response).HiddenQuestionIds;
     }
+
+    /// <inheritdoc />
+    public Task PrepareAsync()
+        => _logic.PrepareAsync();
 }

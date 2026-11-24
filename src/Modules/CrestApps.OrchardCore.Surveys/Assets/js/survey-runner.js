@@ -5,7 +5,7 @@
 // feedback, and keeps a page from being submitted twice. The server decides everything again when the page is posted,
 // and the page works without this script.
 
-import { debounce, evaluateRules, formatTimeLeft, isQuestionHidden, isRetryable, lockAttribute, readAnswers, retryDelay } from './survey-runner-logic.js';
+import { debounce, evaluateRules, formatTimeLeft, isQuestionHidden, isRetryable, kioskActivityEvents, lockAttribute, readAnswers, retryDelay } from './survey-runner-logic.js';
 
 const autosaveDelay = 10000;
 const evaluateDelay = 300;
@@ -453,8 +453,9 @@ function initTimer(form, announce) {
 }
 
 /**
- * A kiosk response page left without input goes back to the landing page, which forgets the response, so the next
- * person at the device never sees the previous person's answers.
+ * A kiosk response page left alone goes back to the landing page, which forgets the response, so the next person at the
+ * device never sees the previous person's answers. Any sign of someone there (typing, a tap, scrolling, moving the mouse
+ * or the focus) starts the time again, so reading a long page doesn't count as leaving it.
  * @param {HTMLElement} container
  */
 function initKioskIdle(container) {
@@ -473,7 +474,7 @@ function initKioskIdle(container) {
         timer = setTimeout(() => window.location.assign(url), seconds * 1000);
     };
 
-    for (const type of ['input', 'change', 'keydown', 'pointerdown', 'scroll']) {
+    for (const type of kioskActivityEvents) {
         document.addEventListener(type, reset, { passive: true, capture: true });
     }
 

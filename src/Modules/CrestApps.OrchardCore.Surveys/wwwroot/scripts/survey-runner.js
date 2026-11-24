@@ -403,6 +403,23 @@
 			timer = setTimeout(() => work(...args), delay);
 		};
 	}
+	/**
+	* The events that show someone is at a kiosk: each starts its idle time again. Reading a long page moves the mouse or
+	* the focus and scrolls, so it never counts as leaving the page.
+	* @type {readonly string[]}
+	*/
+	var kioskActivityEvents = Object.freeze([
+		"input",
+		"change",
+		"keydown",
+		"pointerdown",
+		"pointermove",
+		"mousemove",
+		"focusin",
+		"wheel",
+		"scroll",
+		"touchstart"
+	]);
 	// src/Modules/CrestApps.OrchardCore.Surveys/Assets/js/survey-runner.js
 	var autosaveDelay = 1e4;
 	var evaluateDelay = 300;
@@ -686,8 +703,9 @@
 		tick();
 	}
 	/**
-	* A kiosk response page left without input goes back to the landing page, which forgets the response, so the next
-	* person at the device never sees the previous person's answers.
+	* A kiosk response page left alone goes back to the landing page, which forgets the response, so the next person at the
+	* device never sees the previous person's answers. Any sign of someone there (typing, a tap, scrolling, moving the mouse
+	* or the focus) starts the time again, so reading a long page doesn't count as leaving it.
 	* @param {HTMLElement} container
 	*/
 	function initKioskIdle(container) {
@@ -700,13 +718,7 @@
 			clearTimeout(timer);
 			timer = setTimeout(() => window.location.assign(url), seconds * 1e3);
 		};
-		for (const type of [
-			"input",
-			"change",
-			"keydown",
-			"pointerdown",
-			"scroll"
-		]) document.addEventListener(type, reset, {
+		for (const type of kioskActivityEvents) document.addEventListener(type, reset, {
 			passive: true,
 			capture: true
 		});

@@ -31,6 +31,16 @@ public static class SurveyAvailability
     }
 
     /// <summary>
+    /// Gets the grace, in seconds, that a respondent's write in flight at their deadline or at the closing date gets
+    /// (<see cref="SurveyTimingSettings.GraceSeconds"/>, 5 by default): a deadline is often clamped to the closing date,
+    /// so both give a last page posted just before them the same time to arrive. A close by staff has no grace.
+    /// </summary>
+    /// <param name="definition">The definition of the response's version, or <see langword="null"/>.</param>
+    /// <returns>The grace.</returns>
+    public static int GraceSeconds(SurveyDefinition definition)
+        => Math.Max(definition?.Timing?.GraceSeconds ?? 5, 0);
+
+    /// <summary>
     /// Gets whether staff closed the survey or the link: its status, whatever the dates say.
     /// </summary>
     /// <param name="survey">The survey.</param>

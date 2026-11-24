@@ -185,6 +185,9 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             // The key the response is counted under names the person on an identified survey (u:{id} or i:{id}); left
             // in place, a later deadline completion would count it again and write back the participation erased below.
             response.RespondentKey = null;
+
+            // What the person's accommodation granted goes with the accommodation itself.
+            response.Accommodation = null;
             response.Context = null;
             response.Variables.Clear();
             response.Properties.Clear();

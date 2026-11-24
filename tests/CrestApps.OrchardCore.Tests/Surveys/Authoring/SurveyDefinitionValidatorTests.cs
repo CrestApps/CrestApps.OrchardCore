@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Authoring;
 
-public sealed class SurveyDefinitionValidatorTests
+public sealed partial class SurveyDefinitionValidatorTests
 {
     private static SurveyDefinitionValidator Validator(ISurveyFormulaValidator formulas = null)
         => new(AuthoringSurveyHarness.CreateRegistry(), [], formulas ?? new NullSurveyFormulaValidator(), new AuthoringLocalizer<SurveyDefinitionValidator>());
@@ -217,12 +217,95 @@ public sealed class SurveyDefinitionValidatorTests
         Assert.Contains("invalid-formula", await CodesAsync(definition, new RejectingFormulas()));
     }
 
+    [Fact]
+    public async Task ValidateAsync_PageFormulaReadingALaterPage_IsAnError()
+    {
+        // Arrange: page 1 shows by a formula on the answer to q3, on page 2 (R6-L1).
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Pages[0].Visibility = new SurveyVisibility { Mode = VisibilityMode.HideWhen, Formula = "[why] = 'x'" };
+
+        // Act & Assert
+        Assert.Contains("invalid-formula-source", await CodesAsync(definition, new ReferencingFormulas()));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_PageFormulaReadingItsOwnPage_IsAnError()
+    {
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Pages[1].Visibility = new SurveyVisibility { Mode = VisibilityMode.ShowWhen, Formula = "[why] = 'x'" };
+
+        Assert.Contains("invalid-formula-source", await CodesAsync(definition, new ReferencingFormulas()));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_BranchFormulaReadingALaterPage_IsAnError()
+    {
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Pages[0].Branches.Add(new SurveyBranch { Id = "b1", Formula = "[why] = 'x'", TargetKind = BranchTargetKind.Ending, TargetId = "e1" });
+
+        Assert.Contains("invalid-formula-source", await CodesAsync(definition, new ReferencingFormulas()));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_QuestionFormulaReadingThroughACalculatedVariableALaterPage_IsAnError()
+    {
+        // Arrange: q2 (page 1) hides by a formula on a calculated variable that copies q3 (page 2).
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Variables.Add(new SurveyVariable { Name = "late", Kind = VariableKind.Calculated, Formula = "[why]" });
+        definition.Pages[0].Questions[1].Visibility = new SurveyVisibility { Mode = VisibilityMode.HideWhen, Formula = "[late] = 'x'" };
+
+        // Act & Assert
+        Assert.Contains("invalid-formula-source", await CodesAsync(definition, new ReferencingFormulas()));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_RuleReadingACalculatedVariableOfALaterPage_IsAnError()
+    {
+        // Arrange: a rule reads the variable, which reads q3 on page 2: as late as q3 itself.
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Variables.Add(new SurveyVariable { Name = "late", Kind = VariableKind.Calculated, Formula = "[why]" });
+        definition.Pages[0].Questions[1].Visibility = ShowWhen("var:late", ConditionOperator.IsNotEmpty);
+
+        Assert.Contains("invalid-rule-source", await CodesAsync(definition, new ReferencingFormulas()));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_FormulasReadingEarlierQuestions_AreFine()
+    {
+        // Arrange: page 2 and its question read page 1, and a branch of page 1 reads its own page.
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Variables.Add(new SurveyVariable { Name = "early", Kind = VariableKind.Calculated, Formula = "[color]" });
+        definition.Pages[1].Visibility = new SurveyVisibility { Mode = VisibilityMode.ShowWhen, Formula = "[early] = 'red'" };
+        definition.Pages[1].Questions[0].Visibility = new SurveyVisibility { Mode = VisibilityMode.ShowWhen, Formula = "[comment] <> ''" };
+        definition.Pages[0].Branches.Add(new SurveyBranch { Id = "b1", Formula = "[color] = 'blue'", TargetKind = BranchTargetKind.Ending, TargetId = "e1" });
+
+        // Act & Assert
+        Assert.Empty(await CodesAsync(definition, new ReferencingFormulas()));
+    }
+
     private static SurveyVisibility ShowWhen(string source, ConditionOperator op, params string[] values)
         => new()
         {
             Mode = VisibilityMode.ShowWhen,
             Rule = new ConditionRule { Conditions = [new Condition { Source = source, Operator = op, Values = values.ToList() }] },
         };
+
+    // Accepts every formula and reads the fields between its brackets, as the formula compiler does.
+    private sealed partial class ReferencingFormulas : ISurveyFormulaValidator
+    {
+        public bool TryCompile(SurveyDefinition definition, string formula, out string error)
+        {
+            error = null;
+
+            return true;
+        }
+
+        public IReadOnlyCollection<string> GetReferences(SurveyDefinition definition, string formula)
+            => [.. Field().Matches(formula ?? string.Empty).Select(match => match.Groups[1].Value)];
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"\[([^\]]+)\]")]
+        private static partial System.Text.RegularExpressions.Regex Field();
+    }
 
     private sealed class RejectingFormulas : ISurveyFormulaValidator
     {

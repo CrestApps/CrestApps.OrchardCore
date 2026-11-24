@@ -242,15 +242,15 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             if (existing is not null)
             {
-                if (existing.DeadlineUtc is { } deadline && now >= deadline.AddSeconds(Math.Max(version.Definition.Timing?.GraceSeconds ?? 5, 0)))
+                if (existing.DeadlineUtc is { } deadline && now >= deadline.AddSeconds(SurveyAvailability.GraceSeconds(version.Definition)))
                 {
                     // The respondent's own call: the completion counts toward their limits like any other.
                     await SubmitAtDeadlineCoreAsync(existing.ItemId, identity, cancellationToken);
                 }
-                else if (await ClosedForAsync(survey, existing, identity, now, cancellationToken))
+                else if (await ClosedForAsync(survey, existing, identity, now.AddSeconds(-SurveyAvailability.GraceSeconds(version.Definition)), cancellationToken))
                 {
-                    // The survey closed while the response was in progress: it takes no new answers, so it is submitted
-                    // as it was saved, and the start below is refused as closed.
+                    // The survey closed (and the grace a write in flight gets passed) while the response was in progress:
+                    // it takes no new answers, so it is submitted as it was saved, and the start below is refused as closed.
                     await SubmitAtCloseCoreAsync(existing.ItemId, identity, cancellationToken);
                 }
                 else if (await _access.CheckResumeAsync(new SurveyAccessContext
@@ -333,7 +333,9 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 SurveyId = survey.ItemId,
                 SurveyVersionId = version.ItemId,
                 VersionNumber = version.Number,
-                Number = "R" + (await _numberSequence.NextAsync(NumberSeries, cancellationToken: cancellationToken)).ToString("D7", CultureInfo.InvariantCulture),
+                // The site's sequence numbers responses in the order they start, so next to identified responses' numbers
+                // an anonymous response's number could name its respondent: it gets none (staff see a label instead).
+                Number = anonymous ? null : "R" + (await _numberSequence.NextAsync(NumberSeries, cancellationToken: cancellationToken)).ToString("D7", CultureInfo.InvariantCulture),
                 Status = SurveyResponseStatus.InProgress,
                 Grading = definition.Scoring?.Enabled == true ? GradingStatus.Pending : GradingStatus.NotScored,
                 CollectorId = collector?.ItemId,
@@ -370,6 +372,11 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             // The key the start counts under, so a completion without the respondent's request (the deadline task)
             // counts toward the same person's limits. It is cleared when the response completes.
             response.RespondentKey = respondentKey;
+
+            // What the accommodation granted, for the same reason: a completion with no user to look up (an anonymous
+            // response submitted by the deadline task or upkeep) still finishes under the close and attempts it started
+            // with. It is cleared when the response ends.
+            response.Accommodation = AccommodationOf(surveyOverride);
 
             // Properties come from the caller and can name the person, so an anonymous response keeps only the link
             // back (a course item, say): its path and text name a page, not a person.
@@ -409,7 +416,9 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 response.DeadlineUtc = now.AddMinutes(minutes.Value + (surveyOverride?.ExtraMinutes ?? 0));
             }
 
-            var closes = surveyOverride?.ClosesUtc ?? survey.Access?.ClosesUtc;
+            // The deadline never runs past the close the respondent is held to: the accommodation's, else the survey's,
+            // and the link's when that comes first. A write in flight at that close keeps the deadline's grace.
+            var closes = SurveyAvailability.ClosesUtc(survey, surveyOverride, collector);
 
             if (response.DeadlineUtc is not null && closes is not null && response.DeadlineUtc > closes)
             {
@@ -441,7 +450,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             if (response.DeadlineUtc is { } due && definition.Timing?.AutoSubmitAtDeadline != false)
             {
-                await _deadlines.EnqueueAsync(new SurveyDeadlineWork { ResponseId = response.ItemId, NextAttemptUtc = due.AddSeconds(Math.Max(definition.Timing?.GraceSeconds ?? 5, 0)) }, cancellationToken);
+                await _deadlines.EnqueueAsync(new SurveyDeadlineWork { ResponseId = response.ItemId, NextAttemptUtc = due.AddSeconds(SurveyAvailability.GraceSeconds(definition)) }, cancellationToken);
             }
 
             // Commit before the lock is let go, so a second start for the same respondent finds this response.
@@ -567,11 +576,12 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             var lockSnapshot = LockSnapshot(definition, response);
             var screenQuestionIds = SurveyPlanNavigator.QuestionsOf(response.Plan, response.CurrentPageId);
 
-            // A post whose answers would take a locked answer off the path or hide it is refused: the response keeps
-            // the answers it had, nothing is saved, and the page shows why on the answers that would do it.
+            // A post whose answers would take a locked answer off the path or hide it is refused: nothing is saved, the
+            // answers that would do it get their earlier value back, the respondent's other new answers stay on the
+            // page, and the page shows why on the answers that would do it.
             SurveyPageResult RefuseLockBreak(Dictionary<string, List<string>> breaks)
             {
-                RestoreSnapshot(response, lockSnapshot);
+                RestoreLockBreakers(definition, cacheKey, response, lockSnapshot, breaks.Keys, screenQuestionIds);
 
                 return new SurveyPageResult { Error = SurveyErrorCode.InvalidAnswer, Response = response, Page = BuildPage(version, response), Errors = breaks };
             }
@@ -936,7 +946,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         => WriteAsync<SurveyResponseResult>(responseId, () => new SurveyResponseResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
             // The same grace as the respondent's own posts: a last page still in flight inside it is not cut off.
-            var grace = Math.Max(version.Definition.Timing?.GraceSeconds ?? 5, 0);
+            var grace = SurveyAvailability.GraceSeconds(version.Definition);
 
             if (response.Status != SurveyResponseStatus.InProgress || response.DeadlineUtc is null || _clock.UtcNow < response.DeadlineUtc.Value.AddSeconds(grace))
             {
@@ -962,7 +972,9 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
     private Task<SurveyResponseResult> SubmitAtCloseCoreAsync(string responseId, SurveyRespondentIdentity identity, CancellationToken cancellationToken)
         => WriteAsync<SurveyResponseResult>(responseId, () => new SurveyResponseResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
-            if (response.Status != SurveyResponseStatus.InProgress || !await ClosedForAsync(survey, response, identity, _clock.UtcNow, cancellationToken))
+            // A last page in flight at the closing date keeps its grace here too, so the upkeep doesn't cut it off.
+            if (response.Status != SurveyResponseStatus.InProgress
+                || !await ClosedForAsync(survey, response, identity, _clock.UtcNow.AddSeconds(-SurveyAvailability.GraceSeconds(version.Definition)), cancellationToken))
             {
                 return new SurveyResponseResult { Error = SurveyErrorCode.InvalidState, Response = response };
             }
@@ -989,15 +1001,47 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         }
 
         // An accommodation moves the survey's closing date, so it is read only when the survey has one.
-        SurveyOverride surveyOverride = null;
-
-        if (survey.Access?.ClosesUtc is not null && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides)
-        {
-            surveyOverride = await overrides.FindEffectiveAsync(survey.ItemId, response.UserId ?? identity?.UserId, response.Context, cancellationToken);
-        }
+        var surveyOverride = survey.Access?.ClosesUtc is null ? null : await OverrideForAsync(survey, response, identity, cancellationToken);
 
         return SurveyAvailability.IsClosed(survey, surveyOverride, collector, utcNow);
     }
+
+    // The accommodation of a response's respondent: the one of its user (the response's own, else the caller's), looked
+    // up now, so one granted while the response is in progress applies; else what the start granted, kept on the response,
+    // when no user can be looked up (an anonymous response submitted by the deadline task or upkeep) or the user's no
+    // longer matches (an anonymous response keeps a narrower context than its start was granted for).
+    private async Task<SurveyOverride> OverrideForAsync(Survey survey, SurveyResponse response, SurveyRespondentIdentity identity, CancellationToken cancellationToken)
+    {
+        if (response.IsTest)
+        {
+            return null;
+        }
+
+        var userId = response.UserId ?? identity?.UserId;
+
+        if (!string.IsNullOrEmpty(userId)
+            && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides
+            && await overrides.FindEffectiveAsync(survey.ItemId, userId, response.Context, cancellationToken) is { } found)
+        {
+            return found;
+        }
+
+        return response.Accommodation is { } granted
+            ? new SurveyOverride
+            {
+                SurveyId = survey.ItemId,
+                ClosesUtc = granted.ClosesUtc,
+                ExtraAttempts = granted.ExtraAttempts,
+            }
+            : null;
+    }
+
+    // What an accommodation grants a response at its start, or null without one (or when it grants nothing that outlasts
+    // the start: its extra time is already in the deadline).
+    private static SurveyResponseAccommodation AccommodationOf(SurveyOverride surveyOverride)
+        => surveyOverride is null || (surveyOverride.ClosesUtc is null && surveyOverride.ExtraAttempts <= 0)
+            ? null
+            : new SurveyResponseAccommodation { ClosesUtc = surveyOverride.ClosesUtc, ExtraAttempts = Math.Max(surveyOverride.ExtraAttempts, 0) };
 
     /// <inheritdoc />
     public Task<SurveyResponseResult> ReopenAsync(string responseId, SurveyRespondentIdentity identity, CancellationToken cancellationToken = default)
@@ -1103,6 +1147,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
     public Task<SurveyResponseResult> DeleteAsync(string responseId, string actorId, CancellationToken cancellationToken = default)
         => WriteAsync<SurveyResponseResult>(responseId, () => new SurveyResponseResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
+            await GiveBackParticipationAsync(survey, version, response, cancellationToken);
             await _responseStore.DeleteAsync(response, cancellationToken);
 
             // Every file of the response goes with it, once the delete is committed.
@@ -1113,6 +1158,30 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             return new SurveyResponseResult { Response = response };
         }, cancellationToken, allowMissingVersion: true);
+
+    // A response staff delete gives its attempt back to an identified respondent: the start and the counted completion it
+    // added to their participation are taken back, as the count of their kept responses drops (the limits read the larger
+    // of the two). A guest's or an anonymous respondent's participation can't be tied to one response, so it stays.
+    private async Task GiveBackParticipationAsync(Survey survey, SurveyVersion version, SurveyResponse response, CancellationToken cancellationToken)
+    {
+        if (response.IsTest || string.IsNullOrEmpty(response.UserId) || SurveyAnonymity.IsAnonymous(survey))
+        {
+            return;
+        }
+
+        var invitation = string.IsNullOrEmpty(response.InvitationId) ? null : await _invitationStore.FindByIdAsync(response.InvitationId, cancellationToken);
+        var respondentKey = await CompletionRespondentKeyAsync(survey, response, identity: null, invitation, cancellationToken);
+
+        // A completion is counted when the response completed (a voided one was voided after it completed); a screened-out
+        // response's never was.
+        var screenedOut = response.Status == SurveyResponseStatus.ScreenedOut
+            || version?.Definition?.Endings?.FirstOrDefault(ending => string.Equals(ending?.Id, response.EndingId, StringComparison.Ordinal))?.Outcome == EndingOutcome.ScreenedOut;
+        var counted = response.CompletedUtc is not null
+            && response.Status is SurveyResponseStatus.Completed or SurveyResponseStatus.Voided
+            && !screenedOut;
+
+        await _participation.RecordDeletedAsync(survey, respondentKey, response.Context, response.StartedUtc, counted ? response.CompletedUtc : null);
+    }
 
     /// <summary>
     /// Marks a response in progress as abandoned, for the maintenance task.
@@ -1131,6 +1200,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             response.Status = SurveyResponseStatus.Abandoned;
             response.RespondentKey = null;
+            response.Accommodation = null;
             response.ModifiedUtc = _clock.UtcNow;
             await _responseStore.UpdateAsync(response, cancellationToken);
 
@@ -1344,9 +1414,11 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             return 1;
         }
 
+        // Every attempt the respondent started counts, a voided one included: voiding doesn't give an attempt back, so the
+        // next attempt never takes the number of a voided one.
         if (!string.IsNullOrEmpty(response.UserId))
         {
-            return await _counter.CountForUserAsync(survey.ItemId, response.UserId, request.Context?.ToString()) + 1;
+            return await _counter.CountAttemptsUsedByUserAsync(survey.ItemId, response.UserId, request.Context?.ToString(), countStarted: true) + 1;
         }
 
         if (string.IsNullOrEmpty(respondentKey))
@@ -1695,8 +1767,8 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             // The same completion rules decide on every path: a respondent's submit, and a submission for them at the
             // deadline or once the survey closed. Without the respondent's request (the deadline task) the identity is
-            // the response's own user, so a rule about who responds still decides.
-            var overrides = _serviceProvider.GetService<ISurveyOverrideService>();
+            // the response's own user, so a rule about who responds still decides, and the accommodation is the user's,
+            // else the one the start granted (an anonymous response keeps no user).
             var decision = await _access.CheckCompleteAsync(new SurveyAccessContext
             {
                 Survey = survey,
@@ -1707,7 +1779,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 RespondentKey = respondentKey,
                 Context = response.Context,
                 Response = response,
-                Override = overrides is null || response.IsTest ? null : await overrides.FindEffectiveAsync(survey.ItemId, response.UserId ?? identity?.UserId, response.Context, cancellationToken),
+                Override = await OverrideForAsync(survey, response, identity, cancellationToken),
                 UtcNow = now,
                 IsTest = response.IsTest,
                 AutoSubmitted = autoSubmitted,
@@ -1812,8 +1884,10 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 response.InvitationSeal = null;
             }
 
-            // The completion is counted: the response no longer keeps who it was counted for.
+            // The completion is counted: the response no longer keeps who it was counted for, nor what their
+            // accommodation granted (on an anonymous survey, that could single the person out).
             response.RespondentKey = null;
+            response.Accommodation = null;
 
             var context = new SurveyResponseEventContext { Survey = survey, Version = version, Response = response };
 
@@ -1884,6 +1958,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         response.Status = SurveyResponseStatus.Abandoned;
         response.AutoSubmitted = true;
         response.RespondentKey = null;
+        response.Accommodation = null;
         response.ModifiedUtc = now;
         await _responseStore.UpdateAsync(response, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
@@ -1980,8 +2055,13 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             await _participation.RecordReopenedAsync(survey, respondentKey, response.Context, completedUtc);
 
-            // In progress again: a completion at the deadline counts under the same key.
+            // In progress again: a completion at the deadline counts under the same key, with the same accommodation.
             response.RespondentKey = respondentKey;
+
+            if (!string.IsNullOrEmpty(identity.UserId) && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides)
+            {
+                response.Accommodation = AccommodationOf(await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, response.Context, cancellationToken));
+            }
         }
 
         if (definition.Quotas is { Count: > 0 } && _serviceProvider.GetService<ISurveyQuotaService>() is { } quotas)
@@ -2044,7 +2124,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             return SurveyErrorCode.InvalidState;
         }
 
-        var grace = Math.Max(version.Definition.Timing?.GraceSeconds ?? 5, 0);
+        var grace = SurveyAvailability.GraceSeconds(version.Definition);
         var now = _clock.UtcNow;
 
         if (response.DeadlineUtc is { } deadline && now >= deadline.AddSeconds(grace))
@@ -2054,7 +2134,10 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 : SurveyErrorCode.DeadlinePassed;
         }
 
-        if (await ClosedForAsync(survey, response, identity, now, cancellationToken))
+        // The closing date gets the same grace as the deadline (a deadline is often clamped to it): a last page the timer
+        // or the respondent posted just before the close, and still in flight at it, is taken with its answers. A close by
+        // staff (the survey's or the link's status) takes effect at once.
+        if (await ClosedForAsync(survey, response, identity, now.AddSeconds(-grace), cancellationToken))
         {
             return await SubmitExpiredAsync(survey, version, response, identity, notifications, cancellationToken) == SurveyErrorCode.Busy
                 ? SurveyErrorCode.Busy

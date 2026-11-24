@@ -33,6 +33,14 @@ public sealed class SurveyLogicEngine
     }
 
     /// <summary>
+    /// Reads what an evaluation needs before it runs: the site's time zone, which formulas on the date or time read. Every
+    /// path that evaluates a response (the runner, a regrade, the review) calls it first.
+    /// </summary>
+    /// <returns>A task.</returns>
+    public Task PrepareAsync()
+        => _formulas.PrepareAsync();
+
+    /// <summary>
     /// Evaluates the logic of a definition for a response.
     /// </summary>
     /// <param name="definition">The definition.</param>
