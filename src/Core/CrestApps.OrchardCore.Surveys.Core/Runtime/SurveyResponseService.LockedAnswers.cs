@@ -12,6 +12,12 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 // counting, because the respondent saw it graded and can't do anything about it.
 public sealed partial class SurveyResponseService
 {
+    /// <summary>
+    /// The most changed answers a write that breaks a lock is probed for one at a time, to put the error only on the
+    /// answers that break it. A write that changes more is refused on every answer it changed.
+    /// </summary>
+    public const int MaxLockBreakProbes = 10;
+
     // Gets whether a write to a response could break a lock: the survey checks answers one at a time and the response has
     // a locked answer. A check that locks the first answer can't break anything: the answer it locks is on the page shown.
     private static bool GuardsLocks(SurveyDefinition definition, SurveyResponse response)
@@ -27,6 +33,50 @@ public sealed partial class SurveyResponseService
     {
         response.Answers = snapshot.Answers;
         response.Variables = snapshot.Variables;
+    }
+
+    // Puts back, after a page post refused for breaking a lock, only the answers that broke it: the respondent's other new
+    // answers on the screen stay on the page (unsaved), so they aren't lost. When those still break a lock on their own,
+    // everything is put back. Nothing here is saved.
+    private void RestoreLockBreakers(SurveyDefinition definition, string cacheKey, SurveyResponse response, SurveyResponse snapshot, IEnumerable<string> breakers, IEnumerable<string> screenQuestionIds)
+    {
+        var breaking = new HashSet<string>(breakers, StringComparer.Ordinal);
+        var kept = screenQuestionIds
+            .Distinct(StringComparer.Ordinal)
+            .Where(questionId => !breaking.Contains(questionId))
+            .Select(questionId => (Id: questionId, Answer: response.Answers.GetValueOrDefault(questionId)))
+            .ToList();
+        var restored = Clone(snapshot);
+
+        response.Answers = restored.Answers;
+        response.Variables = restored.Variables;
+
+        foreach (var (questionId, answer) in kept)
+        {
+            // A locked answer never changes, and a new file isn't stored for a refused post, so its question keeps the
+            // answer it had.
+            if (response.Answers.GetValueOrDefault(questionId)?.CheckedUtc is not null
+                || answer?.AttachmentIds?.Any(SurveyResponseFiles.IsPending) == true)
+            {
+                continue;
+            }
+
+            if (answer is null)
+            {
+                response.Answers.Remove(questionId);
+            }
+            else
+            {
+                response.Answers[questionId] = answer;
+            }
+        }
+
+        _formulas.ComputeVariables(definition, response, cacheKey);
+
+        if (FindLockBreaks(definition, cacheKey, snapshot, response, kept.Select(entry => entry.Id)) is not null)
+        {
+            RestoreSnapshot(response, snapshot);
+        }
     }
 
     // Finds the locked answers a write takes off the respondent's path or hides, comparing the response before the write
@@ -61,7 +111,9 @@ public sealed partial class SurveyResponseService
             .Where(questionId => !SameAnswer(before.Answers.GetValueOrDefault(questionId), after.Answers.GetValueOrDefault(questionId)))
             .ToList();
 
-        var culprits = changed
+        // Each probe costs a copy of the response and a walk of its path, so a post that changes many answers at once
+        // isn't probed one answer at a time: the error goes on every answer it changed, and the page is refused whole.
+        var culprits = changed.Count > MaxLockBreakProbes ? [] : changed
             .Where(questionId =>
             {
                 // The write with only this answer put back: when that keeps every broken lock, this answer breaks them.

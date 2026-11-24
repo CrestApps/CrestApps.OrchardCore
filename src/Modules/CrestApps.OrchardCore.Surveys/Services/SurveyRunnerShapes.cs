@@ -162,6 +162,10 @@ public sealed class SurveyRunnerShapes
         ArgumentNullException.ThrowIfNull(response);
 
         var definition = version.Definition;
+
+        // A rule on the date or time reads the completion time, in the site's time zone, as the completion did.
+        await _logic.PrepareAsync();
+
         var state = _logic.Evaluate(definition, response, SurveyRuntimeVersions.CacheKey(version));
         var shapes = new List<IShape>();
         var screens = response.PagePath.Count > 0 ? SurveyScoringEngine.ScreensOnPath(response).ToList() : response.Plan.PageOrder;

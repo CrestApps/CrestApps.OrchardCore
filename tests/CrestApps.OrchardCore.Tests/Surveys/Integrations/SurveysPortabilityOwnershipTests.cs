@@ -133,7 +133,7 @@ public sealed class SurveysPortabilityOwnershipTests
     }
 
     [Fact]
-    public async Task Responses_OfAnAnonymousSurvey_RoundTripWithoutTheirNumber_AndGetANewOne()
+    public async Task Responses_OfAnAnonymousSurvey_RoundTripWithoutTheirNumber_AndGetNone()
     {
         // Arrange
         var surveyId = IdGenerator.GenerateId();
@@ -178,7 +178,8 @@ public sealed class SurveysPortabilityOwnershipTests
         Assert.Contains("R0004211", step.ToJsonString(), StringComparison.Ordinal);
         Assert.Empty(errors);
         var imported = (await target.RunAsync(async services => await services.GetRequiredService<SurveyResponseStore>().GetAllAsync())).ToDictionary(response => response.ItemId);
-        Assert.Equal("R0000501", imported[anonymousId].Number);
+        // An anonymous response takes no number from the site's sequence (R6-L13).
+        Assert.Null(imported[anonymousId].Number);
         Assert.Equal("R0004211", imported[identifiedId].Number);
     }
 

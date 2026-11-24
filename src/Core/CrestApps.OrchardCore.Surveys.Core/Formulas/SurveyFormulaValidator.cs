@@ -22,4 +22,8 @@ public sealed class SurveyFormulaValidator : ISurveyFormulaValidator
     /// <inheritdoc />
     public bool TryCompile(SurveyDefinition definition, string formula, out string error)
         => _formulas.TryCompile(definition, formula, out error);
+
+    /// <inheritdoc />
+    public IReadOnlyCollection<string> GetReferences(SurveyDefinition definition, string formula)
+        => _formulas.GetReferences(definition, formula);
 }

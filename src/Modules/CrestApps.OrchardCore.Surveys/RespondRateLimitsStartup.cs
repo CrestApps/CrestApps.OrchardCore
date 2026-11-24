@@ -1,7 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using CrestApps.OrchardCore.Surveys.Api;
-using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -17,7 +13,7 @@ namespace CrestApps.OrchardCore.Surveys;
 /// signed-in user, else the IP address), where guessing a password or a link matters.</item>
 /// <item><see cref="ResponseRateLimitGroup"/>: the routes of a response already started (<c>/s/r/{responseId}</c>: its
 /// pages, autosave, live evaluation, answer checks, the ending, the review and reopen), which need the response's owner
-/// anyway. They are counted per caller and response (see <see cref="ResponsePartitionKey"/>), <see cref="ResponseRequestsPerMinute"/> a minute, so a class answering from
+/// anyway. They are counted per client and response (see <see cref="ResponsePartitionKey"/>), <see cref="ResponseRequestsPerMinute"/> a minute, so a class answering from
 /// one network (a school or office address, a proxy) never shares one budget; <see cref="ClientCeilingGroup"/> adds a
 /// generous ceiling per client of <see cref="ClientCeilingPerMinute"/> a minute.</item>
 /// </list>
@@ -89,12 +85,12 @@ public sealed class RespondRateLimitsStartup : StartupBase
     }
 
     /// <summary>
-    /// Gets the key a request to a started response is counted under: the caller together with the response id of its
-    /// route (cut to the longest id), else the client. The caller is the response's own resume token when the request
-    /// carries it (the API header, or the resume cookie whose token names this response), else the signed-in user, else
-    /// the IP address. The response id comes from the URL, before any ownership check, so a stranger who knows someone's
-    /// response id only fills a budget of their own and can't lock the respondent out; a client that varies the id still
-    /// meets <see cref="ClientCeilingGroup"/>.
+    /// Gets the key a request to a started response is counted under: the response id of its route (cut to the longest
+    /// id) together with the client (the signed-in user, else the IP address), else the client alone. The response id
+    /// comes from the URL, before any ownership check, so a stranger who knows someone's response id only fills a budget
+    /// of their own and can't lock the respondent out; a client that varies the id still meets
+    /// <see cref="ClientCeilingGroup"/>. Nothing else the caller sends is in the key: a resume token isn't checked before
+    /// the limit runs, so a made-up one would give every request a fresh budget.
     /// </summary>
     /// <param name="context">The request.</param>
     /// <returns>The key.</returns>
@@ -102,11 +98,12 @@ public sealed class RespondRateLimitsStartup : StartupBase
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        var client = RateLimitPartitionHelpers.GetClientPartitionKey(context);
         var responseId = context.Request.RouteValues["responseId"]?.ToString();
 
         if (string.IsNullOrEmpty(responseId))
         {
-            return RateLimitPartitionHelpers.GetClientPartitionKey(context);
+            return client;
         }
 
         if (responseId.Length > 64)
@@ -114,40 +111,6 @@ public sealed class RespondRateLimitsStartup : StartupBase
             responseId = responseId[..64];
         }
 
-        var token = ResumeTokenOf(context, responseId);
-        var caller = token is null
-            ? RateLimitPartitionHelpers.GetClientPartitionKey(context)
-            : "token:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)), 0, 16);
-
-        return "response:" + responseId + "|" + caller;
-    }
-
-    // The resume token of a response the request carries: the API header, or a respondent cookie whose token names the
-    // response. Only its hash goes into the key.
-    private static string ResumeTokenOf(HttpContext context, string responseId)
-    {
-        var prefix = responseId + ".";
-        var header = context.Request.Headers[SurveysApiEndpoints.ResumeTokenHeader].ToString().Trim();
-
-        if (header.Length is > 0 and <= 300 && header.StartsWith(prefix, StringComparison.Ordinal))
-        {
-            return header;
-        }
-
-        foreach (var (name, value) in context.Request.Cookies)
-        {
-            if (name.StartsWith(SurveyResumeCookies.CookiePrefix, StringComparison.Ordinal)
-                && !name.StartsWith(SurveyResumeCookies.GenerationCookiePrefix, StringComparison.Ordinal)
-                && value is { Length: > 0 and <= 300 }
-                && value.StartsWith(prefix, StringComparison.Ordinal))
-            {
-                // The cookie holds the token and its generation; the token alone is the caller.
-                var separator = value.LastIndexOf('~');
-
-                return separator > 0 ? value[..separator] : value;
-            }
-        }
-
-        return null;
+        return "response:" + responseId + "|" + client;
     }
 }

@@ -158,6 +158,7 @@ internal sealed class SurveysRecipeExporter
                 nameof(SurveyResponse.SurveyVersionId),
                 nameof(SurveyResponse.ResumeTokenHash),
                 nameof(SurveyResponse.RespondentKey),
+                nameof(SurveyResponse.Accommodation),
                 nameof(SurveyResponse.UpkeepFailures));
 
             node["SurveyName"] = surveyNames.GetValueOrDefault(response.SurveyId);

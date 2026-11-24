@@ -227,6 +227,14 @@ public sealed class SurveyResponse : CatalogItem
     public string RespondentKey { get; set; }
 
     /// <summary>
+    /// Gets or sets, while the response is in progress, what the respondent's accommodation granted it at its start (its
+    /// closing date and extra attempts), or <see langword="null"/> without one. A completion with no user to look up
+    /// (the deadline task or upkeep on an anonymous response) uses it, so the response finishes under the terms it
+    /// started with. It is cleared when the response completes or is abandoned, like <see cref="RespondentKey"/>.
+    /// </summary>
+    public SurveyResponseAccommodation Accommodation { get; set; }
+
+    /// <summary>
     /// Gets or sets when retention anonymized the response, or <see langword="null"/> when it wasn't. An anonymized
     /// response is not visited by retention again.
     /// </summary>

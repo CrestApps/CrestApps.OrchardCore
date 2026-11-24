@@ -33,6 +33,10 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
     }
 
     /// <inheritdoc />
+    public Task PrepareAsync()
+        => _hiddenQuestionResolver.PrepareAsync();
+
+    /// <inheritdoc />
     public void Score(SurveyDefinition definition, SurveyResponse response)
     {
         ArgumentNullException.ThrowIfNull(definition);

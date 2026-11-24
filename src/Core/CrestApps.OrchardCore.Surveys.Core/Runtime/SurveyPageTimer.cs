@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
@@ -54,7 +55,7 @@ public static class SurveyPageTimer
         ArgumentNullException.ThrowIfNull(response);
 
         var pageDeadline = PageDeadline(definition, response, screenId);
-        var grace = Math.Max(definition?.Timing?.GraceSeconds ?? 5, 0);
+        var grace = SurveyAvailability.GraceSeconds(definition);
 
         return pageDeadline is not null && utcNow >= pageDeadline.Value.AddSeconds(grace);
     }

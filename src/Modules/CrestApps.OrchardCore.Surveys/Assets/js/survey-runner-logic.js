@@ -175,3 +175,10 @@ export function debounce(work, delay) {
         timer = setTimeout(() => work(...args), delay);
     };
 }
+
+/**
+ * The events that show someone is at a kiosk: each starts its idle time again. Reading a long page moves the mouse or
+ * the focus and scrolls, so it never counts as leaving the page.
+ * @type {readonly string[]}
+ */
+export const kioskActivityEvents = Object.freeze(['input', 'change', 'keydown', 'pointerdown', 'pointermove', 'mousemove', 'focusin', 'wheel', 'scroll', 'touchstart']);

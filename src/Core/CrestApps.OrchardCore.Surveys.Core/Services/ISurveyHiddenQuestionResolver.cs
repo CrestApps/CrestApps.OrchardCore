@@ -15,4 +15,11 @@ public interface ISurveyHiddenQuestionResolver
     /// <param name="response">The response.</param>
     /// <returns>The question ids.</returns>
     IReadOnlySet<string> GetHiddenQuestionIds(SurveyDefinition definition, SurveyResponse response);
+
+    /// <summary>
+    /// Reads what the evaluation needs before it runs, such as the site's time zone that rules on the date or time read.
+    /// </summary>
+    /// <returns>A task.</returns>
+    Task PrepareAsync()
+        => Task.CompletedTask;
 }

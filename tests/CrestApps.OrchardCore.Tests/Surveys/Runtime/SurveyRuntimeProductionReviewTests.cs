@@ -268,33 +268,63 @@ public sealed class SurveyRuntimeProductionReviewTests
     [Fact]
     public void ResponseRoutes_AStrangerWithTheVictimsResponseId_CountsInABudgetOfTheirOwn()
     {
-        // Arrange: the respondent carries the response's resume cookie; a stranger (another address) only knows the id.
+        // Arrange: the respondent answers from one address; a stranger (another address) only knows the id.
         var respondent = new DefaultHttpContext();
         respondent.Request.RouteValues["responseId"] = "r1";
         respondent.Request.Headers.Cookie = "sr_s1=r1.secret~g1";
         respondent.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.1");
 
-        var sameRespondentOtherAddress = new DefaultHttpContext();
-        sameRespondentOtherAddress.Request.RouteValues["responseId"] = "r1";
-        sameRespondentOtherAddress.Request.Headers.Cookie = "sr_s1=r1.secret~g1";
-        sameRespondentOtherAddress.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.9");
-
         var stranger = new DefaultHttpContext();
         stranger.Request.RouteValues["responseId"] = "r1";
         stranger.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.2");
 
-        var apiClient = new DefaultHttpContext();
-        apiClient.Request.RouteValues["responseId"] = "r1";
-        apiClient.Request.Headers[CrestApps.OrchardCore.Surveys.Api.SurveysApiEndpoints.ResumeTokenHeader] = "r1.secret";
+        var signedIn = new DefaultHttpContext { User = RuntimeTestHarness.User("u1") };
+        signedIn.Request.RouteValues["responseId"] = "r1";
+        signedIn.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.1");
 
         // Act
         var respondentKey = RespondRateLimitsStartup.ResponsePartitionKey(respondent);
         var strangerKey = RespondRateLimitsStartup.ResponsePartitionKey(stranger);
+        var signedInKey = RespondRateLimitsStartup.ResponsePartitionKey(signedIn);
 
-        // Assert: the token, not the address, names the respondent; the stranger has another key; the secret isn't in it.
-        Assert.Equal(respondentKey, RespondRateLimitsStartup.ResponsePartitionKey(sameRespondentOtherAddress));
-        Assert.Equal(respondentKey, RespondRateLimitsStartup.ResponsePartitionKey(apiClient));
+        // Assert: the client (the user, else the address) names the caller; the cookie's secret isn't in the key.
         Assert.NotEqual(respondentKey, strangerKey);
+        Assert.NotEqual(respondentKey, signedInKey);
         Assert.DoesNotContain("secret", respondentKey, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResponseRoutes_AMadeUpResumeToken_DoesNotGetABudgetOfItsOwn()
+    {
+        // Arrange: one client sends every request with another unchecked token, in the header or in a cookie (R6-M10).
+        static DefaultHttpContext Request(string token, bool cookie)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.RouteValues["responseId"] = "r1";
+            context.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("10.0.0.1");
+
+            if (cookie)
+            {
+                context.Request.Headers.Cookie = "sr_s1=" + token + "~g1";
+            }
+            else
+            {
+                context.Request.Headers[CrestApps.OrchardCore.Surveys.Api.SurveysApiEndpoints.ResumeTokenHeader] = token;
+            }
+
+            return context;
+        }
+
+        // Act
+        var keys = new[]
+        {
+            RespondRateLimitsStartup.ResponsePartitionKey(Request("r1.random-1", cookie: false)),
+            RespondRateLimitsStartup.ResponsePartitionKey(Request("r1.random-2", cookie: false)),
+            RespondRateLimitsStartup.ResponsePartitionKey(Request("r1.random-3", cookie: true)),
+        };
+
+        // Assert: every request counts in the same budget.
+        Assert.Single(keys.Distinct(StringComparer.Ordinal));
+        Assert.StartsWith("response:r1|", keys[0], StringComparison.Ordinal);
     }
 }

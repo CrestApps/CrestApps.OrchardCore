@@ -83,12 +83,22 @@ public sealed class SurveyFormulaService
         _timeZoneId = !string.IsNullOrEmpty(site?.TimeZoneId) ? site.TimeZoneId : _clock.GetSystemTimeZone()?.TimeZoneId ?? string.Empty;
     }
 
-    // The current date and time in the site's time zone (wall clock, unspecified kind), as the formula language expects.
-    private DateTime LocalNow()
+    /// <summary>
+    /// Gets the time formulas read as now for a response: when it was completed, once it is finished, so a regrade or the
+    /// review evaluates a rule on the date or time as the completion did; else the current time.
+    /// </summary>
+    /// <param name="response">The response, or <see langword="null"/>.</param>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <returns>The time, in UTC.</returns>
+    public static DateTime EvaluationUtc(SurveyResponse response, DateTime utcNow)
+        => response is { Status: not SurveyResponseStatus.InProgress, CompletedUtc: { } completedUtc } ? completedUtc : utcNow;
+
+    // A time in the site's time zone (wall clock, unspecified kind), as the formula language expects.
+    private DateTime LocalTime(DateTime utc)
     {
         var zone = _timeZoneId ?? _clock.GetSystemTimeZone()?.TimeZoneId ?? string.Empty;
 
-        return DateTime.SpecifyKind(CalendarTime.ToLocal(DateTime.SpecifyKind(_clock.UtcNow, DateTimeKind.Utc), zone), DateTimeKind.Unspecified);
+        return DateTime.SpecifyKind(CalendarTime.ToLocal(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone), DateTimeKind.Unspecified);
     }
 
     /// <summary>
@@ -122,6 +132,31 @@ public sealed class SurveyFormulaService
     }
 
     /// <summary>
+    /// Gets the fields a formula reads, as written between its brackets.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="formula">The formula.</param>
+    /// <returns>The fields, or none when the formula is empty or doesn't compile.</returns>
+    public IReadOnlyCollection<string> GetReferences(SurveyDefinition definition, string formula)
+    {
+        if (string.IsNullOrWhiteSpace(formula) || definition is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            var expression = ExpressionCompiler.Compile(formula, new SurveyFormulaScope(definition, _registry), _catalog, S);
+
+            return expression.References is { } references ? [.. references] : [];
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
     /// Evaluates a formula for a response.
     /// </summary>
     /// <param name="definition">The definition.</param>
@@ -144,8 +179,9 @@ public sealed class SurveyFormulaService
             var row = BuildRow(compiled.Scope, definition, response);
 
             // NOW(), TODAY() and AGE() read the site's date and time, never UTC: someone born on the 23rd turns a year
-            // older on the 23rd of the site's calendar, not hours earlier because UTC is already there.
-            var now = LocalNow();
+            // older on the 23rd of the site's calendar, not hours earlier because UTC is already there. A finished
+            // response reads the time it was completed, so a regrade or the review shows what the completion counted.
+            var now = LocalTime(EvaluationUtc(response, _clock.UtcNow));
 
             using (SurveyFormulaContext.Use(new SurveyFormulaContext { Definition = definition, Response = response, Today = DateOnly.FromDateTime(now) }))
             {

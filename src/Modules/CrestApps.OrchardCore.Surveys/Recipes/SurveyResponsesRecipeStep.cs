@@ -89,11 +89,11 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
             }
 
             var existing = string.IsNullOrEmpty(id) ? null : await _responseStore.FindByIdAsync(id);
-            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName", SurveysRecipeJson.CollectorName, nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
+            var response = existing ?? SurveysRecipeJson.Read<SurveyResponse>(token, "SurveyName", "UserName", "GradedByUserName", SurveysRecipeJson.CollectorName, nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.Accommodation), nameof(SurveyResponse.UpkeepFailures));
 
             if (existing is not null)
             {
-                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", SurveysRecipeJson.CollectorName, nameof(SurveyResponse.ResumeTokenHash), nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.UpkeepFailures));
+                SurveysRecipeJson.Populate(existing, token, "SurveyName", "UserName", "GradedByUserName", SurveysRecipeJson.CollectorName, nameof(SurveyResponse.ResumeTokenHash), nameof(SurveyResponse.RespondentKey), nameof(SurveyResponse.Accommodation), nameof(SurveyResponse.UpkeepFailures));
             }
 
             var version = await _versionStore.FindByNumberAsync(survey.ItemId, response.VersionNumber);
@@ -161,9 +161,13 @@ internal sealed class SurveyResponsesRecipeStep : NamedRecipeStepHandler
                 response.InvitationId = null;
             }
 
-            // An anonymous response comes without its number (the source site's sequence could name its respondent), and
-            // a number in the file of an anonymous survey is never kept: it gets a new one from this site's sequence.
-            if (existing is null && (string.IsNullOrEmpty(response.Number) || survey.Access?.Anonymity == AnonymityMode.Anonymous))
+            // An anonymous response has no number: the site's sequence runs in the order responses start, so a number next
+            // to the numbers of identified responses could name its respondent. One in the file is never kept.
+            if (survey.Access?.Anonymity == AnonymityMode.Anonymous)
+            {
+                response.Number = null;
+            }
+            else if (existing is null && string.IsNullOrEmpty(response.Number))
             {
                 response.Number = await NextNumberAsync();
             }

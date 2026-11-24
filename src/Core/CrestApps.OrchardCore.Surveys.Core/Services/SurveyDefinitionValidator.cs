@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Formulas;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -49,7 +50,10 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
         ArgumentNullException.ThrowIfNull(definition);
 
         var context = new SurveyDefinitionValidationContext(survey, definition);
-        var map = new DefinitionMap(definition);
+        var map = new DefinitionMap(definition)
+        {
+            FormulaScope = new SurveyFormulaScope(definition, _registry),
+        };
 
         CheckIdsAndNames(context, map);
         CheckQuestions(context, map);
@@ -247,12 +251,22 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
                 CheckRule(context, map, page.Visibility.Rule, pageIndex, allowSamePage: false, null, page.Id);
             }
 
+            if (HasFormula(page.Visibility))
+            {
+                CheckFormulaSources(context, map, page.Visibility.Formula, pageIndex, allowSamePage: false, null, page.Id);
+            }
+
             foreach (var question in page.Questions)
             {
                 if (HasRule(question.Visibility))
                 {
                     CheckRule(context, map, question.Visibility.Rule, pageIndex, allowSamePage: true, question.Id, page.Id, selfId: question.Id);
                     visibilityRules[question.Id] = question.Visibility.Rule;
+                }
+
+                if (HasFormula(question.Visibility))
+                {
+                    CheckFormulaSources(context, map, question.Visibility.Formula, pageIndex, allowSamePage: true, question.Id, page.Id, selfId: question.Id);
                 }
 
                 if (!ConditionRule.IsEmpty(question.RequiredWhen))
@@ -270,6 +284,11 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
                     if (HasRule(choice.Visibility))
                     {
                         CheckRule(context, map, choice.Visibility.Rule, pageIndex, allowSamePage: true, question.Id, page.Id, selfId: question.Id);
+                    }
+
+                    if (HasFormula(choice.Visibility))
+                    {
+                        CheckFormulaSources(context, map, choice.Visibility.Formula, pageIndex, allowSamePage: true, question.Id, page.Id, selfId: question.Id);
                     }
                 }
             }
@@ -299,6 +318,8 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
                 {
                     CheckRule(context, map, branch.Rule, pageIndex, allowSamePage: true, null, page.Id);
                 }
+
+                CheckFormulaSources(context, map, branch.Formula, pageIndex, allowSamePage: true, null, page.Id);
 
                 if (branch.TargetKind == BranchTargetKind.Page)
                 {
@@ -593,14 +614,24 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
 
         if (source.StartsWith("var:", StringComparison.Ordinal))
         {
-            if (definition.Variables.Any(variable => string.Equals(variable.Name, source.Substring(4), StringComparison.OrdinalIgnoreCase)))
+            var variable = definition.Variables.FirstOrDefault(variable => string.Equals(variable.Name, source.Substring(4), StringComparison.OrdinalIgnoreCase));
+
+            if (variable is null)
             {
-                return true;
+                problem = S["A rule reads the variable {0}, which does not exist.", source.Substring(4)];
+
+                return false;
             }
 
-            problem = S["A rule reads the variable {0}, which does not exist.", source.Substring(4)];
+            // A calculated variable is as late as the latest question its formula reads.
+            if (variable.Kind == VariableKind.Calculated && LateQuestionRead(definition, map, variable.Formula, pageIndex, allowSamePage, selfId) is { } lateRead)
+            {
+                problem = S["A rule reads the variable {0}, whose formula reads the question {1}, which comes later in the survey or is the question itself.", variable.Name, Label(lateRead)];
 
-            return false;
+                return false;
+            }
+
+            return true;
         }
 
         if (source == "score" || source == "collector" || source == "culture" || source.StartsWith("context:", StringComparison.Ordinal))
@@ -654,8 +685,112 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
             return false;
         }
 
+        // A calculated question is as late as the latest question its formula reads.
+        if (CalculatedFormula(question) is { } formula && LateQuestionRead(definition, map, formula, pageIndex, allowSamePage, selfId) is { } late)
+        {
+            problem = S["A rule reads the question {0}, whose formula reads the question {1}, which comes later in the survey or is the question itself.", Label(question), Label(late)];
+
+            return false;
+        }
+
         return true;
     }
+
+    // Checks a formula that decides the respondent's path or what they see (a page's or question's visibility, a branch)
+    // as a rule is checked: it may read only questions on earlier pages (on the same page too when allowed), never the
+    // question it belongs to, through every calculated variable and calculated question it reads. A formula that reads a
+    // later question could let an answer given later change whether an earlier page counted.
+    private void CheckFormulaSources(SurveyDefinitionValidationContext context, DefinitionMap map, string formula, int pageIndex, bool allowSamePage, string questionId, string pageId, string selfId = null)
+    {
+        if (string.IsNullOrWhiteSpace(formula))
+        {
+            return;
+        }
+
+        if (LateQuestionRead(context.Definition, map, formula, pageIndex, allowSamePage, selfId) is { } late)
+        {
+            context.AddError(
+                "invalid-formula-source",
+                late.Id == selfId
+                    ? S["The question {0} has a formula that reads its own answer.", Label(late)]
+                    : S["A formula reads the question {0}, which comes later in the survey.", Label(late)],
+                questionId,
+                pageId);
+        }
+    }
+
+    // The first question a formula reads (through the calculated variables and calculated questions it reads) that comes
+    // after the page it is read on (or on that page, unless allowed), or is the question the formula belongs to; null when
+    // there is none.
+    private SurveyQuestion LateQuestionRead(SurveyDefinition definition, DefinitionMap map, string formula, int pageIndex, bool allowSamePage, string selfId)
+    {
+        foreach (var questionId in QuestionsReadBy(definition, map, formula))
+        {
+            if (!map.Questions.TryGetValue(questionId, out var question) || !map.QuestionPage.TryGetValue(questionId, out var sourcePage))
+            {
+                continue;
+            }
+
+            if (questionId == selfId || sourcePage > pageIndex || (!allowSamePage && sourcePage == pageIndex))
+            {
+                return question;
+            }
+        }
+
+        return null;
+    }
+
+    // The ids of the questions a formula reads, with those read by the calculated variables and calculated questions it
+    // reads, and theirs in turn.
+    private HashSet<string> QuestionsReadBy(SurveyDefinition definition, DefinitionMap map, string formula)
+    {
+        var questions = new HashSet<string>(StringComparer.Ordinal);
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pending = new Stack<string>();
+
+        if (map.FormulaScope is null || string.IsNullOrWhiteSpace(formula))
+        {
+            return questions;
+        }
+
+        pending.Push(formula);
+
+        while (pending.Count > 0)
+        {
+            foreach (var reference in _formulaValidator.GetReferences(definition, pending.Pop()))
+            {
+                var field = map.FormulaScope.Find(reference);
+
+                if (field is null || !visited.Add(field.Key))
+                {
+                    continue;
+                }
+
+                if (field.Kind == SurveyFormulaFieldKind.Question)
+                {
+                    questions.Add(field.Id);
+
+                    if (map.Questions.TryGetValue(field.Id, out var question) && CalculatedFormula(question) is { } calculated)
+                    {
+                        pending.Push(calculated);
+                    }
+                }
+                else if (field.Kind == SurveyFormulaFieldKind.Variable
+                    && definition.Variables.FirstOrDefault(variable => string.Equals(variable?.Name, field.Id, StringComparison.OrdinalIgnoreCase)) is { Kind: VariableKind.Calculated, Formula: { Length: > 0 } variableFormula })
+                {
+                    pending.Push(variableFormula);
+                }
+            }
+        }
+
+        return questions;
+    }
+
+    // The formula of a calculated question, or null.
+    private string CalculatedFormula(SurveyQuestion question)
+        => question is not null && _registry.GetHandler(question.ControlType) is ISurveyCalculatedControl control && control.GetFormula(question) is { Length: > 0 } formula
+            ? formula
+            : null;
 
     private void CheckPipes(SurveyDefinitionValidationContext context, DefinitionMap map, string text, int pageIndex, int position, string questionId, string pageId)
     {
@@ -709,6 +844,9 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
 
     private static bool HasRule(SurveyVisibility visibility)
         => visibility is not null && visibility.Mode != VisibilityMode.Always && !ConditionRule.IsEmpty(visibility.Rule);
+
+    private static bool HasFormula(SurveyVisibility visibility)
+        => visibility is not null && visibility.Mode != VisibilityMode.Always && !string.IsNullOrWhiteSpace(visibility.Formula);
 
     private static bool IsValidRegex(string pattern)
     {
@@ -778,6 +916,8 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
         public Dictionary<string, int> QuestionPage { get; } = new(StringComparer.Ordinal);
 
         public Dictionary<string, int> QuestionPosition { get; } = new(StringComparer.Ordinal);
+
+        public SurveyFormulaScope FormulaScope { get; init; }
     }
 
     private static IEnumerable<Condition> AllConditions(ConditionRule rule)

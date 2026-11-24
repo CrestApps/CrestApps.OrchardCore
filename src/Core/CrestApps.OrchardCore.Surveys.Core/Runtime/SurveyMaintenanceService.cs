@@ -204,13 +204,14 @@ public sealed class SurveyMaintenanceService
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        var changed = response.UserId is not null || response.Respondent is not null || response.IpAddress is not null || response.InvitationId is not null || response.RespondentKey is not null;
+        var changed = response.UserId is not null || response.Respondent is not null || response.IpAddress is not null || response.InvitationId is not null || response.RespondentKey is not null || response.Accommodation is not null;
 
         response.UserId = null;
         response.Respondent = null;
         response.IpAddress = null;
         response.InvitationId = null;
         response.RespondentKey = null;
+        response.Accommodation = null;
 
         foreach (var answer in response.Answers.Values)
         {

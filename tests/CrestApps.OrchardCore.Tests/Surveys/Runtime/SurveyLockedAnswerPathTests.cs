@@ -148,6 +148,57 @@ public sealed class SurveyLockedAnswerPathTests
     }
 
     [Fact]
+    public async Task Finish_ThatWouldHideALockedAnswer_PutsBackOnlyThatAnswer_AndKeepsTheOthersOnThePage()
+    {
+        // Arrange (R6-L4)
+        await using var harness = await CreateHarnessAsync();
+        var survey = await harness.PublishAsync(VisibilityQuiz());
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await SaveAsync(harness, response, ("q1", "yes"));
+        await CheckAsync(harness, response, "q2", ("q2", "right"));
+
+        // Act: q1 "no" would hide the locked q2; q3 is a new answer of the same post.
+        var refused = await harness.PostAsync(response, _identity, SurveyPageDirection.Finish, ("q1", "no"), ("q3", "typed before the refusal"));
+        var stored = await harness.FindAsync(response.ItemId);
+
+        // Assert: q1 gets its earlier answer back, q3 stays on the page as typed, and nothing is saved.
+        Assert.Equal(SurveyErrorCode.InvalidAnswer, refused.Error);
+        Assert.Equal(["q1"], refused.Errors.Keys);
+        Assert.Equal("yes", refused.Response.Answers["q1"].Values[0]);
+        Assert.Equal("typed before the refusal", refused.Response.Answers["q3"].Values[0]);
+        Assert.DoesNotContain("q2", refused.Page.HiddenQuestionIds);
+        Assert.False(stored.Answers.ContainsKey("q3"));
+    }
+
+    [Fact]
+    public async Task Finish_ThatChangesManyAnswersAndBreaksALock_IsRefusedOnEveryChangedAnswer_WithoutProbingEach()
+    {
+        // Arrange (R6-L2): q2 shows only when q1 is "yes"; the page has more questions than the guard probes.
+        await using var harness = await CreateHarnessAsync();
+        var definition = VisibilityQuiz();
+        var extra = Enumerable.Range(0, CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyResponseService.MaxLockBreakProbes).Select(index => RuntimeSurveys.Text("t" + index)).ToList();
+        definition.Pages[0].Questions.AddRange(extra);
+        var survey = await harness.PublishAsync(definition);
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await SaveAsync(harness, response, ("q1", "yes"));
+        await CheckAsync(harness, response, "q2", ("q2", "right"));
+
+        // Act: one post changes q1 (which hides the locked q2) and more answers than the guard probes.
+        var fields = new List<(string Key, string Value)> { ("q1", "no"), ("q3", "x") };
+        fields.AddRange(extra.Select(question => (question.Id, "x")));
+        var refused = await harness.PostAsync(response, _identity, SurveyPageDirection.Finish, [.. fields]);
+        var stored = await harness.FindAsync(response.ItemId);
+
+        // Assert: the page is refused whole, with the error on every answer it changed, and nothing is saved.
+        Assert.Equal(SurveyErrorCode.InvalidAnswer, refused.Error);
+        Assert.Equal(fields.Select(field => field.Key).Order(StringComparer.Ordinal), refused.Errors.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(SurveyResponseStatus.InProgress, stored.Status);
+        Assert.Equal("yes", stored.Answers["q1"].Values[0]);
+    }
+
+    [Fact]
     public async Task Back_WithAnAnswerThatWouldHideALockedOne_IsRefused()
     {
         // Arrange: on p2, q2 shows only when q3 (on the same page) is "show".

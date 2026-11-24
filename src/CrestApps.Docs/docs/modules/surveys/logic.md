@@ -28,7 +28,7 @@ A question on a hidden page is hidden, and a hidden question answers nothing, so
 
 `RequiredWhen` decides whether an answer is required; `EnabledWhen` decides whether the question can be answered (otherwise it shows read-only).
 
-Publishing refuses a rule that reads a question on a later page, a cycle of rules, a source that does not exist, or a choice that does not exist.
+Publishing refuses a rule that reads a question on a later page, a cycle of rules, a source that does not exist, or a choice that does not exist. A page, question, choice or branch formula is held to the same order (`invalid-formula-source`): it may read only questions on earlier pages (on its own page too, except a page's own visibility), never its own question. A calculated variable or calculated question counts as late as the latest question its formula reads, for rules and formulas alike. Otherwise an answer given later could change whether an earlier page counted after the respondent checked an answer there. A finished response reads `NOW()` and `TODAY()` at its completion time, in the site's time zone, so a regrade and the review count the questions its completion counted.
 
 ### In the browser
 

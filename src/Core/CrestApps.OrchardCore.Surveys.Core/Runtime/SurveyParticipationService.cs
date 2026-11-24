@@ -204,6 +204,60 @@ public sealed class SurveyParticipationService
     }
 
     /// <summary>
+    /// Takes back what a response staff deleted counted: its start on the day it started and, when its completion was
+    /// counted, its completion on the day it completed, so a delete gives the attempt back. Nothing is taken back from a
+    /// day that counts nothing for the respondent (its records were deleted, say).
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="respondentKey">The respondent key the response was counted under.</param>
+    /// <param name="context">The context, or <see langword="null"/>.</param>
+    /// <param name="startedUtc">When the response started, in UTC.</param>
+    /// <param name="completedUtc">When its counted completion happened, in UTC, or <see langword="null"/> when none was
+    /// counted.</param>
+    /// <returns>A task.</returns>
+    public async Task RecordDeletedAsync(Survey survey, string respondentKey, RecordRef? context, DateTime startedUtc, DateTime? completedUtc)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+
+        if (string.IsNullOrEmpty(respondentKey))
+        {
+            return;
+        }
+
+        var contextKey = ContextKey(survey, context);
+        var startedDay = await TodayAsync(startedUtc);
+        var completedDay = completedUtc is { } completed ? await TodayAsync(completed) : (DateOnly?)null;
+        var firstDay = completedDay is { } day && day < startedDay ? day : startedDay;
+        var rows = (await _store.ListAsync(survey.ItemId, respondentKey, firstDay))
+            .Where(row => string.Equals(row.ContextKey ?? string.Empty, contextKey, StringComparison.Ordinal))
+            .ToList();
+
+        if (rows.Where(row => row.Day == startedDay).Sum(row => row.StartedCount) > 0)
+        {
+            await _store.CreateAsync(new SurveyParticipation
+            {
+                SurveyId = survey.ItemId,
+                RespondentKey = respondentKey,
+                ContextKey = contextKey,
+                Day = startedDay,
+                StartedCount = -1,
+            });
+        }
+
+        if (completedDay is { } countedDay && rows.Where(row => row.Day == countedDay).Sum(row => row.CompletedCount) > 0)
+        {
+            await _store.CreateAsync(new SurveyParticipation
+            {
+                SurveyId = survey.ItemId,
+                RespondentKey = respondentKey,
+                ContextKey = contextKey,
+                Day = countedDay,
+                CompletedCount = -1,
+            });
+        }
+    }
+
+    /// <summary>
     /// Lists the index rows of participation records older than the retention, a batch at a time in the order of their
     /// index ids, so a cleanup can read past a record it could not delete. The records of the surveys whose records are
     /// kept (<see cref="KeepsRecords(Survey)"/>) are left out of the query when there are few enough of them; the caller

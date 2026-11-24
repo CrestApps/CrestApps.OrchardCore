@@ -225,6 +225,8 @@ public sealed class SurveyGradingService : ISurveyGradingService
             return result;
         }
 
+        await _scoringEngine.PrepareAsync();
+
         var count = 0;
 
         foreach (var versionId in fromVersionIds.Distinct(StringComparer.Ordinal))
@@ -441,6 +443,9 @@ public sealed class SurveyGradingService : ISurveyGradingService
         }
 
         response.Answers ??= [];
+
+        // Scoring re-runs the logic: a rule on the date or time reads the completion time in the site's time zone.
+        await _scoringEngine.PrepareAsync();
 
         return (response, survey, version, definition, SurveyErrorCode.None);
     }
