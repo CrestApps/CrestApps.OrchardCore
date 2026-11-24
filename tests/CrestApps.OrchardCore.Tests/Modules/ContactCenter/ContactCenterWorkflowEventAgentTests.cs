@@ -133,13 +133,12 @@ public sealed class ContactCenterWorkflowEventAgentTests
             .Setup(store => store.GetUserNameAsync(It.IsAny<IUser>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IUser value, CancellationToken _) => ((User)value).UserName);
 
+        var userManager = new UserManager<IUser>(users.Object, null, null, null, null, null, null, null, NullLogger<UserManager<IUser>>.Instance);
         var handler = new ContactCenterWorkflowEventHandler(
             workflowManager.Object,
             deduplication.Object,
             subscriptions.Object,
-            interactionManager,
-            agentManager,
-            new UserManager<IUser>(users.Object, null, null, null, null, null, null, null, NullLogger<UserManager<IUser>>.Instance));
+            new AgentProfileEventAgentResolver(interactionManager, agentManager, userManager));
 
         return (handler, input);
     }

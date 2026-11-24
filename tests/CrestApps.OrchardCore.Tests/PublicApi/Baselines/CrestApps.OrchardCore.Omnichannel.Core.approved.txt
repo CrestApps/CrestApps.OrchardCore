@@ -391,6 +391,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string ActivityId { get; set; }
         public string ProfileId { get; set; }
     }
+    public enum ActivityDialerWithdrawResult
+    {
+        NotQueued = 0,
+        Withdrawn = 1,
+        InFlight = 2,
+    }
     public enum ActivityDispositionActor
     {
         Unknown = 0,
@@ -1586,6 +1592,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerCampaignMoveResult> MoveToCampaignAsync(string activityId, string campaignId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerWithdrawResult> WithdrawAsync(string activityId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityDispositionHandler
     {
