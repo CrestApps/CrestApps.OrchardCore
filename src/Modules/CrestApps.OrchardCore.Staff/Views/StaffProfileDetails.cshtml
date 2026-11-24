@@ -1,0 +1,49 @@
+@model ShapeViewModel<StaffMember>
+@inject CrestApps.OrchardCore.Staff.Services.IStaffCapabilityService CapabilityService
+
+@{
+    var staff = Model.Value;
+    var employment = staff.EmploymentType switch
+    {
+        EmploymentType.FullTime => T["Full time"],
+        EmploymentType.PartTime => T["Part time"],
+        EmploymentType.Seasonal => T["Seasonal"],
+        EmploymentType.Temporary => T["Temporary"],
+        EmploymentType.Contractor => T["Contractor"],
+        _ => T["Subcontractor"],
+    };
+    var labels = (await CapabilityService.ListAsync(includeDisabled: true)).ToDictionary(capability => capability.Name, capability => capability.DisplayName, StringComparer.OrdinalIgnoreCase);
+    var capabilities = staff.Capabilities.Select(name => labels.GetValueOrDefault(name, name)).ToList();
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Employment"]</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">@T["Employee number"]</dt><dd class="col-sm-8">@(staff.EmployeeNumber ?? "-")</dd>
+            <dt class="col-sm-4">@T["Employment"]</dt><dd class="col-sm-8">@employment</dd>
+            <dt class="col-sm-4">@T["Hire date"]</dt><dd class="col-sm-8">@(staff.HireDate?.ToString("d") ?? "-")</dd>
+            @if (staff.TerminationDate is { } left)
+            {
+                <dt class="col-sm-4">@T["Last day worked"]</dt><dd class="col-sm-8">@left.ToString("d")</dd>
+            }
+            @if (staff.ContractedHoursPerWeek is { } hours)
+            {
+                <dt class="col-sm-4">@T["Contracted hours a week"]</dt><dd class="col-sm-8">@hours.ToString("0.##")</dd>
+            }
+            <dt class="col-sm-4">@T["Work location"]</dt><dd class="col-sm-8">@(staff.WorkLocation ?? "-")</dd>
+            <dt class="col-sm-4">@T["Work email"]</dt><dd class="col-sm-8">@(string.IsNullOrEmpty(staff.Email) ? "-" : staff.Email)</dd>
+            <dt class="col-sm-4">@T["Work phone"]</dt><dd class="col-sm-8">@(staff.Phone ?? "-")</dd>
+            @if (capabilities.Count > 0)
+            {
+                <dt class="col-sm-4">@T["Capabilities"]</dt>
+                <dd class="col-sm-8">
+                    @foreach (var capability in capabilities)
+                    {
+                        <span class="badge text-bg-light border me-1">@capability</span>
+                    }
+                </dd>
+            }
+        </dl>
+    </div>
+</div>

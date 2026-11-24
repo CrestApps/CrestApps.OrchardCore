@@ -22,3 +22,18 @@ using OrchardCore.Modules.Manifest;
         ResourcesConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = SkillsConstants.Features.IssuedCertificates,
+    Name = "Skills: Issued Certificates",
+    Description = "Prints the certificates the site issues from a certificate template, with a QR code, and proves them on a public verification page that shows a revocation at once.",
+    Category = "Workforce",
+    Dependencies =
+    [
+        SkillsConstants.Features.Skills,
+        OrchardCoreFeatureIds.Contents,
+        OrchardCoreFeatureIds.Title,
+        OrchardCoreFeatureIds.Liquid,
+        OrchardCoreFeatureIds.Media,
+    ]
+)]

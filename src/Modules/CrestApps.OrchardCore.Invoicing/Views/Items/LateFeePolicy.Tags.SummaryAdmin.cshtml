@@ -1,0 +1,20 @@
+@model ShapeViewModel<LateFeePolicy>
+
+@{
+    var policy = Model.Value;
+}
+
+@if (!policy.Enabled)
+{
+    <span class="badge text-bg-secondary">@T["Off"]</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Fee"]">
+    <i class="fa-solid fa-percent text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Fee"]</span>
+    @(policy.Kind == LateFeeKind.Percent ? T["{0}% of what is due", policy.Percent.ToString("0.##")] : T["{0} each", policy.Amount.ToString("0.00")])
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["When"]">
+    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["When"]</span>
+    @(policy.RepeatEveryDays > 0
+        ? T["{0} days late, then every {1} days", policy.GraceDays + 1, policy.RepeatEveryDays]
+        : T["Once, {0} days late", policy.GraceDays + 1])
+</span>

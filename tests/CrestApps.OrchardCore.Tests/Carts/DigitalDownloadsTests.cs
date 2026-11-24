@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Downloads.Indexes;
 using CrestApps.OrchardCore.Downloads.Migrations;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
+using CrestApps.OrchardCore.FileStorage;
+using CrestApps.OrchardCore.FileStorage.ProtectedFiles;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -201,7 +203,8 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var localClock = new Mock<ILocalClock>();
         localClock.Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).Returns<DateTimeOffset>(Task.FromResult);
 
-        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(DateTime.UtcNow), localClock.Object).GetSectionAsync(order, TestContext.Current.CancellationToken));
+        // The email is written on the day of the grant: the real clock would pass the 30 days and drop the link.
+        var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(_now), localClock.Object).GetSectionAsync(order, TestContext.Current.CancellationToken));
 
         var link = Assert.Single(section.Links);
         Assert.Equal("guide.pdf", link.Text);
@@ -319,10 +322,10 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         return result;
     }
 
-    private DigitalFileStore FileStore(params IFileEventHandler[] handlers)
+    private ProtectedFileStore<DigitalDownloadFiles> FileStore(params IFileEventHandler[] handlers)
         => new(new FileSystemStore(_folder, NullLogger<FileSystemStore>.Instance), new FileCreationService(handlers));
 
-    private static ContentItem Product(StoredDigitalFile file, int limit, int days = 30)
+    private static ContentItem Product(ProtectedFile file, int limit, int days = 30)
     {
         var product = new ContentItem { ContentItemId = "ebook", ContentItemVersionId = "ebook-v1", ContentType = "Product" };
 

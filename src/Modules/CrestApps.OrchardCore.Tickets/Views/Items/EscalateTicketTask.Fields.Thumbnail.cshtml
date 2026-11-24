@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EscalateTicketTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+    @T["Escalate Ticket"]
+</h4>
+<p>@T["Raises a ticket's escalation level."]</p>

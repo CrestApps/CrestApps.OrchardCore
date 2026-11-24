@@ -25,7 +25,7 @@ public sealed class AIApiKeysAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["API keys"], S["API keys"].PrefixPosition(), keys => keys
+                .Add(S["API Keys"], S["API Keys"].PrefixPosition(), keys => keys
                     .AddClass("ai-api-keys")
                     .Id("aiApiKeys")
                     .Action("Index", "AIApiKeys", AIConstants.Feature.Area)

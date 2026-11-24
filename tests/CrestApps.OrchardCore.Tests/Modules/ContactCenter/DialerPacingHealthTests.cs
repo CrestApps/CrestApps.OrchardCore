@@ -376,6 +376,60 @@ public sealed class DialerPacingHealthTests
     }
 
     [Fact]
+    public async Task TheBanner_DoesNotSayNothingToCall_WhenTheDialerWorksCampaignsTheViewerDoesNotOversee()
+    {
+        // Arrange
+        // Production, 2026-11-10: Power placed calls all afternoon, but the supervisor's agent profile listed no
+        // campaign, so every campaign queue was filtered out and the banner read "Nothing to call: no paced campaign
+        // has work waiting." It was taken for a stopped dialer.
+        var healthService = new Mock<IDialerPacingHealthService>();
+        healthService
+            .Setup(service => service.EvaluateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Snapshot(
+                Queue(_idleQueue, DialerPacingHealthState.Dialing, TimeSpan.FromSeconds(10)),
+                Queue(_nothingQueue, DialerPacingHealthState.Idle, TimeSpan.FromSeconds(10))));
+        var localClock = new Mock<ILocalClock>();
+        localClock.Setup(clock => clock.GetLocalTimeZoneAsync()).ReturnsAsync(Mock.Of<ITimeZone>());
+        var localizer = new Mock<IStringLocalizer<DialerPacingBannerService>>();
+        localizer
+            .Setup(l => l[It.IsAny<string>(), It.IsAny<object[]>()])
+            .Returns((string name, object[] arguments) => new LocalizedString(name, string.Format(CultureInfo.InvariantCulture, name, arguments)));
+        localizer
+            .Setup(l => l[It.IsAny<string>()])
+            .Returns((string name) => new LocalizedString(name, name));
+        var bannerService = new DialerPacingBannerService(healthService.Object, [], Mock.Of<IClock>(), localClock.Object, localizer.Object);
+
+        // Act
+        var hidden = await bannerService.GetAsync(_ => Task.FromResult(false), TestContext.Current.CancellationToken);
+        var seen = await bannerService.GetAsync(_ => Task.FromResult(true), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(DialerPacingHealthState.NothingToCall, hidden.State);
+        Assert.Equal("info", hidden.Level);
+        Assert.DoesNotContain("no paced campaign", hidden.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2 other campaigns have dialer work", hidden.Message, StringComparison.Ordinal);
+        Assert.Contains("Allowed campaigns", hidden.Message, StringComparison.Ordinal);
+        Assert.Equal(DialerPacingHealthState.Idle, seen.State);
+    }
+
+    [Fact]
+    public void TheBanner_DescribesTheViewersOwnCampaigns_WhenOthersAreHidden()
+    {
+        // Arrange
+        var localizer = new FormattingLocalizer();
+        var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["idle"] = "Renewals" };
+
+        // Act
+        var mixed = DialerPacingBannerService.Build(Snapshot(Queue(_idleQueue, DialerPacingHealthState.Idle, TimeSpan.FromSeconds(30))), localizer, names, utc => utc, hiddenQueueCount: 1);
+        var onlyHidden = DialerPacingBannerService.Build(Snapshot(), localizer, names, utc => utc, hiddenQueueCount: 1);
+
+        // Assert
+        Assert.Equal(DialerPacingHealthState.Idle, mixed.State);
+        Assert.Contains("Renewals", mixed.Message, StringComparison.Ordinal);
+        Assert.Contains("1 other campaign has dialer work", onlyHidden.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TheHealthCheck_FailsForAQueueWhosePacingLockIsNotAcquired()
     {
         // Arrange

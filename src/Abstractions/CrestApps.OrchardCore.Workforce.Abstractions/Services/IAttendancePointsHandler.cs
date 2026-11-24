@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -16,5 +17,5 @@ public interface IAttendancePointsHandler
     /// <param name="policy">The policy.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task ThresholdReachedAsync(WorkerProfile worker, AttendanceException exception, decimal points, TimeClockPolicy policy, CancellationToken cancellationToken = default);
+    Task ThresholdReachedAsync(StaffMember worker, AttendanceException exception, decimal points, TimeClockPolicy policy, CancellationToken cancellationToken = default);
 }

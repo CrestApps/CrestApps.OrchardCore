@@ -12,9 +12,16 @@ public static class SkillSubjectKind
     public const string User = "User";
 
     /// <summary>
-    /// A workforce worker, who may have no user account; the subject id is the worker id.
+    /// A staff member, who may have no user account; the subject id is the staff member id. A staff member and their
+    /// user are one skill holder: skills given to either count for both.
     /// </summary>
-    public const string Worker = "Worker";
+    public const string Staff = "Staff";
+
+    /// <summary>
+    /// The name Workforce workers were stored under before workers became staff members (same ids). It is read as
+    /// <see cref="Staff"/>.
+    /// </summary>
+    public const string LegacyWorker = "Worker";
 
     /// <summary>
     /// Reads a kind someone typed or a file holds: a well-known kind in any case, a legacy number, or another module's
@@ -36,9 +43,9 @@ public static class SkillSubjectKind
             return User;
         }
 
-        if (string.Equals(trimmed, Worker, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(trimmed, Staff, StringComparison.OrdinalIgnoreCase) || string.Equals(trimmed, LegacyWorker, StringComparison.OrdinalIgnoreCase))
         {
-            return Worker;
+            return Staff;
         }
 
         return long.TryParse(trimmed, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var number)
@@ -56,7 +63,7 @@ public static class SkillSubjectKind
         => kind switch
         {
             User => 0,
-            Worker => 1,
+            Staff => 1,
             _ => -1,
         };
 
@@ -69,7 +76,7 @@ public static class SkillSubjectKind
         => value switch
         {
             0 => User,
-            1 => Worker,
+            1 => Staff,
             _ => value.ToString(System.Globalization.CultureInfo.InvariantCulture),
         };
 }

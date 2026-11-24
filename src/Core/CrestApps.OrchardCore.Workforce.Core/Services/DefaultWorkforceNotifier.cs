@@ -1,5 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Core.Telemetry;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -14,13 +16,13 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class DefaultWorkforceNotifier : IWorkforceNotifier
 {
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly IEnumerable<IWorkforceNotificationChannel> _channels;
     private readonly IWorkerTimeZoneService _timeZones;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
-    public DefaultWorkforceNotifier(WorkerStore workerStore, IEnumerable<IWorkforceNotificationChannel> channels, IWorkerTimeZoneService timeZones, IClock clock, ILogger<DefaultWorkforceNotifier> logger)
+    public DefaultWorkforceNotifier(StaffMemberStore workerStore, IEnumerable<IWorkforceNotificationChannel> channels, IWorkerTimeZoneService timeZones, IClock clock, ILogger<DefaultWorkforceNotifier> logger)
     {
         _workerStore = workerStore;
         _channels = channels;
@@ -35,7 +37,7 @@ internal sealed class DefaultWorkforceNotifier : IWorkforceNotifier
 
         var worker = string.IsNullOrEmpty(notification.WorkerId) ? null : await _workerStore.FindByIdAsync(notification.WorkerId, cancellationToken);
 
-        if (worker is null || worker.Status == WorkerStatus.Terminated)
+        if (worker is null || worker.Status == StaffStatus.Terminated)
         {
             return;
         }

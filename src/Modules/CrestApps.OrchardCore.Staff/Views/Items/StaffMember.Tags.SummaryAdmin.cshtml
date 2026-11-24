@@ -1,0 +1,37 @@
+@model ShapeViewModel<StaffMember>
+
+@{
+    var staff = Model.Value;
+    var employment = staff.EmploymentType switch
+    {
+        EmploymentType.PartTime => T["Part time"],
+        EmploymentType.Seasonal => T["Seasonal"],
+        EmploymentType.Temporary => T["Temporary"],
+        EmploymentType.Contractor => T["Contractor"],
+        EmploymentType.Subcontractor => T["Subcontractor"],
+        _ => T["Full time"],
+    };
+}
+@if (!string.IsNullOrEmpty(staff.EmployeeNumber))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Employee number"]"><i class="fa-solid fa-id-badge text-secondary me-1" aria-hidden="true"></i>@staff.EmployeeNumber</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Employment"]"><i class="fa-solid fa-briefcase text-secondary me-1" aria-hidden="true"></i>@employment</span>
+@foreach (var capability in staff.Capabilities)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Capability"]"><i class="fa-solid fa-screwdriver-wrench text-secondary me-1" aria-hidden="true"></i>@capability</span>
+}
+@if (string.IsNullOrEmpty(staff.UserId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Has no user account, so can't sign in"]"><i class="fa-solid fa-user-slash text-secondary me-1" aria-hidden="true"></i>@T["No account"]</span>
+}
+@if (staff.Status != StaffStatus.Active)
+{
+    var status = staff.Status switch
+    {
+        StaffStatus.OnLeave => T["On leave"],
+        StaffStatus.Suspended => T["Suspended"],
+        _ => T["Terminated"],
+    };
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-pause text-warning me-1" aria-hidden="true"></i>@status</span>
+}

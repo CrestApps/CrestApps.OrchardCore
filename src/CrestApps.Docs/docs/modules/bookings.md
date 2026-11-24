@@ -91,12 +91,7 @@ The handler resolves `BookingService` when an order changes rather than when it'
 
 `BookingBalanceTenderProvider.DebitAsync` puts the balance on an outstanding ledger transaction, with the transactions' reminders and pay link, due on that date. It keeps a `BookingBalance` record of the transaction and the deposit's checkout session. `CreditAsync` takes refunds off what's owed.
 
-`BookingBalanceCharger.ChargeAsync` charges the kept card through the checkout without the buyer present, as installments do:
-
-1. It reads the card through `ICheckoutSavedPaymentMethodProvider` from the deposit's succeeded attempts.
-2. It starts a checkout on the transaction, and begins it with `CheckoutPaymentDataKeys.ForOffSessionCharge`.
-
-A declined card is tried again the next day, three times in all. The charger reads the balance again after the checkout commits: saving the document read before that commit would store it twice.
+The balance's transaction carries its charge from the start (`DeferredBalanceDebit.AutoCharge`, from `BookingBalanceCharger.NewAutoCharge`): the card the deposit's checkout kept (`SourceSessionId`), on the due date, retried a day later twice (`RetryDays` `[1, 1]`, three charges in all). The Transactions feature's saved card charge service charges it without the buyer present, as it does invoices and installment plan payments; see [Charging on a schedule](transactions#charging-on-a-schedule-with-retries). `BookingBalanceChargeHandler` keeps the `BookingBalance` in step with its events: a decline records the attempt, the failure and the next attempt and reports a failure that isn't final; a charge no longer retried marks the balance `Failed` and reports a final one. `BookingBalancePaymentHandler` marks it `Paid` once its invoice is paid. The bookings background task hands a due balance whose invoice carries no charge (one made before) to the service, and settles one paid or canceled meanwhile. Staff's **Charge the card now** on the booking charges it now through the same service (`BookingBalanceCharger.ChargeAsync`).
 
 ## Cancellation
 
@@ -128,7 +123,7 @@ A declined card is tried again the next day, three times in all. The charger rea
 - Stays of those nights, as rooms enough for the people.
 - Times on the first day.
 
-Each result links to the product with its date. **Commerce > Bookings > Calendar** shows each day's dates with what's taken.
+Each result links to the product with its date. **Commerce** → **Bookings** → **Calendar** shows each day's dates with what's taken.
 
 ## Booking hooks
 
@@ -165,7 +160,7 @@ services.AddScoped<IBookingHandler, BookingAuditHandler>();
 | --- | --- | --- |
 | `PaymentReceivedAsync` | `BookingService.ConfirmPaidAsync` | An order with bookings is paid: `FullPayment`, or `Deposit` when a balance is owed later. `Amount` is what was paid now; `Reference` is the order's checkout session. |
 | `PaymentReceivedAsync` | `BookingBalancePaymentHandler` (an `ITransactionPaymentHandler`) | A payment is applied to a balance's ledger invoice, however it was paid: the kept card charged when it's due, the buyer's pay link, or staff recording a payment. `PaymentKind` is `Balance`; `Reference` is the ledger transaction. |
-| `PaymentFailedAsync` | `BookingBalanceCharger` | Charging the balance to the kept card fails. `IsFinal` is `true` when it isn't tried again (after the last attempt, or when no card or invoice can be found). |
+| `PaymentFailedAsync` | `BookingBalanceCharger` (from the saved card charge service's events) | Charging the balance to the kept card fails. `IsFinal` is `true` when it isn't tried again (after the last attempt, when the card's bank asks the buyer to approve it, or when no card or invoice can be found). |
 | `RefundedAsync` | `BookingOrderEventHandler.RefundedAsync` | A refund is recorded on an order with confirmed bookings, whether a booking was canceled with a refund or staff refunded the order. `Reference` is the refund's id. |
 
 Each is reported once. An order reported paid again confirms no booking twice, so it reports nothing new; the ledger applies a payment and an order records a refund only once; and a balance that already failed for good, was paid or was let go of reports no further failure. Each try of a declined charge reports its own failure. Only bookings that were confirmed are included in a balance payment, a failed charge or a refund. The handlers run inside the unit of work that records the money; a handler that throws is logged and doesn't undo it.
@@ -228,7 +223,7 @@ Whenever Bookings and Calendars (`CrestApps.OrchardCore.Calendars`) are both on,
 
 The handler writes with `SkipConflictCheck` (Bookings checks capacity itself) and `SendInvitations = false`, inside the booking's session. The calendar is private by default, so only calendar administrators and the people it is shared with see it.
 
-**Sync to calendar.** `BookingCalendarController.Sync` (`bookings-calendar/sync` in the admin, **Manage bookings**) adds or updates the event of every booking from today on, held ones included, for bookings made before Calendars was on. It answers `404` while Calendars is off. It changes only what differs, so running it again is harmless. **Commerce > Bookings > Calendar** shows a **Sync to calendar** button, and **Open in calendar** (the calendar view on the Bookings calendar, same month) once the calendar exists.
+**Sync to calendar.** `BookingCalendarController.Sync` (`bookings-calendar/sync` in the admin, **Manage bookings**) adds or updates the event of every booking from today on, held ones included, for bookings made before Calendars was on. It answers `404` while Calendars is off. It changes only what differs, so running it again is harmless. **Commerce** → **Bookings** → **Calendar** shows a **Sync to calendar** button, and **Open in calendar** (the calendar view on the Bookings calendar, same month) once the calendar exists.
 
 **Block with calendar.** With Calendars on, Bookings adds a **Block with calendar** setting to the Booking part (`BookingPart.BlockingCalendarId`, edited by `BookingPartCalendarDisplayDriver`), listing every calendar except the Bookings calendar itself. `BookingCalendarSlotFilter` is its `IBookingSlotFilter`: it reads busy time on that calendar through `ICalendarAvailabilityService.GetBusyAsync`, tentative events included and busy-time sources left out. A time slot is closed when anything busy overlaps it; a departure date or a night is closed when anything busy falls on that day. Use it to keep a room, a guide or a vehicle from being sold twice across products, or to close dates that a team calendar marks as out of office.
 
@@ -250,7 +245,7 @@ The **Booking dates** deployment step (`BookingDatesDeploymentStep`, *Commerce*)
 
 ## Report Builder data source
 
-With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Bookings adds the **Bookings** data source (`Bookings`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage bookings** (`ManageBookings`), the permission of **Commerce > Bookings**. The travelers' details, the reason a booking was canceled, the cancellation policy, the card a balance is charged to and the payment provider's error messages are never exposed.
+With **Data Pipelines Core** (`OrchardCore.DataPipelines.Core`) on, which the Report Builder needs, Bookings adds the **Bookings** data source (`Bookings`) to the Report Builder and to Orchard Core data pipelines. Its data sets need **Manage bookings** (`ManageBookings`), the permission of **Commerce** → **Bookings**. The travelers' details, the reason a booking was canceled, the cancellation policy, the card a balance is charged to and the payment provider's error messages are never exposed.
 
 The **Bookings** data set (`Bookings`) has one row per booking, newest first by when it was booked, which is its default date. Date ranges on that date, joins on the booking, order, product and cart IDs, and status filters are applied in the database, and simple groups and totals of those fields and of the start date are counted there too. Money is in the booking's currency, which the `Currency` field names.
 

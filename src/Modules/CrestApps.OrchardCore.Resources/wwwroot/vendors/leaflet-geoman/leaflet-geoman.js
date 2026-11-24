@@ -2133,7 +2133,7 @@
   // package.json
   var package_default = {
     name: "@geoman-io/leaflet-geoman-free",
-    version: "2.20.4",
+    version: "2.20.6",
     description: "A Leaflet Plugin For Editing Geometry Layers in Leaflet 1.0",
     keywords: [
       "leaflet",
@@ -3381,15 +3381,14 @@
   var GlobalEditMode = {
     _globalEditModeEnabled: false,
     enableGlobalEditMode(o) {
-      const options = {
-        ...o
-      };
+      const callerOptions = o && Object.keys(o).length ? o : void 0;
       this._globalEditModeEnabled = true;
       this.Toolbar.toggleButton("editMode", this.globalEditModeEnabled());
       const layers = L.PM.Utils.findLayers(this.map);
       layers.forEach((layer) => {
         if (this._isRelevantForEdit(layer)) {
-          layer.pm.enable(options);
+          layer.pm._applyInheritedOptions(this.globalOptions);
+          layer.pm.enable(callerOptions);
         }
       });
       if (!this.throttledReInitEdit) {
@@ -3422,8 +3421,9 @@
     globalEditModeEnabled() {
       return this._globalEditModeEnabled;
     },
-    // TODO: this should maybe removed, it will overwrite explicit options on the layers
-    toggleGlobalEditMode(options = this.globalOptions) {
+    // An empty default matches enableGlobalEditMode. The old globalOptions default
+    // reapplied draggable: true to every layer, including ones locked with setOptions.
+    toggleGlobalEditMode(options = {}) {
       if (this.globalEditModeEnabled()) {
         this.disableGlobalEditMode();
       } else {
@@ -3437,7 +3437,8 @@
         for (const id in layers) {
           const layer = layers[id];
           if (this._isRelevantForEdit(layer)) {
-            layer.pm.enable({ ...this.globalOptions });
+            layer.pm._applyInheritedOptions(this.globalOptions);
+            layer.pm.enable();
           }
         }
       }
@@ -4651,6 +4652,9 @@
 
   // src/js/helpers/language.ts
   function resolveLanguageCode(lang, availableTranslations) {
+    if (typeof lang !== "string") {
+      return "en";
+    }
     lang = lang.trim().toLowerCase();
     if (availableTranslations[lang]) {
       return lang;
@@ -4756,7 +4760,7 @@
     },
     // optionsModifier for special options like ignoreShapes or merge
     setPathOptions(options, optionsModifier = {}) {
-      const ignore = optionsModifier.ignoreShapes || [];
+      const ignore = Array.isArray(optionsModifier.ignoreShapes) ? optionsModifier.ignoreShapes : [];
       const mergeOptions = optionsModifier.merge || false;
       this.map.pm.Draw.shapes.forEach((shape) => {
         if (ignore.indexOf(shape) === -1) {
@@ -4797,7 +4801,7 @@
       }
       const layers = L.PM.Utils.findLayers(this.map);
       layers.forEach((layer) => {
-        layer.pm.setOptions(options);
+        layer.pm._applyOptions(options);
       });
       this.map.fire("pm:globaloptionschanged");
       this.globalOptions = options;
@@ -5043,7 +5047,7 @@
       this._button.afterClick(e, { button: this, event: e });
     },
     _makeButton(button) {
-      const pos = this.options.position.indexOf("right") > -1 ? "pos-right" : "";
+      const pos = controlPosition(this.options.position).indexOf("right") > -1 ? "pos-right" : "";
       const buttonContainer = L.DomUtil.create(
         "div",
         `button-container  ${pos}`,
@@ -5229,9 +5233,23 @@
       });
     }
   });
+  var CONTROL_POSITIONS = [
+    "topleft",
+    "topright",
+    "bottomleft",
+    "bottomright"
+  ];
+  var controlPosition = (value, fallback = "topleft") => typeof value === "string" && CONTROL_POSITIONS.includes(value) ? value : fallback;
   var L_Controls_default = PMButton;
 
   // src/js/Toolbar/L.PM.Toolbar.ts
+  var optionText = (value) => {
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) {
+      return value.filter((item) => typeof item === "string").join(" ");
+    }
+    return "";
+  };
   L.Control.PMButton = L_Controls_default;
   var Toolbar = L.Class.extend({
     options: {
@@ -5649,7 +5667,8 @@
       }
     },
     _getBtnPosition(block) {
-      return this.options.positions && this.options.positions[block] ? this.options.positions[block] : this.options.position;
+      const configured = this.options.positions && this.options.positions[block] ? this.options.positions[block] : this.options.position;
+      return controlPosition(configured);
     },
     setBlockPosition(block, position) {
       this.options.positions[block] = position;
@@ -5699,12 +5718,11 @@
       if (options.toggle !== false) {
         options.toggle = true;
       }
-      if (options.block) {
-        options.block = options.block.toLowerCase();
-      }
+      options.block = optionText(options.block).toLowerCase();
       if (!options.block || options.block === "draw") {
         options.block = "";
       }
+      options.className = optionText(options.className);
       if (!options.className) {
         options.className = "control-icon";
       } else if (options.className.indexOf("control-icon") === -1) {
@@ -6430,7 +6448,11 @@
     },
     _finishLayer(layer) {
       if (layer.pm) {
-        layer.pm.setOptions(this.options);
+        if (layer.pm._applyOptions) {
+          layer.pm._applyOptions(this.options);
+        } else {
+          layer.pm.setOptions(this.options);
+        }
         layer.pm._shape = this._shape;
         layer.pm._map = this._map;
       }
@@ -6456,6 +6478,17 @@
   var L_PM_Draw_default = Draw;
 
   // src/js/Draw/L.PM.Draw.Marker.ts
+  var markerDrawOptions = (style) => {
+    if (!style || typeof style !== "object") {
+      return {};
+    }
+    const options = { ...style };
+    const icon = options.icon;
+    if (icon && typeof icon.createIcon !== "function") {
+      delete options.icon;
+    }
+    return options;
+  };
   L_PM_Draw_default.Marker = L_PM_Draw_default.extend({
     initialize(map) {
       this._map = map;
@@ -6473,7 +6506,7 @@
       if (this._isTouchDevice) {
         this._createTouchHint();
         this._hintMarker = L.marker(this._map.getCenter(), {
-          ...this.options.markerStyle,
+          ...markerDrawOptions(this.options.markerStyle),
           opacity: 0,
           interactive: false
         });
@@ -6482,7 +6515,7 @@
       } else {
         this._hintMarker = L.marker(
           this._map.getCenter(),
-          this.options.markerStyle
+          markerDrawOptions(this.options.markerStyle)
         );
         this._setPane(this._hintMarker, "markerPane");
         this._hintMarker._pmTempLayer = true;
@@ -6567,7 +6600,10 @@
         this._hintMarker.setLatLng(e.latlng);
       }
       const latlng = this._hintMarker.getLatLng();
-      const marker = new L.Marker(latlng, this.options.markerStyle);
+      const marker = new L.Marker(
+        latlng,
+        markerDrawOptions(this.options.markerStyle)
+      );
       this._setPane(marker, "markerPane");
       this._finishLayer(marker);
       if (!marker.pm) {
@@ -6586,8 +6622,9 @@
       }
     },
     setStyle() {
-      if (this.options.markerStyle?.icon) {
-        this._hintMarker?.setIcon(this.options.markerStyle.icon);
+      const icon = markerDrawOptions(this.options.markerStyle).icon;
+      if (icon) {
+        this._hintMarker?.setIcon(icon);
       }
     },
     _createTouchHint() {
@@ -9307,6 +9344,9 @@
   }
   var index_default3 = lineSplit;
 
+  // src/js/Draw/L.PM.Draw.Cut.ts
+  var import_get2 = __toESM(require_get());
+
   // node_modules/.pnpm/robust-predicates@3.0.3/node_modules/robust-predicates/esm/util.js
   var epsilon2 = 11102230246251565e-32;
   var splitter2 = 134217729;
@@ -10184,9 +10224,6 @@
     return [(pair1[0] + pair2[0]) / 2, (pair1[1] + pair2[1]) / 2];
   }
   var index_default4 = booleanContains;
-
-  // src/js/Draw/L.PM.Draw.Cut.ts
-  var import_get2 = __toESM(require_get());
 
   // node_modules/.pnpm/bignumber.js@9.3.1/node_modules/bignumber.js/bignumber.mjs
   var isNumeric = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
@@ -13104,49 +13141,80 @@
   function turfMultiPolygon(coords) {
     return feature2({ type: "MultiPolygon", coordinates: coords });
   }
+  var ringIsUsable = (ring) => Array.isArray(ring) && ring.length >= 4;
+  function withoutDegenerateRings(input) {
+    const geometry = getGeometry(input);
+    let next = geometry;
+    if (geometry.type === "Polygon") {
+      const coordinates = geometry.coordinates.filter(ringIsUsable);
+      if (coordinates.length === 0) return input;
+      next = { type: "Polygon", coordinates };
+    } else if (geometry.type === "MultiPolygon") {
+      const coordinates = geometry.coordinates.map((part) => part.filter(ringIsUsable)).filter((part) => part.length > 0);
+      if (coordinates.length === 0) return input;
+      next = { type: "MultiPolygon", coordinates };
+    } else {
+      return input;
+    }
+    if (input.type === "Feature") {
+      return { ...input, geometry: next };
+    }
+    return next;
+  }
   function intersect(poly1, poly2) {
-    const geom1 = getGeometry(poly1);
-    const geom2 = getGeometry(poly2);
-    const intersection3 = intersection2(
-      geom1.coordinates,
-      geom2.coordinates
-    );
+    const geom1 = getGeometry(withoutDegenerateRings(poly1));
+    const geom2 = getGeometry(withoutDegenerateRings(poly2));
+    let intersection3;
+    try {
+      intersection3 = intersection2(
+        geom1.coordinates,
+        geom2.coordinates
+      );
+    } catch {
+      return null;
+    }
     if (intersection3.length === 0) return null;
     if (intersection3.length === 1) return turfPolygon(intersection3[0]);
     return turfMultiPolygon(intersection3);
   }
   function difference2(polygon1, polygon2) {
-    const geom1 = getGeometry(polygon1);
-    const geom2 = getGeometry(polygon2);
-    const differenced = difference(
-      geom1.coordinates,
-      geom2.coordinates
-    );
+    const geom1 = getGeometry(withoutDegenerateRings(polygon1));
+    const geom2 = getGeometry(withoutDegenerateRings(polygon2));
+    let differenced;
+    try {
+      differenced = difference(
+        geom1.coordinates,
+        geom2.coordinates
+      );
+    } catch {
+      return null;
+    }
     if (differenced.length === 0) return null;
     if (differenced.length === 1) return turfPolygon(differenced[0]);
     return turfMultiPolygon(differenced);
   }
-  function getDepthOfCoords(coords) {
-    if (Array.isArray(coords)) {
-      return 1 + getDepthOfCoords(coords[0]);
+  function contains(outer, inner) {
+    try {
+      return index_default4(
+        withoutDegenerateRings(outer),
+        withoutDegenerateRings(inner)
+      );
+    } catch {
+      return false;
     }
-    return -1;
   }
   function flattenPolyline(polyline) {
     if (polyline instanceof L.Polyline) {
       polyline = polyline.toGeoJSON(15);
     }
-    const coords = getCoords2(polyline);
-    const depth = getDepthOfCoords(coords);
-    const features = [];
-    if (depth > 1) {
-      coords.forEach((coord) => {
-        features.push(turfLineString(coord));
-      });
-    } else {
-      features.push(polyline);
+    const geometry = getGeometry(polyline);
+    if (geometry.type === "MultiLineString") {
+      return geometry.coordinates.filter((coord) => coord.length >= 2).map((coord) => turfLineString(coord));
     }
-    return features;
+    if (geometry.type === "LineString" && geometry.coordinates.length < 2) {
+      return [];
+    }
+    return [polyline];
   }
   function groupToMultiLineString(group) {
     const coords = [];
@@ -13289,6 +13357,13 @@
       });
     },
     _cutLayer(layer, l) {
+      try {
+        return this._cutLayerUnsafe(layer, l);
+      } catch {
+        return null;
+      }
+    },
+    _cutLayerUnsafe(layer, l) {
       const fg = L.geoJSON();
       let diff;
       if (l instanceof L.Polygon) {
@@ -13296,6 +13371,10 @@
       } else {
         const features = flattenPolyline(l);
         features.forEach((feature3) => {
+          const part = feature3.geometry?.coordinates;
+          if (!part || part.length < 2) {
+            return;
+          }
           const lineDiff = index_default3(
             feature3,
             layer.toGeoJSON(15)
@@ -13307,10 +13386,7 @@
             group = L.geoJSON(feature3);
           }
           group.getLayers().forEach((lay) => {
-            if (!index_default4(
-              layer.toGeoJSON(15),
-              lay.toGeoJSON(15)
-            )) {
+            if (!contains(layer.toGeoJSON(15), lay.toGeoJSON(15))) {
               lay.addTo(fg);
             }
           });
@@ -13327,6 +13403,10 @@
   });
 
   // src/js/Draw/L.PM.Draw.Text.ts
+  var cssClassNames = (className) => {
+    const values = Array.isArray(className) ? className : [className];
+    return values.filter((name) => typeof name === "string").flatMap((name) => name.split(" ")).filter(Boolean);
+  };
   L_PM_Draw_default.Text = L_PM_Draw_default.extend({
     initialize(map) {
       this._map = map;
@@ -13410,8 +13490,8 @@
       }
       const latlng = this._hintMarker.getLatLng();
       this.textArea = this._createTextArea();
-      if (this.options.textOptions?.className) {
-        const cssClasses = this.options.textOptions.className.split(" ");
+      const cssClasses = cssClassNames(this.options.textOptions?.className);
+      if (cssClasses.length) {
         this.textArea.classList.add(...cssClasses);
       }
       const textAreaIcon = this._createTextIcon(this.textArea);
@@ -13973,14 +14053,30 @@
       if (this._rotationCenter) {
         return this._rotationCenter;
       }
-      const polygon = L.polygon(this._layer.getLatLngs(), {
-        stroke: false,
-        fill: false,
-        pmIgnore: true
-      }).addTo(this._layer._map);
-      const center = polygon.getCenter();
-      polygon.removeFrom(this._layer._map);
-      return center;
+      const map = this._layer._map;
+      if (!map) {
+        const bounds = this._layer.getBounds?.();
+        if (bounds?.isValid()) {
+          return bounds.getCenter();
+        }
+        return L.latLng(0, 0);
+      }
+      try {
+        const polygon = L.polygon(this._layer.getLatLngs(), {
+          stroke: false,
+          fill: false,
+          pmIgnore: true
+        }).addTo(map);
+        const center = polygon.getCenter();
+        polygon.removeFrom(map);
+        return center;
+      } catch {
+        const bounds = this._layer.getBounds?.();
+        if (bounds?.isValid()) {
+          return bounds.getCenter();
+        }
+        return map.getCenter();
+      }
     },
     /*
      *
@@ -13992,17 +14088,18 @@
         this.disableRotate();
         return;
       }
+      if (!this._layer.getBounds?.().isValid?.()) {
+        return;
+      }
       if (this.rotateEnabled()) {
         this.disableRotate();
       }
       if (this._layer instanceof L.Rectangle && this._angle === void 0) {
-        this.setInitAngle(
-          calcAngle(
-            this._layer._map,
-            this._layer.getLatLngs()[0][0],
-            this._layer.getLatLngs()[0][1]
-          ) || 0
-        );
+        const ring = this._layer.getLatLngs()[0];
+        if (!ring?.[0] || !ring[1]) {
+          return;
+        }
+        this.setInitAngle(calcAngle(this._layer._map, ring[0], ring[1]) || 0);
       }
       const options = {
         fill: false,
@@ -14054,6 +14151,9 @@
     },
     // angle is clockwise (0-360)
     rotateLayer(degrees) {
+      if (!this._layer._map || !Number.isFinite(degrees)) {
+        return;
+      }
       const oldAngle = this.getAngle();
       const oldLatLngs = this._layer.getLatLngs();
       const rads = degrees * (Math.PI / 180);
@@ -14150,7 +14250,29 @@
       snapVertex: true
     },
     setOptions(options) {
+      if (options && Object.keys(options).length) {
+        this._ownOptions = {
+          ...this._ownOptions || {},
+          ...options
+        };
+      }
+      this._applyOptions(options);
+    },
+    _applyOptions(options) {
       L.Util.setOptions(this, options);
+    },
+    _applyInheritedOptions(options) {
+      if (!options) return;
+      const own = this._ownOptions || {};
+      const inherited = {};
+      for (const key of Object.keys(options)) {
+        if (!Object.prototype.hasOwnProperty.call(own, key)) {
+          inherited[key] = options[key];
+        }
+      }
+      if (Object.keys(inherited).length) {
+        this._applyOptions(inherited);
+      }
     },
     getOptions() {
       return this.options;
@@ -14416,9 +14538,10 @@
       this._enabled = false;
       this._layer.on("dragend", this._onDragEnd, this);
     },
-    // TODO: remove default option in next major Release
-    enable(options = { draggable: true }) {
-      L.Util.setOptions(this, options);
+    enable(options) {
+      if (options) {
+        this.setOptions(options);
+      }
       if (!this.options.allowEditing || !this._layer._map) {
         this.disable();
         return;
@@ -14599,7 +14722,9 @@
       this._enabled = false;
     },
     enable(options) {
-      L.Util.setOptions(this, options);
+      if (options) {
+        this.setOptions(options);
+      }
       this._map = this._layer._map;
       if (!this._map) {
         return;
@@ -14722,7 +14847,7 @@
         marker.on("dragstart", this._onMarkerDragStart, this);
         marker.on("move", this._onMarkerDrag, this);
         marker.on("dragend", this._onMarkerDragEnd, this);
-        if (!this.options.preventMarkerRemoval) {
+        if (!this.options.preventMarkerRemoval && typeof this.options.removeVertexOn === "string") {
           marker.on(this.options.removeVertexOn, this._removeMarker, this);
         }
       }
@@ -14748,7 +14873,13 @@
       middleMarker.rightM = rightM;
       leftM._middleMarkerNext = middleMarker;
       rightM._middleMarkerPrev = middleMarker;
-      middleMarker.on(this.options.addVertexOn, this._onMiddleMarkerClick, this);
+      if (typeof this.options.addVertexOn === "string") {
+        middleMarker.on(
+          this.options.addVertexOn,
+          this._onMiddleMarkerClick,
+          this
+        );
+      }
       middleMarker.on("movestart", this._onMiddleMarkerMoveStart, this);
       return middleMarker;
     },
@@ -14791,7 +14922,9 @@
     // adds a new marker from a middlemarker
     _addMarker(newM, leftM, rightM) {
       newM.off("movestart", this._onMiddleMarkerMoveStart, this);
-      newM.off(this.options.addVertexOn, this._onMiddleMarkerClick, this);
+      if (typeof this.options.addVertexOn === "string") {
+        newM.off(this.options.addVertexOn, this._onMiddleMarkerClick, this);
+      }
       const latlng = newM.getLatLng();
       const coords = this._layer._latlngs;
       delete newM.leftM;
@@ -14984,6 +15117,9 @@
         marker
       );
       const parent = indexPath.length > 1 ? (0, import_get4.default)(coords, parentPath) : coords;
+      if (!parent?.[index]) {
+        return;
+      }
       latlng.alt = parent[index].alt;
       parent.splice(index, 1, latlng);
       this._layer.setLatLngs(coords);
@@ -15203,14 +15339,13 @@
       this._markers = [];
       this._markers[0] = corners.map(this._createMarker, this);
       [this._cornerMarkers] = this._markers;
-      this._layer.getLatLngs()[0].forEach(
-        (latlng, index) => {
-          const marker = this._cornerMarkers.find((m) => m._index === index);
-          if (marker) {
-            marker.setLatLng(latlng);
-          }
+      const ring = this._layer.getLatLngs()[0];
+      ring?.forEach((latlng, index) => {
+        const marker = this._cornerMarkers.find((m) => m._index === index);
+        if (marker) {
+          marker.setLatLng(latlng);
         }
-      );
+      });
     },
     applyOptions() {
       if (this.options.snappable) {
@@ -15349,16 +15484,13 @@
     // finds the 4 corners of the current bounding box
     // returns array of 4 LatLng objects in this order: Northwest corner, Northeast corner, Southeast corner, Southwest corner
     _findCorners() {
-      if (this._angle === void 0) {
-        this.setInitAngle(
-          calcAngle(
-            this._map,
-            this._layer.getLatLngs()[0][0],
-            this._layer.getLatLngs()[0][1]
-          ) || 0
-        );
-      }
       const latlngs = this._layer.getLatLngs()[0];
+      if (!latlngs?.[0] || !latlngs[1] || !latlngs[2]) {
+        return [];
+      }
+      if (this._angle === void 0) {
+        this.setInitAngle(calcAngle(this._map, latlngs[0], latlngs[1]) || 0);
+      }
       return L.PM.Utils._getRotatedRectangle(
         latlngs[0],
         latlngs[2],
@@ -15379,15 +15511,20 @@
       this._editableOption = "resizeableCircleMarker";
       this._updateHiddenPolyCircle();
     },
-    // TODO: remove default option in next major Release
-    enable(options = {
-      draggable: true,
-      snappable: true
-    }) {
-      L.Util.setOptions(this, options);
+    enable(options) {
+      if (options) {
+        this.setOptions(options);
+      }
       if (this.options.editable) {
         this.options.resizeableCircleMarker = this.options.editable;
         delete this.options.editable;
+      }
+      const own = this._ownOptions;
+      if (own && Object.prototype.hasOwnProperty.call(own, "editable")) {
+        if (!Object.prototype.hasOwnProperty.call(own, "resizeableCircleMarker")) {
+          own.resizeableCircleMarker = own.editable;
+        }
+        delete own.editable;
       }
       if (!this.options.allowEditing || !this._layer._map) {
         this.disable();
@@ -15753,7 +15890,7 @@
       this._updateHiddenPolyCircle();
     },
     enable(options) {
-      L.PM.Edit.CircleMarker.prototype.enable.call(this, options || {});
+      L.PM.Edit.CircleMarker.prototype.enable.call(this, options);
     },
     _extendingEnable() {
     },
@@ -15824,12 +15961,10 @@
     enabled() {
       return this._enabled;
     },
-    // TODO: remove default option in next major Release
-    enable(options = {
-      draggable: true,
-      snappable: true
-    }) {
-      L.Util.setOptions(this, options);
+    enable(options) {
+      if (options) {
+        this.setOptions(options);
+      }
       this._map = this._layer._map;
       if (!this._map) {
         return;
@@ -15876,6 +16011,10 @@
   });
 
   // src/js/Edit/L.PM.Edit.Text.ts
+  var cssClassNames2 = (className) => {
+    const values = Array.isArray(className) ? className : [className];
+    return values.filter((name) => typeof name === "string").flatMap((name) => name.split(" ")).filter(Boolean);
+  };
   L_PM_Edit_default.Text = L_PM_Edit_default.extend({
     _shape: "Text",
     initialize(layer) {
@@ -15883,7 +16022,9 @@
       this._enabled = false;
     },
     enable(options) {
-      L.Util.setOptions(this, options);
+      if (options) {
+        this.setOptions(options);
+      }
       if (!this.textArea) {
         return;
       }
@@ -16070,8 +16211,8 @@
     },
     _initTextMarker() {
       this.textArea = L.PM.Draw.Text.prototype._createTextArea.call(this);
-      if (this.options.className) {
-        const cssClasses = this.options.className.split(" ");
+      const cssClasses = cssClassNames2(this.options.className);
+      if (cssClasses.length) {
         this.textArea.classList.add(...cssClasses);
       }
       const textAreaIcon = L.PM.Draw.Text.prototype._createTextIcon.call(
@@ -16315,6 +16456,9 @@
     circleToPolygon(circle, sides = 60, withBearing = true) {
       const origin = circle.getLatLng();
       const radius = circle.getRadius();
+      if (!Number.isFinite(radius) || !Number.isFinite(sides) || sides <= 0) {
+        return L.polygon([origin, origin, origin], circle.options);
+      }
       const polys = createGeodesicPolygon(origin, radius, sides, 0, withBearing);
       const polygon = [];
       for (let i = 0; i < polys.length; i += 1) {
@@ -16379,11 +16523,11 @@
       const run = (path) => (v3, i) => {
         const iRes = path.concat(i);
         if (exact) {
-          if (v3.lat && v3.lat === latlng.lat && v3.lng === latlng.lng) {
+          if ((v3.lat || v3.lat === 0) && v3.lat === latlng.lat && v3.lng === latlng.lng) {
             result = iRes;
             return true;
           }
-        } else if (v3.lat && L.latLng(v3).equals(latlng)) {
+        } else if ((v3.lat || v3.lat === 0) && L.latLng(v3).equals(latlng)) {
           result = iRes;
           return true;
         }
@@ -16442,6 +16586,9 @@
     // Returns the corners of the rectangle with a given rotation
     // degrees: Between marker A and the marker counterclockwise before. Same for marker B
     _getRotatedRectangle(A, B3, rotation, map) {
+      if (!Number.isFinite(rotation)) {
+        rotation = 0;
+      }
       const startPoint = _toPoint(map, A);
       const endPoint = _toPoint(map, B3);
       const theta = rotation * Math.PI / 180;

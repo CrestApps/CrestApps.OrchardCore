@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoicePaidEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    @T["Invoice Paid"]
+</h4>
+<p>@T["Starts when an invoice is paid in full."]</p>

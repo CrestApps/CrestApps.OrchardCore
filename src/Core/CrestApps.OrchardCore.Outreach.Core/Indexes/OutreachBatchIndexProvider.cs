@@ -21,6 +21,8 @@ public sealed class OutreachBatchIndexProvider : IndexProvider<OutreachBatch>
     {
         context
             .For<OutreachBatchIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(batch => new OutreachBatchIndex
             {
                 ItemId = batch.ItemId,

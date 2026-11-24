@@ -1,4 +1,4 @@
-@model ShapeViewModel<WorkerProfile>
+@model ShapeViewModel<CrestApps.OrchardCore.Staff.Models.StaffMember>
 
-<a asp-controller="Timesheets" asp-action="Worker" asp-route-workerId="@Model.Value.ItemId" class="dropdown-item">@T["Timesheet"]</a>
-<a asp-controller="WorkerTimeClock" asp-action="Index" asp-route-workerId="@Model.Value.ItemId" class="dropdown-item">@T["Time clock"]</a>
+<a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="Timesheets" asp-action="Worker" asp-route-workerId="@Model.Value.ItemId" class="dropdown-item">@T["Timesheet"]</a>
+<a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="WorkerTimeClock" asp-action="Index" asp-route-workerId="@Model.Value.ItemId" class="dropdown-item">@T["Time clock"]</a>

@@ -24,6 +24,12 @@ public static class ProductPartExtensions
             return false;
         }
 
+        // On a type whose products may go without a price, a product without one is not for sale.
+        if (IsUnpricedOptional(part, settings))
+        {
+            return false;
+        }
+
         return (settings?.SalesMode ?? ProductSalesMode.Purchasable) switch
         {
             ProductSalesMode.ListingOnly => false,
@@ -41,6 +47,11 @@ public static class ProductPartExtensions
     {
         ArgumentNullException.ThrowIfNull(part);
 
+        if (IsUnpricedOptional(part, settings))
+        {
+            return ProductPriceDisplay.Hidden;
+        }
+
         if (settings is not null && settings.AllowPriceDisplayOverride && part.PriceDisplay.HasValue)
         {
             return part.PriceDisplay.Value;
@@ -56,4 +67,7 @@ public static class ProductPartExtensions
     /// <param name="settings">The content type's product settings, or <see langword="null"/> when there are none.</param>
     public static bool RequiresPrice(this ProductPart part, ProductPartSettings settings)
         => part.CanBePurchased(settings) || part.GetPriceDisplay(settings) == ProductPriceDisplay.Show;
+
+    private static bool IsUnpricedOptional(ProductPart part, ProductPartSettings settings)
+        => settings?.PriceOptional == true && part.Price is null;
 }

@@ -1,0 +1,34 @@
+@model ShapeViewModel<BankAccount>
+
+@{
+    var account = Model.Value;
+    var kind = account.Kind switch
+    {
+        BankAccountKind.Savings => T["Savings"],
+        BankAccountKind.CreditCard => T["Credit card"],
+        BankAccountKind.LineOfCredit => T["Line of credit"],
+        BankAccountKind.Cash => T["Cash"],
+        BankAccountKind.Other => T["Other"],
+        _ => T["Checking"],
+    };
+    var (status, icon) = account.Status switch
+    {
+        BankAccountStatus.Verified => (T["Verified"], "fa-solid fa-circle-check text-success"),
+        BankAccountStatus.VerificationSent => (T["Verification sent"], "fa-solid fa-hourglass-half text-info"),
+        BankAccountStatus.Failed => (T["Failed"], "fa-solid fa-circle-xmark text-danger"),
+        BankAccountStatus.Closed => (T["Closed"], "fa-solid fa-ban text-secondary"),
+        _ => (T["Unverified"], "fa-solid fa-circle-question text-warning"),
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="@icon me-1" aria-hidden="true"></i>@status</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Account type"]"><i class="fa-solid fa-building-columns text-secondary me-1" aria-hidden="true"></i>@kind</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Currency"]"><i class="fa-solid fa-coins text-secondary me-1" aria-hidden="true"></i>@account.Currency</span>
+@if (account.Owner.IsEmpty)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Owner"]"><i class="fa-solid fa-briefcase text-secondary me-1" aria-hidden="true"></i>@T["The business"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Owner kind"]"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@account.Owner.Kind</span>
+}

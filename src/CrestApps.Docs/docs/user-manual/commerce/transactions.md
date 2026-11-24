@@ -21,7 +21,7 @@ Every transaction shows its status as a colored badge.
 | **Paid** | Paid in full. |
 | **Canceled** | Canceled before it was paid. Nothing more is collected for it. |
 | **Failed** | An attempt to collect the payment failed. |
-| **Abandoned** | Left unpaid past the time it could be collected. |
+| **Abandoned** | Left unpaid past the time it could be collected. The site does not set this status itself; older records may show it. |
 | **Refunded** | Paid and later refunded. |
 
 A transaction can still take a payment, be marked paid or be canceled while it is **Pending**, **Outstanding**, **Partially paid** or **Failed**. Once it is **Paid**, **Canceled**, **Abandoned** or **Refunded**, it is final.
@@ -32,7 +32,7 @@ The report lists every transaction on the site, newest first.
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Transactions |
+| **Menu** | **Commerce** → **Transactions** |
 | **Permission** | Manage transactions |
 | **Feature** | Transactions |
 
@@ -42,11 +42,11 @@ The report lists every transaction on the site, newest first.
 
 ### Find a transaction
 
-1. Open **Commerce > Transactions**.
+1. Open **Commerce** → **Transactions**.
 2. Type part of the transaction's title in **Search by title** and press Enter.
 3. To narrow the list, pick a status in the **Any status** list in the list header, or a source in the **Any source** list. The list updates as soon as you pick.
 
-The status list offers **Outstanding** as well as each status: it shows everything that still has a balance, which is both **Outstanding** and **Partially paid** transactions. The source list shows where transactions come from on your site, for example **Pay Later** or **Installment plan**, depending on which features are turned on.
+The status list offers **Outstanding** as well as each status except **Abandoned**: it shows everything that still has a balance, which is both **Outstanding** and **Partially paid** transactions. The source list shows where transactions come from on your site, for example **Pay Later** or **Installment plan**, depending on which features are turned on.
 
 The header shows how many transactions are on this page and how many match in total. Use the pager under the list to move between pages, and **Items per page** to show more or fewer rows.
 
@@ -74,6 +74,7 @@ The transaction's page has a **Summary** card and a **Timeline** on the left, an
 | Field | What it shows |
 | --- | --- |
 | **Owner** | The customer who owes the money. |
+| **Payer** | Who owes the money, such as a business account whose members may pay it, with its e-mail address. |
 | **Source** | Where the transaction came from. |
 | **Reference** | What the transaction is for, such as the order or plan it belongs to. |
 | **Total** | The full amount. |
@@ -81,6 +82,9 @@ The transaction's page has a **Summary** card and a **Timeline** on the left, an
 | **Paid** | How much has been paid so far. |
 | **Refunded** | How much has been given back, once anything has. |
 | **Outstanding** | How much is still owed: the total, less what was adjusted and what was paid. |
+| **Tax** | The tax by name and rate, when the transaction was recorded with a breakdown. |
+| **Exchange rate** | What one unit of the transaction's currency was worth in your reporting currency, when it was recorded with a rate. |
+| **Part payments** | Whether the customer may pay part of the balance online, and the smallest amount they may pay. |
 | **Created** | When the transaction was recorded. |
 | **Due** | When the payment is due, if it has a due date. |
 | **Invoice** | The invoice number, such as *INV-1001*, once the customer has been sent an invoice. With the **Receipts** feature on, it opens the [printable invoice](invoices-and-receipts.md#print-an-invoice). |
@@ -95,17 +99,46 @@ The **Timeline** lists everything that happened to the transaction, newest first
 
 Use this when the customer paid by cash, check or bank transfer.
 
-1. Open the transaction from **Commerce > Transactions**.
+1. Open the transaction from **Commerce** → **Transactions**.
 2. In **Record an offline payment**, check the **Amount**. It starts at the full outstanding balance; change it for a part payment.
-3. Optionally, type the check number or transfer reference in **Reference**. It is recorded with the payment.
-4. Optionally, describe how the payment was received in **Note**.
-5. Click **Record payment**, then click **Record payment** again in the confirmation box.
+3. Optionally, pick how the customer paid in **Payment method**: *Cash*, *Check*, *Bank transfer*, *Card terminal* or *Other*, or type another way. Then change **Received** to when the money arrived. **Received** starts at now, in your site's time zone.
+4. Optionally, type the check number or transfer reference in **Reference**. It is recorded with the payment.
+5. Optionally, add anything else about the payment in **Note**.
+6. Click **Record payment**, then click **Record payment** again in the confirmation box.
 
 If the payment covers the balance, the transaction becomes **Paid**. If it covers part of it, the transaction becomes **Partially paid**. An amount larger than the balance is recorded as the balance, so the customer never owes a negative amount. With the **Send Payment Receipts** feature on, the customer is sent a receipt.
 
 :::note[The customer sees the note]
 The note you type on a recorded payment becomes part of the payment's entry in the customer's history. Write it for the customer, for example *Paid by bank transfer*. For something only staff should read, use **Add a note** instead.
 :::
+
+### When the customer paid more than they owe
+
+With the **Store Credit** feature on, and a customer with an account, **Record an offline payment** has the checkbox **Keep anything above what is owed as customer credit**. Check it before you record a payment larger than the balance: the balance is paid, and the rest is added to the customer's store credit, which they can spend at checkout or you can apply to another transaction. Without the checkbox, only the balance is recorded and a message reminds you to give the rest back.
+
+A payment that kept some credit and is then taken back takes that credit back too. If the customer has already spent it, the payment can't be taken back; refund it instead.
+
+### Pay with the customer's credit
+
+When the customer has store credit in the transaction's currency, the transaction page shows **Apply customer credit** with their balance.
+
+1. Check the **Amount**. It starts at the smaller of the credit and what is still owed.
+2. Optionally, add a **Note**.
+3. Click **Apply credit**, then click **Apply credit** again in the confirmation box.
+
+The credit is taken from the customer's balance and recorded as a payment, with a receipt like any other. If you take that payment back, the credit is given back.
+
+The payment is recorded first and the credit changes right after it. If the credit can't change at that moment (another change to the same credit is in progress), the page says so and the credit changes within a few minutes on its own. If it can't change at all, for example because the Store Credit feature was turned off, the page warns you and a payment issue is opened for you to settle by hand. If the credit was spent elsewhere in the meantime, the payment is taken back and the page says nothing was paid.
+
+### Take back a payment or an adjustment
+
+Use this when a payment you recorded did not arrive after all (a check bounced) or was recorded on the wrong transaction, or when an adjustment should not have been made. Nothing is deleted: the entry stays on the timeline, a **Taken back** entry is added, and what it paid or took off is owed again.
+
+1. Open the transaction and find the entry in the **Timeline**.
+2. Type why it is taken back in the box under the entry. A reason is required.
+3. Click **Take back**, then click **Take back** in the confirmation box.
+
+The entry is marked **Taken back**, and the transaction is **Outstanding** or **Partially paid** again when it was **Paid**. **Take back** is offered only on a payment recorded by hand and on an adjustment that was not taken back already. A payment the customer made online cannot be taken back; refund it instead.
 
 ### Mark a transaction as paid
 
@@ -147,7 +180,7 @@ The **Send the invoice** card appears when the **Transaction Reminders** feature
 1. Open the transaction.
 2. In **Send the invoice**, click **Send invoice**, then click **Send invoice** in the confirmation box, which names the amount still owed.
 
-The transaction gets its invoice number, such as *INV-1001*, if it has none yet, and the customer is sent a notice titled *Invoice INV-1001* with a link that pays it. It is not worded as a reminder. It counts as the first notice: it adds to **Reminders sent**, and the next scheduled reminder waits a full interval after it. If you see *The invoice could not be sent. The owner may not have a notification channel configured.*, contact the customer another way; the invoice number is kept for the next try.
+The transaction gets its invoice number, such as *INV-1001*, if it has none yet, and the customer is sent a notice titled *Invoice INV-1001* with a link that pays it. It is not worded as a reminder, and it uses its own e-mail template (**Payment request**), which an administrator can change under **Settings** → **Commerce** → **Emails** without changing the reminder. It counts as the first notice: it adds to **Reminders sent**, and the next scheduled reminder waits a full interval after it. If you see *The invoice could not be sent. The owner may not have a notification channel configured.*, contact the customer another way; the invoice number is kept for the next try.
 
 ### Send a reminder now
 
@@ -171,7 +204,7 @@ If two people work on the same transaction at once, the second to save sees *Thi
 
 ## Payment reminders
 
-With the **Transaction Reminders** feature on, the site reminds customers about money they owe. It checks about every six hours.
+With the **Transaction Reminders** feature on, the site reminds customers about money they owe. It checks every hour, and sends reminders only in the daytime hours you set (8:00 to 20:00 by default, in the site's time zone).
 
 - **Before the due date:** once per transaction, a set number of days before it falls due. If the payment is charged automatically to a saved card, the reminder says which card will be charged and on which date, and tells the customer they don't need to do anything. If the customer pays it themselves, the reminder is their invoice, with a link that pays it.
 - **On and after the due date:** for each transaction that is **Outstanding** or **Partially paid** and past its due date, a first reminder, then more at a fixed interval, up to a maximum number. A transaction with no due date is counted from the day it was created.
@@ -184,13 +217,13 @@ Customers with an account get reminders through the site's notifications, on the
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Transactions |
+| **Menu** | **Settings** → **Commerce** → **Transactions** |
 | **Permission** | Manage transaction settings |
 | **Feature** | Transaction Reminders |
 
 <AskYourAdmin />
 
-1. Open **Settings > Commerce > Transactions**.
+1. Open **Settings** → **Commerce** → **Transactions**.
 2. Change the fields below and click **Save**.
 
 | Field | What it does |
@@ -201,15 +234,29 @@ Customers with an account get reminders through the site's notifications, on the
 | **Maximum reminders** | The most reminders sent for one transaction. 0 means no limit; the default is 3. |
 | **Remind before the due date (days)** | How many days before the due date the customer is told a payment is coming due. Sent once per payment. 0 turns these reminders off; the default is 3. |
 
+| **Reminder steps (days)** | Optional. The days, counted from the due date, a reminder is sent on, such as `-3, 0, 7, 14, 30`: three days before, on the day, then one week, two weeks and a month after. When set, these steps replace the four fields above. A step missed (for example while reminders were paused) is passed over, so a customer never gets several reminders at once. |
+| **Send between** | The hours of the day, in the site's time zone, reminders are sent in. 0 and 24 send them at any time. |
+| **Retry a declined card after (days)** | When a balance charged automatically to a saved card is declined, it is charged again after each of these numbers of days, in order (1, 3 and 5 by default). After the last one, the customer is asked to pay it themselves. |
+
 A reminder you send by hand counts toward **Maximum reminders**, and the next scheduled reminder waits a full interval after it.
+
+### Pause the reminders of one transaction
+
+On the transaction's page, the **Scheduled reminders** card has **Pause reminders**, for example while the customer disputes the amount or agreed to pay later. The customer gets no scheduled reminder for it until you click **Resume reminders**; you can still send one by hand. Both are noted on the **Timeline**.
+
+### A balance charged to a saved card
+
+A balance charged automatically to the customer's saved card, such as an invoice marked **Charge the customer's saved card**, shows a **Charged to a saved card** card with the card and the day it is charged, and how many charges were declined so far. The customer gets no reminder that it is owed while the charge is pending. If the card is declined, it is tried again on the retry schedule above; when no try is left, or the card's bank asks the customer to approve the payment, the customer is asked to pay it themselves (an invoice is e-mailed to them) and a payment issue is recorded under **Commerce** → **Payment Issues**. **Cancel the charge** stops it, and the customer pays themselves.
 
 ## My Transactions (for customers)
 
 Customers see and pay their own balances on **My Transactions**. Every signed-in user has the **View own transactions** permission by default.
 
+An **admin** of a business account also sees what the account owes, whoever in the account placed the order, and can open its invoices and receipts and pay them. A buyer of the account who is not an admin sees only the orders they placed, also when the account is billed for them. Nobody sees what another account owes.
+
 | | |
 | --- | --- |
-| **Menu** | Commerce > My Transactions |
+| **Menu** | **Commerce** → **My Transactions** |
 | **Permission** | View own transactions |
 | **Feature** | Transactions |
 
@@ -218,7 +265,7 @@ Customers see and pay their own balances on **My Transactions**. Every signed-in
 
 ### See what you owe
 
-1. Open **Commerce > My Transactions**.
+1. Open **Commerce** → **My Transactions**.
 2. To see only what you still owe, pick **Outstanding** in the **Any status** list in the list header.
 3. To find one transaction, type part of its description in **Search by description** and press Enter.
 
@@ -262,7 +309,7 @@ Installments are offered only for a balance that is still owed in full and belon
 
 ## My Transactions on the website
 
-Customers who never open the admin can see their transactions on the website itself, in your site's own design. They see the same transactions, invoices and receipts as on **Commerce > My Transactions**, and only their own.
+Customers who never open the admin can see their transactions on the website itself, in your site's own design. They see the same transactions, invoices and receipts as on **Commerce** → **My Transactions**, and only their own.
 
 | | |
 | --- | --- |
@@ -289,6 +336,10 @@ Each transaction shows its status, the **Total**, the **Outstanding** amount whi
 While the invoice is still due, its page also has **Pay now**. **Back to my transactions** returns to the list.
 
 Your site's designer can change how these pages look, or show the same documents inside the site's own customer area.
+
+## Move transactions to another site
+
+Under **Tools** → **Deployments** → **Plans**, add the **Transactions** step to a plan to take every transaction, with its timeline, payments, refunds and payment issues, to another site. They arrive as they were: nothing is charged, numbered or e-mailed again, and a transaction the other site already has is left as it is. Payments and refunds need **Checkout** enabled on the other site.
 
 ## Related pages
 

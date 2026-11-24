@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Geo.Core.Indexes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Workforce;
@@ -55,7 +56,7 @@ public sealed class WorkforceGeocodingTests
             var teams = services.GetRequiredService<ITeamManager>();
             var stored = await teams.FindByIdAsync(team.ItemId);
 
-            stored.GetWorkforceSettings().Location = new WorkforceLocation { Address = "1 City Hall Square, Boston" };
+            stored.Address = new global::CrestApps.OrchardCore.Addresses.Models.Address { AddressLine1 = "1 City Hall Square", City = "Boston" };
             await teams.UpdateAsync(stored);
         });
 

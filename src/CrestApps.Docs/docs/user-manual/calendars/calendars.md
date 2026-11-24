@@ -10,7 +10,7 @@ The calendar keeps everyone's time in one place: company events, your own meetin
 
 | | |
 | --- | --- |
-| **Menu** | Calendars > Calendar, Calendars > Manage Calendars |
+| **Menu** | **Calendars** → **Calendar**, **Calendars** → **Manage Calendars** |
 | **Permission** | Use calendars (to create calendars of your own: Create calendars) |
 | **Feature** | Calendars, plus the calendar features below for more types |
 
@@ -43,7 +43,7 @@ Which types you can choose depends on the features your administrator turned on.
 | **Equipment** | Resource Calendars | Something that can be reserved, such as a projector or a vehicle. | Reservation, Maintenance |
 | **Office** | Office Calendars | Who is in an office and which desks are booked, up to the number of desks. | In office, Desk booking, Visitor, Office closed |
 
-Two more types are kept by other features and can't be added by hand: **Appointments**, one per staff member, room or piece of equipment that takes appointments (see [Scheduling](./scheduling.md)), and **Bookings**, which holds the store's bookings (see [Bookings](../commerce/bookings.md#bookings-on-the-calendar)). Other modules you add can bring types of their own, such as a calendar of employees' shifts and time off: with Workforce Shift Planning on, each team's **Workforce** calendar holds its published shifts, and **Calendars > Shift Schedules** plans them (see [Shift Planning](../workforce/shift-planning.md)).
+Two more types are kept by other features and can't be added by hand: **Appointments**, one per staff member, room or piece of equipment that takes appointments (see [Scheduling](./scheduling.md)), and **Bookings**, which holds the store's bookings (see [Bookings](../commerce/bookings.md#bookings-on-the-calendar)). Other modules you add can bring types of their own, such as a calendar of employees' shifts and time off: with Workforce Shift Planning on, each team's **Workforce** calendar holds its published shifts, and **Calendars** → **Shift Schedules** plans them (see [Shift Planning](../workforce/shift-planning.md)).
 
 Some kinds of events have their own behavior:
 
@@ -55,7 +55,7 @@ Some kinds of events have their own behavior:
 
 <YouTube video="calendars-getting-started" title="Video of opening the calendar and choosing its views" start={71} end={126} />
 
-Open **Calendars > Calendar**. The list on the side shows every calendar you can see; tick the ones to show. Your choice is remembered on that browser.
+Open **Calendars** → **Calendar**. The list on the side shows every calendar you can see; tick the ones to show. Your choice is remembered on that browser.
 
 Times on the calendar are in your time zone (the one on your user profile, or the site's), not your computer's, so they match the times on forms and lists across the site even when you're away.
 
@@ -70,7 +70,7 @@ Events another feature keeps, such as appointments and bookings, can't be moved 
 
 <YouTube video="calendars-create-and-share" title="Video of creating a calendar and sharing it" start={18} end={122} />
 
-1. Open **Calendars > Manage Calendars**.
+1. Open **Calendars** → **Manage Calendars**.
 2. Choose **Add calendar** and pick the type.
 3. Fill in the sections below and choose **Save**.
 
@@ -202,12 +202,12 @@ An **In office** event lasts the whole day, a **Desk booking** lasts four hours 
 
 <YouTube video="calendars-categories-and-colors" title="Video of making categories and putting events in them" start={43} end={132} />
 
-Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps you read your week at a glance. Open **Calendars > Categories**, choose **Add category**, give it a **Name** and a **Color**, and **Save**. Then pick it as an event's **Category** in the event editor.
+Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps you read your week at a glance. Open **Calendars** → **Categories**, choose **Add category**, give it a **Name** and a **Color**, and **Save**. Then pick it as an event's **Category** in the event editor.
 
 - An event is drawn in the first color that applies: the event's own color (**Use its own color**), then its category's color, then the color of its kind of event, and last its calendar's color.
 - The calendar view lists your categories under **Categories**, with **No category** at the end. Untick a category to hide its events; your choice is remembered in this browser.
 - Your categories are only yours. People who can manage all calendars can also tick **Everyone can use it**, to make a category everyone sees and uses (such as "Company holiday").
-- Deleting a category (**Actions > Delete**) keeps its events; they show again in the color of their kind of event or their calendar, unless they have a color of their own.
+- Deleting a category (**Actions** → **Delete**) keeps its events; they show again in the color of their kind of event or their calendar, unless they have a color of their own.
 
 <YouTube video="calendars-categories-and-colors" title="Video of filtering by category and deleting a category" start={131} end={176} />
 
@@ -217,9 +217,9 @@ Categories are yours to make: "Sales calls", "Admin", "Personal", whatever helps
 
 <YouTube video="calendars-getting-started" title="Video of seeing someone else's schedule" start={236} end={272} />
 
-To see what people have scheduled, such as a manager checking a team's workload, use **Whose schedule** under the calendar list on **Calendars > Calendar**. Choose **Choose people** and pick one or more users in the box that appears, or choose **Everyone**, then **Show**. The calendar shows the events on those people's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
+To see what people have scheduled, such as a manager checking a team's workload, use **Whose schedule** under the calendar list on **Calendars** → **Calendar**. Choose **Choose people** and pick one or more users in the box that appears, or choose **Everyone**, then **Show**. The calendar shows the events on those people's own calendars and the events they attend on any calendar. Events you aren't allowed to open show as **Busy**, with their time but no title. **Back to my calendars** returns to your own calendars. The address of the page keeps the choice, so you can bookmark it.
 
-**Whose schedule** only appears for people allowed to see others' schedules. Two pairs of permissions decide this, under **Access Control > Roles**:
+**Whose schedule** only appears for people allowed to see others' schedules. Two pairs of permissions decide this, under **Access Control** → **Roles**:
 
 | Permission | What it allows |
 | --- | --- |
@@ -236,7 +236,7 @@ Being able to read a calendar, because it's shared with you or visible to everyo
 
 <YouTube video="calendars-schedules-and-team" title="Video of the Team Availability page" start={104} end={170} />
 
-With Team Calendars on, open **Calendars > Team Availability**. Choose the **Team** (its calendar), the **Day** and the **Meeting length (minutes)**, then **Show**. Each member of the team's role gets a row, with a cell for each half hour, showing when they are **Busy**, **Tentative** or **Free**, from all of their calendars. **When everyone is free** lists the gaps long enough for the meeting that everyone shares.
+With Team Calendars on, open **Calendars** → **Team Availability**. Choose the **Team** (its calendar), the **Day** and the **Meeting length (minutes)**, then **Show**. Each member of the team's role gets a row, with a cell for each half hour, showing when they are **Busy**, **Tentative** or **Free**, from all of their calendars. **When everyone is free** lists the gaps long enough for the meeting that everyone shares.
 
 ## Invitations
 
@@ -252,8 +252,8 @@ The organizer and anyone who declined are not emailed. The invitation has **Acce
 
 Invitations need two things besides the feature:
 
-- **Email that works.** Open **Settings > Communication > Email** and set up a provider. To try it without sending anything, choose the **Specified pickup directory** delivery method on the **SMTP** tab: each message is written to a folder instead.
-- **The site's Base url**, under **Settings > General**. The **Accept**, **Maybe** and **Decline** links point to it, so without it the email has no links (its calendar file still works).
+- **Email that works.** Open **Settings** → **Communication** → **Email** and set up a provider. To try it without sending anything, choose the **Specified pickup directory** delivery method on the **SMTP** tab: each message is written to a folder instead.
+- **The site's Base url**, under **Settings** → **General**. The **Accept**, **Maybe** and **Decline** links point to it, so without it the email has no links (its calendar file still works).
 
 If email isn't set up or a message fails, the event is still saved; the failure is only written to the site's log.
 
@@ -273,7 +273,7 @@ Calendar Reminders also runs every minute to notice when events are about to sta
 
 With **Calendar Feeds** on, a calendar's menu on **Manage Calendars** has:
 
-- **Subscription address**: choose **Make an address**, then **Copy** it. Add it to Google Calendar (**Other calendars > From URL**), Outlook (**Add calendar > Subscribe from web**) or a phone, and they show the calendar's events and keep them up to date. Anyone with the address can see the events, so share it only with people you trust; private events show as busy time. **Make a new address** stops the old one working, and **Remove the address** turns it off.
+- **Subscription address**: choose **Make an address**, then **Copy** it. Add it to Google Calendar (**Other calendars** → **From URL**), Outlook (**Add calendar** → **Subscribe from web**) or a phone, and they show the calendar's events and keep them up to date. Anyone with the address can see the events, so share it only with people you trust; private events show as busy time. **Make a new address** stops the old one working, and **Remove the address** turns it off.
 - **Export .ics** downloads the calendar as a file.
 - **Import .ics** adds the events of an iCalendar file, such as one exported from Google Calendar or Outlook. Events already in the calendar with the same identifier are updated instead of added again, so importing the same file twice is safe. A message says how many events were added, changed and left unchanged. An event counts as unchanged only when the file gives it the same sequence number and a modified time that isn't newer, as calendar apps' exports do; a file without those is counted as changed every time.
 
@@ -302,23 +302,23 @@ For example: when an **Out of office** event is created on a team calendar, emai
 
 ## Ask an AI assistant
 
-With the AI features on, an AI profile can use calendar tools. Edit the profile (**Artificial Intelligence > Profiles**), open its **Capabilities** tab and tick the tools in the **Calendar** group: **List calendars**, **Find calendar events**, **Find free time**, **Create calendar event**, **Move calendar event** and **Cancel calendar event**. The assistant can then answer what's on your calendar, find a time when you and others are free, and book, move or cancel events. The tools act for the person who is signed in, with that person's access to each calendar, and refuse anyone who isn't signed in.
+With the AI features on, an AI profile can use calendar tools. Edit the profile (**Artificial Intelligence** → **Profiles**), open its **Capabilities** tab and tick the tools in the **Calendar** group: **List calendars**, **Find calendar events**, **Find free time**, **Create calendar event**, **Move calendar event** and **Cancel calendar event**. The assistant can then answer what's on your calendar, find a time when you and others are free, and book, move or cancel events. The tools act for the person who is signed in, with that person's access to each calendar, and refuse anyone who isn't signed in.
 
 ## Copy calendars to another site
 
 <YouTube video="calendars-deployment-and-features" title="Video of the calendar features and copying calendars with a deployment plan" />
 
-Calendars, their events and the categories travel between sites with a deployment plan (**Tools > Deployments > Plans**, with the **Deployment** feature on):
+Calendars, their events and the categories travel between sites with a deployment plan (**Tools** → **Deployments** → **Plans**, with the **Deployment** feature on):
 
 1. Open or create a deployment plan and choose **Add Step**.
 2. Under **Calendar**, add **Calendars**. Tick **Include events** to take every calendar's events (up to 10,000 per calendar) and **Include categories** (on by default) to take everyone's categories, so the events keep their colors.
-3. **Execute** the plan to download it, then import the file on the other site (**Tools > Deployments > Package Import**), or send it with a remote deployment.
+3. **Execute** the plan to download it, then import the file on the other site (**Tools** → **Deployments** → **Package Import**), or send it with a remote deployment.
 
 The import creates what's missing and updates what's already there, matched by each record's id, so importing the same file twice doesn't duplicate anything. A calendar needs its kind's feature to be on in the other site (for example **Resource Calendars** for rooms). Imported events don't send invitations and aren't checked for overlaps. A recipe with the `Calendars` step behaves the same way; to get its exact shape, export a plan first and start from that file.
 
 ## Which feature to turn on
 
-Features are turned on under **Tools > Features** (search for *Calendars*); each one lists what it depends on.
+Features are turned on under **Tools** → **Features** (search for *Calendars*); each one lists what it depends on.
 
 | You want to... | Ask your administrator to turn on |
 | --- | --- |
@@ -340,4 +340,4 @@ Features are turned on under **Tools > Features** (search for *Calendars*); each
 - **I can't see a calendar.** It's private and not shared with you. Ask its owner to share it, or to make it shared or public.
 - **I can see the time but not the event.** You can only see the calendar's free/busy time, or the event is private.
 - **My event was refused with "already booked" or "already full".** A room, a piece of equipment or the office has no room left at that time. Pick another time, or check what's booked on that calendar.
-- **I can't drag or edit an event.** It's kept by another feature, such as an appointment or a booking, or you can only see the calendar. Change appointments under **Calendars > Appointments** and bookings under **Commerce > Bookings**.
+- **I can't drag or edit an event.** It's kept by another feature, such as an appointment or a booking, or you can only see the calendar. Change appointments under **Calendars** → **Appointments** and bookings under **Commerce** → **Bookings**.

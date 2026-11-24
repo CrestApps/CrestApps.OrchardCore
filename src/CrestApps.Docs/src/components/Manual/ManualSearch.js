@@ -1,14 +1,14 @@
 import React, {useState} from 'react';
 import {useHistory} from '@docusaurus/router';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import {USER_MANUAL_SEARCH_CONTEXT} from './searchScope';
 import styles from './styles.module.css';
 
-/** The search context the search plugin builds for the User Manual (see docusaurus.config.js). */
-export const USER_MANUAL_SEARCH_CONTEXT = 'docs/user-manual';
+export {USER_MANUAL_SEARCH_CONTEXT};
 
 /**
- * A search box that searches only the User Manual. It opens the site's search page with the
- * User Manual filter selected, where the reader can switch the filter to "Everywhere".
+ * A search box that searches only the User Manual. It opens the site's search page with only the
+ * User Manual ticked, where the reader can tick the Technical Manual too.
  */
 export default function ManualSearch({placeholder = 'Search the User Manual, for example "transfer a call"'}) {
   const [query, setQuery] = useState('');

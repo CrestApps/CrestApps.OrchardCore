@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model UserAudienceMembersViewModel
+
+<zone Name="Title">
+    <breadcrumb name="UserAudiencesMembers" title="@T["People in the '{0}' audience", Model.DisplayName]">
+        <breadcrumb-item id="UserAudiences" action="Index" controller="UserAudiences" area="CrestApps.OrchardCore.Users">@T["User Audiences"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">@T.Plural(Model.Count, "1 person matches the rules today.", "{0} people match the rules today.")</div>
+            @if (Model.IsDefined)
+            {
+                <div class="col-auto"><a asp-action="Edit" asp-route-name="@Model.Name" class="btn btn-secondary">@T["Edit the rules"]</a></div>
+            }
+        </div>
+    </div>
+</div>
+
+<admin-list name="UserAudienceMembers" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody matches the rules of this audience today."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Person"]" />
+        <admin-list-column name="Email" position="30" title="@T["E-mail"]" width="auto" />
+    </admin-list-grid>
+</admin-list>

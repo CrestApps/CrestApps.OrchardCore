@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Coursework.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ReturnCourseworkTask>
+
+<header><h4><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Return Coursework For Resubmission"])</h4></header>

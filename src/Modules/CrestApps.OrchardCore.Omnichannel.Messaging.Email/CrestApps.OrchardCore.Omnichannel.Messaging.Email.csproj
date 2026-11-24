@@ -38,7 +38,7 @@
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Email.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Email.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Webhooks.Abstractions/CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
-    <ProjectReference Include="../CrestApps.OrchardCore.Webhooks/CrestApps.OrchardCore.Webhooks.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Webhooks/CrestApps.OrchardCore.Webhooks.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

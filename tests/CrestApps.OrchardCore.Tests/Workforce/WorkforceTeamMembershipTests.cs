@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -14,7 +15,7 @@ public sealed class WorkforceTeamMembershipTests
     private static readonly DateOnly _today = new(2026, 11, 4);
 
     [Fact]
-    public async Task ATeamsMembers_AreItsWorkersWithAUser_AndThoseOfItsSubTeams()
+    public async Task ATeamsMembers_AreItsStaff_WithOrWithoutAUser_AndThoseOfItsSubTeams()
     {
         // Arrange
         await using var harness = await WorkforceTests.CreateAsync();
@@ -31,7 +32,7 @@ public sealed class WorkforceTeamMembershipTests
             worker.UserId = "ben";
             worker.TeamMemberships.Add(new TeamMembership { TeamId = billing.ItemId });
         });
-        await WorkforceTests.AddWorkerAsync(harness, "Cara Diaz", worker => worker.TeamMemberships.Add(new TeamMembership { TeamId = billing.ItemId }));
+        var cara = await WorkforceTests.AddWorkerAsync(harness, "Cara Diaz", worker => worker.TeamMemberships.Add(new TeamMembership { TeamId = billing.ItemId }));
 
         // Act
         var (siteMembers, billingOnly, directOnly) = await harness.RunAsync(async services =>
@@ -45,9 +46,10 @@ public sealed class WorkforceTeamMembershipTests
         }, commit: false);
 
         // Assert
-        Assert.Equal(["ana", "ben"], siteMembers.Select(member => member.UserId).Order());
+        // Cara has no account: she is a member through her staff record alone.
+        Assert.Equal(["ana", "ben", "staff:" + cara.ItemId], siteMembers.Select(member => member.UserId ?? "staff:" + member.StaffMemberId).Order());
         Assert.Equal(TeamMemberRoles.Manager, siteMembers.Single(member => member.UserId == "ana").Role);
-        Assert.Equal(["ben"], billingOnly.Select(member => member.UserId));
+        Assert.Equal(["ben", "staff:" + cara.ItemId], billingOnly.Select(member => member.UserId ?? "staff:" + member.StaffMemberId).Order());
         Assert.Equal(["ana"], directOnly.Select(member => member.UserId));
     }
 

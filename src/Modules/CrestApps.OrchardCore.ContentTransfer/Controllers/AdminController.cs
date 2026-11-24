@@ -24,6 +24,7 @@ using OrchardCore.BackgroundJobs;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -203,6 +204,11 @@ public sealed class AdminController : Controller, IUpdateModel
     [Admin("import/contents/{contentTypeId}", "ImportContentFromFile")]
     public async Task<IActionResult> Import(string contentTypeId)
     {
+        if (await FindRecordImporterAsync(contentTypeId) is { } recordImporter)
+        {
+            return await ImportRecordsAsync(recordImporter);
+        }
+
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
 
         if (contentTypeDefinition == null)
@@ -239,11 +245,15 @@ public sealed class AdminController : Controller, IUpdateModel
         var viewModel = new ContentImporterViewModel()
         {
             ContentTypeDefinition = contentTypeDefinition,
+            TargetName = contentTypeDefinition.Name,
+            TargetDisplayName = contentTypeDefinition.DisplayName,
             Content = await _displayManager.BuildEditorAsync(importContent, _updateModelAccessor.ModelUpdater, true, string.Empty, string.Empty),
             Columns = columns.Where(x => x.Type != ImportColumnType.ExportOnly),
             FileFormats = BuildFileFormatSelectList(),
+            ImportFormats = [.. ImportFormats(contentTypeId).Select(provider => provider.FileExtension)],
             OtherLayouts = [.. HttpContext.RequestServices.GetServices<IContentTransferFileReaderTransformer>()
                 .Select(transformer => transformer.Describe(contentTypeDefinition))
+                .Concat(ImportFormats(contentTypeId).Select(provider => provider.DescribeImport(contentTypeDefinition)))
                 .Where(description => !string.IsNullOrEmpty(description))],
         };
 
@@ -263,29 +273,45 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)contentTypeId))
-        {
-            RecordUploadRejected("unauthorized");
+        // A target that is not a content type, such as skills, keeps its own permission.
+        var recordImporter = await FindRecordImporterAsync(contentTypeId);
+        ContentTypeDefinition contentTypeDefinition = null;
 
-            return Unauthorized();
+        if (recordImporter is not null)
+        {
+            if (!await recordImporter.AuthorizeAsync(User, _authorizationService))
+            {
+                RecordUploadRejected("unauthorized");
+
+                return Unauthorized();
+            }
         }
-
-        var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
-
-        if (contentTypeDefinition == null)
+        else
         {
-            RecordUploadRejected("not_found");
+            if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)contentTypeId))
+            {
+                RecordUploadRejected("unauthorized");
 
-            return NotFound();
-        }
+                return Unauthorized();
+            }
 
-        var settings = contentTypeDefinition.GetSettings<ContentTypeTransferSettings>();
+            contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
 
-        if (!settings.AllowBulkImport)
-        {
-            RecordUploadRejected("disabled");
+            if (contentTypeDefinition == null)
+            {
+                RecordUploadRejected("not_found");
 
-            return NotFound();
+                return NotFound();
+            }
+
+            var settings = contentTypeDefinition.GetSettings<ContentTypeTransferSettings>();
+
+            if (!settings.AllowBulkImport)
+            {
+                RecordUploadRejected("disabled");
+
+                return NotFound();
+            }
         }
 
         return await _chunkFileUploadService.ProcessRequestAsync(
@@ -310,19 +336,20 @@ public sealed class AdminController : Controller, IUpdateModel
                 }
 
                 var extension = Path.GetExtension(file.FileName);
-                var formatProvider = ResolveFileFormatProviderByFileName(file.FileName);
+                var formatProvider = ContentImportRowTypes.ResolveImportFormat(_formatProviders, file.FileName, contentTypeId);
 
                 if (formatProvider == null)
                 {
                     RecordUploadRejected("bad_format");
 
-                    return BadRequest(new { error = GetUnsupportedFormatsMessage().Value });
+                    return BadRequest(new { error = GetUnsupportedFormatsMessage(contentTypeId).Value });
                 }
 
                 var importContent = new ImportContent()
                 {
                     ContentTypeId = contentTypeId,
-                    ContentTypeName = contentTypeDefinition.Name,
+                    ContentTypeName = recordImporter?.Name ?? contentTypeDefinition.Name,
+                    IsContentType = recordImporter is null,
                 };
 
                 await _displayManager.UpdateEditorAsync(importContent, _updateModelAccessor.ModelUpdater, false, string.Empty, string.Empty);
@@ -334,13 +361,20 @@ public sealed class AdminController : Controller, IUpdateModel
                     return BadRequest(new { error = GetModelErrorMessage() });
                 }
 
+                // The rows may be of the related types the person may also import, such as questions of other kinds.
+                if (contentTypeDefinition is not null)
+                {
+                    var rowContentTypes = await GetRowContentTypesAsync(contentTypeDefinition);
+                    importContent.Alter<ImportContentOptionsPart>(options => options.RowContentTypes = rowContentTypes);
+                }
+
                 var fileName = Guid.NewGuid() + extension;
                 var storedFileName = await _contentTransferFileStore.CreateFileFromStreamAsync(fileName, file.OpenReadStream(), false);
 
                 var entry = new ContentTransferEntry()
                 {
                     EntryId = IdGenerator.GenerateId(),
-                    ContentType = contentTypeId,
+                    ContentType = recordImporter?.Name ?? contentTypeId,
                     Owner = CurrentUserId(),
                     Author = User.Identity.Name,
                     UploadedFileName = file.FileName,
@@ -400,6 +434,11 @@ public sealed class AdminController : Controller, IUpdateModel
         if (string.IsNullOrEmpty(contentTypeId))
         {
             return NotFound();
+        }
+
+        if (await FindRecordImporterAsync(contentTypeId) is { } recordImporter)
+        {
+            return await DownloadRecordTemplateAsync(recordImporter, format);
         }
 
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
@@ -869,7 +908,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType))
+        if (!await CanImportEntryAsync(entry))
         {
             return Forbid();
         }
@@ -915,7 +954,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType))
+        if (!await CanImportEntryAsync(entry))
         {
             return Forbid();
         }
@@ -964,7 +1003,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return RedirectToAction(nameof(Export));
         }
 
-        var formatProvider = ResolveFileFormatProviderByFileName(entry.StoredFileName);
+        var formatProvider = _formatProviders.FirstOrDefault(provider => provider.CanExport && provider.CanHandle(entry.StoredFileName));
 
         if (formatProvider == null)
         {
@@ -995,7 +1034,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType))
+        if (!await CanImportEntryAsync(entry))
         {
             return Forbid();
         }
@@ -1016,11 +1055,22 @@ public sealed class AdminController : Controller, IUpdateModel
             return RedirectToAction(nameof(List));
         }
 
-        var formatProvider = ResolveFileFormatProviderByFileName(entry.StoredFileName);
+        var formatProvider = ContentImportRowTypes.ResolveImportFormat(_formatProviders, entry.StoredFileName, entry.ContentType);
 
         if (formatProvider == null)
         {
             await _notifier.ErrorAsync(H["The file format for this import is no longer enabled."]);
+            return RedirectToAction(nameof(List));
+        }
+
+        // A format that only reads, such as a package of another system, gives its failed rows in a format that writes.
+        var errorsFormat = formatProvider.CanExport
+            ? formatProvider
+            : _formatProviders.Where(provider => provider.CanExport).OrderBy(provider => provider.FileExtension == ".csv" ? 0 : 1).FirstOrDefault();
+
+        if (errorsFormat == null)
+        {
+            await _notifier.ErrorAsync(H["No file format that can write the failed rows is enabled."]);
             return RedirectToAction(nameof(List));
         }
 
@@ -1041,11 +1091,13 @@ public sealed class AdminController : Controller, IUpdateModel
             }
         }
 
-        // Read as the import read it, so a reshaped file's failed rows are the rows that failed.
-        var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
+        // Read as the import read it, so a reshaped file's failed rows are the rows that failed. Only content types are
+        // reshaped.
+        var isRecordImport = await FindRecordImporterAsync(entry.ContentType) is not null;
+        var contentTypeDefinition = isRecordImport ? null : await _contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
 
         using (var reader = await ContentTransferFileReaders.TransformAsync(
-            HttpContext.RequestServices.GetServices<IContentTransferFileReaderTransformer>(),
+            isRecordImport ? [] : HttpContext.RequestServices.GetServices<IContentTransferFileReaderTransformer>(),
             () =>
             {
                 sourceStream.Position = 0;
@@ -1054,7 +1106,7 @@ public sealed class AdminController : Controller, IUpdateModel
             },
             contentTypeDefinition,
             HttpContext.RequestAborted))
-        using (var writer = formatProvider.CreateWriter(outputStream, entry.ContentType))
+        using (var writer = errorsFormat.CreateWriter(outputStream, entry.ContentType))
         {
             var columnNames = reader.GetColumnNames().ToList();
             columnNames.Add(S["Errors"]);
@@ -1089,9 +1141,9 @@ public sealed class AdminController : Controller, IUpdateModel
 
         outputStream.Position = 0;
 
-        return new FileStreamResult(outputStream, formatProvider.ContentType)
+        return new FileStreamResult(outputStream, errorsFormat.ContentType)
         {
-            FileDownloadName = $"{entry.ContentType}_Errors{formatProvider.FileExtension}",
+            FileDownloadName = $"{entry.ContentType}_Errors{errorsFormat.FileExtension}",
         };
     }
 
@@ -1126,7 +1178,7 @@ public sealed class AdminController : Controller, IUpdateModel
         ];
 
         options.ImportableTypes = direction == ContentTransferDirection.Import
-            ? await GetTransferableContentTypesAsync(ContentTransferDirection.Import)
+            ? await GetImportableTargetsAsync()
             : [];
         options.ExportableTypes = direction == ContentTransferDirection.Export
             ? await GetTransferableContentTypesAsync(ContentTransferDirection.Export)
@@ -1405,12 +1457,15 @@ public sealed class AdminController : Controller, IUpdateModel
         Func<ShellScope, Task> work)
         => DeferredWork.RunAsync(name, traceParent, scope, work);
 
+    // The formats that write: exports, templates and failed rows.
     private IContentTransferFileFormatProvider ResolveFileFormatProvider(string format)
     {
+        var writers = _formatProviders.Where(provider => provider.CanExport).ToArray();
+
         if (!string.IsNullOrEmpty(format))
         {
             var extension = format.StartsWith('.') ? format : "." + format;
-            var provider = _formatProviders.FirstOrDefault(p => p.FileExtension.Equals(extension, StringComparison.OrdinalIgnoreCase));
+            var provider = writers.FirstOrDefault(p => p.FileExtension.Equals(extension, StringComparison.OrdinalIgnoreCase));
 
             if (provider != null)
             {
@@ -1418,24 +1473,54 @@ public sealed class AdminController : Controller, IUpdateModel
             }
         }
 
-        return _formatProviders.Length > 0 ? _formatProviders[0] : null;
+        return writers.Length > 0 ? writers[0] : null;
     }
-
-    private IContentTransferFileFormatProvider ResolveFileFormatProviderByFileName(string fileName)
-        => _formatProviders.FirstOrDefault(provider => provider.CanHandle(fileName));
 
     private List<SelectListItem> BuildFileFormatSelectList()
         => _formatProviders
+            .Where(provider => provider.CanExport)
             .Select(provider => new SelectListItem(GetFileFormatLabel(provider), provider.FileExtension))
             .ToList();
 
-    private string GetFileFormatExtensions()
-        => string.Join(", ", _formatProviders.Select(provider => provider.FileExtension));
+    // The formats files of the content type can be imported in.
+    private IEnumerable<IContentTransferFileFormatProvider> ImportFormats(string contentType)
+        => _formatProviders.Where(provider => provider.CanImport(contentType));
 
-    private LocalizedString GetUnsupportedFormatsMessage()
-        => _formatProviders.Length == 0
+    private LocalizedString GetUnsupportedFormatsMessage(string contentType)
+    {
+        var extensions = ImportFormats(contentType).Select(provider => provider.FileExtension).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        return extensions.Count == 0
             ? S["No file formats are currently enabled."]
-            : S["Only the enabled file formats are supported: {0}.", GetFileFormatExtensions()];
+            : S["Only the enabled file formats are supported: {0}.", string.Join(", ", extensions)];
+    }
+
+    // The content types the rows of an import may be: the related types the person may also import.
+    private async Task<string[]> GetRowContentTypesAsync(ContentTypeDefinition contentTypeDefinition)
+    {
+        var candidates = ContentImportRowTypes.Collect(HttpContext.RequestServices.GetServices<IContentImportRowTypeProvider>(), contentTypeDefinition);
+
+        if (candidates.Count < 2)
+        {
+            return [];
+        }
+
+        var allowed = new List<string> { contentTypeDefinition.Name };
+
+        foreach (var type in candidates.Skip(1))
+        {
+            var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(type);
+
+            if (definition is not null &&
+                definition.GetSettings<ContentTypeTransferSettings>().AllowBulkImport &&
+                await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)type))
+            {
+                allowed.Add(type);
+            }
+        }
+
+        return allowed.Count < 2 ? [] : [.. allowed];
+    }
 
     private static string GetFileFormatLabel(IContentTransferFileFormatProvider provider)
         => provider.FileExtension.TrimStart('.').ToUpperInvariant();
@@ -1558,6 +1643,91 @@ public sealed class AdminController : Controller, IUpdateModel
         }
 
         return query.OrderBy(x => x.CreatedUtc);
+    }
+
+    private IContentTransferImportTargetResolver TargetResolver
+        => HttpContext.RequestServices.GetRequiredService<IContentTransferImportTargetResolver>();
+
+    private async Task<IContentTransferRecordImporter> FindRecordImporterAsync(string name)
+        => string.IsNullOrEmpty(name) ? null : await TargetResolver.FindAsync(name) as IContentTransferRecordImporter;
+
+    // Each target keeps its own permission: a content type its import permission, any other target its own check.
+    private async Task<bool> CanImportEntryAsync(ContentTransferEntry entry)
+        => await FindRecordImporterAsync(entry.ContentType) is { } recordImporter
+            ? await recordImporter.AuthorizeAsync(User, _authorizationService)
+            : await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType);
+
+    private async Task<IList<SelectListItem>> GetImportableTargetsAsync()
+    {
+        var targets = await GetTransferableContentTypesAsync(ContentTransferDirection.Import);
+
+        foreach (var recordImporter in await TargetResolver.ListRecordImportersAsync(User))
+        {
+            targets.Add(new SelectListItem(recordImporter.DisplayName, recordImporter.Name));
+        }
+
+        return targets
+            .OrderBy(item => item.Text ?? item.Value, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task<IActionResult> ImportRecordsAsync(IContentTransferRecordImporter recordImporter)
+    {
+        if (!await recordImporter.AuthorizeAsync(User, _authorizationService))
+        {
+            return Unauthorized();
+        }
+
+        var importContent = new ImportContent()
+        {
+            ContentTypeId = recordImporter.Name,
+            ContentTypeName = recordImporter.Name,
+            IsContentType = false,
+        };
+
+        var columns = await recordImporter.GetColumnsAsync(HttpContext.RequestAborted);
+
+        return View(nameof(Import), new ContentImporterViewModel()
+        {
+            TargetName = recordImporter.Name,
+            TargetDisplayName = recordImporter.DisplayName,
+            IsContentType = false,
+            Content = await _displayManager.BuildEditorAsync(importContent, _updateModelAccessor.ModelUpdater, true, string.Empty, string.Empty),
+            Columns = columns.Where(column => column.Type != ImportColumnType.ExportOnly),
+            FileFormats = BuildFileFormatSelectList(),
+            ImportFormats = [.. ImportFormats(recordImporter.Name).Select(provider => provider.FileExtension)],
+        });
+    }
+
+    private async Task<IActionResult> DownloadRecordTemplateAsync(IContentTransferRecordImporter recordImporter, string format)
+    {
+        if (!await recordImporter.AuthorizeAsync(User, _authorizationService))
+        {
+            return Unauthorized();
+        }
+
+        var formatProvider = ResolveFileFormatProvider(format);
+
+        if (formatProvider == null)
+        {
+            return BadRequest(S["No file formats are currently enabled for bulk import."]);
+        }
+
+        var columns = await recordImporter.GetColumnsAsync(HttpContext.RequestAborted);
+        var content = new MemoryStream();
+
+        using (var writer = formatProvider.CreateWriter(content, recordImporter.DisplayName))
+        {
+            writer.WriteHeader(columns.Where(column => column.Type != ImportColumnType.ExportOnly).Select(column => column.Name).ToList());
+            writer.Flush();
+        }
+
+        content.Seek(0, SeekOrigin.Begin);
+
+        return new FileStreamResult(content, formatProvider.ContentType)
+        {
+            FileDownloadName = $"{recordImporter.Name}_Template{formatProvider.FileExtension}",
+        };
     }
 
     private Task<ContentTransferEntry> FindImportEntryAsync(string entryId)

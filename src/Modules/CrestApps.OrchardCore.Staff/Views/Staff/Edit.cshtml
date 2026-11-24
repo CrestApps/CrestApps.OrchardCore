@@ -1,0 +1,28 @@
+@model StaffEditorPageViewModel
+
+<zone Name="Title">
+    <breadcrumb name="StaffEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Staff Member"] : T["Edit '{0}'", Model.DisplayName])">
+        <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
+        @if (!string.IsNullOrEmpty(Model.Id))
+        {
+            <breadcrumb-item id="StaffProfile" action="Profile" controller="Staff" area="CrestApps.OrchardCore.Staff" route-id="@Model.Id">@Model.DisplayName</breadcrumb-item>
+        }
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Edit" asp-route-id="@Model.Id" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        @if (string.IsNullOrEmpty(Model.Id))
+        {
+            <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+        }
+        else
+        {
+            <a class="btn btn-secondary cancel" asp-action="Profile" asp-route-id="@Model.Id">@T["Cancel"]</a>
+        }
+    </div>
+</form>

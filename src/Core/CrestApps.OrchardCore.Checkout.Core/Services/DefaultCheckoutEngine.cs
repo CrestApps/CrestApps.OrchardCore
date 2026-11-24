@@ -154,6 +154,12 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                     newSession.Put(returnInfo);
                 }
 
+                // Before activation, because the handler of the reference reads it to decide what is charged.
+                if (request.Amount is decimal requestedAmount && requestedAmount > 0m)
+                {
+                    newSession.Put(new CheckoutRequestedAmount { Amount = requestedAmount });
+                }
+
                 // A session started for someone else belongs to them. Anything the store derived from the
                 // current request (an administrator's identity, or a guest token issued to the browser that
                 // happens to be making the call) does not describe this buyer, so it is dropped.

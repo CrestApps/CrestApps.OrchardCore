@@ -1,0 +1,39 @@
+@model CheckEditViewModel
+
+@{
+    var check = Model.Check;
+    var name = check.Number > 0 ? T["Edit check {0}", check.Number] : T["Edit the check to {0}", check.PayeeName];
+}
+
+<zone Name="Title">
+    <breadcrumb name="ChecksEdit" title="@name">
+        <breadcrumb-item id="Checks" action="Index" controller="Checks" area="CrestApps.OrchardCore.Banking" permission="@ChecksPermissions.ViewCheckRegister.Name">@T["Checks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="alert alert-info">
+    @T["The check has not printed yet, so its payee, address, amount, date and memo can still change. The feature the check pays may refuse a change, or follow it, such as a bill payment of another amount."]
+</div>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Change"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Reason">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reason" class="form-control" maxlength="500" />
+                    <span class="hint">@T["Optional, such as a wrong amount or a misspelled name. It is kept in the history of the change."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

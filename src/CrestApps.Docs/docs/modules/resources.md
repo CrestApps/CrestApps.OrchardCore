@@ -43,6 +43,7 @@ The feature also registers reusable scripts that other modules can require by na
 | `item-selector` | – | A reusable item selector widget (script and style). |
 | `collapsible-panel` | – | Toggle behavior for collapsible admin panels. |
 | `date-range-picker` | `flatpickr`, `flatpickr-culture` | A reusable date-range dropdown described below. |
+| `file-drop` | – | The file picker of the `FileDropInput` shape, described below (script and `file-drop` style). |
 | `fullcalendar` | – | [FullCalendar](https://fullcalendar.io/) 7 global build (`FullCalendar.Calendar`), with the day grid, time grid, list, multi-month and interaction plugins. |
 | `fullcalendar-locales` | `fullcalendar` | Every FullCalendar translation; pass the page culture as the calendar's `locale`. |
 | `fullcalendar-theme` | `fullcalendar` | The FullCalendar classic theme. FullCalendar 7 draws nothing without a theme; pair it with the `fullcalendar-theme` and `fullcalendar-palette` styles. |
@@ -120,3 +121,23 @@ The script auto-initializes every element with a `data-date-range-picker` attrib
 | `[data-drp-panel="after"]` | Panel with a single `[data-drp-after-date]` date-time input; choosing a value sets only the **from** input (on or after). |
 
 Presets are computed in the browser using the supplied first day of the week; the resulting range is written into the from/to inputs and the surrounding form submits them. The `DateRangePicker` view component renders this exact contract; see its `Views/Shared/Components/DateRangePicker/Default.cshtml` view for a complete, localized example.
+
+## File drop input
+
+The `FileDropInput` shape renders a file picker that takes files dropped on it or pasted into it, as well as picked with the browse dialog. The files of each drop or pick add up instead of replacing the ones already chosen, a file chosen twice is kept once, and each chosen file is listed with its size and a button that removes it. The files stay in the form's own file input, so the form posts them under the input's name as it would with a plain `<input type="file">`; without script, or in a browser that can't set an input's files, the plain input shows. The colors come from Bootstrap's variables, so the zone follows the light and dark themes.
+
+```cshtml
+@await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "ticket-files", Target: "form"))
+```
+
+| Property | Description |
+| --- | --- |
+| `InputName` | The name the files post under. Required. |
+| `InputId` | The input's id, for a `<label for>`. Defaults to the name with dots replaced by underscores. |
+| `Multiple` | Whether several files may be chosen. Defaults to `true`; with `false` a new file replaces the chosen one. |
+| `Accept` | The input's `accept` attribute (`.pdf,image/*`). Dropped and pasted files it doesn't match are left out, with a message. The server still checks each file. |
+| `Compact` | A one-line zone, for composers such as a reply box. |
+| `Target` | A CSS selector of the area around the picker that also takes drops and pastes, found with `closest()`: `form` lets a user drop files anywhere on a reply form, or paste a screenshot into its text box. |
+| `Text`, `Hint`, `CssClass`, `Disabled` | The zone's text, a hint under it, extra classes, and a disabled picker. |
+
+The script raises a `filedrop:change` event on the input, with the chosen files in `detail.files`, each time they change; `CrestAppsFileDrop.initializeAll(root)` enhances pickers added to the page later.

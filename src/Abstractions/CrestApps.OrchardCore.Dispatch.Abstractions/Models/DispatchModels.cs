@@ -67,6 +67,19 @@ public sealed class DispatchSettings
     public string TimeZoneId { get; set; }
 
     /// <summary>
+    /// Gets or sets the capabilities of the staff dispatch sends: a staff member with any of them is a technician on
+    /// the board, in suggestions, the optimizer, territories and the technician pickers. Empty means Technician.
+    /// </summary>
+    public List<string> TechnicianCapabilities { get; set; } = [];
+
+    /// <summary>
+    /// Gets the capabilities of the staff dispatch sends, Technician when none is set.
+    /// </summary>
+    /// <returns>The capability keys.</returns>
+    public IReadOnlyList<string> GetTechnicianCapabilities()
+        => TechnicianCapabilities is { Count: > 0 } ? TechnicianCapabilities : [DispatchConstants.TechnicianCapability];
+
+    /// <summary>
     /// Gets or sets the weights candidates are ranked by.
     /// </summary>
     public DispatchObjective Objective { get; set; } = new();

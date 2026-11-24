@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
@@ -14,14 +14,12 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
-using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
-using OrchardCore.Entities;
 using OrchardCore.Locking;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
@@ -122,7 +120,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                 .Take(_batchSize)
                 .ListAsync(cancellationToken);
 
-            if (!activities.Any())
+            if (activities.Count == 0)
             {
                 break;
             }

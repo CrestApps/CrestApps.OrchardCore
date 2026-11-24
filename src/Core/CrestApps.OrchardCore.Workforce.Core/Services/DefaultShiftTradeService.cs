@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -15,7 +16,7 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
 {
     private readonly ShiftTradeStore _tradeStore;
     private readonly ICalendarEventManager _eventManager;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly IShiftService _shiftService;
     private readonly ShiftAssignmentContexts _contexts;
     private readonly TeamPlanningPolicy _policy;
@@ -27,7 +28,7 @@ internal sealed class DefaultShiftTradeService : IShiftTradeService
     public DefaultShiftTradeService(
         ShiftTradeStore tradeStore,
         ICalendarEventManager eventManager,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         IShiftService shiftService,
         ShiftAssignmentContexts contexts,
         TeamPlanningPolicy policy,

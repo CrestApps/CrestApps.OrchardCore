@@ -1,0 +1,60 @@
+@model StaffProfileHeaderViewModel
+
+@{
+    var staff = Model.StaffMember;
+    var statusClass = staff.Status switch
+    {
+        StaffStatus.Active => "text-bg-success",
+        StaffStatus.OnLeave => "text-bg-warning",
+        StaffStatus.Suspended => "text-bg-danger",
+        _ => "text-bg-secondary",
+    };
+    var status = staff.Status switch
+    {
+        StaffStatus.Active => T["Active"],
+        StaffStatus.OnLeave => T["On leave"],
+        StaffStatus.Suspended => T["Suspended"],
+        _ => T["Terminated"],
+    };
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body d-flex flex-wrap align-items-center gap-3">
+        @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+        {
+            <img src="@Url.Content(Model.AvatarUrl)" alt="" class="rounded-circle" width="72" height="72" style="object-fit: cover" />
+        }
+        else
+        {
+            <span class="rounded-circle d-inline-flex align-items-center justify-content-center fw-semibold fs-4 text-primary bg-primary-subtle" style="width: 72px; height: 72px" aria-hidden="true">@Model.Initials</span>
+        }
+        <div class="flex-grow-1">
+            <h2 class="h4 mb-1">@staff.DisplayName</h2>
+            <div class="text-secondary">
+                @if (!string.IsNullOrEmpty(staff.JobTitle))
+                {
+                    <span>@staff.JobTitle</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.TeamName))
+                {
+                    <span class="ms-2"><i class="fa-solid fa-people-group me-1" aria-hidden="true"></i>@Model.TeamName</span>
+                }
+            </div>
+            <div class="mt-1">
+                <span class="badge @statusClass">@status</span>
+                @if (string.IsNullOrEmpty(staff.UserId))
+                {
+                    <span class="badge text-bg-light border">@T["No user account"]</span>
+                }
+                else if (!string.IsNullOrEmpty(Model.UserName))
+                {
+                    <a class="badge text-bg-light border text-decoration-none" asp-area="OrchardCore.Users" asp-controller="Admin" asp-action="Edit" asp-route-id="@staff.UserId"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@Model.UserName</a>
+                }
+            </div>
+        </div>
+        @if (Model.CanEdit)
+        {
+            <a class="btn btn-primary" asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-id="@staff.ItemId">@T["Edit Staff Member"]</a>
+        }
+    </div>
+</div>

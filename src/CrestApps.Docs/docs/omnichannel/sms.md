@@ -46,11 +46,11 @@ For the step-by-step setup with screencasts, see [Automated AI SMS and voice](..
 
 ### Twilio webhook
 
-The Twilio settings editor (**Settings > Communication > SMS**, Twilio tab) shows the address to give Twilio as a read-only **Webhook URL** field. In the Twilio console, set the phone number's *A message comes in* to *Webhook*, *HTTP POST*, and that address. The same field ships with the SMS Messaging Channel, so it shows when either feature is on.
+The Twilio settings editor (**Settings** → **Communication** → **SMS**, Twilio tab) shows the address to give Twilio as a read-only **Webhook URL** field. In the Twilio console, set the phone number's *A message comes in* to *Webhook*, *HTTP POST*, and that address. The same field ships with the SMS Messaging Channel, so it shows when either feature is on.
 
 ### Twilio webhook signature
 
-The Twilio webhook verifies Twilio's `X-Twilio-Signature` header with the auth token from the Twilio SMS settings; a request without a valid signature is refused, and a missing auth token answers `400 Bad Request`. Twilio signs the public URL it was configured with, so when the site runs behind a TLS-terminating proxy or load balancer, set the site's **Base URL** (**Settings > General**) to the public address. The signature is then checked against that URL instead of the internal hop's scheme and host.
+The Twilio webhook verifies Twilio's `X-Twilio-Signature` header with the auth token from the Twilio SMS settings; a request without a valid signature is refused, and a missing auth token answers `400 Bad Request`. Twilio signs the public URL it was configured with, so when the site runs behind a TLS-terminating proxy or load balancer, set the site's **Base URL** (**Settings** → **General**) to the public address. The signature is then checked against that URL instead of the internal hop's scheme and host.
 
 ### Inbound texts are stored before Twilio is answered
 

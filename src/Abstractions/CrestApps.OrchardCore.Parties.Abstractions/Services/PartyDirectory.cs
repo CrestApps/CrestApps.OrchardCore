@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
 
 namespace CrestApps.OrchardCore.Parties.Services;
@@ -48,6 +49,17 @@ public sealed class PartyDirectory : IPartyDirectory
         }
 
         return (await source.GetNamesAsync([party.Id], cancellationToken)).GetValueOrDefault(party.Id);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactInfo> GetContactInfoAsync(PartyRef party, CancellationToken cancellationToken = default)
+    {
+        if (party.IsEmpty || GetSource(party.Kind) is not { } source)
+        {
+            return null;
+        }
+
+        return (await source.GetContactInfoAsync([party.Id], cancellationToken)).GetValueOrDefault(party.Id);
     }
 
     /// <inheritdoc/>

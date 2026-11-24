@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 
@@ -17,7 +18,7 @@ internal sealed class TimeOffPolicyResolvers
         _teamStore = teamStore;
     }
 
-    public async Task<TimeOffPolicyResolver> ForWorkerAsync(WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<TimeOffPolicyResolver> ForWorkerAsync(StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

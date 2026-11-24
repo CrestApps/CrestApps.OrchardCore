@@ -23,10 +23,13 @@ public sealed class MessageTemplateIndexProvider : IndexProvider<MessageTemplate
     {
         context
             .For<MessageTemplateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(template => new MessageTemplateIndex
             {
                 ItemId = template.ItemId,
                 Name = template.Name,
+                Scope = string.IsNullOrEmpty(template.Scope) ? null : template.Scope,
             });
     }
 }

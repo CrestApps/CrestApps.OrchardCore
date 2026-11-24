@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Feeds;
 
 /// <summary>
 /// Registers agent product feeds: the OpenAI feed at <c>feeds/openai/products.*</c>, its daily SFTP push, the ACP feed
-/// API client and its pushes after edits, and Settings › Commerce › Agent feeds.
+/// API client and its pushes after edits, and Settings › Commerce › Agent Feeds.
 /// </summary>
 [Feature(AgenticCommerceConstants.Features.Feeds)]
 public sealed class FeedsStartup : StartupBase

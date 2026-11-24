@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Staff.Core.Indexes;
+using CrestApps.OrchardCore.Staff;
 using System.Linq.Expressions;
 using System.Reflection;
 using CrestApps.OrchardCore.Reports.DataSources;
@@ -40,8 +42,9 @@ public abstract class WorkforceReportDataSet<TRecord, TIndex> : IndexedReportDat
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="scopeService">The scope service.</param>
     /// <param name="permission">The permission the reader needs.</param>
-    protected WorkforceReportDataSet(DataSetDescriptor descriptor, ISession session, IAuthorizationService authorizationService, IWorkforceScopeService scopeService, Permission permission)
-        : base(descriptor, session, authorizationService, WorkforceConstants.CollectionName, permission)
+    /// <param name="collectionName">The collection the records are in; the Workforce collection when omitted.</param>
+    protected WorkforceReportDataSet(DataSetDescriptor descriptor, ISession session, IAuthorizationService authorizationService, IWorkforceScopeService scopeService, Permission permission, string collectionName = null)
+        : base(descriptor, session, authorizationService, collectionName ?? WorkforceConstants.CollectionName, permission)
     {
         _scopeService = scopeService;
     }
@@ -96,7 +99,7 @@ public abstract class WorkforceReportDataSet<TRecord, TIndex> : IndexedReportDat
             return null;
         }
 
-        _workers = (await Session.QueryIndex<WorkerIndex>(collection: WorkforceConstants.CollectionName).ListAsync(cancellationToken))
+        _workers = (await Session.QueryIndex<StaffMemberIndex>(collection: StaffConstants.CollectionName).ListAsync(cancellationToken))
             .GroupBy(index => index.ItemId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.Ordinal);
         _teams = (await Session.QueryIndex<TeamIndex>(collection: TeamsConstants.CollectionName).ListAsync(cancellationToken))

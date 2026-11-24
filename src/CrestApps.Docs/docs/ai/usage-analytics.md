@@ -11,7 +11,7 @@ user_manual:
 | --- | --- |
 | **Feature Name** | AI Usage Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.UsageAnalytics` |
-| **Report** | **Reports → Billing & Usage → AI Usage Analytics** (`/Admin/Reports/view/ai-usage-analytics`, `AIUsageAnalyticsReport`) |
+| **Report** | **Reports** → **Billing & Usage** → **AI Usage Analytics** (`/Admin/Reports/view/ai-usage-analytics`, `AIUsageAnalyticsReport`) |
 | **Permission** | `ViewChatAnalytics` |
 
 The AI Usage Analytics report reports what AI cost a tenant, in three parts:
@@ -81,6 +81,7 @@ A unit a model is not billed in shows as a dash.
 | `Api` | The AI completion API endpoints. |
 | `Workflow` | AI workflow tasks. |
 | `A2A` | Tasks received from other agents. |
+| `Tickets` | The help desk's AI assistant: suggested replies and triage. |
 
 **Model and purpose** splits each model by why the request was made. The framework's purposes are listed in
 [CrestApps.Core: AI Usage Metering](https://core.crestapps.com/docs/core/ai-usage-metering#categories-and-purposes);
@@ -101,7 +102,7 @@ var completion = await completionService.CompleteAsync(deployment, messages, con
 
 ### Turning usage into cost
 
-Each AI deployment can carry its prices (**Artificial Intelligence > Deployments > Edit > Pricing**). The report then shows the **Est. cost** of every row of the metered, audio and chat completion tables, and the estimated total per currency above the metered table. Requests to a deployment without prices have no cost. See [Deployment pricing](#deployment-pricing).
+Each AI deployment can carry its prices (**Artificial Intelligence** → **Deployments** → **Edit** → **Pricing**). The report then shows the **Est. cost** of every row of the metered, audio and chat completion tables, and the estimated total per currency above the metered table. Requests to a deployment without prices have no cost. See [Deployment pricing](#deployment-pricing).
 
 Multiplying a row by the provider's list prices gives an estimate. To match what was actually paid, take the cost
 of each billing meter from the provider's invoice for a period and divide it in proportion to the units each row
@@ -153,7 +154,7 @@ The **AIDeployment** deployment step exports the prices in a `Pricing` section o
 }
 ```
 
-The recipe schema of the **AIDeployment** step describes `Pricing` and its fields. Prices that were entered on the **Costs** card of **Settings > Artificial Intelligence** before this release are moved onto the matching deployments once, when the site starts after the upgrade.
+The recipe schema of the **AIDeployment** step describes `Pricing` and its fields. Prices that were entered on the **Costs** card of **Settings** → **Artificial Intelligence** before this release are moved onto the matching deployments once, when the site starts after the upgrade.
 
 ## Audio usage
 
@@ -307,14 +308,14 @@ A measurement that the engine of the call cannot make is empty, as described in 
 
 ### Cost per call
 
-Each AI call's summary carries an estimated cost when prices are set under **Settings > Artificial Intelligence**, in **Costs**:
+Each AI call's summary carries an estimated cost when prices are set on the **Costs** tab of **Settings** → **Communication** → **Telephony**:
 
-- the **Currency** of the carrier's prices;
-- the carrier's price of a **Phone call, per minute** and of a **Text message**.
+- the **Currency** of the carrier's price;
+- the carrier's price of a **Phone call, per minute**.
 
 The AI part of the cost comes from the [prices of the deployment](#deployment-pricing) that answered the call: its text, audio and cached tokens at the token prices, and the call's length at an **Audio duration** price for a model billed by the minute.
 
-The cost is the call's minutes at the carrier's price, plus its tokens or minutes at its deployment's prices. When the carrier's prices and the deployment's prices are in different currencies, they cannot be added, and the summary keeps the AI part in the deployment's currency. It is written when the call ends, with the prices of that moment, so a price change applies to later calls only. It is an estimate: to match an invoice, see [Turning usage into cost](#turning-usage-into-cost).
+The cost is the call's minutes at the carrier's price, plus its tokens or minutes at its deployment's prices. When the carrier's price and the deployment's prices are in different currencies, they cannot be added, and the summary keeps the AI part in the deployment's currency. It is written when the call ends, with the prices of that moment, so a price change applies to later calls only. It is an estimate: to match an invoice, see [Turning usage into cost](#turning-usage-into-cost).
 
 ### Cost per model
 

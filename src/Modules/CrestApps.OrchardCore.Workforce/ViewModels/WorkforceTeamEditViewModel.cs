@@ -11,7 +11,8 @@ public class WorkforceTeamEditViewModel
     /// <summary>
     /// Gets or sets the site address.
     /// </summary>
-    public string Address { get; set; }
+    [BindNever]
+    public string TeamAddress { get; set; }
 
     /// <summary>
     /// Gets or sets the site's latitude, for the time clock's geofence.

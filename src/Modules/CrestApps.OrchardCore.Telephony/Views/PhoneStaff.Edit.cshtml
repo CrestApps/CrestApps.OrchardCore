@@ -1,0 +1,17 @@
+@model CrestApps.OrchardCore.Telephony.ViewModels.PhoneStaffViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Phone"]</div>
+    <div class="card-body">
+        @if (string.IsNullOrEmpty(Model.ExtensionId))
+        {
+            <p class="hint mb-0">@T["No extension yet."] <a href="@Url.Content("~/Admin/telephony/extension/create")">@T["Add an extension"]</a></p>
+        }
+        else
+        {
+            <p class="mb-2">@T["Extension"] <strong>@Model.Number</strong> @if (!string.IsNullOrEmpty(Model.Name)) { <span class="hint">@Model.Name</span> }</p>
+            <a href="@Url.Content("~/Admin/telephony/extension/edit/" + Model.ExtensionId)" class="btn btn-sm btn-secondary">@T["Edit the extension"]</a>
+            <span class="hint d-block mt-2">@T["When they leave, the extension is freed for someone else."]</span>
+        }
+    </div>
+</div>

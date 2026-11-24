@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
@@ -533,5 +534,5 @@ public sealed class ShiftPlanningTests
         });
     }
 
-    private sealed record Setup(Team Team, WorkerProfile Worker, ShiftTemplate Template, ActivityCode Meal, SchedulePeriod Period);
+    private sealed record Setup(Team Team, StaffMember Worker, ShiftTemplate Template, ActivityCode Meal, SchedulePeriod Period);
 }

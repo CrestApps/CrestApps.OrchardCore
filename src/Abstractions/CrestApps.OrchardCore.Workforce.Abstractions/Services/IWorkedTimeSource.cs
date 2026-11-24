@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -16,5 +17,5 @@ public interface IWorkedTimeSource
     /// <param name="to">The last day.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The minutes.</returns>
-    Task<int> GetWorkedMinutesAsync(WorkerProfile worker, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+    Task<int> GetWorkedMinutesAsync(StaffMember worker, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
 }

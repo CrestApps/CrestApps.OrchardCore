@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.Dispatch;
 public static class DispatchConstants
 {
     /// <summary>
+    /// The staff capability of people who go out to jobs. Pickers of technicians offer the staff who have it.
+    /// </summary>
+    public const string TechnicianCapability = "Technician";
+
+    /// <summary>
     /// The YesSql collection visits are kept in.
     /// </summary>
     public const string CollectionName = "Dispatch";

@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
+using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Drivers;
 using CrestApps.OrchardCore.Assets.Fleet;
 using CrestApps.OrchardCore.Assets.Migrations;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -38,6 +40,7 @@ public sealed class Startup : StartupBase
     {
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(AssetsConstants.CollectionName));
         services.AddAssetsCore();
+        services.AddRecordSource<AssetRecordSource>();
         services.AddPermissionProvider<AssetsPermissionsProvider>();
         services
             .AddIndexProvider<AssetTypeIndexProvider>()
@@ -81,6 +84,7 @@ public sealed class ContactOwnersStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // The CRM registers contacts as a party source; this feature only needs it to be there.
         services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
         services.AddPartySource<ContactPartySource>();
         services.AddScoped<IContentDisplayDriver, ContactAssetsDisplayDriver>();
@@ -98,6 +102,20 @@ public sealed class FleetStartup : StartupBase
     {
         services.TryAddSingleton<FleetFeature>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Asset>, FleetCalendarHandler>());
+    }
+}
+
+/// <summary>
+/// Picks the staff member who drives a fleet vehicle by default.
+/// </summary>
+[Feature(AssetsConstants.Features.Fleet)]
+[RequireFeatures(CrestApps.OrchardCore.Staff.StaffConstants.Features.Staff)]
+public sealed class FleetDriverStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<Asset, Drivers.FleetDriverDisplayDriver>();
     }
 }
 

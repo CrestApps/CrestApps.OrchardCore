@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-recipient-address.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-recipient-address.js
 	var e164Pattern = /^\+[1-9]\d{6,14}$/;
 	/**
 	* Whether the text is a phone number in E.164 form, exactly as typed.
@@ -48,8 +48,7 @@
 	function shouldShowPhoneHint(term, isPhoneChannel, offeredTypedAddress) {
 		return isPhoneChannel && !offeredTypedAddress && looksLikePhoneNumber(term);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-contact-picker.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-contact-picker.js
 	(function(root) {
 		"use strict";
 		function init(select) {
@@ -267,5 +266,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAll);
 		else initAll();
 	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
 })();

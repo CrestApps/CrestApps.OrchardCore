@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -26,7 +28,7 @@ public sealed class LaborRuleSetsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ILaborRuleSetManager _setManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -45,7 +47,7 @@ public sealed class LaborRuleSetsController : Controller
         IAuthorizationService authorizationService,
         ILaborRuleSetManager setManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         INotifier notifier,
         IHtmlLocalizer<LaborRuleSetsController> htmlLocalizer,
         IStringLocalizer<LaborRuleSetsController> stringLocalizer)
@@ -271,7 +273,7 @@ public sealed class LaborRuleSetsController : Controller
             .ToList();
         // Active workers, and any chosen before who have left, so saving doesn't drop them unseen.
         model.WorkerOptions = (await _workerManager.GetAllAsync(HttpContext.RequestAborted))
-            .Where(worker => worker.Status == WorkerStatus.Active || chosen.Contains(worker.ItemId))
+            .Where(worker => worker.Status == StaffStatus.Active || chosen.Contains(worker.ItemId))
             .OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(worker => new SelectListItem(string.IsNullOrEmpty(worker.EmployeeNumber) ? worker.DisplayName : $"{worker.DisplayName} ({worker.EmployeeNumber})", worker.ItemId, chosen.Contains(worker.ItemId)))
             .ToList();

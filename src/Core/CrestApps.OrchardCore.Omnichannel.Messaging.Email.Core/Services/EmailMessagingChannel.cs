@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -36,7 +37,7 @@ public sealed class EmailMessagingChannel : IMessagingChannel
         // An email carries pictures and documents alike, inside the message itself.
         Attachments = new MessagingAttachmentCapabilities
         {
-            Formats = MessagingFileFormats.All,
+            Formats = FileFormats.All,
             MaxCount = 10,
             MaxTotalBytes = 20 * 1024 * 1024,
             DeliveredAsLinks = false,

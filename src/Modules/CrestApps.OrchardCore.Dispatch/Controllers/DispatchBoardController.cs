@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Services;
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core;
@@ -68,7 +69,7 @@ public sealed class DispatchBoardController : Controller
     /// Shows the board.
     /// </summary>
     [Admin("dispatch/board", "DispatchBoard")]
-    public async Task<IActionResult> Index(string day, string teamId)
+    public async Task<IActionResult> Index(string day, string teamId, string capability)
     {
         if (!await _authorizationService.AuthorizeAsync(User, DispatchPermissions.ViewDispatch))
         {
@@ -77,9 +78,14 @@ public sealed class DispatchBoardController : Controller
 
         var zone = await _timeZone.GetAsync();
         var teams = await _teams.ListTreeAsync(HttpContext.RequestAborted);
+        var capabilities = await HttpContext.RequestServices.GetRequiredService<IStaffCapabilityService>().ListAsync(includeDisabled: true, HttpContext.RequestAborted);
+        var defaults = (await HttpContext.RequestServices.GetRequiredService<IDispatchSettingsProvider>().GetAsync()).GetTechnicianCapabilities();
 
         return View(new DispatchBoardViewModel
         {
+            Capability = capability,
+            CapabilityOptions = [.. capabilities.Select(entry => new SelectListItem(entry.DisplayName, entry.Name, string.Equals(entry.Name, capability, StringComparison.OrdinalIgnoreCase)))],
+            DefaultCapabilitiesText = string.Join(", ", defaults.Select(name => capabilities.FirstOrDefault(entry => string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? name)),
             Day = ParseDay(day, zone).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             TimeZoneId = zone,
             TeamId = teamId,
@@ -94,7 +100,7 @@ public sealed class DispatchBoardController : Controller
     /// Gives the board's data for a day: technicians with their shifts and visits, the unscheduled visits, and places.
     /// </summary>
     [Admin("dispatch/board/data", "DispatchBoardData")]
-    public async Task<IActionResult> Data(string day, string teamId)
+    public async Task<IActionResult> Data(string day, string teamId, string capability)
     {
         if (!await _authorizationService.AuthorizeAsync(User, DispatchPermissions.ViewDispatch))
         {
@@ -106,7 +112,7 @@ public sealed class DispatchBoardController : Controller
         var fromUtc = CalendarTime.ToUtc(date.ToDateTime(TimeOnly.MinValue), zone);
         var toUtc = CalendarTime.ToUtc(date.AddDays(1).ToDateTime(TimeOnly.MinValue), zone);
         var teamIds = string.IsNullOrEmpty(teamId) ? null : await _teams.GetSubtreeIdsAsync(teamId, HttpContext.RequestAborted);
-        var workers = (await _resources.ListWorkersAsync(HttpContext.RequestAborted))
+        var workers = (await _resources.ListWorkersAsync(Capabilities(capability), HttpContext.RequestAborted))
             .Where(worker => teamIds is null || worker.MembershipsOn(date).Any(membership => teamIds.Contains(membership.TeamId)))
             .OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -240,15 +246,22 @@ public sealed class DispatchBoardController : Controller
         var date = ParseDay(model?.Day, zone);
         IReadOnlyCollection<string> workerIds = null;
 
+        // The optimizer works with the people the board shows: its team and capability filters.
+        var shown = await _resources.ListWorkersAsync(Capabilities(model?.Capability), HttpContext.RequestAborted);
+
         if (!string.IsNullOrEmpty(model?.TeamId))
         {
             var teamIds = await _teams.GetSubtreeIdsAsync(model.TeamId, HttpContext.RequestAborted);
 
-            workerIds = [.. (await _resources.ListWorkersAsync(HttpContext.RequestAborted)).Where(worker => worker.MembershipsOn(date).Any(membership => teamIds.Contains(membership.TeamId))).Select(worker => worker.ItemId)];
+            workerIds = [.. shown.Where(worker => worker.MembershipsOn(date).Any(membership => teamIds.Contains(membership.TeamId))).Select(worker => worker.ItemId)];
+        }
+        else if (!string.IsNullOrEmpty(model?.Capability))
+        {
+            workerIds = [.. shown.Select(worker => worker.ItemId)];
         }
 
         var proposal = await optimization.ProposeAsync(date, workerIds, model?.IncludeUnscheduled == true, HttpContext.RequestAborted);
-        var names = (await _resources.ListWorkersAsync(HttpContext.RequestAborted)).ToDictionary(worker => worker.ItemId, worker => worker.DisplayName, StringComparer.Ordinal);
+        var names = shown.ToDictionary(worker => worker.ItemId, worker => worker.DisplayName, StringComparer.Ordinal);
 
         return Json(new
         {
@@ -382,4 +395,8 @@ public sealed class DispatchBoardController : Controller
             : DateOnly.FromDateTime(CalendarTime.ToLocal(_clock.UtcNow, zone));
 
     private static double Hours(DateTime utc, DateTime fromUtc) => Math.Clamp((utc - fromUtc).TotalHours, 0, 24);
+
+    // A capability picked on the board, or none for the dispatch settings' ones.
+    private static string[] Capabilities(string capability)
+        => string.IsNullOrWhiteSpace(capability) ? null : [capability.Trim()];
 }

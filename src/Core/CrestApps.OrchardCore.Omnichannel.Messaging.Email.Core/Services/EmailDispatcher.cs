@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -258,7 +259,7 @@ public sealed class EmailDispatcher : IEmailDispatcher
             files.Add(new EmailTransportAttachment
             {
                 FileName = string.IsNullOrWhiteSpace(attachment.FileName)
-                    ? $"attachment{MessagingFileFormats.FindByContentType(attachment.ContentType)?.PreferredExtension}"
+                    ? $"attachment{FileFormats.FindByContentType(attachment.ContentType)?.PreferredExtension}"
                     : attachment.FileName,
                 ContentType = attachment.ContentType,
                 Content = content,

@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Accounts.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AccountInvitationAcceptedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> @T["Account Invitation Accepted"]</h4>
+<p>@T["Starts when a person accepts an invitation. The input holds InvitationId, AccountId, Email, Role, UserId, Source and SourceId."]</p>

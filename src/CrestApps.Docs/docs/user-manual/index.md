@@ -45,14 +45,14 @@ What you see in the app depends on your role. Most people are not administrators
 
 | Menu | What you find there |
 | --- | --- |
-| **Interaction Center > Activities** | The agent's own list of work to do. |
-| **Interaction Center > Contacts** | Every contact record. |
-| **Interaction Center > My workspace** | The agent's live desk: presence, offers, the active call and recent work. |
-| **Interaction Center > Live dashboard** | The supervisor's real-time view of queues and agents. |
-| **Interaction Center > Shared voicemail** | Voicemail left for a queue rather than one person. |
-| **Interaction Center > My voicemail greeting** | The greeting callers hear when you miss a call. |
-| **Interaction Center > Call recordings** | Recorded calls to search and play back, with the transcript of AI calls. |
-| **Interaction Center > Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and omnichannel addresses. |
+| **Interaction Center** → **Activities** | The agent's own list of work to do. |
+| **Interaction Center** → **Contacts** | Every contact record. |
+| **Interaction Center** → **My Workspace** | The agent's live desk: presence, offers, the active call and recent work. |
+| **Interaction Center** → **Live Dashboard** | The supervisor's real-time view of queues and agents. |
+| **Interaction Center** → **Shared Voicemail** | Voicemail left for a queue rather than one person. |
+| **Interaction Center** → **My Voicemail Greeting** | The greeting callers hear when you miss a call. |
+| **Interaction Center** → **Call Recordings** | Recorded calls to search and play back, with the transcript of AI calls. |
+| **Interaction Center** → **Management** | The manager's setup screens: subject flows, dispositions, campaigns, load activities, bulk activity management, queues, skills, business hours, agent states, entry points, voice media, dialer profiles, extensions and omnichannel addresses. |
 | **Messaging** | The shared SMS inbox, broadcasts and message templates. |
 | **Artificial Intelligence** | AI profiles, templates, provider connections, deployments and tool instances. |
 | **Reports** | Every report, grouped by category. |
@@ -71,9 +71,9 @@ What you see in the app depends on your role. Most people are not administrators
 - **Site Administration**: [users](administration/users.md), [roles](administration/roles.md), [content access](administration/content-access-control.md), [content fields](administration/content-fields.md), [import and export](administration/import-and-export.md), [Do Not Call lists](administration/do-not-call-lists.md), [phone number verification](administration/phone-number-verification.md), [time zones](administration/time-zones.md), [wizards](administration/wizard.md) and [recipes and shared resources](administration/recipes.md).
 - **[Troubleshooting](troubleshooting.md)**: what to do when something doesn't work as expected.
 
-## Searching only the User Manual
+## Searching one manual or both
 
-The search box at the top of every User Manual page searches only this manual. To search the whole site, including the Technical Manual, choose **See all results** at the bottom of the search box, then switch the filter next to the search field from **User Manual** to **Everywhere**.
+The search box at the top of every page searches both manuals. Next to it are two checkboxes, **User Manual** and **Technical Manual**: clear **Technical Manual** to search only this manual, or clear **User Manual** to search only the Technical Manual. At least one stays ticked, and the site remembers your choice. The search results page (**See all results** at the bottom of the search box) has the same two checkboxes. On a phone the search box searches both manuals; use the checkboxes on the search results page.
 
 ## About the screencasts
 

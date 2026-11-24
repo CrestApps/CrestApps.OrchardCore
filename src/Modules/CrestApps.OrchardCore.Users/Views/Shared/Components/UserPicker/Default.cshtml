@@ -5,6 +5,11 @@
 @{
     var endpoint = Url.Content($"~/Admin/api/crestapps/users/search?valueType={Uri.EscapeDataString(Model.ValueType)}");
 
+    if (!string.IsNullOrWhiteSpace(Model.Audience))
+    {
+        endpoint += $"&audience={Uri.EscapeDataString(Model.Audience)}";
+    }
+
     foreach (var role in Model.Roles)
     {
         if (!string.IsNullOrWhiteSpace(role))

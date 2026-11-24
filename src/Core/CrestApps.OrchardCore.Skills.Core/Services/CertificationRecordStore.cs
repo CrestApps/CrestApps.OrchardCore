@@ -105,6 +105,51 @@ internal sealed class CertificationRecordStore : DocumentCatalog<CertificationRe
         return (count, page.ToArray());
     }
 
+    /// <summary>
+    /// Finds the certificate issued for a certification, source and source id that has not been revoked.
+    /// </summary>
+    /// <param name="certificationId">The certification.</param>
+    /// <param name="source">The source.</param>
+    /// <param name="sourceId">The source id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The certificate, or <see langword="null"/>.</returns>
+    public Task<CertificationRecord> FindIssuedAsync(string certificationId, string source, string sourceId, CancellationToken cancellationToken = default)
+    {
+        return Session.Query<CertificationRecord, CertificationRecordIndex>(
+            index => index.CertificationId == certificationId
+                && index.Source == source
+                && index.SourceId == sourceId
+                && index.Status != CertificationStatus.Revoked,
+            collection: CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Finds a certificate by its verification code.
+    /// </summary>
+    /// <param name="code">The code, as it is stored.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The certificate, or <see langword="null"/>.</returns>
+    public Task<CertificationRecord> FindByVerificationCodeAsync(string code, CancellationToken cancellationToken = default)
+    {
+        return Session.Query<CertificationRecord, CertificationRecordIndex>(index => index.VerificationCode == code, collection: CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Lists the numbers of the certificates whose number starts with a prefix, to seed a number series.
+    /// </summary>
+    /// <param name="prefix">The prefix.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The numbers.</returns>
+    public async Task<IReadOnlyList<string>> ListNumbersAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        var rows = await Session.QueryIndex<CertificationRecordIndex>(index => index.Number.StartsWith(prefix), collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return rows.Select(row => row.Number).ToArray();
+    }
+
     public async Task<IReadOnlyList<CertificationRecord>> ListByIdsAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         var records = await Session.Query<CertificationRecord, CertificationRecordIndex>(index => index.ItemId.IsIn(ids), collection: CollectionName)

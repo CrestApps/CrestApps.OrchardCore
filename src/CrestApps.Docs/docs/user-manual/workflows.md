@@ -11,7 +11,7 @@ Workflows can react to contact center events and act on them without code. For e
 
 | | |
 | --- | --- |
-| **Menu** | Design > Workflows |
+| **Menu** | **Design** → **Workflows** |
 | **Permission** | Manage workflows |
 | **Features** | Workflows, plus the Contact Center features each task needs (see [Contact Center activities](#contact-center-activities)) |
 
@@ -25,7 +25,7 @@ The steps below build a workflow that starts recording every call as soon as it 
 
 <YouTube video="omnichannel-workflows" title="Video of creating a workflow and opening the event picker" start={35} end={68} />
 
-1. Open **Design > Workflows** and click **Create Workflow**. Enter a **Name** such as *Record connected calls* and click **Save**.
+1. Open **Design** → **Workflows** and click **Create Workflow**. Enter a **Name** such as *Record connected calls* and click **Save**.
 2. Click **Add Event**, find **Contact Center Event** and click its **Add** button.
 3. Pick the **Event type** to react to, for example **Call connected** (leave *Any event type* to react to every event), and click **Save**.
 4. Click **Add Task**, open the **Contact Center** category (the contact center tasks, including **Send Text Message**) or **Omnichannel CRM** (**Convert Lead**), find a task such as **Start Call Recording**, and click **Add**. Fill in its fields; for the interaction, use `{{ Workflow.Input.InteractionId }}` to take it from the event. Click **Save**.
@@ -81,6 +81,7 @@ Two events carry what a follow-up needs, such as a text message to a customer th
 | `Data.Source` | What applied it: `Agent`, `AI`, `Provider`, `Workflow` or `System`. |
 | `Data.PhoneNumber` | The number the activity was reaching. |
 | `Data.CompletedById` | The user who completed the activity, when a person did. |
+| `Data.AgentUserId` | The user the follow-up belongs to: the agent who took the call or, on an automated dial, the agent the dialer held for it, even when nobody answered and the system applied the disposition. Otherwise the agent who applied it. |
 | `Data.ActivityItemId`, `Data.ContactContentItemId`, `Data.CampaignId`, `Data.SubjectContentType`, `Data.Channel`, `Data.Attempts` | The activity, its contact, campaign, subject, channel and attempt count. |
 
 ### Call a contact again
@@ -114,10 +115,10 @@ Every Power, Progressive or Preview call that rings out now sends the text. Use 
 **Find Agent Numbers** looks up the numbers an agent calls and texts from and writes them to the workflow: `{{ Workflow.Output.AgentPhoneNumber }}` and `{{ Workflow.Output.AgentSmsNumber }}`. They come from the Omnichannel Address whose **Agents who dial from this number** or **Agents who text from this number** lists the agent, or else from the [default numbers](contact-center-settings.md#default-numbers). The **User name** field takes Liquid, and a user identifier or email works too. Leave it empty to get the default numbers. The task ends in **NotFound** only when it finds neither number.
 
 1. Start the workflow from the **Contact Center Event** that follows the call, for example **Activity disposition applied**.
-2. Add **Find Agent Numbers** with **User name** set to the user who handled the call: `{{ Workflow.Input.Data.CompletedById }}`.
-3. Add **Send Text Message** with **From** `{{ Workflow.Output.AgentSmsNumber }}`, **To** `{{ Workflow.Input.Data.PhoneNumber }}`, your **Message**, and **Agent** `{{ Workflow.Input.Data.CompletedById }}`, and connect the **Done** outcome of Find Agent Numbers to it.
+2. Add **Find Agent Numbers** with **User name** set to the agent the call belongs to: `{{ Workflow.Input.Data.AgentUserId }}`.
+3. Add **Send Text Message** with **From** `{{ Workflow.Output.AgentSmsNumber }}`, **To** `{{ Workflow.Input.Data.PhoneNumber }}`, your **Message**, and **Agent** `{{ Workflow.Input.Data.AgentUserId }}`, and connect the **Done** outcome of Find Agent Numbers to it.
 
-The text is sent by the provider that owns the number and lands in the customer's conversation in the [messaging workspace](messaging.md), owned by the agent, so the customer's reply reaches them. Leave **Agent** empty to send a system text instead.
+The text is sent by the provider that owns the number and lands in the customer's conversation in the [messaging workspace](messaging.md), owned by the agent, so the customer's reply reaches them. Leave **Agent** empty to send a system text instead. Use `AgentUserId` rather than `CompletedById`: when a Power dial reaches an answering machine, the system applies the disposition, so `CompletedById` is empty and the text would belong to no agent.
 
 ### Example: text a customer only once
 
@@ -135,7 +136,7 @@ Use **Update Contact** here rather than **Update Content Item**. Update Content 
 
 Open the workflow's editor and click **Instances** (at the top right) to list its runs. Each run shows its status, such as **Finished**, and when it ran. Click a run to see the path it took through the workflow: **Restart** runs it again and **Delete** removes it. The workflow's **Properties** hold **Enabled**, **Single instance** and **Delete successfully completed workflows**.
 
-Every contact center event starts a run of each workflow that begins with a **Contact Center Event**, so a busy contact center produces many runs. A run for an event of another type ends at the **Ignored** outcome and does nothing. To keep the list short, tick **Delete successfully completed workflows** in the workflow's **Properties**, or open **Settings > Workflow Trimming**: **Statuses** picks which runs to remove once they pass the **Retention period** (90 days by default), and **Disable** turns the trimming off.
+Every contact center event starts a run of each workflow that begins with a **Contact Center Event**, so a busy contact center produces many runs. A run for an event of another type ends at the **Ignored** outcome and does nothing. To keep the list short, tick **Delete successfully completed workflows** in the workflow's **Properties**, or open **Settings** → **Workflow Trimming**: **Statuses** picks which runs to remove once they pass the **Retention period** (90 days by default), and **Disable** turns the trimming off.
 
 ## Contact Center activities
 

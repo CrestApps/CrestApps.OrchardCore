@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Intraday;
@@ -24,7 +25,7 @@ public sealed class IntradayController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IntradayService _intradayService;
     private readonly PlanningGroupManager _groupManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
@@ -46,7 +47,7 @@ public sealed class IntradayController : Controller
         IAuthorizationService authorizationService,
         IntradayService intradayService,
         PlanningGroupManager groupManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ISession session,
         IClock clock,
         INotifier notifier,

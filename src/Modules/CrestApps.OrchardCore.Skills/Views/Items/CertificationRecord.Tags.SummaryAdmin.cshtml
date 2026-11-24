@@ -19,7 +19,7 @@
 }
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid @statusIcon me-1" aria-hidden="true"></i>@statusText</span>
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Valid until"]"><i class="fa-solid fa-calendar-day text-secondary me-1" aria-hidden="true"></i>@(record.ExpiresOn?.ToString("d") ?? T["Never expires"].Value)</span>
-@if (record.SubjectKind == SkillSubjectKind.Worker)
+@if (record.SubjectKind == SkillSubjectKind.Staff)
 {
-    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Held by"]"><i class="fa-solid fa-helmet-safety text-secondary me-1" aria-hidden="true"></i>@T["Worker"]</span>
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Held by"]"><i class="fa-solid fa-helmet-safety text-secondary me-1" aria-hidden="true"></i>@T["Staff member"]</span>
 }

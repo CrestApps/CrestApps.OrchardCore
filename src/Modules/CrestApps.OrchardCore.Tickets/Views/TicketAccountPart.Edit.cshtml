@@ -1,0 +1,9 @@
+@model TicketAccountPartViewModel
+
+<div class="mb-3">
+    <label asp-for="ServiceLevelPolicyId" class="form-label">@T["Ticket service level"]</label>
+    <select asp-for="ServiceLevelPolicyId" asp-items="Model.Policies" class="form-select">
+        <option value="">@T["The ticket type's or desk's"]</option>
+    </select>
+    <span class="hint">@T["The service-level policy this account's tickets run on, before the ticket type's and the desk's, such as a premium support plan."]</span>
+</div>

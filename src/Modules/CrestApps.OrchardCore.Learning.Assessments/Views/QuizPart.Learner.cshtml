@@ -1,0 +1,107 @@
+@model QuizPanelViewModel
+@inject CrestApps.OrchardCore.Learning.Assessments.Core.Services.AttemptReviewPolicy AttemptReview
+
+@{
+    var quiz = Model.Quiz;
+}
+
+<div class="card mb-3 learning-quiz" data-learning-quiz>
+    <div class="card-body">
+        <ul class="list-inline text-secondary small mb-3">
+            @if (Model.QuestionCount > 0)
+            {
+                <li class="list-inline-item"><i class="fa-regular fa-circle-question me-1" aria-hidden="true"></i>@T["{0} questions", Model.QuestionCount]</li>
+            }
+            @if (quiz.TimeLimitMinutes is { } minutes)
+            {
+                <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["{0} minutes", minutes]</li>
+            }
+            @if (quiz.MaxAttempts is { } max)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["{0} attempts allowed", max]</li>
+            }
+            @if (quiz.PassMark is { } passMark)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-flag-checkered me-1" aria-hidden="true"></i>@T["Pass mark {0}%", passMark.ToString("0.##")]</li>
+            }
+            @if (quiz.ClosesUtc is { } closes)
+            {
+                <li class="list-inline-item"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Closes"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(closes, DateTimeKind.Utc), Format: "g"))</li>
+            }
+        </ul>
+
+        @if (!Model.SignedIn)
+        {
+            <p class="mb-0">@T["Sign in to take this quiz."]</p>
+        }
+        else if (Model.Open is not null)
+        {
+            <a class="btn btn-primary" href="@Url.RouteUrl("LearningAttempt", new { attemptId = Model.Open.ItemId })"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@T["Continue the attempt"]</a>
+        }
+        else if (Model.AttemptsLeft is 0)
+        {
+            <p class="mb-0">@T["You have used every attempt of this quiz."]</p>
+        }
+        else
+        {
+            <form method="post" action="@Url.RouteUrl("LearningQuizStart", new { quizId = Model.QuizId })">
+                @Html.AntiForgeryToken()
+                @if (Model.NeedsAccessCode)
+                {
+                    <div class="mb-2">
+                        <label class="form-label" for="quiz-access-code-@Model.QuizId">@T["Access code"]</label>
+                        <input class="form-control" id="quiz-access-code-@Model.QuizId" name="accessCode" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore required />
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(quiz.HonorStatement))
+                {
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="honor" value="true" id="quiz-honor-@Model.QuizId" required />
+                        <label class="form-check-label" for="quiz-honor-@Model.QuizId">@quiz.HonorStatement</label>
+                    </div>
+                }
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Attempts.Count == 0 ? T["Start the quiz"] : T["Start another attempt"])</button>
+                @if (quiz.TimeLimitMinutes is { } limit)
+                {
+                    <span class="hint ms-2">@T["The time starts when you select Start and keeps running if you leave the page."]</span>
+                }
+            </form>
+        }
+
+        @if (Model.Attempts.Count > 0)
+        {
+            <h2 class="h6 mt-4">@T["Your attempts"]</h2>
+            <ul class="list-group">
+                @foreach (var attempt in Model.Attempts)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span>
+                            <a href="@Url.RouteUrl("LearningAttempt", new { attemptId = attempt.ItemId })">@T["Attempt {0}", attempt.Sequence]</a>
+                            <span class="text-secondary small ms-2">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(attempt.StartedUtc, DateTimeKind.Utc), Format: "g"))</span>
+                        </span>
+                        <span>
+                            @switch (attempt.Status)
+                            {
+                                case AttemptStatus.InProgress:
+                                    <span class="badge text-bg-primary">@T["In progress"]</span>
+                                    break;
+                                case AttemptStatus.NeedsGrading:
+                                    <span class="badge text-bg-warning">@T["Waiting for a grader"]</span>
+                                    break;
+                                case AttemptStatus.Graded when AttemptReview.CanSeeScore(attempt):
+                                    <span class="badge @(attempt.Passed == true ? "text-bg-success" : "text-bg-secondary")">@(attempt.Percent?.ToString("0.##"))%</span>
+                                    break;
+                                case AttemptStatus.Voided:
+                                    <span class="badge text-bg-light border">@T["Cancelled"]</span>
+                                    break;
+                                default:
+                                    <span class="badge text-bg-light border">@T["Submitted"]</span>
+                                    break;
+                            }
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

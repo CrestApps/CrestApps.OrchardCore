@@ -18,7 +18,7 @@ Use webhooks to:
 
 | | |
 | --- | --- |
-| **Menu** | Configuration > Webhooks |
+| **Menu** | **Configuration** → **Webhooks** |
 | **Permission** | **Manage webhooks** |
 | **Feature** | Commerce Webhooks (it turns on Webhooks) |
 
@@ -34,7 +34,7 @@ The system that receives the messages is called the **receiver**. Whoever builds
 
 <YouTube video="webhooks" title="Video of adding a webhook" start={81} end={132} />
 
-1. Open **Configuration > Webhooks** and click **Add webhook**.
+1. Open **Configuration** → **Webhooks** and click **Add webhook**.
 2. Fill in the fields (below).
 3. Click **Save**.
 
@@ -47,7 +47,7 @@ The system that receives the messages is called the **receiver**. Whoever builds
 | **On** | Turn it off to stop sending without losing the webhook. Messages waiting to be tried again aren't sent either: they're marked **Failed**, with *The webhook was turned off.* |
 | **Events** | The events to send (below). Tick **Every event, those added later too** to send them all, including events added to the store later. Choose at least one. |
 
-**Commerce > Webhooks** lists your webhooks, each with whether it's **On** or **Off** and how many events it sends. Click a webhook's name, or **Edit**, to change it. **Delete**, on its page, removes it and its deliveries log: nothing more is sent to it.
+**Commerce** → **Webhooks** lists your webhooks, each with whether it's **On** or **Off** and how many events it sends. Click a webhook's name, or **Edit**, to change it. **Delete**, on its page, removes it and its deliveries log: nothing more is sent to it.
 
 ## The events
 
@@ -61,7 +61,7 @@ Each event has a name, which the receiver reads, and a label you see when choosi
 | `order.paid` | Order paid | The order's checkout is completed. An order placed to pay offline, such as by bank transfer, is sent when it's placed, before the money arrives. | `order` |
 | `order.canceled` | Order canceled | The order is canceled, by your store or because its checkout didn't finish. | `order`, and `reason` |
 | `order.refunded` | Order refunded | Money is given back on the order, once for each refund, in full or in part. | `order`, and `refund` |
-| `customer.created` | Customer created | A customer record is made: for a guest who buys, the first time a signed-in buyer needs one (their first checkout, or opening **My account**), when you add one under **Commerce > Customers**, or when a recipe adds one. | `customer` |
+| `customer.created` | Customer created | A customer record is made: for a guest who buys, the first time a signed-in buyer needs one (their first checkout, or opening their **Account**), when you add one under **Commerce** → **Customers**, or when a recipe adds one. | `customer` |
 | `shipment.shipped` | Shipment shipped | A shipment is marked shipped, with its carrier and tracking. | `shipment`, `orderNumber` and `customerEmail` |
 | `shipment.delivered` | Shipment delivered | A shipment is marked delivered. | `shipment`, `orderNumber` and `customerEmail` |
 | `stock.changed` | Stock changed | What's available of a product or variant changes: a sale, units held while a buyer pays and let go again, units received, an adjustment or a count. Several changes saved together send one event. A move between locations doesn't change what's available, so it sends nothing. | `stock`, and `previousAvailable` |

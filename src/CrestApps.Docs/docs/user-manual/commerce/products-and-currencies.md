@@ -17,7 +17,7 @@ The currencies you add here are the ones offered in every currency drop-down of 
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Currencies |
+| **Menu** | **Commerce** → **Currencies** |
 | **Permission** | Manage currencies |
 | **Feature** | Products |
 
@@ -29,7 +29,7 @@ This video walks through the product screens, from currencies and a first produc
 
 ### Add a currency
 
-1. Open **Commerce > Currencies** and click **Add Currency**.
+1. Open **Commerce** → **Currencies** and click **Add Currency**.
 2. Enter the **Currency code** and the **Display name**.
 3. Click **Save**. The message *A new currency has been created successfully.* confirms it.
 
@@ -53,13 +53,13 @@ You add the **Product** part to the content type that describes what you sell, f
 
 | | |
 | --- | --- |
-| **Menu** | Design > Content Definition > Content Types |
+| **Menu** | **Design** → **Content Definition** → **Content Types** |
 | **Permission** | Edit content types |
 | **Feature** | Products |
 
 <AskYourAdmin />
 
-1. Open **Design > Content Definition > Content Types** and edit the content type, or create one.
+1. Open **Design** → **Content Definition** → **Content Types** and edit the content type, or create one.
 2. Click **Add Parts**, tick **Product**, and save. Tick **Product prices** as well if items should offer more than one way to buy them, such as monthly and yearly, or **Product variants** if items come in versions such as sizes and colors.
 3. Back on the content type, click **Edit** next to the **Product** part to set its options (below), and save.
 
@@ -73,6 +73,7 @@ You add the **Product** part to the content type that describes what you sell, f
 | **Price display** | How the price is shown to visitors: **Show the price**, **Show on request** (a label such as *Call for price* instead of the price) or **Hide the price**. |
 | **On-request label** | The text shown instead of the price when it is shown on request. |
 | **Let each product choose how its price is shown** | Adds a **Price display** choice to each item that overrides the setting above. |
+| **A product without a price is not for sale** | Lets an item of this type be saved with no price. It then shows no price and cannot be bought. Courses and learning paths have it on. |
 
 The same part's settings also lay out each product's own page and its inquiry button; see [Product listings](product-listings.md#lay-out-the-product-pages).
 
@@ -130,7 +131,7 @@ A product that comes in versions, such as a shirt in three sizes and two colors,
 
 First, give the content type its options:
 
-1. Open **Design > Content Definition > Content Types**, edit the type, click **Add Parts**, and add **Product variants**.
+1. Open **Design** → **Content Definition** → **Content Types**, edit the type, click **Add Parts**, and add **Product variants**.
 2. Click **Edit** next to the **Product variants** part.
 3. Under **Options**, enter one option per row, such as *Size* and *Color*. Tick **Filterable** for an option visitors can filter listings by. Save; saving offers empty rows for more options, and clearing a name removes that option.
 
@@ -195,7 +196,7 @@ Its stock is what its parts in stock can make: with 4 caps left and 2 in each ki
 
 <YouTube video="product-import-and-feeds" title="Import and export products" start={133} end={169} />
 
-Products import and export like any other content, with the **Content Transfer** feature (**Content > Bulk Import** and **Bulk Export**), in a CSV file or, with its OpenXml feature, an Excel workbook.
+Products import and export like any other content, with the **Content Transfer** feature (**Content** → **Bulk Import** and **Bulk Export**), in a CSV file or, with its OpenXml feature, an Excel workbook.
 
 Each product is a row, and its product details are columns: the price, compare-at and sale prices with the sale's dates, SKU, currency, the address of a product sold elsewhere, quantity rules, the options and variants, the category and brand by name, and the stock. Download a template from the import page to see them all. An export has the same columns, so you can change prices in a spreadsheet and import the file back.
 
@@ -204,7 +205,7 @@ Rows are matched to your products by SKU, the product's own or a variant's, so a
 - A row whose SKU is already in your store updates that product when the file has the **ContentItemId** column, as an export has. Without that column, the row is skipped and the import says why.
 - A row whose SKU an earlier row of the file used is skipped, with the row it repeats.
 
-To move from another store, export your products from Shopify (**Products > Export**) or WooCommerce (**Products > Export**) and import the file as your product type. It's read as it is:
+To move from another store, export your products from Shopify (**Products** → **Export**) or WooCommerce (**Products** → **Export**) and import the file as your product type. It's read as it is:
 
 - **Variants** come in when the type has the **Product variants** part with options of the same names, such as *Size*. Otherwise the product comes in as one product, from its lowest price, with the stock of all its variants.
 - **Categories and brands** go to the type's taxonomy fields named like *Category* and *Brand*, matched to their terms by name.

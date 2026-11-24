@@ -11,7 +11,7 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Dialer Profiles |
+| **Menu** | **Interaction Center** → **Management** → **Dialer Profiles** |
 | **Permission** | Manage the Contact Center dialer |
 | **Features** | Contact Center Outbound Dialer for Preview. Contact Center Paced Dialing adds Power, Progressive and Predictive. |
 
@@ -90,7 +90,7 @@ The dialer still looks at every campaign once a minute as well, whatever else is
 
 The form is made of cards: **General**, **Dialing**, **Caller ID**, **Compliance**, **Abandoned calls** and **Predictive pacing**. **Abandoned calls** appears for the Power, Progressive and Predictive modes, and **Predictive pacing** only for Predictive.
 
-1. Open **Interaction Center > Management > Dialer Profiles** and click **Add Dialer Profile**.
+1. Open **Interaction Center** → **Management** → **Dialer Profiles** and click **Add Dialer Profile**.
 2. On **General**, enter a **Name**, an optional **Description**, and leave **Enabled** ticked. A disabled profile places no calls, and the records loaded under it aren't offered to agents until you turn it back on.
 3. On **Dialing**, pick the **Mode** and the **Voice call provider** (or *Default provider*). Power, Progressive and Predictive show extra fields:
 
@@ -109,8 +109,8 @@ The form is made of cards: **General**, **Dialing**, **Caller ID**, **Compliance
    | Field | What it does |
    | --- | --- |
    | **Respect do-not-call and communication preferences** | Skips contacts who opted out of calls and numbers on a national do-not-call registry. On by default. |
-   | **Enforce a calling window** | Dials only while the chosen calendar is open, checked in the **contact's** time zone. |
-   | **Outbound calling calendar** | The [business hours calendar](business-hours.md) for the calling window. Required when the window is enforced. |
+   | **Enforce a calling window** | Dials only while the chosen hours are open, checked in the **contact's** time zone. |
+   | **Outbound calling hours** | The [business hours schedule](business-hours.md) for the calling window. Required when the window is enforced. |
 
 6. On **Abandoned calls** (Power, Progressive and Predictive):
 
@@ -198,7 +198,7 @@ Keep the message short and say who is calling and a number the person can call t
 
 | Placeholder | Replaced with |
 | --- | --- |
-| `{company}` | The site name (**Configuration > Settings > General**). |
+| `{company}` | The site name (**Configuration** → **Settings** → **General**). |
 | `{number}` | The number the call came from (the caller ID the person saw), read digit by digit. |
 
 The editor suggests this message when the field is empty: `Sorry we missed you. This call was from {company}. To be removed from our list or to reach us, please call {number}. Goodbye.`

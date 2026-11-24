@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -55,7 +56,7 @@ internal static class FieldServiceLookups
             ?? (visits.Count > 0 ? visits[0] : null);
     }
 
-    public static async Task<WorkerProfile> WorkerAsync(IServiceProvider services, string name, CancellationToken cancellationToken)
+    public static async Task<StaffMember> WorkerAsync(IServiceProvider services, string name, CancellationToken cancellationToken)
     {
         var text = Normalize(name);
 

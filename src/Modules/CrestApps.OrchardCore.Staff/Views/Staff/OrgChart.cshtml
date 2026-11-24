@@ -1,0 +1,132 @@
+@model StaffOrgChartViewModel
+
+@{
+    var teams = (IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["TeamOptions"];
+}
+
+<zone Name="Title"><breadcrumb name="StaffOrgChart" title="@T["Organization Chart"]" /></zone>
+
+<script asp-name="d3-org-chart" at="Foot"></script>
+
+<style at="Head">
+    .staff-org-chart { height: calc(100vh - 230px); min-height: 480px; background: var(--bs-tertiary-bg); border-radius: var(--bs-border-radius); }
+    .staff-org-node { box-sizing: border-box; height: 100%; display: flex; align-items: center; gap: .75rem; padding: .75rem; background: var(--bs-body-bg); color: var(--bs-body-color); border: 1px solid var(--bs-border-color); border-radius: .75rem; box-shadow: var(--bs-box-shadow-sm); font-family: var(--bs-body-font-family); }
+    .staff-org-node.is-root { justify-content: center; font-weight: 600; background: var(--bs-secondary-bg); }
+    .staff-org-avatar { flex: 0 0 56px; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; color: var(--bs-primary); background: var(--bs-primary-bg-subtle); }
+    .staff-org-text { min-width: 0; line-height: 1.25; }
+    .staff-org-name { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--bs-body-color); text-decoration: none; }
+    a.staff-org-name:hover { color: var(--bs-link-hover-color); text-decoration: underline; }
+    .staff-org-title, .staff-org-team { display: block; font-size: .825rem; color: var(--bs-secondary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .staff-org-team { font-size: .75rem; }
+</style>
+
+<form asp-action="OrgChart" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 align-items-center">
+                @if (teams.Count > 0)
+                {
+                    <div class="col-auto">
+                        <select name="teamId" class="form-select" aria-label="@T["Team"]" onchange="this.form.submit()">
+                            <option value="">@T["Everyone"]</option>
+                            @foreach (var option in teams)
+                            {
+                                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                            }
+                        </select>
+                    </div>
+                }
+                <div class="col text-secondary small">@T["{0} working staff members", Model.Count]</div>
+                @if (Model.Nodes.Count > 0)
+                {
+                    <div class="col-auto">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="@T["Chart"]">
+                            <button type="button" class="btn btn-outline-secondary" data-org-chart="fit" title="@T["Fit to screen"]"><i class="fa-solid fa-expand" aria-hidden="true"></i><span class="visually-hidden">@T["Fit to screen"]</span></button>
+                            <button type="button" class="btn btn-outline-secondary" data-org-chart="zoom-in" title="@T["Zoom in"]"><i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i><span class="visually-hidden">@T["Zoom in"]</span></button>
+                            <button type="button" class="btn btn-outline-secondary" data-org-chart="zoom-out" title="@T["Zoom out"]"><i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i><span class="visually-hidden">@T["Zoom out"]</span></button>
+                            <button type="button" class="btn btn-outline-secondary" data-org-chart="expand" title="@T["Expand all"]"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i><span class="visually-hidden">@T["Expand all"]</span></button>
+                            <button type="button" class="btn btn-outline-secondary" data-org-chart="collapse" title="@T["Collapse all"]"><i class="fa-solid fa-down-left-and-up-right-to-center" aria-hidden="true"></i><span class="visually-hidden">@T["Collapse all"]</span></button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Nodes.Count == 0)
+{
+    <div class="alert alert-info">@T["<strong>Nothing here!</strong> No working staff members."]</div>
+}
+else
+{
+    <div id="staff-org-chart" class="staff-org-chart" role="img" aria-label="@T["Organization chart of {0} working staff members", Model.Count]"></div>
+
+    <script at="Foot">
+        (() => {
+            const container = document.getElementById('staff-org-chart');
+
+            if (!container || !window.d3 || typeof d3.OrgChart !== 'function') {
+                return;
+            }
+
+            const people = @Json.Serialize(Model.Nodes);
+            const rootName = @Json.Serialize(Site.SiteName ?? T["Organization"].Value);
+            const roots = people.filter(person => !person.parentId);
+            let nodes = people;
+
+            // The chart draws one tree, so people at the top hang from the organization when there are several.
+            if (roots.length > 1) {
+                const rootId = 'staff-org-root';
+
+                nodes = [{ id: rootId, parentId: null, name: rootName, isRoot: true }]
+                    .concat(people.map(person => person.parentId ? person : { ...person, parentId: rootId }));
+            }
+
+            const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+
+            const content = node => {
+                const person = node.data;
+
+                if (person.isRoot) {
+                    return `<div class="staff-org-node is-root"><i class="fa-solid fa-sitemap" aria-hidden="true"></i><span>${escape(person.name)}</span></div>`;
+                }
+
+                const picture = person.avatarUrl
+                    ? `<img class="staff-org-avatar" src="${escape(person.avatarUrl)}" alt="" />`
+                    : `<span class="staff-org-avatar" aria-hidden="true">${escape(person.initials)}</span>`;
+                const name = person.url
+                    ? `<a class="staff-org-name" href="${escape(person.url)}">${escape(person.name)}</a>`
+                    : `<span class="staff-org-name">${escape(person.name)}</span>`;
+                const title = person.jobTitle ? `<span class="staff-org-title">${escape(person.jobTitle)}</span>` : '';
+                const team = person.teamName ? `<span class="staff-org-team"><i class="fa-solid fa-people-group me-1" aria-hidden="true"></i>${escape(person.teamName)}</span>` : '';
+
+                return `<div class="staff-org-node">${picture}<div class="staff-org-text">${name}${title}${team}</div></div>`;
+            };
+
+            const chart = new d3.OrgChart()
+                .container(container)
+                .data(nodes)
+                .nodeWidth(node => node.data.isRoot ? 220 : 260)
+                .nodeHeight(node => node.data.isRoot ? 56 : 92)
+                .childrenMargin(() => 48)
+                .compactMarginBetween(() => 28)
+                .compactMarginPair(() => 64)
+                .siblingsMargin(() => 24)
+                .initialExpandLevel(3)
+                .nodeContent(content)
+                .render()
+                .fit();
+
+            const actions = {
+                'fit': () => chart.fit(),
+                'zoom-in': () => chart.zoomIn(),
+                'zoom-out': () => chart.zoomOut(),
+                'expand': () => chart.expandAll().fit(),
+                'collapse': () => chart.collapseAll().fit(),
+            };
+
+            document.querySelectorAll('[data-org-chart]').forEach(button => button.addEventListener('click', () => actions[button.dataset.orgChart]?.()));
+        })();
+    </script>
+}

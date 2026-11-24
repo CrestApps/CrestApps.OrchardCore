@@ -26,7 +26,7 @@ A supported Contact Center tenant enables roughly a dozen features across the ba
 
 <YouTube video="contact-center-configuration-deployment" title="Video of the Contact Center feature recipe" start={96} end={123} />
 
-Enable **Recipes** (`OrchardCore.Recipes`), then run the recipe for your provider from **Configuration → Recipes**. Orchard Core resolves feature dependencies, so the listed features and anything they depend on are enabled together. Each recipe enables the base orchestration and administration menu, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the provider's Contact Center voice adapter. Each capability includes the screens needed to configure its queues, agents, entry points, or dialer profiles after the recipe runs.
+Enable **Recipes** (`OrchardCore.Recipes`), then run the recipe for your provider from **Configuration** → **Recipes**. Orchard Core resolves feature dependencies, so the listed features and anything they depend on are enabled together. Each recipe enables the base orchestration and administration menu, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the provider's Contact Center voice adapter. Each capability includes the screens needed to configure its queues, agents, entry points, or dialer profiles after the recipe runs.
 
 The feature list in each recipe is the coherent, certified combination for its tenant profile: each recipe enables exactly its profile's certified feature set, and never an unlisted (unsupported) combination. There is deliberately no "inbound-only" or "outbound-only" recipe: the certified profiles bundle inbound voice with preview and manual dialing, and a partial split would be an unlisted feature combination. The recipes enable features only; they carry no queues, skills, entry points, or dialer profiles, because that configuration references environment-specific resources (a configured provider, its channel endpoints, and campaigns). Configure your provider and then define or import that configuration with the steps below.
 
@@ -38,13 +38,15 @@ Each configurable entity has its own deployment step and a matching recipe step,
 | --- | --- | --- | --- |
 | Skill | Contact Center Skills | `ContactCenterSkill` | `Skills` |
 | Queue group | Contact Center Queue Groups | `ContactCenterQueueGroup` | `QueueGroups` |
-| Business hours calendar | Contact Center Business Hours Calendars | `ContactCenterBusinessHoursCalendar` | `Calendars` |
+| Business hours schedule | Business hours schedules (category **Configuration**, from the Business Hours module) | `BusinessHoursSchedules` | `Schedules` |
 | Queue | Contact Center Queues | `ContactCenterQueue` | `Queues` |
 | Entry point | Contact Center Entry Points | `ContactCenterEntryPoint` | `EntryPoints` |
 | Dialer profile | Contact Center Dialer Profiles | `ContactCenterDialerProfile` | `DialerProfiles` |
 | Agent state reason code | Contact Center Agent State Reason Codes | `AgentStateReasonCode` | `ReasonCodes` |
 | Agent entitlements | Contact Center Agent Entitlements | `ContactCenterAgentEntitlement` | `Agents` |
 | Voice media clip | Contact Center Voice Media Library | `ContactCenterVoiceMedia` | `VoiceMedia` |
+
+Queues, entry points and dialer profiles name their business hours by schedule id. The `ContactCenterBusinessHoursCalendar` step of older recipes is still read: each calendar is imported as a Business Hours schedule, keeping its id when it is a valid id, so the queues and entry points of the same recipe keep their hours. Plans no longer offer that step; export the hours with the **Business hours schedules** step.
 
 The CRM configuration a contact centre routes and reports on travels the same way. Those steps are described in [Omnichannel management](../omnichannel/management.md#exporting-and-importing-configuration).
 
@@ -86,7 +88,7 @@ The telephony provider settings are different, because they hold credentials. Ea
 
 
 1. Enable **Deployment** (`OrchardCore.Deployment`) alongside the Contact Center features you use.
-2. Go to **Configuration → Import/Export → Deployment Plans** and create a plan.
+2. Go to **Configuration** → **Import/Export** → **Deployment Plans** and create a plan.
 3. Add the Contact Center steps you need. Each step exports every entry of its type.
 4. Add the Omnichannel steps as well if the tenant runs campaigns, dispositions, or subject flows.
 5. Execute the plan with the **Download** target.
@@ -96,7 +98,7 @@ The telephony provider settings are different, because they hold credentials. Ea
 <YouTube video="contact-center-configuration-deployment" title="Video of replaying a plan with Package Import" start={161} end={207} />
 
 
-Enable **Recipes** (`OrchardCore.Recipes.Core`) in the destination, then import the plan from **Configuration → Import/Export → Package Import**, or include the steps in a setup recipe.
+Enable **Recipes** (`OrchardCore.Recipes.Core`) in the destination, then import the plan from **Configuration** → **Import/Export** → **Package Import**, or include the steps in a setup recipe.
 
 Import is idempotent, which is what makes a plan safe to replay:
 
@@ -110,7 +112,7 @@ Because identifiers are preserved, cross-references keep working after the impor
 
 A recipe runs its steps in file order, and a reference is checked when the entry that carries it is stored. Order a plan's Contact Center steps as follows:
 
-1. Voice media clips, skills, queue groups, and business hours calendars.
+1. Voice media clips, skills, queue groups, and business hours schedules.
 2. Queues.
 3. Entry points.
 4. Dialer profiles.

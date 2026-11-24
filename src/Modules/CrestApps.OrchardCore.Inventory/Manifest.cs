@@ -40,7 +40,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = InventoryConstants.Features.PurchaseOrders,
     Name = "Purchase Orders",
-    Description = "Orders stock from suppliers and receives it at a location, under Commerce > Purchase orders.",
+    Description = "Orders stock from suppliers and receives it at a location, under Commerce > Purchase Orders.",
     Category = "Commerce",
     Dependencies =
     [

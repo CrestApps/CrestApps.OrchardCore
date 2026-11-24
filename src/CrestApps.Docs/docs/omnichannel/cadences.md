@@ -16,7 +16,7 @@ user_manual:
 
 A **cadence** is a reusable, named series of follow-up messages that re-engages a contact who has gone quiet in an **automated** conversation. You define a cadence once, then select it in the **Re-engagement** field of any **Automatic** activity load. A load with no cadence selected never sends follow-ups, so re-engagement is off by default.
 
-Cadences are administered from **Interaction Center > Management > Cadences** (requires the **Manage cadences** permission, `ManageCadences`), alongside campaigns and dispositions. Cadences can be created, edited, and deleted; unlike campaigns, which cannot be deleted. For a step-by-step walkthrough, see [Cadences](../user-manual/cadences.md) in the user manual.
+Cadences are administered from **Interaction Center** → **Management** → **Cadences** (requires the **Manage cadences** permission, `ManageCadences`), alongside campaigns and dispositions. Cadences can be created, edited, and deleted; unlike campaigns, which cannot be deleted. For a step-by-step walkthrough, see [Cadences](../user-manual/cadences.md) in the user manual.
 
 ## What a cadence contains
 
@@ -39,7 +39,7 @@ The same activity load also has a **Business hours** field (see below), which ev
 
 ## Business hours
 
-Every follow-up is **background-initiated** — the automation sends it on its own, not in response to a live message. Such sends are only made while the activity load's **business-hours calendar** is open, evaluated in the **contact's local time zone**, so a contact is never followed up after hours. Business-hours calendars come from the shared [Business Hours](../modules/business-hours.md) building block, which today reads the calendars of the [Contact Center](../contact-center/index.md) **Business Hours** feature; enable that feature to define calendars (the SMS automation feature no longer turns it on by itself). When no calendar is set the cadence still runs but is not restricted by hours.
+Every follow-up is **background-initiated** — the automation sends it on its own, not in response to a live message. Such sends are only made while the activity load's **business hours** schedule is open, evaluated in the **contact's local time zone**, so a contact is never followed up after hours. The schedules come from the shared [Business Hours](../modules/business-hours.md) building block, edited under **Content** → **Business Hours**; enable the Business Hours feature to define them (the SMS automation feature does not turn it on by itself). When no schedule is set the cadence still runs but is not restricted by hours.
 
 A **live reply** to a contact who is *actively messaging* is never gated — only the proactive follow-ups a cadence sends are. Likewise, a reply the automation owes to a message the contact just sent is completed normally, not treated as a follow-up.
 

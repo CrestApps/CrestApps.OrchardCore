@@ -90,12 +90,13 @@ public sealed class DefaultTeamMembershipService : ITeamMembershipService
         return memberships.Any(membership => subtree.Contains(membership.TeamId));
     }
 
-    // Keeps one membership per team and user, the first a provider gave, after leaving out those that don't count on the day.
+    // Keeps one membership per team and person, the first a provider gave, after leaving out those that don't count on
+    // the day. A person is their user, or their staff record when they have no account (such as kiosk-only staff).
     private static List<TeamMember> Distinct(IEnumerable<TeamMember> memberships, DateOnly? on)
         => [.. memberships
             .Where(membership => membership is not null
                 && !string.IsNullOrEmpty(membership.TeamId)
-                && !string.IsNullOrEmpty(membership.UserId)
+                && (!string.IsNullOrEmpty(membership.UserId) || !string.IsNullOrEmpty(membership.StaffMemberId))
                 && (on is null || membership.IsEffectiveOn(on.Value)))
-            .DistinctBy(membership => (membership.TeamId, membership.UserId))];
+            .DistinctBy(membership => (membership.TeamId, string.IsNullOrEmpty(membership.UserId) ? "staff:" + membership.StaffMemberId : membership.UserId))];
 }

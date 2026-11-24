@@ -1,0 +1,134 @@
+@model TaxReturnEFilingViewModel
+@using CrestApps.OrchardCore.Taxation
+@using System.Globalization
+
+@{
+    var taxReturn = Model.Return;
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Electronic filing"]</div>
+    <div class="card-body">
+        @if (Model.Submissions.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>@T["Submitted"]</th>
+                            <th>@T["Channel"]</th>
+                            <th>@T["Status"]</th>
+                            <th>@T["Confirmation number"]</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var submission in Model.Submissions)
+                        {
+                            var status = submission.Status switch
+                            {
+                                EFileSubmissionStatus.Submitted when submission.IsTest => T["Test: waiting for the agency's answer"],
+                                EFileSubmissionStatus.Submitted => submission.IsManual ? T["Waiting for the agency's answer to be recorded"] : T["Waiting for the agency's answer"],
+                                EFileSubmissionStatus.Accepted => submission.IsTest ? T["Accepted as a test: nothing was filed"] : T["Accepted"],
+                                EFileSubmissionStatus.Rejected => submission.IsTest ? T["Test rejected"] : T["Rejected"],
+                                EFileSubmissionStatus.Failed => T["Not sent"],
+                                _ => T["Created"],
+                            };
+
+                            <tr>
+                                <td>
+                                    @if (submission.SubmittedUtc is { } submitted)
+                                    {
+                                        @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(submitted, DateTimeKind.Utc), Format: "g"))
+                                    }
+                                </td>
+                                <td>@(Model.TransportNames.TryGetValue(submission.Transport ?? string.Empty, out var transportName) ? transportName : submission.Transport)</td>
+                                <td>
+                                    @status
+                                    @foreach (var message in submission.Messages)
+                                    {
+                                        <div class="text-muted small">@message</div>
+                                    }
+                                </td>
+                                <td>@submission.ConfirmationNumber</td>
+                                <td class="text-end text-nowrap">
+                                    @if (Model.CanFile && !string.IsNullOrEmpty(submission.Content))
+                                    {
+                                        <a asp-action="Download" asp-controller="EFiling" asp-route-id="@submission.ItemId" class="btn btn-sm btn-secondary">@T["Download"]</a>
+                                    }
+                                    @if (Model.CanFile && submission.Status == EFileSubmissionStatus.Submitted && !submission.IsManual)
+                                    {
+                                        <form asp-action="Check" asp-controller="EFiling" asp-route-id="@submission.ItemId" method="post" class="d-inline no-multisubmit">
+                                            <button type="submit" class="btn btn-sm btn-secondary">@T["Check the answer"]</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+
+                            @if (Model.CanFile && submission.Status == EFileSubmissionStatus.Submitted && submission.IsManual)
+                            {
+                                <tr>
+                                    <td colspan="5">
+                                        <form asp-action="RecordAnswer" asp-controller="EFiling" asp-route-id="@submission.ItemId" method="post" class="no-multisubmit">
+                                            <div class="ocat-wrapper">
+                                                <label for="answer-@submission.ItemId" class="ocat-label">@T["The agency"]</label>
+                                                <div class="ocat-end">
+                                                    <select id="answer-@submission.ItemId" name="accepted" class="form-select" style="max-width: 20rem">
+                                                        <option value="true">@T["Accepted the return"]</option>
+                                                        <option value="false">@T["Rejected the return"]</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="ocat-wrapper">
+                                                <label for="filedOn-@submission.ItemId" class="ocat-label">@T["Filed on"]</label>
+                                                <div class="ocat-end">
+                                                    <input id="filedOn-@submission.ItemId" name="filedOn" type="date" class="form-control" style="max-width: 12rem" value="@Model.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
+                                                </div>
+                                            </div>
+                                            <div class="ocat-wrapper">
+                                                <label for="confirmation-@submission.ItemId" class="ocat-label">@T["Confirmation number"]</label>
+                                                <div class="ocat-end">
+                                                    <input id="confirmation-@submission.ItemId" name="confirmationNumber" class="form-control" style="max-width: 20rem" />
+                                                </div>
+                                            </div>
+                                            <div class="ocat-wrapper">
+                                                <label for="message-@submission.ItemId" class="ocat-label">@T["Message"]</label>
+                                                <div class="ocat-end">
+                                                    <input id="message-@submission.ItemId" name="message" class="form-control" />
+                                                    <span class="hint">@T["Such as the reason the agency gave for a rejection."]</span>
+                                                </div>
+                                            </div>
+                                            <div class="ocat-wrapper">
+                                                <div class="ocat-end-offset">
+                                                    <button type="submit" class="btn btn-secondary">@T["Record the answer"]</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.NotFileableReason))
+        {
+            <p class="hint mb-0">@Model.NotFileableReason</p>
+        }
+        else if (Model.SubmitEditor is not null)
+        {
+            <form asp-action="Submit" asp-controller="EFiling" method="post" class="no-multisubmit">
+                <input type="hidden" name="targetType" value="@TaxationConstants.TaxReturnEFileTargetType" />
+                <input type="hidden" name="targetId" value="@taxReturn.ItemId" />
+                @await DisplayAsync(Model.SubmitEditor)
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-secondary">@T["File electronically"]</button>
+                    </div>
+                </div>
+            </form>
+        }
+    </div>
+</div>

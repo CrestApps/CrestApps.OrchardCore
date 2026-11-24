@@ -3,6 +3,8 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Controllers;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -66,9 +68,9 @@ public sealed class FindCoverTool : WorkforceAIToolBase
             return "Give the worker's name and the day as yyyy-MM-dd.";
         }
 
-        var workers = services.GetRequiredService<IWorkerManager>();
+        var workers = services.GetRequiredService<IStaffMemberManager>();
         var teams = (await services.GetRequiredService<ITeamManager>().GetAllAsync(cancellationToken)).Where(team => scope.Covers(team.ItemId)).ToList();
-        WorkerProfile absent = null;
+        StaffMember absent = null;
 
         foreach (var team in teams)
         {
@@ -94,7 +96,7 @@ public sealed class FindCoverTool : WorkforceAIToolBase
 
         foreach (var candidate in await workers.ListByTeamAsync(data.TeamId, date.Value, cancellationToken))
         {
-            if (candidate.ItemId == absent.ItemId || candidate.Status != WorkerStatus.Active)
+            if (candidate.ItemId == absent.ItemId || candidate.Status != StaffStatus.Active)
             {
                 continue;
             }

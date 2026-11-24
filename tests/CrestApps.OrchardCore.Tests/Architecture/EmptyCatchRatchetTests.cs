@@ -19,7 +19,7 @@ public sealed partial class EmptyCatchRatchetTests
         var scanned = 0;
 
         // Act
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", directory => SourceTreeFiles.IsBuildOutputDirectory(directory) || Path.GetFileName(directory) == "node_modules"))
         {
             if (IsExcluded(file))
             {

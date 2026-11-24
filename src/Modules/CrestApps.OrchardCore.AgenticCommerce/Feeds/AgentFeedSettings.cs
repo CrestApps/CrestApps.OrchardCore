@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.AgenticCommerce.Feeds;
 
 /// <summary>
-/// Settings › Commerce › Agent feeds: the countries the OpenAI feed targets, the daily SFTP push, and the agent
+/// Settings › Commerce › Agent Feeds: the countries the OpenAI feed targets, the daily SFTP push, and the agent
 /// platforms that host an ACP feed API.
 /// </summary>
 public sealed class AgentFeedSettings

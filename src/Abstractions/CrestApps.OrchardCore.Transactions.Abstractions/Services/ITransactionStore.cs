@@ -40,6 +40,15 @@ public interface ITransactionStore : ICatalog<Transaction>
     Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the transactions paid through the supplied checkout session (<see cref="Transaction.CheckoutSessionId"/>),
+    /// oldest first: the debts one checkout's payment settled, such as an invoice and the debit note for the shipping its
+    /// order's checkout added.
+    /// </summary>
+    /// <param name="checkoutSessionId">The checkout session identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<Transaction>> GetByCheckoutSessionAsync(string checkoutSessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the outstanding transactions (status <see cref="TransactionStatus.Outstanding"/> or
     /// <see cref="TransactionStatus.PartiallyPaid"/>) whose due date is on or before
     /// <paramref name="asOfUtc"/>, or that have no due date, so the reminder sweep can chase them.

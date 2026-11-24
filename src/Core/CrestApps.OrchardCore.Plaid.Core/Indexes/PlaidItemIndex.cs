@@ -1,0 +1,49 @@
+using CrestApps.OrchardCore.Plaid.Models;
+using YesSql.Indexes;
+
+namespace CrestApps.OrchardCore.Plaid.Indexes;
+
+/// <summary>
+/// Finds the kept Plaid items by their Plaid id, for webhooks (an item linked to several bank accounts is kept once per
+/// bank account), and by their bank account, when the account changes.
+/// </summary>
+public sealed class PlaidItemIndex : MapIndex
+{
+    /// <summary>
+    /// Gets or sets Plaid's id of the item.
+    /// </summary>
+    public string ItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id of the bank account.
+    /// </summary>
+    public string BankAccountId { get; set; }
+}
+
+/// <summary>
+/// Maps kept Plaid items to <see cref="PlaidItemIndex"/>.
+/// </summary>
+public sealed class PlaidItemIndexProvider : IndexProvider<PlaidItem>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PlaidItemIndexProvider"/> class.
+    /// </summary>
+    public PlaidItemIndexProvider()
+    {
+        CollectionName = PlaidConstants.CollectionName;
+    }
+
+    /// <inheritdoc />
+    public override void Describe(DescribeContext<PlaidItem> context)
+    {
+        context
+            .For<PlaidItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(item => new PlaidItemIndex
+            {
+                ItemId = item.ItemId,
+                BankAccountId = item.BankAccountId,
+            });
+    }
+}

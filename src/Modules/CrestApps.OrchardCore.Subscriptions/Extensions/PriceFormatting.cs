@@ -16,7 +16,5 @@ public static class PriceFormatting
     /// <param name="currency">The ISO-4217 code of the currency the amount is in.</param>
     /// <returns>The formatted price.</returns>
     public static string Format(decimal amount, string currency)
-        => string.IsNullOrEmpty(currency)
-            ? CurrencyScale.Format(amount, currency)
-            : $"{currency} {CurrencyScale.Format(amount, currency)}";
+        => CurrencyFormat.WithCode(amount, currency);
 }

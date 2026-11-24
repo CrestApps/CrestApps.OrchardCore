@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<LearnerEnrolledEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-user-graduate" aria-hidden="true"></i>
+    @T["Learner Enrolled"]
+</h4>
+<p>@T["Starts when a learner is enrolled in a course, or a request to enroll is approved."]</p>

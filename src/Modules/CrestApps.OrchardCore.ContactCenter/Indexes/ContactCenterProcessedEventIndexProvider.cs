@@ -22,6 +22,8 @@ public sealed class ContactCenterProcessedEventIndexProvider : IndexProvider<Con
     {
         context
             .For<ContactCenterProcessedEventIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(processedEvent => new ContactCenterProcessedEventIndex
             {
                 ItemId = processedEvent.ItemId,

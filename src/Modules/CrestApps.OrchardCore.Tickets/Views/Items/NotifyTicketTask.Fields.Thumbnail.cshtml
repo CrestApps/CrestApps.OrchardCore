@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<NotifyTicketTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-bell" aria-hidden="true"></i>
+    @T["Notify About Ticket"]
+</h4>
+<p>@T["E-mails the requester or tells the assignee."]</p>

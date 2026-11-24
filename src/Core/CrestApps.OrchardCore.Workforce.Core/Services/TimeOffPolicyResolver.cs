@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
@@ -9,10 +10,10 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class TimeOffPolicyResolver
 {
-    private readonly WorkerProfile _worker;
+    private readonly StaffMember _worker;
     private readonly IReadOnlyDictionary<string, Team> _teams;
 
-    public TimeOffPolicyResolver(WorkerProfile worker, IReadOnlyList<TimeOffPolicy> policies, IReadOnlyDictionary<string, Team> teams)
+    public TimeOffPolicyResolver(StaffMember worker, IReadOnlyList<TimeOffPolicy> policies, IReadOnlyDictionary<string, Team> teams)
     {
         _worker = worker;
         _teams = teams;

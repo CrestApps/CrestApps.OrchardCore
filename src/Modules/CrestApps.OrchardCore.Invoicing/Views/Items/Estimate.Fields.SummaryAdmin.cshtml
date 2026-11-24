@@ -1,0 +1,4 @@
+@model ShapeViewModel<EstimateRowViewModel>
+
+@* A plain link to the estimate's page; a draft has no number until it is sent. *@
+<a asp-action="Detail" asp-controller="EstimatesAdmin" asp-route-itemId="@Model.Value.Estimate.ItemId">@(string.IsNullOrEmpty(Model.Value.Estimate.Number) ? T["Draft estimate"].Value : Model.Value.Estimate.Number)</a>

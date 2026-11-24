@@ -3,6 +3,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Controllers;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -83,7 +84,7 @@ public sealed class WhoIsWorkingTool : WorkforceAIToolBase
         var at = ReadDateTime(arguments, "at");
         var queries = services.GetRequiredService<ICalendarQueryService>();
         var siteService = services.GetRequiredService<ISiteService>();
-        var workers = services.GetRequiredService<IWorkerManager>();
+        var workers = services.GetRequiredService<IStaffMemberManager>();
         var timeClock = services.GetService<ITimeClockService>();
         var clock = services.GetRequiredService<IClock>();
         var seen = new HashSet<string>(StringComparer.Ordinal);

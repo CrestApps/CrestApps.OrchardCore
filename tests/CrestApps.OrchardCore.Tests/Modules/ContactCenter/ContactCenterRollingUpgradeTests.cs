@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Legacy;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
@@ -701,6 +702,12 @@ public sealed class ContactCenterRollingUpgradeTests
                     {
                         arguments.Add(new Mock<IPhoneNumberService>().Object);
                     }
+                    else if (parameter.ParameterType == typeof(IBusinessHoursCalendarUpgrade))
+                    {
+                        // The step that copies calendars to Business Hours schedules moves documents and grants
+                        // permissions, not schema; BusinessHoursCalendarMoveTests cover it.
+                        arguments.Add(new NoCalendarsUpgrade());
+                    }
                     else if (parameter.ParameterType.IsGenericType && parameter.ParameterType.GetGenericTypeDefinition() == typeof(ILogger<>))
                     {
                         arguments.Add(Activator.CreateInstance(typeof(NullLogger<>).MakeGenericType(parameter.ParameterType.GetGenericArguments())));
@@ -733,6 +740,16 @@ public sealed class ContactCenterRollingUpgradeTests
 
             return migrations;
         }
+    }
+
+    // An empty tenant has no calendars to copy and no roles to grant.
+    private sealed class NoCalendarsUpgrade : IBusinessHoursCalendarUpgrade
+    {
+        public Task<int> MoveCalendarsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
+        public Task GrantSchedulePermissionsAfterCommitAsync()
+            => Task.CompletedTask;
     }
 
     private sealed class DiscoveredMigration

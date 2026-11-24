@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Skills.Models;
 /// The person a skill or certification belongs to.
 /// </summary>
 /// <param name="Kind">What kind of record the person is: one of the <see cref="SkillSubjectKind"/> constants, or a kind another module adds.</param>
-/// <param name="Id">The user id or the worker id.</param>
+/// <param name="Id">The user id or the staff member id.</param>
 public readonly record struct SkillSubject(string Kind, string Id)
 {
     /// <summary>
@@ -18,13 +18,13 @@ public readonly record struct SkillSubject(string Kind, string Id)
     }
 
     /// <summary>
-    /// Creates the subject of a worker.
+    /// A staff member.
     /// </summary>
-    /// <param name="workerId">The worker id.</param>
+    /// <param name="staffMemberId">The staff member id.</param>
     /// <returns>The subject.</returns>
-    public static SkillSubject Worker(string workerId)
+    public static SkillSubject Staff(string staffMemberId)
     {
-        return new SkillSubject(SkillSubjectKind.Worker, workerId);
+        return new SkillSubject(SkillSubjectKind.Staff, staffMemberId);
     }
 
     /// <summary>

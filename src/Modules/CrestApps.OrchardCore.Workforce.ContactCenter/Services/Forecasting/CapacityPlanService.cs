@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using OrchardCore.Modules;
@@ -16,7 +17,7 @@ public sealed class CapacityPlanService
 
     private readonly PlanningGroupManager _groupManager;
     private readonly ForecastService _forecastService;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IClock _clock;
 
     /// <summary>
@@ -26,7 +27,7 @@ public sealed class CapacityPlanService
     /// <param name="forecastService">The forecast service.</param>
     /// <param name="workerManager">The worker manager.</param>
     /// <param name="clock">The clock.</param>
-    public CapacityPlanService(PlanningGroupManager groupManager, ForecastService forecastService, IWorkerManager workerManager, IClock clock)
+    public CapacityPlanService(PlanningGroupManager groupManager, ForecastService forecastService, IStaffMemberManager workerManager, IClock clock)
     {
         _groupManager = groupManager;
         _forecastService = forecastService;

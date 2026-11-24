@@ -42,6 +42,8 @@ public sealed class ClassifiedIndexProvider : IndexProvider<ContentItem>
 {
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<ClassifiedIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(item => item.Has<ClassifiedPart>())
             .Map(item =>
             {

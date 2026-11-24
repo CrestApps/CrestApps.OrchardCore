@@ -40,6 +40,8 @@ public sealed class TaxationPartSettingsDisplayDriver : ContentTypePartDefinitio
             model.DefaultTaxCategoryCode = settings.DefaultTaxCategoryCode;
             model.DefaultTaxClassificationCode = settings.DefaultTaxClassificationCode;
             model.AllowClassificationOverride = settings.AllowClassificationOverride;
+            model.ShowClassification = settings.ShowClassification;
+            model.ShowExternalTaxCode = settings.ShowExternalTaxCode;
             model.TaxCategories = await BuildCategoryListAsync();
         }).Location("Content");
     }
@@ -56,6 +58,8 @@ public sealed class TaxationPartSettingsDisplayDriver : ContentTypePartDefinitio
             DefaultTaxCategoryCode = model.DefaultTaxCategoryCode,
             DefaultTaxClassificationCode = model.DefaultTaxClassificationCode,
             AllowClassificationOverride = model.AllowClassificationOverride,
+            ShowClassification = model.ShowClassification,
+            ShowExternalTaxCode = model.ShowExternalTaxCode,
         });
 
         return Edit(contentTypePartDefinition, context);

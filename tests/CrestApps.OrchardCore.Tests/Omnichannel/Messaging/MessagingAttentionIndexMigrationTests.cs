@@ -26,10 +26,12 @@ public sealed class MessagingAttentionIndexMigrationTests
     private static readonly string[] _ownerAttentionColumns = ["OwnerType", "OwnerId", "Status", "IsRead", "AssignmentStatus", "AssignedAgentId", "DocumentId"];
     private const string FirstResponseDueIndexName = "IDX_MessagingConversationIndex_FirstResponseDue";
     private const string ContactIndexName = "IDX_MessagingConversationIndex_Contact";
+    private const string CampaignIndexName = "IDX_MessagingConversationIndex_Campaign";
 
     private static readonly string[] _activityColumns = ["LastActivityUtc", "DocumentId"];
     private static readonly string[] _firstResponseDueColumns = ["Status", "FirstResponseDueUtc", "DocumentId"];
     private static readonly string[] _contactColumns = ["Channel", "ContactAddress", "DocumentId"];
+    private static readonly string[] _campaignColumns = ["CampaignId", "DocumentId"];
 
     [Fact]
     public async Task CreateAsync_CreatesTheAttentionIndexes()
@@ -38,12 +40,134 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(7, version);
+            Assert.Equal(10, version);
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.Equal("0", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE Scope IS NOT NULL"));
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
             Assert.Equal(_ownerAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.OwnerAttentionIndexName));
             Assert.Equal(_activityColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.ActivityIndexName));
             Assert.Equal(_firstResponseDueColumns, await IndexColumnsAsync(schemaBuilder, FirstResponseDueIndexName));
             Assert.Equal(_contactColumns, await IndexColumnsAsync(schemaBuilder, ContactIndexName));
+        });
+    }
+
+    // The inbox's campaign filter reads the campaign a conversation was handed off from.
+    [Fact]
+    public async Task UpdateFrom6Async_OnAVersion6Table_AddsTheCampaignColumnAndIndex()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            // What version 6 released: the same table without the campaign column and its index.
+            await DropIndexAsync(schemaBuilder, CampaignIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN CampaignId");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TableName(schemaBuilder)} (DocumentId, ItemId, LastMessageUtc, IsRead, UnreadCount) VALUES (1, 'c1', '2026-10-24 05:59:00', 0, 0)");
+
+            Assert.Equal(7, await migration.UpdateFrom6Async());
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.True(string.IsNullOrEmpty(await ScalarAsync(schemaBuilder, $"SELECT CampaignId FROM {TableName(schemaBuilder)} WHERE ItemId = 'c1'")));
+        });
+    }
+
+    // Production, 2026-11-16: version 7 was recorded but the column was missing, so every conversation save failed with
+    // "Invalid column name 'CampaignId'" and agents could not open a conversation.
+    [Fact]
+    public async Task UpdateFrom7Async_WhenVersion7WasRecordedWithoutTheColumn_AddsTheColumnAndIndex()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            await DropIndexAsync(schemaBuilder, CampaignIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN CampaignId");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TableName(schemaBuilder)} (DocumentId, ItemId, LastMessageUtc, IsRead, UnreadCount) VALUES (1, 'c1', '2026-10-24 05:59:00', 0, 0)");
+
+            Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.True(string.IsNullOrEmpty(await ScalarAsync(schemaBuilder, $"SELECT CampaignId FROM {TableName(schemaBuilder)} WHERE ItemId = 'c1'")));
+        });
+    }
+
+    // Wherever version 7 applied, the repair finds the column and the index and changes nothing.
+    [Fact]
+    public async Task UpdateFrom7Async_WhenTheColumnAndIndexExist_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+        });
+    }
+
+    // A second instance that activates the tenant at the same time finds the column the first one added.
+    [Fact]
+    public async Task UpdateFrom6Async_WhenTheColumnAlreadyExists_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(7, await migration.UpdateFrom6Async());
+        });
+    }
+
+    // A reply template can be written for another kind of work, such as tickets; existing templates stay the workspace's.
+    // Version 8 is the campaign repair that main released, so the scope comes as version 9.
+    [Fact]
+    public async Task UpdateFrom8Async_OnTheVersion8MainReleased_AddsTheTemplateScope()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            // What version 8 released: the template table without the scope column.
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TemplateTableName(schemaBuilder)} DROP COLUMN Scope");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TemplateTableName(schemaBuilder)} (DocumentId, ItemId, Name) VALUES (1, 't1', 'Thanks')");
+
+            Assert.Equal(9, await migration.UpdateFrom8Async());
+            Assert.Equal("1", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE ItemId = 't1' AND Scope IS NULL"));
+        });
+    }
+
+    // A database built while the scope step was numbered 7 to 8 already has the column; the step records the version.
+    [Fact]
+    public async Task UpdateFrom8Async_WhenTheScopeColumnExists_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(9, await migration.UpdateFrom8Async());
+        });
+    }
+
+    // A tenant at version 6 runs main's steps and then the scope step, and ends where a fresh install does.
+    [Fact]
+    public async Task AVersion6Tenant_RunsEveryStep_AndEndsLikeAFreshInstall()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            await DropIndexAsync(schemaBuilder, CampaignIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN CampaignId");
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TemplateTableName(schemaBuilder)} DROP COLUMN Scope");
+
+            Assert.Equal(7, await migration.UpdateFrom6Async());
+            Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal(9, await migration.UpdateFrom8Async());
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.Equal("0", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE Scope IS NOT NULL"));
         });
     }
 
@@ -142,6 +266,9 @@ public sealed class MessagingAttentionIndexMigrationTests
 
     private static string TableName(SchemaBuilder schemaBuilder)
         => schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(MessagingConversationIndex), MessagingStorage.CollectionName);
+
+    private static string TemplateTableName(SchemaBuilder schemaBuilder)
+        => schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(MessageTemplateIndex), MessagingStorage.CollectionName);
 
     private static async Task ExecuteAsync(SchemaBuilder schemaBuilder, string sql)
     {

@@ -1,0 +1,31 @@
+@model BusinessDocumentTemplateTagsViewModel
+
+@if (Model.Template.IsDefault)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Used when a document names no template"]">
+        <i class="fa-solid fa-star text-warning me-1" aria-hidden="true"></i>@T["Default"]
+    </span>
+}
+
+@if (Model.KindTitles.Count == 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Used for"]">
+        <i class="fa-solid fa-file-lines text-secondary me-1" aria-hidden="true"></i>@T["Every kind of document"]
+    </span>
+}
+else
+{
+    foreach (var kindTitle in Model.KindTitles)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Used for"]">
+            <i class="fa-solid fa-file-lines text-secondary me-1" aria-hidden="true"></i>@kindTitle
+        </span>
+    }
+}
+
+@if (Model.Template.PaperSize != BusinessDocumentPaperSize.Default)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Paper size"]">
+        <i class="fa-solid fa-print text-secondary me-1" aria-hidden="true"></i>@(Model.Template.PaperSize == BusinessDocumentPaperSize.A4 ? T["A4"] : T["Letter"])
+    </span>
+}

@@ -1,0 +1,64 @@
+@model CrestApps.OrchardCore.Staff.Drivers.StaffPayViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Pay"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="PayBasis" class="ocat-label">@T["Paid"]</label>
+            <div class="ocat-end">
+                <select asp-for="PayBasis" class="form-select" style="max-width: 14rem">
+                    <option value="Hourly">@T["By the hour"]</option>
+                    <option value="Salary">@T["A yearly salary"]</option>
+                    <option value="PerUnit">@T["By the unit of work"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Currency">
+            <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-end">
+                <input asp-for="Currency" class="form-control code" maxlength="3" style="max-width: 8rem" placeholder="USD" />
+                <span asp-validation-for="Currency" class="text-danger"></span>
+                <span class="hint">@T["The three-letter code of the amounts below. Empty for the site's currency."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="HourlyCost">
+            <label asp-for="HourlyCost" class="ocat-label">@T["Cost of an hour"]</label>
+            <div class="ocat-end">
+                <input asp-for="HourlyCost" class="form-control" inputmode="decimal" style="max-width: 14rem" placeholder="38.20" />
+                <span asp-validation-for="HourlyCost" class="text-danger"></span>
+                <span class="hint">@T["Pay, taxes and benefits for an hour of their work, used to price labor on jobs. Empty to use the hourly rate."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CommissionRate">
+            <label asp-for="CommissionRate" class="ocat-label">@T["Commission on sales (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="CommissionRate" class="form-control" inputmode="decimal" style="max-width: 14rem" placeholder="5" />
+                <span asp-validation-for="CommissionRate" class="text-danger"></span>
+                <span class="hint">@T["The percent of the orders they sell, after discounts and refunds, that payroll pays them as commission. Empty for none."]</span>
+            </div>
+        </div>
+
+        <h6 class="mt-3">@T["Rates"]</h6>
+        <div class="row g-2 fw-semibold small mb-1"><div class="col-md-4">@T["From"]</div><div class="col-md-4">@T["Rate"]</div><div class="col-md-4">@T["Kind of work"]</div></div>
+        @for (var i = 0; i < Model.Rates.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-md-4"><input type="date" name="@Html.NameFor(m => m.Rates[i].EffectiveFrom)" value="@Model.Rates[i].EffectiveFrom?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["From"]" /></div>
+                <div class="col-md-4"><input name="@Html.NameFor(m => m.Rates[i].HourlyRate)" value="@Model.Rates[i].HourlyRate" class="form-control" inputmode="decimal" aria-label="@T["Rate"]" placeholder="25.50" /></div>
+                <div class="col-md-4"><input name="@Html.NameFor(m => m.Rates[i].ActivityCodeId)" value="@Model.Rates[i].ActivityCodeId" class="form-control" aria-label="@T["Kind of work"]" placeholder="@T["All work"]" /></div>
+            </div>
+        }
+        <span class="hint">@T["An hourly rate, or a rate per unit for pay by the unit. The rate that applies on a day is the latest one that has started; a rate for a kind of work wins over the general one."]</span>
+
+        <h6 class="mt-3">@T["Salary"]</h6>
+        <div class="row g-2 fw-semibold small mb-1"><div class="col-md-4">@T["From"]</div><div class="col-md-4">@T["Yearly amount"]</div></div>
+        @for (var i = 0; i < Model.Salaries.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-md-4"><input type="date" name="@Html.NameFor(m => m.Salaries[i].EffectiveFrom)" value="@Model.Salaries[i].EffectiveFrom?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["From"]" /></div>
+                <div class="col-md-4"><input name="@Html.NameFor(m => m.Salaries[i].AnnualAmount)" value="@Model.Salaries[i].AnnualAmount" class="form-control" inputmode="decimal" aria-label="@T["Yearly amount"]" placeholder="52000" /></div>
+            </div>
+        }
+        <span class="hint">@T["For salaried staff. Give a raise a new row from the day it starts, so earlier pay stays as it was. Amounts use a dot for decimals. Save to get more empty rows. Every change is kept in the staff member's history."]</span>
+    </div>
+</div>

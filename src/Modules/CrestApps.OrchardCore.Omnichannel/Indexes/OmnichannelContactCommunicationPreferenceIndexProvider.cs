@@ -15,6 +15,8 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : I
     {
         context
             .For<OmnichannelContactCommunicationPreferenceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(contentItem =>
             {
                 if (!contentItem.TryGet<OmnichannelContactPart>(out var contactPart))

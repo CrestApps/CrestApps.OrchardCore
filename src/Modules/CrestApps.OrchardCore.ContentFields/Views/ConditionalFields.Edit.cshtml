@@ -1,0 +1,6 @@
+@model CrestApps.OrchardCore.ContentFields.ViewModels.ConditionalFieldsEditorViewModel
+
+@* The rules of this editor's fields; the script shows and hides the fields as people answer. The JSON is written by
+   System.Text.Json, which escapes "<", so it can't close this element. *@
+<script type="application/json" data-conditional-fields>@Html.Raw(Model.Json)</script>
+<script asp-name="@CrestApps.OrchardCore.ContentFields.ContentFieldsConstants.ConditionalFieldsScript" at="Foot"></script>

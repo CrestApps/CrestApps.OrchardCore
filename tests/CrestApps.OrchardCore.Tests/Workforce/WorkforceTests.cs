@@ -2,6 +2,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Payroll;
+using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Scheduling;
 using CrestApps.OrchardCore.Scheduling.Core;
 using CrestApps.OrchardCore.Scheduling.Core.Indexes;
@@ -11,11 +13,16 @@ using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Core;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Core.Indexes;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Teams.Core.Indexes;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
@@ -136,7 +143,7 @@ public sealed class WorkforceTests
         // Act
         var (sameNumber, sameUser, unnamed) = await harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IWorkerManager>();
+            var manager = services.GetRequiredService<IStaffMemberManager>();
             var first = await manager.NewAsync();
 
             first.DisplayName = "Ben";
@@ -150,7 +157,7 @@ public sealed class WorkforceTests
             return (await manager.ValidateAsync(first), await manager.ValidateAsync(second), await manager.ValidateAsync(await manager.NewAsync()));
         }, commit: false);
 
-        var found = await harness.RunAsync(services => services.GetRequiredService<IWorkerManager>().FindByUserIdAsync("ana"), commit: false);
+        var found = await harness.RunAsync(services => services.GetRequiredService<IStaffMemberManager>().FindByUserIdAsync("ana"), commit: false);
 
         // Assert
         Assert.False(sameNumber.Succeeded);
@@ -174,8 +181,8 @@ public sealed class WorkforceTests
         await AddWorkerAsync(harness, "Elsewhere");
 
         // Act
-        var (count, items) = await harness.RunAsync(services => services.GetRequiredService<IWorkerManager>().SearchAsync(new WorkerQuery { TeamId = site.ItemId }, 0, 10), commit: false);
-        var members = await harness.RunAsync(services => services.GetRequiredService<IWorkerManager>().ListByTeamAsync(team.ItemId, today), commit: false);
+        var (count, items) = await harness.RunAsync(services => services.GetRequiredService<IStaffMemberManager>().SearchAsync(new StaffQuery { TeamId = site.ItemId }, 0, 10), commit: false);
+        var members = await harness.RunAsync(services => services.GetRequiredService<IStaffMemberManager>().ListByTeamAsync(team.ItemId, today), commit: false);
 
         // Assert
         Assert.Equal(3, count);
@@ -414,6 +421,7 @@ public sealed class WorkforceTests
         return CalendarTestHarness.CreateAsync(
             services =>
             {
+                services.AddStaffDoubles();
                 services.AddSkillsCore();
                 services.AddSchedulingCore();
                 services.AddWorkforceCore();
@@ -423,12 +431,15 @@ public sealed class WorkforceTests
             {
                 await SkillsIndexSchema.CreateAsync(schemaBuilder);
                 await TeamsIndexSchema.CreateAsync(schemaBuilder);
+                await StaffIndexSchema.CreateAsync(schemaBuilder);
                 await SchedulingIndexSchema.CreateAsync(schemaBuilder);
                 await WorkforceIndexSchema.CreateAsync(schemaBuilder);
                 await ShiftPlanningIndexSchema.CreateAsync(schemaBuilder);
                 await TimeOffIndexSchema.CreateAsync(schemaBuilder);
                 await LaborRulesIndexSchema.CreateAsync(schemaBuilder);
                 await PortalIndexSchema.CreateAsync(schemaBuilder);
+                await PortalIndexSchema.CreateStaffFeedIndexAsync(schemaBuilder);
+                await PaySetupIndexSchema.CreateAsync(schemaBuilder);
                 await TimeClockIndexSchema.CreateAsync(schemaBuilder);
 
                 if (schema is not null)
@@ -444,10 +455,11 @@ public sealed class WorkforceTests
                 .Concat(TimeOffIndexProviders.All())
                 .Concat(LaborRulesIndexProviders.All())
                 .Concat(PortalIndexProviders.All())
+                .Concat(PaySetupIndexProviders.All())
                 .Concat(TimeClockIndexProviders.All())
                 .Concat(indexProviders ?? [])
                 .ToArray(),
-            new[] { SkillsConstants.CollectionName, TeamsConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName }.Concat(collections ?? []).ToArray());
+            new[] { SkillsConstants.CollectionName, TeamsConstants.CollectionName, StaffConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName, WorkforceConstants.TimeOffLedgerCollectionName, PayrollConstants.CollectionName, CrestApps.OrchardCore.Taxation.TaxationConstants.IncomeTaxCollectionName }.Concat(collections ?? []).ToArray());
     }
 
     internal static Task<Team> AddTeamAsync(CalendarTestHarness harness, string name, TeamKind kind, string parentId = null)
@@ -472,11 +484,11 @@ public sealed class WorkforceTests
         });
     }
 
-    internal static Task<WorkerProfile> AddWorkerAsync(CalendarTestHarness harness, string name, Action<WorkerProfile> configure = null)
+    internal static Task<StaffMember> AddWorkerAsync(CalendarTestHarness harness, string name, Action<StaffMember> configure = null)
     {
         return harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IWorkerManager>();
+            var manager = services.GetRequiredService<IStaffMemberManager>();
             var worker = await manager.NewAsync();
 
             worker.DisplayName = name;

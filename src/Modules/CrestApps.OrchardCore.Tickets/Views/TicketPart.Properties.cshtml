@@ -1,0 +1,117 @@
+@model TicketPropertiesViewModel
+
+@{
+    var part = Model.Part;
+    var ticketId = Model.Ticket.ContentItemId;
+    var canChange = Model.CanEdit || Model.CanAssign;
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Ticket"]</h2>
+        <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Update" asp-route-id="@ticketId" method="post" class="no-multisubmit">
+            @* The values the page showed, so only what the user changes is applied and a change made meanwhile is noticed. *@
+            <input type="hidden" name="loaded.StatusId" value="@part.StatusId" />
+            <input type="hidden" name="loaded.PriorityId" value="@part.PriorityId" />
+            <input type="hidden" name="loaded.DeskId" value="@part.DeskId" />
+            <input type="hidden" name="loaded.TeamId" value="@part.TeamId" />
+            <input type="hidden" name="loaded.AssigneeId" value="@part.AssigneeId" />
+            <input type="hidden" name="loaded.CategoryId" value="@part.CategoryId" />
+            @if (Model.Categories.Count > 0 || !string.IsNullOrEmpty(Model.CategoryText))
+            {
+                <div class="mb-2">
+                    <label for="ticket-category" class="form-label small mb-1">@T["Category"]</label>
+                    @if (Model.CanEdit && Model.Categories.Count > 0)
+                    {
+                        @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "ticket-category", Choices: Model.Categories, SelectedId: part.CategoryId, EmptyText: T["No category"].Value))
+                    }
+                    else
+                    {
+                        <div class="small">@(Model.CategoryText ?? T["No category"].Value)</div>
+                    }
+                </div>
+            }
+            <div class="mb-2">
+                <label for="ticket-status" class="form-label small mb-1">@T["Status"]</label>
+                <select id="ticket-status" name="StatusId" class="form-select form-select-sm" asp-items="Model.Statuses" disabled="@(!Model.CanEdit)"></select>
+            </div>
+            <div class="mb-2">
+                <label for="ticket-priority" class="form-label small mb-1">@T["Priority"]</label>
+                <select id="ticket-priority" name="PriorityId" class="form-select form-select-sm" asp-items="Model.Priorities" disabled="@(!Model.CanEdit)"></select>
+            </div>
+            <div class="mb-2">
+                <label for="ticket-desk" class="form-label small mb-1">@T["Desk"]</label>
+                <select id="ticket-desk" name="DeskId" class="form-select form-select-sm" asp-items="Model.Desks" disabled="@(!Model.CanEdit)"></select>
+            </div>
+            <div class="mb-2">
+                <label class="form-label small mb-1">@T["Team"]</label>
+                @if (Model.CanAssign)
+                {
+                    @await Component.InvokeAsync("TeamPicker", new { name = "TeamId", selectedValues = string.IsNullOrEmpty(part.TeamId) ? Array.Empty<string>() : new[] { part.TeamId } })
+                }
+                else
+                {
+                    <div class="small">@(Model.TeamName ?? T["No team"].Value)</div>
+                }
+            </div>
+            <div class="mb-3">
+                <label class="form-label small mb-1">@T["Assignee"]</label>
+                @if (Model.CanAssign)
+                {
+                    @await Component.InvokeAsync("UserPicker", new { name = "AssigneeId", selectedValues = string.IsNullOrEmpty(part.AssigneeId) ? Array.Empty<string>() : new[] { part.AssigneeId }, valueType = "userId", multiple = false, buttonText = T["Choose an agent"].Value, searchPlaceholder = T["Search users"].Value, smallButton = true })
+                }
+                else
+                {
+                    <div class="small">@(Model.AssigneeName ?? T["Nobody yet"].Value)</div>
+                }
+            </div>
+            @if (canChange)
+            {
+                <button type="submit" class="btn btn-primary btn-sm">@T["Save"]</button>
+            }
+        </form>
+        @if (Model.CategoryRoutingChanges.Count > 0)
+        {
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="ApplyCategoryRouting" asp-route-id="@ticketId" method="post" class="mt-2">
+                <input type="hidden" name="categoryId" value="@part.CategoryId" />
+                <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Apply the category's routing"]</button>
+                <span class="hint d-block">@T["Changes {0}.", string.Join(", ", Model.CategoryRoutingChanges)]</span>
+            </form>
+        }
+        @if (Model.CanAssign && part.AssigneeId != Context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)
+        {
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Take" asp-route-id="@ticketId" method="post" class="d-inline">
+                <button type="submit" class="btn btn-link btn-sm px-0">@T["Assign to me"]</button>
+            </form>
+        }
+        <dl class="row small mb-0 mt-2">
+            <dt class="col-6 fw-normal text-muted">@T["Replies"]</dt>
+            <dd class="col-6 mb-1">@part.ReplyCount</dd>
+            @if (part.ReopenCount > 0)
+            {
+                <dt class="col-6 fw-normal text-muted">@T["Reopened"]</dt>
+                <dd class="col-6 mb-1">@part.ReopenCount</dd>
+            }
+            @if (part.EscalationLevel > 0)
+            {
+                <dt class="col-6 fw-normal text-muted">@T["Escalation level"]</dt>
+                <dd class="col-6 mb-1">@part.EscalationLevel</dd>
+            }
+            @if (!string.IsNullOrEmpty(part.Channel))
+            {
+                <dt class="col-6 fw-normal text-muted">@T["Came in through"]</dt>
+                <dd class="col-6 mb-1">@part.Channel</dd>
+            }
+            @if (part.FirstResponseUtc is { } firstResponse)
+            {
+                <dt class="col-6 fw-normal text-muted">@T["First response"]</dt>
+                <dd class="col-6 mb-1">@await DisplayAsync(await New.DateTime(Utc: firstResponse, Format: "g"))</dd>
+            }
+            @if (part.SolvedUtc is { } solved)
+            {
+                <dt class="col-6 fw-normal text-muted">@T["Solved"]</dt>
+                <dd class="col-6 mb-1">@await DisplayAsync(await New.DateTime(Utc: solved, Format: "g"))</dd>
+            }
+        </dl>
+    </div>
+</div>

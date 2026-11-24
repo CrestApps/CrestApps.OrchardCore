@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -16,7 +17,7 @@ public interface ITimeOffPolicyManager : ICatalogManager<TimeOffPolicy>
     /// <param name="date">The day.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The policies.</returns>
-    Task<IReadOnlyList<TimeOffPolicy>> ListForWorkerAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TimeOffPolicy>> ListForWorkerAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the enabled policy of a type that applies to a worker on a day, or <see langword="null"/>.
@@ -26,7 +27,7 @@ public interface ITimeOffPolicyManager : ICatalogManager<TimeOffPolicy>
     /// <param name="date">The day.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The policy.</returns>
-    Task<TimeOffPolicy> FindForWorkerAsync(WorkerProfile worker, string typeId, DateOnly date, CancellationToken cancellationToken = default);
+    Task<TimeOffPolicy> FindForWorkerAsync(StaffMember worker, string typeId, DateOnly date, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the policies a worker or any of the given teams is assigned to, at any date.

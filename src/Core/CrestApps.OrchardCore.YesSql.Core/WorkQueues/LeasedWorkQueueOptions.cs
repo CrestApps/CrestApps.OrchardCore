@@ -8,6 +8,10 @@ public class LeasedWorkQueueOptions
     /// <summary>
     /// Gets or sets the YesSql collection the items live in, or <see langword="null"/> for the default collection.
     /// </summary>
+    /// <remarks>
+    /// Give each work item type its own collection. The index of a collection declares that it only holds that
+    /// type's items, so its counts read the index table alone.
+    /// </remarks>
     public string CollectionName { get; set; }
 
     /// <summary>

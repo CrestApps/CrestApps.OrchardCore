@@ -124,7 +124,7 @@ The checkout's confirmation page shows the order number.
 
 **Find my order.** `GET/POST orders/find` takes an email and emails a link to each paid or awaiting-payment order placed with it in the last year (up to 10), finding them through the indexed `OrderIndex.CustomerEmail` (`OrderQuery.CustomerEmail`). The answer is the same whether or not orders exist. Posts are limited per IP and per email through `IPaymentAttemptLimiter`, and carry the `find-order` rate-limit group for the Rate Limits feature.
 
-**Order confirmations.** Other modules add sections to the confirmation email through `IOrderEmailSectionProvider`, such as the download links of [Digital Downloads](downloads). Once a checkout completes and is committed, `OrderConfirmationCheckoutHandler` emails the paid order's confirmation to `Order.CustomerEmail` through `IEmailService`, built by `OrderConfirmationEmailBuilder` (order number, lines, discounts, shipping, tax, total, addresses; every value HTML-encoded). It sends once (`Order.ConfirmationSentUtc`), only when `OrderSettings.SendConfirmations` is on (the default, under **Settings > Commerce > Orders**, with **Manage orders**) and an email service is registered. A failed send is logged and leaves the order unconfirmed; it never undoes the paid order.
+**Order confirmations.** Other modules add sections to the confirmation email through `IOrderEmailSectionProvider`, such as the download links of [Digital Downloads](downloads). Once a checkout completes and is committed, `OrderConfirmationCheckoutHandler` emails the paid order's confirmation to `Order.CustomerEmail` through `IEmailService`, built by `OrderConfirmationEmailBuilder` (order number, lines, discounts, shipping, tax, total, addresses; every value HTML-encoded). It sends once (`Order.ConfirmationSentUtc`), only when `OrderSettings.SendConfirmations` is on (the default, under **Settings** → **Commerce** → **Orders**, with **Manage orders**) and an email service is registered. A failed send is logged and leaves the order unconfirmed; it never undoes the paid order.
 
 Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
 
@@ -165,11 +165,12 @@ Drafts aren't printed; canceled orders print for the store only. The page around
 - **Admin** (`DraftOrdersAdminController`, `ManageOrders`): `Admin/orders/drafts/create` (`OrdersCreate`; `?addsToOrderId=` from a paid order's **Add items**), `Admin/orders/{orderId}/edit` (`OrdersEdit`, while it's a draft) and `Admin/orders/{orderId}/send-invoice` (`OrdersSendInvoice`).
 - **Editing.** `IOrderService.ReplaceLinesAsync(order, pricing)` replaces a draft's lines with a priced cart's and calls each `IOrderEventHandler.LinesChangedAsync`; a handler that refuses (Inventory, short of stock) leaves the old lines and returns the problems. An order awaiting payment can't be changed.
 - **Invoice email.** `SendInvoiceAsync` emails *Your order … is ready to pay* with the lines, subtotal, note, due date and a **Review and pay** link to `orders/view/{token}/pay`, sets `SentUtc` and adds a note. It needs an `IEmailService` and the order's signed link.
+- **Another module's documents.** `DraftOrderService.SendAsync` first asks each `IOrderDocumentSender` (Orders.Core) to send the order; the first that handles it (returns an `OrderDocumentSendResult`) sends it instead of the order's own e-mail, and the order is marked sent with the note it gives. With **Invoicing** on, its sender issues an Invoicing invoice from the draft order (or, for a quote with **Invoicing Estimates** on, sends an Invoicing estimate); see [Invoicing: draft orders and quotes](invoicing#draft-orders-and-quotes). The order keeps its pay link and checkout either way. `IOrderDocumentSender.GetInvoiceUrlAsync` lets the order's **Invoice** links (`OrdersInvoice`, `AccountOrderInvoice`, `GuestOrderInvoice`) open that invoice instead of the order's printable one. The result says whether the document was e-mailed (`Emailed`) and its number (`DocumentNumber`); the order keeps them as `OrderInvoice.NotEmailed` and `SentAs`, and its page reads *made but not emailed* when e-mail isn't set up. Without such a sender nothing changes.
 - **Paying.** `OrderPayController` serves `orders/view/{token}/pay` (`GuestOrderPay`) and `account/orders/{orderId}/pay` (`AccountOrderPay`): it opens the order's pending checkout, or starts one (`CheckoutReferenceTypes.Order`). `OrderCheckoutHandler` fills in the checkout's `CheckoutContactInfo` from the order, and puts an invoiced order whose checkout failed, was canceled or expired back to `Draft`, so its link pays it again. `AbandonedOrderSweeper` leaves invoiced orders alone. The guest and account order pages show a sent draft with its note, due date and **Pay now**.
 
 ### Quotes
 
-A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuoteRequests` is on (**Settings > Commerce > Orders**, **Take quote requests**).
+A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuoteRequests` is on (**Settings** → **Commerce** → **Orders**, **Take quote requests**).
 
 - **The cart.** Carts.Core's `ICartActionProvider` (`GetActionsAsync(pricing)` returns `CartAction(Label, Url, Description)`) adds buttons under **Checkout**; `QuoteCartActionProvider` adds **Request a quote**, linking to `cart/quote` (`QuoteRequest`).
 - **The request.** `QuoteService.RequestAsync(user, message, purchaseOrderNumber)` creates a `Draft` order from the priced cart (with no `CartId`, so a later checkout of the cart doesn't replace it), an `OrderInvoice` created by the buyer, the purchase order number, the buyer's customer, and `Order.Quote` (`OrderQuote`: `RequestedUtc`, `Message` up to 2,000 characters, `Status`, `SentUtc`, `ExpiresUtc`, `RespondedUtc`), then deletes the cart. The page is the `QuoteRequest` shape.
@@ -182,16 +183,18 @@ A signed-in buyer asks for a quote from their cart when `OrderSettings.AllowQuot
 
 ### Commerce emails and their templates
 
-Every email the commerce modules send a customer goes through `ICommerceEmailSender` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Emails`; registered with `services.AddCommerceEmailSender()` from Commerce.Core): the order confirmation, the order to pay and the quote, the shipped email, the return emails, the gift card, the recovery email, Find my order, the booking emails, business order approvals, back-in-stock alerts, review requests, donation receipts, listing emails and the point of sale receipt. A sender passes a `CommerceEmail` (`Kind`, `To`, `Models`, `Culture`, `Reference`) and a callback that builds the `CommerceEmailContent` (`Subject`, `Text`, `Html` and the template's `Values`). `Models` holds the records the email is about by the name the template reads them under; an email about an order passes `OrderEmailModels.For(order)`, which the template reads as `{{ Order }}`. `ICommerceEmailSender` then does the following:
+Every email the commerce modules send a customer goes through `ICommerceEmailSender` (Commerce.Abstractions, namespace `CrestApps.OrchardCore.Commerce.Emails`; registered with `services.AddCommerceEmailSender()` from Commerce.Core): the order confirmation, the order to pay and the quote, the shipped email, the return emails, the gift card, the recovery email, Find my order, the booking emails, business order approvals, back-in-stock alerts, review requests, donation receipts, listing emails and the point of sale receipt. A sender passes a `CommerceEmail` (`Kind`, `To`, `Cc`, `Bcc`, `Models`, `Culture`, `Reference`) and a callback that builds the `CommerceEmailContent` (`Subject`, `Text`, `Html`, the template's `Values` and the `Attachments`). `Models` holds the records the email is about by the name the template reads them under; an email about an order passes `OrderEmailModels.For(order)`, which the template reads as `{{ Order }}`. `ICommerceEmailSender` then does the following:
 
 - It sends nothing, and returns `false`, when the Email feature is off, the email has no recipient, or the callback returns `null`.
 - It builds the email in `Culture`, such as the language the buyer shopped in (`Order.Culture`).
 - It passes an email with a `Kind` through `ICommerceEmailTemplates`, the store's template of that kind and its layout. An email without a kind goes as built.
 - It sends the email, and logs a send that fails or throws and returns `false`. A failed send never undoes what the email is about.
+- It sends the copies in `Cc` and `Bcc` (blank and repeated addresses are left out) and the files in `Attachments`, whether or not the store wrote a template of the email's kind. Each `CommerceEmailAttachment` has a `FileName`, a `ContentType` and an `OpenAsync` callback that opens the file's stream when the email is sent, such as a document's PDF. The file name must be a name only: a name with a folder or a drive in it, or an attachment with no file, stops the send. The sender disposes every stream it opened after the send, whether the send succeeded, failed or threw.
+- `SendAsync` returns whether the email went. `SendWithResultAsync`, with the same parameters, returns a `CommerceEmailResult` (`Succeeded`, `Error`) that says why it didn't: the site can't send email, the email has no recipient, nothing was built, an attachment couldn't be opened or has a bad file name, or the email provider's error. Use it where the reason is recorded, such as a document's delivery log. Neither throws when the send fails.
 
 Messages that reach a buyer through `ICustomerOwnerNotifier` (notifications for a buyer with an account, email for a guest) take the same templates: a `CustomerOwnerMessage` with a `Kind`, `Models` and `Values` passes through `ICommerceEmailTemplates` before it's sent. Payment reminders, payment receipts, refund notices and installment plan notices go this way.
 
-The kinds the store can write templates of are registered by the feature that sends them, with `services.AddCommerceEmailKind(name, title, values)` (Commerce.Abstractions). The title and the description of the email's own values are `LocalizationSource`s, and **Settings > Commerce > Emails** lists the kinds in the order they were registered:
+The kinds the store can write templates of are registered by the feature that sends them, with `services.AddCommerceEmailKind(name, title, values)` (Commerce.Abstractions). The title and the description of the email's own values are `LocalizationSource`s, and **Settings** → **Commerce** → **Emails** lists the kinds in the order they were registered:
 
 | Kind | Feature | Records |
 | --- | --- | --- |
@@ -217,7 +220,7 @@ services.AddCommerceEmailSender()
     .AddCommerceEmailKind("giftwrap-sent", LocalizationSource.Create<Startup>("Gift wrapped"), LocalizationSource.Create<Startup>("{{ Message }}: the gift message."));
 ```
 
-`LiquidCommerceEmailTemplates` (Commerce.Core) reads `OrderEmailTemplateSettings` (**Settings > Commerce > Emails**, group `order-emails`). The settings keep the name they had when they served orders only, so the templates a store wrote, its recipes and its deployment plans keep working:
+`LiquidCommerceEmailTemplates` (Commerce.Core) reads `OrderEmailTemplateSettings` (**Settings** → **Commerce** → **Emails**, group `order-emails`). The settings keep the name they had when they served orders only, so the templates a store wrote, its recipes and its deployment plans keep working:
 
 - A `Layout` around every email with a kind and an HTML body, with `{{ Content }}`. A text-only email stays text-only unless its template writes a body.
 - `Templates` by kind, each with `IsEnabled`, a `Subject` and a `Body` in Liquid.
@@ -234,7 +237,7 @@ Every order records where it was made, in `Order.Channel` (`OrderChannels`):
 | `pos` | A sale rung up at a register by [Point of Sale](point-of-sale). It also has `LocationId` (the register's inventory location), `RegisterId`, `RegisterName`, `ShiftId`, `StaffUserId` and `StaffName`. `OrderChannels.IsCounterSale` is true for it. |
 | `draft` | `DraftOrderService`: an order staff make and send to the buyer to pay. |
 
-`OrderIndex` has `Channel`, `LocationId` and `ShiftId`, and `OrderQuery` filters by each. **Commerce > Orders** has a channel filter (*Every channel*, *Online*, *Point of sale*, *Drafts sent by staff*, *AI agents*) in its list toolbar, which the CSV export follows, and a register sale shows its register as a badge. The staff orders API takes `channel` and `locationId`, and `ApiOrder` and `ApiOrderSummary` carry `channel` and `locationId`, with `register` on `ApiOrder`.
+`OrderIndex` has `Channel`, `LocationId` and `ShiftId`, and `OrderQuery` filters by each. **Commerce** → **Orders** has a channel filter (*Every channel*, *Online*, *Point of sale*, *Drafts sent by staff*, *AI agents*) in its list toolbar, which the CSV export follows, and a register sale shows its register as a badge. The staff orders API takes `channel` and `locationId`, and `ApiOrder` and `ApiOrderSummary` carry `channel` and `locationId`, with `register` on `ApiOrder`.
 
 `LocationId` is set only for register sales. A pickup order's location is its shipping's (`Order.Shipping.LocationId`).
 
@@ -246,7 +249,7 @@ The **Returns** feature (`CrestApps.OrchardCore.Orders.Returns`) adds buyer-requ
 - **Buyer.** `account/orders/{orderId}/return` (`AccountOrderReturn`) and `orders/view/{token}/return` (`GuestOrderReturn`) show the `OrderReturnRequest` shape and post the request; `…/returns/{returnId}/withdraw` withdraws one still `Requested`. `OrderReturnsDisplayDriver` adds `OrderReturns_Detail` (the buyer's returns, with **Return items** and the return instructions once approved) to a paid order's `Detail` display, and `OrderReturns_DetailAdmin` to the store's.
 - **Store.** `ReturnsAdminController` (`Admin/returns`, `ManageOrders`) lists returns through an `AdminList` with a status filter and search by return or order number, and acts through `OrderReturnService`: `approve`, `reject` (with a message), `receive` (the lines to restock and an optional location), `refund` (an amount, through `OrderOperationsService.RefundAsync` without restocking, then `Completed`) and `exchanged`. Each step adds an order note, and `OrderReturnEmailSender` emails the buyer (requested, approved, declined, refunded, exchanged); a failed send is logged and never undoes the step.
 - **Restocking.** Receiving calls each `IOrderEventHandler.ReturnedAsync` with an `OrderReturnedContext` (the order, the return, `Lines` of `OrderReturnedLine(Line, Quantity, Restock)`, `LocationId`, actor) in the same unit of work. Inventory puts the restocked lines back with `IInventoryService.RestockAsync(orderId, lines, locationId, …)`.
-- **Settings.** `ReturnSettings` (**Settings > Commerce > Returns**, group `returns`, `ManageOrders`): `WindowDays` (30, 1 to 365), `Reasons` (up to 20), `AllowExchanges` (true) and `Instructions`.
+- **Settings.** `ReturnSettings` (**Settings** → **Commerce** → **Returns**, group `returns`, `ManageOrders`): `WindowDays` (30, 1 to 365), `Reasons` (up to 20), `AllowExchanges` (true) and `Instructions`.
 
 Exchanges are closed by the store once it has sent the replacement; no replacement order is created. Returns start with the buyer; the store's own refunds and restocking stay on the order's page.
 
@@ -270,7 +273,7 @@ The **Gift Cards** feature (`CrestApps.OrchardCore.Orders.GiftCards`, depends on
 
 **Email.** `GiftCardEmailSender.SendAsync(card, message)` sends the card to `RecipientEmail` through `IEmailService`, when one is registered: the value (the current balance), the code, the optional personal message, how to use it, the expiry and a link to the store, all HTML-encoded. It returns whether the email went.
 
-**Admin.** `GiftCardsAdminController` (`Admin/gift-cards`, permission `ManageGiftCards`, menu **Commerce > Gift cards**) lists cards through an `AdminList` (`GiftCardDisplayDriver` renders the row in both `SummaryAdmin` and `SummaryAdminGrid`) with a search in the action bar and the status filter in the toolbar (the shared `CommerceAdminListFilters` shape). `create` issues a card and can email it; `edit/{itemId}` shows the whole code, the balance, the order that bought it and the activity, and saves the recipient, expiry, note and `IsEnabled`; `adjust/{itemId}` posts an `amount` and a required `reason` to `AdjustAsync`; `email/{itemId}` sends the card again.
+**Admin.** `GiftCardsAdminController` (`Admin/gift-cards`, permission `ManageGiftCards`, menu **Commerce** → **Gift Cards**) lists cards through an `AdminList` (`GiftCardDisplayDriver` renders the row in both `SummaryAdmin` and `SummaryAdminGrid`) with a search in the action bar and the status filter in the toolbar (the shared `CommerceAdminListFilters` shape). `create` issues a card and can email it; `edit/{itemId}` shows the whole code, the balance, the order that bought it and the activity, and saves the recipient, expiry, note and `IsEnabled`; `adjust/{itemId}` posts an `amount` and a required `reason` to `AdjustAsync`; `email/{itemId}` sends the card again.
 
 `GiftCardPermissionsProvider` declares **Manage gift cards** (`OrderPermissions.ManageGiftCards`), given to Administrator by default.
 
@@ -334,7 +337,7 @@ Other modules act on orders through `IOrderOperationsService` in `Orders.Core`, 
 
 ### Reports
 
-With the [Reports](reports) feature on, the Orders feature adds these reports under **Reports > Commerce** (permission `ManageOrders`). They read the orders paid in the chosen period (`OrderReportReader`, by `PaidUtc`, page by page), including orders canceled since, and keep every amount in its own currency. The arithmetic is in `OrderReportAggregator`.
+With the [Reports](reports) feature on, the Orders feature adds these reports under **Reports** → **Commerce** (permission `ManageOrders`). They read the orders paid in the chosen period (`OrderReportReader`, by `PaidUtc`, page by page), including orders canceled since, and keep every amount in its own currency. The arithmetic is in `OrderReportAggregator`.
 
 | Report | Shows |
 | --- | --- |
@@ -354,7 +357,7 @@ With the [Reports](reports) feature on, the Orders feature adds these reports un
 
 Refunded in **Sales** is what was given back for the period's orders, whenever it was; **Refunds** lists refunds by the day they were given.
 
-Other commerce features add their own reports under **Reports > Commerce** when Reports is on:
+Other commerce features add their own reports under **Reports** → **Commerce** when Reports is on:
 
 | Report | Feature | Permission | Shows |
 | --- | --- | --- | --- |
@@ -422,11 +425,11 @@ With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** eve
 
 | Screen | Permission | Default roles |
 | --- | --- | --- |
-| **Commerce > Orders**: every order, searchable by order number or customer email, with a status filter | `ManageOrders` | Administrator |
-| **Commerce > My Orders**: the signed-in customer's own orders | `ViewOwnOrders` | Authenticated |
+| **Commerce** → **Orders**: every order, searchable by order number or customer email, with a status filter | `ManageOrders` | Administrator |
+| **Commerce** → **My Orders**: the signed-in customer's own orders | `ViewOwnOrders` | Authenticated |
 | **Create order**, an order's **Invoice**, **Packing slip** and **Add items** | `ManageOrders` | Administrator |
-| **Commerce > Returns** and **Settings > Commerce > Returns** (Returns feature) | `ManageOrders` | Administrator |
-| **Commerce > Gift cards** (Gift Cards feature) | `ManageGiftCards` | Administrator |
+| **Commerce** → **Returns** and **Settings** → **Commerce** → **Returns** (Returns feature) | `ManageOrders` | Administrator |
+| **Commerce** → **Gift Cards** (Gift Cards feature) | `ManageGiftCards` | Administrator |
 
 ### Sales Summary widget
 
@@ -437,6 +440,10 @@ The widget has these options: the **first window** (7 days) and **second window*
 ### Automation recipes
 
 Orders adds the recipes **Automation: thank-you email** (on) and **Automation: canceled order alert** (added off), and Inventory adds **Automation: low stock alert** (added off). Each turns on Workflows and Email and adds a `WorkflowType` with stable ids: `OrderPaidEvent`, `OrderCanceledEvent` or `LowStockEvent` leading to an `EmailTask` in Liquid over `Workflow.Input`.
+
+## Commissions in payroll
+
+With Payroll's Pay Setup and Staff on, `OrderCommissionPayInputSource` (source kind `Order`) gives payroll each paid order's commission: the `CommissionRate` of the staff member who made it (`StaffUserId`) times the subtotal less discounts and refunds, on the day it was paid in the site's zone. A run that takes it stamps the order (`OrderCommissionPayroll`), so it is paid once; a void gives it back. A refund after the commission was paid doesn't take it back.
 
 ## The account page
 

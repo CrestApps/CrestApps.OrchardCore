@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -15,7 +16,7 @@ public interface IMyWorkLinkProvider
     /// <param name="worker">The user's worker, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The links.</returns>
-    Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, WorkerProfile worker, CancellationToken cancellationToken = default);
+    Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, StaffMember worker, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

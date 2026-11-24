@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
@@ -17,7 +18,7 @@ public sealed class MessagingAttachmentCapabilities
     /// <summary>
     /// Gets the file formats the channel accepts; empty when it carries none.
     /// </summary>
-    public IReadOnlyList<MessagingFileFormat> Formats { get; init; } = [];
+    public IReadOnlyList<FileFormat> Formats { get; init; } = [];
 
     /// <summary>
     /// Gets the most files one message may carry.

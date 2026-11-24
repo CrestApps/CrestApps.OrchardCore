@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Lib.Net.Http.WebPush;
@@ -48,7 +49,7 @@ internal sealed class WebPushNotificationChannel : IWorkforceNotificationChannel
 
     public string DisplayName => S["Push notifications"];
 
-    public async Task SendAsync(WorkerProfile worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
+    public async Task SendAsync(StaffMember worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
     {
         var subscriptions = await _store.ListAsync(worker.ItemId, cancellationToken);
 

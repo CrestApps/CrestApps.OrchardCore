@@ -1,0 +1,42 @@
+@model ShapeViewModel<ExternalTool>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Client ID"]">
+    <i class="fa-solid fa-id-badge text-secondary me-1" aria-hidden="true"></i>@Model.Value.ClientId
+</span>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.DeepLinkingUrl))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Course staff can pick content from the tool."]">
+        <i class="fa-solid fa-link text-secondary me-1" aria-hidden="true"></i>@T["Deep Linking"]
+    </span>
+}
+
+@if (Model.Value.AllowNamesAndRoles)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The tool may read course rosters."]">
+        <i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@T["Roster"]
+    </span>
+}
+
+@if (Model.Value.AllowGrades)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The tool may post grades."]">
+        <i class="fa-solid fa-star-half-stroke text-secondary me-1" aria-hidden="true"></i>@T["Grades"]
+    </span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["What the tool learns about a person"]">
+    <i class="fa-solid fa-user-shield text-secondary me-1" aria-hidden="true"></i>@(Model.Value.PrivacyLevel switch
+    {
+        LtiPrivacyLevel.Name => T["Name"],
+        LtiPrivacyLevel.NameAndEmail => T["Name and e-mail"],
+        _ => T["Anonymous"],
+    })
+</span>
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

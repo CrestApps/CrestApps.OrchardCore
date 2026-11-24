@@ -1,0 +1,36 @@
+@model StaffPickerViewModel
+
+@{
+    var endpoint = Url.Content($"~/Admin/api/staff/search?valueType={Uri.EscapeDataString(Model.ValueType ?? "staffId")}");
+
+    if (!string.IsNullOrWhiteSpace(Model.Capability))
+    {
+        endpoint += $"&capability={Uri.EscapeDataString(Model.Capability)}";
+    }
+
+    if (!string.IsNullOrWhiteSpace(Model.ExcludeId))
+    {
+        endpoint += $"&excludeId={Uri.EscapeDataString(Model.ExcludeId)}";
+    }
+}
+
+@await Component.InvokeAsync("ItemSelector", new
+{
+    id = Model.Id,
+    inputName = Model.InputName,
+    endpoint = endpoint,
+    initialItemsJson = Model.InitialItemsJson,
+    multiple = Model.Multiple,
+    enableSearch = true,
+    buttonText = Model.ButtonText ?? (Model.Multiple ? T["Choose staff"].Value : T["Choose a staff member"].Value),
+    searchPlaceholder = T["Search staff"].Value,
+    emptyResultsText = T["No staff found."].Value,
+    noSelectionText = T["Nobody chosen."].Value,
+    loadingText = T["Loading staff..."].Value,
+    loadErrorText = T["Unable to load staff."].Value,
+    resultsTextFormat = T["Found {0} staff member(s)."].Value,
+    selectedItemsLabel = Model.Multiple ? T["Chosen staff"].Value : T["Chosen staff member"].Value,
+    availableItemsLabel = T["Staff"].Value,
+    smallButton = Model.SmallButton,
+    required = Model.Required,
+})

@@ -1,0 +1,14 @@
+@model CrestApps.OrchardCore.Assets.Drivers.FleetDriverViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Driver"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Drives it by default"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.DefaultDriverWorkerId).ToString(), selectedValues = new[] { Model.DefaultDriverWorkerId }, buttonText = T["Choose a driver"].Value })
+                <span class="hint">@T["The technician app shows this vehicle and its stock as theirs."]</span>
+            </div>
+        </div>
+    </div>
+</div>

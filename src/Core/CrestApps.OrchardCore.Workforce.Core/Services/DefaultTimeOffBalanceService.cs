@@ -1,4 +1,6 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -14,7 +16,7 @@ internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
 {
     private static readonly TimeOffLedgerKind[] _manualKinds = [TimeOffLedgerKind.Opening, TimeOffLedgerKind.Adjustment, TimeOffLedgerKind.Payout, TimeOffLedgerKind.Carryover, TimeOffLedgerKind.Grant];
 
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly TimeOffPolicyStore _policyStore;
     private readonly TimeOffTypeStore _typeStore;
     private readonly TimeOffLedgerStore _ledgerStore;
@@ -28,7 +30,7 @@ internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
     internal readonly IStringLocalizer S;
 
     public DefaultTimeOffBalanceService(
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         TimeOffPolicyStore policyStore,
         TimeOffTypeStore typeStore,
         TimeOffLedgerStore ledgerStore,
@@ -182,7 +184,7 @@ internal sealed class DefaultTimeOffBalanceService : ITimeOffBalanceService
         return result;
     }
 
-    private async Task<TimeOffBalance> ComputeAsync(WorkerProfile worker, TimeOffPolicy policy, TimeOffPolicyResolver resolver, DateOnly date, CancellationToken cancellationToken)
+    private async Task<TimeOffBalance> ComputeAsync(StaffMember worker, TimeOffPolicy policy, TimeOffPolicyResolver resolver, DateOnly date, CancellationToken cancellationToken)
     {
         var entries = await _ledgerStore.ListAsync(worker.ItemId, policy.ItemId, cancellationToken);
         var input = await _planner.BuildAsync(worker, policy, resolver, entries, date, cancellationToken);

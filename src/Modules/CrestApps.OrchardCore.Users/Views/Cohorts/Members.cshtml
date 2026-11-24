@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model CohortMembersViewModel
+
+<zone Name="Title">
+    <breadcrumb name="CohortsMembers" title="@T["People in the '{0}' cohort", Model.Name]">
+        <breadcrumb-item id="Cohorts" action="Index" controller="Cohorts" area="CrestApps.OrchardCore.Users">@T["Cohorts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">@T.Plural(Model.Count, "1 person is in this cohort.", "{0} people are in this cohort.")</div>
+            <div class="col-auto"><a asp-action="Edit" asp-route-id="@Model.CohortId" class="btn btn-secondary">@T["Rename"]</a></div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Add people"]</div>
+    <div class="card-body">
+        <form asp-action="AddMembers" asp-route-id="@Model.CohortId" method="post" class="no-multisubmit" id="cohort-add-members">
+            <div class="ocat-limited-wrapper">
+                <label class="ocat-label">@T["People"]</label>
+                <div class="ocat-limited">
+                    @await Component.InvokeAsync("UserPicker", new { name = "UserIds", valueType = "userId", multiple = true, buttonText = T["Choose people"].Value, searchPlaceholder = T["Search users"].Value })
+                    <span class="hint">@T["Search by name, user name or e-mail."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper">
+                <label for="cohort-people" class="ocat-label">@T["Many at once"]</label>
+                <div class="ocat-limited">
+                    <textarea id="cohort-people" name="People" class="form-control" rows="4" placeholder="@T["One user name or e-mail per line"]"></textarea>
+                    <span class="hint">@T["Paste user names or e-mail addresses, one per line or separated by commas. People already in the cohort are skipped."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> @T["Add to cohort"]</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<admin-list name="CohortMembers" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody is in this cohort yet. Add people above."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Person"]" />
+        <admin-list-column name="Email" position="30" title="@T["E-mail"]" width="auto" />
+        <admin-list-column name="Added" position="40" title="@T["Added"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

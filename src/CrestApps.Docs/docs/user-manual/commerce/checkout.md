@@ -11,18 +11,18 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Checkout (the layout). Buyers reach the checkout itself from your site, for example by signing up to a [subscription](subscriptions.md) or opening a payment link. |
+| **Menu** | **Settings** → **Commerce** → **Checkout** (the layout). Buyers reach the checkout itself from your site, for example by signing up to a [subscription](subscriptions.md) or opening a payment link. |
 | **Permission** | None. A checkout only opens for the visitor who started it. |
 | **Feature** | Checkout, plus at least one [payment provider](payment-providers.md) (Stripe or Pay Later) |
 
 <AskYourAdmin />
 
-A checkout a buyer leaves unfinished is canceled after 24 hours. That time is not a setting in the admin; ask your developer if you need a different one. **Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
+A checkout a buyer leaves unfinished is canceled after 24 hours. That time is not a setting in the admin; ask your developer if you need a different one. **Settings** → **Commerce** → **Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
 This video walks through every step of the checkout as a shopper sees it:
 
 <YouTube video="carts-checkout" title="Video overview of the cart and the checkout" />
 
-**Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
+**Settings** → **Commerce** → **Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
 
 <YouTube video="carts-checkout" title="Carts and checkout: the buyer's journey and the checkout settings" />
 
@@ -31,7 +31,7 @@ This video walks through every step of the checkout as a shopper sees it:
 The page has three parts:
 
 - **The steps** across the top, numbered in order. A finished step shows a check mark, and the buyer can click it to go back and change it. Steps not reached yet cannot be opened, so nobody reaches payment with an earlier step unfilled. When the checkout has only one step, the row is not shown.
-- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**, or **Place order** when nothing is left to pay, for example when a gift card or a code covers the whole order. While the payment is being taken it shows **Processing…**. When the buyer started the checkout from a page of your site that asks to be returned to, such as a payment page or a list of payments, the **Payment** step (and the first step) also has a link back to that page, for example **Back to the payment page**. It reads **Back**, or **Leave checkout** when there is also a **Back** to the previous step, unless the page named its own wording.
+- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**, or **Place order** when nothing is left to pay, for example when a gift card or a code covers the whole order, or when the buyer picks a method that is paid later, such as Pay Later or Bank transfer (the order summary then shows the total as **Due later**). While the payment is being taken it shows **Processing…**. When the buyer started the checkout from a page of your site that asks to be returned to, such as a payment page or a list of payments, the **Payment** step (and the first step) also has a link back to that page, for example **Back to the payment page**. It reads **Back**, or **Leave checkout** when there is also a **Back** to the previous step, unless the page named its own wording.
 - **The order summary** on the right, on every step, so the total is never a surprise.
 
 ### Steps a buyer may see
@@ -56,7 +56,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 
 <YouTube video="carts-checkout" title="Video of the checkout and customer settings, and Checkout details" start={259} end={299} />
 
-Under **Settings > Commerce > Checkout**, **Checkout layout** is one of:
+Under **Settings** → **Commerce** → **Checkout**, **Checkout layout** is one of:
 
 - **A page per step**, the default: the steps described above, one page each.
 - **One page**: every step is a numbered section of one page, with the order summary beside them (below them on a phone). The buyer fills in their details and presses **Continue**. Once every step is complete, **Payment** appears below them on the same page, with **Pay now** (or **Place order** when nothing is left to pay). If the buyer then changes a detail, such as the shipping method, **Pay now** gives way to **Update order** with *You changed your details. Update your order to see the total before you pay.* Updating saves the change and shows the new total, so what they pay is what they see.
@@ -78,7 +78,7 @@ On the **Payment** step, the buyer:
 1. Optionally enters a promotion code, and pays part or all of the order with a gift card, store credit or points (see below).
 2. Picks a **Payment method**. Each method is a large button: **Credit or debit card (Stripe)** (*Pay securely online and confirm immediately.*), **Pay Later** (*Confirm now and pay later.*), **Bank transfer** and **Cash on delivery**, as you turned them on (see [Offline payments](payment-providers.md#offline-payments-pay-later-bank-transfer-and-cash-on-delivery)). Only methods that can pay for this purchase are shown: cash on delivery only for an order that is delivered. On a test or development site there may also be **Test payment**, which confirms the payment without taking any money; see [Try the checkout with test payments](payment-providers.md#try-the-checkout-with-test-payments).
 3. For card: picks one of their [saved cards](payment-providers.md#saved-cards), or enters the **Name on card** and the **Card details**, optionally ticking **Save this card for next time**, or taps an Apple Pay or Google Pay button when the device offers one.
-4. Clicks **Pay now**. When a gift card, store credit or points pay everything, the page says *No payment is required to complete this checkout.* instead of listing payment methods, and the buyer clicks **Place order**.
+4. Clicks **Pay now** (**Place order** for a method paid later). When a gift card, store credit or points pay everything, the page says *No payment is required to complete this checkout.* instead of listing payment methods, and the buyer clicks **Place order**.
 
 If the card's bank asks the cardholder to approve the payment, the approval window opens on top of the page. When the payment is confirmed, the buyer lands on the confirmation page.
 
@@ -150,9 +150,9 @@ With the Customers feature on, the **Contact** step of an order asks for:
 - **Full name** and **Email**, so the order and its messages reach the buyer, and a **Phone** if they want to give one. A signed-in buyer starts with their own details, and can change them for this order.
 - A **Billing address**, when your settings ask for one. It starts with the country and lays itself out the way that country writes addresses, with its list of states or provinces where it has one. A signed-in buyer can pick one of their saved addresses instead, and tick **Save a new address to my address book**.
 
-Under **Settings > Commerce > Customers**, **Billing address at checkout** is **Optional** (asked for, may be left blank; the default), **Required** (for example for invoices or tax) or **Off**. A checkout keeps the setting it started with.
+Under **Settings** → **Commerce** → **Customers**, **Billing address at checkout** is **Optional** (asked for, may be left blank; the default), **Required** (for example for invoices or tax) or **Off**. A checkout keeps the setting it started with.
 
-When the order is paid, it keeps its own copy of the name, email, phone and billing address, so later changes never change it. A guest becomes a customer of their own, listed under **Commerce > Customers** with the address they entered.
+When the order is paid, it keeps its own copy of the name, email, phone and billing address, so later changes never change it. A guest becomes a customer of their own, listed under **Commerce** → **Customers** with the address they entered.
 
 ## Your own checkout fields
 
@@ -160,8 +160,8 @@ When the order is paid, it keeps its own copy of the name, email, phone and bill
 
 To ask buyers for something of your own, such as a gift message, a delivery date or a purchase order number:
 
-1. Enable the **Checkout details** feature (**Tools > Features**).
-2. Go to **Design > Content Types**, open **Checkout details** and add the fields you need, for example a **Text Field** named *Gift message*. Tick **Required** in a field's settings to make buyers fill it in.
+1. Enable the **Checkout details** feature (**Tools** → **Features**).
+2. Go to **Design** → **Content Types**, open **Checkout details** and add the fields you need, for example a **Text Field** named *Gift message*. Tick **Required** in a field's settings to make buyers fill it in.
 
 The fields appear under **Order details** on the **Contact** step, in the order the content type lists them. What the buyer enters is kept on the order and shown under **Order details** on the order's page, for you and for the buyer. A field left out while required keeps the buyer on the step with *A value is required for …*.
 

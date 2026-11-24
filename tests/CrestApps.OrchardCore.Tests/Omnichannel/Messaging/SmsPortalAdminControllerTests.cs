@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -625,13 +626,15 @@ public sealed class SmsPortalAdminControllerTests
             conversationStore.Object,
             channels,
             Mock.Of<IOmnichannelChannelEndpointManager>(),
-            Mock.Of<IMessageTemplateManager>(),
+            Mock.Of<IMessageTemplateManager>(manager => manager.ListByScopeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<MessageTemplate>>(Array.Empty<MessageTemplate>())),
+            new LiquidMessageTemplateRenderer(Doubles.LiquidTestClocks.In("UTC"), Doubles.RecipeRoundTrip.Localizer<LiquidMessageTemplateRenderer>(), NullLogger<LiquidMessageTemplateRenderer>.Instance),
             agentProfileManager.Object,
             new PermissiveAgentEntitlementPolicy(),
             availabilityService.Object,
             Mock.Of<IMessagingAgentNameProvider>(),
             new MessagingFavoritesService(Mock.Of<IAgentProfileManager>(), Mock.Of<IClock>()),
             queueManagers,
+            [],
             Mock.Of<IContentManager>(),
             authorizationService,
             new MessagingQuietHoursGuard(

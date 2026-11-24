@@ -1,0 +1,11 @@
+@model ShapeViewModel<EducationCreditType>
+
+<a asp-controller="EducationCreditTypes" asp-action="Edit" asp-route-id="@Model.Value.ItemId" class="fw-semibold">@Model.Value.Name</a>
+@if (!string.IsNullOrEmpty(Model.Value.Unit))
+{
+    <span class="text-muted small ms-1">@Model.Value.Unit</span>
+}
+@if (!Model.Value.AllowExternalLearning)
+{
+    <span class="badge ta-badge fw-normal ms-1">@T["No external learning"]</span>
+}

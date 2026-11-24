@@ -1,0 +1,128 @@
+@model DocumentLinesEditorViewModel
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+@using CrestApps.OrchardCore.Invoicing.Services
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+@inject DocumentLinesEditorContext EditorContext
+
+@* The line rows of a draft document: lines are added, removed and moved in the browser, and the amounts and totals are
+   worked out as you type. The server's calculator works them out again on save; its totals are the ones kept. *@
+@{
+    var currency = Model.Currency;
+    var totals = Model.Totals ?? new DocumentTotals();
+    var decimals = string.IsNullOrEmpty(currency) ? 2 : CurrencyScale.GetDecimalPlaces(currency);
+    var categories = await EditorContext.GetTaxCategoriesAsync(Model.Lines.Select(line => line.TaxCategoryCode));
+    var searchUrl = Model.CanAddLines ? EditorContext.GetProductSearchUrl() : null;
+    var lineUrl = Model.CanAddLines ? EditorContext.GetProductLineUrl() : null;
+    var canPick = !string.IsNullOrEmpty(searchUrl) && !string.IsNullOrEmpty(lineUrl);
+    var templateRow = new DocumentLineRowViewModel { Line = new InvoiceLineEditViewModel { Quantity = 1m }, Index = "__index__", Editor = Model, TaxCategories = categories, CanPickProduct = canPick };
+    string Money(decimal amount) => string.IsNullOrEmpty(currency) ? amount.ToString("N" + decimals, CultureInfo.CurrentCulture) : MoneyFormatter.Format(amount, currency);
+}
+
+<style asp-name="invoicing-document-lines"></style>
+<script asp-name="invoicing-document-lines" at="Foot"></script>
+
+<div class="card mb-3 document-lines-card"
+     data-document-lines
+     data-decimals="@decimals"
+     data-currency="@currency"
+     data-culture="@CultureInfo.CurrentCulture.Name"
+     data-prices-include-tax="@(Model.PricesIncludeTax ? "true" : "false")"
+     data-product-search-url="@(canPick ? searchUrl : null)"
+     data-product-line-url="@(canPick ? lineUrl : null)"
+     data-tax-on-save="@T["tax worked out on save"]">
+    <div class="card-header">@T["Lines"]</div>
+    <div>
+        <table class="table table-sm mb-0 document-lines">
+            <colgroup>
+                <col class="document-lines-move" />
+                <col class="document-lines-kind" />
+                <col />
+                <col class="document-lines-quantity" />
+                <col class="document-lines-unit" />
+                <col class="document-lines-price" />
+                <col class="document-lines-discount" />
+                <col class="document-lines-tax-category" />
+                <col class="document-lines-amount" />
+                <col class="document-lines-remove" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col"><span class="visually-hidden">@T["Order"]</span></th>
+                    <th scope="col">@T["Kind"]</th>
+                    <th scope="col">@T["Description"]</th>
+                    <th scope="col" class="text-end">@T["Quantity"]</th>
+                    <th scope="col">@T["Unit"]</th>
+                    <th scope="col" class="text-end">@T["Price"]</th>
+                    <th scope="col" class="text-end">@T["Discount %"]</th>
+                    <th scope="col">@T["Tax category"]</th>
+                    <th scope="col" class="text-end">@T["Amount"]</th>
+                    <th scope="col"><span class="visually-hidden">@T["Remove"]</span></th>
+                </tr>
+            </thead>
+            <tbody data-lines-body>
+                @for (var i = 0; i < Model.Lines.Count; i++)
+                {
+                    <partial name="_DocumentLineRow" model="new DocumentLineRowViewModel { Line = Model.Lines[i], Index = i.ToString(CultureInfo.InvariantCulture), Position = i + 1, Editor = Model, TaxCategories = categories, CanPickProduct = canPick }" />
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" colspan="8">@T["Subtotal"]</th>
+                    <td data-lines-subtotal>@Money(totals.Subtotal)</td>
+                    <td></td>
+                </tr>
+                @foreach (var tax in Model.Taxes)
+                {
+                    <tr data-lines-saved>
+                        <th scope="row" colspan="8">
+                            @(string.IsNullOrEmpty(tax.Name) ? T["Tax"].Value : tax.Name)
+                            @if (tax.Rate > 0m)
+                            {
+                                <span>(@tax.Rate.ToString("0.###", CultureInfo.CurrentCulture)%)</span>
+                            }
+                        </th>
+                        <td>@Money(tax.TaxAmount)</td>
+                        <td></td>
+                    </tr>
+                }
+                <tr data-lines-estimate hidden>
+                    <th scope="row" colspan="8">@T["Tax, estimated until you save"]</th>
+                    <td data-lines-tax></td>
+                    <td></td>
+                </tr>
+                @if (totals.RoundingAmount != 0m)
+                {
+                    <tr data-lines-saved>
+                        <th scope="row" colspan="8">@T["Rounding"]</th>
+                        <td>@Money(totals.RoundingAmount)</td>
+                        <td></td>
+                    </tr>
+                }
+                <tr>
+                    <th scope="row" colspan="8">@(Model.TotalLabel ?? T["Total"].Value)</th>
+                    <th data-lines-total>@Money(totals.Total)</th>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    @if (Model.CanAddLines)
+    {
+        <template data-line-template>
+            <partial name="_DocumentLineRow" model="templateRow" />
+        </template>
+    }
+    <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+        @if (Model.CanAddLines)
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary" data-line-add>
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add line"]
+            </button>
+        }
+        @if (!string.IsNullOrEmpty(Model.Hint))
+        {
+            <span class="small text-muted">@Model.Hint</span>
+        }
+    </div>
+</div>

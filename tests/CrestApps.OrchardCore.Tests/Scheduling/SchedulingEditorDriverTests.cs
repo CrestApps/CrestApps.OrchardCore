@@ -287,6 +287,7 @@ public sealed class SchedulingEditorDriverTests
             calendars.Object,
             Mock.Of<ITimeZoneSelectListProvider>(),
             siteService.Object,
+            Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.Scheduling.Staff.SchedulingStaffOptions()),
             RecipeRoundTrip.Localizer<SchedulingResourceFieldsDisplayDriver>());
     }
 

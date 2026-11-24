@@ -75,5 +75,10 @@ public static class TimeTrackerConstants
         /// A recipe or deployment import.
         /// </summary>
         public const string Import = "Import";
+
+        /// <summary>
+        /// Work on a help desk ticket; the source ref is the ticket's record (<c>Ticket:{id}</c>).
+        /// </summary>
+        public const string Ticket = "Ticket";
     }
 }

@@ -11,7 +11,7 @@ An **invoice** tells a customer what they owe and gives them a link to pay it. A
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Transactions (administrators), Commerce > My Transactions (customers) |
+| **Menu** | **Commerce** → **Transactions (administrators)**, **Commerce** → **My Transactions (customers)** |
 | **Permission** | Manage transactions, or View own transactions for a customer's own invoices and receipts |
 | **Feature** | Transactions and Receipts (printable invoices and receipts), Send Payment Receipts (receipts and refund notices sent to customers), Transaction Reminders (invoices and pay links) |
 
@@ -65,7 +65,7 @@ The page says instead:
 
 The invoice page shows the invoice exactly as it prints.
 
-1. Open the transaction: **Commerce > Transactions** for an administrator, **Commerce > My Transactions** for a customer.
+1. Open the transaction: **Commerce** → **Transactions** for an administrator, **Commerce** → **My Transactions** for a customer.
 2. Click the invoice number next to **Invoice**.
 3. Click **Print invoice**. Only the invoice is printed, without the site's menus.
 
@@ -87,7 +87,7 @@ A customer whose invoice is still due also sees **Pay now** on the invoice page.
 
 Administrators can send a customer the pay link themselves, for example in a reply to their email.
 
-1. Open the transaction from **Commerce > Transactions** and click the invoice number.
+1. Open the transaction from **Commerce** → **Transactions** and click the invoice number.
 2. Under **Payment link**, click **Copy**. The button changes to **Copied**.
 3. Paste the link into your message.
 
@@ -107,7 +107,7 @@ With the **Send Payment Receipts** feature on, the customer is sent a receipt af
 A receipt shows:
 
 - your business's logo, name and address, under your **Header title** (*Payment receipt* unless you change it);
-- **Receipt:** with the receipt number, and the **Date** of the payment;
+- **Receipt:** with the receipt number, the **Date** of the payment, and the **Currency** code, such as *USD*, because several currencies share a symbol such as *$*;
 - **Billed to**, and the **Status** **Paid**;
 - the amount paid, with its share of the transaction's tax;
 - **Notes**: *Paid offline.* for a payment an administrator recorded, *Payment for invoice INV-1001.* when the payment settled an invoice, and how much of the charge was taken off without being paid when the transaction was adjusted;
@@ -116,7 +116,7 @@ A receipt shows:
 
 ### Print a receipt
 
-1. Open the transaction: **Commerce > Transactions** for an administrator, **Commerce > My Transactions** for a customer.
+1. Open the transaction: **Commerce** → **Transactions** for an administrator, **Commerce** → **My Transactions** for a customer.
 2. Find the payment in the **Timeline** (administrators) or **History** (customers) and click **View receipt**.
 3. Click **Print receipt**.
 
@@ -130,7 +130,7 @@ With the **Send Payment Receipts** feature on, when a refund of a payment on a t
 
 Receipts and reminders sent to a customer with an account carry a link to the document's page: **View your receipt online** in a receipt, **View your invoice** in a reminder for an invoiced payment. The customer signs in and sees only their own documents. Guests don't get these links, because they have no account to sign in with; their pay link is all they need.
 
-The links open the customer's pages in the admin (**Commerce > My Transactions**) unless your administrator sets them to open the [pages on the website](transactions.md#my-transactions-on-the-website). That is a setting in the site's configuration, not on a settings screen.
+The links open the customer's pages in the admin (**Commerce** → **My Transactions**) unless your administrator sets them to open the [pages on the website](transactions.md#my-transactions-on-the-website). That is a setting in the site's configuration, not on a settings screen.
 
 ## Brand your invoices and receipts
 
@@ -140,13 +140,13 @@ Invoices and receipts share one set of branding settings.
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Receipts |
+| **Menu** | **Settings** → **Commerce** → **Receipts** |
 | **Permission** | Manage receipt settings |
 | **Feature** | Receipts |
 
 <AskYourAdmin />
 
-1. Open **Settings > Commerce > Receipts**.
+1. Open **Settings** → **Commerce** → **Receipts**.
 2. Fill in the fields below and click **Save**.
 
 | Field | What it does |
@@ -159,11 +159,13 @@ Invoices and receipts share one set of branding settings.
 | **Contact phone** | A phone number printed at the bottom. |
 | **Website** | A website address printed at the bottom. |
 | **Footer text** | Free text printed at the bottom, such as a thank-you note or your return policy. |
-| **Show a test-payment badge for test-mode payments** | Marks receipts for payments made in a payment provider's test mode with a **Test payment** badge. On by default. |
+| **Show a test-payment badge for test-mode payments** | Prints **Test payment** across receipts for payments made in a payment provider's test mode. On by default. |
+
+Invoices and receipts are printed with the document template for **Receipts**, when there is one. The template adds an accent color and a paper size, and its logo and footer when these settings leave them empty. See [Document Templates and Number Series](document-templates-and-number-series.md).
 
 ## Make sure links point at your site
 
-The pay links in reminders, the links to the customer's invoice and receipt pages, and the link you copy from an invoice, use your site's public address. Your administrator sets it in **Base url** under **Settings > General**, for example *https://shop.contoso.com*.
+The pay links in reminders, the links to the customer's invoice and receipt pages, and the link you copy from an invoice, use your site's public address. Your administrator sets it in **Base url** under **Settings** → **General**, for example *https://shop.contoso.com*.
 
 Set it before you rely on pay links. Without it, a link copied from the invoice page uses whatever address you opened the admin from, which a customer may not be able to reach, and the reminders the site sends on its schedule go out **without** a pay link: customers with an account are asked to sign in to pay instead.
 
@@ -171,3 +173,4 @@ Set it before you rely on pay links. Without it, a link copied from the invoice 
 
 - [Transactions](transactions.md): the report, recording payments and reminder settings.
 - [Payments and Refunds](payments-and-refunds.md): refunding a payment.
+- [Document Templates and Number Series](document-templates-and-number-series.md): the look of printed documents and how their numbers are written.

@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -20,7 +23,7 @@ public sealed class WorkforceSetupController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellFeaturesManager _featuresManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
 
     internal readonly IStringLocalizer S;
 
@@ -36,7 +39,7 @@ public sealed class WorkforceSetupController : Controller
         IAuthorizationService authorizationService,
         IShellFeaturesManager featuresManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IStringLocalizer<WorkforceSetupController> stringLocalizer)
     {
         _authorizationService = authorizationService;
@@ -61,8 +64,8 @@ public sealed class WorkforceSetupController : Controller
         var features = (await _featuresManager.GetEnabledFeaturesAsync()).Select(feature => feature.Id).ToHashSet(StringComparer.Ordinal);
         var services = HttpContext.RequestServices;
         var teams = await _teamManager.GetAllAsync(HttpContext.RequestAborted);
-        var (workerCount, _) = await _workerManager.SearchAsync(new WorkerQuery(), 0, 1, HttpContext.RequestAborted);
-        var (linked, _) = await _workerManager.SearchAsync(new WorkerQuery { HasUser = true }, 0, 1, HttpContext.RequestAborted);
+        var (workerCount, _) = await _workerManager.SearchAsync(new StaffQuery(), 0, 1, HttpContext.RequestAborted);
+        var (linked, _) = await _workerManager.SearchAsync(new StaffQuery { HasUser = true }, 0, 1, HttpContext.RequestAborted);
         var model = new WorkforceSetupViewModel { HasRecipes = features.Contains("OrchardCore.Recipes") };
 
         model.Steps.Add(new WorkforceSetupStep
@@ -80,8 +83,8 @@ public sealed class WorkforceSetupController : Controller
             Description = S["The people who work, with their teams and roles. Link a worker to a user account so they can use My Work."],
             Status = S["Workers: {0} · Linked to a user: {1}", workerCount, linked],
             Done = workerCount > 0,
-            Action = S["Workers"],
-            Url = Url.Action("Index", "Workers"),
+            Action = S["Staff"],
+            Url = Url.Action("Index", "Staff", new { area = StaffConstants.Features.Staff }),
         });
 
         await AddAsync(model, features, WorkforceConstants.Features.ShiftPlanning, S["Plan shifts"], S["Shift templates, then a schedule for a team: draft it, fill it automatically, check coverage and publish it."], async () =>
@@ -107,13 +110,13 @@ public sealed class WorkforceSetupController : Controller
             return (S["Rule sets: {0}", sets.Count()], sets.Any(), S["Labor Rules"], Url.Action("Index", "LaborRuleSets"));
         });
 
-        await AddAsync(model, features, WorkforceConstants.Features.TimeClock, S["Turn on the time clock"], S["Pay periods, a time clock policy, and the teams that use it. Workers then clock in from My Work or a kiosk."], async () =>
+        await AddAsync(model, features, WorkforceConstants.Features.TimeClock, S["Turn on the time clock"], S["A pay schedule (Payroll > Setup), a time clock policy, and the teams that use it. Workers then clock in from My Work or a kiosk."], async () =>
         {
-            var calendars = await services.GetRequiredService<IPayPeriodCalendarManager>().GetAllAsync(HttpContext.RequestAborted);
+            var calendars = await services.GetRequiredService<IPayScheduleManager>().GetAllAsync(HttpContext.RequestAborted);
             var policies = await services.GetRequiredService<ITimeClockPolicyManager>().GetAllAsync(HttpContext.RequestAborted);
             var clocked = teams.Count(team => !string.IsNullOrEmpty(team.GetWorkforceSettings().TimeClockPolicyId));
 
-            return (S["Pay periods: {0} · Policies: {1} · Teams with a policy: {2}", calendars.Count(), policies.Count(), clocked], calendars.Any() && policies.Any() && clocked > 0, S["Time Clock Policies"], Url.Action("Index", "TimeClockPolicies"));
+            return (S["Pay schedules: {0} · Policies: {1} · Teams with a policy: {2}", calendars.Count(), policies.Count(), clocked], calendars.Any() && policies.Any() && clocked > 0, S["Time Clock Policies"], Url.Action("Index", "TimeClockPolicies"));
         });
 
         model.Steps.Add(new WorkforceSetupStep

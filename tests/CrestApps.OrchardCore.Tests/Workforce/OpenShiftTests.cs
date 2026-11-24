@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Skills.Models;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
@@ -175,7 +177,7 @@ public sealed class OpenShiftTests
 
         await harness.RunAsync(async services =>
         {
-            var workers = services.GetRequiredService<IWorkerManager>();
+            var workers = services.GetRequiredService<IStaffMemberManager>();
 
             foreach (var (worker, since) in new[] { (setup.Ana, new DateOnly(2022, 1, 1)), (setup.Ben, new DateOnly(2015, 6, 1)) })
             {
@@ -302,12 +304,12 @@ public sealed class OpenShiftTests
         return harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().FindAsync(id), commit: false);
     }
 
-    private static Task<PlanningResult<OpenShift>> ClaimAsync(CalendarTestHarness harness, OpenShift shift, WorkerProfile worker)
+    private static Task<PlanningResult<OpenShift>> ClaimAsync(CalendarTestHarness harness, OpenShift shift, StaffMember worker)
     {
         return harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().ClaimAsync(shift.ItemId, worker.ItemId, worker.UserId));
     }
 
-    private static Task<IReadOnlyList<string>> CheckAsync(CalendarTestHarness harness, OpenShift shift, WorkerProfile worker)
+    private static Task<IReadOnlyList<string>> CheckAsync(CalendarTestHarness harness, OpenShift shift, StaffMember worker)
     {
         return harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().CheckAsync(shift.ItemId, worker.ItemId), commit: false);
     }
@@ -317,5 +319,5 @@ public sealed class OpenShiftTests
         return harness.RunAsync(services => services.GetRequiredService<IOpenShiftService>().AwardDueAsync());
     }
 
-    private sealed record Setup(Team Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, Skill Skill, ShiftTemplate Template, SchedulePeriod Period, DraftShift Open);
+    private sealed record Setup(Team Team, StaffMember Ana, StaffMember Ben, StaffMember Cy, Skill Skill, ShiftTemplate Template, SchedulePeriod Period, DraftShift Open);
 }

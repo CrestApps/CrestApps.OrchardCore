@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Estimates
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EstimateSentEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+    @T["Estimate Sent"]
+</h4>
+<p>@T["Starts when an estimate is sent."]</p>

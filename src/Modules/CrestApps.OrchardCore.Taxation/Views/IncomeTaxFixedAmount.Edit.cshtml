@@ -1,0 +1,22 @@
+@model IncomeTaxFixedAmountViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Amount"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="FixedAmount">
+            <label asp-for="FixedAmount" class="ocat-label ocat-label-required">@T["Each pay"]</label>
+            <div class="ocat-end">
+                <input asp-for="FixedAmount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="FixedAmount" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="YearlyMaximum">
+            <label asp-for="YearlyMaximum" class="ocat-label">@T["Yearly maximum"]</label>
+            <div class="ocat-end">
+                <input asp-for="YearlyMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="YearlyMaximum" class="text-danger"></span>
+                <span class="hint">@T["The most tax taken in a calendar year; empty for no limit. Amounts take a dot for decimals."]</span>
+            </div>
+        </div>
+    </div>
+</div>

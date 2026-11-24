@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Staff.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StaffMemberHiredEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Staff Member Hired"])
+    </h4>
+</header>

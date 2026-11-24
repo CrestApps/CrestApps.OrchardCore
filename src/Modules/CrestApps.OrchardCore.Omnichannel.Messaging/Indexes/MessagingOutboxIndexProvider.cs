@@ -25,6 +25,8 @@ public sealed class MessagingOutboxIndexProvider : IndexProvider<OmnichannelMess
     {
         context
             .For<MessagingOutboxIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(message => !message.IsInbound && string.Equals(message.DeliveryStatus, _queued, StringComparison.Ordinal))
             .Map(message =>
             {

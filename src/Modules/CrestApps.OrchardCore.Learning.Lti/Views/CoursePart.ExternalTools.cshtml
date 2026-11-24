@@ -1,0 +1,23 @@
+@model CourseExternalToolsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Content from external tools"]</div>
+    <div class="card-body">
+        @if (Model.Tools.Count == 0)
+        {
+            <p class="mb-0 text-body-secondary">@T["No registered external tool offers Deep Linking."]</p>
+        }
+        else
+        {
+            <p class="hint">@T["Pick activities in a tool: each one you choose becomes an External tool item at the end of the course's last section. Save your changes to the course first, because you leave this page."]</p>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var tool in Model.Tools)
+                {
+                    <a class="btn btn-sm btn-secondary" href="@Url.RouteUrl("LearningLtiDeepLinkingStart", new { courseId = Model.CourseId, toolId = tool.Value })">
+                        <i class="fa-solid fa-plug me-1" aria-hidden="true"></i>@T["Pick from {0}", tool.Text]
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
@@ -219,7 +220,7 @@ public sealed class AdherenceServiceTests
 
         public Team Team { get; set; }
 
-        public WorkerProfile Ana { get; set; }
+        public StaffMember Ana { get; set; }
 
         public AgentProfile Agent { get; set; }
 

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -66,7 +67,7 @@ public sealed class WorkforceSampleRecipeTests
         await harness.RunAsync(async services =>
         {
             var tree = await services.GetRequiredService<ITeamManager>().ListTreeAsync();
-            var (workers, _) = await services.GetRequiredService<IWorkerManager>().SearchAsync(new WorkerQuery(), 0, 50);
+            var (workers, _) = await services.GetRequiredService<IStaffMemberManager>().SearchAsync(new StaffQuery(), 0, 50);
             var templates = await services.GetRequiredService<IShiftTemplateManager>().GetAllAsync();
             var policy = Assert.Single(await services.GetRequiredService<ITimeClockPolicyManager>().GetAllAsync());
 

@@ -82,7 +82,7 @@ public sealed class PortalAdminMenu : AdminNavigationProvider
 
                 if (nav.HasTimeOff)
                 {
-                    Item("myWorkTimeOff", S["Time off"], "~/Admin/my-work/time-off");
+                    Item("myWorkTimeOff", S["Time Off"], "~/Admin/my-work/time-off");
                 }
 
                 if (nav.HasShiftPlanning)
@@ -102,7 +102,7 @@ public sealed class PortalAdminMenu : AdminNavigationProvider
             if (nav.IsManager)
             {
                 Item("myWorkApprovals", S["Approvals"], "~/Admin/my-work/approvals");
-                Item("myWorkTeam", S["Who's working"], "~/Admin/my-work/team");
+                Item("myWorkTeam", S["Who's Working"], "~/Admin/my-work/team");
             }
         });
     }

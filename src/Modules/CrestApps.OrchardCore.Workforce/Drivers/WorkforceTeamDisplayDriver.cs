@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Workforce.Geo;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -38,7 +40,7 @@ internal sealed class WorkforceTeamDisplayDriver : DisplayDriver<Team>
         {
             var settings = team.GetWorkforceSettings();
 
-            model.Address = settings.Location?.Address;
+            model.TeamAddress = WorkforceGeocodeTargets.AddressText(team.Address);
             model.Latitude = settings.Location?.Latitude;
             model.Longitude = settings.Location?.Longitude;
             model.TimeClockPolicyId = settings.TimeClockPolicyId;
@@ -98,9 +100,9 @@ internal sealed class WorkforceTeamDisplayDriver : DisplayDriver<Team>
             }
         }
 
-        settings.Location = string.IsNullOrWhiteSpace(model.Address) && !latitude.HasValue
-            ? null
-            : new WorkforceLocation { Address = model.Address?.Trim(), Latitude = latitude, Longitude = longitude };
+        settings.Location = latitude.HasValue
+            ? new WorkforceLocation { Latitude = latitude, Longitude = longitude }
+            : null;
 
         return Edit(team, context);
     }

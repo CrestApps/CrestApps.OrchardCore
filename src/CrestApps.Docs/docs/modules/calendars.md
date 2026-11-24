@@ -53,7 +53,7 @@ External Calendars ships one read-only provider: a subscription to an iCalendar 
 
 ### Categories
 
-`CalendarCategory` (name, color, and an `OwnerId`, or none for a category everyone can use) lives in the Calendars collection behind `ICalendarCategoryService` (`ListAsync(userId)` gives the user's own and the shared ones). `CalendarEvent.CategoryId` puts an event in one. The calendar view colors an event with, in order, its own `Color`, its category's, its event type's, then its calendar's, and sends `categoryId` with each occurrence so the page can filter by category (busy blocks carry none). Users manage their own categories at **Calendars > Categories** (`AccessCalendars`); shared ones need `ManageAllCalendars`.
+`CalendarCategory` (name, color, and an `OwnerId`, or none for a category everyone can use) lives in the Calendars collection behind `ICalendarCategoryService` (`ListAsync(userId)` gives the user's own and the shared ones). `CalendarEvent.CategoryId` puts an event in one. The calendar view colors an event with, in order, its own `Color`, its category's, its event type's, then its calendar's, and sends `categoryId` with each occurrence so the page can filter by category (busy blocks carry none). Users manage their own categories at **Calendars** → **Categories** (`AccessCalendars`); shared ones need `ManageAllCalendars`.
 
 ### Reminders on screen
 
@@ -98,7 +98,7 @@ The rules, in order: `ManageAllCalendars` gives **Manage**; `ViewAllCalendars` g
 
 ## Dashboard widget
 
-With Orchard Core's **Admin Dashboard** enabled next to **Calendars**, a **Calendar** widget can be added to the admin dashboard. There is no feature of its own to turn on: the widget appears when both are enabled. Add it from **Manage Dashboard > Add Widget > Calendar** and choose:
+With Orchard Core's **Admin Dashboard** enabled next to **Calendars**, a **Calendar** widget can be added to the admin dashboard. There is no feature of its own to turn on: the widget appears when both are enabled. Add it from **Manage Dashboard** → **Add Widget** → **Calendar** and choose:
 
 - **Calendars to show**:
   - **The viewer's own calendars** (the default): each person sees their personal calendar and the calendars they may add events to, the same ones the calendar page ticks first.
@@ -135,6 +135,7 @@ Event type builder (`CalendarEventTypeBuilder`):
 | `NeedsApproval()` | New events are created `Tentative` and someone with **Manage** confirms them. |
 | `RequiresAttendee()` | An event must name at least one attendee, such as the person on call. |
 | `IgnoresCapacity()` | Busy events of the type don't count toward the calendar's capacity. |
+| `MarksAbsence()` | An event of the type marks its people as away (out of office, time off): team assignment doesn't push work to them while it lasts. |
 
 The built-in types:
 
@@ -151,7 +152,7 @@ The built-in types:
 
 Calendars has no workforce type (shifts, time off, breaks). A workforce management module is expected to register one with `AddCalendarType` (see [#1225](https://github.com/CrestApps/CrestApps.OrchardCore/issues/1225)), using `RequiresAttendee()` for the people on a shift and `NeedsApproval()` for time off.
 
-A personal calendar is created for a user the first time they open **Calendars > Calendar** (`ICalendarService.GetOrCreatePersonalCalendarAsync`).
+A personal calendar is created for a user the first time they open **Calendars** → **Calendar** (`ICalendarService.GetOrCreatePersonalCalendarAsync`).
 
 ### Register a calendar type from another module
 
@@ -383,6 +384,8 @@ The Calendars API feature maps `/api/calendars/v1`, authenticated with Orchard C
 An overlap refusal returns `409 Conflict` as Problem Details; other validation errors, including a missing body or a range whose end is not after its start, return `400` with the field errors. Cancelling an event that is already cancelled, or sending the same answer to an invitation again, succeeds without a change, so a retried request raises no second **Event Cancelled**, **Event Updated** or **Response Received** workflow event.
 
 The admin calendar view uses its own endpoints under `Admin/api/calendars` (`occurrences`, `occurrences/move` and `users/search`), which are not a public API.
+
+The user search behind the calendar user pickers (`users/search`, route name `CalendarsUserSearch`) answers only users who hold both **Use calendars** and **Access admin panel** (`AccessAdminPanel`); anyone else, such as a signed-in storefront customer, gets `403 Forbidden`. It returns up to 30 enabled users and matches the user name. It matches and shows emails only for a caller who holds Orchard Core's **View Users** permission (`UsersPermissions.ViewUsers`, which **Manage Users** implies); others see user names only.
 
 ## AI tools
 

@@ -22,12 +22,46 @@ public sealed class RegisterIndexProvider : IndexProvider<Register>
 
     public override void Describe(DescribeContext<Register> context)
         => context.For<RegisterIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(register => new RegisterIndex
             {
                 ItemId = register.ItemId,
                 Name = register.Name,
                 LocationId = register.LocationId,
                 IsEnabled = register.IsEnabled,
+            });
+}
+
+public sealed class PosDepartmentIndex : CatalogItemIndex
+{
+    public string Name { get; set; }
+
+    public string Number { get; set; }
+
+    public int Position { get; set; }
+
+    public bool IsEnabled { get; set; }
+}
+
+public sealed class PosDepartmentIndexProvider : IndexProvider<PosDepartment>
+{
+    public PosDepartmentIndexProvider()
+    {
+        CollectionName = PosConstants.CollectionName;
+    }
+
+    public override void Describe(DescribeContext<PosDepartment> context)
+        => context.For<PosDepartmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(department => new PosDepartmentIndex
+            {
+                ItemId = department.ItemId,
+                Name = department.Name?.Length > 255 ? department.Name[..255] : department.Name,
+                Number = department.Number?.Length > 50 ? department.Number[..50] : department.Number,
+                Position = department.Position,
+                IsEnabled = department.IsEnabled,
             });
 }
 
@@ -61,6 +95,8 @@ public sealed class RegisterShiftIndexProvider : IndexProvider<RegisterShift>
 
     public override void Describe(DescribeContext<RegisterShift> context)
         => context.For<RegisterShiftIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(shift => new RegisterShiftIndex
             {
                 ItemId = shift.ItemId,

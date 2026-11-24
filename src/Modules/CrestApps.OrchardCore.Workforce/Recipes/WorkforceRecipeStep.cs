@@ -4,6 +4,8 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Core;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -25,12 +27,12 @@ internal sealed class WorkforceRecipeStep : NamedRecipeStepHandler
 
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
 
     public WorkforceRecipeStep(
         IActivityCodeManager activityCodeManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager)
+        IStaffMemberManager workerManager)
         : base(WorkforceConstants.RecipeStepName)
     {
         _activityCodeManager = activityCodeManager;
@@ -75,6 +77,15 @@ internal sealed class WorkforceRecipeStep : NamedRecipeStepHandler
         {
             var incoming = Read<WorkforceTeamSettings>(context, node, "Teams") ?? new WorkforceTeamSettings();
 
+            // Recipes written before teams had an address kept it on the Workforce location, as one line.
+            if (team.Address is null
+                && node["Location"]?["Address"] is System.Text.Json.Nodes.JsonValue legacy
+                && legacy.TryGetValue<string>(out var line)
+                && !string.IsNullOrWhiteSpace(line))
+            {
+                team.Address = new global::CrestApps.OrchardCore.Addresses.Models.Address { AddressLine1 = line.Trim() };
+            }
+
             team.AlterWorkforceSettings(settings =>
             {
                 // The calendar belongs to the site; an imported team keeps the one it has here.
@@ -94,7 +105,7 @@ internal sealed class WorkforceRecipeStep : NamedRecipeStepHandler
 
         foreach (var node in Nodes(context, "Workers"))
         {
-            var incoming = Read<WorkerProfile>(context, node, "Workers");
+            var incoming = Read<StaffMember>(context, node, "Workers");
 
             if (incoming is null)
             {

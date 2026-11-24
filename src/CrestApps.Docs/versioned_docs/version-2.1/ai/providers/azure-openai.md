@@ -70,7 +70,7 @@ When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use 
 ### Get the API key and endpoint
 
 1. Open the Azure Portal and navigate to your Azure OpenAI resource.
-2. Go to **Resource Management** -> **Keys and Endpoint**.
+2. Go to **Resource Management** → **Keys and Endpoint**.
 3. Copy the **Endpoint**.
 4. Copy one of the available **API keys**.
 
@@ -157,7 +157,7 @@ This is useful when:
 
 ### How to create an Azure Speech deployment
 
-1. Navigate to **AI Services** -> **Deployments** in the admin dashboard.
+1. Navigate to **AI Services** → **Deployments** in the admin dashboard.
 2. Click **Add Deployment** and select **Azure Speech** as the provider.
 3. Enter a deployment name.
 4. Set the deployment purpose to **SpeechToText**.
@@ -171,7 +171,7 @@ You can find your Speech Service endpoint and API key in the [Azure AI Foundry p
 
 ### Setting the default speech-to-text deployment
 
-After creating the deployment, go to **Settings** -> **Artificial Intelligence** and select this deployment under **Default Speech-to-Text Deployment**.
+After creating the deployment, go to **Settings** → **Artificial Intelligence** and select this deployment under **Default Speech-to-Text Deployment**.
 
 ### Configuring Azure Speech via appsettings.json
 

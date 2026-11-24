@@ -1,0 +1,43 @@
+@model ShapeViewModel<IncomeTaxRule>
+@using System.Globalization
+@using CrestApps.OrchardCore.Taxation.Services
+@using Microsoft.Extensions.Localization
+@using Microsoft.Extensions.Options
+@using OrchardCore
+
+@inject IOptions<IncomeTaxRuleSourceOptions> SourceOptions
+@inject IStringLocalizerFactory LocalizerFactory
+
+@{
+    var rule = Model.Value;
+    var source = rule.Source is { } name ? SourceOptions.Value.Sources.GetValueOrDefault(name) : null;
+}
+
+@if (source is not null)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Kind of rule"]">@LocalizerFactory.Localize(source.DisplayName).Value</span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Jurisdiction"]">@rule.Jurisdiction</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Paid by"]">@(rule.Payer == IncomeTaxPayer.Employer ? T["Employer"] : T["Employee"])</span>
+@if (rule.ShareOfTaxCode is { } share)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Share of another tax"]">@share × @((rule.ShareMultiplier ?? 1m).ToString("0.####", CultureInfo.CurrentCulture))</span>
+}
+@if (rule.Rate is { } rate)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rate"]">@rate.ToString("0.####", CultureInfo.CurrentCulture) %</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Applies"]"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@rule.EffectiveFrom.ToString("d", CultureInfo.CurrentCulture)@(rule.EffectiveTo is { } to ? " – " + to.ToString("d", CultureInfo.CurrentCulture) : string.Empty)</span>
+@if (rule.IsVerified)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@(string.IsNullOrEmpty(rule.VerificationSource) ? T["Verified by {0}", rule.VerifiedBy] : T["Verified by {0} against {1}", rule.VerifiedBy, rule.VerificationSource])"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Verified"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Nobody has checked the rule against the agency's publications since it last changed. It is still worked out."]"><i class="fa-solid fa-circle-question text-warning me-1" aria-hidden="true"></i>@T["Not verified"]</span>
+}
+@if (!rule.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]</span>
+}

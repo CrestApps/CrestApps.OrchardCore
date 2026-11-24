@@ -1,0 +1,3 @@
+@model ShapeViewModel<ApprovalRequest>
+
+<a asp-action="Decide" asp-controller="ApprovalRequests" asp-route-id="@Model.Value.ItemId">@(Model.Value.Title ?? Model.Value.SubjectKind)</a>

@@ -1,7 +1,12 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Core;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Teams.Core;
 using CrestApps.OrchardCore.Teams.Models;
@@ -34,23 +39,23 @@ public static class WorkforceCoreServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddTeamsCore();
-        services.TryAddScoped<WorkerStore>();
+        services.AddStaffCore();
+
+        // Workforce always runs with Skills: a worker and their user hold skills together.
+        services.AddStaffSkillLinks();
+        services.AddStaffLifecycleObserver<WorkforceStaffLifecycleObserver>();
         services.TryAddScoped<ActivityCodeStore>();
-        services.TryAddScoped<IWorkerManager, WorkerManager>();
         services.TryAddScoped<IActivityCodeManager, ActivityCodeManager>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkerProfile>, WorkerCatalogHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectLinkProvider, WorkerSkillSubjectLinkProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<StaffMember>, WorkforceStaffCatalogHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, WorkforceTeamCatalogHandler>());
         services.AddTeamDeletionGuard<WorkforceTeamDeletionGuard>();
-        services.AddTeamMemberProvider<WorkerTeamMemberProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ActivityCode>, ActivityCodeCatalogHandler>());
         services.TryAddScoped<IWorkforceScopeService, DefaultWorkforceScopeService>();
         services.TryAddScoped<WorkforceCalendarService>();
         services.TryAddScoped<ActivityCodeSeeder>();
-        services.TryAddScoped<WorkerAccounts>();
         services.AddCalendarAccessContributor<WorkforceCalendarAccessContributor>();
         services.AddCalendarBusyTimeSource<ShiftSegmentBusyTimeSource>();
+        services.AddTeamMemberAvailabilitySource<WorkforceShiftAvailabilitySource>();
 
         services.TryAddScoped<TeamTimeZoneResolver>();
         services.TryAddScoped<WorkerTimeZones>();
@@ -100,7 +105,7 @@ public static class WorkforceCoreServiceCollectionExtensions
             .WithPosition(60)
             .ManagedByCode()
             .AddEventType(WorkforceConstants.EventTypes.Shift, LocalizationSource.Create("Shift", _source), e => e.Color("#2b8a3e").Free().IgnoresCapacity())
-            .AddEventType(WorkforceConstants.EventTypes.TimeOff, LocalizationSource.Create("Time off", _source), e => e.Color("#e8590c").Busy().IgnoresCapacity().AllDayByDefault())
+            .AddEventType(WorkforceConstants.EventTypes.TimeOff, LocalizationSource.Create("Time off", _source), e => e.Color("#e8590c").Busy().IgnoresCapacity().AllDayByDefault().MarksAbsence())
             .AddEventType(WorkforceConstants.EventTypes.Training, LocalizationSource.Create("Training", _source), e => e.Color("#1971c2").Busy())
             .AddEventType(WorkforceConstants.EventTypes.Meeting, LocalizationSource.Create("Meeting", _source), e => e.Color("#6741d9").Busy())
             .AddEventType(WorkforceConstants.EventTypes.OnCall, LocalizationSource.Create("On call", _source), e => e.Color("#f08c00").Free().RequiresAttendee()));

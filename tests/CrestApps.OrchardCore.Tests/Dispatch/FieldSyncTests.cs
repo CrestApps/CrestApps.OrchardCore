@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -43,7 +44,7 @@ public sealed class FieldSyncTests
         var first = await ApplyAsync(kit, ana, outbox);
         var again = await ApplyAsync(kit, ana, outbox);
         var after = Assert.Single(await kit.VisitsOfAsync(workOrder.ItemId));
-        var notes = (await kit.WorkOrderAsync(workOrder.ItemId)).Notes.Count(note => note.Text == "Replaced the igniter.");
+        var notes = (await kit.WorkOrderNotesAsync(workOrder.ItemId)).Count(note => note.Text == "Replaced the igniter.");
 
         Assert.Equal([FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Duplicate], first.Select(result => result.Outcome));
         Assert.All(again, result => Assert.Equal(FieldCommandOutcome.Duplicate, result.Outcome));
@@ -78,7 +79,7 @@ public sealed class FieldSyncTests
             Assert.Equal($"{visit.Number} was given to someone else.", result.Reason);
         });
         Assert.Equal(VisitStatus.Scheduled, after.Status);
-        Assert.DoesNotContain((await kit.WorkOrderAsync(workOrder.ItemId)).Notes, note => note.Text == "On my way.");
+        Assert.DoesNotContain((await kit.WorkOrderNotesAsync(workOrder.ItemId)), note => note.Text == "On my way.");
 
         // Ben's own commands go through.
         Assert.Equal(FieldCommandOutcome.Applied, Assert.Single(await ApplyAsync(kit, ben, Status("k3", visit, VisitStatus.EnRoute))).Outcome);
@@ -315,7 +316,7 @@ public sealed class FieldSyncTests
         Assert.Equal([FieldCommandOutcome.Applied, FieldCommandOutcome.Duplicate, FieldCommandOutcome.Rejected], results.Select(result => result.Outcome));
         Assert.Equal(today.ItemId, created.ParentWorkOrderId);
         Assert.Equal(["boiler"], created.AssetIds);
-        Assert.Contains((await kit.WorkOrderAsync(today.ItemId)).Notes, note => note.Text == $"Follow-up {created.Number}: Fit the new pump");
+        Assert.Contains((await kit.WorkOrderNotesAsync(today.ItemId)), note => note.Text == $"Follow-up {created.Number}: Fit the new pump");
     }
 
     private static FieldCommand Status(string key, ServiceVisit visit, VisitStatus status)
@@ -324,15 +325,15 @@ public sealed class FieldSyncTests
     private static FieldCommand Answer(string key, ServiceVisit visit, string value, DateTime utc)
         => new() { Key = key, Kind = FieldCommandKind.Answer, VisitId = visit.ItemId, Utc = utc, ChecklistIndex = 0, QuestionId = "pressure", Value = value };
 
-    private static Task<IReadOnlyList<FieldCommandResult>> ApplyAsync(DispatchKit kit, WorkerProfile worker, params FieldCommand[] commands)
+    private static Task<IReadOnlyList<FieldCommandResult>> ApplyAsync(DispatchKit kit, StaffMember worker, params FieldCommand[] commands)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IFieldSyncService>().ApplyAsync(worker.ItemId, commands, worker.DisplayName));
 
-    private static Task<WorkerLocationConsent> SetConsentAsync(DispatchKit kit, WorkerProfile worker, bool given)
+    private static Task<WorkerLocationConsent> SetConsentAsync(DispatchKit kit, StaffMember worker, bool given)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IWorkerLocationService>().SetConsentAsync(worker.ItemId, given));
 
-    private static Task<LocationPingResult> PingAsync(DispatchKit kit, WorkerProfile worker, DateTime utc)
+    private static Task<LocationPingResult> PingAsync(DispatchKit kit, StaffMember worker, DateTime utc)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IWorkerLocationService>().RecordAsync(worker.ItemId, [new LocationPingInput { Utc = utc, Latitude = DispatchKit.South.Latitude, Longitude = DispatchKit.South.Longitude, AccuracyMeters = 12 }]));
 
-    private static Task<IReadOnlyList<WorkerLocationPing>> LatestAsync(DispatchKit kit, WorkerProfile worker)
+    private static Task<IReadOnlyList<WorkerLocationPing>> LatestAsync(DispatchKit kit, StaffMember worker)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IWorkerLocationService>().LatestAsync([worker.ItemId], DispatchKit.Monday(0)), commit: false);
 }

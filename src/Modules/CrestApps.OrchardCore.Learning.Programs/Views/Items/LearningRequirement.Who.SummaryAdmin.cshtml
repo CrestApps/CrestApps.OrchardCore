@@ -1,0 +1,14 @@
+@model LearningRequirementRowViewModel
+
+@if (!string.IsNullOrEmpty(Model.AudienceName))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@Model.AudienceName</span>
+}
+@if (Model.Requirement.UserIds.Count > 0)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Requirement.UserIds.Count, "1 person", "{0} people")</span>
+}
+@if (Model.Requirement.LastRunUtc is not null)
+{
+    <span class="text-muted small ms-1">@T.Plural(Model.Requirement.LastRunCovered, "covers 1 person", "covers {0} people")</span>
+}

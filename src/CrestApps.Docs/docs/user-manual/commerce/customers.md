@@ -11,7 +11,7 @@ Everyone who buys from your store is a **customer**: a person or a business, wit
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Customers |
+| **Menu** | **Commerce** → **Customers** |
 | **Permission** | **View customers** to look, **Manage customers** to add, edit, export and erase; **Manage own customer profile and addresses** for **My Account** |
 | **Feature** | Customers |
 
@@ -23,7 +23,7 @@ This video shows guest customers and merged accounts, how long guest data is kep
 
 ## Customers and accounts
 
-A customer's sign-in, password and email stay on their **account**, which is managed under **Security > Users** like any other user. The customer record keeps what your store needs on top of that: how to address them, their company and tax id, and whether they want news and offers.
+A customer's sign-in, password and email stay on their **account**, which is managed under **Security** → **Users** like any other user. The customer record keeps what your store needs on top of that: how to address them, their company and tax id, and whether they want news and offers.
 
 A customer who signs in and places an order becomes a customer the first time they order. Their customer record starts with their user name and the account's email.
 
@@ -43,7 +43,7 @@ When that happens:
 
 ## Find a customer
 
-1. Open **Commerce > Customers**. The most recently active customers come first.
+1. Open **Commerce** → **Customers**. The most recently active customers come first.
 2. Type the start of a name, company or email in the search box and press Enter.
 3. Use the list beside the count to show only customers **With an account**, **Guests**, **Businesses**, **Disabled** ones, or **All customers**.
 
@@ -55,7 +55,7 @@ Each customer shows their email and when they were last active, with badges for 
 
 For a customer you deal with outside the site, for example someone who orders by phone:
 
-1. Open **Commerce > Customers** and click **Add customer**.
+1. Open **Commerce** → **Customers** and click **Add customer**.
 2. Fill in their details (below). Enter at least a name, a company or an email, so you can find them again.
 3. Click **Save**.
 
@@ -123,7 +123,7 @@ Typing an address is slow, and typos send parcels astray. With address suggestio
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Address suggestions |
+| **Menu** | **Settings** → **Address Suggestions** |
 | **Permission** | Manage address suggestions |
 | **Feature** | Address Suggestions (Google Places) |
 
@@ -132,7 +132,7 @@ Typing an address is slow, and typos send parcels astray. With address suggestio
 To set it up:
 
 1. In the Google Cloud console, create an API key for the **Places API (New)**, restricted to that API.
-2. Open **Settings > Address suggestions**, paste it into **Google Places API key**, and save.
+2. Open **Settings** → **Address Suggestions**, paste it into **Google Places API key**, and save.
 
 The key is kept on your server and never sent to shoppers' browsers. Once saved it's never shown again: leave the field blank to keep it, or enter a new key to replace it. To stop suggesting addresses, tick **Remove the key** and save. Without a key, shoppers type their address themselves.
 
@@ -155,7 +155,7 @@ People can ask what you hold on them, or ask you to erase it. Open the customer;
 - **Download data** gives you a JSON file with everything the store holds on the customer: their details, addresses, and their orders with the payments for them, and, under *commerce*, their checkouts, transactions, payments, refunds, subscriptions, installment plans, coupons used and the customer record Stripe keeps for them. Send it to the person who asked.
 - **Erase personal data** removes the customer's name, company, tax id, email, phone, addresses and marketing consent, and the name, email, phone and billing address of their orders. It also removes their name, email and phone from their checkouts, transactions, subscriptions and installment plans, the IP address and browser details their checkouts recorded, what they typed into checkout steps, installment plan notes, the card description shown on plans and transactions, and their name and email at Stripe. You're asked to confirm; it can't be undone. The orders, transactions and plans themselves stay, with their lines, amounts, dates, statuses, invoice and receipt numbers, and the billing country and region, because your accounts and tax records need them. Saved cards stay at Stripe, so a plan or subscription still running is still charged, but the cards kept for automatic payments are no longer listed on their account or charged for new payments. An erased customer shows *This customer's personal data was erased* and can't be edited.
 
-Erasing a customer doesn't delete their account. If they also want the account gone, delete the user under **Security > Users**.
+Erasing a customer doesn't delete their account. If they also want the account gone, delete the user under **Security** → **Users**.
 
 Each download and erasure is listed under **Privacy** with when it happened and who did it.
 
@@ -163,7 +163,7 @@ Each download and erasure is listed under **Privacy** with when it happened and 
 
 <YouTube video="customers-guests-privacy" title="Video of how long guest data is kept" start={130} end={179} />
 
-Under **Settings > Commerce > Customers**, **Privacy** sets how long you keep guests' personal data. Once a day the store applies it:
+Under **Settings** → **Commerce** → **Customers**, **Privacy** sets how long you keep guests' personal data. Once a day the store applies it:
 
 | Setting | What happens | Default |
 | --- | --- | --- |
@@ -174,7 +174,7 @@ Enter **0** to keep the data. Customers with an account are kept while the accou
 
 ## My Account
 
-A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default. Staff open it under **Commerce > My Account**.
+A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default. Staff open it under **Commerce** → **My Account**.
 
 <YouTube video="customers-guests-privacy" title="Video of staff's My Account page" start={237} end={247} />
 
@@ -187,10 +187,10 @@ On the storefront the same details are on **Account details** and **Addresses** 
 
 ## Try it with the sample store
 
-The **Product listing: online store sample** recipe (**Configuration > Recipes**) enables Customers and adds two sample customers: *Sam Carter*, a person with a home and a work address, and *Contoso Supplies*, a business in Canada with a tax id. Open them under **Commerce > Customers** to see the details, address book and privacy actions.
+The **Product listing: online store sample** recipe (**Configuration** → **Recipes**) enables Customers and adds two sample customers: *Sam Carter*, a person with a home and a work address, and *Contoso Supplies*, a business in Canada with a tax id. Open them under **Commerce** → **Customers** to see the details, address book and privacy actions.
 
 :::note[A site set up with the Online store recipe]
-That setup recipe already made a **Shop** page at `/shop`, and so does the sample, so the sample stops with *Your permalink is already in use.* Delete the **Shop** listing under **Commerce > Product Listings** first.
+That setup recipe already made a **Shop** page at `/shop`, and so does the sample, so the sample stops with *Your permalink is already in use.* Delete the **Shop** listing under **Commerce** → **Product Listings** first.
 :::
 
 ## Related pages

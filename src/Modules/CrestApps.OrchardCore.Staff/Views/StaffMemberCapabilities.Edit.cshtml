@@ -1,0 +1,23 @@
+@model StaffCapabilitiesEditViewModel
+
+@if (Model.CapabilityOptions.Count > 0)
+{
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Capabilities"]</div>
+        <div class="card-body">
+            <p class="hint">@T["The kinds of work they do. Pickers in other modules offer only the people with the right capability."]</p>
+            @foreach (var option in Model.CapabilityOptions)
+            {
+                var id = "staff-capability-" + option.Name;
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(m => m.Capabilities)" value="@option.Name" checked="@option.Selected" />
+                    <label class="form-check-label" for="@id">@option.DisplayName</label>
+                    @if (!string.IsNullOrEmpty(option.Description))
+                    {
+                        <span class="hint dashed">@option.Description</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}

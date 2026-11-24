@@ -39,7 +39,7 @@ jobs:
     - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
-          10.0.x
+          11.0.x
     - name: Cache NuGet packages
       uses: ./.github/actions/cache-nuget-packages
     - name: Contact Center distributed tests
@@ -75,12 +75,14 @@ jobs:
     - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
-          10.0.x
+          11.0.x
     - name: Cache NuGet packages
       uses: ./.github/actions/cache-nuget-packages
     - name: Set build number 
       if: matrix.os == 'ubuntu-latest'
       run: echo "BuildNumber=$(( $GITHUB_RUN_NUMBER ))" >> $GITHUB_ENV
+    - name: Prepare the Aspire CLI bundle
+      uses: ./.github/actions/prepare-aspire-cli-bundle
     - name: Build
       run: |
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true -p:Version=${{ steps.get_version.outputs.VERSION }}
@@ -103,6 +105,12 @@ jobs:
     - name: Commerce API integration tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj
+    # The Learning suite runs one real tenant with a course, a lesson file under Secure Media and two learners, and
+    # checks over HTTP that a person who is not enrolled cannot open a lesson or its file, and that a recipe moves a
+    # course and its enrollments.
+    - name: Learning integration tests
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj
     - name: Telephony browser tests
       if: matrix.os == 'ubuntu-latest'
       run: |

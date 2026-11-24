@@ -15,6 +15,12 @@ public sealed class ImportContent : Entity
     public string ContentTypeName { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the import is of content items. An import into another target, such as skills, has no
+    /// content options such as publishing.
+    /// </summary>
+    public bool IsContentType { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the content type identifier.
     /// </summary>
     public string ContentTypeId { get; set; }

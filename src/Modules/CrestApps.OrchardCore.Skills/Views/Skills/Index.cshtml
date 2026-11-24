@@ -12,6 +12,10 @@
                         <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
+                @if (Model.ImportUrl is not null)
+                {
+                    <div class="col-auto"><a href="@Model.ImportUrl" class="btn btn-outline-secondary">@T["Import"]</a></div>
+                }
                 <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add skill"]</a></div>
             </div>
         </div>

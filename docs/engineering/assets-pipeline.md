@@ -107,7 +107,7 @@ so switching branches or cloning fresh rebuilds what actually differs. `npm run 
 
 `assets_validation.yml` runs `npm ci` and `npm run rebuild`, renormalizes line endings, and fails if git reports
 any change: the committed `wwwroot` must be what the sources build. Fix a failure by running `npm run rebuild`
-locally and committing the result. `pr_ci.yml` runs the Vitest suite.
+locally and committing the result. `build_and_test.yml`, which PR - CI and Main - CI both call, runs the Vitest suite.
 
 ## Compared with Orchard Core's assets manager
 

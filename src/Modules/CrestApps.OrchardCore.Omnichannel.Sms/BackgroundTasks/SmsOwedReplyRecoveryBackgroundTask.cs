@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.Services;
@@ -7,6 +6,7 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Services;
@@ -112,7 +112,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
                 .Take(_batchSize)
                 .ListAsync(cancellationToken);
 
-            if (!activities.Any())
+            if (activities.Count == 0)
             {
                 break;
             }

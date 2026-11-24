@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ApprovePayRunTask>
+
+<h4 class="card-title"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> @T["Approve Pay Run"]</h4>
+<p>@T["Approves a pay run's pending approval as the person the workflow runs for, under the policy: a workflow with no user, or the person who prepared the run, is not allowed.."]</p>

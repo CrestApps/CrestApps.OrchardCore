@@ -1,0 +1,75 @@
+{
+  "Description": "A bonus earned in the overtime week raises the regular rate to 22 (1100 for 50 hours): 10 hours of overtime owe 0.5 x 2 x 10 more.",
+  "Frequency": "Weekly",
+  "PeriodStart": "2026-11-08",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    },
+    {
+      "Code": "OT",
+      "Class": "Earning",
+      "Kind": "Overtime",
+      "Multiplier": 1.5
+    },
+    {
+      "Code": "BONUS",
+      "Class": "Earning",
+      "Kind": "Bonus"
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Date": "2026-11-09",
+      "Hours": 40,
+      "Rate": 20
+    },
+    {
+      "PayCode": "OT",
+      "Date": "2026-11-13",
+      "Hours": 10,
+      "Rate": 20
+    },
+    {
+      "PayCode": "BONUS",
+      "Date": "2026-11-12",
+      "Amount": 100
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 800.00 for 40h",
+      "Earning OT 300.00 for 10h",
+      "Earning BONUS 100.00",
+      "Earning OT 10.00"
+    ],
+    "Gross": 1210.0,
+    "Net": 1210.0,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 1210.0
+      }
+    ]
+  }
+}

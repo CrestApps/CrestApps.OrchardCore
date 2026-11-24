@@ -54,6 +54,8 @@ public sealed class ReportViewSnapshotIndexProvider : IndexProvider<ReportViewSn
     {
         context
             .For<ReportViewSnapshotIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(snapshot => new ReportViewSnapshotIndex
             {
                 ViewId = snapshot.ViewId,

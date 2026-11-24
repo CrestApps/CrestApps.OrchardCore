@@ -1,0 +1,116 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "A 5% deduction before income tax matched at 50% up to 3% of earnings, a reimbursement, and net pay split 60% to one account, 200 to another and the rest by check.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 25
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    },
+    {
+      "Code": "RET",
+      "Class": "Deduction",
+      "Kind": "Contribution",
+      "Settings": {
+        "Calculation": "PercentOfEarnings",
+        "TaxTreatment": {
+          "IncomeTax": "Exempt"
+        }
+      }
+    },
+    {
+      "Code": "REIMB",
+      "Class": "Reimbursement",
+      "Kind": "Reimbursement"
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 80
+    },
+    {
+      "PayCode": "REIMB",
+      "Amount": 75
+    }
+  ],
+  "Items": [
+    {
+      "PayCode": "RET",
+      "Percent": 5,
+      "EmployerMatchPercent": 50,
+      "EmployerMatchLimitPercent": 3
+    }
+  ],
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 10
+      }
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "BankAccount",
+      "BankAccountId": "acct1",
+      "Split": "Percent",
+      "Percent": 60
+    },
+    {
+      "Method": "BankAccount",
+      "BankAccountId": "acct2",
+      "Split": "Amount",
+      "Amount": 200
+    },
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 2000.00 for 80h",
+      "Deduction RET 100.00",
+      "EmployerContribution RET 50.00",
+      "Reimbursement REIMB 75.00",
+      "Tax US-FIT Employee 190.00 on 1900.00"
+    ],
+    "Gross": 2000.0,
+    "Net": 1785.0,
+    "Payments": [
+      {
+        "Method": "BankAccount",
+        "BankAccountId": "acct1",
+        "Amount": 1071.0
+      },
+      {
+        "Method": "BankAccount",
+        "BankAccountId": "acct2",
+        "Amount": 200.0
+      },
+      {
+        "Method": "Check",
+        "Amount": 514.0
+      }
+    ]
+  }
+}

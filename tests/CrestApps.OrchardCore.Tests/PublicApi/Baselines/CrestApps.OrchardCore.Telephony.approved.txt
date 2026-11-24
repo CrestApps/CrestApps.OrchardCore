@@ -84,6 +84,13 @@ namespace CrestApps.OrchardCore.Telephony
         public SoftPhoneWidgetStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Staff"})]
+    public sealed class StaffStartup : OrchardCore.Modules.StartupBase
+    {
+        public StaffStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     public sealed class Startup : OrchardCore.Modules.StartupBase
     {
         public Startup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
@@ -180,6 +187,13 @@ namespace CrestApps.OrchardCore.Telephony.Drivers
         protected override string SettingsGroupId { get; }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidgetSettings settings, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidgetSettings settings, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
+    }
+    public sealed class TelephonyCostSettingsDisplayDriver : OrchardCore.DisplayManagement.Entities.SiteDisplayDriver<CrestApps.OrchardCore.Telephony.TelephonyCostSettings>
+    {
+        public TelephonyCostSettingsDisplayDriver(Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService) { }
+        protected override string SettingsGroupId { get; }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.TelephonyCostSettings settings, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
+        public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.TelephonyCostSettings settings, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
     public sealed class TelephonySettingsDisplayDriver : OrchardCore.DisplayManagement.Entities.SiteDisplayDriver<CrestApps.OrchardCore.Telephony.TelephonySettings>
     {
@@ -474,7 +488,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public sealed class TelephonyExtensionsAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
     {
-        public TelephonyExtensionsAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyExtensionsAdminMenu> stringLocalizer) { }
+        public TelephonyExtensionsAdminMenu(OrchardCore.Environment.Shell.IShellFeaturesManager shellFeaturesManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyExtensionsAdminMenu> stringLocalizer) { }
         protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
     }
     public sealed class TelephonyInteractionSynchronizationService : CrestApps.OrchardCore.Telephony.ITelephonyInteractionSynchronizationService
@@ -511,6 +525,13 @@ namespace CrestApps.OrchardCore.Telephony.Services
 }
 namespace CrestApps.OrchardCore.Telephony.ViewModels
 {
+    public class PhoneStaffViewModel
+    {
+        public PhoneStaffViewModel() { }
+        public string ExtensionId { get; set; }
+        public string Name { get; set; }
+        public string Number { get; set; }
+    }
     public sealed class SoftPhoneStandaloneViewModel
     {
         public SoftPhoneStandaloneViewModel() { }
@@ -528,6 +549,12 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels
         public bool EnableDiagnostics { get; set; }
         public bool Enabled { get; set; }
         public int RecentCallsCount { get; set; }
+    }
+    public class TelephonyCostSettingsViewModel
+    {
+        public TelephonyCostSettingsViewModel() { }
+        public string Currency { get; set; }
+        public decimal PerMinute { get; set; }
     }
     public class TelephonyExtensionFieldsViewModel
     {

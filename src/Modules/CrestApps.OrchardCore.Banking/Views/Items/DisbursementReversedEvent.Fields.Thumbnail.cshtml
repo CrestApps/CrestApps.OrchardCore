@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementReversedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @T["Disbursement Reversed"]</h4>
+<p>@T["Starts when a settled disbursement is taken back."]</p>

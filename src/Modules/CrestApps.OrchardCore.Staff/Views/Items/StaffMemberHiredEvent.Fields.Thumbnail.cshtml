@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Staff.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StaffMemberHiredEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+    @T["Staff Member Hired"]
+</h4>
+<p>@T["Starts when a person starts working: hired, rehired or back from suspension."]</p>

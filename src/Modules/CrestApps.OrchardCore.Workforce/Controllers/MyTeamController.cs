@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
@@ -27,7 +28,7 @@ public sealed class MyTeamController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly MyWorkPortal _portal;
     private readonly IWorkforceScopeService _scopeService;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IShiftTradeService _tradeService;
     private readonly IOpenShiftService _openShiftService;
@@ -59,7 +60,7 @@ public sealed class MyTeamController : Controller
         IAuthorizationService authorizationService,
         MyWorkPortal portal,
         IWorkforceScopeService scopeService,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IShiftTradeService tradeService,
         IOpenShiftService openShiftService,

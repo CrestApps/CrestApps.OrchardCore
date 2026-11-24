@@ -1,0 +1,22 @@
+@model CrestApps.OrchardCore.ContactCenter.Staff.AgentStaffViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Contact Center"]</div>
+    <div class="card-body">
+        @if (string.IsNullOrEmpty(Model.AgentId))
+        {
+            <p class="hint mb-0">@T["Not an agent yet. They become one the first time they sign in to a queue, or when entitlements are given to them."] <a href="@Url.Content("~/Admin/contact-center/agent-entitlements/create")">@T["Give entitlements"]</a></p>
+        }
+        else
+        {
+            <dl class="row mb-2">
+                <dt class="col-sm-4">@T["Presence"]</dt><dd class="col-sm-8">@Model.Presence</dd>
+                <dt class="col-sm-4">@T["Queues they may work"]</dt><dd class="col-sm-8">@(Model.AllowedQueueCount == 0 ? T["Any"].Value : Model.AllowedQueueCount.ToString())</dd>
+                <dt class="col-sm-4">@T["Campaigns they may work"]</dt><dd class="col-sm-8">@(Model.AllowedCampaignCount == 0 ? T["Any"].Value : Model.AllowedCampaignCount.ToString())</dd>
+                <dt class="col-sm-4">@T["Calls at once"]</dt><dd class="col-sm-8">@Model.MaxConcurrentInteractions</dd>
+                <dt class="col-sm-4">@T["Skills"]</dt><dd class="col-sm-8">@(Model.Skills.Count == 0 ? T["None"].Value : string.Join(", ", Model.Skills))</dd>
+            </dl>
+            <a href="@Url.Content("~/Admin/contact-center/agent-entitlements/edit/" + Model.AgentId)" class="btn btn-sm btn-secondary">@T["Edit entitlements"]</a>
+        }
+    </div>
+</div>

@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using Dapper;
 using YesSql;
 using YesSql.Indexes;
 using YesSql.Services;
@@ -14,7 +16,8 @@ namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 /// <remarks>
 /// A page is found in the index table alone: the rows that match the filter, ordered by a date column and then by their
 /// row identifier, after the last row of the page before (keyset paging), with no join to the documents and no
-/// grouping, so the database seeks to the page through an index on the date column and the row identifier. Only then
+/// grouping, and only the row identifier and the date are read, so the database seeks to the page through an index on
+/// the date column and the row identifier, and the other columns can't fail the read. Only then
 /// are the records of the page loaded, by the identifiers of their index rows. Skipping pages with an offset instead
 /// makes the database read, join, group and sort every record before a page, for every page. Index the date column and
 /// the row identifier together, such as with <c>CreateIndex("IDX_..._Report", "CreatedUtc", "Id")</c>, for the seek.
@@ -158,7 +161,7 @@ public static class ReportIndexPages
 
         foreach (var dated in parts)
         {
-            TIndex last = null;
+            RowKey last = null;
 
             while (true)
             {
@@ -179,7 +182,7 @@ public static class ReportIndexPages
                     rows = rows.Where(order.After(last, dated));
                 }
 
-                var page = (await order.Sort(rows, dated).Take(PageSize).ListAsync(cancellationToken)).ToArray();
+                var page = await ReadKeysAsync(session, order.Sort(rows, dated).Take(PageSize), order, dated, cancellationToken);
 
                 if (page.Length == 0)
                 {
@@ -207,6 +210,82 @@ public static class ReportIndexPages
         }
     }
 
+    // Reads the identifier and the date of each row of a page, not the whole rows. The rows are read with YesSql's own
+    // query, so with the filter, the order and the page size the caller gave, but only these two columns are selected:
+    // Dapper builds the reader of a query from the kind of value of each column in its first row, and SQLite keeps a
+    // decimal column's whole numbers as integers and its other numbers as real numbers, so reading whole rows fails
+    // as soon as a row holds the other kind of value than the first one in any decimal column. YesSql doesn't let a
+    // query over an index choose its columns, so the selector is set on the query's builder; when the query isn't the
+    // one YesSql builds, such as after an update of YesSql, the whole rows are read as before.
+    private static async Task<RowKey[]> ReadKeysAsync<TIndex>(
+        ISession session,
+        IQueryIndex<TIndex> rows,
+        PageOrder<TIndex> order,
+        bool dated,
+        CancellationToken cancellationToken)
+        where TIndex : MapIndex
+    {
+        var state = IndexQueryState<TIndex>.Of(rows);
+
+        if (state is null || (dated && order.DateColumn is null))
+        {
+            return [.. (await rows.ListAsync(cancellationToken)).Select(row => new RowKey { Id = row.Id, Date = dated ? order.ReadDate(row) : null })];
+        }
+
+        // As YesSql reads a query: the pending changes first, on the session's connection and in its transaction.
+        await session.FlushAsync(cancellationToken);
+
+        var connection = await session.CreateConnectionAsync(cancellationToken);
+        var configuration = session.Store.Configuration;
+        var builder = state._sqlBuilder;
+        var alias = state.GetTypeAlias(typeof(TIndex));
+
+        state.FlushFilters();
+
+        var selector = $"{builder.FormatColumn(alias, nameof(MapIndex.Id), configuration.Schema, isAlias: true)} AS {configuration.SqlDialect.QuoteForAliasName(nameof(RowKey.Id))}";
+
+        if (dated)
+        {
+            selector += $", {builder.FormatColumn(alias, order.DateColumn, configuration.Schema, isAlias: true)} AS {configuration.SqlDialect.QuoteForAliasName(nameof(RowKey.Date))}";
+        }
+
+        builder.Selector(selector);
+
+        var keys = await connection.QueryAsync<RowKey>(new CommandDefinition(
+            builder.ToSqlString(),
+            new DynamicParameters(builder.Parameters),
+            session.CurrentTransaction,
+            cancellationToken: cancellationToken));
+
+        return [.. keys];
+    }
+
+    // The identifier and the date of an index row.
+    private sealed class RowKey
+    {
+        public long Id { get; set; }
+
+        public DateTime? Date { get; set; }
+    }
+
+    // The state of a query YesSql builds over an index, which holds its SQL builder.
+    private static class IndexQueryState<TIndex>
+        where TIndex : MapIndex
+    {
+        private static readonly FieldInfo _query = typeof(DefaultQuery.Query<TIndex>).GetField("_query", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo _state = typeof(DefaultQuery).GetField("_queryState", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        public static QueryState Of(IQueryIndex<TIndex> rows)
+        {
+            if (_query is null || _state is null || rows is not DefaultQuery.Query<TIndex>)
+            {
+                return null;
+            }
+
+            return _query.GetValue(rows) is DefaultQuery query ? _state.GetValue(query) as QueryState : null;
+        }
+    }
+
     // The order of the pages: by a date column, newest first, then by the row identifier, newest first.
     private sealed class PageOrder<TIndex>
         where TIndex : MapIndex
@@ -217,6 +296,7 @@ public static class ReportIndexPages
         private readonly Expression _date;
         private readonly Expression<Func<TIndex, object>> _boxedDate;
         private readonly Func<TIndex, object> _readDate;
+        private readonly string _dateColumn;
 
         public PageOrder(LambdaExpression date)
         {
@@ -230,6 +310,12 @@ public static class ReportIndexPages
             _boxedDate = Expression.Lambda<Func<TIndex, object>>(Expression.Convert(_date, typeof(object)), _parameter);
             _readDate = _boxedDate.Compile();
             Dated = true;
+
+            // The column of the date, when the date is a property of the row as it is for every data set.
+            if (_date is MemberExpression { Member: PropertyInfo property } member && member.Expression == _parameter)
+            {
+                _dateColumn = property.Name;
+            }
 
             if (System.Nullable.GetUnderlyingType(_date.Type) is not null)
             {
@@ -251,6 +337,14 @@ public static class ReportIndexPages
 
         public Expression<Func<TIndex, bool>> WithoutDate { get; }
 
+        // The column of the date, or null when the date is not a property of the row.
+        public string DateColumn => _dateColumn;
+
+        public DateTime? ReadDate(TIndex row)
+        {
+            return (DateTime?)_readDate(row);
+        }
+
         public IQueryIndex<TIndex> Sort(IQueryIndex<TIndex> rows, bool dated)
         {
             return dated
@@ -270,7 +364,7 @@ public static class ReportIndexPages
         // written as "date <= last and (date < last or id < last id)", not as "date < last or (date = last and id <
         // last id)": databases seek to a range on the first form only, and scan the index from its start to the last
         // row on the second, which makes each page cost more than the one before.
-        public Expression<Func<TIndex, bool>> After(TIndex row, bool dated)
+        public Expression<Func<TIndex, bool>> After(RowKey row, bool dated)
         {
             var id = row.Id;
 
@@ -279,7 +373,7 @@ public static class ReportIndexPages
                 return index => index.Id < id;
             }
 
-            var date = Expression.Constant(_readDate(row), _date.Type);
+            var date = Expression.Constant(row.Date, _date.Type);
             var rowId = Expression.Property(_parameter, nameof(MapIndex.Id));
 
             return Expression.Lambda<Func<TIndex, bool>>(

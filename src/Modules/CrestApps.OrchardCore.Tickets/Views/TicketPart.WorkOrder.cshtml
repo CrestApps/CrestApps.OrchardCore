@@ -1,0 +1,41 @@
+@model TicketWorkOrderViewModel
+
+@{
+    var formId = "ticket-work-order-" + Model.TicketId;
+    string PriorityName(string priority) => priority switch
+    {
+        "Low" => T["Low"].Value,
+        "High" => T["High"].Value,
+        "Urgent" => T["Urgent"].Value,
+        _ => T["Normal"].Value,
+    };
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Work order"]</h2>
+        <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="CreateWorkOrder" asp-route-id="@Model.TicketId" method="post" id="@formId" class="no-multisubmit">
+            <div class="mb-2">
+                <label for="@(formId)-type" class="form-label small mb-1">@T["Type"]</label>
+                <select id="@(formId)-type" name="typeId" class="form-select form-select-sm" required>
+                    @foreach (var type in Model.Types)
+                    {
+                        <option value="@type.Value">@type.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-2">
+                <label for="@(formId)-priority" class="form-label small mb-1">@T["Priority"]</label>
+                <select id="@(formId)-priority" name="priority" class="form-select form-select-sm">
+                    <option value="">@T["The type's"]</option>
+                    @foreach (var priority in Model.Priorities)
+                    {
+                        <option value="@priority.Value">@PriorityName(priority.Value)</option>
+                    }
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-secondary">@T["Create a work order"]</button>
+            <span class="hint d-block">@T["When someone has to go on site: the work order gets the ticket's subject, first message, account and requester, and shows in the links. The ticket hears when it is completed."]</span>
+        </form>
+    </div>
+</div>

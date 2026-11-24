@@ -67,7 +67,7 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
             vm.DialerProfileOptions = await _optionsProvider.GetDialerProfileOptionsAsync(string.Empty, S["Select a dialer profile"]);
             vm.CampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(string.Empty, S["No campaign"]);
             vm.DialerCampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(string.Empty, S["Keep current campaign"]);
-            vm.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
+            vm.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId", audience = "Staff" });
             vm.TotalCount = model.TotalCount;
         }).Location("Content:5");
     }

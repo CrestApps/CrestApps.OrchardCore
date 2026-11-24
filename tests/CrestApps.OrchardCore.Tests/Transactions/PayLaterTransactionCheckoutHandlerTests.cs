@@ -339,6 +339,7 @@ public sealed class PayLaterTransactionCheckoutHandlerTests
         var siteService = SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = netTermDays });
         var provider = new PayLaterCheckoutPaymentProvider(
             siteService,
+            new PayLaterDueDateResolver(siteService, Mock.Of<IServiceProvider>()),
             Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(environment => environment.EnvironmentName == "Development"),
             new PassThroughStringLocalizer<PayLaterCheckoutPaymentProvider>());
 

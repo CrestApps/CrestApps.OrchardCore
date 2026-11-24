@@ -1,5 +1,7 @@
-using CrestApps.OrchardCore.Workforce.BackgroundTasks;
+using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Workforce.BackgroundTasks;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
@@ -29,13 +31,14 @@ public sealed class TimeOffStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkforceConstants.TimeOffLedgerCollectionName));
         services.AddWorkforceTimeOffCore();
+        services.AddScoped<IModularTenantEvents, TimeOffLedgerCopyTenantEvents>();
         services.AddPersonalDataContributor<TimeOffRequestPersonalDataContributor>();
         services.AddDataMigration<TimeOffMigrations>()
             .AddIndexProvider<TimeOffTypeIndexProvider>()
             .AddIndexProvider<TimeOffPolicyIndexProvider>()
             .AddIndexProvider<TimeOffPolicyAssignmentIndexProvider>()
-            .AddIndexProvider<TimeOffLedgerEntryIndexProvider>()
             .AddIndexProvider<TimeOffRequestIndexProvider>()
             .AddIndexProvider<TimeOffAllotmentIndexProvider>()
             .AddIndexProvider<BlackoutPeriodIndexProvider>();
@@ -46,9 +49,22 @@ public sealed class TimeOffStartup : StartupBase
         services.AddDisplayDriver<TimeOffAllotment, TimeOffAllotmentRowDisplayDriver>();
         services.AddDisplayDriver<BlackoutPeriod, BlackoutPeriodRowDisplayDriver>();
         services.AddDisplayDriver<TimeOffLedgerRowViewModel, TimeOffLedgerRowDisplayDriver>();
-        services.AddDisplayDriver<WorkerProfile, WorkerTimeOffRowDisplayDriver>();
+        services.AddDisplayDriver<StaffMember, WorkerTimeOffRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TimeOffAccrualBackgroundTask>();
         services.AddPermissionProvider<TimeOffPermissionsProvider>();
         services.AddNavigationProvider<TimeOffAdminMenu>();
+    }
+}
+
+/// <summary>
+/// With Pay Setup on: time-off payouts become pay inputs, and pay statements show time-off balances.
+/// </summary>
+[Feature(WorkforceConstants.Features.TimeOff)]
+[RequireFeatures(PayrollConstants.Features.PaySetup)]
+public sealed class TimeOffPayrollStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkforceTimeOffPayrollCore();
     }
 }

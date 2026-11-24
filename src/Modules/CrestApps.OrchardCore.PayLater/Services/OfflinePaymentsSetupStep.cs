@@ -18,6 +18,7 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
     private readonly ISiteService _siteService;
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly PayLaterDueDateResolver _dueDates;
 
     internal readonly IStringLocalizer S;
 
@@ -25,11 +26,13 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
         ISiteService siteService,
         LinkGenerator linkGenerator,
         IHttpContextAccessor httpContextAccessor,
+        PayLaterDueDateResolver dueDates,
         IStringLocalizer<OfflinePaymentsSetupStep> stringLocalizer)
     {
         _siteService = siteService;
         _linkGenerator = linkGenerator;
         _httpContextAccessor = httpContextAccessor;
+        _dueDates = dueDates;
         S = stringLocalizer;
     }
 
@@ -61,7 +64,10 @@ internal sealed class OfflinePaymentsSetupStep : IStoreSetupStep
         // When pay later is on, the owner sees that anyone can order on an invoice.
         if (payLater.Enabled)
         {
-            offered.Add(S["pay later, on an invoice due in {0} days", payLater.NetTermDays]);
+            // A customer with terms of their own gets theirs; this is what everyone else gets.
+            offered.Add(await _dueDates.FindTermAsync(default, cancellationToken) is { } term
+                ? S["pay later, on an invoice due under the {0} payment term", term.Name]
+                : S["pay later, on an invoice due in {0} days", payLater.NetTermDays]);
         }
 
         return new StoreSetupStepDescription

@@ -15,6 +15,11 @@ public sealed class UserPickerViewModel
 
     public string[] Roles { get; set; }
 
+    /// <summary>
+    /// Gets or sets the audience the users must belong to, such as <c>Staff</c>, or <see langword="null"/> for everyone.
+    /// </summary>
+    public string Audience { get; set; }
+
     public bool Multiple { get; set; }
 
     public string Label { get; set; }

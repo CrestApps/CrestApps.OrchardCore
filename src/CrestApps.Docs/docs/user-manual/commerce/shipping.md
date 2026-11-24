@@ -10,7 +10,7 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Shipping; Settings > Commerce > Shipping |
+| **Menu** | **Commerce** → **Shipping**; **Settings** → **Commerce** → **Shipping** |
 | **Permission** | **Manage shipping zones, methods and settings**; **Ship orders and update their shipments** to ship orders |
 | **Feature** | Shipping; **EasyPost** for carriers' rates, labels and tracking |
 
@@ -24,7 +24,7 @@ This video walks through zones, methods, pickup, Try rates and shipping an order
 
 A zone is a set of countries, such as *Domestic* or *Europe*. Buyers see the methods of the zone their address is in.
 
-1. Go to **Commerce > Shipping** and click **Add Shipping Zone**.
+1. Go to **Commerce** → **Shipping** and click **Add Shipping Zone**.
 2. Give it a **Name** (only you see it) and choose its **Countries**.
 3. Click **Save**. The zone's page opens, where you add its methods.
 
@@ -80,7 +80,7 @@ Add the **Shipping** part to your product types (under **Content Definition**), 
 - **Variant weights** set a different weight for some variants, such as a larger size. A variant left empty weighs what the product does.
 - **Shipping class** puts the product in a class a method can charge extra for.
 
-Under **Settings > Commerce > Shipping**:
+Under **Settings** → **Commerce** → **Shipping**:
 
 | Setting | What it does | Default |
 | --- | --- | --- |
@@ -108,7 +108,7 @@ The order page, the order link a guest gets and the confirmation email show wher
 
 <YouTube video="shipping" title="Video of the pickup, ship-from and carrier settings" start={198} end={239} />
 
-Let buyers collect their order from your shop instead of having it shipped. Under **Settings > Commerce > Shipping**, **Store pickup**, fill in the blank **Add a pickup location**:
+Let buyers collect their order from your shop instead of having it shipped. Under **Settings** → **Commerce** → **Shipping**, **Store pickup**, fill in the blank **Add a pickup location**:
 
 | Field | What it's for |
 | --- | --- |
@@ -134,10 +134,10 @@ Click **Save**; a new blank location is there for the next one, up to 20. Tick *
 <YouTube video="shipments-and-labels" title="Creating a shipment" start={78} end={120} />
 <YouTube video="shipping" title="Video of recording a shipment" start={262} end={292} />
 
-A paid order with goods gets a **Shipments** section on its page (**Commerce > Orders**, then the order). It lists what has been shipped, and what is left.
+A paid order with goods gets a **Shipments** section on its page (**Commerce** → **Orders**, then the order). It lists what has been shipped, and what is left.
 
 1. Under **New shipment**, set how many of each item go in the parcel. All that's left is filled in; lower a number to ship in parts.
-2. Enter the **Carrier** and the **Tracking number**. A carrier listed under **Settings > Commerce > Shipping** fills in the tracking link itself; otherwise paste the **Tracking link**.
+2. Enter the **Carrier** and the **Tracking number**. A carrier listed under **Settings** → **Commerce** → **Shipping** fills in the tracking link itself; otherwise paste the **Tracking link**.
 3. Leave **It has left: mark it shipped now** ticked, and click **Create shipment**. Untick it to set the items aside while they're packed: the shipment shows as *Being packed*, and **Mark shipped** sends it later.
 
 The buyer gets an email that the shipment is on its way, with what's in it and the tracking link, and sees the shipment and its link on their order page: under **My Orders** for a customer, on the order link a guest has, or through **Track your order** with their order number and email (see [Guests and their orders](carts-and-orders.md#guests-and-their-orders)).
@@ -156,7 +156,7 @@ With **Workflows** on, the **Shipment Created**, **Shipment Shipped**, **Shipmen
 
 With a carrier provider, buyers see the carriers' own rates at checkout, such as UPS, USPS, FedEx or DHL, and you buy and print the carrier's label from the order. A carrier provider is a shipping account, such as EasyPost, turned on as its own feature.
 
-**Settings > Commerce > Shipping** has a tab for this, before the store's own shipping settings:
+**Settings** → **Commerce** → **Shipping** has a tab for this, before the store's own shipping settings:
 
 - **Providers** chooses the **Default carrier provider** among the enabled ones. Carrier rates methods and **Buy label** use it.
 - Each carrier provider, such as **EasyPost**, has its own tab, where it's enabled and set up.
@@ -164,8 +164,8 @@ With a carrier provider, buyers see the carriers' own rates at checkout, such as
 
 ### Set it up
 
-1. Turn on the **EasyPost** feature under **Tools > Features**. An EasyPost account is free, and comes with a test API key: test labels aren't charged.
-2. On **Settings > Commerce > Shipping**, open the **EasyPost** tab, tick **Enable EasyPost provider**, and paste your **API key**, from your EasyPost dashboard under API Keys. It's kept encrypted and never shown again.
+1. Turn on the **EasyPost** feature under **Tools** → **Features**. An EasyPost account is free, and comes with a test API key: test labels aren't charged.
+2. On **Settings** → **Commerce** → **Shipping**, open the **EasyPost** tab, tick **Enable EasyPost provider**, and paste your **API key**, from your EasyPost dashboard under API Keys. It's kept encrypted and never shown again.
 3. On the **Sending parcels** tab, enter where parcels leave from: the **Sender's name**, **Company**, **Street address**, **City**, **State or region**, **Postal code**, **Country** and a **Phone** (some carriers need one for labels).
 4. Enter the box most orders go in: its length, width and height (optional, as carriers price by weight without it) and its weight, which is added to the items' weight. Lengths are in inches for a store weighing in pounds, and centimeters for one in kilograms.
 5. Click **Save**.
@@ -197,7 +197,7 @@ Your EasyPost account is charged, the shipment is marked shipped with the carrie
 
 ### Follow the parcels
 
-Tracking updates set themselves up. When your site's **Base URL**, under **Settings > General**, is its public https address, saving the **EasyPost** tab registers a webhook with EasyPost for you, signed with a secret made for it; the tab then says *Registered with EasyPost at ...*. EasyPost can't reach a site on your own computer, so the tab says so until the Base URL is public. Rates and labels work either way.
+Tracking updates set themselves up. When your site's **Base URL**, under **Settings** → **General**, is its public https address, saving the **EasyPost** tab registers a webhook with EasyPost for you, signed with a secret made for it; the tab then says *Registered with EasyPost at ...*. EasyPost can't reach a site on your own computer, so the tab says so until the Base URL is public. Rates and labels work either way.
 
 Once registered, the carrier's latest word, such as *In transit*, shows on the shipment, and the buyer's order page lists where the parcel has been. A parcel the carrier delivers is marked **Delivered** for you.
 
@@ -205,11 +205,11 @@ Once registered, the carrier's latest word, such as *In transit*, shows on the s
 
 <YouTube video="shipping" title="Video of Try rates" start={239} end={262} />
 
-**Try rates**, on **Commerce > Shipping**, shows which zone an address falls in and what each of its methods charges for an order you describe: country, region, currency, subtotal, weight, number of items and shipping class. No order is placed. Use it to check your zones and tables before buyers see them.
+**Try rates**, on **Commerce** → **Shipping**, shows which zone an address falls in and what each of its methods charges for an order you describe: country, region, currency, subtotal, weight, number of items and shipping class. No order is placed. Use it to check your zones and tables before buyers see them.
 
 ## Try a sample
 
-The **Product listing: online store sample** recipe (**Configuration > Recipes**) adds shipping zones for the United States (Standard, Express by weight and free shipping from $100), Canada and the rest of the world, weights for every product with boots in a *Bulky* class, and UPS, FedEx and USPS as carriers. Buy something from **/shop**, then ship it from the order's page.
+The **Product listing: online store sample** recipe (**Configuration** → **Recipes**) adds shipping zones for the United States (Standard, Express by weight and free shipping from $100), Canada and the rest of the world, weights for every product with boots in a *Bulky* class, and UPS, FedEx and USPS as carriers. Buy something from **/shop**, then ship it from the order's page.
 
 ## Related pages
 

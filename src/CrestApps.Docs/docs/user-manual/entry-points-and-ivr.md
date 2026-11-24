@@ -19,7 +19,7 @@ A text entry point decides where the conversations go, how a queue hands them ou
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Inbound entry points |
+| **Menu** | **Interaction Center** → **Management** → **Inbound Entry Points** |
 | **Permission** | Manage Contact Center queues |
 | **Features** | Contact Center Inbound Entry Points, with Contact Center Inbound Voice for call entry points and SMS Messaging Channel for text entry points |
 
@@ -33,8 +33,8 @@ A text entry point decides where the conversations go, how a queue hands them ou
 
 <YouTube video="contact-center-call-flows" title="Video of the life of an inbound call: the recording notice, welcome, menu, queue, offer and wrap-up" start={27} end={74} />
 
-1. Add the numbers first, under **Interaction Center > Management > [Omnichannel Addresses](channel-endpoints.md)**, with **Voice calls** or **Text messages (SMS)** ticked.
-2. Open **Interaction Center > Management > Inbound entry points** and click **Add inbound entry point**. When more than one channel is available, a dialog asks what the entry point answers: click **Add** on the **Voice calls** or **Text messages** card.
+1. Add the numbers first, under **Interaction Center** → **Management** → [**Omnichannel Addresses**](channel-endpoints.md), with **Voice calls** or **Text messages (SMS)** ticked.
+2. Open **Interaction Center** → **Management** → **Inbound Entry Points** and click **Add inbound entry point**. When more than one channel is available, a dialog asks what the entry point answers: click **Add** on the **Voice calls** or **Text messages** card.
 3. Fill in the cards described below. A call entry point has five; the priority, closed-call, phone menu and voicemail settings are for calls only.
 4. Click **Save**. Calls or texts to its numbers follow the new rules straight away.
 
@@ -69,7 +69,7 @@ Numbers that were typed on an entry point before entry points picked them from t
 
 | Field | What it does |
 | --- | --- |
-| **Business hours calendar** | When the entry point is open. Empty means *Always open*. See [Business hours](business-hours.md). |
+| **Business hours** | The business hours schedule that says when the entry point is open. Empty means *Always open*. See [Business hours](business-hours.md). |
 | **Closed action** | Calls only. What to do with calls while closed: **Hold in queue** (the default), **Voicemail**, **Overflow** (to the overflow queue below), or **Reject**. On a specific-agent line every choice except Reject becomes Voicemail. |
 | **Overflow queue** | The queue that takes after-hours calls when the closed action is Overflow. |
 | **Closed message** | Spoken to a caller who rings while the entry point is closed, before the closed action. Once it has been said the caller is held in the queue, moved to the overflow queue or sent to voicemail; with **Reject** the call ends after the message. Empty applies the closed action straight away, with no message. |
@@ -120,7 +120,7 @@ A call entry point can hand its calls to an AI voice agent: an AI chat profile, 
 
 <YouTube video="contact-center-ai-voice-agent-inbound" title="Video of routing a number to an AI voice agent and setting open and closed hours" start={68} end={155} />
 
-1. Make the profile under **Artificial Intelligence > Profiles**, with an **Opening message** (what it says when it picks up) and the business details its instructions ask for.
+1. Make the profile under **Artificial Intelligence** → **Profiles**, with an **Opening message** (what it says when it picks up) and the business details its instructions ask for.
 2. On the entry point's **Routing** card, set **Route to** to **AI voice agent** and pick the profile under **AI agent**.
 3. To let the AI pass callers to a person, set up the hand-off on the [subject flow](subjects.md) for the number.
 

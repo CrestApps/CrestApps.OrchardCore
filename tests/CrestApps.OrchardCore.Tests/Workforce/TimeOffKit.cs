@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
@@ -67,7 +68,7 @@ internal static class TimeOffKit
         });
     }
 
-    public static Task<TimeOffLedgerEntry> OpenBalanceAsync(CalendarTestHarness harness, WorkerProfile worker, TimeOffPolicy policy, decimal amount)
+    public static Task<TimeOffLedgerEntry> OpenBalanceAsync(CalendarTestHarness harness, StaffMember worker, TimeOffPolicy policy, decimal amount)
     {
         return harness.RunAsync(async services =>
         {
@@ -103,7 +104,7 @@ internal static class TimeOffKit
         });
     }
 
-    public static Task<PlanningResult<TimeOffRequest>> SubmitAsync(CalendarTestHarness harness, WorkerProfile worker, TimeOffType type, DateOnly start, DateOnly? end = null, Action<TimeOffRequestInput> configure = null)
+    public static Task<PlanningResult<TimeOffRequest>> SubmitAsync(CalendarTestHarness harness, StaffMember worker, TimeOffType type, DateOnly start, DateOnly? end = null, Action<TimeOffRequestInput> configure = null)
     {
         return harness.RunAsync(services =>
         {
@@ -121,7 +122,7 @@ internal static class TimeOffKit
         });
     }
 
-    public static Task<TimeOffPreview> PreviewAsync(CalendarTestHarness harness, WorkerProfile worker, TimeOffType type, DateOnly start, DateOnly? end = null, Action<TimeOffRequestInput> configure = null)
+    public static Task<TimeOffPreview> PreviewAsync(CalendarTestHarness harness, StaffMember worker, TimeOffType type, DateOnly start, DateOnly? end = null, Action<TimeOffRequestInput> configure = null)
     {
         return harness.RunAsync(services =>
         {
@@ -144,12 +145,12 @@ internal static class TimeOffKit
         return harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().FindAsync(id), commit: false);
     }
 
-    public static Task<TimeOffBalance> BalanceAsync(CalendarTestHarness harness, WorkerProfile worker, TimeOffPolicy policy, DateOnly date)
+    public static Task<TimeOffBalance> BalanceAsync(CalendarTestHarness harness, StaffMember worker, TimeOffPolicy policy, DateOnly date)
     {
         return harness.RunAsync(services => services.GetRequiredService<ITimeOffBalanceService>().GetBalanceAsync(worker.ItemId, policy.ItemId, date), commit: false);
     }
 
-    public static async Task<IReadOnlyList<TimeOffLedgerEntry>> LedgerAsync(CalendarTestHarness harness, WorkerProfile worker, TimeOffPolicy policy)
+    public static async Task<IReadOnlyList<TimeOffLedgerEntry>> LedgerAsync(CalendarTestHarness harness, StaffMember worker, TimeOffPolicy policy)
     {
         var page = await harness.RunAsync(services => services.GetRequiredService<ITimeOffBalanceService>().PageLedgerAsync(worker.ItemId, policy.ItemId, 0, 100), commit: false);
 

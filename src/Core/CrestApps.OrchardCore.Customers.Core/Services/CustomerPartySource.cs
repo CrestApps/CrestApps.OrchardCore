@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
@@ -52,6 +53,34 @@ public sealed class CustomerPartySource : IPartySource
 
         return names;
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<string, ContactInfo>> GetContactInfoAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+    {
+        var contacts = new Dictionary<string, ContactInfo>(StringComparer.Ordinal);
+
+        foreach (var id in ids ?? [])
+        {
+            if (string.IsNullOrEmpty(id) || contacts.ContainsKey(id))
+            {
+                continue;
+            }
+
+            if (await _customerStore.FindByIdAsync(id, cancellationToken) is { } customer)
+            {
+                contacts[id] = ContactInfo.From(PlainNameOf(customer), customer.Email, customer.Phone);
+            }
+        }
+
+        return contacts;
+    }
+
+    private static string PlainNameOf(Customer customer)
+        => !string.IsNullOrWhiteSpace(customer.DisplayName)
+            ? customer.DisplayName
+            : !string.IsNullOrWhiteSpace(customer.CompanyName)
+                ? customer.CompanyName
+                : $"{customer.FirstName} {customer.LastName}".Trim();
 
     private static string NameOf(Customer customer)
     {

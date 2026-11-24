@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -54,7 +55,7 @@ internal sealed class TimeOffApprovals
     /// <summary>
     /// Approves a request: the event, the Taken entry and the overlapping shifts. The caller saves the request.
     /// </summary>
-    public async Task<IReadOnlyList<string>> ApproveAsync(TimeOffRequest request, WorkerProfile worker, TimeOffType type, string actor, bool automatic, string note, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> ApproveAsync(TimeOffRequest request, StaffMember worker, TimeOffType type, string actor, bool automatic, string note, CancellationToken cancellationToken = default)
     {
         var team = await _teamStore.FindByIdAsync(request.TeamId, cancellationToken);
 

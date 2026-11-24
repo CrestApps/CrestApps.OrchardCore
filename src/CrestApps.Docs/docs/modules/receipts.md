@@ -3,6 +3,8 @@ sidebar_label: Receipts
 sidebar_position: 15
 title: Receipts
 description: A reusable, settings-driven module that builds branded, printable proof-of-purchase receipts any module can consume.
+user_manual:
+  - user-manual/commerce/invoices-and-receipts
 ---
 
 | | |
@@ -88,7 +90,9 @@ The data the consumer supplies:
 
 ### Rendering the printable receipt
 
-The module ships a reusable, self-contained printable view. Because Orchard Core compiles module views under `~/Areas/{ModuleId}/Views`, a consuming module renders the shared receipt from its own view with a full-path partial:
+Receipts are printed as [business documents](business-documents) of the `Receipt` kind, and the **Receipts** feature depends on the **Business Documents** feature. `ReceiptBusinessDocumentMapper` (in `CrestApps.OrchardCore.Receipts.Core`) turns a `ReceiptDocument` into a `BusinessDocument`: the issuer and its address lines, the billed-to party, the reference and date as fields, a line table (description, quantity, amount), the subtotal, the tax lines and the total, the notes as a section, the footer, a status badge, and a **Test payment** watermark for a test-mode payment when the test badge is turned on. Amounts are written with the shared money format (`IMoneyFormatter`).
+
+The module ships a reusable printable view. Because Orchard Core compiles module views under `~/Areas/{ModuleId}/Views`, a consuming module renders the shared receipt from its own view with a full-path partial:
 
 ```html
 @using CrestApps.OrchardCore.Receipts.Models
@@ -97,11 +101,13 @@ The module ships a reusable, self-contained printable view. Because Orchard Core
 <partial name="~/Areas/CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml" model="Model" />
 ```
 
-This lets every consumer print the same receipt layout while owning its own surrounding page (for example a print toolbar or a back link).
+The view maps the receipt, applies the [document template](business-documents#document-templates) for receipts, and renders the shared `BusinessDocument` shape, so every consumer prints the same layout while owning its own surrounding page (for example a print toolbar or a back link). A theme restyles receipts alone with a `BusinessDocument-Receipt.cshtml` view.
+
+`IReceiptHtmlRenderer`, which writes the receipt into the body of an e-mail, does the same through the shared `IBusinessDocumentHtmlRenderer`. Call `RenderAsync`, which applies the document template. The synchronous `Render` is obsolete: it renders the receipt without its template and cannot work with a renderer whose rendering is asynchronous. Amounts print with the currency symbol through `IMoneyFormatter`, such as `$108.00`; because several currencies share a symbol, the receipt also has a **Currency** field with the ISO code. Receipts registers the business document services it renders with itself (`AddBusinessDocumentsCore`), and a site upgraded before Business Documents is recorded as enabled (its migration turns it on after the first request) still prints and sends receipts: until the feature is recorded as enabled, the template is not read at all (no query runs against tables that do not exist yet, which on PostgreSQL would abort the transaction that records the payment) and the receipt is rendered with its own look. Once it is enabled, a template that fails to apply is an error, not hidden. The logo and footer of the receipt settings win over the template's; the template adds its accent color and paper size, and its logo and footer when the receipt settings have none.
 
 ## Settings
 
-Enable the **Receipts** feature, then browse to **Settings → Commerce → Receipts** to configure the issuer branding that appears on every receipt. Access requires the **Manage receipt settings** permission.
+Enable the **Receipts** feature, then browse to **Settings** → **Commerce** → **Receipts** to configure the issuer branding that appears on every receipt. Access requires the **Manage receipt settings** permission.
 
 | Setting | Description |
 | --- | --- |

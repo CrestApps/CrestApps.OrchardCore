@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+
+@model LearningEventActivityViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<div class="mb-3">
+    <label asp-for="CourseIds" class="form-label">@T["Courses"]</label>
+    @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.CourseIds).ToString(), inputName = Html.NameFor(m => m.CourseIds).ToString(), endpoint = Url.RouteUrl("LearningCourseSearch"), initialItemsJson = Model.CoursesJson, multiple = true, buttonText = T["Every course"].Value, searchPlaceholder = T["Search courses by title"].Value, emptyResultsText = T["No course has this title."].Value, smallButton = false })
+    <span class="hint">@T["The courses that start the workflow. Choose none for every course."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="IncludeWorkflowChanges" type="checkbox" class="form-check-input" />
+        <label asp-for="IncludeWorkflowChanges" class="form-check-label">@T["Also start for changes a workflow made"]</label>
+        <span class="hint dashed">@T["Off by default, so a workflow that changes an enrollment does not start itself again."]</span>
+    </div>
+</div>

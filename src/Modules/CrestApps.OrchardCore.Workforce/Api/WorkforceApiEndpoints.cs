@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Controllers;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -272,7 +274,7 @@ internal static class WorkforceApiEndpoints
 
         var today = await PlanningOptions.TodayAsync(services.GetRequiredService<ILocalClock>());
 
-        return Results.Ok((await services.GetRequiredService<IWorkerManager>().ListByTeamAsync(teamId, today, httpContext.RequestAborted))
+        return Results.Ok((await services.GetRequiredService<IStaffMemberManager>().ListByTeamAsync(teamId, today, httpContext.RequestAborted))
             .Select(worker => new { id = worker.ItemId, name = worker.DisplayName, employeeNumber = worker.EmployeeNumber, jobTitle = worker.JobTitle, status = worker.Status.ToString() }));
     }
 
@@ -293,7 +295,7 @@ internal static class WorkforceApiEndpoints
         }
 
         var teams = (await services.GetRequiredService<ITeamManager>().GetAllAsync()).Where(team => scope.Covers(team.ItemId) && (string.IsNullOrEmpty(teamId) || team.ItemId == teamId)).ToList();
-        var workers = services.GetRequiredService<IWorkerManager>();
+        var workers = services.GetRequiredService<IStaffMemberManager>();
         var siteService = services.GetRequiredService<ISiteService>();
         var queries = services.GetRequiredService<ICalendarQueryService>();
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -390,7 +392,7 @@ internal static class WorkforceApiEndpoints
             return Results.Forbid();
         }
 
-        var worker = string.IsNullOrEmpty(input?.WorkerId) ? null : await services.GetRequiredService<IWorkerManager>().FindByIdAsync(input.WorkerId);
+        var worker = string.IsNullOrEmpty(input?.WorkerId) ? null : await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(input.WorkerId);
 
         if (worker is null)
         {
@@ -511,11 +513,11 @@ internal static class WorkforceApiEndpoints
         return (scope.All ? null : scope.TeamIds.ToArray(), null);
     }
 
-    private static Task<WorkerProfile> WorkerAsync(HttpContext httpContext, IServiceProvider services)
+    private static Task<StaffMember> WorkerAsync(HttpContext httpContext, IServiceProvider services)
     {
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        return string.IsNullOrEmpty(userId) ? Task.FromResult<WorkerProfile>(null) : services.GetRequiredService<IWorkerManager>().FindByUserIdAsync(userId);
+        return string.IsNullOrEmpty(userId) ? Task.FromResult<StaffMember>(null) : services.GetRequiredService<IStaffMemberManager>().FindByUserIdAsync(userId);
     }
 
     private static string Key(HttpContext httpContext, string prefix)

@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -24,7 +25,7 @@ internal sealed class TimeOffShiftRemover : ITimeOffApprovalHandler
     private readonly ScheduleChangeRecorder _changeRecorder;
     private readonly TeamTimeZoneResolver _timeZones;
     private readonly WorkerShiftReader _shiftReader;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -37,7 +38,7 @@ internal sealed class TimeOffShiftRemover : ITimeOffApprovalHandler
         ScheduleChangeRecorder changeRecorder,
         TeamTimeZoneResolver timeZones,
         WorkerShiftReader shiftReader,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         IClock clock,
         IStringLocalizer<TimeOffShiftRemover> stringLocalizer)
     {

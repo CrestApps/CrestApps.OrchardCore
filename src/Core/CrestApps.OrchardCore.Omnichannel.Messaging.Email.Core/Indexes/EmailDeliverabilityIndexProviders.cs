@@ -17,6 +17,8 @@ public sealed class EmailDeliveryLogIndexProvider : IndexProvider<EmailDeliveryL
     {
         context
             .For<EmailDeliveryLogIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new EmailDeliveryLogIndex
             {
                 AddressId = entry.AddressId,
@@ -48,6 +50,8 @@ public sealed class EmailSuppressionIndexProvider : IndexProvider<EmailSuppressi
     {
         context
             .For<EmailSuppressionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(suppression => new EmailSuppressionIndex
             {
                 Address = EmailDeliveryLogIndexProvider.Truncate(suppression.Address, EmailDeliveryLogIndex.RecipientLength),
@@ -71,6 +75,8 @@ public sealed class EmailSendingStateIndexProvider : IndexProvider<EmailSendingS
     {
         context
             .For<EmailSendingStateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(state => new EmailSendingStateIndex
             {
                 AddressId = state.AddressId,

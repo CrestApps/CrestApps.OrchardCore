@@ -1,19 +1,36 @@
+using CrestApps.Core;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Agreements;
+using CrestApps.OrchardCore.Agreements.Core.Indexes;
+using CrestApps.OrchardCore.Agreements.Core.Services;
+using CrestApps.OrchardCore.Agreements.Models;
+using CrestApps.OrchardCore.Agreements.Services;
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Tests.Calendars;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
+using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NodaTime;
+using YesSql;
+using YesSql.Indexes;
+using YesSql.Sql;
 using IClock = OrchardCore.Modules.IClock;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.WorkOrders;
 
 /// <summary>
-/// Service agreements make the work orders of their visits ahead of time, once each, on the right days across daylight
-/// saving changes; expire past their end; start the expiring event once; and bill as agreed.
+/// Agreements with visits (their Work Orders terms) make the work orders of their visits ahead of time, once each, on the
+/// right days across daylight saving changes, and none past their end; their terms are checked by the agreement's own
+/// rules; their billable labor counts against the agreement's hours; and the service agreements Work Orders kept move to
+/// the Agreements module with the same ids, numbers and terms.
 /// </summary>
 public sealed class ServiceAgreementTests
 {
@@ -22,7 +39,7 @@ public sealed class ServiceAgreementTests
     [Fact]
     public void Occurrences_AreTheDaysInTheLeadTime_AndStopAtTheEnd()
     {
-        var agreement = new ServiceAgreement { StartDate = new DateOnly(2026, 1, 15) };
+        var agreement = new Agreement { StartDate = new DateOnly(2026, 1, 15) };
         var schedule = new AgreementSchedule { Rule = "FREQ=MONTHLY" };
 
         Assert.Equal(
@@ -37,7 +54,7 @@ public sealed class ServiceAgreementTests
     [Fact]
     public void AVisitsDay_FollowsDaylightSaving()
     {
-        var agreement = new ServiceAgreement { StartDate = new DateOnly(2027, 1, 1) };
+        var agreement = new Agreement { StartDate = new DateOnly(2027, 1, 1) };
         var days = ServiceAgreementScheduler.Occurrences(agreement, new AgreementSchedule { Rule = "FREQ=MONTHLY;BYDAY=2SU" }, _newYork, new LocalDate(2027, 2, 1), new LocalDate(2027, 4, 30)).ToList();
 
         // The second Sunday of March is the day the clocks go forward.
@@ -52,9 +69,9 @@ public sealed class ServiceAgreementTests
     {
         await using var setup = await SetupAsync();
 
-        var agreementId = await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, agreement =>
+        var agreementId = await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, (agreement, terms) =>
         {
-            agreement.Schedules = [new AgreementSchedule { Id = "weekly", Name = "Filter check", TypeId = setup.TypeId, Rule = "FREQ=WEEKLY;BYDAY=MO", LeadDays = 14 }];
+            terms.Schedules = [new AgreementSchedule { Id = "weekly", Name = "Filter check", TypeId = setup.TypeId, Rule = "FREQ=WEEKLY;BYDAY=MO", LeadDays = 14 }];
         }));
 
         // Monday 2 November 2026: this Monday and the next two are within 14 days.
@@ -85,30 +102,24 @@ public sealed class ServiceAgreementTests
     }
 
     [Fact]
-    public async Task AnAgreement_StartsTheExpiringEventOnce_AndExpiresAfterItsEnd()
+    public async Task AnAgreementPastItsEnd_OrNotActive_MakesNoWorkOrders()
     {
         await using var setup = await SetupAsync();
 
-        var agreementId = await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, agreement =>
+        await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, (agreement, terms) =>
         {
-            agreement.EndDate = new DateOnly(2026, 11, 20);
-            agreement.Schedules = [new AgreementSchedule { Id = "yearly", TypeId = setup.TypeId, Rule = "FREQ=YEARLY", LeadDays = 0 }];
+            agreement.EndDate = new DateOnly(2026, 10, 31);
+            terms.Schedules = [new AgreementSchedule { Id = "weekly", TypeId = setup.TypeId, Rule = "FREQ=WEEKLY;BYDAY=MO", LeadDays = 14 }];
+        }));
+        await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, (agreement, terms) =>
+        {
+            agreement.Status = AgreementStatus.Paused;
+            terms.Schedules = [new AgreementSchedule { Id = "weekly", TypeId = setup.TypeId, Rule = "FREQ=WEEKLY;BYDAY=MO", LeadDays = 14 }];
         }));
 
-        await setup.Harness.RunAsync(services => services.GetRequiredService<ServiceAgreementScheduler>().RunAsync());
-        await setup.Harness.RunAsync(services => services.GetRequiredService<ServiceAgreementScheduler>().RunAsync());
+        var made = await setup.Harness.RunAsync(services => services.GetRequiredService<ServiceAgreementScheduler>().RunAsync());
 
-        Assert.Equal(["SA-00001"], setup.Expiring);
-
-        setup.Now = new DateTime(2026, 11, 22, 12, 0, 0, DateTimeKind.Utc);
-        await setup.Harness.RunAsync(services => services.GetRequiredService<ServiceAgreementScheduler>().RunAsync());
-
-        await setup.Harness.RunAsync(async services =>
-        {
-            var agreement = await services.GetRequiredService<ServiceAgreementManager>().FindByIdAsync(agreementId);
-
-            Assert.Equal(ServiceAgreementStatus.Expired, agreement.Status);
-        });
+        Assert.Equal(0, made);
     }
 
     [Fact]
@@ -133,14 +144,17 @@ public sealed class ServiceAgreementTests
 
         await setup.Harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<ServiceAgreementManager>();
+            var manager = services.GetRequiredService<IAgreementManager>();
             var agreement = await manager.NewAsync();
 
             agreement.Name = "Broken";
-            agreement.Status = ServiceAgreementStatus.Active;
+            agreement.Status = AgreementStatus.Active;
             agreement.EndDate = agreement.StartDate.AddDays(-1);
-            agreement.Pricing = AgreementPricing.PerVisit;
-            agreement.Schedules = [new AgreementSchedule { Id = "x", TypeId = setup.TypeId, Rule = "FREQ=SOMETIMES" }];
+            agreement.Put(new WorkOrderAgreementTerms
+            {
+                Pricing = AgreementPricing.PerVisit,
+                Schedules = [new AgreementSchedule { Id = "x", TypeId = setup.TypeId, Rule = "FREQ=SOMETIMES" }],
+            });
 
             var result = await manager.ValidateAsync(agreement);
 
@@ -154,10 +168,10 @@ public sealed class ServiceAgreementTests
     {
         await using var setup = await SetupAsync();
 
-        await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, agreement =>
+        await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, (agreement, terms) =>
         {
-            agreement.AssetIds = ["boiler", "pump"];
-            agreement.Schedules =
+            terms.AssetIds = ["boiler", "pump"];
+            terms.Schedules =
             [
                 new AgreementSchedule { Id = "pump", Name = "Pump check", TypeId = setup.TypeId, Rule = "FREQ=YEARLY", LeadDays = 0, AssetIds = ["pump"] },
                 new AgreementSchedule { Id = "all", Name = "Full service", TypeId = setup.TypeId, Rule = "FREQ=YEARLY", LeadDays = 0 },
@@ -174,49 +188,159 @@ public sealed class ServiceAgreementTests
         Assert.Equal(["boiler", "pump"], assets["Full"]);
     }
 
-    private static async Task<string> CreateAgreementAsync(IServiceProvider services, string typeId, Action<ServiceAgreement> configure)
+    [Fact]
+    public async Task TheBillableLaborOfTheAgreementsCompletedWorkOrders_CountsAgainstItsHours()
     {
-        var manager = services.GetRequiredService<ServiceAgreementManager>();
+        // Arrange (a 10-hour block; a completed work order with 1.5 hours of billable labor and half an hour that isn't)
+        await using var setup = await SetupAsync();
+        var agreementId = await setup.Harness.RunAsync(services => CreateAgreementAsync(services, setup.TypeId, (agreement, _) =>
+        {
+            agreement.AccountId = "contoso";
+            agreement.Hours = new AgreementHours { Kind = AgreementHoursKind.Block, Hours = 10 };
+        }));
+        await setup.Harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            await session.SaveAsync(new WorkOrder
+            {
+                ItemId = UniqueId.GenerateId(),
+                Number = "WO-1",
+                Summary = "Boiler repair",
+                AccountId = "contoso",
+                AgreementId = agreementId,
+                Status = WorkOrderStatus.Completed,
+                CompletedUtc = setup.Now.AddHours(-2),
+                Lines =
+                [
+                    new WorkOrderLine { Kind = WorkOrderLineKind.Labor, QuantityUsed = 1.5m, Billable = true },
+                    new WorkOrderLine { Kind = WorkOrderLineKind.Labor, QuantityUsed = 0.5m, Billable = false },
+                    new WorkOrderLine { Kind = WorkOrderLineKind.Product, QuantityUsed = 3, Billable = true },
+                ],
+            }, false, WorkOrdersConstants.CollectionName);
+
+            return true;
+        });
+
+        // Act
+        var balance = await setup.Harness.RunAsync(async services =>
+        {
+            var agreement = await services.GetRequiredService<IAgreementManager>().FindByIdAsync(agreementId);
+
+            return await services.GetRequiredService<IAgreementBalanceService>().GetBalanceAsync(agreement);
+        }, commit: false);
+
+        // Assert
+        Assert.Equal(90, balance.UsedMinutes);
+        var entry = Assert.Single(balance.Entries);
+        Assert.Equal("WO-1 Boiler repair", entry.Usage.Description);
+    }
+
+    [Fact]
+    public async Task TheServiceAgreementsWorkOrdersKept_MoveToTheAgreementsModule_WithTheirIdsNumbersAndTerms()
+    {
+        // Arrange (an agreement stored as Work Orders kept it)
+        await using var setup = await SetupAsync(legacy: true);
+        await setup.Harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            session.Store.TypeNames[typeof(LegacyServiceAgreement)] = ServiceAgreementUpgrade.StoredTypeName;
+            await session.SaveAsync(new LegacyServiceAgreement
+            {
+                ItemId = "4legacyagreement0000000001",
+                Number = "SA-00007",
+                Name = "Furnace care",
+                Status = "Active",
+                AccountId = "contoso",
+                CustomerId = "customer-1",
+                Contact = new WorkOrderContact { Name = "Pat" },
+                StartDate = new DateOnly(2026, 1, 1),
+                TimeZoneId = "America/New_York",
+                Pricing = AgreementPricing.PerVisit,
+                PricePerVisit = 120,
+                Schedules = [new AgreementSchedule { Id = "yearly", TypeId = setup.TypeId, Rule = "FREQ=YEARLY", LeadDays = 14 }],
+            }, false, WorkOrdersConstants.CollectionName);
+
+            return true;
+        });
+
+        // Act
+        var first = await setup.Harness.RunAsync(services => services.GetRequiredService<ServiceAgreementUpgrade>().RunAsync());
+        var again = await setup.Harness.RunAsync(services => services.GetRequiredService<ServiceAgreementUpgrade>().RunAsync());
+        var moved = await setup.Harness.RunAsync(async services => await services.GetRequiredService<IAgreementManager>().FindByIdAsync("4legacyagreement0000000001"), commit: false);
+
+        // Assert
+        Assert.Equal((1, 1, 0), first);
+        Assert.Equal((0, 1, 0), again);
+        Assert.Equal("SA-00007", moved.Number);
+        Assert.Equal(AgreementStatus.Active, moved.Status);
+        Assert.Equal("contoso", moved.AccountId);
+        Assert.True(moved.TryGet<WorkOrderAgreementTerms>(out var terms));
+        Assert.Equal("customer-1", terms.CustomerId);
+        Assert.Equal("Pat", terms.Contact.Name);
+        Assert.Equal(120, terms.PricePerVisit);
+        Assert.Equal("yearly", Assert.Single(terms.Schedules).Id);
+    }
+
+    [Fact]
+    public void TheMigrationsSteps_AreInstanceMethods_AsOrchardCoreFindsThem()
+    {
+        var steps = typeof(CrestApps.OrchardCore.WorkOrders.Migrations.ServiceAgreementsMigrations)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(method => method.Name.StartsWith("Create", StringComparison.Ordinal) || method.Name.StartsWith("UpdateFrom", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Equal(["CreateAsync", "UpdateFrom1Async", "UpdateFrom2Async"], steps.Select(method => method.Name).Order());
+        Assert.All(steps, method => Assert.False(method.IsStatic, method.Name + " is static."));
+    }
+
+    private static async Task<string> CreateAgreementAsync(IServiceProvider services, string typeId, Action<Agreement, WorkOrderAgreementTerms> configure)
+    {
+        var manager = services.GetRequiredService<IAgreementManager>();
         var agreement = await manager.NewAsync();
+        var terms = new WorkOrderAgreementTerms { CustomerId = "customer-1", Contact = new WorkOrderContact { Name = "Pat" } };
 
         agreement.Name = "Furnace care";
-        agreement.Status = ServiceAgreementStatus.Active;
+        agreement.Status = AgreementStatus.Active;
         agreement.StartDate = new DateOnly(2026, 10, 1);
         agreement.TimeZoneId = "America/New_York";
-        agreement.CustomerId = "customer-1";
-        agreement.Contact = new WorkOrderContact { Name = "Pat" };
-        configure(agreement);
+        configure(agreement, terms);
+        agreement.Put(terms);
+
+        var validation = await manager.ValidateAsync(agreement);
+        Assert.True(validation.Succeeded, string.Join(" ", validation.Errors.Select(error => error.ErrorMessage)));
         await manager.CreateAsync(agreement);
 
         return agreement.ItemId;
     }
 
-    private static async Task<Setup> SetupAsync()
+    private static async Task<Setup> SetupAsync(bool legacy = false)
     {
         var setup = new Setup();
         var clock = new Mock<IClock>();
-        var observer = new Mock<IServiceAgreementObserver>();
 
         clock.SetupGet(c => c.UtcNow).Returns(() => setup.Now);
-        observer.Setup(o => o.OnExpiringAsync(It.IsAny<ServiceAgreement>(), It.IsAny<CancellationToken>()))
-            .Callback((ServiceAgreement agreement, CancellationToken _) => setup.Expiring.Add(agreement.Number))
-            .Returns(Task.CompletedTask);
 
         setup.Harness = await CalendarTestHarness.CreateAsync(
             services =>
             {
                 services.AddSingleton(clock.Object);
-                services.AddSingleton(observer.Object);
-                services.AddWorkOrdersCore();
+                services.AddWorkOrdersWithServiceLevels();
                 services.AddServiceAgreementsCore();
+                services.AddScoped<ICatalogEntryHandler<Agreement>, AgreementHandler>();
+                services.AddSingleton<INumberSequence, InMemoryNumberSequence>();
             },
             async builder =>
             {
-                await WorkOrdersIndexSchema.CreateAsync(builder);
-                await ServiceAgreementsIndexSchema.CreateAsync(builder);
+                await WorkOrderTestStores.CreateSchemaAsync(builder);
+                await AgreementsIndexSchema.CreateAsync(builder);
+
+                if (legacy)
+                {
+                    await builder.CreateMapIndexTableAsync<ServiceAgreementIndex>(table => table.Column<string>("ItemId", column => column.WithLength(26)), collection: WorkOrdersConstants.CollectionName);
+                }
             },
-            [new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider(), new ServiceAgreementIndexProvider()],
-            [WorkOrdersConstants.CollectionName]);
+            [.. WorkOrderTestStores.IndexProviders, new AgreementIndexProvider(), .. legacy ? new IIndexProvider[] { new LegacyServiceAgreementIndexProvider() } : []],
+            [.. WorkOrderTestStores.Collections, AgreementsConstants.CollectionName]);
 
         setup.TypeId = await setup.Harness.RunAsync(async services =>
         {
@@ -234,6 +358,18 @@ public sealed class ServiceAgreementTests
         return setup;
     }
 
+    // Writes the index row Work Orders wrote for its own agreements.
+    private sealed class LegacyServiceAgreementIndexProvider : IndexProvider<LegacyServiceAgreement>
+    {
+        public LegacyServiceAgreementIndexProvider()
+        {
+            CollectionName = WorkOrdersConstants.CollectionName;
+        }
+
+        public override void Describe(DescribeContext<LegacyServiceAgreement> context)
+            => context.For<ServiceAgreementIndex>().Map(item => new ServiceAgreementIndex { ItemId = item.ItemId });
+    }
+
     private sealed class Setup : IAsyncDisposable
     {
         public CalendarTestHarness Harness { get; set; }
@@ -241,8 +377,6 @@ public sealed class ServiceAgreementTests
         public string TypeId { get; set; }
 
         public DateTime Now { get; set; } = CalendarTestHarness.Now;
-
-        public List<string> Expiring { get; } = [];
 
         public ValueTask DisposeAsync() => Harness?.DisposeAsync() ?? ValueTask.CompletedTask;
     }

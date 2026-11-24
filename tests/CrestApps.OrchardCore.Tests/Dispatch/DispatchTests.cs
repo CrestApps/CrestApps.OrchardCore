@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Dispatch;
 using CrestApps.OrchardCore.Dispatch.Core;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Skills.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Workforce;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -13,7 +15,6 @@ using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.DependencyInjection;
-using CrestApps.OrchardCore.Calendars;
 
 namespace CrestApps.OrchardCore.Tests.Dispatch;
 
@@ -190,7 +191,7 @@ public sealed class DispatchTests
         await PlanningKit.GrantSkillAsync(kit.Harness, ana.ItemId, boilers.ItemId);
         await SaveCertificateAsync(kit, ana, gas.ItemId, new DateOnly(2024, 1, 1), new DateOnly(2026, 10, 31));
 
-        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.Depot, workOrder => workOrder.RequiredSkills = [new RequiredSkill { SkillId = boilers.ItemId }]);
+        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.Depot, workOrder => workOrder.RequiredSkills = [new SkillRequirement { SkillId = boilers.ItemId }]);
         var found = await kit.CandidatesAsync(visit);
 
         Assert.Empty(found.Candidates);
@@ -223,7 +224,7 @@ public sealed class DispatchTests
 
         Assert.True((await kit.AssignAsync(early, DispatchKit.Monday(8), ana)).Succeeded);
 
-        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.South, workOrder => workOrder.RequiredSkills = [new RequiredSkill { SkillId = boilers.ItemId }]);
+        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.South, workOrder => workOrder.RequiredSkills = [new SkillRequirement { SkillId = boilers.ItemId }]);
 
         // Act
         var found = await kit.CandidatesAsync(visit);
@@ -379,12 +380,12 @@ public sealed class DispatchTests
         Assert.True((await kit.AssignAsync(other, DispatchKit.Monday(10), ana)).Succeeded);
     }
 
-    private static Task SaveCertificateAsync(DispatchKit kit, WorkerProfile worker, string certificationId, DateOnly issuedOn, DateOnly expiresOn)
+    private static Task SaveCertificateAsync(DispatchKit kit, StaffMember worker, string certificationId, DateOnly issuedOn, DateOnly expiresOn)
         => kit.Harness.RunAsync(async services =>
         {
             var result = await services.GetRequiredService<CrestApps.OrchardCore.Skills.Services.ICertificationRecordService>().SaveAsync(new CertificationRecord
             {
-                SubjectKind = SkillSubjectKind.Worker,
+                SubjectKind = SkillSubjectKind.Staff,
                 SubjectId = worker.ItemId,
                 SubjectName = worker.DisplayName,
                 CertificationId = certificationId,
@@ -397,7 +398,7 @@ public sealed class DispatchTests
         });
 
     // Approved time off shows as a TimeOff event on the team's calendar.
-    private static async Task AddTimeOffAsync(DispatchKit kit, WorkerProfile worker)
+    private static async Task AddTimeOffAsync(DispatchKit kit, StaffMember worker)
     {
         var calendarId = await kit.Harness.RunAsync(async services => (await services.GetRequiredService<CrestApps.OrchardCore.Teams.Services.ITeamManager>().FindByIdAsync(kit.Team.ItemId)).GetWorkforceSettings().CalendarId, commit: false);
         var created = await kit.Harness.RunAsync(async services =>

@@ -1,6 +1,10 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -16,8 +20,8 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
-using OrchardCore.Routing;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -28,7 +32,7 @@ namespace CrestApps.OrchardCore.Workforce.Controllers;
 public sealed class WorkerTimeClockController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ITimeClockService _timeClock;
     private readonly IAttendanceService _attendance;
@@ -54,7 +58,7 @@ public sealed class WorkerTimeClockController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkerTimeClockController(
         IAuthorizationService authorizationService,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IWorkforceScopeService scopeService,
         ITimeClockService timeClock,
         IAttendanceService attendance,
@@ -92,21 +96,19 @@ public sealed class WorkerTimeClockController : Controller
         }
 
         var today = await PlanningOptions.TodayAsync(_localClock);
-        var settings = worker.TryGet<WorkerTimeClockSettings>(out var stored) ? stored : new WorkerTimeClockSettings();
-        var rates = worker.TryGet<WorkerPayRates>(out var payRates) ? payRates : new WorkerPayRates();
+        var settings = worker.TryGet<StaffBadge>(out var stored) ? stored : new StaffBadge();
+        var rates = worker.TryGet<StaffPayRates>(out var payRates) ? payRates : new StaffPayRates();
         var activities = await _activityCodes.GetAllAsync(HttpContext.RequestAborted);
         var model = new WorkerTimeClockViewModel
         {
             Worker = worker,
             HasPin = !string.IsNullOrEmpty(settings.PinHash),
             LockedUntilUtc = settings.LockedUntilUtc,
-            CanViewRates = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ViewPayRates),
+            CanViewRates = await _authorizationService.AuthorizeAsync(User, StaffPermissions.ManageStaffPay) || await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ExportPayrollData),
             Policy = await _timeClock.GetPolicyAsync(worker, today, HttpContext.RequestAborted),
             Status = await _timeClock.GetStatusAsync(worker, HttpContext.RequestAborted),
             Points = await _attendance.GetPointsAsync(worker, today, HttpContext.RequestAborted),
             ActivityNames = activities.ToDictionary(code => code.ItemId, code => code.Name, StringComparer.Ordinal),
-            ActivityOptions = activities.Select(code => new SelectListItem(code.Name, code.ItemId)).ToList(),
-            RateFrom = today,
         };
 
         if (model.CanViewRates)
@@ -150,82 +152,7 @@ public sealed class WorkerTimeClockController : Controller
         return RedirectToAction(nameof(Index), new { workerId });
     }
 
-    /// <summary>
-    /// Adds a pay rate.
-    /// </summary>
-    /// <param name="workerId">The worker.</param>
-    /// <param name="model">The rate.</param>
-    /// <returns>A redirect to the page.</returns>
-    [HttpPost]
-    [Admin("workforce/workers/{workerId}/time-clock/rates", "WorkforceWorkerTimeClockRates")]
-    public async Task<IActionResult> AddRate(string workerId, WorkerTimeClockViewModel model)
-    {
-        var (worker, denied) = await WorkerAsync(workerId);
-
-        if (denied is not null)
-        {
-            return denied;
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ViewPayRates))
-        {
-            return Forbid();
-        }
-
-        if (!model.RateFrom.HasValue || model.HourlyRate is not > 0)
-        {
-            await _notifier.ErrorAsync(H["Give the rate an hour and the day it starts."]);
-
-            return RedirectToAction(nameof(Index), new { workerId });
-        }
-
-        var rates = worker.TryGet<WorkerPayRates>(out var stored) ? stored : new WorkerPayRates();
-        var activity = string.IsNullOrEmpty(model.RateActivityCodeId) ? null : model.RateActivityCodeId;
-
-        rates.Rates = rates.Rates.Where(rate => rate.EffectiveFrom != model.RateFrom.Value || rate.ActivityCodeId != activity).ToList();
-        rates.Rates.Add(new WorkerPayRate { EffectiveFrom = model.RateFrom.Value, HourlyRate = Math.Round(model.HourlyRate.Value, 4), ActivityCodeId = activity });
-        worker.Put(rates);
-        await _workerManager.UpdateAsync(worker);
-        await _notifier.SuccessAsync(H["The rate has been saved."]);
-
-        return RedirectToAction(nameof(Index), new { workerId });
-    }
-
-    /// <summary>
-    /// Removes a pay rate.
-    /// </summary>
-    /// <param name="workerId">The worker.</param>
-    /// <param name="from">The day the rate starts.</param>
-    /// <param name="activityCodeId">The rate's activity, or empty.</param>
-    /// <returns>A redirect to the page.</returns>
-    [HttpPost]
-    [Admin("workforce/workers/{workerId}/time-clock/rates/remove", "WorkforceWorkerTimeClockRemoveRate")]
-    public async Task<IActionResult> RemoveRate(string workerId, DateOnly from, string activityCodeId)
-    {
-        var (worker, denied) = await WorkerAsync(workerId);
-
-        if (denied is not null)
-        {
-            return denied;
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ViewPayRates))
-        {
-            return Forbid();
-        }
-
-        var rates = worker.TryGet<WorkerPayRates>(out var stored) ? stored : new WorkerPayRates();
-        var activity = string.IsNullOrEmpty(activityCodeId) ? null : activityCodeId;
-
-        rates.Rates = rates.Rates.Where(rate => rate.EffectiveFrom != from || rate.ActivityCodeId != activity).ToList();
-        worker.Put(rates);
-        await _workerManager.UpdateAsync(worker);
-        await _notifier.SuccessAsync(H["The rate has been removed."]);
-
-        return RedirectToAction(nameof(Index), new { workerId });
-    }
-
-    private async Task<(WorkerProfile Worker, IActionResult Denied)> WorkerAsync(string workerId)
+    private async Task<(StaffMember Worker, IActionResult Denied)> WorkerAsync(string workerId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ManageWorkers))
         {

@@ -14,7 +14,7 @@ Watch the short video, then follow the steps below.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder > *a report* > Sharing |
+| **Menu** | **Reports** → **Report Builder** → *a report* → **Sharing** |
 | **Permission** | Build reports and manage own custom reports and views (to share your reports); Share custom reports publicly and through share links (to share with everyone or create links) |
 | **Feature** | Report Builder. Emailing share links needs Email. |
 
@@ -44,7 +44,7 @@ Publish the report to apply the settings.
 
 Report groups arrange the reports in the admin menu, like folders. A group can be nested in another one, so **Sales** can hold **Regional**, which holds the regional reports. In the admin menu, each group is an item under **Reports**, with the groups nested in it first and then its reports. A group shows only when it holds a report in the menu that you may open, so people never see empty groups.
 
-To manage the groups, open **Reports > Report Groups**. You need the *Manage report groups* permission.
+To manage the groups, open **Reports** → **Report Groups**. You need the *Manage report groups* permission.
 
 1. Click **Add Group**, or choose **Add a group inside** from a group's actions to nest the new group in it.
 2. Enter the **Name**.
@@ -69,7 +69,7 @@ On the **Sharing** tab:
 | **People** | Search by user name or email and pick the people who may run the report. |
 | **Roles** | Everyone in a checked role may run the report. **Authenticated** means everyone who is signed in. **Anonymous** means everyone, including visitors who are not signed in, and needs the *Share custom reports publicly and through share links* permission. |
 
-Publish the report to apply the sharing. The people you share with find the report under **Reports > Shared Reports** (or **Report Builder** if they build reports), and in the admin menu when it is pinned there.
+Publish the report to apply the sharing. The people you share with find the report under **Reports** → **Shared Reports** (or **Report Builder** if they build reports), and in the admin menu when it is pinned there.
 
 :::warning[A shared report shows data with your access]
 A shared report reads data with **your** access: people see what the report shows even when they could not open that data themselves. Share only what they should see. If your account is disabled or deleted, your reports stop running; someone who designs reports can clone them and share the copies again.
@@ -110,13 +110,13 @@ To stop a link working before it expires, click **Revoke**.
 
 When a recipient opens the link, the site asks them to sign in if they are not signed in yet. Someone else who signs in with the link is refused, and a link that expired, was used up or was revoked no longer opens. Pages opened through a share link are hidden from search engines, and every opening and export through a link is recorded in the site's logs.
 
-The links of every feature of the site, such as report links and the files of data pipelines, are listed together under **Tools > Shared Links** for people with the *Manage shared links* permission. They can revoke and delete links there too. A link is deleted a day after it stops working, and a report's links are deleted with the report.
+The links of every feature of the site, such as report links and the files of data pipelines, are listed together under **Tools** → **Shared Links** for people with the *Manage shared links* permission. They can revoke and delete links there too. A link is deleted a day after it stops working, and a report's links are deleted with the report.
 
 ## Run and export a report
 
 <YouTube video="report-builder-groups-and-pdf" title="Video of exporting a report to PDF" start={143} end={183} />
 
-**Reports > Report Builder** (or **Shared Reports**) lists every report you can open. Click **Run**, or the report's title, to open it. A report pinned to the menu also opens from **Reports** > *its group* (or directly from **Reports** when it is in no group).
+**Reports** → **Report Builder** (or **Shared Reports**) lists every report you can open. Click **Run**, or the report's title, to open it. A report pinned to the menu also opens from **Reports** > *its group* (or directly from **Reports** when it is in no group).
 
 1. Change the filters shown above the report, if any, and click **Show**.
 2. To download the report, click **Export CSV**. When the Reports (OpenXml) or Reports (PDF) feature is on, the button becomes an **Export** menu with **Export CSV**, **Export Excel (.xlsx)** and **Export PDF**. The PDF lays the report out as it looks on the page, with a band for each container, its charts as drawn, and numbered pages.

@@ -38,7 +38,7 @@ The profile editor and the editor of profile-source AI templates share one layou
 
 For chat profiles, the required **Past messages included** parameter loads the default value automatically when a profile is opened without an explicit saved value.
 
-When the AI Documents features are enabled, the **Knowledge** tab for **AI Profiles**, **profile-source AI Templates**, and **Chat Interactions** also exposes a **Document retrieval mode** selector. Leaving it blank uses the site default from **Settings → Artificial Intelligence → Documents**. **Chunk** keeps chunk-level context, while **Hierarchical** retrieves matching chunks and then injects the full text of the matched documents.
+When the AI Documents features are enabled, the **Knowledge** tab for **AI Profiles**, **profile-source AI Templates**, and **Chat Interactions** also exposes a **Document retrieval mode** selector. Leaving it blank uses the site default from **Settings** → **Artificial Intelligence** → **Documents**. **Chunk** keeps chunk-level context, while **Hierarchical** retrieves matching chunks and then injects the full text of the matched documents.
 
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
@@ -69,10 +69,10 @@ How each mode looks and works for the person chatting is described in [Talk inst
 
 #### Prerequisites
 
-- **Audio input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
+- **Audio input** requires a **Default Speech-to-Text Deployment** configured in **Settings** → **Artificial Intelligence** → **Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
 - **Conversation** is carried by a realtime (speech-to-speech) deployment when one resolves — the profile's own **Conversation deployment**, then the site's default realtime deployment, then the first realtime-capable deployment. See [Realtime Voice](realtime-voice.md). When none resolves it falls back to the client-driven speech-to-text plus text-to-speech cascade, which requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment**.
-- Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
-- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
+- Optionally, set a **Default Text-to-Speech Voice** in **Settings** → **Artificial Intelligence** → **Default Deployments**. This voice is used when no profile-specific voice is selected.
+- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings** → **Artificial Intelligence** → **Default Deployments** after checking the connection-level default.
 
 #### Configuring Chat Mode
 
@@ -107,12 +107,12 @@ Even when a profile is not using the full **Conversation** chat mode, on-demand 
 
 TTS playback can be enabled at two levels:
 
-- **Site level (Chat Interactions)**: **Enable text-to-speech playback** in the **Chat Interactions** section of **Settings → Artificial Intelligence** enables playback across all Chat Interaction sessions.
+- **Site level (Chat Interactions)**: **Enable text-to-speech playback** in the **Chat Interactions** section of **Settings** → **Artificial Intelligence** enables playback across all Chat Interaction sessions.
 - **Profile level**: **Enable text-to-speech playback** on the AI Profile editor enables playback for all chat UIs associated with that specific profile.
 
 #### Prerequisites
 
-- A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
+- A **Default Text-to-Speech Deployment** must be configured in **Settings** → **Artificial Intelligence** → **Default Deployments**.
 - The playback feature works with any chat mode (Text only, Audio input, or Conversation). In Conversation mode, TTS is already built-in and always active, so the per-message playback button is hidden.
 
 #### Behavior
@@ -160,7 +160,7 @@ For **Utility** and **Agent** profile types, the AI profile list includes an **I
 
 Provides a floating AI chat widget on every admin page, allowing users to interact with a predefined AI profile.
 
-The widget is configured in the **Admin Widget** section of **Settings → Artificial Intelligence** (stored as site settings, editable with the **Manage AI profiles** permission): the chat profile, the maximum number of history sessions (1–50, default 10), and the primary color (default `#41b670`). It renders on every admin page for signed-in users who are authorized to query the selected profile, and it stores its position, size, open state and current session in the browser's local storage.
+The widget is configured in the **Admin Widget** section of **Settings** → **Artificial Intelligence** (stored as site settings, editable with the **Manage AI profiles** permission): the chat profile, the maximum number of history sessions (1–50, default 10), the primary color (default `#41b670`), and whether it tells the AI which page the user is on (on by default; see [Page context](#page-context)). It renders on every admin page for signed-in users who are authorized to query the selected profile, and it stores its position, size, open state and current session in the browser's local storage.
 
 Setting it up and using it are described in [Chat widgets](../user-manual/ai/chat-widgets.md#turn-on-the-admin-chat-widget).
 
@@ -169,6 +169,67 @@ It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.A
 :::
 
 ---
+
+### AG-UI: the assistant works on the page with the user
+
+The chat page, the admin widget, the frontend widget and the profile test page run the chat as an [AG-UI](https://docs.ag-ui.com) agent, over CrestApps.Core's AI chat hub (`RunAgent`). Nothing needs to be turned on. The user sees what the assistant does and keeps control of it:
+
+- **Tool calls.** Each tool the assistant calls shows as a card in its message, with the tool's title, its input and its result, while it runs and after the chat reloads. The cards use the titles the tools are registered with (`.WithTitle(...)`), and every text is localized through `AIChatUIConfiguration`.
+- **Tool approvals.** Tools that delete, disable, import or send ask the user first (see [Tool approvals](#tool-approvals)).
+- **Page context.** The admin widget tells the assistant which page the user is on (see [Page context](#page-context)).
+- **Page tools.** With the [WebMCP](mcp/webmcp.md) module and a profile that has **Allow page tools**, the assistant reads the page (`page_read_content` reads the text and tables it shows), fills in forms without submitting them and opens other pages of the site.
+
+#### Tool approvals
+
+A tool registered with `.RequireApproval()` does not run until the user answers. The run ends with an interrupt, the tool card shows **Allow** and **Deny**, and the answer starts a new run that makes the call, or tells the assistant it was denied. The tool's own permission checks still run when it executes. Chats that cannot ask, such as an SMS or voice conversation, run such tools as before.
+
+These **Orchard Core AI Agent** tools ask first: **Delete Content Item**, **Remove Content Type Definitions**, **Remove Content Part Definitions**, **Disable Feature**, **Disable Tenant**, **Remove Tenant**, **Setup Tenant**, **Import Orchard Core Recipe**, **Run Non-Startup Recipes**, **Send Email** and **Send SMS**. Mark your own tools the same way:
+
+```csharp
+services.AddCoreAITool<ArchiveOrdersTool>(ArchiveOrdersTool.TheName)
+    .WithTitle(S["Archive Orders"])
+    .RequireApproval()
+    .Selectable();
+```
+
+WebMCP page tools marked `consequentialHint` ask too, unless the profile has **Allow consequential page tools**.
+
+#### Page context
+
+With each message, the admin widget sends the page title and address, the text the user selected, and what the page is about:
+
+| Context | Added by |
+| --- | --- |
+| The content item being edited or viewed (title, content type, id, published or draft), or the content type being created | `ContentItemPageContextProvider`, when Orchard Core's **Contents** feature is on |
+| The site name and tenant | `SitePageContextProvider` |
+
+The model reads it as data, never as instructions: at most 10 entries from the providers, of at most 1,000 characters each. **Tell the AI which page the user is on** in the **Admin Widget** settings (`AIChatAdminWidgetSettings.SendPageContext`, on by default) turns all of it off.
+
+A module adds the context of the concept it owns with an `IAIChatPageContextProvider`. Providers run when the widget renders, once per admin page, so read only what the page already loaded or what a cached service answers:
+
+```csharp
+public sealed class OrderPageContextProvider : IAIChatPageContextProvider
+{
+    public async Task PopulateAsync(AIChatPageContext context)
+    {
+        if (context.GetRouteValue("area") == "MyCompany.Orders" && context.GetRouteValue("orderId") is { } orderId)
+        {
+            context.Add("Order being edited", $"Order {orderId}");
+        }
+    }
+}
+
+// In the startup of the feature that owns orders:
+services.AddScoped<IAIChatPageContextProvider, OrderPageContextProvider>();
+```
+
+#### Runs that continue on the next page
+
+When the assistant opens another page with `page_navigate`, its turn ends there, and the widget on the new page continues it with that page's tools, up to five pages in a row. The next message the user sends starts a new chain. A run also keeps going on the server for two minutes after its page closed, so its answer is saved and shown on the next page.
+
+#### The AG-UI endpoint
+
+With the **AI Chat API** feature (`CrestApps.OrchardCore.AI.Chat.Api`), any AG-UI client, such as a CopilotKit front end, runs the chat profiles over HTTP: `POST /api/ai/v1/agui` with a `RunAgentInput`, answered with the run's events as Server-Sent Events. Send the profile id in `forwardedProps.profileId` and the chat session id in `threadId` (empty starts a session). The caller authenticates like the other AI APIs, with an [AI API key](conversations-api.md#api-keys) whose areas include `ai.chat` (in the `X-Api-Key` header or as a bearer token) or an OpenID bearer token, and gets 401 otherwise. The chat hub then authorizes the profile and the session as it does for the widget. The endpoint reads JSON only, so it needs no antiforgery token.
 
 ### Frontend Chat Widget
 
@@ -185,13 +246,13 @@ Frontend widgets also work with the shared anonymous-visitor protection flow:
 - Anonymous visitors receive a stable first-party visitor cookie for more accurate unique-visitor analytics.
 - Chat message throttling and anonymous session-start throttling use that visitor identity together with the configured remote-address mode.
 - Widgets no longer auto-create sessions on page load just because a profile has an opening message.
-- **Settings → Artificial Intelligence** includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
+- **Settings** → **Artificial Intelligence** includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
 
 ---
 
 ### Security and Visitor Identity Settings
 
-Both the admin widget and the frontend widget share a common protection layer that guards against prompt injection, prompt leakage, abusive traffic, and anonymous session churn. These options are configured per tenant under **Settings** > **Artificial Intelligence**, and require the **Manage AI Profiles** permission.
+Both the admin widget and the frontend widget share a common protection layer that guards against prompt injection, prompt leakage, abusive traffic, and anonymous session churn. These options are configured per tenant under **Settings** → **Artificial Intelligence**, and require the **Manage AI Profiles** permission.
 
 Saving either section may restart the tenant so the updated options take effect.
 

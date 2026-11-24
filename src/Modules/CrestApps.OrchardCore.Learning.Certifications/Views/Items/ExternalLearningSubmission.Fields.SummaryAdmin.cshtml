@@ -1,0 +1,12 @@
+@model ExternalLearningRowViewModel
+
+<span class="fw-semibold">@Model.Submission.Title</span>
+<span class="text-muted small ms-1">@Model.UserName</span>
+<div class="text-muted small">
+    @Model.Submission.Amount.ToString("0.##") @Model.TypeName
+    @if (!string.IsNullOrEmpty(Model.Submission.Provider))
+    {
+        <span>· @Model.Submission.Provider</span>
+    }
+    <span>· @T["recorded {0}", Model.Submitted]</span>
+</div>

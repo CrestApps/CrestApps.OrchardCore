@@ -20,6 +20,9 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly Lock _batchLock = new();
+
+    private ContactCenterRealTimeDispatchBatch _realTimeBatch;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultContactCenterEventPublisher"/> class.
@@ -101,8 +104,41 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
         await _eventStore.CreateAsync(interactionEvent, cancellationToken);
         await _outbox.EnqueueAsync(interactionEvent, cancellationToken);
 
+        var eventId = interactionEvent.ItemId;
+        var batch = JoinRealTimeBatch(eventId);
+
         _scopeExecutor.ScheduleAfterCommit<ContactCenterEventDispatchContext>(
-            context => context.DispatchAsync(interactionEvent.ItemId));
+            context => context.DispatchAsync(eventId, batch));
+    }
+
+    // The first event a change publishes schedules the change's real-time pass, ahead of every event's own dispatch, so
+    // the agent's screens hear of all of them as soon as the change commits rather than one by one after each event's
+    // slower handlers. The publisher lives in one scope, as do the post-commit tasks it schedules. Should a batch ever be
+    // run later than an event's own dispatch, that dispatch finds nothing delivered and runs every handler itself: the
+    // screens may hear of the event twice, never not at all.
+    private ContactCenterRealTimeDispatchBatch JoinRealTimeBatch(string eventId)
+    {
+        lock (_batchLock)
+        {
+            if (_realTimeBatch is not null &&
+                _realTimeBatch.TryAdd(eventId))
+            {
+                return _realTimeBatch;
+            }
+
+            var batch = new ContactCenterRealTimeDispatchBatch();
+
+            batch.TryAdd(eventId);
+
+            if (!_scopeExecutor.ScheduleAfterCommit<ContactCenterEventDispatchContext>(context => context.DispatchRealTimeAsync(batch)))
+            {
+                return null;
+            }
+
+            _realTimeBatch = batch;
+
+            return batch;
+        }
     }
 
     // The outbox runs the handlers after the commit, often on the retry pass long after the request ended, so the event

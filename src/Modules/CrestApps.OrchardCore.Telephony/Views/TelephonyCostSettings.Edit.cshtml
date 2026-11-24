@@ -1,0 +1,19 @@
+@model TelephonyCostSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Currency">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-end">
+        <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" />
+        <span asp-validation-for="Currency"></span>
+        <span class="hint">@T["The currency the carrier's prices are in, such as USD."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PerMinute">
+    <label asp-for="PerMinute" class="ocat-label">@T["Phone call, per minute"]</label>
+    <div class="ocat-end">
+        <input asp-for="PerMinute" type="number" step="any" min="0" class="form-control" />
+        <span asp-validation-for="PerMinute"></span>
+        <span class="hint">@T["What a minute of a phone call costs with the carrier. The estimated cost of each AI call, in the AI voice usage report, adds the call's minutes at this price to the AI's usage at the prices set on its AI deployment."]</span>
+    </div>
+</div>

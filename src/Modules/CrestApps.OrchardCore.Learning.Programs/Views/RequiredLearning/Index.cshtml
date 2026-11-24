@@ -1,0 +1,31 @@
+@model RequiredLearningListViewModel
+
+<zone Name="Title">
+    <breadcrumb name="RequiredLearning" title="@T["Required Learning"]" />
+</zone>
+
+<form asp-action="Index" method="get" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input name="search" value="@Model.Search" class="form-control" placeholder="@T["Search"]" type="search" autocomplete="off" />
+                        <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add required learning"]</a></div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="RequiredLearning" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> Require a course, a learning path or a certification path of an audience, with a due date and reminders."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Required learning"]" />
+        <admin-list-column name="Who" position="30" title="@T["Of whom"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

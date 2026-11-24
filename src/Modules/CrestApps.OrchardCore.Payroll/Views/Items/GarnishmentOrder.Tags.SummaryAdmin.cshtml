@@ -1,0 +1,31 @@
+@model ShapeViewModel<GarnishmentOrder>
+@using System.Globalization
+
+@{
+    var order = Model.Value;
+    var kind = order.Type switch
+    {
+        GarnishmentType.Support => T["Support"],
+        GarnishmentType.FederalTaxLevy => T["Federal tax levy"],
+        GarnishmentType.StateTaxLevy => T["State tax levy"],
+        GarnishmentType.Bankruptcy => T["Bankruptcy"],
+        GarnishmentType.StudentLoan => T["Student loan"],
+        GarnishmentType.Creditor => T["Creditor"],
+        _ => T["Other"],
+    };
+    var status = order.Status switch
+    {
+        GarnishmentStatus.Suspended => T["Suspended"],
+        GarnishmentStatus.Completed => T["Completed"],
+        GarnishmentStatus.Released => T["Released"],
+        _ => T["Active"],
+    };
+}
+
+<span class="badge ta-badge fw-normal">@kind</span>
+@if (!string.IsNullOrEmpty(order.CaseNumber))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Case number"]">@order.CaseNumber</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Withheld so far"]">@order.Withheld.ToString("N2", CultureInfo.CurrentCulture)@(order.TotalOwed is { } total ? " / " + total.ToString("N2", CultureInfo.CurrentCulture) : string.Empty)</span>
+<span class="badge ta-badge fw-normal">@status</span>

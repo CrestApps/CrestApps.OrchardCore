@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Programs.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RequiredLearningOverdueEvent>
+
+<header><h4><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Required Learning Overdue"])</h4></header>

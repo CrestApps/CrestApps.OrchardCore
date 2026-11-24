@@ -81,6 +81,7 @@
             <div class="ocat-end">
                 @await Component.InvokeAsync("UserPicker", new
                 {
+                    audience = "Staff",
                     name = Html.NameFor(m => m.OwnerId).ToString(),
                     selectedValues = string.IsNullOrEmpty(Model.OwnerId) ? Array.Empty<string>() : new[] { Model.OwnerId },
                     valueType = "userId",

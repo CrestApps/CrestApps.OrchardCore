@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.Extensions.Localization;
@@ -10,13 +11,13 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class WorkforceTeamDeletionGuard : ITeamDeletionGuard
 {
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public WorkforceTeamDeletionGuard(
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         IClock clock,
         IStringLocalizer<WorkforceTeamDeletionGuard> stringLocalizer)
     {

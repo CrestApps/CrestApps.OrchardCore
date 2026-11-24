@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Resources;
+using CrestApps.OrchardCore.Timeline;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -24,6 +25,9 @@ using OrchardCore.Modules.Manifest;
         CartConstants.Features.Carts,
         CheckoutConstants.Features.Area,
 
+        // The order notes and history are its timeline.
+        TimelineConstants.Features.Timeline,
+
         // The item selector the coupon editor picks products and categories with.
         ResourcesConstants.Feature.Area,
     ]
@@ -32,7 +36,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = OrderConstants.Features.GiftCards,
     Name = "Gift Cards",
-    Description = "Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift cards.",
+    Description = "Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift Cards.",
     Category = "Commerce",
     Dependencies =
     [

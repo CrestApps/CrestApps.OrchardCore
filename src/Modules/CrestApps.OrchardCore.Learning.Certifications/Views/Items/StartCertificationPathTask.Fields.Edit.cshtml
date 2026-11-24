@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Workflows
+
+@model StartCertificationPathTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="Certification" class="form-label">@T["Certification"]</label>
+    <input asp-for="Certification" class="form-control code" />
+    <span class="hint">@T["The certification, by name or id. Liquid is allowed."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="UserId" class="form-label">@T["User id"]</label>
+    <input asp-for="UserId" class="form-control code" />
+    <span class="hint">@T["The person to start, such as {0}.", "{{ Workflow.Input.UserId }}"]</span>
+</div>

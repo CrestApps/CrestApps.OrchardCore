@@ -38,4 +38,9 @@ public static class AIUsageCategories
     /// Tasks received from other agents over the Agent-to-Agent protocol.
     /// </summary>
     public const string AgentToAgent = "A2A";
+
+    /// <summary>
+    /// Help desk tickets: triage and suggested replies.
+    /// </summary>
+    public const string Tickets = "Tickets";
 }

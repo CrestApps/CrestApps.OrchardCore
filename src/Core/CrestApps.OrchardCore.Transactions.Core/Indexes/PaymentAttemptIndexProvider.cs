@@ -12,6 +12,8 @@ public sealed class PaymentAttemptIndexProvider : IndexProvider<PaymentAttempt>
     public override void Describe(DescribeContext<PaymentAttempt> context)
     {
         context.For<PaymentAttemptIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(attempt => new PaymentAttemptIndex
             {
                 ItemId = attempt.ItemId,

@@ -27,6 +27,12 @@ public static class OrderConstants
     public const string CollectionName = "Orders";
 
     /// <summary>
+    /// The record kind of an order: what a record reference to an order names. It is stored in every reference, so it
+    /// never changes.
+    /// </summary>
+    public const string RecordKind = "Order";
+
+    /// <summary>
     /// The key gift cards pay toward checkouts with (<see cref="Checkout.Services.ICheckoutTenderProvider.Key"/>).
     /// </summary>
     public const string GiftCardTenderKey = "gift-card";

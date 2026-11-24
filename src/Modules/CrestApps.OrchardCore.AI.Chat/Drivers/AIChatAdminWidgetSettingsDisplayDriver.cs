@@ -53,6 +53,7 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
             model.ProfileId = settings.ProfileId;
             model.MaxSessions = settings.MaxSessions;
             model.PrimaryColor = settings.PrimaryColor;
+            model.SendPageContext = settings.SendPageContext;
 
             var profiles = await _profileManager.GetAsync(AIProfileType.Chat);
             model.Profiles = profiles
@@ -83,6 +84,7 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
         settings.PrimaryColor = string.IsNullOrWhiteSpace(model.PrimaryColor)
             ? AIChatAdminWidgetSettings.DefaultPrimaryColor
             : model.PrimaryColor.Trim();
+        settings.SendPageContext = model.SendPageContext;
 
         return Edit(site, settings, context);
     }

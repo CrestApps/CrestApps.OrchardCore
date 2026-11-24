@@ -31,7 +31,7 @@ This section explains each feature in plain words. For installation, configurati
 
 ## AI permissions at a glance
 
-Give each role only what it needs, under **Access Control > Roles**. The permissions are grouped by feature on the role page; use **Search permissions** to find one.
+Give each role only what it needs, under **Access Control** → **Roles**. The permissions are grouped by feature on the role page; use **Search permissions** to find one.
 
 | For | Permissions |
 | --- | --- |

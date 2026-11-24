@@ -30,6 +30,7 @@ internal static class UserSearchEndpoints
         string query,
         string valueType,
         string[] role,
+        string audience,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
         IUserSearchService userSearchService,
@@ -44,6 +45,7 @@ internal static class UserSearchEndpoints
         {
             Text = query,
             Roles = role ?? [],
+            Audience = audience,
         }, cancellationToken);
 
         var items = users

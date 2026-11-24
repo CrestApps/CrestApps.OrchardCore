@@ -78,6 +78,13 @@ internal sealed class AIDeploymentPricingMigrations : DataMigration
         }
 
         costSettings.Remove(DeploymentsName);
+
+        // The carrier's prices moved to the telephony settings. Once they are gone too, only their currency is left.
+        if (costSettings.All(property => property.Key == "Currency"))
+        {
+            site.Properties.Remove(CostSettingsName);
+        }
+
         await siteService.UpdateSiteSettingsAsync(site);
     }
 

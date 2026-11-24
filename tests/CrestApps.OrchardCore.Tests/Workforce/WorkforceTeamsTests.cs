@@ -1,5 +1,6 @@
 using System.Data.Common;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Indexes;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
@@ -28,7 +29,8 @@ public sealed class WorkforceTeamsTests
         // Act
         await PlanningKit.UpdateTeamAsync(harness, team, saved => saved.AlterWorkforceSettings(settings =>
         {
-            settings.Location = new WorkforceLocation { Address = "1 Main St", Latitude = 42.36, Longitude = -71.06 };
+            saved.Address = new global::CrestApps.OrchardCore.Addresses.Models.Address { AddressLine1 = "1 Main St", City = "Boston", Country = "US" };
+            settings.Location = new WorkforceLocation { Latitude = 42.36, Longitude = -71.06 };
             settings.OpenShiftClaimPolicy = OpenShiftClaimPolicy.FirstCome;
             settings.TimeClockPolicyId = "policy";
         }));
@@ -37,7 +39,8 @@ public sealed class WorkforceTeamsTests
         var settings = stored.GetWorkforceSettings();
 
         // Assert
-        Assert.Equal("1 Main St", settings.Location.Address);
+        Assert.Equal("1 Main St", stored.Address.AddressLine1);
+        Assert.Equal("Boston", stored.Address.City);
         Assert.Equal(42.36, settings.Location.Latitude);
         Assert.Equal(OpenShiftClaimPolicy.FirstCome, settings.OpenShiftClaimPolicy);
         Assert.Equal("policy", settings.TimeClockPolicyId);
@@ -93,7 +96,7 @@ public sealed class WorkforceTeamsTests
             Kind = TeamKind.Site,
             ParentId = region.ItemId,
             LinkedRoleName = "Boston staff",
-            Location = new WorkforceLocation { Address = "1 Main St", Latitude = 42.36, Longitude = -71.06 },
+            Location = new LegacyLocation { Address = "1 Main St", Latitude = 42.36, Longitude = -71.06 },
             CalendarId = "calendar-boston",
             LeadWorkerId = "lead",
             OpenShiftClaimPolicy = OpenShiftClaimPolicy.BySeniority,
@@ -122,7 +125,7 @@ public sealed class WorkforceTeamsTests
         Assert.Equal(region.ItemId, movedSite.ParentId);
         Assert.Equal("Boston staff", movedSite.LinkedRoleName);
         Assert.False(movedSite.Enabled);
-        Assert.Equal("1 Main St", settings.Location.Address);
+        Assert.Equal("1 Main St", movedSite.Address.AddressLine1);
         Assert.Equal(-71.06, settings.Location.Longitude);
         Assert.Equal("calendar-boston", settings.CalendarId);
         Assert.Equal("lead", settings.LeadWorkerId);
@@ -253,7 +256,7 @@ public sealed class WorkforceTeamsTests
 
         public string TimeZoneId { get; set; }
 
-        public WorkforceLocation Location { get; set; }
+        public LegacyLocation Location { get; set; }
 
         public string CalendarId { get; set; }
 
@@ -272,5 +275,15 @@ public sealed class WorkforceTeamsTests
         public DateTime CreatedUtc { get; set; }
 
         public DateTime? ModifiedUtc { get; set; }
+    }
+
+    // The location as Workforce kept it before teams had an address: one line of text and the coordinates.
+    private sealed class LegacyLocation
+    {
+        public string Address { get; set; }
+
+        public double? Latitude { get; set; }
+
+        public double? Longitude { get; set; }
     }
 }

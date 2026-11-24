@@ -74,7 +74,7 @@ Grant agents the `ContactCenterSignIntoQueues` permission (or a role that includ
 
 <YouTube video="contact-center-live-dashboard" title="Video overview of the live dashboard and supervisor interventions" />
 
-**Interaction Center → Live dashboard** shows summary metrics, a tile per queue (waiting, signed-in, available, busy/reserved/wrap-up and other not-ready agents, the longest wait and SLA breaches, amber near the SLA and red once breached) and an agent board with filters. It connects to the real-time hub and also re-reads its state every 10 seconds, so it can be left open on a wallboard. Reading the dashboard and every supervisor action, step by step, is in the User Manual's [Live Dashboard](../user-manual/live-dashboard.md).
+**Interaction Center** → **Live Dashboard** shows summary metrics, a tile per queue (waiting, signed-in, available, busy/reserved/wrap-up and other not-ready agents, the longest wait and SLA breaches, amber near the SLA and red once breached) and an agent board with filters. It connects to the real-time hub and also re-reads its state every 10 seconds, so it can be left open on a wallboard. Reading the dashboard and every supervisor action, step by step, is in the User Manual's [Live Dashboard](../user-manual/live-dashboard.md).
 
 The dashboard shows only the queues the supervisor is authorized for (the queues and campaigns on the supervisor's own agent entitlement record), and every action is limited to agents and calls in those queues. A supervisor without an entitlement record sees an empty dashboard.
 
@@ -123,7 +123,7 @@ Each key's action is stored as one of these kinds:
 | Send to an agent | `RouteToAgent` | An agent, picked from the tenant's agents. |
 | Open a submenu | `SubMenu` | One of the menus defined here. A key that jumps to a menu drawn under another key (for example back to the main menu) shows as **Go to another menu**. |
 | Send to voicemail | `Voicemail` | None. |
-| Transfer to an approved external number | `ExternalTransfer` | An approved destination from the **External transfer destinations** section of *Settings → Contact Center*. |
+| Transfer to an approved external number | `ExternalTransfer` | An approved destination from the **External transfer destinations** section of ***Settings** → **Contact Center***. |
 | Repeat this menu | `Repeat` | None. |
 
 The editor blocks saving on a missing or unknown first menu, a menu with no name or a duplicate name, a silent menu, a menu with no keys, a repeated or invalid key, a key with no action, an action with no target, and a key that opens a menu that does not exist. Two warnings do not block saving: a menu no key or fallback leads to (callers never hear it), and a queue, agent or destination that is no longer in the lists. The server checks the menu again on save and refuses one that cannot run.
@@ -169,7 +169,7 @@ The Subject Flow is the primary business workflow for work completion. Use it fo
 
 ## For contact center agents: the Agent Workspace
 
-**Interaction Center → My workspace** is the screen an agent keeps open for the whole shift, next to the [Telephony soft phone](../telephony/index.md), which carries the call audio and device controls. What the agent does there, step by step, is in the User Manual's [Agent Workspace](../user-manual/agent-workspace.md) and [Placing and Handling Calls](../user-manual/calls.md). The sections below describe how the workspace behaves underneath.
+**Interaction Center** → **My Workspace** is the screen an agent keeps open for the whole shift, next to the [Telephony soft phone](../telephony/index.md), which carries the call audio and device controls. What the agent does there, step by step, is in the User Manual's [Agent Workspace](../user-manual/agent-workspace.md) and [Placing and Handling Calls](../user-manual/calls.md). The sections below describe how the workspace behaves underneath.
 
 ### 1. Sign in and set your presence
 
@@ -223,7 +223,7 @@ When a customer must read out a card number, a national identity number, or anot
 
 The **Pause recording** control appears on the active interaction only when every one of these is true:
 
-- The **Recording** feature is enabled and the tenant has turned on **Allow agents to pause recording** on the **Recording governance** tab of *Settings → Contact Center*.
+- The **Recording** feature is enabled and the tenant has turned on **Allow agents to pause recording** on the **Recording governance** tab of ***Settings** → **Contact Center***.
 - The agent holds the `ContactCenterSecurePauseRecording` permission (granted to the built-in **Agent** stereotype).
 - The active voice provider advertises the **RecordingPause** capability and implements the executable recording contract for the live call (for example, the Asterisk provider).
 
@@ -244,7 +244,7 @@ Pausing recording keeps a spoken value out of the recorded media, but the agent 
 
 The **Collect data securely** control appears on the active interaction only when every one of these is true:
 
-- The **Secure Data Capture** feature is enabled and the tenant has turned on **Enable agent-assisted secure data capture** in *Interaction Center → Settings → Secure Data Capture*.
+- The **Secure Data Capture** feature is enabled and the tenant has turned on **Enable agent-assisted secure data capture** in ***Interaction Center** → **Settings** → **Secure Data Capture***.
 - The agent holds the `ContactCenterInitiateSecureCapture` permission (granted to the built-in **Agent** stereotype).
 
 When the agent starts a capture, the server re-checks the setting and confirms the agent owns the live interaction before it mints a one-time access token. Only one secure capture may be in progress for an interaction at a time, so a second request is refused while one is still collecting. The token is returned to the agent exactly once as a short-lived secure link to share with the customer over the existing channel; only its SHA-256 hash is stored, so a leaked datastore can never reconstruct a usable link. The secure page is served with `Cache-Control: no-store` and `Referrer-Policy: no-referrer` so the token in the link is never cached or leaked through a referrer header. Starting a capture also pauses recording as defense in depth when the tenant leaves **Pause recording during capture** enabled, so a provider that records the whole media path cannot retain the segment either. If the capture cannot be persisted after recording was paused, recording is resumed immediately so a failed start never leaves recording suppressed.
@@ -298,7 +298,7 @@ The voicemail endpoints answer a refusal with a status code and a problem body (
 
 ### 7. Record your voicemail greeting
 
-**Interaction Center → My voicemail greeting** lets an agent record a greeting with the microphone or upload an audio file (MP3, WAV, OGG or WebM, up to 20 MB); see [Record your voicemail greeting](../user-manual/voicemail.md#record-your-voicemail-greeting).
+**Interaction Center** → **My Voicemail Greeting** lets an agent record a greeting with the microphone or upload an audio file (MP3, WAV, OGG or WebM, up to 20 MB); see [Record your voicemail greeting](../user-manual/voicemail.md#record-your-voicemail-greeting).
 
 A saved greeting is uploaded to the telephony provider's own media storage (for Telnyx, Media Storage) and played back from there, so no publicly reachable URL of your own is required. When the agent has no recorded greeting, the caller hears the entry point's **Default voicemail greeting** (configured per dialed number), and if that is also empty, a built-in system greeting. See [Voice routing](voice-routing.md#greeting-then-beep-then-record).
 

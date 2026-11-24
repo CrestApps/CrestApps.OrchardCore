@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Commerce.Api;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
@@ -186,7 +187,7 @@ internal static class InventoryAdminApiEndpoints
             {
                 StockChangeError.NotFound => ApiProblems.NotFound(),
                 StockChangeError.Busy => ApiProblems.Conflict(ApiProblems.Codes.Concurrency, "The stock is being changed elsewhere right now. Try again."),
-                StockChangeError.NotEnoughAtLocation => ApiProblems.Conflict(ApiProblems.Codes.OutOfStock, "There aren't that many at the location."),
+                StockChangeError.NotEnoughAtLocation => ApiProblems.Conflict(CommerceProblemCodes.OutOfStock, "There aren't that many at the location."),
                 _ => ApiProblems.Validation("quantity", "That change isn't possible."),
             };
         }

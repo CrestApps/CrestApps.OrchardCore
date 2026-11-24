@@ -16,6 +16,11 @@ namespace CrestApps.OrchardCore.Accounts;
 public static class AccountPageTabs
 {
     /// <summary>
+    /// The page name the account page's sections are registered for with <c>AddPageSection</c>.
+    /// </summary>
+    public const string PageName = "Account";
+
+    /// <summary>
     /// The account at a glance: its members, its locations and the cards other modules add.
     /// </summary>
     public const string Overview = "Overview";
@@ -51,9 +56,19 @@ public static class AccountPageTabs
     public const string Activities = "Activities";
 
     /// <summary>
+    /// The notes the team keeps on the account: its timeline.
+    /// </summary>
+    public const string Notes = "Notes";
+
+    /// <summary>
     /// The orders placed for the account.
     /// </summary>
     public const string Orders = "Orders";
+
+    /// <summary>
+    /// The account's help desk tickets.
+    /// </summary>
+    public const string Tickets = "Tickets";
 
     /// <summary>
     /// How the account buys as a business: its terms, its buyers and what it owes.
@@ -84,7 +99,9 @@ public static class AccountPageTabs
         [Opportunities] = 20,
         [Leads] = 30,
         [Activities] = 40,
+        [Notes] = 45,
         [Orders] = 50,
+        [Tickets] = 55,
         [Business] = 60,
         [Invoices] = 70,
         [Service] = 80,

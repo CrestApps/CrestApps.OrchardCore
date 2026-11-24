@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
@@ -22,7 +23,7 @@ public sealed class AdherenceController : Controller
     private readonly AdherenceService _adherenceService;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
@@ -46,7 +47,7 @@ public sealed class AdherenceController : Controller
         AdherenceService adherenceService,
         IWorkforceScopeService scopeService,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ISession session,
         IClock clock,
         INotifier notifier,

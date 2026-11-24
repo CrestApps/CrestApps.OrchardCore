@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Accounts.Models
+@using CrestApps.OrchardCore.Accounts.ViewModels
+
+@model InviteToAccountTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="AccountId" class="form-label">@T["Account id"]</label>
+    <input asp-for="AccountId" class="form-control code" />
+</div>
+<div class="mb-3">
+    <label asp-for="Email" class="form-label">@T["E-mail"]</label>
+    <input asp-for="Email" class="form-control code" />
+    <span class="hint">@T["Liquid is allowed, such as {{ Workflow.Input.Email }}."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Role" class="form-label">@T["Role"]</label>
+    <select asp-for="Role" class="form-select">
+        <option value="@AccountMemberRole.Member">@T["Member"]</option>
+        <option value="@AccountMemberRole.Admin">@T["Admin"]</option>
+    </select>
+</div>

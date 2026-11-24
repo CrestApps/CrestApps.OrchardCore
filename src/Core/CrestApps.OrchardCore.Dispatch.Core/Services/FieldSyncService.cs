@@ -2,18 +2,19 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Services;
+using IClock = OrchardCore.Modules.IClock;
+using ISession = YesSql.ISession;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using YesSql;
 using YesSql.Services;
-using IClock = OrchardCore.Modules.IClock;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -36,7 +37,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
     private readonly IDispatchService _dispatchService;
     private readonly WorkOrderService _workOrderService;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IDispatchSettingsProvider _settingsProvider;
     private readonly IWorkerLocationService _locationService;
     private readonly FieldCommandReceiptStore _receipts;
@@ -71,7 +72,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
         IDispatchService dispatchService,
         WorkOrderService workOrderService,
         WorkOrderSettingManager<WorkOrderType> types,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IDispatchSettingsProvider settingsProvider,
         IWorkerLocationService locationService,
         FieldCommandReceiptStore receipts,
@@ -178,7 +179,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
                 ArrivalStartUtc = visit.ArrivalStartUtc,
                 ArrivalEndUtc = visit.ArrivalEndUtc,
                 IsLead = visit.LeadWorkerId == workerId,
-                WorkOrder = ToField(workOrder, types.GetValueOrDefault(workOrder.TypeId ?? string.Empty)),
+                WorkOrder = ToField(workOrder, types.GetValueOrDefault(workOrder.TypeId ?? string.Empty), await _workOrderService.GetNotesAsync(workOrder.ItemId, cancellationToken: cancellationToken)),
             });
         }
 
@@ -485,7 +486,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
             : (await _workOrderService.AttachAsync(workOrder.ItemId, path, actor, cancellationToken)).Errors;
     }
 
-    private static FieldWorkOrder ToField(WorkOrder workOrder, WorkOrderType type)
+    private static FieldWorkOrder ToField(WorkOrder workOrder, WorkOrderType type, IReadOnlyList<WorkOrderNote> notes)
     {
         var address = workOrder.ServiceAddress;
 
@@ -514,7 +515,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
                 StockItemId = line.Kind == WorkOrderLineKind.Product ? line.StockItemId : null,
             })],
             Checklists = workOrder.Checklists,
-            Notes = workOrder.Notes,
+            Notes = [.. notes],
             SignedBy = [.. workOrder.Signatures.Select(signature => signature.Name)],
             Photos = workOrder.Attachments.Count,
             RequiresSignature = type?.RequiresSignature == true,

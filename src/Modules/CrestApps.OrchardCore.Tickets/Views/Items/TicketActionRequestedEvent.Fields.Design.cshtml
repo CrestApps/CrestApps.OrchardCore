@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketActionRequestedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Ticket Action Requested"])
+    </h4>
+</header>

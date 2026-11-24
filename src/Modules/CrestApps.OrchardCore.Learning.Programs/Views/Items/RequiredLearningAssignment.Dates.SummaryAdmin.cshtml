@@ -1,0 +1,14 @@
+@model RequiredLearningAssignmentRowViewModel
+
+@if (Model.Completed is not null)
+{
+    <span>@T["Completed {0}", Model.Completed]</span>
+}
+else if (Model.Due is not null)
+{
+    <span>@T["Due {0}", Model.Due]</span>
+}
+else
+{
+    <span class="text-muted">@T["No due date"]</span>
+}

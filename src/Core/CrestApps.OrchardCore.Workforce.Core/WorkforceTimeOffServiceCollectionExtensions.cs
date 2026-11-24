@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using CrestApps.OrchardCore.Workforce.Core.Handlers;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -29,6 +30,8 @@ public static class WorkforceTimeOffServiceCollectionExtensions
         services.TryAddScoped<TimeOffTypeStore>();
         services.TryAddScoped<TimeOffPolicyStore>();
         services.TryAddScoped<TimeOffLedgerStore>();
+        services.TryAddScoped<TimeOffLedgerCopy>();
+        services.AddQuantityLedger<TimeOffLedger>(options => options.CollectionName = WorkforceConstants.TimeOffLedgerCollectionName);
         services.TryAddScoped<TimeOffRequestStore>();
         services.TryAddScoped<TimeOffAllotmentStore>();
         services.TryAddScoped<BlackoutPeriodStore>();
@@ -53,6 +56,22 @@ public static class WorkforceTimeOffServiceCollectionExtensions
         services.TryAddScoped<ITimeOffRequestService, DefaultTimeOffRequestService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITimeOffApprovalHandler, TimeOffShiftRemover>());
         services.AddCalendarEventSource<PendingTimeOffEventSource>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Hands time-off payouts to payroll as pay inputs and puts time-off balances on pay statements. Call it with
+    /// <see cref="AddWorkforceTimeOffCore"/> when Pay Setup is on.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddWorkforceTimeOffPayrollCore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddPayInputSource<TimeOffPayoutPayInputSource>();
+        services.AddPayStatementBalanceSource<TimeOffPayStatementBalanceSource>();
 
         return services;
     }

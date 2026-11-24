@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using Json.Schema;
@@ -90,7 +91,7 @@ internal sealed class WorkforceRecipeStepSchema : IRecipeStep
             ("externalId", Text("The worker's id in a payroll or HR system.")),
             ("jobTitle", Text("The job title.")),
             ("employmentType", Enum<EmploymentType>("The kind of employment. Defaults to FullTime.")),
-            ("status", Enum<WorkerStatus>("The employment status. Defaults to Active.")),
+            ("status", Enum<StaffStatus>("The employment status. Defaults to Active.")),
             ("hireDate", OptionalDate("The hire date.")),
             ("seniorityDate", OptionalDate("The date seniority counts from, when not the hire date.")),
             ("terminationDate", OptionalDate("The last day of employment.")),

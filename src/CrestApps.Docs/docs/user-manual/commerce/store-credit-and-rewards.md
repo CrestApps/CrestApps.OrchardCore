@@ -17,8 +17,8 @@ Store credit and points belong to a customer's account, so only signed-in buyers
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Customers (open a customer); Settings > Commerce > Rewards; Settings > Commerce > Referrals |
-| **Permission** | **Manage customers**. Buyers see their own under **My account** with **Manage own customer profile and addresses**, which signed-in users have by default. |
+| **Menu** | **Commerce** → **Customers (open a customer)**; **Settings** → **Commerce** → **Rewards**; **Settings** → **Commerce** → **Referrals** |
+| **Permission** | **Manage customers**. Buyers see their own under **Account** in the user menu with **Manage own customer profile and addresses**, which signed-in users have by default. |
 | **Feature** | Store Credit, Loyalty Points, Referrals (each needs Customers and Orders) |
 
 <AskYourAdmin />
@@ -36,7 +36,7 @@ A customer's store credit is kept per currency: credit in US dollars pays only t
 
 <YouTube video="store-credit-loyalty-referrals" title="Giving store credit" start={77} end={120} />
 
-1. Open **Commerce > Customers** and open the customer.
+1. Open **Commerce** → **Customers** and open the customer.
 2. Under **Store credit**, enter an **Amount**, check the **Currency** (it starts with your checkout currency), and give a **Reason**, such as *Late delivery*.
 3. Click **Change**.
 
@@ -81,7 +81,7 @@ A signed-in customer earns points on every order and spends them toward later on
 
 <YouTube video="store-credit-loyalty-referrals" title="The loyalty points program" start={170} end={211} />
 
-Open **Settings > Commerce > Rewards**.
+Open **Settings** → **Commerce** → **Rewards**.
 
 | Setting | What it does | Default |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ Each signed-in customer gets a referral link, such as *https://example.com/refer
 
 <YouTube video="store-credit-loyalty-referrals" title="Setting up referrals" start={237} end={268} />
 
-Open **Settings > Commerce > Referrals**.
+Open **Settings** → **Commerce** → **Referrals**.
 
 | Setting | What it does | Default |
 | --- | --- | --- |
@@ -172,7 +172,7 @@ The friend's order notes say *Referred by Ana, who was given $10 store credit.*,
 
 ## What buyers see in their account
 
-A signed-in buyer opens these from **My account** on your storefront, alongside their orders and addresses (see [The buyer's account](carts-and-orders.md#the-buyers-account)):
+A signed-in buyer opens these from **Account** in the user menu, alongside their orders and addresses (see [The buyer's account](carts-and-orders.md#the-buyers-account)):
 
 | Page | What it shows | Feature |
 | --- | --- | --- |

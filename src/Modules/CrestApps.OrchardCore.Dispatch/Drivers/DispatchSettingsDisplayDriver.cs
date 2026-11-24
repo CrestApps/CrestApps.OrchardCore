@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Dispatch.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -46,14 +48,16 @@ public sealed class DispatchSettingsDisplayDriver : SiteDisplayDriver<DispatchSe
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IEnumerable<IVisitNoticeSender> _senders;
+    private readonly IStaffCapabilityService _capabilities;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DispatchSettingsDisplayDriver"/> class.
     /// </summary>
-    public DispatchSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, IEnumerable<IVisitNoticeSender> senders, IStringLocalizer<DispatchSettingsDisplayDriver> stringLocalizer)
+    public DispatchSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, IEnumerable<IVisitNoticeSender> senders, IStaffCapabilityService capabilities, IStringLocalizer<DispatchSettingsDisplayDriver> stringLocalizer)
     {
+        _capabilities = capabilities;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _senders = senders;
@@ -65,8 +69,12 @@ public sealed class DispatchSettingsDisplayDriver : SiteDisplayDriver<DispatchSe
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, DispatchSettings settings, BuildEditorContext context)
-        => Initialize<DispatchSettingsViewModel>("DispatchSettings_Edit", model =>
+        => Initialize<DispatchSettingsViewModel>("DispatchSettings_Edit", async model =>
         {
+            var chosen = settings.GetTechnicianCapabilities().ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            model.TechnicianCapabilities = [.. chosen];
+            model.CapabilityOptions = [.. (await _capabilities.ListAsync(includeDisabled: true)).Select(capability => new SelectListItem(capability.DisplayName, capability.Name, chosen.Contains(capability.Name)))];
             var objective = settings.Objective ?? new DispatchObjective();
 
             model.CreateVisitsForNewWorkOrders = settings.CreateVisitsForNewWorkOrders;
@@ -166,6 +174,7 @@ public sealed class DispatchSettingsDisplayDriver : SiteDisplayDriver<DispatchSe
         settings.BufferMinutes = model.BufferMinutes;
         settings.StrictTerritory = model.StrictTerritory;
         settings.TimeZoneId = string.IsNullOrWhiteSpace(model.TimeZoneId) ? null : model.TimeZoneId.Trim();
+        settings.TechnicianCapabilities = [.. (model.TechnicianCapabilities ?? []).Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)];
         settings.Objective = new DispatchObjective
         {
             TravelWeight = model.TravelWeight,

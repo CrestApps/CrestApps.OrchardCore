@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model ShapeViewModel<UserAudienceRow>
+
+@if (Model.Value.IsDefined)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-filter text-secondary me-1" aria-hidden="true"></i>@(Model.Value.MatchAll ? T.Plural(Model.Value.RuleCount, "Matches 1 rule", "Matches all {0} rules") : T.Plural(Model.Value.RuleCount, "Matches 1 rule", "Matches any of {0} rules"))</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-puzzle-piece text-secondary me-1" aria-hidden="true"></i>@T["Defined by a feature"]</span>
+}

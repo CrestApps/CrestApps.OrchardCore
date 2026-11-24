@@ -192,7 +192,7 @@ A provider implementing **`ICheckoutDiscountProvider`** decides only *what* to t
 
 Within its bucket a discount takes off only what it can discount (`CheckoutDiscountBase`): a one-time discount, the goods bought now but never a shipping line; a first-cycle discount, the recurring charges collected now. What it took off is spread across those lines in proportion to each line's total, into `CheckoutLineItem.DiscountAmount`, and the last line takes what rounding leaves, so the shares add up to the discount exactly. `CheckoutTaxContextFactory` passes each share to tax as `TaxableItem.DiscountAmount`, so a line is taxed on what the buyer pays for it, and shipping, which no coupon touches, is taxed in full. A coupon's percentage and its minimum amount count the same lines: a 10% coupon on a $50 item with $15 shipping takes $5 off, and with a 10% tax charges $4.50 on the item and $1.50 on shipping.
 
-The **coupon catalog** ships in the box. Manage codes under **Commerce → Coupons**: percentage, fixed amount or free shipping, targeting the one-time amount or the first cycle, with an optional validity window, minimum and maximum amount, usage limit and limit per customer. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
+The **coupon catalog** ships in the box. Manage codes under **Commerce** → **Coupons**: percentage, fixed amount or free shipping, targeting the one-time amount or the first cycle, with an optional validity window, minimum and maximum amount, usage limit and limit per customer. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
 
 A **free-shipping** coupon (`CouponKind.FreeShipping`) contributes a discount aimed at `DiscountTarget.Shipping`: it takes off the shipping lines charged now, and nothing else, while its minimum and maximum count the items. A coupon can be **limited to some products or categories** (`Coupon.ProductIds`, `Coupon.CategoryIds`, taxonomy term ids): only the lines it applies to count toward its amounts, and its `DiscountLine.LineItemIds` keeps the share off the other lines. A line knows its product and categories through `BillingItem.ProductId` and `BillingItem.CategoryIds`; the [Orders](carts-and-orders) feature fills them in and adds the product and category pickers to the coupon editor (through `IDisplayManager<Coupon>`, so other modules can add editors too).
 
@@ -281,7 +281,7 @@ An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer dest
 
 The default provider then runs every **`ICheckoutTaxProfileHandler`**, at checkout and when a recurring charge is taxed, so modules add what they know without replacing it:
 
-- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Settings > Commerce > Tax origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
+- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Settings** → **Commerce** → **Tax Origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
 - `CustomerCheckoutTaxProfileHandler` (with [Customers](customers)) sets `CheckoutTaxProfile.Customer` for a signed-in buyer: business (`B2B`) or person, their tax id as the registration and VAT number, `IsTaxExempt`, and the ids of the exemption certificates on file for them. A rule the customer is exempt from charges nothing (`TaxTreatment.Exempt`). A guest is taxed as a person.
 
 A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the
@@ -298,6 +298,7 @@ A **tender** is part of a checkout's total paid from a balance the buyer holds r
 | `ICheckoutTenderService` (`DefaultCheckoutTenderService`) | Decides how much each chosen balance pays, and takes it off what the payment provider charges. |
 | `ICheckoutTenderLedger` (`CheckoutTenderLedger`) | Holds what each balance pays while the buyer pays the rest, takes it off when the checkout completes, lets it go when it doesn't, and puts it back for a refund. |
 | `TenderHoldPaymentGate` | An `ICheckoutPaymentGate` that holds the balances before a payment begins. |
+| `IBalanceLedgerArchive` (`BalanceLedgerArchive`, Checkout.Core) | Keeps a balance's document small: called from the balance store's save, it keeps the latest `BalanceLedger.RecentEntryCount` (50) changes on the balance and moves older ones to their own `BalanceLedgerEntryRecord`s, indexed by kind of balance, balance and reference (`BalanceLedgerEntryIndex`, `CheckoutTenderMigrations.UpdateFrom1Async`), so finding a change by its reference is a keyed lookup. Gift cards (`GiftCard`) and store credit (`StoreCredit`) use it. |
 | `TenderCheckoutHandler` | A checkout handler that redeems the holds while completing and releases them on cancel, failure and expiry. |
 
 ### Providers
@@ -328,7 +329,7 @@ Tenders never pay a recurring obligation: the agreement the provider sets up is 
 
 The invoice exposes the result through computed members that aren't serialized: `TenderTotal` (what the tenders pay), `TenderTaxAmount` (their share of the tax) and `AmountDue` (`GrandTotal - TenderTotal`, never below zero). `DefaultCheckoutEngine.GetObligationAmounts` charges the one-time obligation `InitialPaymentAmount`, with a tax of `Math.Min(Math.Max(0, TaxAmount - TenderTaxAmount), gross)`, so the payment the provider reports still splits into the amount and the tax the invoice expects. For example, $90 of goods with $10 tax and a $95 gift card: the card is charged $5, all of it tax, and the gift card carries the other $5 of tax.
 
-`CheckoutInvoiceSummary` shows **Total** (`GrandTotal`), a line per tender and **Due now** (`AmountDue`) when there are tenders, and **Due now** alone otherwise. The Stripe panel offers wallet buttons for `AmountDue`.
+`CheckoutInvoiceSummary` (`CheckoutInvoiceSummaryViewModel`) shows **Total** (`GrandTotal`), a line per tender and **Due now** (`AmountDue`) when there are tenders, and **Due now** alone otherwise. On the payment step a method whose capabilities say `DefersPayment` (the radio carries `data-defers-payment`) turns the label into **Due later** and the button into **Place order** (`checkoutPayment.initialize({ deferredSubmitLabel })`); on the confirmation the label reads **Due later** for such a checkout and **Paid** for one a gateway charged. The Stripe panel offers wallet buttons for `AmountDue`.
 
 ### The ledger
 
@@ -516,7 +517,7 @@ A provider can report a fraud rating with the verification (`PaymentVerification
 
 ### One-page layout
 
-`CheckoutSettings.Layout` (**Settings > Commerce > Checkout**, group `checkout`, permission `ManageCheckoutSettings`) is `CheckoutLayout.Steps` (the default) or `CheckoutLayout.OnePage`. On one page, `CheckoutController` builds the editor of every visible step in order, each with the flow's current step set to it, and renders their `Header`, `Content` and `Footer` zones as sections of the `OnePage` view, with the last section's `Aside` zone (the invoice summary and the coupon box). Step drivers need no change.
+`CheckoutSettings.Layout` (**Settings** → **Commerce** → **Checkout**, group `checkout`, permission `ManageCheckoutSettings`) is `CheckoutLayout.Steps` (the default) or `CheckoutLayout.OnePage`. On one page, `CheckoutController` builds the editor of every visible step in order, each with the flow's current step set to it, and renders their `Header`, `Content` and `Footer` zones as sections of the `OnePage` view, with the last section's `Aside` zone (the invoice summary and the coupon box). Step drivers need no change.
 
 - A post updates every section it showed, in order, and redirects back (post, redirect, get). The payment section joins the page once every visible step with `CollectData` before it has its key in `SavedSteps`.
 - With payment showing, the payment script takes the submit as on the stepped layout. A post from that page with no `checkout-action` completes the checkout, for a purchase that needs no gateway.
@@ -671,7 +672,7 @@ The last two digits of what an obligation charges, tax included, in the currency
 
 The **Checkout API** feature (`CrestApps.OrchardCore.Checkout.Api`) maps a checkout's endpoints into the commerce JSON API at `api/commerce/v1`: reading it (`checkout/{id}`), its discount codes, its payment methods, beginning the payment, completing it, and canceling it, all through `ICheckoutEngine`. The modules that add steps map their own endpoints beside these: the Contact step (Customers API), the Shipping step (Shipping API), gift cards (Orders API), and store credit and points (Customers API). It also maps the staff `coupons` endpoints, held to `CouponEditor`'s rules, with `ManageCoupons`.
 
-`CrestApps.OrchardCore.Commerce.Api.Core` holds what every commerce endpoint shares: `MapCommerceApi` (the route group, the `Api` authentication scheme, and the guest token headers), `AllowGuests`, `ApiMoney`, `ApiPage<T>`, `ApiProblems` with its conflict `code` values, `ApiAddress`, and `WithIdempotency` (the `Idempotency-Key` filter). `CheckoutApi`, in `CrestApps.OrchardCore.Checkout.Core.Api`, finds the caller's checkout and reads it into `ApiCheckout`, for any module that maps a checkout endpoint.
+`CrestApps.OrchardCore.Commerce.Api.Core` holds what every commerce endpoint shares: `MapCommerceApi` (the route group on `MapModuleApi`, with the guest token headers), `AllowGuests`, `ApiMoney`, `ApiPage<T>`, `CommerceProblemCodes` and `ApiAddress`. `ApiProblems`, `WithIdempotency` (the `Idempotency-Key` filter), `IdempotencyPolicy`, `IdempotentOperation` and `MapModuleApi` are shared by every module's API, in `CrestApps.OrchardCore.Api` (`CrestApps.OrchardCore.Core`). `CheckoutApi`, in `CrestApps.OrchardCore.Checkout.Core.Api`, finds the caller's checkout and reads it into `ApiCheckout`, for any module that maps a checkout endpoint.
 
 A client collects a gateway's payment itself, with the provider's SDK. `GET checkout/{id}/payment-methods` lists each method with a `client` dictionary from the provider's **`ICheckoutPaymentClientConfigurationProvider`**, matched by `ProviderKey`; Stripe's gives `publishableKey`, `mode`, and the amount due in minor units with its `currency`. Only values safe to hand any buyer belong there, never a secret. A provider without one lists `client` as `null`.
 

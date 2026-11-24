@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Downloads.Services;
+using CrestApps.OrchardCore.FileStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,7 @@ public sealed class DigitalFilesAdminController : Controller
 {
     private static readonly FileExtensionContentTypeProvider _contentTypes = new();
 
-    private readonly IDigitalFileStore _fileStore;
+    private readonly IProtectedFileStore<DigitalDownloadFiles> _fileStore;
     private readonly DownloadService _downloads;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -28,7 +29,7 @@ public sealed class DigitalFilesAdminController : Controller
     internal readonly IHtmlLocalizer H;
 
     public DigitalFilesAdminController(
-        IDigitalFileStore fileStore,
+        IProtectedFileStore<DigitalDownloadFiles> fileStore,
         DownloadService downloads,
         IAuthorizationService authorizationService,
         INotifier notifier,
@@ -59,7 +60,7 @@ public sealed class DigitalFilesAdminController : Controller
             return BadRequest(new { error = "Choose a file to upload." });
         }
 
-        StoredDigitalFile stored;
+        ProtectedFile stored;
 
         try
         {

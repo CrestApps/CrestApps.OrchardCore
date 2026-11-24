@@ -1,0 +1,33 @@
+@model EnrollmentRowViewModel
+
+@{
+    var enrollment = Model.Enrollment;
+    var statusText = enrollment.Status switch
+    {
+        EnrollmentStatus.Pending => T["Waiting for approval"],
+        EnrollmentStatus.Active => T["Active"],
+        EnrollmentStatus.Suspended => T["Suspended"],
+        EnrollmentStatus.Completed => T["Completed"],
+        EnrollmentStatus.Expired => T["Access ended"],
+        _ => T["Withdrawn"],
+    };
+    var statusIcon = enrollment.Status switch
+    {
+        EnrollmentStatus.Pending => "fa-hourglass-half text-warning",
+        EnrollmentStatus.Active => "fa-circle-play text-primary",
+        EnrollmentStatus.Suspended => "fa-pause text-warning",
+        EnrollmentStatus.Completed => "fa-circle-check text-success",
+        EnrollmentStatus.Expired => "fa-clock text-danger",
+        _ => "fa-ban text-secondary",
+    };
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid @statusIcon me-1" aria-hidden="true"></i>@statusText</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Progress"]"><i class="fa-solid fa-list-check text-secondary me-1" aria-hidden="true"></i>@T["{0}%", enrollment.ProgressPercent]</span>
+@if (enrollment.DueUtc is { } due && enrollment.IsOpen)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Due"]"><i class="fa-solid fa-calendar-day text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(due, DateTimeKind.Utc), Format: "d"))</span>
+}
+@if (enrollment.Cycle > 1)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pass number"]"><i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@T["Pass {0}", enrollment.Cycle]</span>
+}

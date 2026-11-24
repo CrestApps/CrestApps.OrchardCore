@@ -92,7 +92,8 @@ internal sealed class AccountLocationsPartSchemaDefinition : PartSchemaDefinitio
                         .Properties(
                             (nameof(AccountLocation.LocationId), new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The identifier of the location within the account, which orders and other records refer to.")),
                             (nameof(AccountLocation.Name), new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("The name of the location, such as Head office.")),
-                            (nameof(AccountLocation.Address), Address()))
+                            (nameof(AccountLocation.Address), Address()),
+                            (nameof(AccountLocation.IsBilling), new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the account's invoices and other billing documents are addressed to this location. One location at most; without one, the first location is used.")))
                         .AdditionalProperties(true))))
             .AdditionalProperties(true);
 
@@ -122,4 +123,23 @@ internal sealed class AccountLocationsPartSchemaDefinition : PartSchemaDefinitio
 
     private static JsonSchemaBuilder Text(string description)
         => new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description(description);
+}
+
+internal sealed class AccountTeamPartSchemaDefinition : PartSchemaDefinitionBase
+{
+    public override string Name => AccountsConstants.ContentParts.Team;
+
+    protected override JsonSchemaBuilder BuildSettingsCore()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(true);
+
+    protected override JsonSchemaBuilder BuildPartSchemaCore()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("The staff who look after the account.")
+            .Properties(
+                (nameof(AccountTeamPart.OwnerStaffId), new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("The staff member who owns the account.")),
+                (nameof(AccountTeamPart.TeamStaffIds), new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The other staff members who work with the account.")))
+            .AdditionalProperties(true);
 }

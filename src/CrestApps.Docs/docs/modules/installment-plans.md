@@ -40,12 +40,12 @@ For the admin screens, see the User Manual page [Installment Plans](../user-manu
 | **Transactions** | Each payment is a transaction with the source `installment-plan`. |
 | **Transaction Reminders** (optional) | Tells the customer before each payment falls due and chases overdue ones. Invoiced payments rely on it: it sends the invoice and its pay link. See [Reminders](transactions#reminders). |
 | **Send Payment Receipts** (optional) | Sends a receipt after every payment and a notice after every refund. Printable receipts and invoices need only the Receipts module, which Subscriptions already enables. See [Payment receipts](transactions#payment-receipts). |
-| A public **Base URL** (**Settings > General**) | Pay links in reminders are absolute URLs built from it. When it is empty, a link made outside a request (by the background task) is left out. |
+| A public **Base URL** (**Settings** → **General**) | Pay links in reminders are absolute URLs built from it. When it is empty, a link made outside a request (by the background task) is left out. |
 | Background tasks running | The schedule is driven by a background task. See [The background task](#the-background-task). |
 
 ## Configuration
 
-The settings are site settings, edited on **Settings > Installment Plans** (site settings group `installment-plans`). Editing them requires the *Manage installment plans and charge customers' saved cards* permission. The *Manage subscriptions settings* permission also still lets a user edit them, because they used to be a card on **Settings > Subscriptions**.
+The settings are site settings, edited on **Settings** → **Installment Plans** (site settings group `installment-plans`). Editing them requires the *Manage installment plans and charge customers' saved cards* permission. The *Manage subscriptions settings* permission also still lets a user edit them, because they used to be a card on **Settings** → **Subscriptions**.
 
 | Setting | Property | Default | Meaning |
 | --- | --- | --- | --- |
@@ -147,7 +147,7 @@ Nothing is scheduled until the first payment (the down payment, or payment `1` o
 
 | Collection method | On the due date |
 | --- | --- |
-| Charge the saved card (`AutoCharge`) | The kept card is charged off-session through a new checkout session. The provider data is `CheckoutPaymentDataKeys.ForOffSessionCharge(plan.PaymentMethod)`. |
+| Charge the saved card (`AutoCharge`) | Each payment's transaction carries its charge (`Transaction.AutoCharge`): the card the first payment's checkout kept (`SourceSessionId`, or the customer's saved card for a schedule set by staff), on its due date, retried on `RetryDays`. The [saved card charge service](transactions#charging-on-a-schedule-with-retries) charges it off-session, retries it and hands it over; the plan follows the outcome. |
 | Invoice the customer (`Invoice`) | The transaction becomes `Outstanding`. It then appears in the customer's **My Transactions** and gets an invoice number, and the reminders send a pay link. |
 
 A payment can also be paid another way:
@@ -159,12 +159,18 @@ Either way it is picked up from its transaction, so it is never charged again.
 
 ### Declines and retries
 
+The plan does not charge cards itself: the saved card charge service (`ISavedPaymentMethodChargeService`) is the one
+charge-and-retry path, with the plan's due dates and `RetryDays` as its inputs. The plan reacts to its events
+(`InstallmentPlanAutoChargeHandler`: `AutoChargeDeclinedAsync`, `AutoChargeAbandonedAsync`) and to the payment being
+recorded (`InstallmentPlanTransactionPaymentHandler`). A payment of a plan started before this has its charge set on its
+transaction by `ProcessAsync` when it is due, with its declined attempts and next retry carried over.
+
 | What happened | Result |
 | --- | --- |
 | The gateway could not be reached, or refused to start | Nothing is known about the card. The charge is tried again an hour later and does not use up a retry. |
 | The card was declined, and retries are left | The payment is `Failed`, and so is its transaction (`TransactionStatus.Failed`, still collectable). The next try is scheduled from `RetryDays`, and the customer is told *We could not take your payment*. A retry that goes through settles the transaction. |
 | The card was declined on the last retry | The payment is handed to the customer: its transaction becomes `Outstanding` with no automatic collection. The customer is told *Your payment is overdue*, and the overdue reminders take over. It is not charged again unless an administrator clicks **Charge now**. |
-| An administrator's **Charge now** on or after the due date was declined | The payment and its transaction are `Failed`. No automatic retry is scheduled. |
+| An administrator's **Charge now** on or after the due date was declined | The charge counts as one of the payment's attempts: the payment and its transaction are `Failed` and the next retry follows `RetryDays` (no notice to the customer). A payment already handed to the customer is charged once, with no retry. |
 | An administrator's **Charge now** before the due date was declined | The payment stays `Scheduled`, and it is still charged (with its retries) from its due date. An early charge is a favor, not a deadline. |
 
 ### Statuses
@@ -195,7 +201,7 @@ Every change is recorded in the plan's history as an `InstallmentPlanEvent`, wit
 - It closes a draft's open checkout session.
 - It tells a customer whose plan had started (any status but `Draft`) *Your payment plan was canceled*.
 
-Money already collected is refunded separately, from **Commerce > Payments**.
+Money already collected is refunded separately, from **Commerce** → **Payments**.
 
 ## Installments at checkout
 
@@ -286,15 +292,16 @@ The public begin-payment endpoint (`checkout/{sessionId}/payment/begin`) drops `
 
 A payment plan charges a card without the customer present, so the feature is built never to take money twice:
 
+- **One charge path.** The saved card charge service charges each payment under its own lock (`Transactions:AutoCharge:{transactionId}`), the same path invoices and booking balances use.
 - **One writer per plan.** Every change to a plan runs under the distributed lock `INSTALLMENT_PLAN_{planId}`.
-  - The background task and **Charge now** wait for the lock, for up to 10 seconds.
+  - The background task, **Charge now** and the charge events wait for the lock, for up to 10 seconds. **Charge now** makes the charge after releasing it.
   - The payment handler does not wait. If the plan is locked, the plan is collecting that very payment, and it reads the result itself when the charge returns.
   - On deployments with several nodes, enable a distributed lock provider such as Redis.
 - **Money taken is applied before charging again.** The checkout's payment attempts are committed before anything that records the payment elsewhere.
-  - Before each charge, every succeeded attempt for the transaction (`IPaymentAttemptStore.GetByReferenceAsync`) that is not yet on the transaction is applied through `ITransactionSettlementService`.
+  - Before each charge, the ledger's charge command applies every succeeded attempt for the transaction (`IPaymentAttemptStore.GetByReferenceAsync`) that is not yet on the transaction through `ITransactionSettlementService`.
   - So a charge the gateway accepted counts even when its recording was interrupted by a crash, a timeout or a lost response. The payment is not charged again because of a balance that was never recorded.
 - **A charge still settling is finished, not repeated.**
-  - When the payment's previous session is `AwaitingProvider` or `PaymentPending`, the plan completes it instead of starting a new one.
+  - When the payment's previous session is `AwaitingProvider` or `PaymentPending`, the charge command completes it instead of starting a new one.
   - A session that never reached the gateway is canceled, so it cannot be paid later by accident.
 - **Off-session charges are server-only.** Only the server sets the saved-card keys, so nothing the browser sends can spend a kept card.
 - **Idempotent gateway calls.** The Stripe provider sends deterministic idempotency keys. See [Payment resiliency](payments#payment-resiliency).
@@ -304,11 +311,11 @@ A payment plan charges a card without the customer present, so the feature is bu
 `InstallmentPlanBackgroundTask` runs every 15 minutes (`*/15 * * * *`):
 
 - It loads the open plans with `IInstallmentPlanStore.GetOpenAsync`. Those are the `Draft`, `Active` and `PastDue` plans.
-- It calls `ProcessAsync` on each one. When a plan fails, it logs the error and continues with the next.
+- It calls `ProcessAsync` on each one: it activates plans whose first payment came in, makes invoiced payments due, records what was paid or canceled, and completes or marks plans past due. When a plan fails, it logs the error and continues with the next.
 
-So a payment is charged within 15 minutes after its due time (00:00 UTC on the due date), and a retry within 15 minutes of its retry time.
+Payments charged to the card are charged by the **Saved Card Charges** task of the Transactions feature, every hour at half past: within the hour after the due time (00:00 UTC on the due date), and a retry within the hour of its retry time.
 
-Like every Orchard Core background task, its schedule can be changed, or the task disabled, for each tenant under **Configuration > Tasks**. Disabling it stops all scheduled collection.
+Like every Orchard Core background task, its schedule can be changed, or the task disabled, for each tenant under **Configuration** → **Tasks**. Disabling it stops invoiced payments falling due and plans being brought up to date; disabling **Saved Card Charges** stops the card charges.
 
 ## Customer notices
 
@@ -433,6 +440,7 @@ public sealed class PhoneSalesService
 | --- | --- |
 | `CreateAsync` | Creates a draft plan with its first-payment transaction and checkout session. |
 | `CreateFromTransactionAsync` | Turns an outstanding transaction into a plan in the customer's own checkout. See [Installments at checkout](#installments-at-checkout). |
+| `CreateScheduleAsync` | Splits an outstanding transaction (with nothing paid, a guest's too) into a schedule set by staff: dated payments of their own amounts adding up to what it owes, started at once with no down payment. Each payment copies the transaction's owner, guest contact and payer and names its record; invoiced payments are outstanding from now, charged ones (`InstallmentCollectionMethod.AutoCharge`, the owner's default saved card) pending until their date. The transaction is canceled as replaced. Invoicing uses it for an invoice's payment schedule. |
 | `ActivateAsync` | Starts the schedule once the down payment is paid. It is idempotent, and `ProcessAsync` calls it for you. |
 | `ChargeAsync(planId, paymentNumber)` | Charges one payment now, as **Charge now** does. |
 | `ProcessAsync` | Brings a plan up to date. It is safe to call at any time. |
@@ -552,7 +560,7 @@ Plan payments use the Transactions services. Each can be replaced like any other
 
 | Service | Default | Replace it to |
 | --- | --- | --- |
-| `IFinancialDocumentNumberGenerator` | `SequentialFinancialDocumentNumberGenerator`: a per-tenant series under a distributed lock, starting at 1001 (`R-1001` for receipts, `INV-1001` for invoices). | Use your own numbering, for example a series per year. |
+| `IFinancialDocumentNumberGenerator` | `SequentialFinancialDocumentNumberGenerator`: an adapter over the shared number series, one series per kind of document with a format the site chooses under **Settings** → **Business Documents** → **Number Series** (`R-{seq}` for receipts, `INV-{seq}` for invoices, from 1001), numbered in the caller's unit of work under the series lock. | Take numbers from somewhere else, such as an accounting system. A yearly series is a format, not a replacement. |
 | `ITransactionInvoiceService` | Gives a transaction its invoice number the first time its owner is told about it. | Change when invoices are numbered. |
 | `ITransactionPayLinkService` | Signed links to `/transactions/pay/{token}` that expire after 60 days. | Change the link's format or lifetime. |
 
@@ -569,9 +577,9 @@ The plan's own notices are sent through `ICustomerOwnerNotifier`, the same notif
 
 ## Operations
 
-- **Reconciling a plan.** Every plan payment is a transaction, and each attempt the gateway accepted or declined is listed in **Commerce > Payments** with a link to its transaction.
+- **Reconciling a plan.** Every plan payment is a transaction, and each attempt the gateway accepted or declined is listed in **Commerce** → **Payments** with a link to its transaction.
 - **A plan is stuck in `Draft`.** The first payment was never completed. Open the plan and take the payment again, or cancel the plan. A plan a customer chose at checkout is closed automatically once its checkout expires.
-- **Payments are not being charged.** Check that background tasks run on the tenant, and that `InstallmentPlanBackgroundTask` is not disabled under **Configuration > Tasks**. Then check the plan's history for declines.
+- **Payments are not being charged.** Check that background tasks run on the tenant, and that `InstallmentPlanBackgroundTask` is not disabled under **Configuration** → **Tasks**. Then check the plan's history for declines.
 - **Reminders have no pay link.** Set the site's **Base URL**.
 - **An auto-charge plan switched to invoicing.** The provider did not keep the card used for the down payment, for example because the card or wallet does not allow future use. The plan's history says so.
 

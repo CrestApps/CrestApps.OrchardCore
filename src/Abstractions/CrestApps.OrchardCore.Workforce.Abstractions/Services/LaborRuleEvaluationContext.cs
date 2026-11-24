@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -11,7 +12,7 @@ public sealed class LaborRuleEvaluationContext
     /// <summary>
     /// Gets or sets the worker.
     /// </summary>
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     /// <summary>
     /// Gets or sets the team the shifts are for.

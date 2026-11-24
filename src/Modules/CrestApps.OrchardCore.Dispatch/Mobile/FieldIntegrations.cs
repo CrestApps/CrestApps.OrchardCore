@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Dispatch.Controllers;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Inventory.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Configuration;
@@ -73,7 +74,7 @@ internal sealed class FieldLinkProvider : IMyWorkLinkProvider
         S = stringLocalizer;
     }
 
-    public async Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, StaffMember worker, CancellationToken cancellationToken = default)
     {
         if (worker is null)
         {

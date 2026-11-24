@@ -1,6 +1,10 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Workforce.Migrations;
@@ -10,12 +14,15 @@ internal sealed class WorkforceMigrations : DataMigration
     private readonly ActivityCodeSeeder _activityCodeSeeder;
     private readonly IStore _store;
     private readonly ISession _session;
+    private readonly IShellFeaturesManager _shellFeaturesManager;
 
     public WorkforceMigrations(
         ActivityCodeSeeder activityCodeSeeder,
         IStore store,
-        ISession session)
+        ISession session,
+        IShellFeaturesManager shellFeaturesManager)
     {
+        _shellFeaturesManager = shellFeaturesManager;
         _activityCodeSeeder = activityCodeSeeder;
         _store = store;
         _session = session;
@@ -26,8 +33,8 @@ internal sealed class WorkforceMigrations : DataMigration
         await WorkforceIndexSchema.CreateAsync(SchemaBuilder);
         await _activityCodeSeeder.SeedAsync();
 
-        // Teams live in the Teams module from the start, so there is nothing to move.
-        return 2;
+        // Teams live in the Teams module and workers are staff members from the start, so there is nothing to move.
+        return 4;
     }
 
     // Teams were kept in the Workforce collection before they had their own module.
@@ -37,4 +44,42 @@ internal sealed class WorkforceMigrations : DataMigration
 
         return 2;
     }
+
+    // Workers became staff members, kept by the Staff module with the same ids. A site that ran Workforce before Staff
+    // existed gets Staff turned on first; the move runs at the next start, once the Staff tables are there.
+    public async Task<int> UpdateFrom2Async()
+    {
+        if (!(await _shellFeaturesManager.GetEnabledFeaturesAsync()).Any(feature => feature.Id == StaffConstants.Features.Staff))
+        {
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("enable-staff", static async scope =>
+            {
+                var features = scope.ServiceProvider.GetRequiredService<IShellFeaturesManager>();
+
+                if ((await features.GetEnabledFeaturesAsync()).Any(feature => feature.Id == StaffConstants.Features.Staff))
+                {
+                    return;
+                }
+
+                if ((await features.GetAvailableFeaturesAsync()).FirstOrDefault(feature => feature.Id == StaffConstants.Features.Staff) is { } staff)
+                {
+                    // Without force, the feature is refused when any feature in its dependency chain is still off.
+                    await features.EnableFeaturesAsync([staff], force: true);
+                }
+            });
+
+            return 2;
+        }
+
+        // Working staff with an account are put in the Staff role by the hourly staff upkeep, or when they are next saved.
+        await WorkforceWorkersMove.MoveAsync(SchemaBuilder, _store, _session);
+
+        return 3;
+    }
+
+    // A team's address moved from Workforce's one line to the team's own structured address. The move is not run
+    // here: WorkforceTeamAddressMoveTenantEvents runs it after each start of the tenant until it has finished once,
+    // so a move that failed or was cut short is never lost with the migration already recorded.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Orchard Core calls migration steps on the migration instance.")]
+    public int UpdateFrom3()
+        => 4;
 }

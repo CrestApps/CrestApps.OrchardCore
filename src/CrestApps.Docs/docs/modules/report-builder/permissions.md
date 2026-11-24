@@ -54,7 +54,7 @@ Actions that do not concern one existing item check `ManageOwnReportDesigns` wit
 | Share with the `Anonymous` role | `ShareReportsPublicly`, unless the report was already shared with `Anonymous`. |
 | List, create or revoke share links on the **Sharing** tab | `ManageAllReportDesigns` on the report and `ShareReportsPublicly`. |
 | Open a share link (`/SharedLinks/{linkId}?token=...`) | A signed-in user who is one of the link's recipients, with the link's token, while the link works. |
-| List, revoke or delete every shared link of the site (**Tools > Shared Links**) | Orchard Core's `ManageSharedLinks` (**Manage shared links**). |
+| List, revoke or delete every shared link of the site (**Tools** → **Shared Links**) | Orchard Core's `ManageSharedLinks` (**Manage shared links**). |
 | Edit, save, delete or refresh a view | `ManageAllReportDesigns` on the view. |
 | Use a view as a data set | `ViewAllReportDesigns` on the view. |
 | List, create, change or delete report groups (`/Admin/reports/groups`) | `ManageReportGroups`. Placing a report in a group needs only the right to change the report. |
@@ -98,7 +98,7 @@ Share links are Orchard Core shared links (`ISharedLinkManager`, from the Data P
 - With `NotifyByEmail` (the default), Orchard Core emails the link and the note to each recipient, which needs the Email feature; otherwise the person who shares the report sends the link.
 - The report opened through a link runs with its **owner's** access, like a shared report. Its pages send `X-Robots-Tag: noindex, nofollow` and `Referrer-Policy: no-referrer`.
 - Every link opening, export, creation and revocation is logged.
-- **Tools > Shared Links** lists the links of every module, where people with `ManageSharedLinks` can revoke and delete them; each report link links back to its report in the builder. Orchard Core deletes a link a day after it stops working.
+- **Tools** → **Shared Links** lists the links of every module, where people with `ManageSharedLinks` can revoke and delete them; each report link links back to its report in the builder. Orchard Core deletes a link a day after it stops working.
 - Deleting a report deletes its share links. Share links are never exported by the deployment step.
 
 ## Limits

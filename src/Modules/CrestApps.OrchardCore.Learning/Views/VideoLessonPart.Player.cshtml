@@ -1,0 +1,31 @@
+@model VideoPlayerViewModel
+
+<div class="learning-video mb-3">
+    @if (!string.IsNullOrEmpty(Model.VideoUrl))
+    {
+        <div class="ratio ratio-16x9">
+            <video controls preload="metadata" playsinline data-learning-video data-required-percent="@Model.RequiredPercent">
+                <source src="@Model.VideoUrl" type="@Model.VideoType" />
+                @if (!string.IsNullOrEmpty(Model.CaptionsUrl))
+                {
+                    <track kind="captions" src="@Model.CaptionsUrl" srclang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" label="@T["Captions"]" default />
+                }
+                @T["Your browser cannot play this video."]
+            </video>
+        </div>
+        <p class="small text-muted mt-1">@T["Watch at least {0}% of the video to complete this lesson.", Model.RequiredPercent]</p>
+    }
+    else if (!string.IsNullOrEmpty(Model.EmbedUrl))
+    {
+        <div class="ratio ratio-16x9">
+            <iframe src="@Model.EmbedUrl" title="@T["Video"]" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.Transcript))
+    {
+        <details class="mt-2">
+            <summary>@T["Transcript"]</summary>
+            <div class="mt-2" style="white-space: pre-line">@Model.Transcript</div>
+        </details>
+    }
+</div>

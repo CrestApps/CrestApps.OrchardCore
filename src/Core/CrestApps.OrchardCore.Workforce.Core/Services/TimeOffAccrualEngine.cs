@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
@@ -144,7 +145,7 @@ internal static class TimeOffAccrualEngine
     /// <summary>
     /// Returns the key of an accrual or expiry entry.
     /// </summary>
-    public static string Key(string kind, WorkerProfile worker, TimeOffPolicy policy, DateOnly date)
+    public static string Key(string kind, StaffMember worker, TimeOffPolicy policy, DateOnly date)
     {
         return string.Create(CultureInfo.InvariantCulture, $"{kind}:{worker.ItemId}:{policy.ItemId}:{date:yyyyMMdd}");
     }
@@ -216,7 +217,7 @@ internal static class TimeOffAccrualEngine
     /// <summary>
     /// Returns a worker's whole months of service on a day.
     /// </summary>
-    public static int MonthsOfService(WorkerProfile worker, DateOnly date)
+    public static int MonthsOfService(StaffMember worker, DateOnly date)
     {
         var since = worker?.SeniorityDate ?? worker?.HireDate;
 
@@ -303,7 +304,7 @@ internal static class TimeOffAccrualEngine
         }
     }
 
-    private static TimeOffLedgerEntry NewEntry(WorkerProfile worker, TimeOffPolicy policy, TimeOffLedgerKind kind, decimal amount, DateOnly date, string key, string source)
+    private static TimeOffLedgerEntry NewEntry(StaffMember worker, TimeOffPolicy policy, TimeOffLedgerKind kind, decimal amount, DateOnly date, string key, string source)
     {
         return new TimeOffLedgerEntry
         {

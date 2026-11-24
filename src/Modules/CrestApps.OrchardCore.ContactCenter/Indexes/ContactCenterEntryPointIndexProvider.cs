@@ -22,6 +22,8 @@ public sealed class ContactCenterEntryPointIndexProvider : IndexProvider<Contact
     {
         context
             .For<ContactCenterEntryPointIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entryPoint => new ContactCenterEntryPointIndex
             {
                 ItemId = entryPoint.ItemId,

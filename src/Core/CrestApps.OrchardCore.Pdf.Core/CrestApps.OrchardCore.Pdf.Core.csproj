@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore PDF Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Writes PDF documents: pages, text measured and wrapped with embedded fonts, lines, shapes and pictures placed
+      at exact positions, vector QR codes drawn with QRCoder (MIT), and the renderer of the PDF layout model. Reports,
+      check printing, certificates and other modules build their documents on it.
+    </Description>
+    <PackageTags>$(PackageTags) PDF Documents QRCode Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Pdf.Abstractions\CrestApps.OrchardCore.Pdf.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

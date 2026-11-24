@@ -1,0 +1,28 @@
+@model ShapeViewModel<ClassRosterRow>
+
+@{
+    var appointment = Model.Value.Appointment;
+}
+
+@switch (appointment.Status)
+{
+    case AppointmentStatus.Held:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-gift text-info me-1" aria-hidden="true"></i>@T["Offered"]</span>
+        @if (appointment.HoldExpiresUtc is { } expires)
+        {
+            <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The offer runs out"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(expires, DateTimeKind.Utc), Format: "g"))</span>
+        }
+        break;
+    case AppointmentStatus.Requested:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-regular fa-clock text-warning me-1" aria-hidden="true"></i>@T["Waiting for confirmation"]</span>
+        break;
+    case AppointmentStatus.Completed:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@(appointment.Attendance == AppointmentAttendance.Partial ? T["Partly attended ({0} min)", appointment.MinutesAttended ?? 0] : T["Attended"])</span>
+        break;
+    case AppointmentStatus.NoShow:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-xmark text-danger me-1" aria-hidden="true"></i>@T["Absent"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle text-success me-1" aria-hidden="true"></i>@T["Registered"]</span>
+        break;
+}

@@ -1,0 +1,10 @@
+@model ShapeViewModel<FulfillmentRequest>
+@inject IEnumerable<IFulfillmentProvider> Providers
+
+@{
+    var partner = Providers.FirstOrDefault(provider => provider.Name == Model.Value.ProviderName)?.DisplayName.Value ?? Model.Value.ProviderName;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Partner"]">
+    <i class="fa-solid fa-industry text-secondary me-1" aria-hidden="true"></i>@partner
+</span>

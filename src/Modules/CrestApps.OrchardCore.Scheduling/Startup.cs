@@ -8,7 +8,9 @@ using CrestApps.OrchardCore.Scheduling.Migrations;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Navigation;
 using CrestApps.OrchardCore.Scheduling.Services;
+using CrestApps.OrchardCore.Staff;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -23,6 +25,21 @@ namespace CrestApps.OrchardCore.Scheduling;
 /// <summary>
 /// Registers the scheduling services and screens, and the Appointments calendar type.
 /// </summary>
+/// <summary>
+/// Picks the person behind a staff resource among staff, and fills the resource from their staff record.
+/// </summary>
+[RequireFeatures(CrestApps.OrchardCore.Staff.StaffConstants.Features.Staff)]
+public sealed class StaffStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<Staff.SchedulingStaffOptions>(options => options.UseStaffPicker = true);
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.Core.Services.ICatalogEntryHandler<SchedulingResource>, Staff.SchedulingResourceStaffHandler>());
+        services.AddStaffCapability(Staff.SchedulingResourceStaffHandler.BookableCapability, global::OrchardCore.Localization.LocalizationSource.Create<StaffStartup>("Bookable"), global::OrchardCore.Localization.LocalizationSource.Create<StaffStartup>("Takes appointments as a scheduling resource."), 30);
+    }
+}
+
 public sealed class Startup : StartupBase
 {
     /// <inheritdoc />
@@ -33,7 +50,10 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<SchedulingResourceIndexProvider>()
             .AddIndexProvider<AppointmentTypeIndexProvider>()
             .AddIndexProvider<AppointmentIndexProvider>()
-            .AddIndexProvider<WaitlistEntryIndexProvider>();
+            .AddIndexProvider<WaitlistEntryIndexProvider>()
+            .AddIndexProvider<SchedulingSessionIndexProvider>()
+            .AddIndexProvider<SessionRegistrationIndexProvider>()
+            .AddIndexProvider<SessionWaitlistIndexProvider>();
 
         services.AddSchedulingCore();
         services.AddPersonalDataContributor<AppointmentPersonalDataContributor>();

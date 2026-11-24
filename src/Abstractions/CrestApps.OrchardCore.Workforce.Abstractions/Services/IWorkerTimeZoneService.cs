@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -14,7 +15,7 @@ public interface IWorkerTimeZoneService
     /// <param name="teamId">The team to use, or <see langword="null"/> for the worker's team.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The time zone identifier.</returns>
-    Task<string> GetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default);
+    Task<string> GetAsync(StaffMember worker, string teamId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a team's time zone: its own, else the site's.

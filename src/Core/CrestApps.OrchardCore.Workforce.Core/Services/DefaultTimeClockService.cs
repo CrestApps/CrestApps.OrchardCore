@@ -1,6 +1,9 @@
 using System.Security.Cryptography;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
@@ -19,18 +22,16 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class DefaultTimeClockService : ITimeClockService
 {
-    private const int MaxFailedPins = 5;
-    private const int PinIterations = 100_000;
 
     // An open punch older than this no longer keeps the worker on the clock; it is a missed punch.
     private static readonly TimeSpan _staleAfter = TimeSpan.FromHours(16);
-    private static readonly TimeSpan _pinLockout = TimeSpan.FromMinutes(15);
 
     private readonly TimePunchStore _punchStore;
     private readonly TimesheetStore _timesheetStore;
     private readonly TimeClockPolicyStore _policyStore;
     private readonly TimeClockKioskStore _kioskStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
+    private readonly IStaffBadgeService _badgeService;
     private readonly TeamStore _teamStore;
     private readonly ITeamManager _teamManager;
     private readonly WorkerShiftReader _shiftReader;
@@ -50,7 +51,8 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         TimesheetStore timesheetStore,
         TimeClockPolicyStore policyStore,
         TimeClockKioskStore kioskStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
+        IStaffBadgeService badgeService,
         TeamStore teamStore,
         ITeamManager teamManager,
         WorkerShiftReader shiftReader,
@@ -69,6 +71,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         _policyStore = policyStore;
         _kioskStore = kioskStore;
         _workerStore = workerStore;
+        _badgeService = badgeService;
         _teamStore = teamStore;
         _teamManager = teamManager;
         _shiftReader = shiftReader;
@@ -83,7 +86,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         S = stringLocalizer;
     }
 
-    public async Task<TimeClockPolicy> GetPolicyAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<TimeClockPolicy> GetPolicyAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -102,7 +105,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         return null;
     }
 
-    public async Task<TimeClockStatus> GetStatusAsync(WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<TimeClockStatus> GetStatusAsync(StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -138,9 +141,9 @@ internal sealed class DefaultTimeClockService : ITimeClockService
             return result;
         }
 
-        if (worker.Status is WorkerStatus.Terminated or WorkerStatus.Suspended)
+        if (worker.Status is StaffStatus.Terminated or StaffStatus.Suspended)
         {
-            result.Fail(S["{0} can't clock in or out while they are {1}.", worker.DisplayName, worker.Status == WorkerStatus.Terminated ? S["no longer working here"] : S["suspended"]]);
+            result.Fail(S["{0} can't clock in or out while they are {1}.", worker.DisplayName, worker.Status == StaffStatus.Terminated ? S["no longer working here"] : S["suspended"]]);
 
             return result;
         }
@@ -323,102 +326,51 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         return _punchStore.ListEffectiveAsync(workerId, fromUtc, toUtc, cancellationToken);
     }
 
-    public async Task<PlanningResult<WorkerProfile>> SetPinAsync(WorkerProfile worker, string pin, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<StaffMember>> SetPinAsync(StaffMember worker, string pin, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
-        var result = new PlanningResult<WorkerProfile>();
+        var result = new PlanningResult<StaffMember>();
 
-        // The PIN is saved on the stored worker, so a copy from another request can't save over newer changes.
+        // The PIN is saved on the stored record, so a copy from another request can't save over newer changes.
         worker = await _workerStore.FindByIdAsync(worker.ItemId, cancellationToken) ?? worker;
         result.Value = worker;
 
-        if (string.IsNullOrWhiteSpace(pin))
+        if (_badgeService.SetPin(worker, pin) is { } error)
         {
-            worker.Put(new WorkerTimeClockSettings());
-            await _workerStore.UpdateAsync(worker, cancellationToken);
+            result.Fail(error);
 
             return result;
         }
 
-        pin = pin.Trim();
-
-        if (pin.Length is < 4 or > 8 || !pin.All(char.IsAsciiDigit))
-        {
-            result.Fail(S["A PIN is 4 to 8 digits."]);
-
-            return result;
-        }
-
-        if (string.IsNullOrEmpty(worker.EmployeeNumber))
-        {
-            result.Fail(S["Give {0} an employee number first: it is their badge number on the kiosk.", worker.DisplayName]);
-
-            return result;
-        }
-
-        var salt = RandomNumberGenerator.GetBytes(16);
-
-        worker.Put(new WorkerTimeClockSettings
-        {
-            PinSalt = Convert.ToBase64String(salt),
-            PinHash = HashPin(pin, salt),
-        });
         await _workerStore.UpdateAsync(worker, cancellationToken);
 
         return result;
     }
 
-    public async Task<PlanningResult<WorkerProfile>> IdentifyAsync(string badgeNumber, string pin, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<StaffMember>> IdentifyAsync(string badgeNumber, string pin, CancellationToken cancellationToken = default)
     {
-        var result = new PlanningResult<WorkerProfile>();
-        var worker = string.IsNullOrWhiteSpace(badgeNumber) ? null : await _workerStore.FindByEmployeeNumberAsync(badgeNumber.Trim(), cancellationToken);
+        var result = new PlanningResult<StaffMember>();
+        var badge = await _badgeService.VerifyAsync(badgeNumber, pin, cancellationToken);
 
-        if (worker is null || !worker.TryGet<WorkerTimeClockSettings>(out var settings) || string.IsNullOrEmpty(settings.PinHash))
+        switch (badge.Failure)
         {
-            result.Fail(S["That badge number and PIN weren't recognized."]);
+            case StaffBadgeFailure.None:
+                result.Value = badge.StaffMember;
+                break;
 
-            return result;
+            case StaffBadgeFailure.Locked:
+                result.Fail(S["Too many wrong PINs. Try again in a few minutes, or ask a manager."]);
+                break;
+
+            case StaffBadgeFailure.Inactive:
+                result.Fail(S["{0} isn't working at the moment. Ask a manager.", badge.StaffMember?.DisplayName]);
+                break;
+
+            default:
+                result.Fail(S["That badge number and PIN weren't recognized."]);
+                break;
         }
-
-        var now = _clock.UtcNow;
-
-        if (settings.LockedUntilUtc > now)
-        {
-            result.Fail(S["Too many wrong PINs. Try again in a few minutes, or ask a manager."]);
-
-            return result;
-        }
-
-        var matches = !string.IsNullOrEmpty(pin)
-            && CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(HashPin(pin.Trim(), Convert.FromBase64String(settings.PinSalt))), Convert.FromBase64String(settings.PinHash));
-
-        if (!matches)
-        {
-            settings.FailedAttempts++;
-
-            if (settings.FailedAttempts >= MaxFailedPins)
-            {
-                settings.FailedAttempts = 0;
-                settings.LockedUntilUtc = now + _pinLockout;
-            }
-
-            worker.Put(settings);
-            await _workerStore.UpdateAsync(worker, cancellationToken);
-            result.Fail(S["That badge number and PIN weren't recognized."]);
-
-            return result;
-        }
-
-        if (settings.FailedAttempts > 0 || settings.LockedUntilUtc.HasValue)
-        {
-            settings.FailedAttempts = 0;
-            settings.LockedUntilUtc = null;
-            worker.Put(settings);
-            await _workerStore.UpdateAsync(worker, cancellationToken);
-        }
-
-        result.Value = worker;
 
         return result;
     }
@@ -616,7 +568,7 @@ internal sealed class DefaultTimeClockService : ITimeClockService
     /// Returns when clocking in opens, when the worker's next shift is further away than the policy allows and no
     /// shift is under way.
     /// </summary>
-    private async Task<DateTime?> EarliestPunchInAsync(WorkerProfile worker, DateTime utc, int blockMinutes, CancellationToken cancellationToken)
+    private async Task<DateTime?> EarliestPunchInAsync(StaffMember worker, DateTime utc, int blockMinutes, CancellationToken cancellationToken)
     {
         var shifts = await _shiftReader.ListAsync(worker, utc.AddHours(-16), utc.AddHours(16), cancellationToken);
         var window = TimeSpan.FromMinutes(blockMinutes);
@@ -649,11 +601,6 @@ internal sealed class DefaultTimeClockService : ITimeClockService
         var team = string.IsNullOrEmpty(teamId) ? null : await _teamStore.FindByIdAsync(teamId, cancellationToken);
 
         return team is null ? [] : [team, .. await _teamManager.GetAncestorsAsync(team.ItemId, cancellationToken)];
-    }
-
-    private static string HashPin(string pin, byte[] salt)
-    {
-        return Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(pin, salt, PinIterations, HashAlgorithmName.SHA256, 32));
     }
 
     private static double DistanceMeters(double latitude1, double longitude1, double latitude2, double longitude2)

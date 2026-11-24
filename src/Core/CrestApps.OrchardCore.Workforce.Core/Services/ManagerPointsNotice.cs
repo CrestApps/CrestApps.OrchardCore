@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -20,18 +21,18 @@ internal sealed class ManagerPointsNotice : IAttendancePointsHandler
         S = stringLocalizer;
     }
 
-    public Task ThresholdReachedAsync(WorkerProfile worker, AttendanceException exception, decimal points, TimeClockPolicy policy, CancellationToken cancellationToken = default)
+    public Task ThresholdReachedAsync(StaffMember worker, AttendanceException exception, decimal points, TimeClockPolicy policy, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
-        if (string.IsNullOrEmpty(worker.ManagerWorkerId))
+        if (string.IsNullOrEmpty(worker.ManagerId))
         {
             return Task.CompletedTask;
         }
 
         return _notifier.NotifyAsync(new WorkforceNotification
         {
-            WorkerId = worker.ManagerWorkerId,
+            WorkerId = worker.ManagerId,
             Kind = WorkforceNotificationKind.Attendance,
             Title = S["{0} reached {1} attendance points", worker.DisplayName, points.ToString("0.##", CultureInfo.CurrentCulture)],
             Body = S["Their latest exception was on {0}.", exception.Date.ToString("D", CultureInfo.CurrentCulture)],

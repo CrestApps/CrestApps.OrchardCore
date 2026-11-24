@@ -12,7 +12,7 @@ A chat widget is a small chat window that floats in the corner of the page. The 
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Artificial Intelligence, **Admin Widget** section (admin widget); Design > Widgets (website widget) |
+| **Menu** | **Settings** → **Artificial Intelligence**, **Admin Widget** section (admin widget); **Design** → **Widgets (website widget)** |
 | **Permission** | Manage AI profiles (admin widget settings); Manage layers (website widget); Query any AI profile, or Query AI profile - *profile name*, to chat |
 | **Feature** | AI Chat Admin Widget, which also turns on AI Chat and Orchard Core AI Agent (admin widget); AI Chat, with the Orchard Core Widgets and Layers features (website widget) |
 
@@ -25,7 +25,7 @@ Both widgets chat with an [AI profile](profiles.md) of type **Chat**. Create the
 <YouTube video="ai-chat-widgets" title="Video of turning on and setting up the admin widget" start={63} end={122} />
 
 1. Ask your administrator to turn on the **AI Chat Admin Widget** feature. It depends on **AI Chat** and **Orchard Core AI Agent**, which are turned on with it.
-2. Open **Settings > Artificial Intelligence** and scroll to the **Admin Widget** section.
+2. Open **Settings** → **Artificial Intelligence** and scroll to the **Admin Widget** section.
 3. Fill in the fields below and click **Save**.
 
 | Field | What it does |
@@ -33,8 +33,9 @@ Both widgets chat with an [AI profile](profiles.md) of type **Chat**. Create the
 | **Chat profile** | The chat profile the widget talks to. Choose **No profile (disabled)** to hide the widget completely. |
 | **Max history sessions** | How many past chats the widget's history list shows, from 1 to 50. Default 10. |
 | **Primary color** | The color of the widget's header and button. Default `#41b670`. |
+| **Tell the AI which page the user is on** | Sends the page's title and address, the text you selected, the content item you are editing and the site with each message, so you can ask "summarize this item" or "what can I do here?". On by default. |
 
-**Max history sessions** and **Primary color** appear once you pick a profile.
+**Max history sessions**, **Primary color** and **Tell the AI which page the user is on** appear once you pick a profile.
 
 The widget shows on every admin page for each signed-in user who is allowed to use that profile.
 
@@ -53,6 +54,12 @@ An admin assistant becomes much more useful when it can act on the site, for exa
 
 The widget remembers its position, its size, whether it was open and your current chat in your browser, so it looks the same on the next page.
 
+### Watch and approve what the assistant does
+
+- Each step the assistant takes, such as reading a content item or opening a page, shows as a small card in its answer. Expand a card to see what it sent and what came back.
+- Before the assistant deletes, disables, imports or sends something, the card asks **Allow this action?** Click **Allow** to let it go ahead, or **Deny** to stop it. Nothing happens until you answer.
+- When the profile can use the page (**Allow page tools**), the assistant can read what the page shows, fill in form fields for you to review and save, and open other admin pages. When it opens a page, it carries on there by itself.
+
 ## Add a chat box to your website
 
 <YouTube video="ai-chat-widgets" title="Video of adding the website chat widget with an always-on layer, and the Anonymous permission" start={167} end={237} />
@@ -60,7 +67,7 @@ The widget remembers its position, its size, whether it was open and your curren
 The website widget is a normal Orchard Core widget called **Artificial Intelligence Chat**, so you place it like any other widget.
 
 1. Create a chat profile for the public, for example *Website assistant*. The **Website assistant** starting point in the **New AI Profile** picker is made for this. See [Create a profile](profiles.md#create-a-profile).
-2. Open **Design > Widgets**. If it says "Please define the available zones before adding Widgets", your administrator first lists the zones of the theme, such as **Footer**, under **Settings > Zones**.
+2. Open **Design** → **Widgets**. If it says "Please define the available zones before adding Widgets", your administrator first lists the zones of the theme, such as **Footer**, under **Settings** → **Zones**.
 3. Make sure there is a layer that is active on the pages where the chat should appear. To show it on every page, use a layer whose rule is a **Boolean** condition set to true. Many sites already have one, often named *Always*.
 4. In the zone where the widget should live, for example **Footer**, click **Add Widget** and choose **Artificial Intelligence Chat**.
 5. Fill in the fields below, pick the layer, and publish the widget.
@@ -76,7 +83,7 @@ The website widget is a normal Orchard Core widget called **Artificial Intellige
 The widget picks up your theme's main color.
 
 :::note[Visitors need permission]
-Visitors who are not signed in use the **Anonymous** role. The widget only shows to people whose role may use the profile, so give the **Anonymous** role the **Query AI profile - *profile name*** permission for the public profile under **Access Control > Roles**. Grant only that one profile, not **Query any AI profile**.
+Visitors who are not signed in use the **Anonymous** role. The widget only shows to people whose role may use the profile, so give the **Anonymous** role the **Query AI profile - *profile name*** permission for the public profile under **Access Control** → **Roles**. Grant only that one profile, not **Query any AI profile**.
 :::
 
 ## What visitors see
@@ -104,7 +111,7 @@ A public assistant is open to anyone, so the site protects it:
 
 The video shows each protection, a blocked injection attempt, the limits and the visitor cookie.
 
-Your administrator can tune these protections under **Settings > Artificial Intelligence** in the **Prompt Security** and **Visitor Identity** sections, and per profile in the **Prompt Security** card on the **Content** tab of the profile editor. The settings are explained in the [Technical Manual](../../ai/chat.md#security-and-visitor-identity-settings).
+Your administrator can tune these protections under **Settings** → **Artificial Intelligence** in the **Prompt Security** and **Visitor Identity** sections, and per profile in the **Prompt Security** card on the **Content** tab of the profile editor. The settings are explained in the [Technical Manual](../../ai/chat.md#security-and-visitor-identity-settings).
 
 :::tip
 Keep a public assistant focused. Give it clear instructions about what it may talk about, and turn on **Restrict answers to retrieved data only** when it should answer only from your own content (see [Knowledge](knowledge.md)).

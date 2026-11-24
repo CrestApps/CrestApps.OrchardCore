@@ -3,8 +3,8 @@
 @{
     var calendarId = Model.Value.GetWorkforceSettings().CalendarId;
 }
-<a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="Workers" asp-action="Index" asp-route-teamId="@Model.Value.ItemId" class="dropdown-item">@T["Workers"]</a>
-<a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="Workers" asp-action="Edit" asp-route-teamId="@Model.Value.ItemId" class="dropdown-item">@T["Add a worker"]</a>
+<a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Index" asp-route-teamId="@Model.Value.ItemId" class="dropdown-item">@T["Staff"]</a>
+<a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-teamId="@Model.Value.ItemId" class="dropdown-item">@T["Add a staff member"]</a>
 @if (!string.IsNullOrEmpty(calendarId))
 {
     <a href="@Url.Content("~/Admin/calendar?view=week&calendars=" + calendarId)" class="dropdown-item">@T["Calendar"]</a>

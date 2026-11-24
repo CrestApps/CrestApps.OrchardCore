@@ -19,7 +19,7 @@ An **automatic** activity load creates activities that an **AI profile** works b
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Load Activities > Add Activity Load > Automatic |
+| **Menu** | **Interaction Center** → **Management** → **Load Activities** → **Add Activity Load** → **Automatic** |
 | **Permission** | Manage activity batches |
 | **Features** | **SMS Omnichannel Automation** for texts; **Telnyx AI Voice Agent** (which turns on **Automated Voice**) for calls. Both turn on the AI features they need; an AI provider connection must also be set up. |
 
@@ -29,22 +29,22 @@ An **automatic** activity load creates activities that an **AI profile** works b
 
 ## Before you start
 
-1. **An AI profile.** Under **Artificial Intelligence > Profiles**, create a profile of type **Chat** with **Start the conversation automatically** turned on. The **Opening message** is the first message the customer receives. It can use Liquid, for example `{{ Contact.DisplayText }}`. The quickest way is **Add Profile** and one of the **Text messaging** or **Phone calls** starting points (**Qualify leads by text**, **Customer care by text**, **Answer calls at the front desk**, **Qualify leads by phone**, **Confirm appointments by phone**), which fill in the opening message and the instructions for you. Then name your business in the opening message and fill in the **About the business** section of the system prompt. See [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
+1. **An AI profile.** Under **Artificial Intelligence** → **Profiles**, create a profile of type **Chat** with **Start the conversation automatically** turned on. The **Opening message** is the first message the customer receives. It can use Liquid, for example `{{ Contact.DisplayText }}`. The quickest way is **Add Profile** and one of the **Text messaging** or **Phone calls** starting points (**Qualify leads by text**, **Customer care by text**, **Answer calls at the front desk**, **Qualify leads by phone**, **Confirm appointments by phone**), which fill in the opening message and the instructions for you. Then name your business in the opening message and fill in the **About the business** section of the system prompt. See [Text messaging and phone call starting points](../ai/profile-templates.md#text-messaging-and-phone-call-starting-points).
 2. **A subject and its flow**, with the dispositions the AI may choose and a **When to choose this disposition** hint on each action. See [Subject flows](subject-flows.md).
 3. **An omnichannel address** for the number you send from or call from, with **Text messages (SMS)** or **Voice calls** ticked. See [Omnichannel Addresses](channel-endpoints.md).
-4. **The SMS provider connected to the site**, for texts. Your administrator points the provider's incoming-message webhook at the site, so that customers' replies reach the AI. For Twilio, the address to give Twilio shows as **Webhook URL** on the Twilio tab of **Settings > Communication > SMS**. See the [technical manual](../omnichannel/sms.md).
+4. **The SMS provider connected to the site**, for texts. Your administrator points the provider's incoming-message webhook at the site, so that customers' replies reach the AI. For Twilio, the address to give Twilio shows as **Webhook URL** on the Twilio tab of **Settings** → **Communication** → **SMS**. See the [technical manual](../omnichannel/sms.md).
 5. **Optionally a cadence** for follow-ups ([Cadences](cadences.md)) and a **business hours** calendar ([Business hours](business-hours.md)).
 
 ## Load automated SMS activities
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities" start={1231} end={1290} />
 
-1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Automatic**.
+1. Open **Interaction Center** → **Management** → **Load Activities**, click **Add Activity Load** and choose **Automatic**.
 2. Enter a **Title**, pick the **Subject content type** and the **Campaign**.
 3. Pick the **AI profile**. An outbound subject cannot hold a profile, so the load must name one. An inbound subject can, and then the field may stay empty to use the subject's profile.
 4. Pick **SMS** as the **Channel**, and the **Address** to send from. Only addresses used for text messages are listed.
 5. Set the AI options (below), the record filters, and **Save**. For a lead type you can also let the AI convert the leads it qualifies; see [Let the AI convert leads](leads-accounts-opportunities.md#let-the-ai-convert-leads).
-6. Choose **Actions > Load activities**.
+6. Choose **Actions** → **Load activities**.
 
 A background task picks up due automated activities every five minutes and sends the opening message. Replies are answered by the AI after the reply delay. Each time the task starts a text or a call, it checks the contact's opt-out first. A workflow that starts the conversation with the **Place Call or Send Message** task begins it at once and runs none of these checks; see [Workflows](workflows.md).
 
@@ -72,7 +72,7 @@ The background task runs every five minutes, so the first call can start up to f
 
 ### Before and after the call
 
-The recording notice: under **Settings > Contact Center > Recording governance** (which needs **Contact Center Call Recording**), **Tell callers the call is recorded** sets the text, and **Have automated voice agents say it first** makes the AI say it before anything else. A turn-based call speaks it before the profile's opening message; in a live conversation the model is told to say it and the platform checks that it did.
+The recording notice: under **Settings** → **Contact Center** → **Recording governance** (which needs **Contact Center Call Recording**), **Tell callers the call is recorded** sets the text, and **Have automated voice agents say it first** makes the AI say it before anything else. A turn-based call speaks it before the profile's opening message; in a live conversation the model is told to say it and the platform checks that it did.
 
 To review a finished call, open the contact's activities. **Dispositioned by** reads *AI voice agent (profile: ...)*, and the disposition and notes hold the AI's summary. **Review AI conversation** opens the transcript read only. It appears when the activity has an AI conversation, and it needs the **AI Chat** feature and permission to query AI profiles and to list activities.
 
@@ -96,8 +96,8 @@ When nobody speaks for 8 seconds, the AI asks whether the person is still there.
 
 An automatic load is for conversations the AI starts. To have an AI profile **answer** the calls customers make to one of your numbers, set it on the number's **inbound entry point**, not on a queue. A queue only holds callers for people.
 
-1. Make the profile under **Artificial Intelligence > Profiles**. **Add Profile** with the **Answer calls at the front desk** starting point fills in the greeting and the instructions. Every **Chat** profile can be picked.
-2. Open **Interaction Center > Management > Inbound entry points** and edit (or add) the **Voice calls** entry point that picks the number under **Numbers**.
+1. Make the profile under **Artificial Intelligence** → **Profiles**. **Add Profile** with the **Answer calls at the front desk** starting point fills in the greeting and the instructions. Every **Chat** profile can be picked.
+2. Open **Interaction Center** → **Management** → **Inbound Entry Points** and edit (or add) the **Voice calls** entry point that picks the number under **Numbers**.
 3. On the **Routing** card, set **Route to** to **AI voice agent** and choose the profile under **AI agent**. Click **Save**.
 4. Optionally, give the number an inbound **Phone** [subject](subjects.md) whose **Address** is that number. Its subject, campaign and [subject flow](subject-flows.md) are used for the call: the dispositions the AI picks from, and whether it may hand the caller to a person.
 
@@ -111,8 +111,8 @@ This needs the **Telnyx AI Voice Agent** feature, which adds **AI voice agent** 
 
 Texts work the same way as calls. Set the AI profile on the number's **text entry point**, and the AI takes the customer's first text itself.
 
-1. Make the profile under **Artificial Intelligence > Profiles**. **Add Profile** with the **Customer care by text** starting point fills in the instructions. Every **Chat** profile can be picked. The AI replies to the customer, so its opening message is not used.
-2. Open **Interaction Center > Management > Inbound entry points** and edit (or add) the **Text messages** entry point that picks the number under **Numbers**.
+1. Make the profile under **Artificial Intelligence** → **Profiles**. **Add Profile** with the **Customer care by text** starting point fills in the instructions. Every **Chat** profile can be picked. The AI replies to the customer, so its opening message is not used.
+2. Open **Interaction Center** → **Management** → **Inbound Entry Points** and edit (or add) the **Text messages** entry point that picks the number under **Numbers**.
 3. On the **Routing** card, set **Route to** to **AI agent** and choose the profile under **AI agent**. Click **Save**.
 4. Optionally, give the number an inbound **SMS** [subject](subjects.md) whose **Address** is that number. Its subject, campaign and [subject flow](subject-flows.md) are used for the conversation: the dispositions the AI picks from, the no-response timeout, and whether it may hand the customer to a person. Without one, the AI still answers, but it has no dispositions to choose from and cannot hand the conversation over.
 
@@ -142,7 +142,7 @@ This needs the **SMS Omnichannel Automation** and **SMS Messaging Channel** feat
 
 The AI picks a disposition using your hints and what the customer said, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. When the customer never spoke, or decided nothing your dispositions record, no disposition is picked for them: the call takes the one for its outcome, such as the one wired to **Try Again** so the contact is called again, or the one for *No answer* or *Disconnected* (see [Dispositions](dispositions.md#outcomes)). Open **Review AI conversation** on the activity to read the full transcript. When the profile's [AI persona](../ai/personas.md) has a **Language**, the summary is written in that language, and so is the briefing an agent reads when a call is handed to them.
 
-To find it, open the contact from **Interaction Center > Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The transcript is read-only: the page says the conversation was handled automatically, and there is no reply box. The screencast opens a completed AI phone call and reads the whole conversation:
+To find it, open the contact from **Interaction Center** → **Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The transcript is read-only: the page says the conversation was handled automatically, and there is no reply box. The screencast opens a completed AI phone call and reads the whole conversation:
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of opening a contact's completed AI call and reading its transcript with Review AI conversation" start={695} end={717} />
 

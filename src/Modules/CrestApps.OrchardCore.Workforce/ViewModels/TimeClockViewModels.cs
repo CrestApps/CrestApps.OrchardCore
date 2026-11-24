@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -17,7 +19,7 @@ public sealed class KioskViewModel
 
     public string Error { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public TimeClockStatus Status { get; set; }
 
@@ -90,52 +92,15 @@ public sealed class TimeClockPolicyEditViewModel
 }
 
 /// <summary>
-/// The pay period editor.
+/// The Workforce card on the pay code editor: a shift differential's hours.
 /// </summary>
-public sealed class PayPeriodEditViewModel
+public class WorkforcePayCodeWindowViewModel
 {
-    public string Id { get; set; }
-
-    public string Name { get; set; }
-
-    public string Frequency { get; set; }
-
-    public DateOnly AnchorDate { get; set; }
-
-    public string WeekStart { get; set; }
-
-    public bool Enabled { get; set; }
-
-    [BindNever]
-    public IList<(DateOnly Start, DateOnly End)> Upcoming { get; set; } = [];
-}
-
-/// <summary>
-/// The pay code editor.
-/// </summary>
-public sealed class PayCodeEditViewModel
-{
-    public string Id { get; set; }
-
-    public string Code { get; set; }
-
-    public string Name { get; set; }
-
-    public string Kind { get; set; }
-
-    public decimal Multiplier { get; set; }
-
-    public decimal? PremiumPerHour { get; set; }
-
     public TimeOnly? WindowStart { get; set; }
 
     public TimeOnly? WindowEnd { get; set; }
 
     public IList<string> Weekdays { get; set; } = [];
-
-    public string ExportCode { get; set; }
-
-    public bool Enabled { get; set; }
 }
 
 /// <summary>
@@ -190,7 +155,7 @@ public sealed class TimesheetRowViewModel
 {
     public Timesheet Timesheet { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public string TeamName { get; set; }
 
@@ -220,7 +185,7 @@ public sealed class TimesheetDetailsViewModel
 {
     public Timesheet Timesheet { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public string TeamName { get; set; }
 
@@ -272,55 +237,27 @@ public sealed class AttendanceRowViewModel
 {
     public AttendanceException Exception { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public string TeamName { get; set; }
 }
 
 /// <summary>
-/// The payroll export screen.
+/// The files the earlier payroll export wrote.
 /// </summary>
 public sealed class PayrollExportViewModel
 {
-    public string CalendarId { get; set; }
-
-    public DateOnly? PeriodStart { get; set; }
-
-    public string Provider { get; set; }
-
-    public bool IncludeExported { get; set; }
-
-    [BindNever]
-    public IList<SelectListItem> CalendarOptions { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> PeriodOptions { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> ProviderOptions { get; set; } = [];
-
-    [BindNever]
-    public IDictionary<TimesheetStatus, int> Counts { get; set; } = new Dictionary<TimesheetStatus, int>();
-
     [BindNever]
     public AdminListContext List { get; set; }
 }
 
 /// <summary>
-/// The payroll CSV column editor.
-/// </summary>
-public sealed class PayrollColumnsViewModel
-{
-    public IList<PayrollCsvColumn> Columns { get; set; } = [];
-}
-
-/// <summary>
-/// A worker's time clock page: their kiosk PIN, pay rates and attendance points.
+/// A worker's time clock page: their kiosk PIN, attendance points and, read only, their pay rates.
 /// </summary>
 public sealed class WorkerTimeClockViewModel
 {
     [BindNever]
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     [BindNever]
     public bool HasPin { get; set; }
@@ -329,7 +266,7 @@ public sealed class WorkerTimeClockViewModel
     public DateTime? LockedUntilUtc { get; set; }
 
     [BindNever]
-    public IList<WorkerPayRate> Rates { get; set; } = [];
+    public IList<StaffPayRate> Rates { get; set; } = [];
 
     [BindNever]
     public bool CanViewRates { get; set; }
@@ -346,14 +283,5 @@ public sealed class WorkerTimeClockViewModel
     [BindNever]
     public IReadOnlyDictionary<string, string> ActivityNames { get; set; }
 
-    [BindNever]
-    public IList<SelectListItem> ActivityOptions { get; set; } = [];
-
     public string Pin { get; set; }
-
-    public DateOnly? RateFrom { get; set; }
-
-    public decimal? HourlyRate { get; set; }
-
-    public string RateActivityCodeId { get; set; }
 }

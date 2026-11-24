@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Staff.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StaffMemberLeftEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-user-minus" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Staff Member Left"])
+    </h4>
+</header>

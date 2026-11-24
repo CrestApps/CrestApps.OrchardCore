@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.ViewModels
+@model UserNotificationPreferencesViewModel
+
+@{
+    var form = await New.UserNotificationPreferencesForm(Preferences: Model);
+}
+
+@if (Model.InAccount)
+{
+    <zone Name="Title">
+        <breadcrumb name="UserNotificationPreferences" title="@T["Notification preferences"]">
+            <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(UsersConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+            <breadcrumb-item id="UserNotifications" url="@Url.RouteUrl(UsersConstants.Notifications.RouteName)">@T["Notifications"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["Notification preferences"], Content: form))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="UserNotificationPreferences" title="@T["Notification preferences"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+                <breadcrumb-item id="UserNotifications" url="@Url.RouteUrl(UsersConstants.Notifications.RouteName)">@T["Notifications"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["Notification preferences"]</h1>
+        @await DisplayAsync(form)
+    </div>
+}

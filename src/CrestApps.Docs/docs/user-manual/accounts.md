@@ -14,7 +14,7 @@ every part of the site uses that same account.
 ## Finding your accounts
 
 Open **Accounts** in the admin menu to list them. On a site with the CRM, the list is under
-**Interaction Center > Accounts** instead.
+**Interaction Center** → **Accounts** instead.
 
 Search the list by name, and open an account with **View** to see its page.
 
@@ -46,7 +46,7 @@ depends on the features your site uses and what you're allowed to see:
 | **Activities** | How many calls, messages and tasks with its contacts are scheduled and done. **List Activities** shows them all. |
 | **Orders** | The orders placed for it. |
 | **Business buying** | When it buys as a business: its payment terms, what it owes and its buyers. |
-| **Invoices** | The invoices for what it bought on its terms, and what is still owed on each. |
+| **Invoices** | With Invoicing on: what the account owes and is overdue on, its latest invoices, and **New invoice** to bill it. |
 | **All records** | Everything the account holds. |
 
 **Edit Account**, **New** (to add a record to the account) and **List Activities** are at the top of every section.
@@ -67,6 +67,27 @@ member is linked to that contact. Save to get more empty rows; clear a row to re
 
 You need **Manage the users who sign in for accounts** to see the card.
 
+## Inviting people to an account
+
+With **Account Members** on, the members of an account see **Account members** in the account menu on the storefront. It lists the account's members and their role.
+
+An admin of the account can invite people there, without asking you:
+
+1. Under **Invite a person**, enter their **E-mail**, choose the **Role** (**Member** or **Admin**) and, if you like, a **Message**.
+2. Select **Send the invitation**. The person gets an e-mail with a link. The link works for 14 days.
+
+**Waiting invitations** lists the invitations not accepted yet. **Take back** cancels one, so its link stops working. An invitation that is not accepted in time expires.
+
+### Accepting an invitation
+
+The person opens the link in the e-mail. The page names the account they are invited to.
+
+1. They select **Sign in to accept**, and sign in, or create an account, with the e-mail address the invitation was sent to.
+2. If their e-mail address is not confirmed yet, the page asks them to confirm it first, and can send the confirmation e-mail again.
+3. They select **Accept the invitation**. They are now a member of the account, with the role the invitation gave.
+
+A person is a member of one account only, so someone who already belongs to another account cannot accept. A link that was accepted, taken back or has expired says so; ask the account for a new one.
+
 ## An account's locations
 
 With **Account Locations** on, an account's editor has a **Locations** card for the places the account has, such as
@@ -76,15 +97,15 @@ location's fields to remove it.
 
 ## Moving accounts to another site
 
-To copy accounts to another site, add the **Accounts** step to a deployment plan under **Configuration > Import/Export >
-Deployment Plans**. Leave **Also export the records the accounts hold** ticked to bring their contacts and
+To copy accounts to another site, add the **Accounts** step to a deployment plan under **Configuration** → **Import/Export** →
+**Deployment Plans**. Leave **Also export the records the accounts hold** ticked to bring their contacts and
 opportunities too. Every account comes with its members, locations and business buying settings. Import the file on the
 other site as you would any deployment package. Importing the same file again updates the accounts instead of copying
 them.
 
 ## Deleting an account
 
-Use **Actions > Delete** on the account's row and confirm. The contacts and other records it held are kept, now
+Use **Actions** → **Delete** on the account's row and confirm. The contacts and other records it held are kept, now
 outside any account.
 
 ## Importing contacts into accounts

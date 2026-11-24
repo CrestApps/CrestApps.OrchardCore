@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Checks.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckUnclearedEvent>
+
+<header><h4><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Uncleared"])</h4></header>

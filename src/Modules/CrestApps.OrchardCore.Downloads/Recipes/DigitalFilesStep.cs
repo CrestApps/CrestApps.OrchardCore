@@ -2,6 +2,8 @@ using System.Text;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
+using CrestApps.OrchardCore.FileStorage;
+using CrestApps.OrchardCore.FileStorage.ProtectedFiles;
 using OrchardCore.ContentManagement;
 using OrchardCore.FileStorage;
 using OrchardCore.Recipes.Models;
@@ -21,9 +23,9 @@ internal sealed class DigitalFilesStep : NamedRecipeStepHandler
     private const int MaxFileBytes = 10 * 1024 * 1024;
 
     private readonly IContentManager _contentManager;
-    private readonly IDigitalFileStore _fileStore;
+    private readonly IProtectedFileStore<DigitalDownloadFiles> _fileStore;
 
-    public DigitalFilesStep(IContentManager contentManager, IDigitalFileStore fileStore)
+    public DigitalFilesStep(IContentManager contentManager, IProtectedFileStore<DigitalDownloadFiles> fileStore)
         : base(RecipeStepName)
     {
         _contentManager = contentManager;
@@ -35,7 +37,7 @@ internal sealed class DigitalFilesStep : NamedRecipeStepHandler
         foreach (var token in (context.Step["Files"] as JsonArray ?? []).OfType<JsonObject>())
         {
             var productId = token["ProductId"]?.GetValue<string>();
-            var fileName = DigitalFileStore.Sanitize(token["FileName"]?.GetValue<string>());
+            var fileName = ProtectedFileStore<DigitalDownloadFiles>.Sanitize(token["FileName"]?.GetValue<string>());
             var product = string.IsNullOrEmpty(productId) ? null : await _contentManager.GetAsync(productId, VersionOptions.Latest);
 
             if (product is null)
@@ -74,7 +76,7 @@ internal sealed class DigitalFilesStep : NamedRecipeStepHandler
                 continue;
             }
 
-            StoredDigitalFile stored;
+            ProtectedFile stored;
 
             try
             {

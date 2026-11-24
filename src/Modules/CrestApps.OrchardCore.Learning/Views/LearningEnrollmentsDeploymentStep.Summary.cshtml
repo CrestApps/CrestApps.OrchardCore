@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Learning.Deployments
+@model ShapeViewModel<LearningEnrollmentsDeploymentStep>
+
+<h5>@T["Learning enrollments (learner records)"]</h5>
+<span class="hint">@(Model.Value.CourseId is null ? T["Every course"] : T["One course"])@(Model.Value.IncludeProgress ? T[", with progress"] : null)</span>

@@ -1,5 +1,9 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
@@ -16,8 +20,8 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
-using OrchardCore.Routing;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -34,9 +38,9 @@ public sealed class TimesheetsController : Controller
     private readonly ITimesheetService _timesheets;
     private readonly ITimeClockService _timeClock;
     private readonly IAttendanceService _attendance;
-    private readonly IPayPeriodCalendarManager _calendars;
+    private readonly IPayScheduleManager _calendars;
     private readonly IPayCodeManager _payCodes;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly TimesheetViews _views;
@@ -68,9 +72,9 @@ public sealed class TimesheetsController : Controller
         ITimesheetService timesheets,
         ITimeClockService timeClock,
         IAttendanceService attendance,
-        IPayPeriodCalendarManager calendars,
+        IPayScheduleManager calendars,
         IPayCodeManager payCodes,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IWorkforceScopeService scopeService,
         TimesheetViews views,
@@ -280,7 +284,7 @@ public sealed class TimesheetsController : Controller
     [Admin("workforce/timesheets/lock", "WorkforceTimesheetsLock")]
     public async Task<IActionResult> Lock(string calendarId, DateOnly periodStart)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ExportPayroll))
+        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.LockTimesheets))
         {
             return Forbid();
         }
@@ -618,7 +622,7 @@ public sealed class TimesheetsController : Controller
         return RedirectToAction(nameof(Details), new { id = result.Value.ItemId });
     }
 
-    internal static IList<SelectListItem> PeriodOptions(PayPeriodCalendar calendar, DateOnly today, DateOnly selected)
+    internal static IList<SelectListItem> PeriodOptions(PaySchedule calendar, DateOnly today, DateOnly selected)
     {
         var options = new List<SelectListItem>();
         var start = calendar.PeriodOn(today).Start;
@@ -675,7 +679,7 @@ public sealed class TimesheetsController : Controller
 
     private async Task<IList<TimesheetRowViewModel>> RowsAsync(IReadOnlyList<Timesheet> timesheets)
     {
-        var workers = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var workers = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
 
         foreach (var workerId in timesheets.Select(timesheet => timesheet.WorkerId).Distinct(StringComparer.Ordinal))
         {

@@ -2,6 +2,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -19,7 +21,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
 
     private readonly OpenShiftStore _openShiftStore;
     private readonly TeamStore _teamStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly SchedulePeriodStore _periodStore;
     private readonly DraftShiftStore _draftStore;
     private readonly ScheduleChangeRecorder _changeRecorder;
@@ -40,7 +42,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
     public DefaultOpenShiftService(
         OpenShiftStore openShiftStore,
         TeamStore teamStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         SchedulePeriodStore periodStore,
         DraftShiftStore draftStore,
         ScheduleChangeRecorder changeRecorder,
@@ -155,7 +157,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
         return await CheckAsync(shift, worker, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<WorkerProfile>> ListEligibleWorkersAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<StaffMember>> ListEligibleWorkersAsync(string id, CancellationToken cancellationToken = default)
     {
         var shift = await FindAsync(id, cancellationToken);
 
@@ -164,11 +166,11 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
             return [];
         }
 
-        var eligible = new List<WorkerProfile>();
+        var eligible = new List<StaffMember>();
 
         foreach (var worker in await _workerStore.ListByTeamAsync(shift.TeamId, WorkforceDates.ToKey(shift.Date), cancellationToken))
         {
-            if (worker.Status == WorkerStatus.Active && (await CheckAsync(shift, worker, cancellationToken)).Count == 0)
+            if (worker.Status == StaffStatus.Active && (await CheckAsync(shift, worker, cancellationToken)).Count == 0)
             {
                 eligible.Add(worker);
             }
@@ -357,7 +359,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
         return awarded;
     }
 
-    private async Task<(PlanningResult<OpenShift> Result, OpenShift Shift, WorkerProfile Worker)> LoadAsync(string id, string workerId, CancellationToken cancellationToken)
+    private async Task<(PlanningResult<OpenShift> Result, OpenShift Shift, StaffMember Worker)> LoadAsync(string id, string workerId, CancellationToken cancellationToken)
     {
         var result = new PlanningResult<OpenShift>();
         var shift = await FindAsync(id, cancellationToken);
@@ -380,7 +382,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
         return (result, shift, worker);
     }
 
-    private async Task<IReadOnlyList<string>> CheckAsync(OpenShift shift, WorkerProfile worker, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<string>> CheckAsync(OpenShift shift, StaffMember worker, CancellationToken cancellationToken)
     {
         if (worker is null)
         {
@@ -390,7 +392,7 @@ internal sealed class DefaultOpenShiftService : IOpenShiftService
         return await _shiftService.CheckAsync(await _contexts.ForOpenShiftAsync(shift, worker, cancellationToken), cancellationToken);
     }
 
-    private async Task FillAsync(OpenShift shift, WorkerProfile worker, ScheduleChangeInitiator initiatedBy, string actor, PlanningResult<OpenShift> result, CancellationToken cancellationToken)
+    private async Task FillAsync(OpenShift shift, StaffMember worker, ScheduleChangeInitiator initiatedBy, string actor, PlanningResult<OpenShift> result, CancellationToken cancellationToken)
     {
         var lockers = await _locks.LockAsync([worker.ItemId]);
 

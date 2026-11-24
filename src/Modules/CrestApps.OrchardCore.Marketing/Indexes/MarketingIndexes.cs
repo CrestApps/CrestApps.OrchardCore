@@ -51,6 +51,8 @@ public sealed class MarketingIndexProvider : IndexProvider<CustomerPurchases>
 
     public override void Describe(DescribeContext<CustomerPurchases> context)
         => context.For<CustomerPurchasesIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(purchases => new CustomerPurchasesIndex
             {
                 ItemId = purchases.ItemId,
@@ -71,6 +73,8 @@ public sealed class SegmentIndexProvider : IndexProvider<Segment>
 
     public override void Describe(DescribeContext<Segment> context)
         => context.For<SegmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(segment => new SegmentIndex { ItemId = segment.ItemId, Name = segment.Name });
 }
 
@@ -83,6 +87,8 @@ public sealed class CampaignIndexProvider : IndexProvider<Campaign>
 
     public override void Describe(DescribeContext<Campaign> context)
         => context.For<CampaignIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(campaign => new CampaignIndex
             {
                 ItemId = campaign.ItemId,

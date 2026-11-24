@@ -1,0 +1,18 @@
+@model ShapeViewModel<ExchangeRate>
+
+@{
+    var rate = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rate"]">
+    <i class="fa-solid fa-right-left text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Rate"]</span>
+    1 @rate.Currency = @rate.Rate.ToString("0.##########") @rate.BaseCurrency
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["From"]">
+    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["From"]</span>
+    @rate.Date.ToString("d")
+</span>
+@if (!string.Equals(rate.Source, ExchangeRatesConstants.ManualSource, StringComparison.Ordinal))
+{
+    <span class="badge text-bg-light">@rate.Source</span>
+}

@@ -1,0 +1,16 @@
+@model Estimate
+
+@{
+    var (text, css) = Model.Status switch
+    {
+        EstimateStatus.Draft => (T["Draft"], "text-bg-secondary"),
+        EstimateStatus.Sent => (T["Awaiting answer"], "text-bg-primary"),
+        EstimateStatus.Accepted => (T["Accepted"], "text-bg-success"),
+        EstimateStatus.Invoiced => (T["Invoiced"], "text-bg-success"),
+        EstimateStatus.Declined => (T["Declined"], "text-bg-danger"),
+        EstimateStatus.Expired => (T["Expired"], "text-bg-warning"),
+        EstimateStatus.Canceled => (T["Canceled"], "text-bg-dark"),
+        _ => (T["Unknown"], "text-bg-secondary"),
+    };
+}
+<span class="badge @css">@text</span>

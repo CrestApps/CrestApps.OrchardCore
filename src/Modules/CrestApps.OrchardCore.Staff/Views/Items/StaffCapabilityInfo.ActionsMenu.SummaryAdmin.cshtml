@@ -1,0 +1,11 @@
+@model ShapeViewModel<StaffCapabilityInfo>
+
+<a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Index" asp-route-capability="@Model.Value.Name" class="dropdown-item">@T["Staff with it"]</a>
+@if (!Model.Value.IsBuiltIn)
+{
+    <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="StaffCapabilities" asp-action="Delete" asp-route-name="@Model.Value.Name" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this capability? Staff members who have it keep it until they are saved again."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}
+else if (Model.Value.IsCustomized)
+{
+    <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="StaffCapabilities" asp-action="Delete" asp-route-name="@Model.Value.Name" class="dropdown-item" data-title="@T["Reset"]" data-message="@T["Put this capability back to its module's name, description and order, and offer it again?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Reset to defaults"]</a>
+}

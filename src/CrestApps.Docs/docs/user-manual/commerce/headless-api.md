@@ -41,7 +41,7 @@ This video shows what you set up in the admin: the features, the documentation p
 
 <YouTube video="headless-api" title="Video of turning on the API features" start={85} end={120} />
 
-Each commerce module has its own **API** feature, under **Tools > Features**, in the **Commerce** category. Turn on the ones your app needs. Each needs its module turned on first.
+Each commerce module has its own **API** feature, under **Tools** → **Features**, in the **Commerce** category. Turn on the ones your app needs. Each needs its module turned on first.
 
 | Feature | What it gives your app | It needs |
 | --- | --- | --- |
@@ -68,7 +68,7 @@ For a typical headless store, turn on all seven.
 
 Orchard Core's **OpenAPI** feature describes every part of the API, so developers can explore it, try calls, and generate the code their app uses to call it.
 
-1. Under **Tools > Features**, turn on **OpenAPI**.
+1. Under **Tools** → **Features**, turn on **OpenAPI**.
 2. Turn on one or more explorers: **Swagger UI** or **Scalar UI**, which let developers try calls from the browser, or **ReDoc UI**, which is read-only. They open at `/swagger`, `/scalar/v1` and `/redoc` on your site. On a tenant with a URL prefix, put the prefix first, such as `/shop/swagger`.
 
 By default, only a signed-in user with the **View OpenAPI Content** permission can read the description. The OpenAPI settings page has **Allow anonymous access to the API schema**, which opens it to everyone. Leave it off on a live store unless you want your API to be public knowledge.
@@ -76,7 +76,7 @@ By default, only a signed-in user with the **View OpenAPI Content** permission c
 The commerce parts are grouped in the explorers: **Catalog**, **Cart**, **Checkout**, **Inventory**, **Account**, and for staff **Orders**, **Customers**, **Coupons**, **Stock**, **Fulfillment** and **Point of Sale**.
 
 :::tip[Try calls from Swagger or Scalar]
-The **OpenAPI Documentation — Bearer/PKCE** recipe, under **Configuration > Recipes**, sets up sign-in for the Swagger and Scalar pages, so an admin can try the staff calls from the browser. After running it, open the **openapi** application it creates (see below) and change the redirect addresses that start with `https://localhost:5001` to your site's address. The recipe points token validation at the *Default* tenant; on another tenant, change it to that tenant's name.
+The **OpenAPI Documentation — Bearer/PKCE** recipe, under **Configuration** → **Recipes**, sets up sign-in for the Swagger and Scalar pages, so an admin can try the staff calls from the browser. After running it, open the **openapi** application it creates (see below) and change the redirect addresses that start with `https://localhost:5001` to your site's address. The recipe points token validation at the *Default* tenant; on another tenant, change it to that tenant's name.
 :::
 
 ## Set up sign-in
@@ -87,13 +87,13 @@ Guests need no sign-in: what a shopper does before they have an account works wi
 
 <YouTube video="headless-api" title="Video of the sign-in server settings" start={178} end={228} />
 
-1. Under **Tools > Features**, turn on **OpenID Authorization Server**, **OpenID Token Validation** and **OpenID Management Interface**.
-2. Open **Security > OpenID Connect > Settings > Authorization Server**, and turn on:
+1. Under **Tools** → **Features**, turn on **OpenID Authorization Server**, **OpenID Token Validation** and **OpenID Management Interface**.
+2. Open **Security** → **OpenID Connect** → **Settings** → **Authorization Server**, and turn on:
    - the **token endpoint**, and the **authorization endpoint** for apps that sign buyers in;
    - **Allow authorization code flow**, with **Require proof key for code exchange (PKCE)**, for apps;
    - **Allow client credentials flow**, for servers;
    - **Allow refresh token flow**, if your apps should stay signed in.
-3. Open **Security > OpenID Connect > Settings > Token Validation**, and choose **this tenant** as the one whose tokens are accepted. Without this, every app that has signed in is still refused.
+3. Open **Security** → **OpenID Connect** → **Settings** → **Token Validation**, and choose **this tenant** as the one whose tokens are accepted. Without this, every app that has signed in is still refused.
 
 ### An app that buyers sign in to
 
@@ -101,7 +101,7 @@ Guests need no sign-in: what a shopper does before they have an account works wi
 
 A storefront, a phone app or a point of sale signs the person in through your site's own sign-in page. The app never sees their password, and needs no secret of its own.
 
-1. Under **Security > OpenID Connect > Management > Applications**, click **Add an application**.
+1. Under **Security** → **OpenID Connect** → **Management** → **Applications**, click **Add an application**.
 2. Give it a **Client Id**, such as *contoso-shop-app*, and a **Display Name**.
 3. Choose the **Public** type: an app on a phone or in a browser can't keep a secret.
 4. Tick **Allow Authorization Code Flow** and **Require PKCE**. Tick **Allow Refresh Token Flow** if it should stay signed in.
@@ -115,8 +115,8 @@ Give your developers your site's address, the client id and the redirect address
 
 A back-office system, such as a warehouse or accounting integration, has no person signing in. It signs in as itself with a secret, and the role you give it decides what it can do.
 
-1. Create a role for it under **Security > Roles**, such as *Warehouse integration*, with only the permissions it needs, such as **Ship orders and update their shipments**, **View inventory** and **Manage inventory**.
-2. Under **Security > OpenID Connect > Management > Applications**, add an application of the **Confidential** type, with a **Client Id** and a strong **Client Secret**.
+1. Create a role for it under **Security** → **Roles**, such as *Warehouse integration*, with only the permissions it needs, such as **Ship orders and update their shipments**, **View inventory** and **Manage inventory**.
+2. Under **Security** → **OpenID Connect** → **Management** → **Applications**, add an application of the **Confidential** type, with a **Client Id** and a strong **Client Secret**.
 3. Tick **Allow Client Credentials Flow**, and choose the role under **Client Credentials Roles**.
 4. Save, and give the secret to whoever runs the server, to keep in its secret store. Never put it in an app or a web page.
 
@@ -132,7 +132,7 @@ A back-office system, such as a warehouse or accounting integration, has no pers
 
 <YouTube video="headless-api" title="Video of a CORS policy" start={291} end={323} />
 
-A storefront that runs in the browser on another address than your site, such as *shop.contoso.com* calling *admin.contoso.com*, needs your site to allow it. Turn on Orchard Core's **CORS** feature, and add a policy under **Configuration > Settings > CORS** for your storefront's address. Your developers know the settings it needs; the [Technical Manual](../../modules/commerce-api.md#cors) lists them. A phone app, a point of sale or a server doesn't need this.
+A storefront that runs in the browser on another address than your site, such as *shop.contoso.com* calling *admin.contoso.com*, needs your site to allow it. Turn on Orchard Core's **CORS** feature, and add a policy under **Configuration** → **Settings** → **CORS** for your storefront's address. Your developers know the settings it needs; the [Technical Manual](../../modules/commerce-api.md#cors) lists them. A phone app, a point of sale or a server doesn't need this.
 
 ## What the API can do
 

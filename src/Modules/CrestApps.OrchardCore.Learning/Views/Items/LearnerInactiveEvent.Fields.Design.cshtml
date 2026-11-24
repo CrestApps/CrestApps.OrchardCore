@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<LearnerInactiveEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-bed" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Learner Inactive"])
+    </h4>
+</header>

@@ -168,8 +168,8 @@ public sealed class ContactCenterArchitectureGuardTests
             ".targets",
         };
 
-        return Directory
-            .EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)
+        return SourceTreeFiles
+            .Enumerate(sourceRoot, "*", directory => IsExcludedApplicationDirectory(repositoryRoot, directory))
             .Where(file => supportedExtensions.Contains(Path.GetExtension(file)))
             .Select(file => new ArchitectureSourceFile(file, ToRepositoryRelativePath(repositoryRoot, file)))
             .Where(file => !IsExcludedApplicationPath(file.RelativePath))
@@ -182,8 +182,8 @@ public sealed class ContactCenterArchitectureGuardTests
         var repositoryRoot = FindRepositoryRoot();
         var sourceRoot = Path.Combine(repositoryRoot, "src");
 
-        return Directory
-            .EnumerateFiles(sourceRoot, searchPattern, SearchOption.AllDirectories)
+        return SourceTreeFiles
+            .Enumerate(sourceRoot, searchPattern, directory => IsExcludedApplicationDirectory(repositoryRoot, directory))
             .Select(file => new ArchitectureSourceFile(file, ToRepositoryRelativePath(repositoryRoot, file)))
             .Where(file => !IsExcludedApplicationPath(file.RelativePath))
             .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
@@ -320,6 +320,18 @@ public sealed class ContactCenterArchitectureGuardTests
     private static bool IsAsteriskPath(string relativePath)
     {
         return relativePath.Contains(".Asterisk", StringComparison.Ordinal);
+    }
+
+    // Every folder skipped here is one IsExcludedApplicationPath excludes anyway, so skipping it only saves the walk.
+    private static bool IsExcludedApplicationDirectory(string repositoryRoot, string directory)
+    {
+        var name = Path.GetFileName(directory);
+
+        return name.Equals("bin", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("obj", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("node_modules", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("wwwroot", StringComparison.OrdinalIgnoreCase)
+            || ToRepositoryRelativePath(repositoryRoot, directory) == "src/CrestApps.Docs";
     }
 
     private static bool IsExcludedApplicationPath(string relativePath)

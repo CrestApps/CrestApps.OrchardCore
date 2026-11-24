@@ -8,7 +8,7 @@ Counts how many units of each product and variant are on hand, with a history of
 | --- | --- | --- |
 | Inventory | `CrestApps.OrchardCore.Inventory` | Counts how many units of each product and variant are on hand, with a history of every change, under Commerce > Inventory. |
 | Back-in-Stock Alerts | `CrestApps.OrchardCore.Inventory.StockAlerts` | Lets shoppers ask to be emailed when a product that's sold out is back in stock, and emails them, once, when it is. |
-| Purchase Orders | `CrestApps.OrchardCore.Inventory.PurchaseOrders` | Orders stock from suppliers and receives it at a location, under Commerce > Purchase orders. |
+| Purchase Orders | `CrestApps.OrchardCore.Inventory.PurchaseOrders` | Orders stock from suppliers and receives it at a location, under Commerce > Purchase Orders. |
 | Inventory API | `CrestApps.OrchardCore.Inventory.Api` | Gives stock at each location over the commerce JSON API, and lets staff receive, adjust and move it. Enable OpenAPI to document it. |
 
 Enable a feature under **Configuration > Features**, or with the `Feature` step of a recipe.

@@ -10,7 +10,7 @@ Let visitors post their own listings, such as ads, directory entries or homes fo
 
 | | |
 | --- | --- |
-| **Menu** | Content > Posted listings |
+| **Menu** | **Content** → **Posted Listings** |
 | **Permission** | Moderate posted listings; Post listings for the people who post |
 | **Feature** | Classifieds |
 
@@ -20,14 +20,14 @@ This video shows the Marketplace and Classifieds modules, with posting, approvin
 
 <YouTube video="marketplace-classifieds" title="Narrated video overview of the Marketplace and Classifieds modules" />
 
-To try it, run the **Classifieds sample** recipe under **Configuration > Recipes**. It adds a Classified Ad that signed-in visitors post, and a $5 upgrade that features an ad for 7 days.
+To try it, run the **Classifieds sample** recipe under **Configuration** → **Recipes**. It adds a Classified Ad that signed-in visitors post, and a $5 upgrade that features an ad for 7 days.
 
 ## Let visitors post a kind of listing
 
 <YouTube video="marketplace-classifieds" title="Video of letting visitors post a kind of listing" start={282} end={316} />
 
 1. Add the **Classified** part to a content type, such as Classified Ad.
-2. In the part's settings (**Design > Content Definition > Content Types**, then **Edit** on the part), enter **Days a listing runs**, and tick **A moderator approves each listing before it's shown**.
+2. In the part's settings (**Design** → **Content Definition** → **Content Types**, then **Edit** on the part), enter **Days a listing runs**, and tick **A moderator approves each listing before it's shown**.
 
 <YouTube video="marketplace-classifieds" title="Video of posting a listing" start={316} end={353} />
 
@@ -37,7 +37,7 @@ Signed-in visitors post from **My listings** in their account, with **Post a Cla
 
 <YouTube video="marketplace-classifieds" title="Video of approving and rejecting listings" start={353} end={389} />
 
-Under **Content > Posted listings**, filter by **Waiting for approval**. **Approve** shows a listing for its term. **Reject** takes down a listing, with a reason if you give one, and the owner is emailed. When an owner edits an approved listing of a kind that needs approval, it waits for you again.
+Under **Content** → **Posted Listings**, filter by **Waiting for approval**. **Approve** shows a listing for its term. **Reject** takes down a listing, with a reason if you give one, and the owner is emailed. When an owner edits an approved listing of a kind that needs approval, it waits for you again.
 
 ## When a listing ends
 

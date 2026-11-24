@@ -145,6 +145,13 @@ public sealed class MessagingAgentHandoffService : IOmnichannelHandoffService
         // Reserve the AI session so the thread can be traced back to the automated conversation it grew out of.
         conversation.AISessionId = activity.AISessionId;
 
+        // The campaign the automated conversation ran under, so the workspace can list a campaign's conversations. A
+        // later handoff from another campaign moves the thread to that campaign, the one the customer last answered.
+        if (!string.IsNullOrEmpty(activity.CampaignId))
+        {
+            conversation.CampaignId = activity.CampaignId;
+        }
+
         // The AI-written summary shown to the agent as warm context (falls back to the escalation reason).
         var summary = !string.IsNullOrWhiteSpace(request.Summary) ? request.Summary.Trim() : request.Reason?.Trim();
 

@@ -59,7 +59,8 @@ internal sealed class MessagingMigrations : DataMigration
             .Column<DateTime>("LastActivityUtc", column => column.Nullable())
             .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
             .Column<DateTime>("AssignedUtc", column => column.Nullable())
-            .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),
+            .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable())
+            .Column<string>("CampaignId", column => column.Nullable().WithLength(26)),
             collection: MessagingStorage.CollectionName
         );
 
@@ -111,7 +112,8 @@ internal sealed class MessagingMigrations : DataMigration
 
         await SchemaBuilder.CreateMapIndexTableAsync<MessageTemplateIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.WithLength(255)),
+            .Column<string>("Name", column => column.WithLength(255))
+            .Column<string>("Scope", column => column.Nullable().WithLength(MessagingStorage.TemplateScopeLength)),
             collection: MessagingStorage.CollectionName
         );
 
@@ -166,9 +168,10 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateAttentionIndexesAsync();
         await CreateActivityIndexAsync();
         await CreateLookupIndexesAsync();
+        await CreateCampaignIndexAsync();
         await CreateOutboxIndexAsync();
 
-        return 7;
+        return 10;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -285,6 +288,74 @@ internal sealed class MessagingMigrations : DataMigration
         return 6;
     }
 
+    /// <summary>
+    /// Adds the campaign a thread was handed off from, so the workspace can list one campaign's conversations. Threads
+    /// handed off before this have no campaign recorded, so no campaign filter lists them.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await EnsureCampaignColumnAsync();
+        await CreateCampaignIndexAsync();
+
+        return 7;
+    }
+
+    /// <summary>
+    /// Adds the campaign column and its index where version 7 was recorded without them. Every save of a conversation
+    /// maps the column, so on such a database opening a conversation, receiving a message and every workflow that
+    /// touched one failed with "Invalid column name 'CampaignId'". Both checks find what is already there, so this is a
+    /// no-op wherever version 7 applied.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        if (await EnsureCampaignColumnAsync())
+        {
+            _logger.LogWarning(
+                "The messaging conversation index had no 'CampaignId' column although its migration was recorded; the column was added.");
+        }
+
+        await CreateCampaignIndexAsync();
+
+        return 8;
+    }
+
+    /// <summary>
+    /// Adds the scope of a reply template, so a template can be written for another kind of work, such as tickets.
+    /// Existing templates keep an empty scope: the messaging workspace's. A database that already has the column (one
+    /// built while this step was numbered 7 to 8) is left as it is.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await IndexTableColumnCreation.AddIfMissingAsync<MessageTemplateIndex>(
+            SchemaBuilder,
+            MessagingStorage.CollectionName,
+            "Scope",
+            table => table.AddColumn<string>("Scope", column => column.Nullable().WithLength(MessagingStorage.TemplateScopeLength)));
+
+        return 9;
+    }
+
+    private Task<bool> EnsureCampaignColumnAsync()
+    {
+        return IndexTableColumnCreation.AddIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            MessagingStorage.CollectionName,
+            "CampaignId",
+            table => table.AddColumn<string>("CampaignId", column => column.Nullable().WithLength(26)));
+    }
+
+    private Task<bool> CreateCampaignIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_Campaign",
+            MessagingStorage.CollectionName,
+            "CampaignId", "DocumentId");
+    }
+
     private async Task CreateLookupIndexesAsync()
     {
         await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
@@ -302,10 +373,11 @@ internal sealed class MessagingMigrations : DataMigration
 
     /// <summary>
     /// Adds the index of outbound messages waiting for another attempt, which the outbox reads instead of scanning every
-    /// outbound message.
+    /// outbound message. A database that ran this step while it was numbered 6 to 7 already has the table, so the
+    /// table is created only when it is missing.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom6Async()
+    public async Task<int> UpdateFrom9Async()
     {
         await CreateOutboxIndexAsync();
 
@@ -314,17 +386,20 @@ internal sealed class MessagingMigrations : DataMigration
         // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
         ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
 
-        return 7;
+        return 10;
     }
 
     private async Task CreateOutboxIndexAsync()
     {
         // Outbound messages are stored with the rest of the omnichannel documents, not in the workspace's collection.
-        await SchemaBuilder.CreateMapIndexTableAsync<MessagingOutboxIndex>(table => table
-            .Column<string>("Channel", column => column.WithLength(50))
-            .Column<string>("ServiceAddress", column => column.WithLength(255))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
-            collection: OmnichannelConstants.CollectionName);
+        if (!await TableExistence.ExistsAsync(SchemaBuilder, SchemaBuilder.TableNameConvention.GetIndexTable(typeof(MessagingOutboxIndex), OmnichannelConstants.CollectionName)))
+        {
+            await SchemaBuilder.CreateMapIndexTableAsync<MessagingOutboxIndex>(table => table
+                .Column<string>("Channel", column => column.WithLength(50))
+                .Column<string>("ServiceAddress", column => column.WithLength(255))
+                .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+                collection: OmnichannelConstants.CollectionName);
+        }
 
         await IndexTableIndexCreation.CreateIfMissingAsync<MessagingOutboxIndex>(
             SchemaBuilder,

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    acceptedOfferActivityToOpen,
     activityToAutoOpen,
     autoOpenWorkKey,
+    isOfferForUser,
     readPoppedActivities,
     rememberPoppedActivity,
 } from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-bar-work.js';
@@ -104,5 +106,47 @@ describe('popped activities', () => {
         expect(popped).toEqual({ a1: true, a2: true });
         expect(readPoppedActivities({ getItem: () => '{not json' })).toEqual({});
         expect(readPoppedActivities(null)).toEqual({});
+    });
+});
+
+// Live: administrators who were not signed in to any queue or campaign were taken off the page they were on, to the
+// record of a call another agent had just answered, and two of them landed on the same record at once. The acceptance
+// is also sent to the offer's queue and to that queue's supervisors, and the bar opened the record for every screen
+// that heard it.
+describe('acceptedOfferActivityToOpen', () => {
+    const accepted = { userId: 'u1', reason: 'Accepted', kind: 'InboundCall', activityItemId: 'a1', reservationId: 'r1' };
+
+    it('opens the record for the agent who accepted the offer', () => {
+        expect(acceptedOfferActivityToOpen(accepted, 'u1')).toBe('a1');
+        expect(acceptedOfferActivityToOpen({ ...accepted, kind: 'PreviewDial', activityItemId: 42 }, 'u1')).toBe('42');
+    });
+
+    it('opens nothing on the screens of anyone else who hears of it: the queue, its supervisors', () => {
+        expect(acceptedOfferActivityToOpen(accepted, 'u2')).toBe('');
+        expect(acceptedOfferActivityToOpen(accepted, 'supervisor')).toBe('');
+    });
+
+    it('never takes an unknown owner as this agent: a page changes under its user only for their own offer', () => {
+        expect(acceptedOfferActivityToOpen(accepted, '')).toBe('');
+        expect(acceptedOfferActivityToOpen(accepted, null)).toBe('');
+        expect(acceptedOfferActivityToOpen({ ...accepted, userId: null }, 'u1')).toBe('');
+        expect(acceptedOfferActivityToOpen(null, 'u1')).toBe('');
+    });
+
+    it('opens nothing for an offer that expired or was released, for an automatic dial, or without a record', () => {
+        expect(acceptedOfferActivityToOpen({ ...accepted, reason: 'Expired' }, 'u1')).toBe('');
+        expect(acceptedOfferActivityToOpen({ ...accepted, reason: 'Released' }, 'u1')).toBe('');
+        expect(acceptedOfferActivityToOpen({ ...accepted, kind: 'AutoDial' }, 'u1')).toBe('');
+        expect(acceptedOfferActivityToOpen({ ...accepted, activityItemId: null }, 'u1')).toBe('');
+    });
+});
+
+describe('isOfferForUser', () => {
+    it('is true only when the offer names the signed-in user', () => {
+        expect(isOfferForUser({ userId: 'u1' }, 'u1')).toBe(true);
+        expect(isOfferForUser({ userId: 'u2' }, 'u1')).toBe(false);
+        expect(isOfferForUser({ userId: 'u1' }, '')).toBe(false);
+        expect(isOfferForUser({}, 'u1')).toBe(false);
+        expect(isOfferForUser(null, 'u1')).toBe(false);
     });
 });

@@ -694,6 +694,56 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so this index over the queue column comes down before the column is widened to hold a campaign's virtual queue id and is recreated over the same columns in the same step.",
             "CreateIndex"),
         new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketsMigrations.cs",
+            "TicketsMigrations",
+            "UpdateFrom16Async",
+            "DropTableAsync",
+            "TicketProtectedItemIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "TicketProtectedItemIndex",
+            "The default collection's index of a Tickets document that now lives in the service desk's collection. Tickets is new in 3.0.0, so no stable release created the table. It is dropped in the same step that creates the collection's own index table and saves every one of those documents again there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketsMigrations.cs",
+            "TicketsMigrations",
+            "UpdateFrom16Async",
+            "DropTableAsync",
+            "TicketEmailOutboxIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "TicketEmailOutboxIndex",
+            "The default collection's index of a Tickets document that now lives in the service desk's collection. Tickets is new in 3.0.0, so no stable release created the table. It is dropped in the same step that creates the collection's own index table and saves every one of those documents again there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketsMigrations.cs",
+            "TicketsMigrations",
+            "UpdateFrom16Async",
+            "DropTableAsync",
+            "TicketBacklogIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "TicketBacklogIndex",
+            "The default collection's index of a Tickets document that now lives in the service desk's collection. Tickets is new in 3.0.0, so no stable release created the table. It is dropped in the same step that creates the collection's own index table and saves every one of those documents again there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketsMigrations.cs",
+            "TicketsMigrations",
+            "UpdateFrom16Async",
+            "DropTableAsync",
+            "TicketTimeElapsedMarkIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "TicketTimeElapsedMarkIndex",
+            "The default collection's index of a Tickets document that now lives in the service desk's collection. Tickets is new in 3.0.0, so no stable release created the table. It is dropped in the same step that creates the collection's own index table and saves every one of those documents again there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketServiceDeskMove.cs",
+            "Mover",
+            "DeleteAsync",
+            "raw SQL",
+            "delete",
+            MigrationContractJustification.ReviewedAdditive,
+            "3.0.0",
+            null,
+            "A row-level move, not a schema change: it removes, by document id, only the default collection's Tickets documents (and the settings records' dictionary documents) that this same step read and saved again in the service desk's collection. No table, column or index is removed by this statement, and every record keeps exactly one document."),
+        new MigrationContractEntry(
             "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/WorkforceTeamsMove.cs",
             "WorkforceTeamsMove",
             "DropLegacyIndexTableAsync",
@@ -704,6 +754,17 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "Workforce_TeamIndex",
             "The index of the team documents Workforce kept in its own collection before teams had their own module. Workforce is new in 3.0.0, so no stable release created the table. It is dropped in the same step that saves every one of those teams again in the Teams collection with the same id, where the Teams module's own index serves them."),
         new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.KnowledgeBase/Migrations/KnowledgeBaseMigrations.cs",
+            "KnowledgeBaseMigrations",
+            "UpdateFrom4Async",
+            "DropIndex",
+            "IDX_KnowledgeArticleIndex_CategoryId",
+            MigrationContractJustification.InPlaceRebuild,
+            "3.0.0",
+            null,
+            "The category index, which led with the article's own audience, comes down and is recreated over the category in the same step, while the unused audience column stays.",
+            "CreateIndex"),
+        new MigrationContractEntry(
             "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/WorkforceTeamsMove.cs",
             "WorkforceTeamsMove",
             "DeleteLegacyDocumentsAsync",
@@ -713,6 +774,156 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "3.0.0",
             null,
             "A row-level move, not a schema change: it removes the old team documents from the Workforce collection only after each has been saved again in the Teams collection with the same id in this same step, and touches only rows of the old team type. No table, column or index is removed by this statement, and every team keeps exactly one document."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/TimeClockPaySetupMove.cs",
+            "TimeClockPaySetupMove",
+            "DropLegacyIndexTablesAsync",
+            "DropTableAsync",
+            "Workforce_PayPeriodCalendarIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Workforce_PayPeriodCalendarIndex",
+            "The index of the pay period documents the time clock kept in the Workforce collection before Pay Setup owned pay schedules. Workforce is new in 3.0.0, so no stable release created the table. It is dropped in the same step that saves every one of those records again in the Payroll collection with the same id, where Pay Setup's own index serves them."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/TimeClockPaySetupMove.cs",
+            "TimeClockPaySetupMove",
+            "DropLegacyIndexTablesAsync",
+            "DropTableAsync",
+            "Workforce_PayCodeIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Workforce_PayCodeIndex",
+            "The index of the pay code documents the time clock kept in the Workforce collection before Pay Setup owned pay codes. Workforce is new in 3.0.0, so no stable release created the table. It is dropped in the same step that saves every one of those codes again in the Payroll collection with the same id, where Pay Setup's own index serves them."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PaySetupMigrations.cs",
+            "PaySetupMigrations",
+            "UpdateFrom1Async",
+            "DropTableAsync",
+            "Payroll_PayScheduleIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayScheduleIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayScheduleIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PaySetupMigrations.cs",
+            "PaySetupMigrations",
+            "UpdateFrom1Async",
+            "DropTableAsync",
+            "Payroll_PayCodeIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayCodeIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayCodeIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_EmployerIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_EmployerIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollEmployerIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_PayProfileIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayProfileIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayProfileIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_PayItemIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayItemIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayItemIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_PayStatementIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayStatementIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayStatementIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_PayStatementLineIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayStatementLineIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayStatementLineIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_PayRunIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayRunIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayRunIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_PayRunInputIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_PayRunInputIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollPayRunInputIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/PayrollMigrations.cs",
+            "PayrollMigrations",
+            "UpdateFrom10Async",
+            "DropTableAsync",
+            "Payroll_TaxDepositIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_TaxDepositIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollTaxDepositIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Payroll/Migrations/GarnishmentsMigrations.cs",
+            "GarnishmentsMigrations",
+            "UpdateFrom1Async",
+            "DropTableAsync",
+            "Payroll_GarnishmentOrderIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "Payroll_GarnishmentOrderIndex",
+            "Payroll's index table under its old, generic name, which an application module's own index of the same name in a collection named Payroll collided with. Payroll is new in 3.0.0, so no stable release created the table. It is dropped in the same step that makes the index's module-specific table (Payroll_PayrollGarnishmentOrderIndex) and copies every one of its rows there."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/TimeClockPaySetupMove.cs",
+            "TimeClockPaySetupMove",
+            "DeleteLegacyDocumentsAsync",
+            "raw SQL",
+            "delete",
+            MigrationContractJustification.ReviewedAdditive,
+            "3.0.0",
+            null,
+            "A row-level move, not a schema change: it removes the old pay period and pay code documents from the Workforce collection only after each has been saved again in the Payroll collection with the same id in this same step, and touches only rows of those two old types. No table, column or index is removed by this statement, and every record keeps exactly one document."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/WorkforceWorkersMove.cs",
+            "WorkforceWorkersMove",
+            "DeleteLegacyDocumentsAsync",
+            "raw SQL",
+            "delete",
+            MigrationContractJustification.ReviewedAdditive,
+            "3.0.0",
+            null,
+            "A row-level move, not a schema change: it removes the old worker documents from the Workforce collection only after each has been saved again in the Staff collection as a staff member with the same id in this same step, and touches only rows of the old worker type. No table, column or index is removed by this statement (the old worker index tables stay), and every person keeps exactly one document."),
         new MigrationContractEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/DocumentTypeColumnWidening.cs",
             "DocumentTypeColumnWidening",
@@ -770,6 +981,18 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "0fd9dcb84ea12ee4",
             "Read-only index existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.indexes, pg_indexes, information_schema.statistics, sqlite_master), so it cannot create, alter, or drop any object."),
         new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/TableExistence.cs",
+            "TableExistence",
+            "ExistsAsync",
+            "692c198980198df7",
+            "Read-only table existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.tables, pg_tables, information_schema.tables, sqlite_master), so it cannot create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexTableColumnCreation.cs",
+            "IndexTableColumnCreation",
+            "ExistsAsync",
+            "d4589968ef150a6d",
+            "Read-only column existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.columns, information_schema.columns, pragma_table_info), so it cannot create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexMigrationSql.cs",
             "IndexMigrationSql",
             "ExistsAsync",
@@ -800,10 +1023,16 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "ac3e01a635593982",
             "Command factory for the duplicate-interaction repair whose statement arrives as a parameter. It adds nothing to the text it is given, and every caller in the same type passes a literal SELECT, UPDATE or DELETE of rows; the two deletes are authorized in the contract register, and none of the statements creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketPriorityKeys.cs",
+            "TicketPriorityKeys",
+            "MoveToIdsAsync",
+            "8bd90306883eb7da",
+            "Not SQL text at all: a YesSql LINQ query that pages through the active service-level timers of tickets and saves each whose priority is still a name with the priority's id instead. It only reads documents and rewrites a value in them; it never creates, alters or drops a schema object."),
+        new ReviewedDynamicSqlEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
             "CatalogIndexBackfill",
             "ReindexAsync",
-            "bc3e9128102669bb",
+            "90c96eb10c72e6a4",
             "Not SQL text at all: a YesSql LINQ query that pages through a catalog's documents and saves each one again through the session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
@@ -1066,7 +1295,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
         var repositoryRoot = FindRepositoryRoot();
         var impersonations = new List<string>();
 
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (IsGeneratedPath(file))
             {
@@ -1210,7 +1439,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
 
         var registeredTypeNames = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (IsGeneratedPath(file))
             {
@@ -1859,8 +2088,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
 
     private static IEnumerable<string> EnumerateMigrationFiles(string repositoryRoot)
     {
-        return Directory
-            .EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories)
+        return SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", SourceTreeFiles.IsBuildOutputDirectory)
             .Where(file => !IsGeneratedPath(file))
             .Where(file => file.Replace('\\', '/').Contains("/Migrations/", StringComparison.Ordinal))
             .OrderBy(file => file, StringComparer.Ordinal);

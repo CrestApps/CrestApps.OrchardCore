@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.YesSql.Core.Ledgers;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Indexes;
@@ -18,7 +19,7 @@ public static class TimeOffIndexProviders
             new TimeOffTypeIndexProvider(),
             new TimeOffPolicyIndexProvider(),
             new TimeOffPolicyAssignmentIndexProvider(),
-            new TimeOffLedgerEntryIndexProvider(),
+            new QuantityLedgerEntryIndexProvider(WorkforceConstants.TimeOffLedgerCollectionName),
             new TimeOffRequestIndexProvider(),
             new TimeOffAllotmentIndexProvider(),
             new BlackoutPeriodIndexProvider(),

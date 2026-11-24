@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -275,7 +276,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
                 continue;
             }
 
-            var format = MessagingFileFormats.Detect(file.Content, file.FileName, file.ContentType, MessagingFileFormats.All);
+            var format = FileFormats.Detect(file.Content, file.FileName, file.ContentType, FileFormats.All);
 
             if (format is null || stored.Count >= MaxAttachments || totalBytes + file.Content.Length > EmailChannelConstants.MaxInboundEmailBytes)
             {

@@ -1,0 +1,9 @@
+@model TeamAddressViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Address"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Where the team works, such as a site's street address. Optional. Workforce starts a site's time clock geofence from it, and Payroll reads a work site's tax jurisdictions from it."]</p>
+        @await DisplayAsync(Model.AddressEditor)
+    </div>
+</div>

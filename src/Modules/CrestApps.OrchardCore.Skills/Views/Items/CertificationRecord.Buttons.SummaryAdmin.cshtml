@@ -1,3 +1,7 @@
 @model CertificationRecordRowViewModel
 
-<a asp-controller="CertificationRecords" asp-action="Edit" asp-route-id="@Model.Record.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+@* A certificate the site issued is revoked or renewed, never edited by hand. *@
+@if (string.IsNullOrEmpty(Model.Record.VerificationCode))
+{
+    <a asp-controller="CertificationRecords" asp-action="Edit" asp-route-id="@Model.Record.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}

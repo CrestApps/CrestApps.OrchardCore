@@ -10,7 +10,7 @@ Teams describe how your organization is built: a region, a site, a department, a
 
 | | |
 | --- | --- |
-| **Menu** | Content > Teams |
+| **Menu** | **Content** → **Teams** |
 | **Permission** | Manage teams (Manage workforce teams gives it too when Workforce is on) |
 | **Feature** | Teams (Workforce turns it on) |
 
@@ -18,7 +18,7 @@ Teams describe how your organization is built: a region, a site, a department, a
 
 ## Build the team tree
 
-1. Open **Content > Teams** and choose **Add team**.
+1. Open **Content** → **Teams** and choose **Add team**.
 2. Start at the top, such as your organization or a region, and choose **Save**.
 3. Add the teams under it. From a team's **Actions** menu, **Add a team under it** starts a new team with that team in **Part of**.
 
@@ -34,7 +34,9 @@ Teams describe how your organization is built: a region, a site, a department, a
 | **Linked role** | Optional. Users in this role are treated as part of the team, for example to read its Workforce calendar. |
 | **In use** | Untick to stop using a team without deleting it. |
 
-Other features add their own cards to the team editor. With Workforce on, the **Workforce** card holds the team's address and its scheduling and time clock settings; see [Workers and Teams](./workers-and-teams.md#the-workforce-card).
+With Addresses on, the **Address** card holds where the team works, such as a site's street address, laid out for its country. It is optional; an address you start has to be complete for its country. Workforce starts a site's time clock geofence from it and Payroll reads a work site's tax jurisdictions from it.
+
+Other features add their own cards to the team editor. With Workforce on, the **Workforce** card holds the team's scheduling and time clock settings; see [Workers and Teams](./workers-and-teams.md#the-workforce-card).
 
 ## Find a team
 

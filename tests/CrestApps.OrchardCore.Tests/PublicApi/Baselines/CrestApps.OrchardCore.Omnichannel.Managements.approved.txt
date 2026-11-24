@@ -51,7 +51,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
-            "OrchardCore.Workflows"})]
+            "OrchardCore.Workflows",
+            "CrestApps.OrchardCore.AI"})]
     public sealed class AIActivityWorkflowsStartup : OrchardCore.Modules.StartupBase
     {
         public AIActivityWorkflowsStartup() { }
@@ -221,6 +222,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     public sealed class Startup : OrchardCore.Modules.StartupBase
     {
         public Startup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Startup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Timeline"})]
+    public sealed class TimelineStartup : OrchardCore.Modules.StartupBase
+    {
+        public TimelineStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }
@@ -963,6 +971,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> UpdateFrom11Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom12Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom13Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom14Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -26,7 +27,7 @@ public sealed class PredictabilityPayController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly IPredictabilityPayService _payService;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ISiteService _siteService;
@@ -50,7 +51,7 @@ public sealed class PredictabilityPayController : Controller
     public PredictabilityPayController(
         IAuthorizationService authorizationService,
         IPredictabilityPayService payService,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IWorkforceScopeService scopeService,
         ISiteService siteService,

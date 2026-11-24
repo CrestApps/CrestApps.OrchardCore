@@ -108,6 +108,10 @@ public static class OrchardCoreFeatureIds
 
     public const string Notifications = "OrchardCore.Notifications";
 
+    public const string NotificationsEmail = "OrchardCore.Notifications.Email";
+
+    public const string OpenId = "OrchardCore.OpenId";
+
     public const string OpenIdClient = "OrchardCore.OpenId.Client";
 
     public const string OpenIdManagement = "OrchardCore.OpenId.Management";
@@ -139,6 +143,8 @@ public static class OrchardCoreFeatureIds
     public const string ReverseProxy = "OrchardCore.ReverseProxy";
 
     public const string Roles = "OrchardCore.Roles";
+
+    public const string Rules = "OrchardCore.Rules";
 
     public const string Search = "OrchardCore.Search";
 

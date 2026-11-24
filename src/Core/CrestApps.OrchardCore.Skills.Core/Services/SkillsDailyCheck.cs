@@ -63,6 +63,22 @@ internal sealed class SkillsDailyCheck
 
             var daysLeft = expiresOn.DayNumber - today.DayNumber;
 
+            // A renewed certificate has a successor: its holder hears nothing about it, and it simply ends.
+            if (!string.IsNullOrEmpty(record.RenewedByRecordId))
+            {
+                if (daysLeft < 0)
+                {
+                    record.Status = CertificationStatus.Expired;
+                    await _recordStore.UpdateAsync(record, cancellationToken);
+                }
+                else if (changed)
+                {
+                    await _recordStore.UpdateAsync(record, cancellationToken);
+                }
+
+                continue;
+            }
+
             if (daysLeft < 0)
             {
                 record.Status = CertificationStatus.Expired;

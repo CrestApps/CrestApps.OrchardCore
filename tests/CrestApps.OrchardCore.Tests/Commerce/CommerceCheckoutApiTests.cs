@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Models;
@@ -93,7 +94,7 @@ public sealed class CommerceCheckoutApiTests
     public void ATypedUnion_IsKeptByTheValueItWraps()
     {
         Results<Ok<ApiMoney>, ProblemHttpResult> ok = TypedResults.Ok(new ApiMoney(5m, "USD"));
-        Results<Ok<ApiMoney>, ProblemHttpResult> conflict = ApiProblems.Conflict(ApiProblems.Codes.InvoiceChanged, "The total changed.");
+        Results<Ok<ApiMoney>, ProblemHttpResult> conflict = ApiProblems.Conflict(CommerceProblemCodes.InvoiceChanged, "The total changed.");
 
         var stored = IdempotencyEndpointFilter.Capture(ok);
         var storedConflict = IdempotencyEndpointFilter.Capture(conflict);

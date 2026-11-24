@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
@@ -211,7 +212,7 @@ public sealed class MessagingSubjectChannelTests
                 SupportsSubject = supportsSubject,
                 Attachments = new MessagingAttachmentCapabilities
                 {
-                    Formats = MessagingFileFormats.All,
+                    Formats = FileFormats.All,
                     DeliveredAsLinks = false,
                 },
             };

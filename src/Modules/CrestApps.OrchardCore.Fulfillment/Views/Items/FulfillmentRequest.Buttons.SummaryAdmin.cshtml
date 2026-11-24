@@ -1,0 +1,26 @@
+@model ShapeViewModel<FulfillmentRequest>
+
+@* Posted with the antiforgery token of the list form. When the partner may already have the order, a person confirms first. *@
+@if (FulfillmentRequestText.MayAlreadyBeMade(Model.Value))
+{
+    <a asp-action="SendAgain"
+       asp-controller="FulfillmentAdmin"
+       asp-area="@FulfillmentConstants.Features.Fulfillment"
+       asp-route-requestId="@Model.Value.ItemId"
+       class="btn btn-secondary btn-sm"
+       data-title="@T["Send again"]"
+       data-message="@T["The partner may already have this order. Check its dashboard first, or the order may be made twice. Send again?"]"
+       data-ok-text="@T["Send again"]"
+       data-ok-class="btn-primary"
+       data-cancel-text="@T["Cancel"]"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Send again"]</a>
+}
+else
+{
+    <a asp-action="SendAgain"
+       asp-controller="FulfillmentAdmin"
+       asp-area="@FulfillmentConstants.Features.Fulfillment"
+       asp-route-requestId="@Model.Value.ItemId"
+       class="btn btn-secondary btn-sm"
+       data-url-af="UnsafeUrl">@T["Send again"]</a>
+}

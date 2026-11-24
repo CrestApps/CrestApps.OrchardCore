@@ -15,11 +15,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .DefineScript("AIChatApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/ai-chat.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/ai-chat.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/ai-chat.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/ai-chat.js")
             .SetCdnIntegrity(
-                "sha384-8RkAbQpBsjJRalpBNzL/q707SCdxLRxk+GQU1KNoDHQRizInYjWnUgBLtfWJWW63",
-                "sha384-xqwVRD69sGscXAiY0zGvqZnv3wYh9zm07VbGNjqsAHjHlai0tXwibmlQ3G0rEvC6")
+                "sha384-vI/dryZPA6fIg9iKf34K+zdS3Zz5FEgyxtln8TW2jPm2ZKyRVl3nFi2ePb6xTmtx",
+                "sha384-r5VprqpaE5v5f7ttpkGZrh9T7l9Sy26lOerDk3zelA4sI8PtwEPdkNqIYlKjEOXw")
             .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify", "realtime-audio", "chat-markers", "chat-image-carousel", "medium-zoom")
             .SetVersion("2.0.0");
 
@@ -27,8 +27,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .DefineScript("AIChatWidgetApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-widget.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-widget.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/ai-chat-widget.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/ai-chat-widget.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/ai-chat-widget.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/ai-chat-widget.js")
             .SetCdnIntegrity(
                 "sha384-T0ltSFbSlD/9MOxNFHsMZo9gI2Ic/uAsqME2VIGPMt1l6XP7+b2vjBN3+fvch358",
                 "sha384-HFFdb1FSV0+KMlCsTtceavyXxrjz8fUa6Nhod7mMujGhx+/650QVJElWq16MWIio")
@@ -39,11 +39,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .DefineStyle("AIChatApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/ai-chat.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/ai-chat.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/ai-chat.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/ai-chat.css")
             .SetCdnIntegrity(
-                "sha384-8JlLr4C/lf7nyt6/xVqHI0B8xHraW3KCGvhNs9Q+H4Ol4iQXtUKUV+TKVXLv1mVr",
-                "sha384-TsoR6c+xP86Zf1tk7L62qxv72ISHdprwfxy8nJzvQC8z8B6GUrLGfi7pGFkoCINF")
+                "sha384-Wp+eUq72fPUp7GCBS+OhVh1JNPFU89ra/7IZJTWcmG0r0ZX7Rm2+DP7a77mhR0tB",
+                "sha384-k7qd58/J384fqbzddBhToY/cr062hotZb+QrQzSbjLQkXJgyp8IcfXwiIkYslC2r")
             .SetDependencies("chat-image-carousel")
             .SetVersion("2.0.0");
 
@@ -51,11 +51,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .DefineStyle("AIChatWidget")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-widget.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-widget.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-widget.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.246/dist/chat-widget.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/chat-widget.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.258/dist/chat-widget.css")
             .SetCdnIntegrity(
-                "sha384-WwgzuCtEQJq/V6vJYe1YU4P+tkPmVkFVt7h0rznZPgInsMJg92WZcxvc3k0IshjU",
-                "sha384-tIjxz4a6eZlptaX/iKtfbZHRYQfz1B1gfLgUFT6ItuvZw2voaGihiCANikYi5ptA")
+                "sha384-oIo/oi4xNxpnlQUXK8QdEf7DXOAGDLbabYSyXxMBnRgiAs2VvmD7WFkP3dKZKut1",
+                "sha384-rUAxS5l44ITeubO5FMQi7qA/vD5SgZ1EOTbQOXbEvbRcoiBD88z5la/Q8aZpaKqb")
             .SetVersion("2.0.0");
 
         _manifest

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Indexes;
@@ -54,6 +55,27 @@ public static class PortalIndexSchema
         }, collection: collection);
 
         await CreateShiftReminderLogAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the feed secret index of staff members in the Staff collection, where workers are kept since they
+    /// became staff members.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateStaffFeedIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<WorkerFeedIndex>(table => table
+            .Column<string>("WorkerId", column => column.Nullable().WithLength(26))
+            .Column<string>("TokenHash", column => column.Nullable().WithLength(64)),
+            collection: StaffConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<WorkerFeedIndex>(table =>
+        {
+            table.CreateIndex("IDX_Staff_WorkerFeedIndex_Token", "TokenHash");
+        }, collection: StaffConstants.CollectionName);
     }
 
     /// <summary>

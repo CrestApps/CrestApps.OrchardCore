@@ -24,4 +24,10 @@ public sealed class CommerceEmailContent
     /// Gets the email's own values the store's template can use, such as the link to pay, by name.
     /// </summary>
     public IReadOnlyDictionary<string, string> Values { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets the files sent with the email, such as a document as a PDF. They go with the email whether or not the store
+    /// wrote its own template of its kind.
+    /// </summary>
+    public IReadOnlyList<CommerceEmailAttachment> Attachments { get; init; } = [];
 }

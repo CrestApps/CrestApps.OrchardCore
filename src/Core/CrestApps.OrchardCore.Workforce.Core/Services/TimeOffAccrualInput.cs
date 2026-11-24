@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
@@ -15,7 +16,7 @@ internal sealed class TimeOffAccrualInput
     /// <summary>
     /// Gets or sets the worker.
     /// </summary>
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     /// <summary>
     /// Gets or sets the first day the policy can apply to the worker, before the waiting period.

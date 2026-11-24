@@ -135,7 +135,6 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             }
 
             var provider = offlineProviders[attempt.ProviderKey];
-            var dueUtc = await provider.GetDueUtcAsync(now);
             var title = referenceTitle ?? ResolveTitle(session, attempt);
 
             var transaction = await _transactionManager.NewAsync();
@@ -172,9 +171,13 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             transaction.Status = TransactionStatus.Outstanding;
             transaction.CreatedUtc = now;
             transaction.UpdatedUtc = now;
-            transaction.DueUtc = deferred
-                ? (dueUtc is { } due ? recurrence.PeriodStartUtc + (due - now) : recurrence.PeriodStartUtc)
-                : dueUtc;
+
+            // Due under the payer's agreed terms when the method follows them (Pay Later), counted from the day the
+            // first real cycle starts when a trial or a delayed start defers it; a deferred debt with no term falls due
+            // when its cycle starts.
+            var dueUtc = await provider.GetDueUtcAsync(deferred ? recurrence.PeriodStartUtc : now, transaction.GetPayer());
+
+            transaction.DueUtc = dueUtc ?? (deferred ? recurrence.PeriodStartUtc : null);
             transaction.Recurrence = recurrence;
             transaction.Events.Add(new TransactionEvent
             {

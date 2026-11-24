@@ -153,11 +153,16 @@ public sealed class CertificationRecordsController : Controller
             return NotFound();
         }
 
+        if (!string.IsNullOrEmpty(record.VerificationCode))
+        {
+            return await IssuedRecordRefusal();
+        }
+
         var model = new CertificationRecordEditViewModel
         {
             Id = record.ItemId,
             UserId = record.SubjectKind == SkillSubjectKind.User ? record.SubjectId : null,
-            HeldByWorker = record.SubjectKind == SkillSubjectKind.Worker,
+            HeldByWorker = record.SubjectKind == SkillSubjectKind.Staff,
             SubjectName = record.SubjectName,
             CertificationId = record.CertificationId,
             Number = record.Number,
@@ -195,6 +200,11 @@ public sealed class CertificationRecordsController : Controller
         if (record is null)
         {
             return NotFound();
+        }
+
+        if (!string.IsNullOrEmpty(record.VerificationCode))
+        {
+            return await IssuedRecordRefusal();
         }
 
         if (record.SubjectKind == SkillSubjectKind.User)
@@ -240,7 +250,7 @@ public sealed class CertificationRecordsController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.HeldByWorker = record.SubjectKind == SkillSubjectKind.Worker;
+            model.HeldByWorker = record.SubjectKind == SkillSubjectKind.Staff;
             model.SubjectName = record.SubjectName;
             await FillAsync(model);
 
@@ -321,6 +331,11 @@ public sealed class CertificationRecordsController : Controller
             return Forbid();
         }
 
+        if ((await _recordService.FindByIdAsync(id, HttpContext.RequestAborted))?.VerificationCode is { Length: > 0 })
+        {
+            return await IssuedRecordRefusal();
+        }
+
         if (await _recordService.DeleteAsync(id, HttpContext.RequestAborted))
         {
             await _notifier.SuccessAsync(H["The certificate has been deleted."]);
@@ -359,5 +374,14 @@ public sealed class CertificationRecordsController : Controller
         var zone = _clock.GetTimeZone(site.TimeZoneId);
 
         return DateOnly.FromDateTime(_clock.ConvertToTimeZone(_clock.UtcNow, zone).DateTime);
+    }
+
+    // A certificate the site issued is proved on its verification page and may be relied on elsewhere: it is revoked,
+    // never edited or deleted.
+    private async Task<IActionResult> IssuedRecordRefusal()
+    {
+        await _notifier.WarningAsync(H["A certificate the site issued cannot be edited or deleted. Withdraw it instead."]);
+
+        return RedirectToAction(nameof(Index));
     }
 }

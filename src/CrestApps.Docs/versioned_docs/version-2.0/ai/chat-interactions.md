@@ -35,17 +35,17 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
 - Prompt-template composition — add multiple reusable prompt templates from a searchable picker and provide per-template JSON parameters
-- Upload controls driven by site settings — the Knowledge tab only exposes document and image extensions that are enabled in **Settings > Artificial Intelligence**, and image uploads also require a configured vision deployment
+- Upload controls driven by site settings — the Knowledge tab only exposes document and image extensions that are enabled in **Settings** → **Artificial Intelligence**, and image uploads also require a configured vision deployment
 
 ## Getting Started
 
 1. Enable the `AI Chat Interactions` feature in Orchard Core admin
-2. Navigate to **Artificial Intelligence > Chat Interactions**
+2. Navigate to **Artificial Intelligence** → **Chat Interactions**
 3. Click **+ New Chat**, then select your chat and utility deployments
 4. Configure your chat settings and start chatting
 
 :::tip
-Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings > Artificial Intelligence > Default Deployments**). For chat interactions, the global fallback is **Default Chat Deployment**.
+Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings** → **Artificial Intelligence** → **Default Deployments**). For chat interactions, the global fallback is **Default Chat Deployment**.
 :::
 
 When a response cites uploaded or indexed content, the interaction UI renders `[doc:N]` markers as superscript citations and shows the resolved references beneath the assistant message.
@@ -61,8 +61,8 @@ You can attach a document to a single interaction and ask questions about its co
 To enable this experience:
 
 1. Enable the **AI Documents (Elasticsearch)** (or **AI Documents (Azure AI Search)**) feature so a vector store is available.
-2. In **Search > Indexing**, add an **AI Documents** index that uses an embedding deployment.
-3. In **Settings > Artificial Intelligence**, select that index profile under the document settings, choose a **Document retrieval mode**, and enable **Allow document uploads in chat interactions**.
+2. In **Search** → **Indexing**, add an **AI Documents** index that uses an embedding deployment.
+3. In **Settings** → **Artificial Intelligence**, select that index profile under the document settings, choose a **Document retrieval mode**, and enable **Allow document uploads in chat interactions**.
 4. Start a new chat interaction, open the **Knowledge** tab, and upload your file.
 
 The screencast below uploads a short story PDF, waits for it to be indexed, then asks a question that can only be answered from the file. The assistant replies strictly from the document and renders the source file as a numbered citation.
@@ -95,13 +95,13 @@ Chat Interactions supports configurable chat modes that control how users intera
 
 ### Prerequisites
 
-- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
+- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings** → **Artificial Intelligence** → **Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
 - **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
-- Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. The voice list always includes the current culture, even if no site cultures are configured.
+- Optionally, set a **Default Text-to-Speech Voice** in **Settings** → **Artificial Intelligence** → **Default Deployments**. The voice list always includes the current culture, even if no site cultures are configured.
 
 ### Configuring Chat Mode
 
-1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
+1. Navigate to **Settings** → **Artificial Intelligence** → **Chat Interactions**.
 2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears when the required default deployments are configured.
 3. Save the settings.
 
@@ -126,11 +126,11 @@ You can enable on-demand text-to-speech playback independently of the Conversati
 
 To enable TTS playback for Chat Interactions:
 
-1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
+1. Navigate to **Settings** → **Artificial Intelligence** → **Chat Interactions**.
 2. Check **Enable text-to-speech playback**.
 3. Save the settings.
 
-A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments** for the playback button to appear.
+A **Default Text-to-Speech Deployment** must be configured in **Settings** → **Artificial Intelligence** → **Default Deployments** for the playback button to appear.
 
 When playback is enabled, the message action buttons are anchored at the bottom-right of each response, the playback icon switches between play and pause while audio is active, and starting playback on a different message automatically stops the current one. In Conversation mode, the per-message playback button is hidden so the live voice flow remains uninterrupted.
 
@@ -167,8 +167,8 @@ To enable image generation, create an `AIDeployment` record with the `Image` pur
 
 **Option 1: Admin UI**
 
-1. Navigate to **Artificial Intelligence > Deployments** and create a new deployment with purpose **Image** (for example, name `dall-e-3`, connection `openai-main`).
-2. Optionally, set it as the default Image deployment in **Settings > Artificial Intelligence > Default Deployments**.
+1. Navigate to **Artificial Intelligence** → **Deployments** and create a new deployment with purpose **Image** (for example, name `dall-e-3`, connection `openai-main`).
+2. Optionally, set it as the default Image deployment in **Settings** → **Artificial Intelligence** → **Default Deployments**.
 
 **Option 2: Configuration (appsettings.json)**
 

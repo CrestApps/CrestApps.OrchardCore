@@ -41,12 +41,7 @@ public sealed class B2BCheckoutTaxProfileHandler : ICheckoutTaxProfileHandler
         profile.Customer ??= new CustomerTaxProfile();
         profile.Customer.CustomerType = CustomerTaxType.B2B;
 
-        if (!string.IsNullOrWhiteSpace(account.Part.TaxId))
-        {
-            var taxId = account.Part.TaxId.Trim();
-
-            profile.Customer.TaxRegistrationNumber = taxId;
-            profile.Customer.VatNumber = taxId;
-        }
+        // The same rule the tax profile of an account party uses for the tax number its billing profile carries.
+        profile.Customer.SetTaxNumber(account.Part.TaxId);
     }
 }

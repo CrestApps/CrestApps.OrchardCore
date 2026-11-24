@@ -20,6 +20,8 @@ public sealed class CertificationRecordIndexProvider : IndexProvider<Certificati
     public override void Describe(DescribeContext<CertificationRecord> context)
     {
         context.For<CertificationRecordIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(record => new CertificationRecordIndex
             {
                 ItemId = record.ItemId,
@@ -32,6 +34,9 @@ public sealed class CertificationRecordIndexProvider : IndexProvider<Certificati
                 Status = record.Status,
                 IssuedOn = SkillsDates.ToKey(record.IssuedOn),
                 ExpiresOn = SkillsDates.ToKey(record.ExpiresOn),
+                Source = record.Source,
+                SourceId = record.SourceId,
+                VerificationCode = record.VerificationCode,
             });
     }
 }

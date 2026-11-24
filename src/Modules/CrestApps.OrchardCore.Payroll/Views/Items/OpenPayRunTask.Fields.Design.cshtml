@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<OpenPayRunTask>
+
+<header><h4><i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Open Pay Run"])</h4></header>

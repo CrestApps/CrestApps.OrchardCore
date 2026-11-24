@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.PersonalData;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -18,11 +19,11 @@ internal sealed class TimePunchPersonalDataContributor : IPersonalDataContributo
     // A privacy request reads at most this many punches of each worker.
     private const int MaxPunches = 10_000;
 
-    private readonly IWorkerManager _workers;
+    private readonly IStaffMemberManager _workers;
     private readonly TimePunchStore _punches;
 
     public TimePunchPersonalDataContributor(
-        IWorkerManager workers,
+        IStaffMemberManager workers,
         TimePunchStore punches)
     {
         _workers = workers;
@@ -33,7 +34,7 @@ internal sealed class TimePunchPersonalDataContributor : IPersonalDataContributo
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        foreach (var worker in await WorkerProfilePersonalDataContributor.FindWorkersAsync(_workers, context.Subject, cancellationToken))
+        foreach (var worker in await _workers.GetByUserIdsAsync(context.Subject.UserIds, cancellationToken))
         {
             foreach (var punch in await _punches.ListForWorkerAsync(worker.ItemId, MaxPunches, cancellationToken))
             {
@@ -55,7 +56,7 @@ internal sealed class TimePunchPersonalDataContributor : IPersonalDataContributo
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        foreach (var worker in await WorkerProfilePersonalDataContributor.FindWorkersAsync(_workers, context.Subject, cancellationToken))
+        foreach (var worker in await _workers.GetByUserIdsAsync(context.Subject.UserIds, cancellationToken))
         {
             foreach (var punch in await _punches.ListForWorkerAsync(worker.ItemId, MaxPunches, cancellationToken))
             {

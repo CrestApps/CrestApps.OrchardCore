@@ -1,0 +1,17 @@
+@model (DateTime? StartsUtc, DateTime? EndsUtc, CourseSchedule Schedule)
+
+@* A course's dates in the visitor's time zone: when it starts (or started) and when it ends (or ended). *@
+@if (Model.StartsUtc is { } starts)
+{
+    <span class="badge bg-light text-dark border" data-course-starts>
+        <i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@(Model.Schedule == CourseSchedule.NotStarted ? T["Starts on"] : T["Started on"])
+        @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(starts, DateTimeKind.Utc), Format: "d"))
+    </span>
+}
+@if (Model.EndsUtc is { } ends)
+{
+    <span class="badge @(Model.Schedule == CourseSchedule.Ended ? "bg-secondary text-white" : "bg-light text-dark border")" data-course-ends>
+        <i class="fa-regular fa-calendar-check me-1" aria-hidden="true"></i>@(Model.Schedule == CourseSchedule.Ended ? T["Ended on"] : T["Ends on"])
+        @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(ends, DateTimeKind.Utc), Format: "d"))
+    </span>
+}

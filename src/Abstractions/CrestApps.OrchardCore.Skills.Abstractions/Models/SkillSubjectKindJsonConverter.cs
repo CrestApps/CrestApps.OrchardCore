@@ -15,7 +15,7 @@ public sealed class SkillSubjectKindJsonConverter : JsonConverter<string>
         {
             JsonTokenType.Null => null,
             JsonTokenType.Number => SkillSubjectKind.FromLegacyValue(reader.GetInt64()),
-            JsonTokenType.String => reader.GetString(),
+            JsonTokenType.String => SkillSubjectKind.Parse(reader.GetString()),
             _ => throw new JsonException($"A skill subject kind is a name or a number, not a {reader.TokenType}."),
         };
 

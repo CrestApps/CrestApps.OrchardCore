@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AwardEducationCreditsTask>
+
+<header><h4><i class="fa-solid fa-award" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Award Education Credits"])</h4></header>

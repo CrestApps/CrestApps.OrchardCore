@@ -1,0 +1,9 @@
+@model CrestApps.OrchardCore.Staff.Deployments.StaffDeploymentStepViewModel
+
+<h5>@T["Staff"]</h5>
+<p class="hint">@T["Exports every staff member, with their teams by name and their user by user name. Modules that keep their own data on staff export it in their own steps."]</p>
+<div class="form-check">
+    <input asp-for="IncludeSensitiveData" class="form-check-input" />
+    <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include sensitive data"]</label>
+    <span class="hint dashed">@T["The date of birth. Leave it off unless the other site must have it."]</span>
+</div>

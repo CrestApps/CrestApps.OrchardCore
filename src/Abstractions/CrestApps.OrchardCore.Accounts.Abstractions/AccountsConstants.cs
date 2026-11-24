@@ -21,6 +21,21 @@ public static class AccountsConstants
     public const string LocationsFeature = "CrestApps.OrchardCore.Accounts.Locations";
 
     /// <summary>
+    /// The feature that keeps the staff who look after an account: its owner and its account team.
+    /// </summary>
+    public const string TeamFeature = "CrestApps.OrchardCore.Accounts.Team";
+
+    /// <summary>
+    /// The YesSql collection of account invitations.
+    /// </summary>
+    public const string InvitationsCollectionName = "AccountInvitations";
+
+    /// <summary>
+    /// The feature that keeps the e-mail domains an account's people write from.
+    /// </summary>
+    public const string EmailDomainsFeature = "CrestApps.OrchardCore.Accounts.EmailDomains";
+
+    /// <summary>
     /// The technical names of the content parts an account is made of.
     /// </summary>
     public static class ContentParts
@@ -36,9 +51,19 @@ public static class AccountsConstants
         public const string Members = "AccountMembersPart";
 
         /// <summary>
+        /// The part that holds the staff who look after an account.
+        /// </summary>
+        public const string Team = "AccountTeamPart";
+
+        /// <summary>
         /// The part that holds an account's addresses.
         /// </summary>
         public const string Locations = "AccountLocationsPart";
+
+        /// <summary>
+        /// The part holding an account's e-mail domains.
+        /// </summary>
+        public const string EmailDomains = "AccountEmailDomainsPart";
 
         /// <summary>
         /// Orchard Core's list part, which holds an account's contacts.

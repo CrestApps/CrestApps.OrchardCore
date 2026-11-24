@@ -1,4 +1,7 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Core.Indexes;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -16,25 +19,27 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
 {
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly TeamStore _teamStore;
     private readonly TimeOffPolicyStore _policyStore;
     private readonly TimeOffLedgerStore _ledgerStore;
     private readonly TimeOffPolicyResolvers _resolvers;
     private readonly TimeOffAccrualPlanner _planner;
     private readonly TimeOffLocks _locks;
+    private readonly TimeOffLedgerCopy _copy;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
     public DefaultTimeOffAccrualService(
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         TeamStore teamStore,
         TimeOffPolicyStore policyStore,
         TimeOffLedgerStore ledgerStore,
         TimeOffPolicyResolvers resolvers,
         TimeOffAccrualPlanner planner,
         TimeOffLocks locks,
+        TimeOffLedgerCopy copy,
         ISession session,
         IClock clock,
         ILogger<DefaultTimeOffAccrualService> logger)
@@ -46,6 +51,7 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
         _resolvers = resolvers;
         _planner = planner;
         _locks = locks;
+        _copy = copy;
         _session = session;
         _clock = clock;
         _logger = logger;
@@ -53,6 +59,14 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
 
     public async Task<TimeOffAccrualRun> RunAsync(DateOnly date, CancellationToken cancellationToken = default)
     {
+        // Accrual reads what was paid from the ledger: while the ledger is missing its history it would pay it again.
+        if (!await _copy.IsCompleteAsync(cancellationToken))
+        {
+            _logger.LogWarning("Time off accrual waits until the time-off ledger copy is complete.");
+
+            return new TimeOffAccrualRun(0, 0);
+        }
+
         var policies = await _policyStore.ListAccruingAsync(cancellationToken);
         var workerIds = new HashSet<string>(StringComparer.Ordinal);
         var teamIds = new HashSet<string>(StringComparer.Ordinal);
@@ -73,10 +87,10 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
         if (teamIds.Count > 0)
         {
             var ids = teamIds.ToArray();
-            var memberships = await _session.QueryIndex<WorkerTeamMembershipIndex>(index => index.TeamId.IsIn(ids), collection: WorkforceConstants.CollectionName)
+            var memberships = await _session.QueryIndex<StaffTeamMembershipIndex>(index => index.TeamId.IsIn(ids), collection: StaffConstants.CollectionName)
                 .ListAsync(cancellationToken);
 
-            workerIds.UnionWith(memberships.Select(membership => membership.WorkerId));
+            workerIds.UnionWith(memberships.Select(membership => membership.StaffMemberId));
         }
 
         var entries = 0;
@@ -94,6 +108,13 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
 
     public async Task<int> RunForWorkerAsync(string workerId, DateOnly date, CancellationToken cancellationToken = default)
     {
+        if (!await _copy.IsCompleteAsync(cancellationToken))
+        {
+            _logger.LogWarning("Time off accrual waits until the time-off ledger copy is complete.");
+
+            return 0;
+        }
+
         var lockers = await _locks.LockAsync([TimeOffLocks.Worker(workerId)]);
 
         if (lockers is null)

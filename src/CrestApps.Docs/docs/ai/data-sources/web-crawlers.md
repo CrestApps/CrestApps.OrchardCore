@@ -31,9 +31,9 @@ Each scraped page becomes one knowledge-base document keyed by its URL, and the 
 ## Getting Started
 
 1. **Enable the feature** — Enable **AI Web Crawlers** in the Orchard Core admin dashboard. This also enables the **AI Data Sources** feature it depends on.
-2. **Create a Knowledge Base Index** — In **Search > Indexing**, add an **AI Knowledge Base Index** (Elasticsearch or Azure AI Search) with an embedding connection configured. See the [AI Data Sources overview](index.md) for the embedding requirements.
-3. **Add a Web data source** — Under **Artificial Intelligence > Data Sources**, click **Add Data Source**, choose **Web**, then configure the destination knowledge-base index and field mappings. The Web source itself has no connection settings.
-4. **Add a web crawler** — Under **Artificial Intelligence > Web Crawlers**, click **Add Web Crawler**, choose the **Sitemap** strategy, and configure the site to scrape and its target Web data source.
+2. **Create a Knowledge Base Index** — In **Search** → **Indexing**, add an **AI Knowledge Base Index** (Elasticsearch or Azure AI Search) with an embedding connection configured. See the [AI Data Sources overview](index.md) for the embedding requirements.
+3. **Add a Web data source** — Under **Artificial Intelligence** → **Data Sources**, click **Add Data Source**, choose **Web**, then configure the destination knowledge-base index and field mappings. The Web source itself has no connection settings.
+4. **Add a web crawler** — Under **Artificial Intelligence** → **Web Crawlers**, click **Add Web Crawler**, choose the **Sitemap** strategy, and configure the site to scrape and its target Web data source.
 5. **Synchronize** — Use the **Synchronize now** action on a crawler to scrape immediately, or wait for the hourly background task to re-index crawlers that are due.
 
 ## Managing Web Crawlers

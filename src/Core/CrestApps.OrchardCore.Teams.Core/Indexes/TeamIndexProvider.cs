@@ -20,6 +20,8 @@ public sealed class TeamIndexProvider : IndexProvider<Team>
     public override void Describe(DescribeContext<Team> context)
     {
         context.For<TeamIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(team => new TeamIndex
             {
                 ItemId = team.ItemId,

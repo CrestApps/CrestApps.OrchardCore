@@ -230,6 +230,20 @@ These tools act for the signed-in person using the AI, with that person's access
 | `moveCalendarEvent` | Moves an event, or one occurrence of a repeating event, to another time. |
 | `cancelCalendarEvent` | Cancels an event, or one occurrence of a repeating event. |
 
+### Learning tools
+
+**Available when:** `CrestApps.OrchardCore.Learning.AI` on (`explainMyQuizResult` also needs `CrestApps.OrchardCore.Learning.Assessments`)
+
+These tools act for the signed-in person using the AI and refuse anonymous callers. The learner tools need **Access learning** and read only the person's own enrollments and attempts; the staff tools list only learners in the person's scope (everyone with **View learner records**, the learners of the courses the person teaches, or the people the person manages). See [Learning AI](../modules/learning-ai.md#learning-ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `getMyLearningProgress` | Lists the learner's courses with their status, progress, due date, access end and course grade. |
+| `getMyNextLesson` | Finds the next lesson the learner has not completed and may open now, with its link. |
+| `explainMyQuizResult` | Gets the learner's quiz result: the score when the quiz shows it, and the questions, answers, right answers and feedback only when the quiz's review policy allows. |
+| `listOverdueLearners` | Lists the learners whose course is past its due date, within the caller's scope. |
+| `listLearnersExpiringSoon` | Lists the learners whose access to a course ends within the coming days, within the caller's scope. |
+
 ### Scheduling tools
 
 **Available when:** `CrestApps.OrchardCore.Scheduling` with `CrestApps.OrchardCore.AI` on
@@ -242,6 +256,21 @@ These tools are meant for customer-facing assistants and also work for anonymous
 | `findAppointmentSlots` | Finds open times for an appointment. |
 | `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned, and says which staff, rooms and equipment it is with. |
 | `changeAppointment` | Cancels or moves a customer's appointment. The customer proves it is theirs with the manage code, or the email or phone number on the appointment. |
+
+### Ticket tools
+
+**Available when:** `CrestApps.OrchardCore.Tickets` with `CrestApps.OrchardCore.AI` on
+
+These tools act for the signed-in person using the AI, within the tickets they may view and the actions their ticket permissions allow, and refuse anonymous callers. They are in the **Tickets** category and selectable on AI profiles. See [Tickets](../modules/tickets/ai.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `listTicketOptions` | Lists the desks the user may open tickets in, every status with its category, the priorities and the ticket categories, with the ids the other ticket tools take. |
+| `searchTickets` | Finds the tickets the user may view by number or subject words, status category, desk and assignee (`take` up to 25). |
+| `getTicket` | Reads a ticket by id or number with its latest 20 replies, internal notes and events. |
+| `createTicket` | Opens a ticket on a desk the user may reply in, for a requester named by name and e-mail, with a category from `listTicketOptions`. |
+| `addTicketReply` | Sends a public reply (e-mailed to the requester) or adds an internal note, and can set a status with a reply. |
+| `updateTicket` | Changes a ticket's status, priority or category (edit permission) or its team or assignee (assign permission). |
 
 ### Commerce tools
 

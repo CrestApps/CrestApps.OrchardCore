@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Recipes;
@@ -19,12 +20,12 @@ internal sealed class WorkforceDeploymentSource : DeploymentSourceBase<Workforce
 
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
 
     public WorkforceDeploymentSource(
         IActivityCodeManager activityCodeManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager)
+        IStaffMemberManager workerManager)
     {
         _activityCodeManager = activityCodeManager;
         _teamManager = teamManager;
@@ -65,7 +66,7 @@ internal sealed class WorkforceDeploymentSource : DeploymentSourceBase<Workforce
 
             for (var skip = 0; skip < MaxRecords; skip += PageSize)
             {
-                var (_, page) = await _workerManager.SearchAsync(new WorkerQuery(), skip, PageSize);
+                var (_, page) = await _workerManager.SearchAsync(new StaffQuery(), skip, PageSize);
 
                 foreach (var worker in page)
                 {

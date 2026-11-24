@@ -1,6 +1,10 @@
+using CrestApps.OrchardCore.Staff.Core.Indexes;
+using CrestApps.OrchardCore.Staff;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
@@ -82,13 +86,13 @@ internal sealed class TimeClockDaySync
     private static readonly TimeSpan _reach = TimeSpan.FromDays(1);
     private static readonly TimeSpan _readReach = TimeSpan.FromDays(2);
 
-    private readonly WorkerStore _workers;
+    private readonly StaffMemberStore _workers;
     private readonly ITimeClockService _timeClock;
     private readonly ITimeTrackerService _tracker;
     private readonly IActivityCodeManager _activities;
     private readonly IClock _clock;
 
-    public TimeClockDaySync(WorkerStore workers, ITimeClockService timeClock, ITimeTrackerService tracker, IActivityCodeManager activities, IClock clock)
+    public TimeClockDaySync(StaffMemberStore workers, ITimeClockService timeClock, ITimeTrackerService tracker, IActivityCodeManager activities, IClock clock)
     {
         _workers = workers;
         _timeClock = timeClock;
@@ -359,7 +363,7 @@ internal sealed class ActivityCodeStageHandler : CatalogEntryHandlerBase<Activit
 /// </summary>
 internal sealed class TimeClockExternalClock : IExternalTimeClock
 {
-    private readonly WorkerStore _workers;
+    private readonly StaffMemberStore _workers;
     private readonly Lazy<ITimeClockService> _timeClock;
     private readonly IClock _clock;
     private readonly TimeClockTimeTrackerOptions _options;
@@ -367,7 +371,7 @@ internal sealed class TimeClockExternalClock : IExternalTimeClock
     internal readonly IStringLocalizer S;
 
     public TimeClockExternalClock(
-        WorkerStore workers,
+        StaffMemberStore workers,
         Lazy<ITimeClockService> timeClock,
         IClock clock,
         IOptions<TimeClockTimeTrackerOptions> options,
@@ -389,7 +393,7 @@ internal sealed class TimeClockExternalClock : IExternalTimeClock
 
         var worker = await _workers.FindByUserIdAsync(userId, cancellationToken);
 
-        if (worker is null || worker.Status == WorkerStatus.Terminated)
+        if (worker is null || worker.Status == StaffStatus.Terminated)
         {
             return null;
         }
@@ -447,7 +451,7 @@ internal sealed class TimeClockTrackerBackfill
         }
 
         // Only the worker ids are needed, so the index rows are enough.
-        var workers = await _session.QueryIndex<WorkerIndex>(index => index.UserId != null, collection: WorkforceConstants.CollectionName)
+        var workers = await _session.QueryIndex<StaffMemberIndex>(index => index.UserId != null, collection: StaffConstants.CollectionName)
             .OrderBy(index => index.ItemId)
             .Skip(state.Done)
             .Take(batchSize)

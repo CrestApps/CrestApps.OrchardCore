@@ -15,7 +15,7 @@ public static class WorkforceIndexProviders
     {
         return
         [
-            new WorkerIndexProvider(),
+            .. CrestApps.OrchardCore.Staff.Core.Indexes.StaffIndexProviders.All(),
             new ActivityCodeIndexProvider(),
         ];
     }

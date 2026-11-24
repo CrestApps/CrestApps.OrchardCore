@@ -1,0 +1,76 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "A bonus grossed up to 1000 net: 22% flat income tax and 6.2% social insurance leave 71.8%, so the bonus is 1392.76.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "BONUS",
+      "Class": "Earning",
+      "Kind": "Bonus"
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "SupplementalMethod": "Flat",
+  "GrossUp": {
+    "PayCode": "BONUS",
+    "TargetNet": 1000
+  },
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 10,
+        "SupplementalRate": 22
+      }
+    },
+    {
+      "rule": {
+        "TaxCode": "US-SS",
+        "Name": "Social insurance",
+        "Jurisdiction": "US",
+        "Category": "SocialInsurance",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 6.2
+      }
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning BONUS 1392.76",
+      "Tax US-FIT Employee 306.41 on 1392.76",
+      "Tax US-SS Employee 86.35 on 1392.76"
+    ],
+    "Gross": 1392.76,
+    "Net": 1000.0,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 1000.0
+      }
+    ]
+  }
+}

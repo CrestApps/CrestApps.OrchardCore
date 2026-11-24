@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// Projects Contact Center call-session events back onto the telephony soft phone so the assigned
 /// agent's widget reacts immediately when the server advances or ends the call.
 /// </summary>
-public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHandler
+public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterRealTimeEventHandler
 {
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;

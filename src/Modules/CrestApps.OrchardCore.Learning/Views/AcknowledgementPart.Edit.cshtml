@@ -1,0 +1,15 @@
+@model LearningPartTextViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Acknowledgement"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Statement">
+            <label asp-for="Statement" class="ocat-label">@T["Statement to confirm"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Statement" class="form-control" rows="2" maxlength="1000"></textarea>
+                <span asp-validation-for="Statement"></span>
+                <span class="hint">@T["The learner ticks this statement to complete the item. Their confirmation keeps the statement and the version they saw."]</span>
+            </div>
+        </div>
+    </div>
+</div>

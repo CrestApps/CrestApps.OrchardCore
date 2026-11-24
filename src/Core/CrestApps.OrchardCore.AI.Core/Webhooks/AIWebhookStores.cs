@@ -128,6 +128,8 @@ public sealed class AIWebhookSubscriptionIndexProvider : IndexProvider<AIWebhook
     public override void Describe(DescribeContext<AIWebhookSubscription> context)
     {
         context.For<AIWebhookSubscriptionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(subscription => new AIWebhookSubscriptionIndex
             {
                 ItemId = subscription.ItemId,
@@ -155,6 +157,8 @@ public sealed class AIWebhookDeliveryIndexProvider : IndexProvider<AIWebhookDeli
     public override void Describe(DescribeContext<AIWebhookDelivery> context)
     {
         context.For<AIWebhookDeliveryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(delivery => new AIWebhookDeliveryIndex
             {
                 ItemId = delivery.ItemId,

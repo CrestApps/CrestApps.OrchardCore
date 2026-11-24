@@ -10,7 +10,7 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 | | |
 | --- | --- |
-| **Menu** | **Commerce > Orders** for you, and **Commerce > My Orders** for your customers. The cart has no menu: buyers reach it from the cart link in your site's navigation bar, or from **View cart** in the message shown when they add a product. |
+| **Menu** | **Commerce** → **Orders** for you, and **Commerce** → **My Orders** for your customers. The cart has no menu: buyers reach it from the cart link in your site's navigation bar, or from **View cart** in the message shown when they add a product. |
 | **Permission** | **Manage orders** to see every order. **View own orders** for customers to see theirs; signed-in users have it by default. |
 | **Feature** | Carts to show **Add to cart** and the cart. Orders, plus a [payment provider](payment-providers.md), to check out. |
 
@@ -45,7 +45,7 @@ This video walks through finding, managing, refunding and creating orders, and t
 
 <YouTube video="orders" title="Video overview of orders" />
 
-**Commerce > Orders** lists the orders placed on your site, newest first. Search by order number or by the customer's whole email address, and filter by status. The status drop-down starts on **Placed**, which lists the paid orders and the ones awaiting payment, and also offers **Paid**, **Awaiting payment**, **Canceled**, **Drafts** and **Any status**:
+**Commerce** → **Orders** lists the orders placed on your site, newest first. Search by order number or by the customer's whole email address, and filter by status. The status drop-down starts on **Placed**, which lists the paid orders and the ones awaiting payment, and also offers **Paid**, **Awaiting payment**, **Canceled**, **Drafts** and **Any status**:
 
 | Status | Meaning |
 | --- | --- |
@@ -64,7 +64,7 @@ Open an order to see what was bought, the quantities and prices, any discount su
 
 When a [gift card](gift-cards.md), [store credit or points](store-credit-and-rewards.md) paid part of the order, a line under the total says so, such as *Paid with Gift card ending 4F2K* and the amount; the rest was charged to the card or the other payment method. The invoice and the confirmation email show the same lines.
 
-Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
+Signed-in customers see their own orders under **Commerce** → **My Orders**, and can open each one from the link on their order confirmation.
 
 An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **Payment due** in the list, on its page and in the buyer's account until you record the payment.
 
@@ -76,11 +76,11 @@ An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **
 
 <YouTube video="orders-quotes-disputes" title="The order bump" start={51} end={88} />
 
-Under **Settings > Commerce > Orders**, **Order bump** offers a product on the payment step, such as a small item that goes with most orders. Choose the **Product offered**, an optional **Discount** and a **Headline**. Buyers tick one box to add it, and the total changes before they pay. It isn't offered on orders that already have it, or while it's out of stock. Clear the product to stop the offer.
+Under **Settings** → **Commerce** → **Orders**, **Order bump** offers a product on the payment step, such as a small item that goes with most orders. Choose the **Product offered**, an optional **Discount** and a **Headline**. Buyers tick one box to add it, and the total changes before they pay. It isn't offered on orders that already have it, or while it's out of stock. Clear the product to stop the offer.
 
 ## Manage an order
 
-Open an order from **Commerce > Orders**. The **Manage** box on the right does what you need, and every action is written in the order's **Notes** with who did it.
+Open an order from **Commerce** → **Orders**. The **Manage** box on the right does what you need, and every action is written in the order's **Notes** with who did it.
 
 ### Print an invoice or a packing slip
 
@@ -92,7 +92,7 @@ Above the order's details, **Invoice** and **Packing slip** open a page to print
 - The **packing slip** has where the parcel goes, the shipping method, and the goods to pack, with a box to tick per line and no prices. Downloads and services are left off.
 - Each shipment in the order's **Shipments** section has its own packing slip button, which lists only that shipment's items and its number.
 
-The store's name, logo, address, contact details and footer come from **Settings > Commerce > Receipts**; without them, the invoice shows your site's name.
+The store's name, logo, address, contact details and footer come from **Settings** → **Commerce** → **Receipts**; without them, the invoice shows your site's name.
 
 Buyers print their own invoice too: an **Invoice** button on their order's page, in their account or on the order link a guest has.
 
@@ -145,7 +145,7 @@ Write a note under **Notes** and click **Add note** to keep something for the st
 
 Put an order together for a buyer yourself, such as one taken over the phone, and email them an invoice to pay it online.
 
-1. On **Commerce > Orders**, click **Create order**.
+1. On **Commerce** → **Orders**, click **Create order**.
 2. Under **Buyer**, enter their **Email** and **Name**. The invoice goes to the email. A buyer with an account under that email gets their own prices and sees the order in their account.
 3. Under **Add products**, click **Find products**, choose them, and click **Update prices**. Each comes in with a quantity of 1: change the **Quantity**, choose a variant where the product has them, or tick **Remove**. The **Amount** of each line and the **Subtotal** are the buyer's prices.
 4. Under **Invoice**, write a **Note for the buyer** if you like, such as *Thanks for your call. Here's the order we discussed.*, and a **Pay by (optional)** date.
@@ -172,9 +172,9 @@ A paid order can't be changed, but on its page **Add items** starts a new order 
 
 Let signed-in buyers ask for a quote instead of checking out, such as for a large or trade order.
 
-1. On **Settings > Commerce > Orders**, tick **Take quote requests** and save.
+1. On **Settings** → **Commerce** → **Orders**, tick **Take quote requests** and save.
 2. A signed-in buyer now sees **Request a quote** under **Checkout** on their cart. They can write a message, such as the quantities they need and by when, and give a purchase order number. Their cart is emptied, and the quote shows under their orders as *Asked for*.
-3. The quote is a draft order on **Commerce > Orders**, with the buyer's message. Click **Edit**, and under **Price each** enter the price you'll offer for a line; leave it blank for your usual price. Set **Pay by (optional)**: the quote expires then. Click **Update prices** to see the totals, then **Save draft**.
+3. The quote is a draft order on **Commerce** → **Orders**, with the buyer's message. Click **Edit**, and under **Price each** enter the price you'll offer for a line; leave it blank for your usual price. Set **Pay by (optional)**: the quote expires then. Click **Update prices** to see the totals, then **Save draft**.
 4. Click **Send quote**. The buyer is emailed *Your quote ... is ready*, with the prices, until when it's offered, and a **Review and accept** button.
 
 The buyer accepts the quote by paying it, from the email or their orders, before it expires. Prices you set are final: automatic promotions don't come off them. They can also **Turn it down**, or **Withdraw the request** before you've sent it; either cancels it. An expired quote can't be paid: change its date to pay by and send it again to offer it again.
@@ -183,7 +183,7 @@ Sending a quote needs your site's email to be set up.
 
 ## Do something when an order is paid
 
-With Orchard Core's **Workflows** on, the store tells your workflows what happens, so you can email someone, call another system or add a note without code. Start a workflow from **Order Paid**, **Order Canceled** or **Order Refunded**. Orders also adds two ready-made workflows under **Tools > Recipes**: **Automation: thank-you email** (turned on) and **Automation: canceled order alert** (turned off until you set the address it goes to).
+With Orchard Core's **Workflows** on, the store tells your workflows what happens, so you can email someone, call another system or add a note without code. Start a workflow from **Order Paid**, **Order Canceled** or **Order Refunded**. Orders also adds two ready-made workflows under **Tools** → **Recipes**: **Automation: thank-you email** (turned on) and **Automation: canceled order alert** (turned off until you set the address it goes to).
 
 The other parts of the store add events of their own: **Subscription Started**, **Renewed**, **Past Due**, **Canceled** and **Expired**; **Stripe Payment Received**, **Payment Failed**, **Payment Refunded** and **Dispute Created**, among others; and the setup wizard's **Wizard Started**, **Step Displayed**, **Completed** and **Failed**. To send the same news to another system as soon as it happens, without a workflow, use [Webhooks](webhooks.md). The technical guides list every event with what it carries: [Orders](../../modules/carts-and-orders.md#workflow-events), [Subscriptions](../../modules/subscriptions.md) and [Payments](../../modules/payments.md#workflow-events).
 
@@ -191,7 +191,7 @@ The other parts of the store add events of their own: **Subscription Started**, 
 
 <YouTube video="orders" title="Video of the order settings, the order emails and the receipt settings" start={331} end={379} />
 
-On **Settings > Commerce > Emails**, write the emails your store sends about orders in your own words.
+On **Settings** → **Commerce** → **Emails**, write the emails your store sends about orders in your own words.
 
 - **Layout** goes around every one of them, such as your logo at the top and your address at the bottom. Put `{{ Content }}` where the email goes.
 - Each email has its own **Subject** and **Body**: the order confirmation, the order to pay you send a buyer, the quote, the shipped email, the return emails, the gift card, the email to a buyer who left their checkout, and, with Bookings, the booking emails. Tick **Use my template** to use yours.
@@ -202,7 +202,7 @@ In a template, `{{ Content }}` is the email as the store would send it, so a bod
 
 <YouTube video="commerce-reports-dashboard" title="Store reports" start={84} end={135} />
 
-With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
+With the **Reports** feature on, **Reports** → **Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
 
 | Report | Shows |
 | --- | --- |
@@ -231,11 +231,11 @@ Amounts in different currencies are never added together: each currency gets its
 
 <YouTube video="commerce-reports-dashboard" title="Reports on the dashboard" start={235} end={298} />
 
-With the **Admin Dashboard** feature on, open **Manage Dashboard > Add Widget**. Each report above has a ready-made widget, such as **Sales Overview**, **Sales Trend**, **Top Selling Products**, **Orders to Ship**, **Refunds**, **Payment Disputes** and **Low Stock**, and the **Report** widget shows any report you may view. Set the widget's **Period** (last 30 days moves with the clock), what to **Show** (figures, tables or charts), how many **Rows per table**, and **Keep for (minutes)**, how long it keeps what it shows. A person sees a widget only when they may view its report.
+With the **Admin Dashboard** feature on, open **Manage Dashboard** → **Add Widget**. Each report above has a ready-made widget, such as **Sales Overview**, **Sales Trend**, **Top Selling Products**, **Orders to Ship**, **Refunds**, **Payment Disputes** and **Low Stock**, and the **Report** widget shows any report you may view. Set the widget's **Period** (last 30 days moves with the clock), what to **Show** (figures, tables or charts), how many **Rows per table**, and **Keep for (minutes)**, how long it keeps what it shows. A person sees a widget only when they may view its report.
 
 The **Sales Summary** widget shows your sales today, over the last 7 and 30 days, and the orders to ship.
 
-To build your own report, run the **Reports: store reports to adapt** recipe under **Tools > Recipes**. It adds the order reports to **Reports > Report Builder**, in the **Store** group, where you can run, change and save them as your own.
+To build your own report, run the **Reports: store reports to adapt** recipe under **Tools** → **Recipes**. It adds the order reports to **Reports** → **Report Builder**, in the **Store** group, where you can run, change and save them as your own.
 
 ## Wishlists
 
@@ -245,7 +245,7 @@ With **Wishlists** on, a signed-in shopper can click **Save to wishlist** on a p
 
 ## The buyer's account
 
-A signed-in buyer opens **My account** from the user menu, or `/account` on your site. The account lists what the enabled features offer, as tiles and as a menu beside every account page (pills across the top on a phone):
+A signed-in buyer opens **Account** from the user menu, on your site's pages or in the admin, or `/account` on your site. The account lists what the enabled features offer, as tiles and as a menu beside every account page (pills across the top on a phone):
 
 | Page | What it shows | Feature |
 | --- | --- | --- |
@@ -266,11 +266,11 @@ A guest's confirmation page shows **Save your details for next time** with a pas
 
 ## Buyers who leave without paying
 
-Under **Settings > Commerce > Orders**, turn on **Email buyers who leave a checkout** to send a **recovery email** to a buyer who started a checkout, gave their email and left without paying: they canceled, the payment failed, or the checkout expired or was left. **Send it after** sets how long to wait, one hour by default. The email lists what they chose and has **Return to your cart**, which opens their checkout when it is still open, or fills a cart with the same products.
+Under **Settings** → **Commerce** → **Orders**, turn on **Email buyers who leave a checkout** to send a **recovery email** to a buyer who started a checkout, gave their email and left without paying: they canceled, the payment failed, or the checkout expired or was left. **Send it after** sets how long to wait, one hour by default. The email lists what they chose and has **Return to your cart**, which opens their checkout when it is still open, or fills a cart with the same products.
 
 - Each order gets one recovery email at most, and only within a week of the order.
 - Nobody is emailed who paid for an order since, or whose order you canceled.
-- The emails link back to your site through its **Base URL** under **Settings > General**; without one, none is sent. Your site's email must be set up too.
+- The emails link back to your site through its **Base URL** under **Settings** → **General**; without one, none is sent. Your site's email must be set up too.
 
 ## Guests and their orders
 
@@ -304,9 +304,9 @@ With **Workflows** on, the moments of your store start workflows, which can send
 | **Shipment Created**, **Shipped**, **Delivered**, **Returned** | A shipment of an order changes. | Shipping |
 | **Stripe** events, such as **Stripe Payment Failed** and **Stripe Dispute Created** | Stripe tells your site. | Stripe |
 
-In a workflow's editor (**Design > Workflows**), **Add Event** shows them under **Commerce** and **Stripe**. Each event's details, such as the order number, total, customer email and the reason, are there for its tasks.
+In a workflow's editor (**Design** → **Workflows**), **Add Event** shows them under **Commerce** and **Stripe**. Each event's details, such as the order number, total, customer email and the reason, are there for its tasks.
 
-Three recipes under **Tools > Recipes** add workflows to start from: **Automation: thank-you email** (on), **Automation: canceled order alert** and **Automation: low stock alert** (both added off). Run one, then open the workflow, set the address it goes to, and turn it on under **Properties** with **Enabled**. **Delete successfully completed workflows** keeps your list tidy; untick it to keep every run under the workflow's **Instances**.
+Three recipes under **Tools** → **Recipes** add workflows to start from: **Automation: thank-you email** (on), **Automation: canceled order alert** and **Automation: low stock alert** (both added off). Run one, then open the workflow, set the address it goes to, and turn it on under **Properties** with **Enabled**. **Delete successfully completed workflows** keeps your list tidy; untick it to keep every run under the workflow's **Instances**.
 
 <YouTube video="commerce-automation" title="Video of the ready-made automation recipes" start={85} end={150} />
 
@@ -322,4 +322,4 @@ When an order is paid, the customer is emailed a confirmation with the order num
 
 The confirmation, and the other emails about the order (shipped, returns, gift cards and the reminder of a checkout left unpaid), are written in the language the buyer shopped in. See [Markets](markets.md#languages).
 
-Under **Settings > Commerce > Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.
+Under **Settings** → **Commerce** → **Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.

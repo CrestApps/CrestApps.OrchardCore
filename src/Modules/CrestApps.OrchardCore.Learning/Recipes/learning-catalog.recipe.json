@@ -1,0 +1,85 @@
+{
+  "name": "LearningCatalog",
+  "displayName": "Learning course catalog",
+  "description": "Creates the course catalog on Orchard Core search: a Lucene index of published courses, searchable by everyone at /search/courses.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [ "learning" ],
+  "tags": [ "learning", "catalog", "search" ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.Search",
+        "OrchardCore.Lucene"
+      ]
+    },
+    {
+      "name": "CreateOrUpdateIndexProfile",
+      "indexes": [
+        {
+          "IndexName": "courses",
+          "ProviderName": "Lucene",
+          "Type": "Content",
+          "Name": "courses",
+          "Properties": {
+            "LuceneIndexMetadata": {
+              "StoreSourceData": false,
+              "AnalyzerName": "standardanalyzer"
+            },
+            "ContentIndexMetadata": {
+              "IndexLatest": false,
+              "IndexedContentTypes": [
+                "Course"
+              ],
+              "Culture": "any"
+            },
+            "LuceneIndexDefaultQueryMetadata": {
+              "DefaultVersion": "LUCENE_30",
+              "QueryAnalyzerName": "standardanalyzer",
+              "AllowLuceneQueries": false,
+              "DefaultSearchFields": [
+                "Content.ContentItem.FullText"
+              ]
+            }
+          },
+          "IndexLatest": false,
+          "Culture": "any",
+          "IndexedContentTypes": [
+            "Course"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RebuildIndex",
+      "includeAll": false,
+      "indexNames": [
+        "courses"
+      ]
+    },
+    {
+      "name": "Roles",
+      "Roles": [
+        {
+          "Name": "Anonymous",
+          "Description": "Anonymous role",
+          "PermissionBehavior": "Add",
+          "Permissions": [
+            "QueryIndex_courses"
+          ]
+        },
+        {
+          "Name": "Authenticated",
+          "Description": "Authenticated role",
+          "PermissionBehavior": "Add",
+          "Permissions": [
+            "QueryIndex_courses"
+          ]
+        }
+      ]
+    }
+  ]
+}

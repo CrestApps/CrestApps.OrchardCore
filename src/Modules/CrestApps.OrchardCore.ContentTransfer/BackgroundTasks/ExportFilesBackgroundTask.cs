@@ -65,7 +65,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         .OrderBy(x => x.CreatedUtc)
         .ListAsync(cancellationToken);
 
-        if (!entries.Any())
+        if (entries.Count == 0)
         {
             taskRun?.Skip();
 
@@ -199,6 +199,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
 
             // Resolve file format provider from the stored file name extension.
             var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
+                .Where(provider => provider.CanExport)
                 .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 

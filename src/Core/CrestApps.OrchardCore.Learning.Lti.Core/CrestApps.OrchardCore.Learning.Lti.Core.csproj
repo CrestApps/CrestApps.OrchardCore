@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Lti.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Lti Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services of External Tools, LTI 1.3 with Learning as the platform: the external tool store, the platform key
+      on the shared signing keys, the signed message hints and the ids made for each tool, the launch claims and the
+      authorization step of the third-party initiated login, Deep Linking 2.0 response validation, the client assertion
+      handler of the OpenID token endpoint, and the Names and Role Provisioning and Assignment and Grade services.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS LTI Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Learning.Lti" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.OpenId.Core" />
+    <PackageReference Include="OrchardCore.Users.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Core" />
+    <PackageReference Include="OpenIddict.Server" />
+    <PackageReference Include="CrestApps.Core.Data.YesSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Lti.Abstractions\CrestApps.OrchardCore.Learning.Lti.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.SigningKeys.Abstractions\CrestApps.OrchardCore.SigningKeys.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

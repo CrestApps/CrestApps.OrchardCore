@@ -12,6 +12,10 @@ public sealed class StoreCreditAccountIndex : CatalogItemIndex
 {
     public string CustomerId { get; set; }
 
+    public string PartyKind { get; set; }
+
+    public string PartyId { get; set; }
+
     public string Currency { get; set; }
 
     public decimal Balance { get; set; }
@@ -30,10 +34,15 @@ public sealed class StoreCreditAccountIndexProvider : IndexProvider<StoreCreditA
     public override void Describe(DescribeContext<StoreCreditAccount> context)
     {
         context.For<StoreCreditAccountIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(account => new StoreCreditAccountIndex
             {
                 ItemId = account.ItemId,
-                CustomerId = account.CustomerId,
+                // The column predates party accounts and takes no null, so a party's account indexes an empty customer.
+                CustomerId = account.CustomerId ?? string.Empty,
+                PartyKind = string.IsNullOrEmpty(account.PartyKind) ? null : account.PartyKind,
+                PartyId = string.IsNullOrEmpty(account.PartyId) ? null : account.PartyId,
                 Currency = account.Currency,
                 Balance = account.Balance,
             });

@@ -30,7 +30,7 @@ public sealed class ContactMethodConstructionTests
         var violations = new List<string>();
 
         // Act
-        foreach (var path in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
+        foreach (var path in SourceTreeFiles.Enumerate(sourceRoot, "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
                 path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))

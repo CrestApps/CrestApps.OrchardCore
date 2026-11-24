@@ -1,0 +1,10 @@
+@model ShapeViewModel<RequiredLearningPreviewRow>
+
+@if (Model.Value.AlreadyRequired)
+{
+    <span class="badge ta-badge fw-normal">@T["Required already"]</span>
+}
+else
+{
+    <span class="badge bg-warning text-dark fw-normal">@T["Required on the next run"]</span>
+}

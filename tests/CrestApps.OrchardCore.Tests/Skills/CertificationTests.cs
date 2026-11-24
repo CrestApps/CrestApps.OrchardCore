@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Tests.Skills;
 /// </summary>
 public sealed class CertificationTests
 {
-    private static readonly SkillSubject _ben = SkillSubject.Worker("ben");
+    private static readonly SkillSubject _ben = SkillSubject.Staff("ben");
 
     [Fact]
     public async Task SaveAsync_WorksOutTheExpiryFromTheValidity_WhenTheRecordHasNone()
@@ -22,7 +22,7 @@ public sealed class CertificationTests
 
         // Act
         var record = await SkillsTests.SaveRecordAsync(harness, _ben, gas.ItemId, new DateOnly(2026, 3, 15), CertificationStatus.Valid);
-        var ownExpiry = await SkillsTests.SaveRecordAsync(harness, SkillSubject.Worker("cara"), gas.ItemId, new DateOnly(2026, 3, 15), CertificationStatus.Valid, new DateOnly(2026, 12, 31));
+        var ownExpiry = await SkillsTests.SaveRecordAsync(harness, SkillSubject.Staff("cara"), gas.ItemId, new DateOnly(2026, 3, 15), CertificationStatus.Valid, new DateOnly(2026, 12, 31));
 
         // Assert (a certificate issued on 15 March 2026 for 24 months is valid through 14 March 2028)
         Assert.Equal(new DateOnly(2028, 3, 14), record.ExpiresOn);
@@ -37,11 +37,11 @@ public sealed class CertificationTests
         var gas = await harness.AddCertificationAsync("Gas safety");
 
         // Act
-        var unknown = await SaveAsync(harness, new CertificationRecord { SubjectKind = SkillSubjectKind.Worker, SubjectId = "ben", CertificationId = "missing" });
+        var unknown = await SaveAsync(harness, new CertificationRecord { SubjectKind = SkillSubjectKind.Staff, SubjectId = "ben", CertificationId = "missing" });
         var nobody = await SaveAsync(harness, new CertificationRecord { CertificationId = gas.ItemId });
         var backwards = await SaveAsync(harness, new CertificationRecord
         {
-            SubjectKind = SkillSubjectKind.Worker,
+            SubjectKind = SkillSubjectKind.Staff,
             SubjectId = "ben",
             CertificationId = gas.ItemId,
             IssuedOn = new DateOnly(2026, 5, 1),
@@ -85,7 +85,7 @@ public sealed class CertificationTests
         // Arrange
         await using var harness = await SkillsTestHarness.CreateAsync();
         var gas = await harness.AddCertificationAsync("Gas safety", certification => certification.ValidityMonths = 12);
-        var pending = await SkillsTests.SaveRecordAsync(harness, SkillSubject.Worker("pending"), gas.ItemId, SkillsTestHarness.Today, CertificationStatus.Pending);
+        var pending = await SkillsTests.SaveRecordAsync(harness, SkillSubject.Staff("pending"), gas.ItemId, SkillsTestHarness.Today, CertificationStatus.Pending);
         var valid = await SkillsTests.SaveRecordAsync(harness, _ben, gas.ItemId, SkillsTestHarness.Today, CertificationStatus.Valid);
 
         // Act
@@ -112,9 +112,9 @@ public sealed class CertificationTests
         await using var harness = await SkillsTestHarness.CreateAsync();
         var gas = await harness.AddCertificationAsync("Gas safety");
 
-        await SkillsTests.SaveRecordAsync(harness, SkillSubject.Worker("later"), gas.ItemId, SkillsTestHarness.Today.AddYears(-1), CertificationStatus.Valid, SkillsTestHarness.Today.AddDays(20));
-        await SkillsTests.SaveRecordAsync(harness, SkillSubject.Worker("sooner"), gas.ItemId, SkillsTestHarness.Today.AddYears(-1), CertificationStatus.Valid, SkillsTestHarness.Today.AddDays(5));
-        await SkillsTests.SaveRecordAsync(harness, SkillSubject.Worker("far"), gas.ItemId, SkillsTestHarness.Today.AddYears(-1), CertificationStatus.Valid, SkillsTestHarness.Today.AddDays(200));
+        await SkillsTests.SaveRecordAsync(harness, SkillSubject.Staff("later"), gas.ItemId, SkillsTestHarness.Today.AddYears(-1), CertificationStatus.Valid, SkillsTestHarness.Today.AddDays(20));
+        await SkillsTests.SaveRecordAsync(harness, SkillSubject.Staff("sooner"), gas.ItemId, SkillsTestHarness.Today.AddYears(-1), CertificationStatus.Valid, SkillsTestHarness.Today.AddDays(5));
+        await SkillsTests.SaveRecordAsync(harness, SkillSubject.Staff("far"), gas.ItemId, SkillsTestHarness.Today.AddYears(-1), CertificationStatus.Valid, SkillsTestHarness.Today.AddDays(200));
 
         // Act
         var (count, items) = await harness.RunAsync(services => services.GetRequiredService<ICertificationRecordService>().PageAsync(new CertificationRecordQuery

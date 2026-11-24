@@ -28,15 +28,15 @@ This video walks through connecting Stripe, the offline methods, transactions, r
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Payments > Stripe |
+| **Menu** | **Settings** → **Payments** → **Stripe** |
 | **Permission** | Manage Stripe Settings |
 | **Feature** | Stripe |
 
 <AskYourAdmin />
 
-You need a Stripe account. Your keys are on the Stripe dashboard under **Developers > API keys**; the **Test mode** switch on that page chooses between test keys and live keys. Each environment (test and production) has its own keys and its own connection, so you can connect the test account first and switch to production when you are ready.
+You need a Stripe account. Your keys are on the Stripe dashboard under **Developers** → **API Keys**; the **Test mode** switch on that page chooses between test keys and live keys. Each environment (test and production) has its own keys and its own connection, so you can connect the test account first and switch to production when you are ready.
 
-1. Open **Settings > Payments > Stripe**.
+1. Open **Settings** → **Payments** → **Stripe**.
 2. Leave **Enable Production** cleared to set up the test environment, or tick it to set up production. The fields below change to match.
 3. Paste the **Publishable Key** and the **Secret Key** for that environment.
 4. Click **Save**. Saving a change reloads the site's settings.
@@ -94,13 +94,13 @@ There is nothing to turn on. After a successful **Connect** on a public domain, 
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Offline payments |
+| **Menu** | **Settings** → **Commerce** → **Offline Payments** |
 | **Permission** | Manage transaction settings |
 | **Feature** | Pay Later |
 
 <AskYourAdmin />
 
-The **Pay Later** feature adds three ways to buy now and pay afterwards. None of them takes money at checkout: each records what the buyer owes as a **transaction** with an outstanding balance, which you mark paid when the money arrives. Turn each on or off under **Settings > Commerce > Offline payments**.
+The **Pay Later** feature adds three ways to buy now and pay afterwards. None of them takes money at checkout: each records what the buyer owes as a **transaction** with an outstanding balance, which you mark paid when the money arrives. Turn each on or off under **Settings** → **Commerce** → **Offline Payments**.
 
 | Method | Offered | What the buyer is told |
 | --- | --- | --- |
@@ -112,23 +112,26 @@ The confirmation of an order paid by bank transfer or on delivery reads *Thank y
 
 ### Pay Later
 
-Pay Later isn't offered when a customer pays a balance they already owe, from **My Transactions** or from the link in a reminder: that balance has to be paid now. When the buyer picks it, the payment step explains: *Your order will be confirmed now and the balance recorded as outstanding.* and *You will be able to pay it from your account, and we will send you a reminder before it is due.*
+Pay Later isn't offered when a customer pays a balance they already owe, from **My Transactions** or from the link in a reminder: that balance has to be paid now. When the buyer picks it, the payment step says when the payment will be due, under their payment term, for example *Place your order now and pay later. Payment is due by Wednesday, December 2, 2026.*, that an invoice and a reminder will follow, and, for a subscription, that each renewal is invoiced the same way. The button reads **Place order** and the order summary shows the total as **Due later**.
 
-When the buyer clicks **Pay now** with Pay Later selected:
+When the buyer clicks **Place order** with Pay Later selected:
 
 1. The purchase is confirmed straight away. No money changes hands.
 2. The amount owed is recorded as a **transaction** with an outstanding balance, so you can follow it up and the buyer can pay it later. See [Transactions](transactions.md).
 3. For a subscription or another recurring purchase, a new outstanding balance is recorded at the start of each billing period. A free trial or a delayed start owes nothing until it ends.
 4. A buyer who checked out without an account is recorded as a guest. Reminders can only reach a guest whose email address the checkout collected.
+5. The confirmation page has a **Pay later** card with what is owed and when, and, for a signed-in buyer, **View and pay in your account**.
+5. With Invoicing on, each balance also gets an invoice, numbered and sent like any other: the order's invoice for an order, or an invoice for what was bought for a subscription or another purchase, and one for each renewal. Paying the invoice pays the balance; see [Invoicing](invoicing.md).
 
 ### Set up the offline methods
 
-Open **Settings > Commerce > Offline payments**, change what you need, and click **Save**.
+Open **Settings** → **Commerce** → **Offline Payments**, change what you need, and click **Save**.
 
 | Field | What it does |
 | --- | --- |
 | **Offer Pay Later at checkout** | Whether Pay Later is offered. Off until you tick it. |
-| **Net term (days)** | How many days after the purchase a Pay Later balance falls due. The due date drives the reminders. Enter 0 to record the balance without a due date. The default is 30. |
+| **Payment term** | Shown when payment terms are on (Invoicing turns them on). When a Pay Later balance falls due, such as *Net 30* or *End of month*: at the end of that day. A customer whose billing profile has a payment term of their own gets theirs instead. Choose *A number of days* to use the net term below. |
+| **Net term (days)** | How many days after the purchase a Pay Later balance falls due, when no payment term applies. The due date drives the reminders. Enter 0 to record the balance without a due date. The default is 30. |
 | **Offer Bank transfer at checkout** | Whether Bank transfer is offered. It can't be turned on without bank details. |
 | **Bank details** | The account name, bank, account number or IBAN, and anything else buyers need to transfer the money. Shown exactly as you type it, line by line. |
 | **Due within (days)** | When a transfer falls due, which drives the reminders. 0 for no due date. The default is 7. |
@@ -168,9 +171,9 @@ A charge that doesn't go through, because the card was declined or the bank aske
 
 **Test payment** lets you and your team go through a whole purchase, pay it, refund it and check what happens afterwards, without a Stripe account and without any money changing hands. It is meant for development and test sites. On a live site it does not appear, even when the feature is turned on, unless your developer has deliberately allowed it.
 
-When the feature is on, the **Payment** step offers **Test payment**. When you pick it, the payment step shows *Test payment: no money moves, and the payment is confirmed at once.* Click **Pay now** and the purchase is confirmed straight away, exactly as a card payment would be: the confirmation page opens, an outstanding balance you paid is marked paid, and the payment appears under **Commerce > Payments**.
+When the feature is on, the **Payment** step offers **Test payment**. When you pick it, the payment step shows *Test payment: no money moves, and the payment is confirmed at once.* Click **Pay now** and the purchase is confirmed straight away, exactly as a card payment would be: the confirmation page opens, an outstanding balance you paid is marked paid, and the payment appears under **Commerce** → **Payments**.
 
-You can refund a test payment from **Commerce > Payments** like any other payment (see [Payments and refunds](payments-and-refunds.md)). The refund succeeds at once and shows on the transaction.
+You can refund a test payment from **Commerce** → **Payments** like any other payment (see [Payments and refunds](payments-and-refunds.md)). The refund succeeds at once and shows on the transaction.
 
 The amount being paid decides what happens, so you can also try out what a buyer sees when something goes wrong:
 

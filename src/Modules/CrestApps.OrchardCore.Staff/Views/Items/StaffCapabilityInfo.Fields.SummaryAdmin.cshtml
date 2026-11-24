@@ -1,0 +1,4 @@
+@model ShapeViewModel<StaffCapabilityInfo>
+
+<a asp-area="CrestApps.OrchardCore.Staff" asp-controller="StaffCapabilities" asp-action="Edit" asp-route-name="@Model.Value.Name">@Model.Value.DisplayName</a>
+<span class="text-secondary small ms-1">@Model.Value.Name</span>

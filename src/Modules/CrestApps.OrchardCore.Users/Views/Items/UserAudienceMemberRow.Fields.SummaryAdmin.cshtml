@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model ShapeViewModel<UserAudienceMemberRow>
+
+@if (string.IsNullOrEmpty(Model.Value.UserName))
+{
+    <span class="text-muted">@Model.Value.DisplayName</span>
+}
+else
+{
+    <a asp-area="OrchardCore.Users" asp-controller="Admin" asp-action="Edit" asp-route-id="@Model.Value.UserId" class="fw-semibold">@Model.Value.DisplayName</a>
+    <span class="text-muted small ms-1">@Model.Value.UserName</span>
+}

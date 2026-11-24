@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<IssueInvoiceTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-stamp" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Issue Invoice"])
+    </h4>
+</header>

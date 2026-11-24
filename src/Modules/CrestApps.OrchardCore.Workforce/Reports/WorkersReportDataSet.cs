@@ -1,19 +1,22 @@
+using CrestApps.OrchardCore.Staff.Core.Indexes;
+using CrestApps.OrchardCore.Staff;
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
+using ISession = YesSql.ISession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Workforce.Reports;
 
 /// <summary>
 /// One row per worker: their team, employment, status, hours and dates.
 /// </summary>
-public sealed class WorkersReportDataSet : WorkforceReportDataSet<WorkerProfile, WorkerIndex>
+public sealed class WorkersReportDataSet : WorkforceReportDataSet<StaffMember, StaffMemberIndex>
 {
     /// <summary>
     /// The data set's technical name.
@@ -28,7 +31,7 @@ public sealed class WorkersReportDataSet : WorkforceReportDataSet<WorkerProfile,
     /// <param name="scopeService">The scope service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkersReportDataSet(ISession session, IAuthorizationService authorizationService, IWorkforceScopeService scopeService, IStringLocalizer<WorkersReportDataSet> stringLocalizer)
-        : base(new DataSetDescriptor(DataSetName, stringLocalizer["Workers"], stringLocalizer["One row per worker: their main team, employment, status, contracted hours, and when they were hired and left."]), session, authorizationService, scopeService, WorkforcePermissions.ViewWorkers)
+        : base(new DataSetDescriptor(DataSetName, stringLocalizer["Workers"], stringLocalizer["One row per worker: their main team, employment, status, contracted hours, and when they were hired and left."]), session, authorizationService, scopeService, WorkforcePermissions.ViewWorkers, StaffConstants.CollectionName)
     {
         var S = stringLocalizer;
         var group = S["Workers"].Value;
@@ -50,20 +53,20 @@ public sealed class WorkersReportDataSet : WorkforceReportDataSet<WorkerProfile,
     }
 
     /// <inheritdoc />
-    protected override Expression<Func<WorkerIndex, string>> TeamColumn => index => index.PrimaryTeamId;
+    protected override Expression<Func<StaffMemberIndex, string>> TeamColumn => index => index.PrimaryTeamId;
 
     /// <inheritdoc />
-    protected override IReadOnlyDictionary<string, Expression<Func<WorkerIndex, string>>> KeyColumns =>
-        new Dictionary<string, Expression<Func<WorkerIndex, string>>>(StringComparer.Ordinal)
+    protected override IReadOnlyDictionary<string, Expression<Func<StaffMemberIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<StaffMemberIndex, string>>>(StringComparer.Ordinal)
         {
             ["ItemId"] = index => index.ItemId,
         };
 
     /// <inheritdoc />
-    protected override string WorkerOf(WorkerProfile record) => record.ItemId;
+    protected override string WorkerOf(StaffMember record) => record.ItemId;
 
     /// <inheritdoc />
-    protected override string TeamOf(WorkerProfile record) => record.PrimaryTeamId;
+    protected override string TeamOf(StaffMember record) => record.PrimaryTeamId;
 }
 
 /// <summary>

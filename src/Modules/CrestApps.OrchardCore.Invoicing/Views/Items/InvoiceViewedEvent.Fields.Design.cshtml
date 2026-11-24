@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoiceViewedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Invoice Viewed"])
+    </h4>
+</header>

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<MarkCourseItemCompleteTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-square-check" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Mark Course Item Complete"])
+    </h4>
+</header>

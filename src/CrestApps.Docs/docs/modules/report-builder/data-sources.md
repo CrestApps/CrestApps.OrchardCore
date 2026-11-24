@@ -38,6 +38,9 @@ A **data source** is an Orchard Core `IDataSource` (namespace `OrchardCore.DataS
 | **DNC registry** (local do-not-call lists and their numbers) | `DncRegistry` | CrestApps DNC Registry | Data Pipelines Core and Local Do Not Call Registry |
 | **Calendars** (calendars and their events) | `Calendars` | CrestApps Calendars | Data Pipelines Core and Calendars |
 | **Scheduling** (appointments, the resources they book, appointment types, resources, waitlist) | `Scheduling` | CrestApps Scheduling | Data Pipelines Core and Scheduling |
+| **Tickets** (tickets, their replies and notes, changes, links and daily backlog) | `Tickets` | CrestApps Tickets | Data Pipelines Core and Tickets |
+| **Timeline** (comments, notes and events on any record) | `Timeline` | CrestApps Timeline | Data Pipelines Core and Timeline |
+| **Service levels** (service-level timers of any record) | `ServiceLevels` | CrestApps Service Levels | Data Pipelines Core and Service Levels |
 
 The Report Builder depends on Data Pipelines Core, so every source above is available as soon as the builder and the feature that stores the data are on. The CrestApps sources are registered by startup classes marked `[RequireFeatures("OrchardCore.DataPipelines.Core")]`, not by the builder: they are also registered when only Orchard Core's Data Pipelines feature is enabled, so data pipelines can read them too. The technical names are stored in designs (`ReportDataSetReference.Source`) and in [field references](custom-data-sources.md#relationships), so they never change.
 
@@ -121,6 +124,9 @@ CrestApps modules expose their own records as data sources, registered when Data
 | **DNC registry** | **DNC lists**, **DNC entries** (one row per number of a local list, without the number) | **Manage DNC registry settings** (`ManageDncRegistrySettings`) |
 | **Calendars** | **Calendars**, **Calendar events** (one row per stored event; a repeating event is one row) | **Use calendars** (`AccessCalendars`), and only the calendars the reader can read, as on the calendar; private events on calendars the reader can't change have no title or attendee count |
 | **Scheduling** | **Appointments** (with lead time and duration), **Appointment resources** (one row per resource booked), **Appointment types**, **Scheduling resources**, **Waitlist** | **View appointments** (`ViewAppointments`); the waitlist needs **Manage appointments** (`ManageAppointments`) |
+| **Tickets** | **Tickets** (as they are now, with desk, status and priority names, times, minutes to first response and to solve), **Ticket replies and notes**, **Ticket changes** (one row per recorded field change), **Ticket links**, **Ticket backlog** (the open tickets of each desk at the start of each day) | A view permission on a desk; each reader gets only the tickets of their scope (all, their teams', or assigned to them), as in the ticket list |
+| **Timeline** | **Timeline entries** (comments, internal notes and events with their record, author and text) | Signed in; each record kind decides who sees its entries, so a reader gets only the entries of records they can see |
+| **Service levels** | **Service-level timers** (each target of a record: policy, metric, priority, due time, met or breached) | **Manage service level policies** (`ManageServiceLevelPolicies`) sees every timer; others the timers of records their module lets them see, such as the tickets of their scope |
 
 A dialer attempt is an activity plus the interaction that placed the call, so dialer reports join **Activities** to **Interactions** on the activity ID. Agent fields named `AgentId` hold agent profile IDs and join **Agent profiles**; fields holding user IDs join **Users**. Secrets, storage locations, IP addresses and message text are never exposed.
 

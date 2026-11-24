@@ -2,10 +2,13 @@
 @using CrestApps.OrchardCore.Currencies
 @using CrestApps.OrchardCore.Payments
 
-@model ShapeViewModel<CheckoutInvoice>
+@using CrestApps.OrchardCore.Checkout.ViewModels
+
+@model CheckoutInvoiceSummaryViewModel
 
 @{
-    var invoice = Model.Value;
+    var invoice = Model.Invoice;
+    var dueLabel = Model.PaymentDeferred ? T["Due later"] : Model.Paid ? T["Paid"] : T["Due now"];
     var currency = invoice.Currency;
 
     string Format(decimal amount) => $"{currency} {CurrencyScale.Format(amount, currency)}";
@@ -88,14 +91,14 @@
             }
 
             <div class="d-flex justify-content-between fw-semibold border-top pt-2 mt-2">
-                <span>@T["Due now"]</span>
+                <span data-checkout-due-label data-deferred-text="@T["Due later"]">@dueLabel</span>
                 <span>@Format(invoice.AmountDue)</span>
             </div>
         }
         else
         {
             <div class="d-flex justify-content-between fw-semibold@(hasBreakdown ? " border-top pt-2 mt-2" : null)">
-                <span>@T["Due now"]</span>
+                <span data-checkout-due-label data-deferred-text="@T["Due later"]">@dueLabel</span>
                 <span>@Format(invoice.GrandTotal)</span>
             </div>
         }

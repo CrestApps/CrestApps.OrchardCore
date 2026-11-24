@@ -1,0 +1,25 @@
+@using Microsoft.AspNetCore.Mvc.ViewComponents
+@inject IViewComponentSelector ViewComponentSelector
+@{
+    ApproverRuleValueEditorViewModel editor = Model.Editor;
+    var ids = (editor.Value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+}
+
+@if (ViewComponentSelector.SelectComponent("UserPicker") is not null)
+{
+    @await Component.InvokeAsync("UserPicker", new
+    {
+        name = editor.FieldName,
+        selectedValues = ids,
+        valueType = "userId",
+        multiple = true,
+        buttonText = T["Choose users"].Value,
+        searchPlaceholder = T["Search users"].Value,
+        smallButton = false,
+    })
+}
+else
+{
+    @* Without the user picker (CrestApps Users is off), the user ids are typed, separated by commas. *@
+    <input id="@editor.FieldId" name="@editor.FieldName" value="@editor.Value" class="form-control" placeholder="@T["User ids, separated by commas"]" aria-label="@T["Users"]" />
+}

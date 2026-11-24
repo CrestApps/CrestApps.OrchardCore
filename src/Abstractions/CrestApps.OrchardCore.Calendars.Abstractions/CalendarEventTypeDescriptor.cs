@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Models;
 using OrchardCore.Localization;
 
@@ -29,6 +30,7 @@ public sealed class CalendarEventTypeDescriptor
     /// <summary>
     /// Gets the name shown for the event type.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; }
 
     /// <summary>
@@ -77,4 +79,10 @@ public sealed class CalendarEventTypeDescriptor
     /// Gets or sets whether a busy event of the type counts toward the calendar's capacity.
     /// </summary>
     public bool CountsTowardCapacity { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether an event of the type marks its people as away (out of office, time off), so work isn't
+    /// pushed to them while it lasts.
+    /// </summary>
+    public bool MarksAbsence { get; set; }
 }

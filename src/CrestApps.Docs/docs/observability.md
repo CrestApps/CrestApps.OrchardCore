@@ -43,7 +43,7 @@ builder.Services
 - `HasOtlpEndpoint()` is true when `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_{SIGNAL}_ENDPOINT` or `OrchardCore:OpenTelemetry:Otlp:Endpoint` is set.
 - `AddOpenTelemetry()` collects Orchard Core, ASP.NET Core, HttpClient and runtime telemetry, tags spans and logs with their tenant, and exports them over OTLP.
 - `CrestApps.Core` and `CrestApps.Core.*` collect the framework; `CrestApps.OrchardCore.*` (`CrestAppsOrchardCoreTelemetry.SourceNameWildcard`) collects every CrestApps module. The OpenTelemetry SDK matches the wildcards itself; `X.*` does not match `X`, so both are listed.
-- `AICompletionService` is the source the AI chat clients report their `gen_ai.*` spans and metrics on, only while the AI **Enable OpenTelemetry** setting is on (**Settings → Artificial Intelligence → General**).
+- `AICompletionService` is the source the AI chat clients report their `gen_ai.*` spans and metrics on, only while the AI **Enable OpenTelemetry** setting is on (**Settings** → **Artificial Intelligence** → **General**).
 - Other libraries' telemetry, such as the OpenAI SDK's, SignalR's, the MCP and A2A SDKs', Npgsql's or Polly's, is not collected by default. Add their source or meter names to `OrchardCore:OpenTelemetry:Tracing:Sources` or `Metrics:Meters` to collect it.
 
 Every OpenTelemetry package comes from Orchard Core (1.19.1), so no version needs pinning.
@@ -222,7 +222,7 @@ Designed report runs:
 | `crestapps.report.reads.shared.miss` | Counter | `{read}` | data source, `reason` (`disabled`, `join_key`, `conditions`, `too_many_rows`) | Reads of a data set several queries read that the rows kept could not serve |
 | `crestapps.report.limit.hits` | Counter | `{hit}` | `crestapps.report.limit` (`rows_per_dataset`, `joined_rows`, `result_rows`, `join_keys`, `shared_read_rows`), source | Runs that reached a limit of [Configuration](modules/report-builder/index.md#configuration) |
 | `crestapps.report.aggregate.pushdown` | Counter | `{query}` | `outcome` (`used`, `fallback`), `reason` (`multiple_data_sets`, `joins`, `row_calculations`, `not_supported`, `filter`, `dimension`, `measure`, `too_many_buckets`, `declined`), data source | Grouped queries the data source grouped, or why they read every row |
-| `crestapps.report.aggregate.index` | Counter | `{statement}` | `result` (`built`, `unbuildable`, `too_many_groups`), `crestapps.report.index` | `ReportIndexAggregator` statements over a YesSql index |
+| `crestapps.report.aggregate.index` | Counter | `{statement}` | `result` (`built`, `unbuildable`, `too_many_groups`, `inexact_sum`), `crestapps.report.index` | `ReportIndexAggregator` statements over a YesSql index |
 | `crestapps.report.calc.errors` | Counter | `{error}` | source | Calculated field values that failed and were left empty, added once per query |
 | `crestapps.report.spills` | Counter | `{file}` | source | Temporary files a query wrote because its rows didn't fit in `MemoryLimitMegabytes` |
 | `crestapps.report.gate.wait` | Histogram | s | source | Time runs waited for `MaxConcurrentRuns` |
@@ -999,12 +999,16 @@ Deferred work (`DeferredWork.Add`, span `crestapps.deferred.<name>` linked to th
 
 ### Logging
 
-Commerce owns EventIds 12000-12999, split by area: checkout 12000-12099, Stripe 12100-12199, subscriptions 12200-12299, orders 12300-12399, marketplace 12400-12499, shipping 12500-12599, taxation 12600-12699, products 12700-12799, bookings and pay later 12800-12899 (others unassigned).
+Commerce owns EventIds 12000-12999, split by area: checkout 12000-12099, Stripe 12100-12199, subscriptions 12200-12299, orders 12300-12399, marketplace 12400-12499, shipping 12500-12599, taxation 12600-12699, products 12700-12799, bookings and pay later 12800-12899, business documents 12900-12999.
 
 | EventId | Class | Level | Message |
 |---|---|---|---|
 | 12000 | `CheckoutLog.ReconciliationSwept` (Checkout module) | Information | The checkout reconciliation sweep checked `{Sessions}` waiting checkouts: `{Completed}` completed, `{Failed}` failed to reconcile, `{Expired}` abandoned ones expired; the oldest had waited `{OldestPendingSeconds}` seconds. (only when there was something to do) |
 | 12200 | `SubscriptionsLog.TenantProvisioned` (Subscriptions.Core) | Information | Provisioning job '`{JobId}`' created its site on attempt `{Attempt}` in `{ElapsedSeconds}` seconds. |
+| 12900 | `BusinessDocumentPdfTelemetry.FontFallbackUsed` (Business Documents) | Warning | No TrueType font could be used for business document PDFs, so they use the built-in Helvetica font. Logged once. |
+| 12901 | `BusinessDocumentPdfTelemetry.LogoNotDrawn` (Business Documents) | Warning | The logo of a business document could not be drawn in its PDF, which is written without it. |
+
+Business document PDFs count `crestapps.business_document.pdf.font_fallbacks` (Counter, `{document}`, meter `CrestApps.OrchardCore.BusinessDocuments`): the PDFs written with the built-in Helvetica font, which shows Latin-1 text only.
 
 New log scopes: `CheckoutSessionId` (reconciliation sweep, per session), `StripeEventId`/`StripeEventType` (webhook), `ProvisioningJobId` (tenant provisioning), `InstallmentPlanId` (installment sweep).
 
@@ -1013,7 +1017,7 @@ New log scopes: `CheckoutSessionId` (reconciliation sweep, per session), `Stripe
 - No existing commerce instrument was renamed (there were none).
 - `DefaultCheckoutEngine` public methods are now thin wrappers over private `*CoreAsync` methods so every return is measured; behavior is unchanged.
 - `TransactionReminderBackgroundTask.RaiseOverdueAsync` now returns the number of transactions that became overdue (was `Task`); `PayLaterRenewalBackgroundTask.RenewAsync` (private) returns whether it created a cycle.
-- Not deferred-work wrapped on purpose: `SequentialFinancialDocumentNumberGenerator` lock release, and the `BookingMigrations`/`PosMigrations` index backfills (migrations).
+- Not deferred-work wrapped on purpose: the number series lock release (`DocumentNumberSequence` releases it when the caller's unit of work is saved, for every series, financial documents included), and the `BookingMigrations`/`PosMigrations` index backfills (migrations).
 
 ## Scheduling, workforce, field service, geo and tenant hierarchy
 
@@ -1029,6 +1033,7 @@ Each area has its own meter and activity source, named `CrestApps.OrchardCore.<A
 | `CrestApps.OrchardCore.WorkOrders` (meter only) | `WorkOrdersTelemetry` | `src/Core/CrestApps.OrchardCore.WorkOrders.Core/Telemetry` |
 | `CrestApps.OrchardCore.Solver` (meter only) | `SolverTelemetry`, `SolverRun` | `src/Modules/CrestApps.OrchardCore.OrTools/Telemetry` (no `.Core`) |
 | `CrestApps.OrchardCore.TenantHierarchy` | `TenantHierarchyTelemetry` | `src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Telemetry` |
+| `CrestApps.OrchardCore.Learning` | `LearningTelemetry` | `src/Core/CrestApps.OrchardCore.Learning.Core/Telemetry` |
 | `CrestApps.OrchardCore.NLWeb` (meter only) | `NLWebTelemetry` | `src/Modules/CrestApps.OrchardCore.NLWeb/Telemetry` (`NLWeb.Core` stays host-free) |
 
 Ids (calendar, event, appointment, visit, work order, worker, timesheet, payroll batch, registry entry) go on spans and logs only. Names (calendar, worker, tenant), addresses, coordinates and subscription URLs never go on a metric. The tenant hierarchy instruments never add a tenant name, as a metric tag or a span attribute; their spans carry the child's registry entry id instead. (`OrchardCore.OpenTelemetry` still stamps the current tenant on every span, and Orchard Core's own work run inside a child shell is traced under that child.)
@@ -1041,6 +1046,16 @@ Ids (calendar, event, appointment, visit, work order, worker, timesheet, payroll
 | `crestapps.calendars.sync.duration` | Histogram | `s` | `provider` (registered provider name, `unavailable` when the subscription names no registered provider), `sync.direction` (`one_way`, `two_way`), `mode` (`full`, `incremental`; absent when the run failed before reading), `outcome` (`ok`, `error`, `cancelled`, `unauthorized`), `error.type` | One external calendar synchronization (`CalendarSyncService.SyncAsync`). `unauthorized`: the external calendar refused access and the subscription is paused until reconnected. |
 | `crestapps.calendars.sync.events` | Counter | `{event}` | `provider`, `result` (`created`, `updated`, `removed`, `conflict`, `refused`) | Events a successful synchronization changed, in both directions. |
 | `crestapps.calendars.observer.failures` | Counter | `{failure}` | `observer`, `kind` (`CalendarEventChangeKind`) | Event changes an `ICalendarEventObserver` failed to handle (logged and swallowed). |
+| `crestapps.learning.enrollments` | Counter | `{enrollment}` | `source` (grant source: `Manual`, `Self`, `Key`, `Pipeline`, `Workflow` or one a module adds) | Enrollments created. |
+| `crestapps.learning.enrollment.status_changes` | Counter | `{change}` | `from`, `to` (`EnrollmentStatus`) | Enrollment status changes, by a person, a workflow or the upkeep. |
+| `crestapps.learning.items.completed` | Counter | `{item}` | `completed_by` (`learner`, `staff`) | Course items completed. |
+| `crestapps.learning.courses.completed` | Counter | `{course}` | `source` | Courses completed. |
+| `crestapps.learning.notices` | Counter | `{notice}` | `notice` (`access_ending`, `due_soon`, `overdue`, `inactive`) | Notices the daily upkeep raised, once each per enrollment. |
+| `crestapps.learning.upkeep.duration` | Histogram | `s` | `outcome`, `error.type` | One run of the Learning upkeep (span `crestapps.learning.upkeep`). |
+| `crestapps.learning.attempts.started` | Counter | `{attempt}` | `by` (`learner`) | Quiz attempts started. |
+| `crestapps.learning.attempts.submitted` | Counter | `{attempt}` | `by` (`learner`, `deadline`) | Quiz attempts submitted, by the learner or when the time was up. |
+| `crestapps.learning.attempts.graded` | Counter | `{attempt}` | `by` (`automatic`, `staff`) | Quiz attempts graded. |
+| `crestapps.learning.attempts.score_changes` | Counter | `{change}` | `change` (`Overridden`, `Regraded`, `Voided`) | Quiz scores changed after grading. |
 | `crestapps.workforce.notifications` | Counter | `{notification}` | `channel` (channel name: `Inbox`, `Push`, `Email`, or another module's channel such as SMS), `kind` (`WorkforceNotificationKind`), `result` (`sent`, `skipped`, `failed`) | Each notification offered to each channel by `DefaultWorkforceNotifier`. `skipped`: the worker turned the channel or the kind off, or it is their quiet hours. |
 | `crestapps.workforce.adherence.alerts` | Counter | `{alert}` | `activity` (scheduled `ActivityKind`), `status` (`AgentPresenceStatus`) | Agent Out Of Adherence alerts raised (`AdherenceService.RaiseAlertsAsync`), once per episode. |
 | `crestapps.workforce.payroll.export.duration` | Histogram | `s` | `provider` (registered export provider, `unknown`), `outcome` (`ok`, `rejected`, `error`, `cancelled`), `reason` when rejected (`no_provider`, `no_calendar`, `busy`, `none_locked`, `all_exported`), `error.type` | One payroll export (`DefaultPayrollExportService.RunAsync`), lock wait included. |
@@ -1050,7 +1065,7 @@ Ids (calendar, event, appointment, visit, work order, worker, timesheet, payroll
 | `crestapps.geo.geocode.requests` | Counter | `{request}` | `result` (`done`, `no_match`, `gone`, `no_target`, `no_provider`, `retry`, `failed`) | Background geocoding requests processed by `DefaultGeocodeQueue`. `retry`: the provider failed and the request waits; `failed`: it failed `MaxAttempts` times and was given up. |
 | `crestapps.dispatch.visit.events` | Counter | `{event}` | `event` (`created`, `assigned`, `unassigned`, `status_changed`, `at_risk`, `other`), `status` (`VisitStatus` after the event) | Visit transitions, recorded where they are raised (`DefaultDispatchService`, `VisitRiskMonitor`). |
 | `crestapps.dispatch.observer.failures` | Counter | `{failure}` | `observer`, `event` | Visit events an `IVisitObserver` failed to handle (logged and swallowed). |
-| `crestapps.workorders.sla.events` | Counter | `{event}` | `event` (`warning`, `breached`), `target` (`response`, `resolution`) | Service level warnings and breaches raised by `SlaMonitor`, each once per target. |
+| `crestapps.workorders.sla.events` | Counter | `{event}` | `event` (`warning`, `breached`), `target` (`response`, `resolution`) | Work order service level warnings and breaches, raised by `WorkOrderServiceLevelObserver` from the shared Service Levels monitor, each once per target. |
 | `crestapps.solver.runs` | Counter | `{run}` | `solver`, `status` (`optimal`, `feasible`, `timed_out`, `infeasible`, `cancelled`, `skipped`, `error`), `size` (`le_10`, `le_100`, `le_1000`, `le_10000`, `le_100000`, `gt_100000`), `result` (`solver`: its own answer was returned; `builtin`: the built-in answer was kept), `outcome` | OR-Tools solves (the solve's duration is not measured: it runs to its time limit). Size is workers × days × templates for shifts and the number of visits for dispatch. The routing solver (guided local search) never proves optimality and runs to its limit, so an answer it found is `feasible` unless OR-Tools reports `RoutingOptimal`. `skipped`: nothing to solve. |
 | `crestapps.tenanthierarchy.child.operation.duration` | Histogram | `s` (long buckets) | `operation` (`create`, `setup`, `update`, `suspend`, `resume`, `reload`, `remove`, `set_features`), `outcome` (`ok`, `failed`, `error`, `cancelled`), `error.type` | One operation a parent tenant ran on a child tenant through `TenantHierarchyBroker`. `failed`: the broker returned a failure (wrong state, setup errors, removal refused). Its count is the operation count. |
 | `crestapps.nlweb.ask.duration` | Histogram | `s` | `mode` (`list`, `summarize`, `generate`, `other`), `outcome` (`answered`, `empty`, `elicitation`, `failed`), `reason` when failed (`invalid_request`, `forbidden`, `not_configured`, `unknown_promise`, `internal_error`, `other`) | One NLWeb question, until its results and text were ready (recorded by an `INLWebAskHandler`). |

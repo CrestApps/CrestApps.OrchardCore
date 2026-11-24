@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -38,7 +39,7 @@ internal sealed class DefaultLaborRuleEvaluator : ILaborRuleEvaluator
         _clock = clock;
     }
 
-    public async Task<LaborRuleSet> ResolveRuleSetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default)
+    public async Task<LaborRuleSet> ResolveRuleSetAsync(StaffMember worker, string teamId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

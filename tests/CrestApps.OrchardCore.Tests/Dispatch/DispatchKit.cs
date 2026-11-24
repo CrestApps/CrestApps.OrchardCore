@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Tests.WorkOrders;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Dispatch;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
@@ -11,6 +13,7 @@ using CrestApps.OrchardCore.Geo.Core.Indexes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -21,7 +24,6 @@ using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
-using CrestApps.OrchardCore.Calendars;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -119,7 +121,7 @@ internal sealed class DispatchKit : IAsyncDisposable
         kit.Harness = await WorkforceTests.CreateAsync(
             services =>
             {
-                services.AddWorkOrdersCore();
+                services.AddWorkOrdersWithServiceLevels();
                 services.AddDispatchCore();
                 services.AddDispatchMobileCore();
                 services.AddAssetsCore();
@@ -151,20 +153,19 @@ internal sealed class DispatchKit : IAsyncDisposable
             },
             async schema =>
             {
-                await WorkOrdersIndexSchema.CreateAsync(schema);
+                await WorkOrderTestStores.CreateSchemaAsync(schema);
                 await DispatchIndexSchema.CreateAsync(schema);
                 await FieldIndexSchema.CreateAsync(schema);
                 await CrestApps.OrchardCore.Assets.Core.Indexes.AssetsIndexSchema.CreateAsync(schema);
                 await GeoIndexSchema.CreateAsync(schema);
             },
-            new IIndexProvider[]
-            {
-                new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider(),
+            [
+                .. WorkOrderTestStores.IndexProviders,
                 new ServiceVisitIndexProvider(), new FieldCommandReceiptIndexProvider(), new WorkerLocationConsentIndexProvider(), new WorkerLocationPingIndexProvider(),
                 new ServiceTerritoryIndexProvider(), new GeocodeRequestIndexProvider(),
                 new CrestApps.OrchardCore.Assets.Core.Indexes.AssetTypeIndexProvider(), new CrestApps.OrchardCore.Assets.Core.Indexes.AssetIndexProvider(), new CrestApps.OrchardCore.Assets.Core.Indexes.AssetMeterReadingIndexProvider(),
-            },
-            [WorkOrdersConstants.CollectionName, DispatchConstants.CollectionName, GeoConstants.CollectionName, CrestApps.OrchardCore.Assets.AssetsConstants.CollectionName]);
+            ],
+            [.. WorkOrderTestStores.Collections, DispatchConstants.CollectionName, GeoConstants.CollectionName, CrestApps.OrchardCore.Assets.AssetsConstants.CollectionName]);
 
         kit.Team = await WorkforceTests.AddTeamAsync(kit.Harness, "Field", TeamKind.Team);
         kit.Team = await PlanningKit.UpdateTeamAsync(kit.Harness, kit.Team, team => team.GetWorkforceSettings().Location = new WorkforceLocation { Latitude = Depot.Latitude, Longitude = Depot.Longitude });
@@ -194,10 +195,14 @@ internal sealed class DispatchKit : IAsyncDisposable
         }).ToArray()).ToArray(),
     };
 
-    public Task<WorkerProfile> AddTechnicianAsync(string name, Action<WorkerProfile> configure = null)
-        => PlanningKit.AddMemberAsync(Harness, name, Team, configure);
+    public Task<StaffMember> AddTechnicianAsync(string name, Action<StaffMember> configure = null)
+        => PlanningKit.AddMemberAsync(Harness, name, Team, staff =>
+        {
+            staff.Capabilities.Add(DispatchConstants.TechnicianCapability);
+            configure?.Invoke(staff);
+        });
 
-    public async Task PublishShiftsAsync(params WorkerProfile[] workers)
+    public async Task PublishShiftsAsync(params StaffMember[] workers)
     {
         var period = await PlanningKit.CreatePeriodAsync(Harness, Team);
 
@@ -249,7 +254,7 @@ internal sealed class DispatchKit : IAsyncDisposable
     public Task<IReadOnlyList<ServiceVisit>> VisitsOfAsync(string workOrderId)
         => Harness.RunAsync(services => services.GetRequiredService<IDispatchService>().ListForWorkOrderAsync(workOrderId), commit: false);
 
-    public Task<DispatchResult> AssignAsync(ServiceVisit visit, DateTime startUtc, params WorkerProfile[] workers)
+    public Task<DispatchResult> AssignAsync(ServiceVisit visit, DateTime startUtc, params StaffMember[] workers)
         => Harness.RunAsync(services => services.GetRequiredService<IDispatchService>().AssignAsync(visit.ItemId, new VisitAssignment { WorkerIds = workers.Select(worker => worker.ItemId).ToList(), StartUtc = startUtc }, "dispatcher"));
 
     public Task<DispatchResult> MoveAsync(ServiceVisit visit, VisitStatus status, string note = null)
@@ -260,6 +265,9 @@ internal sealed class DispatchKit : IAsyncDisposable
 
     public Task<WorkOrder> WorkOrderAsync(string id)
         => Harness.RunAsync(async services => await services.GetRequiredService<WorkOrderService>().FindAsync(id), commit: false);
+
+    public Task<IReadOnlyList<WorkOrderNote>> WorkOrderNotesAsync(string id)
+        => Harness.RunAsync(services => services.GetRequiredService<WorkOrderService>().GetNotesAsync(id), commit: false);
 
     public async Task<IReadOnlyList<CalendarEvent>> JobEventsAsync()
     {

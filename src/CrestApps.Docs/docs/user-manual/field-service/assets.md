@@ -10,7 +10,7 @@ Assets are the things you service or use: your own vans, equipment and tools, an
 
 | | |
 | --- | --- |
-| **Menu** | Assets > Assets, Asset Types |
+| **Menu** | **Assets** → **Assets**, Asset Types |
 | **Permission** | Manage assets; View assets to see them |
 | **Feature** | Assets; Fleet to book vehicles and equipment and keep van stock |
 
@@ -18,7 +18,7 @@ Assets are the things you service or use: your own vans, equipment and tools, an
 
 ## Add an asset type
 
-1. Go to **Assets > Asset Types** and select **Add asset type**.
+1. Go to **Assets** → **Asset Types** and select **Add asset type**.
 2. Enter a name, such as *Boiler* or *Service van*, and choose its category.
 3. Under **Attributes**, list the values every asset of this type records, such as *Refrigerant* (text) or *Output kW* (a number).
 4. Under **Meters**, list the readings taken on it, such as *Hours run* or *Odometer*, with the unit. Leave **Only goes up** ticked for a meter that only counts up; a lower reading is then refused.
@@ -26,7 +26,7 @@ Assets are the things you service or use: your own vans, equipment and tools, an
 
 ## Add an asset
 
-1. Go to **Assets > Assets**, select **Add asset** and choose its type.
+1. Go to **Assets** → **Assets**, select **Add asset** and choose its type.
 2. Enter its name, and its serial number, manufacturer and model. Leave the asset number empty for the next one.
 3. Under **Owner and place**, choose who owns it: the business, a customer, an account or a contact, then search for them by name. Choose the asset it is part of, if any, and enter its address.
 4. Enter when it was installed and its warranty, and fill in the values its type records.
@@ -48,4 +48,4 @@ With **Fleet** on, a vehicle, equipment or tool the business owns has a **Fleet*
 - **It carries stock** gives it its own Inventory location, so the parts it carries are counted, and parts used on a job come off it.
 - Enter its plate, VIN, capacity and fuel.
 
-A van's stock location doesn't show among the locations on **Settings > Inventory**, and orders are never taken from it.
+A van's stock location doesn't show among the locations on **Settings** → **Inventory**, and orders are never taken from it.

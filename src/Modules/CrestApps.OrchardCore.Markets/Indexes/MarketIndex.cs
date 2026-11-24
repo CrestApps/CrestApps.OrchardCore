@@ -22,6 +22,8 @@ public sealed class MarketIndexProvider : IndexProvider<Market>
 
     public override void Describe(DescribeContext<Market> context)
         => context.For<MarketIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(market => new MarketIndex
             {
                 ItemId = market.ItemId,

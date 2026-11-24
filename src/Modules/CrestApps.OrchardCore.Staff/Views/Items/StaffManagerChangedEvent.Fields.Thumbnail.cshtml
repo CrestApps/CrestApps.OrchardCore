@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Staff.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StaffManagerChangedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-sitemap" aria-hidden="true"></i>
+    @T["Staff Manager Changed"]
+</h4>
+<p>@T["Starts when a person gets a new manager."]</p>

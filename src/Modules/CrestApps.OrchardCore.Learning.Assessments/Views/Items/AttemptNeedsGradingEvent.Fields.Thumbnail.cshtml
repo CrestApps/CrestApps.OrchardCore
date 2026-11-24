@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Learning.Assessments.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AttemptNeedsGradingEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+    @T["Quiz Attempt Needs Grading"]
+</h4>
+<p>@T["Starts when a submitted quiz attempt has answers a person must grade."]</p>

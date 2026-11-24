@@ -91,6 +91,23 @@ internal sealed class LeadListQuery : IQuery<ContentItem>
         => _query.GetTypeAlias(t);
 
     /// <inheritdoc/>
+    public IQuery<ContentItem> SkipDeduplication()
+        => _query.SkipDeduplication();
+
+    /// <inheritdoc/>
+    [Obsolete("Use SkipDeduplication() instead, as this method doesn't remove duplicates but skips removing them.")]
     public IQuery<ContentItem> NoDuplicates()
-        => _query.NoDuplicates();
+        => _query.SkipDeduplication();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The interface's default does nothing, so without this a caller's request to keep the grouping would be lost.
+    /// The list query keeps the lead index count, which reads the index table and is not affected.
+    /// </remarks>
+    public IQuery<ContentItem> NoIndexOptimizations()
+    {
+        _query.NoIndexOptimizations();
+
+        return this;
+    }
 }

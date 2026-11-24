@@ -3,6 +3,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -41,7 +43,7 @@ public sealed class SchedulesController : Controller
     private readonly IShiftTemplateManager _templateManager;
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
@@ -73,7 +75,7 @@ public sealed class SchedulesController : Controller
         IShiftTemplateManager templateManager,
         IActivityCodeManager activityCodeManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IWorkforceScopeService scopeService,
         ISiteService siteService,
         ILocalClock localClock,
@@ -244,7 +246,7 @@ public sealed class SchedulesController : Controller
             CanOverride = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.OverrideLaborRules),
         };
 
-        var members = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var members = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
 
         foreach (var day in days)
         {
@@ -531,13 +533,15 @@ public sealed class SchedulesController : Controller
         if (ModelState.IsValid)
         {
             var (from, to) = PlanningInput.OnDay(model.Date.Value, start, end);
+            var workerId = string.IsNullOrEmpty(model.WorkerId) ? null : model.WorkerId;
+            var workerChanged = !string.Equals(shift.WorkerId, workerId, StringComparison.Ordinal);
 
-            shift.WorkerId = string.IsNullOrEmpty(model.WorkerId) ? null : model.WorkerId;
+            shift.WorkerId = workerId;
             shift.Date = model.Date.Value;
             shift.Start = from;
             shift.End = to;
             shift.TemplateId = template?.ItemId;
-            shift.Segments = SegmentFormat.ToDraft(segments, from);
+            shift.Segments = SegmentFormat.KeepSources(SegmentFormat.ToDraft(segments, from), shift.Segments, workerChanged);
             shift.Notes = string.IsNullOrWhiteSpace(model.Notes) ? null : model.Notes.Trim();
 
             var result = await _planningService.SaveDraftShiftAsync(shift, User.Identity?.Name, HttpContext.RequestAborted);

@@ -61,7 +61,7 @@
         {
             id = $"{Html.IdFor(m => m.NormalizedUserName)}_Selector",
             inputName = Html.NameFor(m => m.NormalizedUserName),
-            endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "normalizedUserName" }),
+            endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "normalizedUserName", audience = "Staff" }),
             initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
             multiple = false,
             enableSearch = true,

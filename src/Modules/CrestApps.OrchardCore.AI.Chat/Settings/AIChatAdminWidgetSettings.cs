@@ -29,4 +29,10 @@ public sealed class AIChatAdminWidgetSettings
     /// Gets or sets the primary color used by the admin chat widget.
     /// </summary>
     public string PrimaryColor { get; set; } = DefaultPrimaryColor;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the widget tells the AI which page the user is on with each message:
+    /// the page title and address, the text the user selected, the content item being edited and the site.
+    /// </summary>
+    public bool SendPageContext { get; set; } = true;
 }

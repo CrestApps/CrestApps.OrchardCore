@@ -1,6 +1,6 @@
 @model PayLaterSettingsViewModel
 
-@* The Pay Later section of Settings › Commerce › Offline payments. *@
+@* The Pay Later section of Settings › Commerce › Offline Payments. *@
 
 <h2 class="h5">@T["Pay Later"]</h2>
 
@@ -14,11 +14,25 @@
     </div>
 </div>
 
+@if (Model.PaymentTerms.Count > 0)
+{
+    <div class="ocat-wrapper" asp-validation-class-for="PaymentTermId">
+        <label asp-for="PaymentTermId" class="ocat-label">@T["Payment term"]</label>
+        <div class="ocat-end">
+            <select asp-for="PaymentTermId" asp-items="Model.PaymentTerms" class="form-select" style="max-width: 20rem">
+                <option value="">@T["A number of days"]</option>
+            </select>
+            <span asp-validation-for="PaymentTermId"></span>
+            <span class="hint">@T["When a Pay Later balance is due. A customer who has a payment term of their own, on their billing profile, gets theirs instead. Payment terms are kept under Commerce > Payment Terms."]</span>
+        </div>
+    </div>
+}
+
 <div class="ocat-wrapper" asp-validation-class-for="NetTermDays">
     <label asp-for="NetTermDays" class="ocat-label">@T["Net term (days)"]</label>
     <div class="ocat-end">
         <input asp-for="NetTermDays" type="number" min="0" class="form-control" style="max-width: 10rem" />
         <span asp-validation-for="NetTermDays"></span>
-        <span class="hint">@T["The number of days a Pay Later balance is allowed before it is due. The due date drives the reminder cadence. Use 0 to record the balance without a due date."]</span>
+        <span class="hint">@T["The number of days a Pay Later balance is allowed before it is due, when no payment term applies. The due date drives the reminder cadence. Use 0 to record the balance without a due date."]</span>
     </div>
 </div>

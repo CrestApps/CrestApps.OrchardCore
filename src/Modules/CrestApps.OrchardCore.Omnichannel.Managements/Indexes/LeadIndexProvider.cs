@@ -13,6 +13,8 @@ internal sealed class LeadIndexProvider : IndexProvider<ContentItem>
     {
         context
             .For<LeadIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(CreateIndex);
     }
 

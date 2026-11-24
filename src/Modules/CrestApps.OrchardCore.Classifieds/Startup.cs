@@ -59,7 +59,7 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Content › Posted listings.
+/// Content › Posted Listings.
 /// </summary>
 public sealed class ClassifiedsAdminMenu : AdminNavigationProvider
 {
@@ -81,7 +81,7 @@ public sealed class ClassifiedsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Content"], content => content
-                .Add(S["Posted listings"], S["Posted listings"].PrefixPosition("5"), listings => listings
+                .Add(S["Posted Listings"], S["Posted Listings"].PrefixPosition("5"), listings => listings
                     .Id("classifieds")
                     .Action(_classifieds)
                     .Permission(ClassifiedsPermissions.ModerateClassifieds)

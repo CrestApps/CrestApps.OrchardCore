@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -56,13 +57,32 @@ public enum GiftCardStatusFilter
 /// </summary>
 public sealed class GiftCardStore : DocumentCatalog<GiftCard, GiftCardIndex>, IGiftCardStore
 {
+    /// <summary>
+    /// The kind of balance gift cards' moved-out changes are kept under (<see cref="IBalanceLedgerArchive"/>).
+    /// </summary>
+    public const string Ledger = "GiftCard";
+
+    private readonly IBalanceLedgerArchive _archive;
+
     // Two checkouts spending one card must not both write a stale balance.
     protected override bool CheckConcurrency => true;
 
-    public GiftCardStore(ISession session, IClock clock)
+    public GiftCardStore(ISession session, IClock clock, IBalanceLedgerArchive archive)
         : base(session, clock)
     {
         CollectionName = OrderConstants.CollectionName;
+        _archive = archive;
+    }
+
+    // The card keeps its latest changes; older ones move to their own records in the same unit of work.
+    protected override async ValueTask SavingAsync(GiftCard record)
+    {
+        await base.SavingAsync(record);
+
+        if (record.Activity is not null)
+        {
+            await _archive.ArchiveAsync(Ledger, record.ItemId, record.Activity);
+        }
     }
 
     /// <inheritdoc/>

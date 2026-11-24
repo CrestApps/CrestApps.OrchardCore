@@ -1,0 +1,119 @@
+{
+  "name": "KnowledgeBase",
+  "displayName": "Knowledge Base",
+  "description": "Turns on the Knowledge Base with its help center at /help, and places its widgets on the help center and on every article: the search box above the page, the categories beside it and related articles after the article. The widgets go in the help center's own zones (KnowledgeBaseTop, KnowledgeBaseSidebar and KnowledgeBaseAfterContent), which the help center's page and an article's page show whatever the theme, on a Help center layer for /help and the pages under it. Move or remove them under Design > Widgets.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "knowledge base"
+  ],
+  "tags": [
+    "knowledge base",
+    "help center",
+    "widgets"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.KnowledgeBase",
+        "OrchardCore.Widgets",
+        "OrchardCore.Layers"
+      ]
+    },
+    {
+      "name": "KnowledgeBaseZones"
+    },
+    {
+      "name": "Layers",
+      "Layers": [
+        {
+          "Name": "Help center",
+          "Description": "The help center at /help and its articles, under /help/.",
+          "LayerRule": {
+            "Conditions": [
+              {
+                "$type": "OrchardCore.Rules.Models.AnyConditionGroup, OrchardCore.Rules",
+                "Name": "AnyConditionGroup",
+                "Conditions": [
+                  {
+                    "$type": "OrchardCore.Rules.Models.UrlCondition, OrchardCore.Rules",
+                    "Name": "UrlCondition",
+                    "Value": "/help",
+                    "Operation": {
+                      "$type": "OrchardCore.Rules.Models.StringEqualsOperator, OrchardCore.Rules",
+                      "CaseSensitive": false
+                    }
+                  },
+                  {
+                    "$type": "OrchardCore.Rules.Models.UrlCondition, OrchardCore.Rules",
+                    "Name": "UrlCondition",
+                    "Value": "/help/",
+                    "Operation": {
+                      "$type": "OrchardCore.Rules.Models.StringStartsWithOperator, OrchardCore.Rules",
+                      "CaseSensitive": false
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content",
+      "data": [
+        {
+          "ContentItemId": "91ecdnkdpx30pjjy7syb8k8fac",
+          "ContentItemVersionId": "6844578b7jakn44app9gzr7ask",
+          "ContentType": "HelpCenterSearchWidget",
+          "DisplayText": "Help center search",
+          "Latest": true,
+          "Published": true,
+          "LayerMetadata": {
+            "Layer": "Help center",
+            "Zone": "KnowledgeBaseTop",
+            "Position": 1,
+            "RenderTitle": false
+          },
+          "HelpCenterSearchPart": {}
+        },
+        {
+          "ContentItemId": "zdn0rqcvpvw0ejgbb7gbj5n3cm",
+          "ContentItemVersionId": "zpj3tqadzz5yc9e4ymwwwh2fms",
+          "ContentType": "KnowledgeBaseCategoriesWidget",
+          "DisplayText": "Knowledge base categories",
+          "Latest": true,
+          "Published": true,
+          "LayerMetadata": {
+            "Layer": "Help center",
+            "Zone": "KnowledgeBaseSidebar",
+            "Position": 1,
+            "RenderTitle": false
+          },
+          "KnowledgeBaseCategoriesPart": {}
+        },
+        {
+          "ContentItemId": "c79019kxn1trftrwrzv3c572mb",
+          "ContentItemVersionId": "g1r4m9tq7vx2c8pdk3nsy6wb0e",
+          "ContentType": "RelatedArticlesWidget",
+          "DisplayText": "Related articles",
+          "Latest": true,
+          "Published": true,
+          "LayerMetadata": {
+            "Layer": "Help center",
+            "Zone": "KnowledgeBaseAfterContent",
+            "Position": 1,
+            "RenderTitle": false
+          },
+          "RelatedArticlesPart": {
+            "Count": 5
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -9,7 +9,7 @@ user_manual:
 # Feature ID Reference
 
 Every feature ID declared by a module under `src/Modules`, grouped by the **Category** the manifest gives it.
-That category is the heading the feature appears under in **Tools → Features**, so this page reads in the same
+That category is the heading the feature appears under in **Tools** → **Features**, so this page reads in the same
 order as that screen.
 
 A module whose manifest declares no explicit `[Feature]` still contributes one feature whose ID is the module
@@ -170,15 +170,18 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.ContentFields` | CrestApps Content Fields | [Content Fields](./modules/content-fields) |
 | `CrestApps.OrchardCore.ContentFields.Address` | Address Field | [Content Fields](./modules/content-fields#addressfield) |
+| `CrestApps.OrchardCore.ContentFields.ConditionalFields` | Conditional Fields | [Content Fields](./modules/content-fields#conditional-fields) |
 | `CrestApps.OrchardCore.ContentAccessControl` | Content Access Control | [Content Access Control](./modules/content-access-control) |
 | `CrestApps.OrchardCore.ContentTransfer` | Content Transfer | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.OpenXml` | Content Transfer (OpenXml) | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
+| `CrestApps.OrchardCore.ProtectedFiles.Azure` | Protected Files - Azure Blob Storage | [Protected Files](./modules/protected-files#store-protected-files-in-azure-blob-storage) |
 | `CrestApps.OrchardCore.Seo` | Advanced SEO | [Advanced SEO](./modules/advanced-seo) |
 | `CrestApps.OrchardCore.NLWeb` | NLWeb | [NLWeb](./modules/nlweb) |
 | `CrestApps.OrchardCore.Accounts` | Accounts | [Accounts](./modules/accounts) |
 | `CrestApps.OrchardCore.Accounts.Members` | Account Members | [Accounts](./modules/accounts#account-members) |
 | `CrestApps.OrchardCore.Accounts.Locations` | Account Locations | [Accounts](./modules/accounts#account-locations) |
+| `CrestApps.OrchardCore.Accounts.EmailDomains` | Account E-mail Domains | [Accounts](./modules/accounts#account-e-mail-domains) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
 | `CrestApps.OrchardCore.Addresses.Countries` | Address Countries | [Addresses](./modules/addresses#country-lists) |
 | `CrestApps.OrchardCore.Addresses.GooglePlaces` | Address Suggestions (Google Places) | [Addresses](./modules/addresses#address-suggestions) |
@@ -219,7 +222,18 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
+| `CrestApps.OrchardCore.Skills.IssuedCertificates` | Skills: Issued Certificates | [Skills](./modules/skills#issued-certificates) |
 | `CrestApps.OrchardCore.Teams` | Teams | [Teams](./modules/teams) |
+| `CrestApps.OrchardCore.Agreements` | Agreements | [Agreements](./modules/agreements) |
+| `CrestApps.OrchardCore.BusinessHours` | Business Hours | [Business Hours](./modules/business-hours#the-business-hours-feature) |
+| `CrestApps.OrchardCore.ServiceLevels` | Service Levels | [Service Levels](./modules/service-levels) |
+| `CrestApps.OrchardCore.Timeline` | Timeline | [Timeline](./modules/timeline) |
+| `CrestApps.OrchardCore.Tickets` | Tickets | [Tickets](./modules/tickets) |
+| `CrestApps.OrchardCore.Tickets.Api` | Tickets API | [Tickets](./modules/tickets/api) |
+| `CrestApps.OrchardCore.Tickets.Portal` | Tickets Portal | [Tickets](./modules/tickets/portal-and-web-form#portal) |
+| `CrestApps.OrchardCore.Tickets.WebForm` | Ticket Web Form | [Tickets](./modules/tickets/portal-and-web-form#web-form) |
+| `CrestApps.OrchardCore.KnowledgeBase` | Knowledge Base | [Knowledge Base](./modules/knowledge-base) |
+| `CrestApps.OrchardCore.Attachments` | Attachments | [Attachments](./modules/attachments) |
 | `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |
 | `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | [Workforce for Contact Center](./modules/workforce-contact-center) |
@@ -228,6 +242,24 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Workforce.Forecasting` | Workforce Forecasting | [Workforce for Contact Center](./modules/workforce-contact-center#forecasting) |
 | `CrestApps.OrchardCore.Workforce.Intraday` | Workforce Intraday | [Workforce for Contact Center](./modules/workforce-contact-center#intraday) |
 | `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | [Workforce for Contact Center](./modules/workforce-contact-center#adherence) |
+
+## Finance
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Approvals` | Approvals | [Approvals](./modules/approvals) |
+| `CrestApps.OrchardCore.Payroll.PaySetup` | Pay Setup | [Payroll](./modules/payroll) |
+| `CrestApps.OrchardCore.Payroll` | Payroll | [Payroll](./modules/payroll) |
+| `CrestApps.OrchardCore.Payroll.UnitedStates` | United States Payroll Filings | [Payroll](./modules/payroll#united-states) |
+| `CrestApps.OrchardCore.Payroll.Canada` | Canada Payroll Filings | [Payroll](./modules/payroll#canada) |
+| `CrestApps.OrchardCore.Taxation.IncomeTax` | Income Tax | [Taxation](./modules/taxation#income-tax) |
+| `CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates` | United States Income Tax | [Taxation](./modules/taxation#country-packs) |
+| `CrestApps.OrchardCore.Taxation.IncomeTax.Canada` | Canada Income Tax | [Taxation](./modules/taxation#country-packs) |
+| `CrestApps.OrchardCore.Banking` | Bank Accounts | [Banking](./modules/banking#bank-accounts) |
+| `CrestApps.OrchardCore.Banking.Checks` | Checks | [Banking](./modules/banking#checks) |
+| `CrestApps.OrchardCore.Banking.Disbursements` | Disbursements | [Banking](./modules/banking#disbursements-and-direct-deposit) |
+| `CrestApps.OrchardCore.Banking.DirectDeposit` | Direct Deposit | [Banking](./modules/banking#providers) |
+| `CrestApps.OrchardCore.Plaid` | Plaid Bank Account Linking | [Plaid](./modules/plaid) |
 
 ## Geo
 
@@ -249,6 +281,34 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.WorkOrders` | Work Orders | [Work Orders](./modules/work-orders) |
 | `CrestApps.OrchardCore.WorkOrders.Agreements` | Service Agreements | [Work Orders](./modules/work-orders#service-agreements) |
 
+## Learning
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Learning` | Learning | [Learning](./modules/learning) |
+| `CrestApps.OrchardCore.Learning.LearnerPages` | Learner Pages | [Learning](./modules/learning#learner-pages) |
+| `CrestApps.OrchardCore.Learning.SelfEnrollment` | Self Enrollment | [Learning](./modules/learning#learner-pages) |
+| `CrestApps.OrchardCore.Learning.CourseCategories` | Course Categories | [Learning](./modules/learning#course-categories) |
+| `CrestApps.OrchardCore.Learning.Cohorts` | Enrollment by Cohort | [Learning](./modules/learning#enrollment-by-cohort) |
+| `CrestApps.OrchardCore.Learning.Assessments` | Learning Assessments | [Learning Assessments](./modules/learning-assessments) |
+| `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Learning Gradebook | [Learning Assessments](./modules/learning-assessments) |
+| `CrestApps.OrchardCore.Learning.Assessments.QtiImport` | Learning QTI Import | [Learning Assessments](./modules/learning-assessments#qti-import) |
+| `CrestApps.OrchardCore.Learning.Assessments.MoodleImport` | Learning Moodle Import | [Learning Assessments](./modules/learning-assessments#moodle-import) |
+| `CrestApps.OrchardCore.Learning.AI` | Learning Assistant | [Learning AI](./modules/learning-ai) |
+| `CrestApps.OrchardCore.Learning.AI.Authoring` | Learning Authoring Assistant | [Learning AI](./modules/learning-ai#author-prompts) |
+| `CrestApps.OrchardCore.Learning.Certifications` | Learning Certifications | [Learning Certifications](./modules/learning-certifications) |
+| `CrestApps.OrchardCore.Learning.Classes` | Learning Classes | [Learning Classes](./modules/learning-classes) |
+| `CrestApps.OrchardCore.Learning.Commerce` | Learning Commerce | [Learning Commerce](./modules/learning-commerce) |
+| `CrestApps.OrchardCore.Learning.Coursework` | Learning Coursework | [Learning Coursework](./modules/learning-coursework) |
+| `CrestApps.OrchardCore.Learning.Packages.Scorm` | Learning SCORM Packages | [Learning Packages](./modules/learning-packages) |
+| `CrestApps.OrchardCore.Learning.Packages.Cmi5` | Learning cmi5 Packages | [Learning Packages](./modules/learning-packages#cmi5) |
+| `CrestApps.OrchardCore.Learning.Xapi` | Learning Record Store | [Learning Record Store](./modules/learning-xapi) |
+| `CrestApps.OrchardCore.Learning.Lti` | External Tools | [Learning External Tools](./modules/learning-lti) |
+| `CrestApps.OrchardCore.Learning.Credentials` | Digital Credentials | [Learning Digital Credentials](./modules/learning-credentials) |
+| `CrestApps.OrchardCore.Learning.Programs` | Learning Paths | [Learning Programs](./modules/learning-programs) |
+| `CrestApps.OrchardCore.Learning.Programs.RequiredLearning` | Required Learning | [Learning Programs](./modules/learning-programs#required-learning) |
+| `CrestApps.OrchardCore.Learning.Programs.TeamLearning` | Team Learning | [Learning Programs](./modules/learning-programs#team-learning) |
+
 ## Data connectors
 
 | Feature ID | Name | Docs |
@@ -264,7 +324,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Customers` | Customers | [Customers](./modules/customers) |
-| `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
+| `CrestApps.OrchardCore.Commerce.Foundation` | Commerce Foundation (dependency only) | [Commerce](./modules/commerce#the-commerce-foundation-and-commerce-features) |
+| `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce#the-commerce-foundation-and-commerce-features) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.Markets` | Markets | [Markets](./modules/markets) |
 | `CrestApps.OrchardCore.Accounts.B2B` | Accounts B2B | [Accounts B2B](./modules/accounts-b2b) |
@@ -277,6 +338,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Orders.Api` | Orders API | [Carts and Orders](./modules/carts-and-orders#api) |
 | `CrestApps.OrchardCore.Customers.Api` | Customers API | [Customers](./modules/customers#api) |
 | `CrestApps.OrchardCore.Shipping.Api` | Shipping API | [Shipping](./modules/shipping#api) |
+| `CrestApps.OrchardCore.Fulfillment` | Fulfillment Partners | [Fulfillment Partners](./modules/fulfillment-partners) |
 | `CrestApps.OrchardCore.Inventory.Api` | Inventory API | [Inventory](./modules/inventory#api) |
 | `CrestApps.OrchardCore.Commerce.Webhooks` | Commerce Webhooks | [Commerce Webhooks](./modules/commerce-webhooks) |
 | `CrestApps.OrchardCore.AgenticCommerce` | Agentic Commerce | [Agentic Commerce](./modules/agentic-commerce) |
@@ -291,13 +353,27 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.AgenticCommerce.Ap2` | Agent Payments Protocol (Preview) | [Agentic Commerce](./modules/agentic-commerce#ap2-mandates-preview) |
 | `CrestApps.OrchardCore.Webhooks` | Webhooks | [Webhooks](./modules/webhooks#outbound-webhooks) |
 | `CrestApps.OrchardCore.PointOfSale` | Point of Sale | [Point of Sale](./modules/point-of-sale) |
+| `CrestApps.OrchardCore.PointOfSale.WebRegister` | Point of Sale Web Register | [Point of Sale](./modules/point-of-sale#web-register) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
 | `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
-| `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
+| `CrestApps.OrchardCore.BusinessDocuments` | Business Documents | [Business Documents](./modules/business-documents) |
+| `CrestApps.OrchardCore.BusinessDocuments.Pdf` | Business Documents PDF | [Business Documents](./modules/business-documents#the-pdf) |
+| `CrestApps.OrchardCore.Invoicing` | Invoicing | [Invoicing](./modules/invoicing) |
+| `CrestApps.OrchardCore.Invoicing.Estimates` | Invoicing Estimates | [Invoicing](./modules/invoicing#estimates) |
+| `CrestApps.OrchardCore.Invoicing.Api` | Invoicing API | [Invoicing](./modules/invoicing#api) |
+| `CrestApps.OrchardCore.Invoicing.Billing` | Invoicing Billing | [Invoicing](./modules/invoicing#billing-work-and-costs), [usage](./modules/invoicing#usage-meters-and-tiers) |
+| `CrestApps.OrchardCore.Invoicing.Collections` | Invoicing Collections | [Invoicing](./modules/invoicing#late-fees-and-debit-notes) |
+| `CrestApps.OrchardCore.Invoicing.Recurring` | Invoicing Recurring | [Invoicing](./modules/invoicing#recurring-plans) |
+| `CrestApps.OrchardCore.ExchangeRates` | Exchange Rates | [Exchange Rates](./modules/exchange-rates) |
+| `CrestApps.OrchardCore.Taxation` | Sales Tax | [Taxation](./modules/taxation) |
+| `CrestApps.OrchardCore.Taxation.Tables` | Tax Tables | [Taxation](./modules/taxation#features) |
 | `CrestApps.OrchardCore.Taxation.TaxJar` | TaxJar | [Taxation](./modules/taxation#taxjar) |
+| `CrestApps.OrchardCore.Taxation.Returns` | Tax Returns | [Taxation](./modules/taxation#tax-returns) |
+| `CrestApps.OrchardCore.Taxation.EFiling` | Tax E-Filing | [Taxation](./modules/taxation#e-filing) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
+| `CrestApps.OrchardCore.Transactions.PaymentTerms` | Payment Terms | [Transactions](./modules/transactions#payment-terms) |
 
 ## Payment Providers
 
@@ -331,6 +407,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Users` | Users Core Components (dependency only) | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Avatars` | User Avatar | [Users](./modules/users) |
+| `CrestApps.OrchardCore.Users.Audiences` | User Audiences | [Users](./modules/users#user-audiences) |
+| `CrestApps.OrchardCore.Users.Cohorts` | Cohorts | [Users](./modules/users#cohorts) |
 
 ## Multi-Tenancy
 
@@ -360,6 +438,10 @@ Orchard Core's settings screen (`/Admin/Settings/{groupId}`) authorizes `Setting
 | `transactions` | `ManageTransactionSettings` | Transaction Reminders (`CrestApps.OrchardCore.Transactions.Notification`) |
 | `paylater` | `ManageTransactionSettings` | Pay Later |
 | `receipts` | `ManageReceiptSettings` | Receipts |
+| `number-series` | `ManageNumberSeries` | Business Documents |
+| `invoicing` | `ManageInvoicingSettings` | Invoicing |
+| `exchangeRates` | `ManageExchangeRates` | Exchange Rates |
+| `tax-origin`, `tax-calculation` | `ManageTaxation` | Taxation |
 | `inventory` | `ManageInventory` | Inventory |
 | `shipping` | `ManageShipping` | Shipping |
 | `taxjar` | `ManageTaxation` | TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`) |

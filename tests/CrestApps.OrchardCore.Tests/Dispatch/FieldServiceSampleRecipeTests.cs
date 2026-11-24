@@ -1,8 +1,13 @@
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Recipes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Recipes;
+using CrestApps.OrchardCore.ServiceLevels;
+using CrestApps.OrchardCore.ServiceLevels.Recipes;
+using CrestApps.OrchardCore.ServiceLevels.Services;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -10,6 +15,7 @@ using CrestApps.OrchardCore.WorkOrders.Recipes;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Recipes;
 using CrestApps.OrchardCore.Workforce.Services;
+using CrestApps.OrchardCore.WorkOrders;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -38,6 +44,7 @@ public sealed class FieldServiceSampleRecipeTests
             [GeoRecipeStep.RecipeName] = typeof(GeoRecipeStep),
             [AssetsRecipeStep.RecipeName] = typeof(AssetsRecipeStep),
             [WorkOrdersRecipeStep.RecipeName] = typeof(WorkOrdersRecipeStep),
+            [ServiceLevelsConstants.RecipeStepName] = typeof(ServiceLevelPoliciesRecipeStep),
         };
         var errors = new List<string>();
 
@@ -73,8 +80,8 @@ public sealed class FieldServiceSampleRecipeTests
             var assets = (await services.GetRequiredService<AssetManager>().GetAllAsync()).ToList();
             var types = (await services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync()).ToList();
             var checklists = (await services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>().GetAllAsync()).ToList();
-            var policies = (await services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync()).ToList();
-            var (_, workers) = await services.GetRequiredService<IWorkerManager>().SearchAsync(new WorkerQuery(), 0, 50);
+            var policies = (await services.GetRequiredService<IServiceLevelPolicyManager>().ListByScopeAsync(WorkOrdersConstants.ServiceLevelScope)).ToList();
+            var (_, workers) = await services.GetRequiredService<IStaffMemberManager>().SearchAsync(new StaffQuery(), 0, 50);
             var teams = (await services.GetRequiredService<ITeamManager>().GetAllAsync()).Where(team => team.Name == "Field Operations").ToList();
             var templates = (await services.GetRequiredService<IShiftTemplateManager>().GetAllAsync()).Where(template => template.Name == "Field day").ToList();
 
@@ -85,7 +92,12 @@ public sealed class FieldServiceSampleRecipeTests
             Assert.Equal(["Boiler service", "No heat"], types.Where(type => type.Name != kit.Type.Name).Select(type => type.Name).Order());
             Assert.Equal(["4fexpaa3vgvp6s1h1y9jzak6dt"], types.Single(type => type.Name == "Boiler service").ChecklistTemplateIds);
             Assert.Equal(4, Assert.Single(checklists).Questions.Count);
-            Assert.Equal(4, Assert.Single(policies).Targets.Count);
+            var policy = Assert.Single(policies);
+
+            Assert.Equal(8, policy.Targets.Count);
+            Assert.True(policy.TryGet<WorkOrderServiceLevelSettings>(out var settings));
+            Assert.Equal([WorkOrderStatus.OnHold], settings.PauseStatuses);
+            Assert.Equal(policy.ItemId, types.Single(type => type.Name == "Boiler service").ServiceLevelPolicyId);
             Assert.Single(teams);
             Assert.Single(templates);
             Assert.Equal(4, workers.Count(worker => worker.EmployeeNumber?.StartsWith("200", StringComparison.Ordinal) == true));

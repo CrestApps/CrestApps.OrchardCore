@@ -62,7 +62,7 @@ public sealed class StoreCreditTests
 
     private StoreCreditTenderProvider Provider()
     {
-        var service = new StoreCreditService(_store.Object, Mock.Of<ISession>(), Mock.Of<IDistributedLock>(), new TestClock(_now));
+        var service = new StoreCreditService(_store.Object, Mock.Of<ISession>(), Mock.Of<IDistributedLock>(), new TestClock(_now), Mock.Of<CrestApps.OrchardCore.Checkout.Core.Services.IBalanceLedgerArchive>());
 
         return new StoreCreditTenderProvider(_store.Object, _customers.Object, service, new TestClock(_now), new PassThroughLocalizer<StoreCreditTenderProvider>());
     }

@@ -1,0 +1,7 @@
+@model CrestApps.OrchardCore.Accounts.ViewModels.AccountEmailDomainsPartViewModel
+
+<div class="mb-3">
+    <label asp-for="Domains" class="form-label">@T["E-mail domains"]</label>
+    <textarea asp-for="Domains" class="form-control" rows="3" placeholder="contoso.com"></textarea>
+    <span class="hint">@T["One per line. A request from an address on one of these domains is filed under this account. Leave out public mail services such as gmail.com."]</span>
+</div>

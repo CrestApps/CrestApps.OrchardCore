@@ -13,6 +13,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -23,6 +24,7 @@ namespace CrestApps.OrchardCore.Taxation.Controllers;
 /// Provides admin endpoints for managing <see cref="TaxJurisdiction"/> entries.
 /// </summary>
 [Admin]
+[Feature(TaxationConstants.Feature.Tables)]
 public sealed class TaxJurisdictionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";

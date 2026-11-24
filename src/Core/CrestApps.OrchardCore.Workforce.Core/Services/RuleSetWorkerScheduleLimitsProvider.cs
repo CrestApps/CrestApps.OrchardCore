@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -18,7 +19,7 @@ internal sealed class RuleSetWorkerScheduleLimitsProvider : IWorkerScheduleLimit
         _evaluator = evaluator;
     }
 
-    public async Task<WorkerScheduleLimits> GetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default)
+    public async Task<WorkerScheduleLimits> GetAsync(StaffMember worker, string teamId, CancellationToken cancellationToken = default)
     {
         var limits = await _defaults.GetAsync(worker, teamId, cancellationToken);
         var set = await _evaluator.ResolveRuleSetAsync(worker, teamId, cancellationToken);

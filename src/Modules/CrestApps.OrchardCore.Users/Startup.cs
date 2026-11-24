@@ -38,6 +38,8 @@ using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
 using OrchardCore.Users.Services;
+using CrestApps.OrchardCore.Parties.Models;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Users;
 
@@ -51,7 +53,12 @@ public sealed class Startup : StartupBase
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
         services.AddUserSearchService();
-        services.AddPartySource<UserPartySource>();
+        services.AddPasswordConfirmation();
+        services.AddPartySource<UserPartySource>(PartyKinds.User, LocalizationSource.Create<Startup>("User"), UserSearchPermissions.SearchUsers);
+
+        // A user is billed under their display name at their e-mail address, and acts for themselves.
+        services.AddPartyBillingProfileSource<UserBillingProfileSource>();
+        services.AddPartyMemberSource<UserPartyMemberSource>();
         services.AddPermissionProvider<UserSearchPermissionProvider>();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
         // services.AddShapeTableProvider<NavbarShapeTableProvider>();
@@ -90,6 +97,45 @@ public sealed class CachingStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DisplayName feature.
 /// </summary>
+/// <summary>
+/// Registers the "my account" area: its home page's menu item and the user menu's link to it.
+/// </summary>
+[Feature(UsersConstants.Feature.Account)]
+public sealed class AccountStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<Navigation.AccountHomeMenu>();
+        services.AddDisplayDriver<UserMenu, AccountUserMenuDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Adds Notifications to the user menu on the site's pages, for the site's Notifications page, where people who don't
+/// use the admin read their Orchard Core notifications.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class NotificationsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<UserMenu, NotificationsUserMenuDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Adds the site's Notifications page to the account menu.
+/// </summary>
+[Feature(UsersConstants.Feature.Account)]
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class AccountNotificationsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<Navigation.NotificationsAccountMenu>();
+    }
+}
+
 [Feature(UsersConstants.Feature.DisplayName)]
 public sealed class DisplayNameStartup : StartupBase
 {
@@ -170,6 +216,7 @@ public sealed class AvatarStartup : StartupBase
 
         services.AddContentPart<UserAvatarPart>();
         services.AddScoped<IDisplayDriver<User>, UserAvatarPartDisplayDriver>();
+        services.AddScoped<IUserAvatarProvider, UserAvatarProvider>();
         services.AddResourceConfiguration<AvatarResourceManagementOptionsConfiguration>();
         services.Configure<MvcOptions>(options =>
         {

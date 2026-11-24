@@ -21,6 +21,8 @@ public sealed class OpenShiftIndexProvider : IndexProvider<OpenShift>
     public override void Describe(DescribeContext<OpenShift> context)
     {
         context.For<OpenShiftIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new OpenShiftIndex
             {
                 ItemId = item.ItemId,

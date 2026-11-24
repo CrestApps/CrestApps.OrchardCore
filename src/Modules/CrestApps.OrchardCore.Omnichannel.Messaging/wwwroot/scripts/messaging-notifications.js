@@ -65,8 +65,7 @@
 	function notificationKey(kind, notification) {
 		return String(kind) + ":" + (notification && notification.conversationId || "");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js
 	var settleDelayMs = 1500;
 	var periodicRefreshMs = 6e4;
 	function flagMenuGroups(root) {
@@ -148,8 +147,7 @@
 			schedule
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-notifications.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-notifications.js
 	(function(root) {
 		"use strict";
 		var host = document.querySelector("[data-messaging-notifications]");
@@ -279,5 +277,4 @@
 			start();
 		} catch (e) {}
 	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
 })();

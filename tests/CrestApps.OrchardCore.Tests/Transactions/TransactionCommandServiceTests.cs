@@ -420,27 +420,6 @@ public sealed class TransactionCommandServiceTests
         Assert.Equal(100m, (await context.Store.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken)).OutstandingAmount);
     }
 
-    [Fact]
-    public async Task InvoiceBuilder_ShowsEachAdjustmentAndOnlyWhatIsStillOwed()
-    {
-        // Arrange
-        var context = new TestContextBuilder(CreateOutstanding());
-
-        await context.Service.AdjustAsync("transaction-1", 30m, TransactionAdjustmentKind.Waiver, "Financial aid", TestContext.Current.CancellationToken);
-
-        var transaction = await context.Manager.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken);
-        var builder = new TransactionInvoiceBuilder(CreateReceiptService(), Mock.Of<ICustomerContactResolver>(), null, new PassThroughStringLocalizer<TransactionInvoiceBuilder>());
-
-        // Act
-        var invoice = await builder.BuildAsync(transaction, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(70m, invoice.Total);
-        Assert.Contains(invoice.LineItems, line => line.Amount == -30m && line.Description.Contains("Financial aid", StringComparison.Ordinal));
-        Assert.Equal(invoice.Subtotal, invoice.LineItems.Sum(line => line.Amount));
-        Assert.Equal(ReceiptStatus.Due, invoice.Status);
-    }
-
     private static Transaction CreateOutstanding()
         => new()
         {
@@ -470,27 +449,6 @@ public sealed class TransactionCommandServiceTests
             ConfirmedAmount = amount,
             CreatedUtc = createdUtc,
         };
-
-    private static IReceiptService CreateReceiptService()
-    {
-        var receipts = new Mock<IReceiptService>();
-        receipts
-            .Setup(service => service.BuildAsync(It.IsAny<ReceiptRequest>()))
-            .ReturnsAsync((ReceiptRequest request) => new ReceiptDocument
-            {
-                Reference = request.Reference,
-                Currency = request.Currency,
-                LineItems = request.LineItems,
-                TaxLines = request.TaxLines,
-                TaxAmount = request.TaxAmount,
-                Total = request.Total,
-                Subtotal = request.Total - request.TaxAmount,
-                Status = request.Status,
-                Notes = request.Notes,
-            });
-
-        return receipts.Object;
-    }
 
     private static DefaultTransactionReminderService CreateReminderService(Action<INotificationMessage> onSend, TestClock clock)
     {

@@ -1,0 +1,305 @@
+@model RecurringPlanEditViewModel
+
+@{
+    var isNew = string.IsNullOrEmpty(Model.ItemId);
+    var billToJson = string.IsNullOrEmpty(Model.BillTo)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.BillTo, text = Model.BillToName ?? Model.BillTo, selected = true } });
+}
+
+<zone Name="Title">
+    <breadcrumb name="@(isNew ? "RecurringInvoicesCreate" : "RecurringInvoicesEdit")" title="@(isNew ? T["New recurring plan"] : T["Edit recurring plan"])">
+        <breadcrumb-item id="RecurringInvoicesIndex" action="Index" controller="RecurringPlansAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Recurring invoices"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Schedule"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Name">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" maxlength="255" autocomplete="off" required />
+                    <span class="hint">@T["What the plan bills, such as Monthly hosting. Seen by staff; the invoices carry it as their reference unless you set one."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Frequency">
+                <label asp-for="Frequency" class="ocat-label">@T["Repeats"]</label>
+                <div class="ocat-limited">
+                    <div class="input-group">
+                        <span class="input-group-text">@T["Every"]</span>
+                        <input asp-for="Interval" type="number" min="1" max="99" class="form-control" />
+                        <select asp-for="Frequency" class="form-select">
+                            <option value="Weekly">@T["week(s)"]</option>
+                            <option value="Monthly">@T["month(s)"]</option>
+                            <option value="Yearly">@T["year(s)"]</option>
+                        </select>
+                    </div>
+                    <span class="hint">@T["Counted from the start date: a plan starting on the 15th runs on the 15th."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="CustomRule">
+                <label asp-for="CustomRule" class="ocat-label">@T["Custom schedule"]</label>
+                <div class="ocat-end">
+                    <input asp-for="CustomRule" class="form-control font-monospace" maxlength="500" autocomplete="off" placeholder="FREQ=MONTHLY;BYMONTHDAY=1" />
+                    <span class="hint">@T["Optional. A recurrence rule (RFC 5545) used instead of the above, such as FREQ=MONTHLY;BYMONTHDAY=-1 for the last day of each month."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="StartDate">
+                <label asp-for="StartDate" class="ocat-label">@T["Starts"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="StartDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" required />
+                    <span class="hint">@T["The day of the first run. A day in the past is caught up when the plan starts, up to 12 runs at a time."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="EndDate">
+                <label asp-for="EndDate" class="ocat-label">@T["Ends"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="EndDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                    <span class="hint">@T["Optional. No run happens after this day."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="MaxRuns">
+                <label asp-for="MaxRuns" class="ocat-label">@T["Number of invoices"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="MaxRuns" type="number" min="1" class="form-control" />
+                    <span class="hint">@T["Optional. The plan completes after this many runs."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Mode">
+                <label asp-for="Mode" class="ocat-label">@T["Each run"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Mode" class="form-select">
+                        <option value="@RecurringPlanMode.Draft">@T["Makes a draft invoice for me to check"]</option>
+                        <option value="@RecurringPlanMode.Issue">@T["Issues the invoice"]</option>
+                        <option value="@RecurringPlanMode.IssueAndSend">@T["Issues the invoice and e-mails it to the customer"]</option>
+                        <option value="@RecurringPlanMode.IssueAndCharge">@T["Issues the invoice and charges the customer's saved payment method"]</option>
+                    </select>
+                    <span class="hint">@T["A run that can't issue its invoice keeps the draft and is shown as failed on the plan's page."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="PriceIncreasePercent">
+                <label asp-for="PriceIncreasePercent" class="ocat-label">@T["Price rise (%)"]</label>
+                <div class="ocat-limited">
+                    <div class="input-group">
+                        <input asp-for="PriceIncreasePercent" type="number" step="any" min="0" class="form-control" />
+                        <span class="input-group-text">@T["every"]</span>
+                        <input asp-for="PriceIncreaseEveryRuns" type="number" min="1" class="form-control" />
+                        <span class="input-group-text">@T["runs"]</span>
+                    </div>
+                    <span class="hint">@T["Optional. Raises the prices of the lines by this percent each time this many runs have passed, such as 5% every 12 runs."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="BillUnbilledCharges" />
+                        <label class="form-check-label" asp-for="BillUnbilledCharges">@T["Also bill the customer's unbilled charges"]</label>
+                        <span class="hint dashed">@T["Each run adds the charges kept to bill the customer (Commerce > Unbilled Charges) up to its day, with Invoicing Billing on."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Bill to"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="BillTo">
+                <label class="ocat-label">@T["Customer"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("ItemSelector", new
+                    {
+                        id = "recurring-bill-to",
+                        inputName = Html.NameFor(m => m.BillTo).ToString(),
+                        endpoint = Model.PartySearchEndpoint,
+                        initialItemsJson = billToJson,
+                        multiple = false,
+                        enableSearch = true,
+                        buttonText = T["Find a customer"].Value,
+                        searchPlaceholder = T["Search users, customers and accounts"].Value,
+                        emptyResultsText = T["No one found."].Value,
+                        noSelectionText = T["No one chosen."].Value,
+                        selectedItemsLabel = T["Bill to"].Value,
+                        availableItemsLabel = T["Found"].Value,
+                        smallButton = false,
+                    })
+                    <span class="hint">@T["A user, customer or business account. Leave it empty to bill someone by name and e-mail only."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="ContactName">
+                <label asp-for="ContactName" class="ocat-label">@T["Name on the invoices"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactName" class="form-control" autocomplete="off" maxlength="255" />
+                    <span class="hint">@T["Left empty, the customer's billing name is used."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="ContactEmail">
+                <label asp-for="ContactEmail" class="ocat-label">@T["E-mail"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" maxlength="255" />
+                    <span class="hint">@T["Where the invoices are sent."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <partial name="_DocumentLinesEditor" model='DocumentLinesEditorViewModel.For(Model, T["The lines of each invoice. Write {{ period.start }}, {{ period.end }}, {{ period.month }} or {{ period.year }} in a name or description to print the period a run bills, such as Hosting {{ period.month }} {{ period.year }}. Amounts are worked out as you type, and the tax when you save."].Value, T["Total"].Value)' />
+
+    @if (Model.Meters is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Usage"]</div>
+            <div class="card-body">
+                <p class="hint">@T["Each run bills a meter's usage in the period that just ended, from the previous run up to the day before this one, so the first run bills none. Tiers price it: each band at its own price (graduated), or all of it at the price of the tier it reaches (volume). Leave the last tier's limit empty."]</p>
+                @for (var i = 0; i < Model.UsageCharges.Count; i++)
+                {
+                    var charge = Model.UsageCharges[i];
+                    <fieldset class="border rounded p-3 mb-3">
+                        <legend class="fs-6 w-auto px-2 mb-0">@(string.IsNullOrEmpty(charge.MeterId) ? T["Add a usage charge"] : T["Usage charge {0}", i + 1])</legend>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label" for="usage-meter-@i">@T["Meter"]</label>
+                                <select id="usage-meter-@i" name="UsageCharges[@i].MeterId" class="form-select">
+                                    <option value="">@T["None"]</option>
+                                    @foreach (var meter in Model.Meters)
+                                    {
+                                        <option value="@meter.Value" selected="@(meter.Value == charge.MeterId)">@meter.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="usage-name-@i">@T["Line name"]</label>
+                                <input id="usage-name-@i" name="UsageCharges[@i].Name" value="@charge.Name" class="form-control" maxlength="255" placeholder="@T["The meter's name"]" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" for="usage-mode-@i">@T["Tiers"]</label>
+                                <select id="usage-mode-@i" name="UsageCharges[@i].TierMode" class="form-select">
+                                    <option value="@UsageTierMode.Graduated" selected="@(charge.TierMode == UsageTierMode.Graduated)">@T["Graduated"]</option>
+                                    <option value="@UsageTierMode.Volume" selected="@(charge.TierMode == UsageTierMode.Volume)">@T["Volume"]</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" for="usage-tax-@i">@T["Tax category"]</label>
+                                <input id="usage-tax-@i" name="UsageCharges[@i].TaxCategoryCode" value="@charge.TaxCategoryCode" class="form-control" />
+                            </div>
+                        </div>
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">@T["Up to (quantity)"]</th>
+                                    <th scope="col">@T["Price of each"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var t = 0; t < charge.Tiers.Count; t++)
+                                {
+                                    var tier = charge.Tiers[t];
+                                    <tr>
+                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UpTo" value="@tier.UpTo?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" placeholder="@T["No limit"]" aria-label="@T["Tier {0} up to", t + 1]" /></td>
+                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UnitPrice" value="@tier.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" aria-label="@T["Tier {0} price of each", t + 1]" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </fieldset>
+                }
+                <span class="hint">@T["Click Update for another empty usage charge or tier row. Usage is recorded under Commerce > Usage Meters or through the API."]</span>
+            </div>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Invoice"]</div>
+        <div class="card-body">
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+                <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="Currency" class="form-control text-uppercase" maxlength="3" autocomplete="off" placeholder="USD" />
+                    <span class="hint">@T["Left empty, the site's default currency is used."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="PaymentTermId">
+                <label asp-for="PaymentTermId" class="ocat-label">@T["Payment term"]</label>
+                <div class="ocat-limited">
+                    <select asp-for="PaymentTermId" asp-items="Model.PaymentTerms" class="form-select">
+                        <option value="">@T["The default payment term"]</option>
+                    </select>
+                    <span class="hint">@T["When each invoice is due."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="PricesIncludeTax" />
+                        <label class="form-check-label" asp-for="PricesIncludeTax">@T["Prices include tax"]</label>
+                        <span class="hint dashed">@T["The prices typed are tax-inclusive, and the tax is worked out of them."]</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="PurchaseOrderNumber">
+                <label asp-for="PurchaseOrderNumber" class="ocat-label">@T["Purchase order"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PurchaseOrderNumber" class="form-control" maxlength="100" autocomplete="off" />
+                    <span class="hint">@T["The customer's purchase order number, printed on each invoice."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Reference">
+                <label asp-for="Reference" class="ocat-label">@T["Reference"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reference" class="form-control" maxlength="100" autocomplete="off" />
+                    <span class="hint">@T["Printed and searchable. Left empty, the plan's name is used."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Notes">
+                <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Notes" rows="2" class="form-control" maxlength="4000"></textarea>
+                    <span class="hint">@T["Printed on each invoice; the period placeholders work here too. Left empty, the default notes are printed."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Terms">
+                <label asp-for="Terms" class="ocat-label">@T["Terms"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Terms" rows="2" class="form-control" maxlength="4000"></textarea>
+                    <span class="hint">@T["Left empty, the default terms from the invoicing settings are printed."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="InternalNote">
+                <label asp-for="InternalNote" class="ocat-label">@T["Internal note"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="InternalNote" rows="2" class="form-control" maxlength="4000"></textarea>
+                    <span class="hint">@T["Seen by staff only, never printed."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save"]</button>
+        <button type="submit" name="submit" value="update" class="btn btn-secondary">@T["Update"]</button>
+        <a class="btn btn-secondary cancel" role="button" href="@(isNew ? Url.Action("Index", "RecurringPlansAdmin") : Url.Action("Detail", "RecurringPlansAdmin", new { itemId = Model.ItemId }))">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script asp-name="item-selector" depends-on="bootstrap-select" at="Foot"></script>

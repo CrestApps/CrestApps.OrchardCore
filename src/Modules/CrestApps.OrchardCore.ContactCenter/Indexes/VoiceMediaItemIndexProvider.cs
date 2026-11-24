@@ -22,6 +22,8 @@ public sealed class VoiceMediaItemIndexProvider : IndexProvider<VoiceMediaItem>
     {
         context
             .For<VoiceMediaItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new VoiceMediaItemIndex
             {
                 ItemId = item.ItemId,

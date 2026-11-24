@@ -1,0 +1,152 @@
+@model ClassPanelViewModel
+
+@{
+    var registration = Model.Registration;
+    var appointment = registration?.Appointment;
+    var registered = appointment is not null && !registration.IsOffered && appointment.Status is AppointmentStatus.Confirmed or AppointmentStatus.Requested or AppointmentStatus.Completed or AppointmentStatus.NoShow;
+    var canGiveUp = Model.CanGiveUp;
+}
+
+<div class="card mb-3 learning-class" data-learning-class>
+    <div class="card-body">
+        @if (!Model.SignedIn)
+        {
+            <p>@T["Sign in to register for a session of this class."]</p>
+        }
+        else if (!Model.Enrolled)
+        {
+            <p>@T["Enroll in the course to register for a session of this class."]</p>
+        }
+        else if (!Model.EnrollmentActive && registration is null)
+        {
+            <p>@T["Your enrollment is not active yet, so you cannot register for a session."]</p>
+        }
+
+        @if (registration is not null)
+        {
+            <div class="alert @(registered ? "alert-success" : "alert-info")" role="status">
+                @if (registration.IsWaiting)
+                {
+                    <p class="mb-1"><i class="fa-solid fa-hourglass-half me-1" aria-hidden="true"></i>@T["You are on the waitlist of {0}.", registration.Session.Title]</p>
+                    <p class="mb-0 small">@T["When a place is free, it is offered to the next person waiting."]</p>
+                }
+                else if (registration.IsOffered)
+                {
+                    <p class="mb-1"><i class="fa-solid fa-gift me-1" aria-hidden="true"></i>@T["A place in {0} is offered to you.", registration.Session.Title]</p>
+                    @if (appointment.HoldExpiresUtc is { } expires)
+                    {
+                        <p class="mb-0 small">@T["Accept it before"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(expires, DateTimeKind.Utc), Format: "g")). @T["After that, it passes to the next person."]</p>
+                    }
+                }
+                else if (appointment.Status == AppointmentStatus.Completed)
+                {
+                    <p class="mb-0"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@(appointment.Attendance == AppointmentAttendance.Partial ? T["You attended part of {0}.", registration.Session.Title] : T["You attended {0}.", registration.Session.Title])</p>
+                    @if (registration.CanRegisterAgain)
+                    {
+                        <p class="mb-0 small">@T["It was not enough to complete the class. You can register for another session."]</p>
+                    }
+                }
+                else if (appointment.Status == AppointmentStatus.NoShow)
+                {
+                    <p class="mb-0"><i class="fa-solid fa-circle-xmark me-1" aria-hidden="true"></i>@T["You were marked absent from {0}.", registration.Session.Title]</p>
+                    <p class="mb-0 small">@T["You can register for another session."]</p>
+                }
+                else if (appointment.Status == AppointmentStatus.Requested)
+                {
+                    <p class="mb-0"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["You asked for a place in {0}. Someone confirms it soon.", registration.Session.Title]</p>
+                }
+                else
+                {
+                    <p class="mb-0"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You have a place in {0}.", registration.Session.Title]</p>
+                }
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @if (registration.IsOffered)
+                {
+                    <form method="post" action="@Url.RouteUrl("LearningClassAcceptOffer", new { classItemId = Model.ClassItemId })">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Accept the place"]</button>
+                    </form>
+                }
+                @if (canGiveUp)
+                {
+                    <form method="post" action="@Url.RouteUrl("LearningClassCancel", new { classItemId = Model.ClassItemId })">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger">@(registration.IsWaiting ? T["Leave the waitlist"] : registration.IsOffered ? T["Decline the place"] : T["Give up my place"])</button>
+                    </form>
+                }
+            </div>
+        }
+
+        @if (Model.Sessions.Count == 0)
+        {
+            <p class="mb-0">@T["No upcoming sessions yet."]</p>
+        }
+        else
+        {
+            <h2 class="h6">@T["Sessions"]</h2>
+            <ul class="list-group">
+                @foreach (var entry in Model.Sessions)
+                {
+                    var session = entry.Session;
+                    var mine = registration?.Session?.ItemId == session.ItemId;
+
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                                <div class="fw-semibold">
+                                    @session.Title
+                                    @if (mine)
+                                    {
+                                        <span class="badge text-bg-primary ms-1">@T["Yours"]</span>
+                                    }
+                                </div>
+                                <ul class="list-unstyled small mb-1">
+                                    @foreach (var meeting in session.Meetings)
+                                    {
+                                        <li><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(meeting.StartUtc, DateTimeKind.Utc), Format: "g")) - @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(meeting.EndUtc, DateTimeKind.Utc), Format: "t"))</li>
+                                    }
+                                </ul>
+                                <ul class="list-inline text-secondary small mb-0">
+                                    @if (!string.IsNullOrWhiteSpace(session.Location))
+                                    {
+                                        <li class="list-inline-item"><i class="fa-solid fa-location-dot me-1" aria-hidden="true"></i>@session.Location</li>
+                                    }
+                                    @if (mine && appointment?.Status == AppointmentStatus.Confirmed && !string.IsNullOrWhiteSpace(session.MeetingUrl))
+                                    {
+                                        <li class="list-inline-item"><i class="fa-solid fa-video me-1" aria-hidden="true"></i><a href="@session.MeetingUrl" target="_blank" rel="noopener noreferrer">@T["Join the meeting"]</a></li>
+                                    }
+                                    <li class="list-inline-item"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@(entry.PlacesLeft == 0 ? T["Full"] : T.Plural(entry.PlacesLeft, "1 place left", "{0} places left"))</li>
+                                    @switch (entry.Window)
+                                    {
+                                        case ClassRegistrationWindow.NotYetOpen:
+                                            <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Registration opens"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(session.RegistrationOpensUtc.Value, DateTimeKind.Utc), Format: "g"))</li>
+                                            break;
+                                        case ClassRegistrationWindow.Closed:
+                                            <li class="list-inline-item"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Registration closed"]</li>
+                                            break;
+                                        default:
+                                            @if (session.RegistrationClosesUtc is { } closes)
+                                            {
+                                                <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Registration closes"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(closes, DateTimeKind.Utc), Format: "g"))</li>
+                                            }
+                                            break;
+                                    }
+                                </ul>
+                            </div>
+                            @if (entry.CanRegister)
+                            {
+                                <form method="post" action="@Url.RouteUrl("LearningClassRegister", new { classItemId = Model.ClassItemId })">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="sessionId" value="@session.ItemId" />
+                                    <button type="submit" class="btn @(entry.PlacesLeft > 0 ? "btn-primary" : "btn-outline-primary")">@(entry.PlacesLeft > 0 ? T["Register"] : T["Join the waitlist"])</button>
+                                </form>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

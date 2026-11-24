@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// desktop and supervisor dashboards stay live. The handler is read-only with respect to domain state; it
 /// only enriches events and forwards them to <see cref="IContactCenterRealTimeNotifier"/>.
 /// </summary>
-public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandler
+public sealed class ContactCenterRealTimeEventHandler : IContactCenterRealTimeEventHandler
 {
     private readonly IContactCenterRealTimeNotifier _notifier;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
@@ -459,6 +459,19 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             Reason = resolvedReason,
             Kind = AgentOfferKindHelper.FromActivitySource(activity?.Source),
         }, cancellationToken);
+
+        // Which agent's screens were told the offer is gone, and why: an accepted one opens its record there, and only
+        // there. The queue and its supervisors hear the same without the record.
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Pushed OfferRevoked ({Reason}) to agent '{AgentId}' for reservation '{ReservationId}' of activity '{ActivityItemId}' in queue '{QueueId}'.",
+                resolvedReason,
+                reservation.AgentId.SanitizeLogValue(),
+                reservation.ItemId.SanitizeLogValue(),
+                reservation.ActivityItemId.SanitizeLogValue(),
+                reservation.QueueId.SanitizeLogValue());
+        }
 
         await BroadcastQueueStatsAsync(reservation.QueueId, queueItemStore, cancellationToken);
     }

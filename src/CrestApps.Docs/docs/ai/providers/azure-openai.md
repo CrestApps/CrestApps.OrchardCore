@@ -71,7 +71,7 @@ Add the following section to `appsettings.json`:
 
 `ClientName` ties a deployment to its provider and `ConnectionName` to the connection it authenticates
 with. `Features` declares what the model can do; which deployment serves chat, utility, embedding and the
-rest is decided by the deployment slots under **Configuration** -> **Artificial Intelligence** ->
+rest is decided by the deployment slots under **Configuration** → **Artificial Intelligence** ->
 **Settings**. See [Model capabilities](../model-capabilities.md) for the full list of features and slots.
 
 Valid values for `AuthenticationType` are `Default`, `ManagedIdentity`, and `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
@@ -97,7 +97,7 @@ When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use 
 ### Get the API key and endpoint
 
 1. Open the Azure Portal and navigate to your Azure OpenAI resource.
-2. Go to **Resource Management** -> **Keys and Endpoint**.
+2. Go to **Resource Management** → **Keys and Endpoint**.
 3. Copy the **Endpoint**.
 4. Copy one of the available **API keys**.
 
@@ -194,7 +194,7 @@ This is useful when:
 
 ### How to create an Azure Speech deployment
 
-1. Navigate to **Artificial Intelligence** -> **Deployments** in the admin dashboard.
+1. Navigate to **Artificial Intelligence** → **Deployments** in the admin dashboard.
 2. Click **Add Deployment** and select **Azure AI Services** as the provider.
 3. Enter the **Model name** (the **Technical name** follows it).
 4. On the **Model capabilities** card, enable the **Speech to text (transcription)** feature.
@@ -210,7 +210,7 @@ You can find your Speech Service endpoint and API key in the [Azure AI Foundry p
 
 ### Setting the default speech-to-text deployment
 
-After creating the deployment, go to **Settings** -> **Artificial Intelligence** and select this deployment under **Default Speech-to-Text Deployment**.
+After creating the deployment, go to **Settings** → **Artificial Intelligence** and select this deployment under **Default Speech-to-Text Deployment**.
 
 ### Configuring Azure Speech via appsettings.json
 
@@ -309,7 +309,7 @@ brew install gstreamer
 Add GStreamer installation to your `Dockerfile` before the application layer:
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS base
 
 # Install GStreamer for Azure Speech SDK compressed audio support
 RUN apt-get update && \

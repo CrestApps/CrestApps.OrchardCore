@@ -1,0 +1,17 @@
+@model WorkforceStaffEditViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Workforce shifts"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="MinHoursPerWeek" class="ocat-label">@T["Fewest hours a week"]</label><div class="ocat-end"><input asp-for="MinHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="MaxHoursPerWeek" class="ocat-label">@T["Most hours a week"]</label><div class="ocat-end"><input asp-for="MaxHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="MaxHoursPerDay" class="ocat-label">@T["Most hours a day"]</label><div class="ocat-end"><input asp-for="MaxHoursPerDay" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        <div class="ocat-wrapper">
+            <label asp-for="Availability" class="ocat-label">@T["Availability"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Availability" class="form-control font-monospace" rows="5"></textarea>
+                <span class="hint">@T["One line per day, such as: Monday 09:00-17:00, or Tuesday 08:00-12:00 preferred, 13:00-17:00, or Saturday unavailable. Leave it empty when they can work any time."]</span>
+            </div>
+        </div>
+    </div>
+</div>

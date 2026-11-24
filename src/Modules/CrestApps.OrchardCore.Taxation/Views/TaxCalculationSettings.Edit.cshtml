@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Taxation.Models
+@model CrestApps.OrchardCore.Taxation.ViewModels.TaxCalculationSettingsViewModel
+
+@{
+    var levels = new (TaxRoundingLevel Level, string Label, string Hint)[]
+    {
+        (TaxRoundingLevel.Rate, T["Each tax and rate on the total"].Value, T["Each tax and rate is rounded once, on what its lines add up to, and the cents are shared back over the lines. The rule EN 16931 asks invoices to follow. Two lines of 10.05 at 7.5% come to 1.51."].Value),
+        (TaxRoundingLevel.Line, T["Each line"].Value, T["Every line's tax is rounded on its own and the rounded amounts are added up. Two lines of 10.05 at 7.5% come to 0.75 + 0.75 = 1.50."].Value),
+        (TaxRoundingLevel.Tax, T["Each kind of tax"].Value, T["What each kind of tax (such as VAT or a sales tax) adds up to is rounded once."].Value),
+        (TaxRoundingLevel.Jurisdiction, T["Each jurisdiction"].Value, T["What each jurisdiction (such as a state or a county) levies is rounded once."].Value),
+        (TaxRoundingLevel.Transaction, T["The whole order"].Value, T["Only the order's total tax is rounded."].Value),
+    };
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["How tax is rounded to the cent. The checkout and invoices both use it, so a cart and an invoice with the same lines come to the same tax. Changing it changes what the checkout charges from then on; orders and issued invoices keep their amounts."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Round tax at"]</label>
+    <div class="ocat-end">
+        @foreach (var (level, label, hint) in levels)
+        {
+            var id = Html.IdFor(m => m.RoundingLevel) + "_" + level;
+
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" asp-for="RoundingLevel" value="@level" id="@id" />
+                <label class="form-check-label" for="@id">@label</label>
+                <span class="hint dashed">@hint</span>
+            </div>
+        }
+    </div>
+</div>

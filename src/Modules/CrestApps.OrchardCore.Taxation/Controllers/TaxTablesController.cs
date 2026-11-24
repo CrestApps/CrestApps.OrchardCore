@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -13,6 +14,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -23,12 +25,14 @@ namespace CrestApps.OrchardCore.Taxation.Controllers;
 /// Provides admin endpoints for managing <see cref="TaxTable"/> entries.
 /// </summary>
 [Admin]
+[Feature(TaxationConstants.Feature.Tables)]
 public sealed class TaxTablesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
     private readonly INamedCatalogManager<TaxTable> _manager;
     private readonly INamedCatalog<TaxRule> _rulesCatalog;
+    private readonly IEnumerable<ITaxTableUsage> _usages;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<TaxTable> _displayManager;
@@ -40,6 +44,7 @@ public sealed class TaxTablesController : Controller
     public TaxTablesController(
         INamedCatalogManager<TaxTable> manager,
         INamedCatalog<TaxRule> rulesCatalog,
+        IEnumerable<ITaxTableUsage> usages,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<TaxTable> displayManager,
@@ -49,6 +54,7 @@ public sealed class TaxTablesController : Controller
     {
         _manager = manager;
         _rulesCatalog = rulesCatalog;
+        _usages = usages;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
@@ -247,6 +253,17 @@ public sealed class TaxTablesController : Controller
             await _notifier.WarningAsync(H["The tax table cannot be deleted because it is used by {0} tax rule(s). Update or remove those rules first.", referencingRules.Count]);
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // Other modules' records that use the table, such as income tax rules.
+        foreach (var usage in _usages)
+        {
+            if (await usage.GetUsagesAsync(model, HttpContext.RequestAborted) is { Count: > 0 } uses)
+            {
+                await _notifier.WarningAsync(H["The tax table cannot be deleted because it is used by {0}. Update or remove them first.", string.Join(", ", uses)]);
+
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         if (await _manager.DeleteAsync(model))

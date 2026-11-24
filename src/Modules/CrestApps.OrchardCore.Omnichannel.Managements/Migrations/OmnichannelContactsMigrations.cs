@@ -49,6 +49,11 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         ("IDX_OCPhone_DocumentId", ["DocumentId"]),
         ("IDX_OCPhone_Number", ["NormalizedPhoneNumber", "Published", "Latest"]),
         ("IDX_OCPhone_ContentItem", ["ContentItemId", "Published", "Latest"]),
+
+        // The search box of a contact or lead list asks for the DocumentId of every number that starts with what was
+        // typed. Holding both columns lets the database answer from this index alone, without reading the table row
+        // of every number that matches a short search.
+        ("IDX_OCPhone_NumberDocument", ["NormalizedPhoneNumber", "DocumentId"]),
     ];
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -101,7 +106,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
             table.CreateIndex(PrimaryAddressIndexName, _emailIndexColumns));
         ScheduleContactDefinitionRepair();
 
-        return 14;
+        return 15;
     }
 
     /// <summary>
@@ -294,11 +299,25 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     }
 
     /// <summary>
+    /// Adds the index the search box of a contact or lead list reads its numbers from, so a search by number is
+    /// answered from that index alone.
+    /// </summary>
+    public async Task<int> UpdateFrom13Async()
+    {
+        foreach (var (name, columns) in _phoneNumberIndexIndexes)
+        {
+            await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelContactPhoneNumberIndex>(SchemaBuilder, name, collection: null, columns);
+        }
+
+        return 14;
+    }
+
+    /// <summary>
     /// Adds the canonical (lower-case) primary email column, so an inbound email finds its contact however the sender
     /// typed their address, and fills it from the email already indexed. No content item is saved again: the value is
     /// copied in SQL, and an address stored with a display name is corrected the next time its contact is saved.
     /// </summary>
-    public async Task<int> UpdateFrom13Async()
+    public async Task<int> UpdateFrom14Async()
     {
         await EnsureColumnExistsAsync<OmnichannelContactIndex>(
             collection: null,
@@ -317,7 +336,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
             Logger.LogWarning(failure, "The canonical primary email of the existing contact index rows could not be filled in.");
         }
 
-        return 14;
+        return 15;
     }
 
     private async Task BackfillNormalizedEmailAddressesAsync(ISchemaBuilder builder)
@@ -609,7 +628,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
                 .Take(ReindexBatchSize)
                 .ListAsync();
 
-            if (!batch.Any())
+            if (batch.Count == 0)
             {
                 break;
             }

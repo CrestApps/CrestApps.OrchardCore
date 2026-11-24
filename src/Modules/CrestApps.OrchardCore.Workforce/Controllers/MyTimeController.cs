@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -225,7 +226,7 @@ public sealed class MyTimeController : Controller
         return Redirect(Url.Content("~/Admin/my-work/timesheet?date=" + date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
     }
 
-    private async Task<(WorkerProfile Worker, ITimeClockService TimeClock, IActionResult Denied)> AuthorizeAsync()
+    private async Task<(StaffMember Worker, ITimeClockService TimeClock, IActionResult Denied)> AuthorizeAsync()
     {
         if (User.Identity?.IsAuthenticated != true)
         {

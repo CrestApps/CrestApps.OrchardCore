@@ -28,6 +28,8 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
     {
         context
             .For<OmnichannelContactIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(CreateIndex);
     }
 

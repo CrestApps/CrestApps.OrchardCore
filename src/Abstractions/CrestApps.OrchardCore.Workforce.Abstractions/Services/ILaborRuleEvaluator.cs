@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -15,7 +16,7 @@ public interface ILaborRuleEvaluator
     /// <param name="teamId">The team.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The rule set, or <see langword="null"/>.</returns>
-    Task<LaborRuleSet> ResolveRuleSetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default);
+    Task<LaborRuleSet> ResolveRuleSetAsync(StaffMember worker, string teamId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks the shifts, with the worker's published shifts and approved time off around them.

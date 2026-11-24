@@ -10,7 +10,7 @@ Everyone who signs in has a **user account**. Orchard Core gives you the user li
 
 | | |
 | --- | --- |
-| **Menu** | Access Control > Users; Settings > User Display Name; Settings > User Avatars |
+| **Menu** | **Access Control** → **Users**; **Settings** → **User Display Name**; **Settings** → **User Avatars** |
 | **Permission** | Manage users (accounts); Manage the user display name settings; Manage the avatar settings |
 | **Feature** | Users (Orchard Core); User Display Name; User Avatar |
 
@@ -25,7 +25,7 @@ Everyone who signs in has a **user account**. Orchard Core gives you the user li
 <YouTube video="users-roles" title="Video of reading the user list and adding a person" start={97} end={163} />
 
 
-1. Open **Access Control > Users** and click **Add User**.
+1. Open **Access Control** → **Users** and click **Add User**.
 2. Fill in the **User name** and **Email**. **Phone Number** is optional and must start with the country code. For the **Password**, type one, or click **Generate password** and **Copy password** to pass it on. Tick the **roles** the person needs. The roles decide what the person can see and do. See [Roles and Permissions](roles.md).
 3. If the display name boxes are shown, fill them in (see [Set a person's name](#set-a-persons-name)).
 4. Save the user.
@@ -43,7 +43,7 @@ To change what someone can do later, edit their user and change their roles. You
 <YouTube video="users-roles" title="Video of choosing how names appear" start={225} end={268} />
 
 
-Open **Settings > User Display Name**. It decides how a person's name is built everywhere the site shows a user.
+Open **Settings** → **User Display Name**. It decides how a person's name is built everywhere the site shows a user.
 
 | Field | What it does |
 | --- | --- |
@@ -65,11 +65,11 @@ The screencast sets the format to *First Middle Last name*, fills in the names o
 - The user menu at the top of the admin screens.
 - Author and owner badges in content lists.
 - User pickers, such as the **Owner Name** box on content items and user fields on content types.
-- Searching **Access Control > Users**: typing a name finds people by user name, display name, first, middle or last name.
+- Searching **Access Control** → **Users**: typing a name finds people by user name, display name, first, middle or last name.
 
 ## Set a person's name
 
-1. Open **Access Control > Users** and edit the user.
+1. Open **Access Control** → **Users** and edit the user.
 2. Fill in the **Display Name**, **First Name**, **Middle Name** and **Last Name** boxes. Only the boxes that are not set to **Don't use** are shown, and boxes set to **Required** must be filled in before you can save.
 3. Save the user.
 
@@ -86,7 +86,7 @@ In the content type's Common part settings you can also choose the **Permission 
 <YouTube video="users-roles" title="Video of the avatar settings and the Avatar box on a user" start={268} end={295} />
 
 
-Open **Settings > User Avatars** to set how avatars work, then click **Save**.
+Open **Settings** → **User Avatars** to set how avatars work, then click **Save**.
 
 | Field | What it does |
 | --- | --- |
@@ -94,6 +94,40 @@ Open **Settings > User Avatars** to set how avatars work, then click **Save**.
 | **Use default CSS styles** | Uses the built-in look for avatars. Leave it ticked unless a developer has styled avatars for your site. |
 
 To give someone a picture, edit the user and use the **Avatar** box to pick or upload an image from the media library. Only image files are accepted. The box is shown only to people who have the **Manage Media** permission. The avatar appears next to the person's name in places that show who a user is.
+
+## Audiences
+
+An audience is a group of people chosen by rules, such as "everyone in the Field team hired more than 30 days ago". Other features target an audience, so the people in it change as your teams, staff records and roles change. Turn on the **User Audiences** feature, then open **Content** → **User Audiences**.
+
+The list shows the audiences you define and the ones features define (marked **Defined by a feature**, which you can't edit). Click **People** on any of them to see who is in it today.
+
+To add one, click **Add audience** and fill in:
+
+| Field | What it does |
+| --- | --- |
+| **Name** | The name people see. |
+| **Technical name** | The name other features keep to find the audience. It can't change after you save. |
+| **Description** | What the audience is for. |
+| **Who is in it** | **People who match every rule**, or **People who match any rule**. |
+| **Rules** | Pick a rule, then the values it matches; within one rule a person matches any value chosen. Click **Add rule** for another, or the bin to remove one. |
+
+The rules you can pick depend on the features that are on: **In a role**, **Member of a team or its sub-teams**, **Hired at least some days ago**, **Employment type**, **Holds a skill**, **Holds a valid certification**, **Enrolled in a course** and **Cohort member**. Click **Save**, then **People** to check the audience holds who you expect.
+
+## Cohorts
+
+A cohort is a named group of people you keep by hand, such as "2026 new hires" or "Warehouse supervisors". Where an audience follows rules, a cohort holds exactly the people you add, so use it for a group no rule describes. Turn on the **Cohorts** feature, then open **Content** → **Cohorts**.
+
+1. Click **Add cohort**, give it a **Name** (each cohort has its own) and, if you like, a **Description**, and click **Save**.
+2. On the cohort's people page, add people:
+    - **People**: search by name, user name or e-mail and choose one or more.
+    - **Many at once**: paste user names or e-mail addresses, one per line or separated by commas.
+
+    Click **Add to cohort**. People already in it are skipped, and the page tells you about any name that matches no user.
+3. To take someone out, click **Remove** on their row.
+
+The list shows how many people each cohort holds. **Edit** renames a cohort; **Delete**, in the row's menu, deletes it with its list of people. A cohort a course or learning path is linked to can't be deleted until you unlink it. Someone whose account is deleted leaves every cohort.
+
+To target a cohort from a feature that uses audiences, such as required learning, add an audience with the **Cohort member** rule and pick the cohorts. Courses and learning paths can enroll a cohort's people directly: see [Enroll a cohort](../learning/enrollments.md#enroll-a-cohort).
 
 ## Sign in with an email code
 

@@ -31,8 +31,8 @@ architecture, data model, background processing, permissions and extension point
 
 | Permission | Key | Grants |
 | --- | --- | --- |
-| Manage phone number verification settings | `ManagePhoneNumberVerificationSettings` | **Settings** -> **Phone Number Verifications** and the provider tabs. |
-| Run 'Phone Number Verifications' Report | `RunPhoneNumberVerificationsReport` | **Tools** -> **Phone Verifications Queue** and the report under **Reports**. Granted to the built-in **Supervisor** role by default. |
+| Manage phone number verification settings | `ManagePhoneNumberVerificationSettings` | **Settings** → **Phone Number Verifications** and the provider tabs. |
+| Run 'Phone Number Verifications' Report | `RunPhoneNumberVerificationsReport` | **Tools** → **Phone Verifications Queue** and the report under **Reports**. Granted to the built-in **Supervisor** role by default. |
 | Verify phone numbers | `VerifyPhoneNumbers` | Re-queuing records from the queue (**Retry now**, **Retry selected**, **Retry all failed**). |
 
 All three are granted to the **Administrator** role by default.
@@ -95,7 +95,7 @@ The entire normalized response is stored, so future providers can expose additio
 
 ## Content item integration
 
-Verification data is stored on contact content items through the **Phone Number Verification** content part (`PhoneNumberVerificationPart`). Attach the part to any content type that represents a contact under **Content** -> **Content Definition** -> **Content Types**.
+Verification data is stored on contact content items through the **Phone Number Verification** content part (`PhoneNumberVerificationPart`). Attach the part to any content type that represents a contact under **Content** → **Content Definition** → **Content Types**.
 
 The part stores:
 
@@ -174,7 +174,7 @@ External verification APIs are paid services, so the framework minimizes provide
 
 ## Reporting
 
-Enable **Reports** (`CrestApps.OrchardCore.Reports`) alongside **Phone Number Verifications** to surface the report under **Reports** -> **General** -> **Phone Number Verifications** for users who have the `RunPhoneNumberVerificationsReport` permission. The report declares no category, so the Reports menu places it in the **General** group. The report uses the shared Reports module renderer and export pipeline, and it surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
+Enable **Reports** (`CrestApps.OrchardCore.Reports`) alongside **Phone Number Verifications** to surface the report under **Reports** → **General** → **Phone Number Verifications** for users who have the `RunPhoneNumberVerificationsReport` permission. The report declares no category, so the Reports menu places it in the **General** group. The report uses the shared Reports module renderer and export pipeline, and it surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
 
 ![Phone number verifications report dashboard](/img/docs/phone-number-verifications-report.png)
 
@@ -201,7 +201,7 @@ The raw provider response, the provider's reference and the user who triggered t
 
 ## Configuration
 
-Configure the module under **Settings** -> **Phone Number Verifications** (requires `ManagePhoneNumberVerificationSettings`). The settings are described for administrators in the [User Manual](../user-manual/administration/phone-number-verification.md#set-up-a-provider); the defaults are:
+Configure the module under **Settings** → **Phone Number Verifications** (requires `ManagePhoneNumberVerificationSettings`). The settings are described for administrators in the [User Manual](../user-manual/administration/phone-number-verification.md#set-up-a-provider); the defaults are:
 
 | Setting | Default | Purpose |
 | --- | --- | --- |

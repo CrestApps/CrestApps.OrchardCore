@@ -20,7 +20,7 @@ This video walks through plans, signing up, agreements, the settings and members
 
 | | |
 | --- | --- |
-| **Menu** | Design > Content Definition > Content Types (to define a plan type), and Content > Content Items (to create plans) |
+| **Menu** | **Design** → **Content Definition** → **Content Types (to define a plan type)**, and **Content** → **Content Items (to create plans)** |
 | **Permission** | The content permissions for your plan type, such as Edit content |
 | **Feature** | Subscriptions |
 
@@ -30,7 +30,7 @@ This video walks through plans, signing up, agreements, the settings and members
 
 A plan type is a content type whose items are plans. You create it once, then create as many plans of that type as you sell.
 
-1. Open **Design > Content Definition > Content Types** and click **Create new type**.
+1. Open **Design** → **Content Definition** → **Content Types** and click **Create new type**.
 2. Enter a **Display Name** such as *Membership Plan* and click **Create**.
 3. In the type's settings, set **Stereotype** to *Subscription* and click **Save**. The **Subscription** part is added to the type for you, with the billing fields described below.
 4. Click **Add Parts** and add **Title** (so each plan has a name). The **Product** part, which gives each plan its price, is added with the stereotype. To offer the same plan at more than one price, add **Product prices** as well; see [Offer more than one price](#offer-more-than-one-price).
@@ -41,7 +41,7 @@ A plan type is a content type whose items are plans. You create it once, then cr
 
 <YouTube video="subscriptions" title="Video of a plan type and a plan's billing fields" start={98} end={163} />
 
-1. Open **Content > Content Items** and create a new item of your plan type, for example *Membership Plan*.
+1. Open **Content** → **Content Items** and create a new item of your plan type, for example *Membership Plan*.
 2. Enter the **Title**, the **Price** on the **Product** part, and the billing terms on the **Subscription** part.
 3. Click **Publish**. To show your plans to visitors, list them on a page of your site; see [Show your plans on your site](#show-your-plans-on-your-site).
 
@@ -75,7 +75,7 @@ On the plan's card on your site, the buyer picks one under **Choose your plan** 
 Plans are products, so you show them to visitors with a [product listing](product-listings.md), like any other product. Each plan shows its price with its billing period, such as *$10 / month*, and its **Sign up** button.
 
 1. Make sure the **Product Listing** feature is on.
-2. Open **Commerce > Product Listings**, click **New**, and give the page a **Title** such as *Plans* and a **Permalink** such as *plans*.
+2. Open **Commerce** → **Product Listings**, click **New**, and give the page a **Title** such as *Plans* and a **Permalink** such as *plans*.
 3. Under **Products**, choose **Only these product types** and tick your plan type.
 4. Plans rarely need filters: untick **Show filters** and **Let visitors change the sort**, and set **Default sort** to **Recommended** to show the plans in the order of their **Position**.
 5. Click **Publish**, and add the page to your site's menu.
@@ -96,7 +96,7 @@ What a plan grants is copied onto each subscription when it is bought, so changi
 
 <YouTube video="subscriptions" title="Video of the subscription settings" start={234} end={254} />
 
-The site-wide settings are under **Settings > Subscriptions**, with the **Manage subscriptions settings** permission.
+The site-wide settings are under **Settings** → **Subscriptions**, with the **Manage subscriptions settings** permission.
 
 | Field | What it does |
 | --- | --- |
@@ -115,7 +115,7 @@ This video shows a visitor signing up to a plan, then the Agreements screen:
 
 | | |
 | --- | --- |
-| **Menu** | Subscriptions > Agreements |
+| **Menu** | **Subscriptions** → **Agreements** |
 | **Permission** | Manage subscriptions |
 | **Feature** | Subscriptions |
 
@@ -161,7 +161,7 @@ What the subscriber keeps:
 
 - With **Keep access until the paid period ends**, the subscriber keeps their access, including any roles the plan gives, until the end of the period they paid for.
 - Without it, access ends now.
-- Payments already taken are not refunded automatically. To refund one, use **Commerce > Payments** (see [Payments and refunds](payments-and-refunds.md)).
+- Payments already taken are not refunded automatically. To refund one, use **Commerce** → **Payments** (see [Payments and refunds](payments-and-refunds.md)).
 
 ### Pause and resume billing
 
@@ -190,7 +190,7 @@ Each action is written to the subscription's **History**.
 
 | | |
 | --- | --- |
-| **Menu** | Subscriptions > My Plans |
+| **Menu** | **Subscriptions** → **My Plans** |
 | **Permission** | Manage own subscriptions (given to every signed-in user by default) |
 | **Feature** | Subscriptions |
 
@@ -227,6 +227,6 @@ At the bottom of the page, the note *Cancelling stops the next payment. You keep
 - **Visitors can't find the plans.** Plans are shown only on a product listing that lists their type; see [Show your plans on your site](#show-your-plans-on-your-site).
 - **The plan has no Sign up button.** Make sure the plan is published and has a price on its **Product** or **Product prices** part.
 - **Visitors see *This plan can't be bought right now* after Sign up.** The plan has no price the site can charge: usually it has no currency, and its content type sets no default currency, or its price is charged once rather than every period. Nothing is charged and no account is created. Give the plan a currency (or set a **Default currency** on the **Product** part of its content type) and a price that recurs, then publish it again.
-- **Visitors are asked to register before they can subscribe.** Tick **Allow guest sign-up** in **Settings > Subscriptions** to let them subscribe without an account.
+- **Visitors are asked to register before they can subscribe.** Tick **Allow guest sign-up** in **Settings** → **Subscriptions** to let them subscribe without an account.
 - **You want to sell a whole website.** See [Selling Sites](sites.md).
 - **You want to split one price into a few payments.** Use an [installment plan](installment-plans.md) instead.

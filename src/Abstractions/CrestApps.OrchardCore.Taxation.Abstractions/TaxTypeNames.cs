@@ -15,6 +15,12 @@ public static class TaxTypeNames
     public const string SalesTax = "SalesTax";
 
     /// <summary>
+    /// A use tax: the tax a business owes on what it bought or took from its stock for its own use without paying sales
+    /// tax on it, filed on the same return as the sales tax in most US states.
+    /// </summary>
+    public const string UseTax = "UseTax";
+
+    /// <summary>
     /// A value-added tax.
     /// </summary>
     public const string Vat = "VAT";
@@ -92,6 +98,7 @@ public static class TaxTypeNames
     public static readonly string[] All =
     [
         SalesTax,
+        UseTax,
         Vat,
         Gst,
         Hst,

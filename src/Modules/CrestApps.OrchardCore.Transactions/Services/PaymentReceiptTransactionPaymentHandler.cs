@@ -94,7 +94,7 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         var title = string.IsNullOrEmpty(transaction.Title) ? S["your purchase"].Value : transaction.Title;
         var subject = S["Receipt for your payment of {0}", amount].Value;
         var text = S["Thank you. We received your payment of {0} for {1}. Your receipt reference is {2}.", amount, title, receipt.Reference].Value;
-        var html = _htmlRenderer.Render(receipt);
+        var html = await _htmlRenderer.RenderAsync(receipt, cancellationToken);
 
         // A signed-up customer can open the receipt online again later, in the admin or in the site theme as the site
         // chose. A guest has no account to sign in with, so their email carries the receipt alone.

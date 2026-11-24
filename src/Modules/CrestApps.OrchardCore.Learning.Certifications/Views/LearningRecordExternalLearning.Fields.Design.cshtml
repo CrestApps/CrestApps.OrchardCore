@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Pipelines
+@model RecordExternalLearningStepViewModel
+
+<span class="hint">@(string.IsNullOrEmpty(Model.CreditTypeId) ? T["Credit type from {0}", Model.CreditTypeField ?? string.Empty] : T["Credit type: {0}", Model.CreditTypeOptions.FirstOrDefault(option => option.Value == Model.CreditTypeId)?.Text ?? string.Empty])</span>

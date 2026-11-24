@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -14,5 +15,5 @@ public interface IWorkerScheduleLimitsProvider
     /// <param name="teamId">The team.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The limits.</returns>
-    Task<WorkerScheduleLimits> GetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default);
+    Task<WorkerScheduleLimits> GetAsync(StaffMember worker, string teamId, CancellationToken cancellationToken = default);
 }

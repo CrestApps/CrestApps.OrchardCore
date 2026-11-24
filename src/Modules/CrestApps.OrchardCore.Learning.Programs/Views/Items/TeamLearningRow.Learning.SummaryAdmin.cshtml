@@ -1,0 +1,32 @@
+@model ShapeViewModel<TeamLearningRow>
+
+@if (Model.Value.Items.Count == 0)
+{
+    <span class="text-muted small">@T["Nothing required"]</span>
+}
+@foreach (var item in Model.Value.Items)
+{
+    var css = item.State switch
+    {
+        RequiredLearningState.Completed => "bg-success text-white",
+        RequiredLearningState.Overdue => "bg-danger text-white",
+        RequiredLearningState.InProgress => "bg-primary text-white",
+        RequiredLearningState.Exempt => "bg-info text-white",
+        _ => "bg-warning text-dark",
+    };
+    var state = item.State switch
+    {
+        RequiredLearningState.Completed => T["Completed"],
+        RequiredLearningState.Overdue => T["Overdue"],
+        RequiredLearningState.InProgress => T["In progress"],
+        RequiredLearningState.Exempt => T["Exempt"],
+        _ => T["Not started"],
+    };
+    <div class="small">
+        <span class="badge @css fw-normal me-1">@state</span>@item.Name
+        @if (item.Due is not null && item.State is not (RequiredLearningState.Completed or RequiredLearningState.Exempt))
+        {
+            <span class="text-muted ms-1">@T["due {0}", item.Due]</span>
+        }
+    </div>
+}

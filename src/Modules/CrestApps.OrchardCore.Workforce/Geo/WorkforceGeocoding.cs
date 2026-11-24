@@ -1,5 +1,6 @@
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.Teams.Models;
@@ -20,17 +21,33 @@ public static class WorkforceGeocodeTargets
     public const string TeamLocation = "WorkforceTeamLocation";
 
     /// <summary>
-    /// A worker's home base.
-    /// </summary>
-    public const string WorkerHomeBase = "WorkforceWorkerHomeBase";
-
-    /// <summary>
     /// Tells whether a location has an address and no coordinates yet.
     /// </summary>
     /// <param name="location">The location.</param>
     /// <returns><see langword="true"/> when it should be geocoded.</returns>
-    public static bool NeedsGeocoding(WorkforceLocation location)
-        => !string.IsNullOrWhiteSpace(location?.Address) && (location.Latitude is null || location.Longitude is null);
+    public static bool NeedsGeocoding(Team team)
+        => AddressText(team?.Address) is not null
+            && team.GetWorkforceSettings().Location is not { Latitude: not null, Longitude: not null };
+
+    /// <summary>
+    /// Writes a team's address on one line, for the geocoder and the Workforce card.
+    /// </summary>
+    /// <param name="address">The address.</param>
+    /// <returns>The line, or <see langword="null"/> when there is no address.</returns>
+    public static string AddressText(Address address)
+    {
+        if (address is null)
+        {
+            return null;
+        }
+
+        var parts = new[] { address.AddressLine1, address.AddressLine2, address.City, address.Region, address.PostalCode, address.Country }
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .Select(part => part.Trim())
+            .ToArray();
+
+        return parts.Length == 0 ? null : string.Join(", ", parts);
+    }
 }
 
 /// <summary>
@@ -58,38 +75,8 @@ internal sealed class TeamLocationGeocodeHandler : CatalogEntryHandlerBase<Team>
         => EnqueueAsync(context.Model, cancellationToken);
 
     private Task EnqueueAsync(Team team, CancellationToken cancellationToken)
-        => team.GetWorkforceSettings().Location is var location && WorkforceGeocodeTargets.NeedsGeocoding(location)
-            ? _queue.Value.EnqueueAsync(WorkforceGeocodeTargets.TeamLocation, team.ItemId, new GeocodeQuery { Text = location.Address }, cancellationToken)
-            : Task.CompletedTask;
-}
-
-/// <summary>
-/// Asks for a worker's home base to be geocoded when it has an address and no coordinates.
-/// </summary>
-internal sealed class WorkerHomeBaseGeocodeHandler : CatalogEntryHandlerBase<WorkerProfile>
-{
-    private readonly Lazy<IGeocodeQueue> _queue;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WorkerHomeBaseGeocodeHandler"/> class.
-    /// </summary>
-    /// <param name="queue">The geocoding queue.</param>
-    public WorkerHomeBaseGeocodeHandler(Lazy<IGeocodeQueue> queue)
-    {
-        _queue = queue;
-    }
-
-    /// <inheritdoc/>
-    public override Task CreatedAsync(CreatedContext<WorkerProfile> context, CancellationToken cancellationToken = default)
-        => EnqueueAsync(context.Model, cancellationToken);
-
-    /// <inheritdoc/>
-    public override Task UpdatedAsync(UpdatedContext<WorkerProfile> context, CancellationToken cancellationToken = default)
-        => EnqueueAsync(context.Model, cancellationToken);
-
-    private Task EnqueueAsync(WorkerProfile worker, CancellationToken cancellationToken)
-        => WorkforceGeocodeTargets.NeedsGeocoding(worker.HomeBase)
-            ? _queue.Value.EnqueueAsync(WorkforceGeocodeTargets.WorkerHomeBase, worker.ItemId, new GeocodeQuery { Text = worker.HomeBase.Address }, cancellationToken)
+        => WorkforceGeocodeTargets.NeedsGeocoding(team)
+            ? _queue.Value.EnqueueAsync(WorkforceGeocodeTargets.TeamLocation, team.ItemId, new GeocodeQuery { Text = WorkforceGeocodeTargets.AddressText(team.Address) }, cancellationToken)
             : Task.CompletedTask;
 }
 
@@ -117,54 +104,16 @@ internal sealed class TeamLocationGeocodeTarget : IGeocodeTarget
     {
         var team = await _teamManager.FindByIdAsync(targetId, cancellationToken);
 
-        var location = team?.GetWorkforceSettings().Location;
-
-        if (location is null || string.IsNullOrWhiteSpace(location.Address))
+        // A point set by hand in the meantime wins over the geocoder's.
+        if (!WorkforceGeocodeTargets.NeedsGeocoding(team))
         {
             return false;
         }
 
-        location.Latitude = candidate.Point.Latitude;
-        location.Longitude = candidate.Point.Longitude;
+        team.GetWorkforceSettings().Location = new WorkforceLocation { Latitude = candidate.Point.Latitude, Longitude = candidate.Point.Longitude };
         await _teamManager.UpdateAsync(team, null, cancellationToken);
 
         return true;
     }
 }
 
-/// <summary>
-/// Writes geocoded coordinates to a worker's home base.
-/// </summary>
-internal sealed class WorkerHomeBaseGeocodeTarget : IGeocodeTarget
-{
-    private readonly IWorkerManager _workerManager;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WorkerHomeBaseGeocodeTarget"/> class.
-    /// </summary>
-    /// <param name="workerManager">The worker manager.</param>
-    public WorkerHomeBaseGeocodeTarget(IWorkerManager workerManager)
-    {
-        _workerManager = workerManager;
-    }
-
-    /// <inheritdoc/>
-    public string TargetType => WorkforceGeocodeTargets.WorkerHomeBase;
-
-    /// <inheritdoc/>
-    public async Task<bool> ApplyAsync(string targetId, GeocodeCandidate candidate, string source, CancellationToken cancellationToken = default)
-    {
-        var worker = await _workerManager.FindByIdAsync(targetId, cancellationToken);
-
-        if (worker?.HomeBase is null || string.IsNullOrWhiteSpace(worker.HomeBase.Address))
-        {
-            return false;
-        }
-
-        worker.HomeBase.Latitude = candidate.Point.Latitude;
-        worker.HomeBase.Longitude = candidate.Point.Longitude;
-        await _workerManager.UpdateAsync(worker, null, cancellationToken);
-
-        return true;
-    }
-}

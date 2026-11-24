@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AccessExpiringEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+    @T["Access Expiring"]
+</h4>
+<p>@T["Starts once when the access of an enrollment ends soon."]</p>

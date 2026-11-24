@@ -1,0 +1,57 @@
+@model ClassRosterViewModel
+
+@{
+    var classItemId = Model.ClassItem.ContentItemId;
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningClassSessionsRoster" title="@T["Roster of {0}", Model.Session.Title]">
+        <breadcrumb-item id="LearningClassItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = classItemId })">@Model.ClassItem.DisplayText</breadcrumb-item>
+        <breadcrumb-item id="LearningClassSessions" action="Index" controller="ClassSessions" area="CrestApps.OrchardCore.Learning.Classes" route-classItemId="@classItemId">@T["Sessions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.Session.Status == SchedulingSessionStatus.Cancelled)
+{
+    <div class="alert alert-info" role="status">@T["This session was cancelled."]</div>
+}
+else if (Model.CanMark)
+{
+    <p class="text-body-secondary">@T["Mark each learner Attended, Partly attended with the minutes, or Absent, then save. An attendance that counts completes the class item for the learner."]</p>
+}
+
+<h2 class="h5">@T["Registered"]</h2>
+<admin-list name="LearningClassRoster" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody has registered for this session yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Learner"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column name="Attendance" position="40" title="@T["Attendance"]" width="auto" />
+    </admin-list-grid>
+</admin-list>
+
+<h2 class="h5 mt-4">@T["Waitlist"]</h2>
+<admin-list name="LearningClassWaitlist" context="Model.Waitlist" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody is waiting for a place."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Person"]" />
+        <admin-list-column name="State" position="30" title="@T["State"]" width="auto" />
+    </admin-list-grid>
+</admin-list>
+
+@* The attendance inputs sit in the roster rows and belong to this form through their form attribute. *@
+<form id="class-roster-form" asp-action="Roster" asp-route-id="@Model.Session.ItemId" method="post" class="no-multisubmit">
+    @if (Model.CanMark)
+    {
+        <div class="action-bar-bottom">
+            <button class="btn btn-primary" type="submit">@T["Save attendance"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-classItemId="@classItemId">@T["Back"]</a>
+        </div>
+    }
+    else
+    {
+        <div class="action-bar-bottom">
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-classItemId="@classItemId">@T["Back"]</a>
+        </div>
+    }
+</form>

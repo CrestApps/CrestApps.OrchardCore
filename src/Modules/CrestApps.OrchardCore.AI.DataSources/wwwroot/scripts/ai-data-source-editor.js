@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.AI.DataSources/Assets/js/ai-data-source-editor.js
+	// src/Modules/CrestApps.OrchardCore.AI.DataSources/Assets/js/ai-data-source-editor.js
 	(function() {
 		"use strict";
 		function updateSections(root) {
@@ -184,5 +184,4 @@
 			});
 		});
 	})();
-	//#endregion
 })();

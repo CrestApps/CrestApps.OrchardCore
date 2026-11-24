@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps Attachments configuration",
+  "description": "The settings of the Attachments module read from appsettings.json, in the OrchardCore section of the host or a tenant.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps": {
+          "type": "object",
+          "properties": {
+            "Attachments": {
+              "type": "object",
+              "description": "The upload policy of record attachments.",
+              "properties": {
+                "MaxFileBytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 20971520,
+                  "description": "The largest file accepted, in bytes."
+                },
+                "MaxFilesPerUpload": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 10,
+                  "description": "How many files one upload may carry."
+                },
+                "AllowedFormats": {
+                  "type": "array",
+                  "description": "The formats accepted; empty accepts every format the site knows.",
+                  "items": {
+                    "type": "string",
+                    "enum": [ "JPEG", "PNG", "GIF", "WebP", "PDF", "Word", "Excel", "PowerPoint", "Text", "CSV", "vCard" ]
+                  }
+                },
+                "AzureBlob": {
+                  "type": "object",
+                  "description": "Keeps the files in an Azure Blob Storage container instead of the tenant's application data.",
+                  "properties": {
+                    "ConnectionString": {
+                      "type": "string",
+                      "description": "The storage account's connection string."
+                    },
+                    "ContainerName": {
+                      "type": "string",
+                      "description": "The container; Liquid such as {{ ShellSettings.Name }} is allowed."
+                    },
+                    "BasePath": {
+                      "type": "string",
+                      "description": "The folder inside the container; Liquid is allowed."
+                    },
+                    "CreateContainer": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Whether the container is created when the tenant starts."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

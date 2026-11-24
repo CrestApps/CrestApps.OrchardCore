@@ -2,6 +2,6 @@
   "name": "crestapps.orchardcore.asterisk.web",
   "private": true,
   "dependencies": {
-    "@microsoft/signalr": "10.0.11"
+    "@microsoft/signalr": "11.0.0"
   }
 }

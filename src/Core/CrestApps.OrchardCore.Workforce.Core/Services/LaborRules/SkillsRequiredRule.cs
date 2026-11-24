@@ -35,7 +35,7 @@ internal sealed class SkillsRequiredRule : LaborRuleBase
 
             foreach (var skillId in shift.RequiredSkillIds)
             {
-                if (!await _skillAssignments.HoldsAsync(SkillSubject.Worker(context.Worker.ItemId), skillId, 0, shift.Date, cancellationToken))
+                if (!await _skillAssignments.HoldsAsync(SkillSubject.Staff(context.Worker.ItemId), skillId, 0, shift.Date, cancellationToken))
                 {
                     missing.Add((await _skillManager.FindByIdAsync(skillId, cancellationToken))?.Name ?? skillId);
                 }

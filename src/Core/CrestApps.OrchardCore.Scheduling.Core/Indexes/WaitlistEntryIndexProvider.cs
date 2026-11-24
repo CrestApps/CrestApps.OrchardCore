@@ -20,7 +20,11 @@ public sealed class WaitlistEntryIndexProvider : IndexProvider<WaitlistEntry>
     /// <inheritdoc />
     public override void Describe(DescribeContext<WaitlistEntry> context)
     {
+        // A dated session keeps its own waitlist (SessionWaitlistIndex); it never takes a place an ordinary appointment frees.
         context.For<WaitlistEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .When(entry => string.IsNullOrEmpty(entry.SessionId))
             .Map(entry => new WaitlistEntryIndex
             {
                 ItemId = entry.ItemId,

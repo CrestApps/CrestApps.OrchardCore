@@ -1,0 +1,57 @@
+@model InvoiceDocumentPageViewModel
+
+@{
+    var source = Model.Source;
+    var isCreditNote = source is CreditNote;
+    var title = isCreditNote
+        ? (string.IsNullOrEmpty(source.Number) ? T["Draft credit note"] : T["Credit note {0}", source.Number])
+        : (string.IsNullOrEmpty(source.Number) ? T["Draft invoice"] : T["Invoice {0}", source.Number]);
+}
+
+<zone Name="Title">
+    <breadcrumb name="InvoicesDocument" title="@T["Print"]">
+        <breadcrumb-item id="InvoicesIndex" action="Index" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoices"]</breadcrumb-item>
+        @if (isCreditNote)
+        {
+            <breadcrumb-item id="CreditNotesDetail" action="Detail" controller="CreditNotesAdmin" area="@InvoicingConstants.Features.Area" route-itemId="@source.ItemId" permission="@InvoicingPermissions.ViewInvoices.Name">@title</breadcrumb-item>
+        }
+        else
+        {
+            <breadcrumb-item id="InvoicesDetail" action="Detail" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" route-itemId="@source.ItemId" permission="@InvoicingPermissions.ViewInvoices.Name">@title</breadcrumb-item>
+        }
+    </breadcrumb>
+</zone>
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .business-document-print-area,
+        .business-document-print-area * {
+            visibility: visible;
+        }
+
+        .business-document-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="d-flex flex-wrap gap-2 mb-3 no-print">
+    <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print"]</button>
+    <a class="btn btn-secondary" href="@Model.PdfUrl">@T["Download PDF"]</a>
+    <a class="btn btn-link" href="@Model.BackUrl">@T["Back"]</a>
+</div>
+
+<div class="business-document-print-area">
+    @await DisplayAsync(await New.BusinessDocument(Document: Model.Document))
+</div>
