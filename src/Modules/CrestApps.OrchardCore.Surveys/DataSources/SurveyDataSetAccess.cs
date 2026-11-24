@@ -18,15 +18,18 @@ internal sealed class SurveyDataSetAccess
     private readonly SurveyAccessScopes _scopes;
     private readonly SurveyIndexReader _reader;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IClock _clock;
 
     public SurveyDataSetAccess(
         SurveyAccessScopes scopes,
         SurveyIndexReader reader,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IClock clock)
     {
         _scopes = scopes;
         _reader = reader;
         _serviceProvider = serviceProvider;
+        _clock = clock;
     }
 
     /// <summary>
@@ -107,7 +110,7 @@ internal sealed class SurveyDataSetAccess
     /// </summary>
     /// <returns>The time.</returns>
     public DateTime UtcNow()
-        => _serviceProvider.GetService<IClock>()?.UtcNow ?? DateTime.UtcNow;
+        => _clock.UtcNow;
 
     /// <summary>
     /// Gets the label staff see for a response (<see cref="SurveyRespondentNames.GetLabelAsync(Survey, SurveyResponse, CancellationToken)"/>).

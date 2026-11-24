@@ -627,7 +627,7 @@ public sealed class SurveyScaleTests : IAsyncLifetime
         var authorization = TestSecurity.Granting(grants);
         var services = new ServiceCollection().BuildServiceProvider();
         var reader = new SurveyIndexReader(session, new SurveyStore(session));
-        var access = new SurveyDataSetAccess(new SurveyAccessScopes(authorization, [], reader), reader, services);
+        var access = new SurveyDataSetAccess(new SurveyAccessScopes(authorization, [], reader), reader, services, new RuntimeTestClock { UtcNow = DateTime.UtcNow });
         var registry = new SurveyControlRegistry(Options.Create(new SurveyControlOptions()), [new ResultsTestControlHandler()], [], []);
         var versions = new SurveyVersionStore(session);
         var names = new SurveyRespondentNames(services, RecipeRoundTrip.Localizer<SurveyRespondentNames>());
