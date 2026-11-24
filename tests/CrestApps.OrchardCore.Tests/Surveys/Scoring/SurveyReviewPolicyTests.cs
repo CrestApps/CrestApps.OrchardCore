@@ -16,7 +16,7 @@ public sealed class SurveyReviewPolicyTests
     public void GetMoment_FollowsTheTimeSinceFinishing(int minutes, SurveyReviewMoment expected)
     {
         // Act
-        var moment = _policy.GetMoment(OpenSurvey(), Completed(), _completed.AddMinutes(minutes));
+        var moment = _policy.GetMoment(OpenSurvey(), Quiz(), Completed(), _completed.AddMinutes(minutes));
 
         // Assert
         Assert.Equal(expected, moment);
@@ -30,7 +30,7 @@ public sealed class SurveyReviewPolicyTests
         survey.Access.ClosesUtc = _completed.AddHours(1);
 
         // Act
-        var moment = _policy.GetMoment(survey, Completed(), _completed.AddHours(2));
+        var moment = _policy.GetMoment(survey, Quiz(), Completed(), _completed.AddHours(2));
 
         // Assert
         Assert.Equal(SurveyReviewMoment.AfterClose, moment);

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Formulas;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Telemetry;
@@ -432,6 +433,15 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 response.ItemId = UniqueIdOf(response);
                 resumeToken = SurveyResumeTokens.Issue(response.ItemId);
                 response.ResumeTokenHash = SurveyResumeTokens.Hash(resumeToken);
+            }
+
+            // Staff may have started deleting the survey since this start read it: the delete counts the responses again
+            // once its mark is committed, and once more after it removed the survey's records, so a response committed
+            // after the first count would outlive its invitations, accommodations and participation. Read the mark again,
+            // as committed, just before the response is written: from here to the commit below is the only window left.
+            if (await IsBeingDeletedAsync(survey.ItemId, cancellationToken))
+            {
+                return new SurveyStartResult { Error = SurveyErrorCode.NotFound };
             }
 
             await _responseStore.CreateAsync(response, cancellationToken);
@@ -1048,6 +1058,17 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
             ? null
             : new SurveyResponseAccommodation { ClosesUtc = surveyOverride.ClosesUtc, ExtraAttempts = Math.Max(surveyOverride.ExtraAttempts, 0) };
 
+    // Whether the survey is gone or marked as being deleted, read as committed: on a session of its own, since this
+    // scope's session hands back the survey it loaded at the start.
+    private async Task<bool> IsBeingDeletedAsync(string surveyId, CancellationToken cancellationToken)
+    {
+        await using var session = _session.Store.CreateSession();
+
+        var current = await session.Query<Survey, SurveyIndex>(index => index.ItemId == surveyId, SurveysConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
+
+        return current is null || current.DeletingUtc is not null;
+    }
+
     // Whether a response keeps only the kind of its context (an anonymous survey's identifying context), so a lookup of
     // its respondent's accommodations can't match one granted for that context.
     private static bool HasHiddenContext(Survey survey, SurveyResponse response)
@@ -1427,20 +1448,25 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
         }
 
         // Every attempt the respondent started counts, a voided one included: voiding doesn't give an attempt back, so the
-        // next attempt never takes the number of a voided one.
+        // next attempt never takes the number of a voided one. The participation records count the attempts started.
+        var started = 0;
+
+        if (!string.IsNullOrEmpty(respondentKey))
+        {
+            started = (await _participation.CountAsync(survey, respondentKey, request.Context, _clock.UtcNow)).Started.Total;
+        }
+
+        // An identified respondent's next attempt also follows the largest number their kept responses carry, the larger
+        // of the two as the limits rule counts (RespondentLimitsRule): a response staff delete leaves the later numbers
+        // as they are, so counting the responses would give the next attempt a number already taken; and retention takes
+        // the user off old responses but keeps the participation of a survey with a total limit, so numbering doesn't
+        // restart at 1.
         if (!string.IsNullOrEmpty(response.UserId))
         {
-            return await _counter.CountAttemptsUsedByUserAsync(survey.ItemId, response.UserId, request.Context?.ToString(), countStarted: true) + 1;
+            started = Math.Max(started, await _counter.FindLargestAttemptNumberForUserAsync(survey.ItemId, response.UserId, request.Context?.ToString()));
         }
 
-        if (string.IsNullOrEmpty(respondentKey))
-        {
-            return 1;
-        }
-
-        var counts = await _participation.CountAsync(survey, respondentKey, request.Context, _clock.UtcNow);
-
-        return counts.Started.Total + 1;
+        return started + 1;
     }
 
     private static void SetVariables(SurveyDefinition definition, SurveyCollector collector, StartResponseRequest request, SurveyResponse response)
@@ -2072,7 +2098,14 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
 
             if (!string.IsNullOrEmpty(identity.UserId) && _serviceProvider.GetService<ISurveyOverrideService>() is { } overrides)
             {
-                response.Accommodation = AccommodationOf(await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, response.Context, cancellationToken));
+                // The same rule as OverrideForAsync: finding none means none, unless the response keeps its context
+                // hidden, when the lookup can't match an accommodation granted for that context and the one kept stays.
+                var found = await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, response.Context, cancellationToken);
+
+                if (found is not null || !HasHiddenContext(survey, response))
+                {
+                    response.Accommodation = AccommodationOf(found);
+                }
             }
         }
 

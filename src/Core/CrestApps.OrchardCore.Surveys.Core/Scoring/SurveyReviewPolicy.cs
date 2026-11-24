@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 
@@ -17,7 +18,7 @@ public sealed class SurveyReviewPolicy : ISurveyReviewPolicy
     private const ReviewShows KeyParts = ReviewShows.Score | ReviewShows.RightAnswers | ReviewShows.Feedback | ReviewShows.GeneralFeedback;
 
     /// <inheritdoc />
-    public SurveyReviewMoment GetMoment(Survey survey, SurveyResponse response, DateTime utcNow)
+    public SurveyReviewMoment GetMoment(Survey survey, SurveyDefinition definition, SurveyResponse response, DateTime utcNow)
     {
         ArgumentNullException.ThrowIfNull(response);
 
@@ -26,7 +27,7 @@ public sealed class SurveyReviewPolicy : ISurveyReviewPolicy
             return SurveyReviewMoment.During;
         }
 
-        if (IsClosed(survey, utcNow))
+        if (SurveyAvailability.IsClosedForReview(survey, definition, utcNow))
         {
             return SurveyReviewMoment.AfterClose;
         }
@@ -47,7 +48,7 @@ public sealed class SurveyReviewPolicy : ISurveyReviewPolicy
         }
 
         var review = definition?.Review ?? new SurveyReviewSettings();
-        var moment = GetMoment(survey, response, utcNow);
+        var moment = GetMoment(survey, definition, response, utcNow);
 
         if (moment == SurveyReviewMoment.During)
         {
@@ -105,20 +106,5 @@ public sealed class SurveyReviewPolicy : ISurveyReviewPolicy
         }
 
         return scoring.ShowScoreToRespondent ? shows : shows & ~ReviewShows.Score;
-    }
-
-    private static bool IsClosed(Survey survey, DateTime utcNow)
-    {
-        if (survey is null)
-        {
-            return false;
-        }
-
-        if (survey.Status is SurveyStatus.Closed or SurveyStatus.Archived)
-        {
-            return true;
-        }
-
-        return survey.Access?.ClosesUtc is { } closes && utcNow >= DateTime.SpecifyKind(closes, DateTimeKind.Utc);
     }
 }

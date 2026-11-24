@@ -9,7 +9,9 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// Saves again, a page per run, every survey draft, published version, template and bank question whose HTML texts the
 /// sanitizer changes, so author HTML stored before the stores sanitized on save (or stored in a translation whose source
 /// text was empty) is cleaned at rest. Records the sanitizer leaves as they are are not saved again, so their modified
-/// time is kept. <see cref="SurveyContentSanitizingMigrations"/> asks for it.
+/// time is kept. Every walk saves with YesSql's concurrency check, so an edit saved while a run holds its page is never
+/// overwritten with the copy the run loaded: the run's commit fails, and the next run reads the page again.
+/// <see cref="SurveyContentSanitizingMigrations"/> asks for it.
 /// </summary>
 internal sealed class SurveyContentSanitizingStep : IResumableStep
 {
@@ -62,8 +64,8 @@ internal sealed class SurveyContentSanitizingStep : IResumableStep
             context,
             cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, collection, cursor, survey => Changes(survey.Draft, _sanitizer.Sanitize), save: _surveyStore.SaveUnchangedAsync, cancellationToken: cancellationToken),
             cursor => SurveyUpgradePages.VisitPageAsync(_session, _versionStore, collection, cursor, version => Changes(version.Definition, _sanitizer.Sanitize), save: _versionStore.SaveUnchangedAsync, cancellationToken: cancellationToken),
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _templateStore, collection, cursor, template => Changes(template.Definition, _sanitizer.Sanitize), cancellationToken: cancellationToken),
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _bankQuestionStore, collection, cursor, question => Changes(question.Question, _sanitizer.Sanitize), cancellationToken: cancellationToken));
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _templateStore, collection, cursor, template => Changes(template.Definition, _sanitizer.Sanitize), save: _templateStore.SaveUnchangedAsync, cancellationToken: cancellationToken),
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _bankQuestionStore, collection, cursor, question => Changes(question.Question, _sanitizer.Sanitize), save: _bankQuestionStore.SaveUnchangedAsync, cancellationToken: cancellationToken));
     }
 
     private static bool Changes<T>(T value, Action<T> sanitize)

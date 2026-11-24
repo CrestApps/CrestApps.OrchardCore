@@ -33,12 +33,19 @@ public static class SurveyAvailability
     /// <summary>
     /// Gets the grace, in seconds, that a respondent's write in flight at their deadline or at the closing date gets
     /// (<see cref="SurveyTimingSettings.GraceSeconds"/>, 5 by default): a deadline is often clamped to the closing date,
-    /// so both give a last page posted just before them the same time to arrive. A close by staff has no grace.
+    /// so both give a last page posted just before them the same time to arrive. A close by staff has no grace. It is
+    /// kept between 0 and <see cref="MaxGraceSeconds"/> whatever the definition says (a recipe or an import can set any
+    /// value), since it delays every closing date.
     /// </summary>
     /// <param name="definition">The definition of the response's version, or <see langword="null"/>.</param>
     /// <returns>The grace.</returns>
     public static int GraceSeconds(SurveyDefinition definition)
-        => Math.Max(definition?.Timing?.GraceSeconds ?? 5, 0);
+        => Math.Clamp(definition?.Timing?.GraceSeconds ?? 5, 0, MaxGraceSeconds);
+
+    /// <summary>
+    /// The longest grace, in seconds, past a deadline or a closing date.
+    /// </summary>
+    public const int MaxGraceSeconds = 300;
 
     /// <summary>
     /// Gets whether staff closed the survey or the link: its status, whatever the dates say.
@@ -59,4 +66,16 @@ public static class SurveyAvailability
     /// <returns><see langword="true"/> when it is closed.</returns>
     public static bool IsClosed(Survey survey, SurveyOverride surveyOverride, SurveyCollector collector, DateTime utcNow)
         => IsClosedByStatus(survey, collector) || ClosesUtc(survey, surveyOverride, collector) is { } closes && utcNow >= closes;
+
+    /// <summary>
+    /// Gets whether the survey is closed for what shows only after it closes (the review after close, the totals of all
+    /// responses): staff closed it, or its own closing date and the grace past it are over. Until the grace ends, another
+    /// respondent's last page posted at the close can still be taken, so the right answers must not show yet.
+    /// </summary>
+    /// <param name="survey">The survey, or <see langword="null"/>.</param>
+    /// <param name="definition">The definition whose grace applies, or <see langword="null"/>.</param>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <returns><see langword="true"/> when it is closed.</returns>
+    public static bool IsClosedForReview(Survey survey, SurveyDefinition definition, DateTime utcNow)
+        => survey is not null && IsClosed(survey, surveyOverride: null, collector: null, utcNow.AddSeconds(-GraceSeconds(definition)));
 }

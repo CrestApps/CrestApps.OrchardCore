@@ -86,6 +86,28 @@ public sealed class SurveyResponseCounter
     }
 
     /// <summary>
+    /// Gets the largest attempt number of a user's responses kept for a survey and context, test responses left out (a
+    /// voided response included: voiding doesn't give its number back).
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="userId">The user.</param>
+    /// <param name="contextRef">The context as Kind:Id, or <see langword="null"/>.</param>
+    /// <returns>The number, or 0 when the user has none.</returns>
+    public async Task<int> FindLargestAttemptNumberForUserAsync(string surveyId, string userId, string contextRef)
+    {
+        var query = _store.YesSqlSession.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
+
+        if (contextRef is not null)
+        {
+            query = query.Where(index => index.ContextRef == contextRef);
+        }
+
+        var largest = await query.OrderByDescending(index => index.AttemptNumber).FirstOrDefaultAsync();
+
+        return largest?.AttemptNumber ?? 0;
+    }
+
+    /// <summary>
     /// Finds the response in progress of a user for a survey and context.
     /// </summary>
     /// <param name="surveyId">The survey.</param>

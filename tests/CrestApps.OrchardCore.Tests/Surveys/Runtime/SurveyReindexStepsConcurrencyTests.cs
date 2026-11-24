@@ -1,12 +1,16 @@
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Migrations;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Tests.Surveys.Authoring;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Dapper;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore;
 using YesSql;
 
@@ -101,6 +105,72 @@ public sealed class SurveyReindexStepsConcurrencyTests
         // Act and assert
         await AssertTheRunsCommitFailsAsync(store, session => new SurveyInvitationRemindersStep(session, new SurveyInvitationStore(session)).RunAsync(new ResumableStepContext(), TestContext.Current.CancellationToken));
     }
+
+    [Fact]
+    public async Task ContentSanitizingStep_TemplateWalk_NeverOverwritesATemplateSavedMeanwhile()
+    {
+        // Arrange (R7-Mi12): a template stored before the stores sanitized on save.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var store = await StoreAsync(harness);
+        store.RegisterIndexes(new SurveyTemplateIndexProvider());
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+        definition.Pages[0].Questions[0].Title = Dirty;
+
+        await using (var session = store.CreateSession())
+        {
+            await new SurveyTemplateStore(session).CreateAsync(new SurveyTemplate { Name = "dirty", Title = "Dirty", Definition = definition }, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Act and assert: the template walk is the step's third.
+        await AssertTheRunsCommitFailsAsync(store, session => SanitizingStep(session).RunAsync(new ResumableStepContext { Cursor = "2|" }, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ContentSanitizingStep_BankQuestionWalk_NeverOverwritesAQuestionSavedMeanwhile()
+    {
+        // Arrange (R7-Mi12)
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var store = await StoreAsync(harness);
+
+        await using (var session = store.CreateSession())
+        {
+            await new BankQuestionStore(session).CreateAsync(new BankQuestion { BankId = "b1", Question = new SurveyQuestion { Id = "q1", Name = "q1", ControlType = "text", Title = Dirty } }, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Act and assert: the bank question walk is the step's fourth.
+        await AssertTheRunsCommitFailsAsync(store, session => SanitizingStep(session).RunAsync(new ResumableStepContext { Cursor = "3|" }, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AnonymityUpgradeStep_ParticipationWalk_NeverOverwritesACompletionCountedMeanwhile()
+    {
+        // Arrange (R7-Mi12): an anonymous participation record with an exact completion time, written by an earlier
+        // version; a completion counts on it while the walk holds its page.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var store = await StoreAsync(harness);
+        var completed = RuntimeTestHarness.Now.AddHours(-3);
+
+        await using (var session = store.CreateSession())
+        {
+            await session.SaveAsync(new SurveyParticipation { ItemId = "anonymous", SurveyId = "s1", RespondentKey = "a:hmac", Day = DateOnly.FromDateTime(completed), CompletedCount = 1, LastCompletedUtc = completed }, false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Act and assert: the participation walk is the step's second.
+        await AssertTheRunsCommitFailsAsync(store, session => new SurveyAnonymityUpgradeStep(
+            session,
+            new SurveyStore(session),
+            new SurveyParticipationStore(session),
+            new SurveyAnonymitySecrets(new EphemeralDataProtectionProvider(), new SurveyStore(session), NullLogger<SurveyAnonymitySecrets>.Instance))
+            .RunAsync(new ResumableStepContext { Cursor = "1|" }, TestContext.Current.CancellationToken));
+    }
+
+    private const string Dirty = "<p>Hello</p><script>alert('XSS')</script>";
+
+    private static SurveyContentSanitizingStep SanitizingStep(ISession session)
+        => new(session, new SurveyStore(session), new SurveyVersionStore(session), new SurveyTemplateStore(session), new BankQuestionStore(session), SurveyContentSanitizerTests.Sanitizer());
 
     // Runs a step's page, then moves on the stored version of every document, as another save would after the run loaded
     // them: the run's commit must fail rather than write its copies over them.

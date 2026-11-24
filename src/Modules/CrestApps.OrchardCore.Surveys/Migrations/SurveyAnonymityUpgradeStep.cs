@@ -12,7 +12,9 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// anonymous surveys, which keep the day only. <see cref="SurveyAnonymityMigrations"/> asks for it. Secrets not reached
 /// yet are still read. The survey and participation stores make the same change on every save, and both walks are
 /// idempotent, so they have no upper bound: they also reach the records saved while they run, such as the surveys the
-/// sanitizing step saves in the same pass.
+/// sanitizing step saves in the same pass. Both save with YesSql's concurrency check: a completion that counts on a
+/// participation record (or an edit of a survey) while a run holds its page is never overwritten with the copy the run
+/// loaded; the run's commit fails, and the next run reads the page again.
 /// </summary>
 internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
 {
@@ -73,5 +75,6 @@ internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
                 },
                 index => index.RespondentKey.StartsWith(AnonymousKeyPrefix),
                 idempotent: true,
+                save: _participationStore.SaveUnchangedAsync,
                 cancellationToken: cancellationToken));
 }

@@ -9,13 +9,16 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 public interface ISurveyReviewPolicy
 {
     /// <summary>
-    /// Gets the moment of a response's review.
+    /// Gets the moment of a response's review. The moment after close starts when staff close the survey, or once its
+    /// closing date and the grace past it (<see cref="SurveyTimingSettings.GraceSeconds"/>) are over, when no other
+    /// respondent's last page can still be taken.
     /// </summary>
     /// <param name="survey">The survey.</param>
+    /// <param name="definition">The definition of the response's version, or <see langword="null"/>.</param>
     /// <param name="response">The response.</param>
     /// <param name="utcNow">The current time, in UTC.</param>
     /// <returns>The moment.</returns>
-    SurveyReviewMoment GetMoment(Survey survey, SurveyResponse response, DateTime utcNow);
+    SurveyReviewMoment GetMoment(Survey survey, SurveyDefinition definition, SurveyResponse response, DateTime utcNow);
 
     /// <summary>
     /// Gets what a respondent may see of a whole response now.

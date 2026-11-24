@@ -653,8 +653,8 @@ public sealed class SurveyRunnerController : Controller
         var version = await _versionCache.GetPublishedAsync(survey);
         var visibility = version?.Definition?.Review?.ResultsVisibility ?? ResultsVisibility.Never;
 
-        // The survey closes when staff close it or when its closing date passes.
-        var closed = Core.Access.SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, _clock.UtcNow);
+        // The survey closes when staff close it, or when its closing date and the grace past it are over.
+        var closed = Core.Access.SurveyAvailability.IsClosedForReview(survey, version?.Definition, _clock.UtcNow);
         var allowed = visibility == ResultsVisibility.Always
             || (visibility == ResultsVisibility.AfterClose && closed)
             || (visibility == ResultsVisibility.AfterAnswer && await hasAnswered());
@@ -952,7 +952,7 @@ public sealed class SurveyRunnerController : Controller
         }
 
         var review = definition.Review ?? new SurveyReviewSettings();
-        var closed = Core.Access.SurveyAvailability.IsClosed(survey, surveyOverride: null, collector: null, utcNow);
+        var closed = Core.Access.SurveyAvailability.IsClosedForReview(survey, definition, utcNow);
 
         if (closed)
         {
