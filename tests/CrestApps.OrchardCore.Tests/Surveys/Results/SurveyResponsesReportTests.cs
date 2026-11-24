@@ -30,6 +30,9 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
     // A secret stored in plain text, as before secrets were protected, so the labels can be worked out here.
     private const string Secret = "plain-test-secret";
 
+    // Number, Status, Respondent (an anonymous survey shows its label), then Version.
+    private const int VersionCell = 3;
+
     private ResultsSqliteStore _store;
 
     public async ValueTask InitializeAsync()
@@ -292,6 +295,85 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
         // Assert: Bob's response is left out of the query, so the total is 5 and no "of 6" tells a row is hidden.
         Assert.Equal(5, section.Rows.Count);
         Assert.DoesNotContain("of 6", section.Description ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_OtherIsLarge_ACollectorFilterLeavesOutTheMaskedRowsOfThatCollector()
+    {
+        // Arrange: R8-M5. (A, v1) = 6, (A, v2) = Bob alone, and five links sent to one person each, so the small groups
+        // hold 6 together ("Other" is large) and Bob's row is masked rather than hidden.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await SaveMaskedSurveyAsync();
+        await using var session = _store.OpenSession();
+        var all = Context("anon");
+        all.Filter.Set(SurveyReportKeys.Version, SurveyReportKeys.AllVersions);
+        var collectorA = Context("anon");
+        collectorA.Filter.Set(SurveyReportKeys.Version, SurveyReportKeys.AllVersions);
+        collectorA.Filter.Set(SurveyReportKeys.CollectorId, "A");
+
+        // Act
+        var unfiltered = Assert.Single((await Report(session).RunAsync(all, cancellationToken)).Sections);
+        var filtered = Assert.Single((await Report(session).RunAsync(collectorA, cancellationToken)).Sections);
+
+        // Assert: without a filter, the masked rows are listed with a blank version (17 rows, 6 of them masked);
+        // filtered to collector A, Bob's masked row is left out, so every row of collector A prints its version.
+        Assert.Equal(17, unfiltered.Rows.Count);
+        Assert.Equal(6, unfiltered.Rows.Count(row => row.Cells[VersionCell] == string.Empty));
+        Assert.Equal(6, filtered.Rows.Count);
+        Assert.All(filtered.Rows, row => Assert.Equal("1", row.Cells[VersionCell]));
+    }
+
+    [Fact]
+    public async Task RunAsync_OtherIsLarge_AVersionFilterLeavesOutTheMaskedRowsOfThatVersion()
+    {
+        // Arrange: R8-M5. (B, v2) = 5 and (A, v2) = Bob alone, with more one-person links on version 1.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await SaveMaskedSurveyAsync();
+        await using var session = _store.OpenSession();
+        var version2 = Context("anon");
+        version2.Filter.Set(SurveyReportKeys.Version, "2");
+
+        // Act
+        var section = Assert.Single((await Report(session).RunAsync(version2, cancellationToken)).Sections);
+
+        // Assert: version 2 lists only (B, v2); Bob's masked row would be the one row of version 2 with a blank version.
+        Assert.Equal(5, section.Rows.Count);
+        Assert.All(section.Rows, row => Assert.Equal("2", row.Cells[VersionCell]));
+    }
+
+    // (A, v1) = 6, (B, v2) = 5, (A, v2) = Bob alone, and five one-person links L1-L5 on version 1; the minimum is 5.
+    private async Task SaveMaskedSurveyAsync()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 0);
+        var question = ResultsSqliteStore.ChoiceQuestion("q1", "color", "red", "blue");
+        var v1 = ResultsSqliteStore.Version("anon-v1", "anon", 1, question);
+        var v2 = ResultsSqliteStore.Version("anon-v2", "anon", 2, question);
+
+        await using var session = _store.OpenSession();
+        await session.SaveAsync(v2, false, SurveysConstants.CollectionName, cancellationToken);
+        var number = 0;
+
+        async Task AddAsync(SurveyVersion version, string collectorId, int count)
+        {
+            for (var index = 0; index < count; index++)
+            {
+                var response = ResultsSqliteStore.Response($"anon-m{number++}", version, SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["red"] }));
+                response.CollectorId = collectorId;
+                await session.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+        }
+
+        await AddAsync(v1, "A", 6);
+        await AddAsync(v2, "B", 5);
+        await AddAsync(v2, "A", 1);
+
+        for (var link = 1; link <= 5; link++)
+        {
+            await AddAsync(v1, "L" + link.ToString(CultureInfo.InvariantCulture), 1);
+        }
+
+        await session.SaveChangesAsync(cancellationToken);
     }
 
     private static SurveyResponsesReport Report(ISession session)

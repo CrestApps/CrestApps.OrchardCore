@@ -165,6 +165,36 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SurveyResponses_AMaskedRowWithNoContextOrCollector_PrintsOtherNotNone()
+    {
+        // Arrange: R8-M5, 4 enrollment responses (a0 with no collector) and r2, which has no context: each group is below
+        // 5, together they reach it, so all five are masked.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddAnonymousResponsesAsync(4);
+
+        await using (var write = _store.OpenSession())
+        {
+            var a0 = await write.Query<SurveyResponse, CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyResponseIndex>(index => index.ItemId == "a0", collection: SurveysConstants.ResponsesCollectionName).FirstOrDefaultAsync(cancellationToken);
+            a0.CollectorId = null;
+            await write.SaveAsync(a0, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+
+        // Assert: r2's missing context and a0's missing collector print "Other" like the other masked rows, not their real
+        // "none", which would set them apart.
+        Assert.Equal("Other", rows["r2"]["ContextKind"]);
+        Assert.Equal("Other", rows["a0"]["Collector"]);
+        Assert.Equal("Other", rows["a1"]["Collector"]);
+        Assert.Null(rows["r2"]["VersionNumber"]);
+    }
+
+    [Fact]
     public async Task SurveyResponses_AnAnonymousSurveyPaddedWithInProgressAndTestResponses_StillShowsNoRow()
     {
         // Arrange: one completed response more, then in-progress, abandoned and test responses well past the minimum of 5.

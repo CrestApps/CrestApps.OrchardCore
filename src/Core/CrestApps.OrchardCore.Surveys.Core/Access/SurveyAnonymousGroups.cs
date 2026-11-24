@@ -17,6 +17,7 @@ public sealed class SurveyAnonymousGroups
     private readonly IServiceProvider _serviceProvider;
     private readonly Dictionary<string, SurveyAnonymousAttributes> _attributes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IReadOnlyList<SurveyResponseGroup>> _hiddenGroups = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IReadOnlyCollection<SurveyResponseGroup>> _allGroups = new(StringComparer.Ordinal);
     private SurveySettings _settings;
     private bool _settingsRead;
 
@@ -54,7 +55,8 @@ public sealed class SurveyAnonymousGroups
     /// test filters are ignored, or <see langword="null"/> for every response of the survey.</param>
     /// <param name="shown">The statuses the output lists, or empty for every status.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The decision.</returns>
+    /// <returns>The decision. The status counts leave out the groups the output leaves out
+    /// (<see cref="ConcealedGroupsAsync"/>), so a status shows only when enough of the responses the output can list share it.</returns>
     public async Task<SurveyGroupDecision> DecideAsync(Survey survey, SurveyResultsScope narrowing, IReadOnlyCollection<SurveyResponseStatus> shown, CancellationToken cancellationToken = default)
     {
         var minimum = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
@@ -64,7 +66,12 @@ public sealed class SurveyAnonymousGroups
             return SurveyGroupDecision.Open;
         }
 
-        var counts = await _queries.CountByStatusAsync(RealOf(survey, narrowing), cancellationToken);
+        if (await ConcealedGroupsAsync(survey, narrowing, cancellationToken) is not { } concealed)
+        {
+            return new SurveyGroupDecision { MinimumGroupSize = minimum, HidesAll = true };
+        }
+
+        var counts = await _queries.CountByStatusAsync(RealOf(survey, narrowing, concealed), cancellationToken);
 
         return SurveyGroupGate.Decide(minimum, shown ?? [], counts);
     }
@@ -158,7 +165,57 @@ public sealed class SurveyAnonymousGroups
         return hidden;
     }
 
-    private static SurveyResultsScope RealOf(Survey survey, SurveyResultsScope narrowing)
+    /// <summary>
+    /// Lists the groups (collector, version, context kind) of a survey whose real responses an output with some narrowing
+    /// filters leaves out. Without a filter that names a collector, a version or a context kind, they are the hidden groups
+    /// (<see cref="HiddenGroupsAsync"/>): a masked row shows its attributes as "Other", which hides it among the other
+    /// small groups. With such a filter, every group that doesn't show as itself (<see cref="SurveyAnonymousAttributes.Shows"/>)
+    /// is left out too, masked or hidden: the filter would tell a masked row's real collector, version or context kind
+    /// (filter on collector A, and the one row with no version is the one person who answered version 2 through A).
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="narrowing">The output's narrowing filters, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The groups, empty for an identified survey, or <see langword="null"/> when there are more than one query
+    /// can leave out (<see cref="Indexes.SurveyResponseGroupFilter.MaxGroups"/>), so the caller lists none of the survey's
+    /// responses.</returns>
+    public async Task<IReadOnlyList<SurveyResponseGroup>> ConcealedGroupsAsync(Survey survey, SurveyResultsScope narrowing, CancellationToken cancellationToken = default)
+    {
+        var attributes = await AttributesAsync(survey, cancellationToken);
+
+        if (attributes.MinimumGroupSize == 0)
+        {
+            return [];
+        }
+
+        if (!NamesAttribute(narrowing))
+        {
+            return await HiddenGroupsAsync(survey, cancellationToken);
+        }
+
+        if (!_allGroups.TryGetValue(survey.ItemId, out var all))
+        {
+            _allGroups[survey.ItemId] = all = [.. (await _queries.CountByGroupAsync(survey.ItemId, completedOnly: false, cancellationToken)).Keys];
+        }
+
+        // Only the groups the filter selects: the filter itself already leaves out the others.
+        var concealed = all
+            .Where(group => Selects(narrowing, group) && !attributes.Shows(group))
+            .ToList();
+
+        return concealed.Count > Indexes.SurveyResponseGroupFilter.MaxGroups ? null : concealed;
+    }
+
+    private static bool NamesAttribute(SurveyResultsScope narrowing)
+        => narrowing is not null
+            && (!string.IsNullOrEmpty(narrowing.CollectorId) || narrowing.VersionNumbers is { Count: > 0 } || !string.IsNullOrEmpty(narrowing.ContextKind));
+
+    private static bool Selects(SurveyResultsScope narrowing, SurveyResponseGroup group)
+        => (string.IsNullOrEmpty(narrowing.CollectorId) || string.Equals(group.CollectorId, narrowing.CollectorId, StringComparison.Ordinal))
+            && (narrowing.VersionNumbers is not { Count: > 0 } || narrowing.VersionNumbers.Contains(group.VersionNumber))
+            && (string.IsNullOrEmpty(narrowing.ContextKind) || string.Equals(group.ContextKind, narrowing.ContextKind, StringComparison.Ordinal));
+
+    private static SurveyResultsScope RealOf(Survey survey, SurveyResultsScope narrowing, IReadOnlyList<SurveyResponseGroup> concealed)
         => new()
         {
             SurveyId = survey?.ItemId,
@@ -170,5 +227,6 @@ public sealed class SurveyAnonymousGroups
             IncludeTest = false,
             CompletedOnly = false,
             Statuses = [],
+            HiddenGroups = [.. concealed],
         };
 }
