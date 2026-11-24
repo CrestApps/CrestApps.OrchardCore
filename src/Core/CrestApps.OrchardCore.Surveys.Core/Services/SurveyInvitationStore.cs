@@ -406,6 +406,103 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
+    /// Loads the current copy of an invitation from the database in place of a copy the caller holds: this session's
+    /// pending changes are written, the held copy is let go of (when this session still tracks it; a copy loaded before
+    /// a commit no longer is), and the invitation is read again. Save the copy returned, never the old one: a copy this
+    /// session no longer tracks would be saved as a new document.
+    /// </summary>
+    /// <param name="copy">The copy held.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The current copy, or <see langword="null"/> when the invitation no longer exists.</returns>
+    public async Task<SurveyInvitation> LoadCurrentAsync(SurveyInvitation copy, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(copy);
+
+        await Session.FlushAsync(cancellationToken);
+        Session.Detach(copy, CollectionName);
+
+        return await FindByIdAsync(copy.ItemId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Loads the current copies of invitations in one read, as <see cref="LoadCurrentAsync(SurveyInvitation, CancellationToken)"/>
+    /// does for one.
+    /// </summary>
+    /// <param name="copies">The copies held.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The current copies of those that still exist.</returns>
+    public async Task<IReadOnlyCollection<SurveyInvitation>> LoadCurrentAsync(IReadOnlyCollection<SurveyInvitation> copies, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(copies);
+
+        if (copies.Count == 0)
+        {
+            return [];
+        }
+
+        await Session.FlushAsync(cancellationToken);
+
+        foreach (var copy in copies)
+        {
+            Session.Detach(copy, CollectionName);
+        }
+
+        return await GetAsync(copies.Select(copy => copy.ItemId).Distinct(StringComparer.Ordinal).ToArray(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Applies a change to the current copy of an invitation and writes it at once, instead of saving a copy loaded
+    /// earlier: what other requests committed since that copy was loaded (a completion, an open, a send's marks) is kept,
+    /// and only the fields <paramref name="apply"/> sets change.
+    /// <para>
+    /// A gap of milliseconds remains between the read and the write, in which another request's commit would be
+    /// overwritten; closing it needs a concurrency check on every writer of invitations, which the stores don't have.
+    /// </para>
+    /// </summary>
+    /// <param name="copy">The copy held.</param>
+    /// <param name="apply">Changes the current copy; returns <see langword="true"/> when it changed it.</param>
+    /// <param name="detach">Whether to let go of the current copy once it is written, so a long walk doesn't keep every
+    /// copy it wrote.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The current copy, or the copy held when the invitation no longer exists.</returns>
+    public async Task<SurveyInvitation> UpdateCurrentAsync(SurveyInvitation copy, Func<SurveyInvitation, bool> apply, bool detach = false, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(copy);
+        ArgumentNullException.ThrowIfNull(apply);
+
+        var current = await LoadCurrentAsync(copy, cancellationToken);
+
+        if (current is null)
+        {
+            return copy;
+        }
+
+        if (apply(current))
+        {
+            await UpdateAsync(current, cancellationToken);
+            await Session.FlushAsync(cancellationToken);
+        }
+
+        if (detach)
+        {
+            Session.Detach(current, CollectionName);
+        }
+
+        return current;
+    }
+
+    /// <summary>
+    /// Lets go of a copy of an invitation this session tracks, once its changes are written.
+    /// </summary>
+    /// <param name="invitation">The invitation.</param>
+    public void Detach(SurveyInvitation invitation)
+    {
+        ArgumentNullException.ThrowIfNull(invitation);
+
+        Session.Detach(invitation, CollectionName);
+    }
+
+    /// <summary>
     /// Writes this session's pending changes now, inside its transaction, so a send's marks reach the database right
     /// after the e-mail went out rather than at the end of a page.
     /// </summary>

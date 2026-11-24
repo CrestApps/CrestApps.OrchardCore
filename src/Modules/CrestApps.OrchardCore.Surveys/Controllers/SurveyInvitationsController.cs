@@ -393,6 +393,19 @@ public sealed class SurveyInvitationsController : Controller
 
         await _notifier.SuccessAsync(H["{0} people were invited.", results.Count(result => result.Succeeded)]);
 
+        // Another send was going out (R8-Mi11): people already on the list were left as they were, so their invitations
+        // aren't written over with copies older than that send's.
+        var leftAsTheyWere = results
+            .Where(result => result.Error == SurveyErrorCode.Busy && result.Invitation is not null)
+            .Select(result => result.Invitation.ItemId)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+
+        if (leftAsTheyWere > 0)
+        {
+            await _notifier.WarningAsync(H["{0} people were already on the list and were left as they were, because another send of invitations was going out. Invite them again in a few minutes.", leftAsTheyWere]);
+        }
+
         if (model.SendNow)
         {
             var waiting = results
@@ -487,12 +500,17 @@ public sealed class SurveyInvitationsController : Controller
     }
 
     // The mail server failing e-mails as in an outage holds the send's other e-mails; the administrator is told why fewer
-    // went out than expected.
+    // went out than expected. When e-mails of the send went out, the mail server works and only refused some addresses
+    // (R8-M2), so that is what the administrator is told instead.
     private async Task NotifyMailServerFailedAsync()
     {
         if (_invitations.MailServerFailed)
         {
             await _notifier.WarningAsync(H["The mail server didn't take the e-mails, so the rest wait. They are tried again with the hourly reminder run."]);
+        }
+        else if (_invitations.RefusedEmails > 0)
+        {
+            await _notifier.WarningAsync(H["The mail server refused {0} of the e-mails. They are tried again with the hourly reminder run, and an address it refuses five times is shown as Bounced.", _invitations.RefusedEmails]);
         }
     }
 
