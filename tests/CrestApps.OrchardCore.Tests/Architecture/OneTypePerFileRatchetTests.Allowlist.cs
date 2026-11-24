@@ -335,7 +335,7 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Core/CrestApps.OrchardCore.Recipes.Core/Schemas/Steps/DataConnectorRecipeSteps.cs"] = 2,
         ["src/Core/CrestApps.OrchardCore.Recipes.Core/Schemas/Steps/PhoneProviderSettingsRecipeSteps.cs"] = 3,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/DataSources/IndexedReportDataSet.cs"] = 2,
-        ["src/Core/CrestApps.OrchardCore.Reports.Core/DataSources/ReportIndexAggregator.cs"] = 2,
+        ["src/Core/CrestApps.OrchardCore.Reports.Core/DataSources/ReportIndexAggregator.cs"] = 3, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryPlan.cs"] = 7,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryResult.cs"] = 3,
         ["src/Core/CrestApps.OrchardCore.Shipping.Core/Indexes/ShipmentIndex.cs"] = 2,
@@ -968,8 +968,6 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollPayCodeSeeder.cs"] = 3,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/UnitedStates/UnitedStatesFilings.cs"] = 16,
         ["src/Core/CrestApps.OrchardCore.Plaid.Core/Indexes/PlaidItemIndex.cs"] = 2,
-        ["src/Core/CrestApps.OrchardCore.Plaid.Core/Models/PlaidApiModels.cs"] = 11,
-        ["src/Core/CrestApps.OrchardCore.Plaid.Core/PlaidConstants.cs"] = 2,
         ["src/Core/CrestApps.OrchardCore.Staff.Core/Services/StaffPayPrivacy.cs"] = 2,
         ["src/Core/CrestApps.OrchardCore.Taxation.Core/Canada/CanadaIncomeTax.cs"] = 6,
         ["src/Core/CrestApps.OrchardCore.Taxation.Core/Canada/CanadaWithholdingMethods.cs"] = 3,
@@ -981,7 +979,7 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Approvals/Workflows/ApprovalEventActivity.cs"] = 3,
         ["src/Modules/CrestApps.OrchardCore.Approvals/Workflows/ApprovalTaskDisplayDriver.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Approvals/Workflows/ApprovalTasks.cs"] = 6,
-        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Startup.cs"] = 7,
+        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Startup.cs"] = 8, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Workflows/MarkStaleChecksTaskDisplayDriver.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Banking/Disbursements/Reports/DisbursementsReportDataSource.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Banking/Disbursements/Startup.cs"] = 11,
@@ -1412,5 +1410,21 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Services/IPayHistoryImporter.cs"] = 3,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollHomeJurisdictions.cs"] = 2,
         ["src/Core/CrestApps.OrchardCore.Taxation.Core/UnitedStates/UnitedStatesStateCertificate.cs"] = 3,
+
+        // Existing debt from main's #1359-#1365 (Plaid, Taxation returns and e-filing, Report Builder, Banking checks, Payroll),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Plaid.Abstractions/Models/PlaidApiModels.cs"] = 11,
+        ["src/Abstractions/CrestApps.OrchardCore.Plaid.Abstractions/PlaidConstants.cs"] = 2,
+        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Models/EFileSubmission.cs"] = 6,
+        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Models/TaxFilingSchedule.cs"] = 3,
+        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Models/TaxReturn.cs"] = 6,
+        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Services/IEFilingService.cs"] = 7,
+        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Services/ITaxReturnService.cs"] = 10,
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/EFiling.cs"] = 11,
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxReturns.cs"] = 10,
+        ["src/Modules/CrestApps.OrchardCore.Taxation/Recipes/TaxReturnsRecipeSteps.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Taxation/TaxReturnsStartup.cs"] = 8,
+        ["src/Modules/CrestApps.OrchardCore.Taxation/ViewModels/MerchantTaxRegistrationViewModel.cs"] = 3,
+        ["src/Modules/CrestApps.OrchardCore.Taxation/ViewModels/TaxReturnViewModels.cs"] = 8,
     };
 }

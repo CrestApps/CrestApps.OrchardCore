@@ -40,7 +40,7 @@
                                 <td class="text-end">
                                     @if (Model.CanFile)
                                     {
-                                        <button type="submit" class="btn btn-sm btn-danger" formaction="@Url.Action("RemovePayment", "TaxReturns", new { id = taxReturn.ItemId, paymentId = payment.Id })" data-url-af="UnsafeUrl" data-title="@T["Remove"]" data-message="@T["Remove the payment recorded by mistake?"]">@T["Remove"]</button>
+                                        <a class="btn btn-sm btn-danger" href="@Url.Action("RemovePayment", "TaxReturns", new { id = taxReturn.ItemId, paymentId = payment.Id })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Remove"]" data-message="@T["Remove the payment recorded by mistake?"]">@T["Remove"]</a>
                                     }
                                 </td>
                             </tr>

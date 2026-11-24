@@ -119,5 +119,9 @@ public sealed partial class ConstructorDependencyRatchetTests
         // Existing debt from main's #1351 (protected files in Azure Blob Storage) and #1356 (US state and local payroll
         // taxes), baselined when PR #1319 merged main; remove as it is paid down.
         ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Services/PackageRuntimeService.cs: PackageRuntimeService"] = 13,
+
+        // Existing debt from main's #1359-#1365 (Plaid, Taxation returns and e-filing, Report Builder, Banking checks, Payroll),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.Taxation/Controllers/TaxReturnsController.cs: TaxReturnsController"] = 15,
     };
 }

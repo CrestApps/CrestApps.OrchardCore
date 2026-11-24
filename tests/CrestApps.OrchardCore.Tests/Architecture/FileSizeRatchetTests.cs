@@ -68,14 +68,17 @@ public sealed class FileSizeRatchetTests
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
         // remove as it is paid down. Sizes as of main's #1336, which added index declarations to four of them.
         ["src/Core/CrestApps.OrchardCore.Banking.Core/Disbursements/Services/DisbursementService.cs"] = 886, // raised for main's #1357 when PR #1319 merged main; lower as it is paid down
-        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs"] = 1020, // added for main's #1357 when PR #1319 merged main; split it to remove
+        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs"] = 1157, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/Checks/Services/CheckService.cs"] = 868, // added for main's #1359-#1365 when PR #1319 merged main; split it to remove
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/EFiling.cs"] = 840, // added for main's #1359-#1365 when PR #1319 merged main; split it to remove
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxReturns.cs"] = 871, // added for main's #1359-#1365 when PR #1319 merged main; split it to remove
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Calculation/PayCalculationSteps.cs"] = 1122, // raised for main's #1356
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/Garnishments.cs"] = 1069,
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs"] = 890,
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs"] = 1199,
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 919,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs"] = 925, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs"] = 1211, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 929, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/UnitedStates/UnitedStatesFilings.cs"] = 1093, // raised for main's #1347 and #1356
-        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 1030, // raised for main's #1347 and #1356
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 1056, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
 
         // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
         // remove as it is paid down.

@@ -253,5 +253,10 @@ public sealed partial class UnboundedQueryRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Skills/IssuedCertificates/Drivers/IssuedCertificateSettingsDisplayDriver.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Users/Controllers/UserAudiencesController.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Users/Controllers/UserNotificationsController.cs"] = 2,
+
+        // Existing debt from main's #1359-#1365 (Plaid, Taxation returns and e-filing, Report Builder, Banking checks, Payroll),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.Taxation/Controllers/TaxReturnsController.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Taxation/Drivers/MerchantTaxRegistrationDisplayDriver.cs"] = 2,
     };
 }

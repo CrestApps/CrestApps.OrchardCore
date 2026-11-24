@@ -162,6 +162,7 @@
         "src/Modules/CrestApps.OrchardCore.Subscriptions/Views/InstallmentPlans/Create.cshtml": 97,
         "src/Modules/CrestApps.OrchardCore.Subscriptions/Views/InstallmentPlans/Pay.cshtml": 10,
         "src/Modules/CrestApps.OrchardCore.Subscriptions/Views/SubscriptionSignup.cshtml": 18,
+        "src/Modules/CrestApps.OrchardCore.Taxation/Views/TaxReturnsYearFilter.cshtml": 7,
         "src/Modules/CrestApps.OrchardCore.Taxation/Views/TaxTableFields.Edit.cshtml": 37,
         "src/Modules/CrestApps.OrchardCore.Telnyx/Views/TelnyxSettings.Edit.cshtml": 79,
         "src/Modules/CrestApps.OrchardCore.Telnyx/Views/TelnyxSmsSettings.Edit.cshtml": 10,

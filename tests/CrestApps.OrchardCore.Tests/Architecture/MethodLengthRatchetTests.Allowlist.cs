@@ -149,5 +149,9 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Services/PackageRuntimeService.cs: ApplyAsync"] = 157,
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs: ImportPOST"] = 154,
         ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/Moodle/MoodleCourseRows.cs: Write"] = 229,
+
+        // Existing debt from main's #1359-#1365 (Plaid, Taxation returns and e-filing, Report Builder, Banking checks, Payroll),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Reports.Core/DataSources/ReportIndexAggregator.cs: Build"] = 153,
     };
 }

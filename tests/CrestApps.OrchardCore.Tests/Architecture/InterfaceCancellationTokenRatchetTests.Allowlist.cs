@@ -259,5 +259,9 @@ public sealed partial class InterfaceCancellationTokenRatchetTests
         ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Services/PackageContentSource.cs: IPackageContentSource.GetPublishedAsync"] = 1,
         ["src/Core/CrestApps.OrchardCore.Learning.Surveys.Core/Services/SurveyContentSource.cs: ISurveyContentSource.GetPublishedAsync"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Learning.AI/Services/LearningAICompleter.cs: ILearningAICompleter.IsAvailableAsync"] = 1,
+
+        // Existing debt from main's #1359-#1365 (Plaid, Taxation returns and e-filing, Report Builder, Banking checks, Payroll),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/Services/IEFilingService.cs: IEFileTargetProvider.CanFileAsync"] = 1,
     };
 }

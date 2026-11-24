@@ -373,6 +373,9 @@ public sealed class DependencyInjectionArchitectureTests
         // Existing debt from main's #1351 (protected files in Azure Blob Storage) and #1356 (US state and local payroll
         // taxes), baselined when PR #1319 merged main; remove as it is paid down.
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollHomeJurisdictions.cs: PayrollHomeJurisdictionResolver"] = 1,
+        // Existing debt from main's #1360 (Taxation returns and e-filing), baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/EFiling.cs: TaxReturnEFileTargetProvider"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxReturns.cs: TaxReturnService"] = 1,
 
         // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
         // remove as it is paid down.

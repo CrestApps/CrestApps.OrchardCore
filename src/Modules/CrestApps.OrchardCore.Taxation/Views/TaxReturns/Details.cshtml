@@ -48,7 +48,7 @@
             <button type="submit" class="btn btn-secondary action-bar-secondary" formaction="@Url.Action("PrepareAgain", new { id = taxReturn.ItemId })">@T["Prepare again"]</button>
             @if (taxReturn.Payments.Count == 0)
             {
-                <button type="submit" class="btn btn-danger action-bar-secondary" formaction="@Url.Action("Delete", new { id = taxReturn.ItemId })" data-url-af="UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete the draft?"]">@T["Delete"]</button>
+                <a class="btn btn-danger action-bar-secondary" href="@Url.Action("Delete", new { id = taxReturn.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete the draft?"]">@T["Delete"]</a>
             }
         }
         @if (taxReturn.Status == TaxReturnStatus.Ready)
@@ -57,7 +57,7 @@
         }
         @if (taxReturn.Status == TaxReturnStatus.Filed && Model.CanFile)
         {
-            <button type="submit" class="btn btn-secondary" formaction="@Url.Action("Amend", new { id = taxReturn.ItemId })" data-url-af="UnsafeUrl" data-title="@T["Amend"]" data-message="@T["Start an amended return? It is prepared again from the figures of the period, and counts what was paid with this one."]">@T["Amend"]</button>
+            <a class="btn btn-secondary" href="@Url.Action("Amend", new { id = taxReturn.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Amend"]" data-message="@T["Start an amended return? It is prepared again from the figures of the period, and counts what was paid with this one."]">@T["Amend"]</a>
         }
         <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-year="@taxReturn.PeriodEnd.Year">@T["Back"]</a>
     </div>
