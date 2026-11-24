@@ -490,8 +490,10 @@ public sealed class SurveyGradingController : Controller
     }
 
     // Every grading path of one response: nobody grades, rescores or regrades their own work, and a real response of an
-    // anonymous survey opens under the shared small-group rule (as Details does), so a grader can't read the first
-    // answers one at a time before there is a crowd to hide in.
+    // anonymous survey opens under the shared small-group rule (as Details does): its status group and its joint key
+    // (collector, version, context kind) must both be large enough, so a grader can't read the first answers one at a
+    // time before there is a crowd to hide in, nor the answers of the one person a link was sent to. Both refusals give
+    // the one notice Details gives, which doesn't say which group is small.
     private async Task<IActionResult> RefuseAsync(SurveyResponse response, Survey survey)
     {
         if (SurveyOwnWork.IsOwn(User, response))
@@ -506,14 +508,14 @@ public sealed class SurveyGradingController : Controller
             return null;
         }
 
-        var decision = await HttpContext.RequestServices.GetRequiredService<SurveyAnonymousGroups>().DecideAsync(survey, null, [response.Status], HttpContext.RequestAborted);
+        var groups = HttpContext.RequestServices.GetRequiredService<SurveyAnonymousGroups>();
 
-        if (decision.Shows(response.Status, response.IsTest))
+        if (await groups.ShowsAsync(survey, response, HttpContext.RequestAborted))
         {
             return null;
         }
 
-        await _notifier.WarningAsync(H["This survey is anonymous, and it has fewer than {0} completed responses. Its responses can be graded once there are enough, so no one can be recognized.", decision.MinimumGroupSize]);
+        await _notifier.WarningAsync(H["This survey is anonymous, and too few of its responses are like this one. It is hidden so no one can be recognized (the minimum is {0}).", await groups.MinimumGroupSizeAsync(survey)]);
 
         return RedirectToAction(nameof(Index), new { surveyId = response.SurveyId });
     }

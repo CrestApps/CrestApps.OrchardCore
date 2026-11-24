@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -14,7 +15,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Scoring;
 /// Lists the responses that need a grader: every survey for a user with the Grade survey responses permission,
 /// otherwise the surveys a grading scope or an access provider lets the user grade. It never lists the grader's own
 /// responses (<see cref="SurveyOwnWork"/>), nor the responses of an anonymous survey whose completed responses are
-/// below its minimum group size (<see cref="SurveyGroupGate"/>), and lists an anonymous survey's responses in random-id
+/// below its minimum group size (<see cref="SurveyGroupGate"/>), nor a response whose joint key is in a group too
+/// small to show (<see cref="SurveyAnonymousAttributes"/>), and lists an anonymous survey's responses in random-id
 /// order rather than by when they started.
 /// </summary>
 public sealed class SurveyGradingQueue : ISurveyGradingQueue
@@ -105,7 +107,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
             surveyIds = allowed.ToList();
         }
 
-        var (hidden, listsAnonymous, pending) = await AnonymousSurveysAsync(surveyIds, cancellationToken);
+        var (hidden, listsAnonymous, pending, hiddenGroups) = await AnonymousSurveysAsync(surveyIds, cancellationToken);
 
         if (!string.IsNullOrEmpty(surveyId) && hidden.Contains(surveyId))
         {
@@ -128,6 +130,10 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
         {
             SurveyIds = surveyIds,
             ExcludedSurveyIds = hidden.ToList(),
+
+            // A response whose joint key (collector, version, context kind) is in a group too small to show is left out,
+            // as Details and Grade refuse it (SurveyAnonymousAttributes).
+            HiddenGroups = hiddenGroups,
 
             // Nobody grades their own work.
             ExcludedUserId = SurveyOwnWork.UserIdOf(user),
@@ -154,9 +160,10 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     /// (a grader can't open their answers one at a time before there is a crowd to hide in), and whether the queue
     /// lists any other anonymous survey.
     /// </summary>
-    private async Task<(HashSet<string> Hidden, bool ListsAnonymous, string[] Pending)> AnonymousSurveysAsync(List<string> surveyIds, CancellationToken cancellationToken)
+    private async Task<(HashSet<string> Hidden, bool ListsAnonymous, string[] Pending, List<SurveyResponseGroup> HiddenGroups)> AnonymousSurveysAsync(List<string> surveyIds, CancellationToken cancellationToken)
     {
         var hidden = new HashSet<string>(StringComparer.Ordinal);
+        var hiddenGroups = new List<SurveyResponseGroup>();
         var listsAnonymous = false;
         var pending = (await _results.ListSurveysPendingGradingAsync(cancellationToken))
             .Where(id => surveyIds.Count == 0 || surveyIds.Contains(id, StringComparer.Ordinal))
@@ -164,7 +171,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
 
         if (pending.Length == 0)
         {
-            return (hidden, false, pending);
+            return (hidden, false, pending, hiddenGroups);
         }
 
         // Summaries from the survey index (the anonymity and the minimum are all that is read), a chunk of ids at a time
@@ -193,14 +200,24 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
             if ((await _groups.DecideAsync(survey, null, [SurveyResponseStatus.Completed], cancellationToken)).HidesAll)
             {
                 hidden.Add(survey.ItemId);
+
+                continue;
             }
-            else
+
+            // More hidden groups than one query can leave out hide the whole survey, which only hides more.
+            if (await _groups.HiddenGroupsAsync(survey, cancellationToken) is not { } groups
+                || hiddenGroups.Count + groups.Count > SurveyResponseGroupFilter.MaxGroups)
             {
-                listsAnonymous = true;
+                hidden.Add(survey.ItemId);
+
+                continue;
             }
+
+            hiddenGroups.AddRange(groups);
+            listsAnonymous = true;
         }
 
-        return (hidden, listsAnonymous, pending);
+        return (hidden, listsAnonymous, pending, hiddenGroups);
     }
 
     /// <inheritdoc />

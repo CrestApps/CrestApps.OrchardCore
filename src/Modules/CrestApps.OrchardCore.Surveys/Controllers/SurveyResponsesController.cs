@@ -190,6 +190,21 @@ public sealed class SurveyResponsesController : Controller
         var filtersStatus = Enum.TryParse<SurveyResponseStatus>(options.Status, out var shown);
         var decision = await SurveyGroupGate.DecideAsync(survey, await SettingsAsync(), filtersStatus ? [shown] : [], async other => await CountRealAsync(surveyId, versionNumber, options, other, anonymous, labelMatches));
 
+        // A response whose joint key (collector, version, context kind) is in a group too small to show isn't listed,
+        // as Details refuses it (SurveyAnonymousAttributes); it leaves the query, so the count and pages leave it out.
+        IReadOnlyList<SurveyResponseGroup> hiddenGroups = anonymous && !decision.HidesAll
+            ? await _serviceProvider.GetRequiredService<SurveyAnonymousGroups>().HiddenGroupsAsync(survey, HttpContext.RequestAborted)
+            : [];
+
+        if (hiddenGroups is null)
+        {
+            decision = new SurveyGroupDecision { MinimumGroupSize = decision.MinimumGroupSize, HidesAll = true };
+        }
+        else
+        {
+            query = query.Excluding(hiddenGroups);
+        }
+
         if (decision.HidesAll)
         {
             options.HiddenBelow = decision.MinimumGroupSize;
@@ -373,31 +388,24 @@ public sealed class SurveyResponsesController : Controller
 
         // One response of an anonymous survey opens under the list's rule (SurveyGroupGate): only once the survey's
         // completed responses reach its minimum group size, and only when enough responses share its status, so the one
-        // abandoned response can't be read by its id.
+        // abandoned response can't be read by its id. Its collector, version and context kind are a group too, decided
+        // on their joint key (SurveyAnonymousAttributes): a response given through a link sent to one person, or to a
+        // version only one person answered through a link, doesn't open on its own. Both refusals give one notice (the
+        // Grade page's too), so a refusal doesn't tell which of the response's groups is small.
         var attributes = SurveyRowAttributes.All;
 
         if (!response.IsTest && SurveyAnonymity.IsAnonymous(survey))
         {
             var groups = _serviceProvider.GetRequiredService<SurveyAnonymousGroups>();
-            var decision = await groups.DecideAsync(survey, null, [response.Status], HttpContext.RequestAborted);
 
-            if (!decision.Shows(response.Status, response.IsTest))
+            if (!await groups.ShowsAsync(survey, response, HttpContext.RequestAborted))
             {
-                await _notifier.WarningAsync(H["This survey is anonymous, and too few of its responses are completed or share this response's status. It is hidden so no one can be recognized (the minimum is {0}).", decision.MinimumGroupSize]);
+                await _notifier.WarningAsync(H["This survey is anonymous, and too few of its responses are like this one. It is hidden so no one can be recognized (the minimum is {0}).", await groups.MinimumGroupSizeAsync(survey)]);
 
                 return RedirectToAction(nameof(Index), new { id = survey.ItemId });
             }
 
-            // Its collector, version and context kind are groups too (SurveyAnonymousAttributes): a response given
-            // through a link sent to one person, or to a version one person answered, doesn't open on its own.
             attributes = (await groups.AttributesAsync(survey, HttpContext.RequestAborted)).Of(response);
-
-            if (attributes.Hidden)
-            {
-                await _notifier.WarningAsync(H["This survey is anonymous, and too few of its completed responses share this response's collector, version or context. It is hidden so no one can be recognized (the minimum is {0}).", decision.MinimumGroupSize]);
-
-                return RedirectToAction(nameof(Index), new { id = survey.ItemId });
-            }
         }
 
         var version = await _versions.GetAsync(survey, response);

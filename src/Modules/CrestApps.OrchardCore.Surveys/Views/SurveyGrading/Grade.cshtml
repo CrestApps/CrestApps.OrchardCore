@@ -1,6 +1,7 @@
 @using CrestApps.OrchardCore.Surveys.ViewModels
 
 @model GradeResponseViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousDays AnonymousDays
 
 <zone Name="Title">
     <breadcrumb name="SurveyGradingGrade" title="@T["Grade {0}", Model.Label]">
@@ -26,7 +27,8 @@
             {
                 <div class="ocat-wrapper">
                     <span class="ocat-label">@T["Completed"]</span>
-                    <div class="ocat-end">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: Model.IsAnonymous ? "d" : "g"))</div>
+                    @* An anonymous response's day is in the site's time zone, preformatted so it isn't converted again in the viewer's. *@
+                    <div class="ocat-end">@if (Model.IsAnonymous) { @await AnonymousDays.TextAsync(completed) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) }</div>
                 </div>
             }
             <div class="ocat-wrapper">
@@ -164,7 +166,7 @@
             @foreach (var change in Model.Response.ScoreHistory.AsEnumerable().Reverse())
             {
                 <li class="list-group-item">
-                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: Model.IsAnonymous ? "d" : "g")):
+                    @if (Model.IsAnonymous) { @await AnonymousDays.TextAsync(change.ChangedUtc) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g")) }:
                     @change.Kind, @(change.From?.ToString() ?? "-") &rarr; @(change.To?.ToString() ?? "-")
                     @if (!string.IsNullOrEmpty(change.Reason))
                     {

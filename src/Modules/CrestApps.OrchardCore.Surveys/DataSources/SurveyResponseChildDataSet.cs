@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -54,29 +55,35 @@ public abstract class SurveyResponseChildDataSet : SurveysDataSetBase<SurveyResp
     }
 
     /// <inheritdoc />
-    protected override async IAsyncEnumerable<SurveyResponseChildRow> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <remarks>Expands the response before the conditions are evaluated for an anonymous survey's group sizes, so a
+    /// condition on an answer counts the rows the consumer keeps.</remarks>
+    protected override async IAsyncEnumerable<SurveyResponseChildRow> CompleteAsync(SurveyResponseChildRow row, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var seed in base.LoadAsync(query, cancellationToken))
+        var version = await _versions.GetAsync(row.Response.SurveyVersionId, cancellationToken);
+        var shows = AttributesOf(row.Response);
+
+        foreach (var values in Expand(row.Response, version?.Definition))
         {
-            var version = await _versions.GetAsync(seed.Response.SurveyVersionId, cancellationToken);
-
-            var shows = AttributesOf(seed.Response);
-
-            foreach (var values in Expand(seed.Response, version?.Definition))
+            // An anonymous survey's version shows only when enough completed responses share its joint key.
+            if (!shows.ShowsVersion && values.ContainsKey("VersionNumber"))
             {
-                // An anonymous survey's version shows only when enough completed responses share it.
-                if (!shows.ShowsVersion && values.ContainsKey("VersionNumber"))
-                {
-                    values["VersionNumber"] = null;
-                }
-
-                yield return new SurveyResponseChildRow
-                {
-                    Response = seed.Response,
-                    Values = values,
-                };
+                values["VersionNumber"] = null;
             }
+
+            yield return new SurveyResponseChildRow
+            {
+                Response = row.Response,
+                Values = values,
+            };
         }
+    }
+
+    /// <inheritdoc />
+    protected override Expression<Func<SurveyResponseIndex, bool>> AnonymousRowsOf(string surveyId)
+    {
+        var completed = nameof(SurveyResponseStatus.Completed);
+
+        return index => index.SurveyId == surveyId && index.Status == completed && !index.IsTest;
     }
 
     /// <inheritdoc />

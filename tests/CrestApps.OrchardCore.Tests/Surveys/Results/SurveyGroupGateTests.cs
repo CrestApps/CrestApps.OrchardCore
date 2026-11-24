@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Results;
 
@@ -122,45 +123,60 @@ public sealed class SurveyGroupGateTests
     public void AnonymousAttributes_ALinkSentToOnePerson_HidesTheirResponse()
     {
         // Arrange: R6-M3, a link "for Bob" with one completed response among 6 on the main link; the minimum is 5.
-        var attributes = SurveyAnonymousAttributes.Create(
-            5,
-            new Dictionary<string, long> { ["main"] = 6, ["bob"] = 1 },
-            new Dictionary<string, long> { ["1"] = 7 },
-            new Dictionary<string, long> { [string.Empty] = 7 });
+        var attributes = SurveyAnonymousAttributes.Create(5, Groups(("main", 1, 6), ("bob", 1, 1)));
 
         // Act
-        var bob = attributes.Of(new SurveyResponse { ItemId = "b", CollectorId = "bob", VersionNumber = 1, Status = SurveyResponseStatus.Completed });
-        var other = attributes.Of(new SurveyResponse { ItemId = "m", CollectorId = "main", VersionNumber = 1, Status = SurveyResponseStatus.Completed });
+        var bob = attributes.Of(new SurveyResponse { ItemId = "b", SurveyId = "s", CollectorId = "bob", VersionNumber = 1, Status = SurveyResponseStatus.Completed });
+        var other = attributes.Of(new SurveyResponse { ItemId = "m", SurveyId = "s", CollectorId = "main", VersionNumber = 1, Status = SurveyResponseStatus.Completed });
 
         // Assert: "Other" would still be Bob alone, so his response doesn't show at all; the others show every value.
         Assert.True(bob.Hidden);
+        Assert.True(attributes.Hides(SurveyResponseGroup.Create("s", "bob", 1, null)));
         Assert.Equal(new SurveyRowAttributes(false, true, true, true), other);
+    }
+
+    [Fact]
+    public void AnonymousAttributes_ACollectorAndAVersionEachLarge_ButTheirIntersectionOnePerson_HidesThatResponse()
+    {
+        // Arrange: R7-M2, collector A has 6 completed responses and version 2 has 6, but only Bob answered v2 through A.
+        var attributes = SurveyAnonymousAttributes.Create(5, Groups(("A", 1, 5), ("A", 2, 1), ("B", 2, 5)));
+
+        // Act
+        var bob = attributes.Of(new SurveyResponse { ItemId = "bob", SurveyId = "s", CollectorId = "A", VersionNumber = 2, Status = SurveyResponseStatus.Completed });
+        var a1 = attributes.Of(new SurveyResponse { ItemId = "a1", SurveyId = "s", CollectorId = "A", VersionNumber = 1, Status = SurveyResponseStatus.Completed });
+        var b2 = attributes.Of(new SurveyResponse { ItemId = "b2", SurveyId = "s", CollectorId = "B", VersionNumber = 2, Status = SurveyResponseStatus.Completed });
+
+        // Assert: deciding each attribute alone would show Bob's row (filtered to A, it is the only v2 row); on the joint
+        // key his group is one person, too few to hide among, so it shows nowhere; the large groups show all three.
+        Assert.True(bob.Hidden);
+        Assert.Equal(SurveyRowAttributes.All, a1);
+        Assert.Equal(SurveyRowAttributes.All, b2);
     }
 
     [Fact]
     public void AnonymousAttributes_SmallGroupsLargeEnoughTogether_ShowAsOther_SoSubtractionFindsNoOne()
     {
-        // Arrange: two small links of 3 (6 together) next to a large one, and a version only one person answered.
-        var attributes = SurveyAnonymousAttributes.Create(
-            5,
-            new Dictionary<string, long> { ["main"] = 6, ["a"] = 3, ["b"] = 3 },
-            new Dictionary<string, long> { ["1"] = 11, ["2"] = 1 },
-            new Dictionary<string, long> { [string.Empty] = 12 });
+        // Arrange: two small links of 3 next to a large one, and a version only one person answered (7 small together).
+        var attributes = SurveyAnonymousAttributes.Create(5, Groups(("main", 1, 6), ("a", 1, 3), ("b", 1, 3), ("main", 2, 1)));
 
         // Act
-        var small = attributes.Of(new SurveyResponse { ItemId = "a1", CollectorId = "a", VersionNumber = 1 });
-        var lone = attributes.Of(new SurveyResponse { ItemId = "v2", CollectorId = "main", VersionNumber = 2 });
-        var test = attributes.Of(new SurveyResponse { ItemId = "t", CollectorId = "bob", VersionNumber = 2, IsTest = true });
+        var small = attributes.Of(new SurveyResponse { ItemId = "a1", SurveyId = "s", CollectorId = "a", VersionNumber = 1 });
+        var lone = attributes.Of(new SurveyResponse { ItemId = "v2", SurveyId = "s", CollectorId = "main", VersionNumber = 2 });
+        var test = attributes.Of(new SurveyResponse { ItemId = "t", SurveyId = "s", CollectorId = "bob", VersionNumber = 2, IsTest = true });
 
-        // Assert: the small links show as Other (6 hide in it); the lone version can't hide, so that response doesn't
-        // show; a test response is never hidden on its own but still masks.
-        Assert.Equal(new SurveyRowAttributes(false, false, true, true), small);
-        Assert.True(lone.Hidden);
+        // Assert: a small group shows its collector, version and context kind as Other, all three together (7 hide in
+        // it); a test response is never hidden on its own but still masks.
+        Assert.Equal(new SurveyRowAttributes(false, false, false, false), small);
+        Assert.Equal(new SurveyRowAttributes(false, false, false, false), lone);
+        Assert.False(attributes.Hides(SurveyResponseGroup.Create("s", "main", 2, null)));
         Assert.False(test.Hidden);
         Assert.False(test.ShowsCollector);
         Assert.False(test.ShowsVersion);
         Assert.Equal(SurveyRowAttributes.All, SurveyAnonymousAttributes.Open.Of(new SurveyResponse { CollectorId = "bob" }));
     }
+
+    private static Dictionary<SurveyResponseGroup, long> Groups(params (string Collector, int Version, long Count)[] groups)
+        => groups.ToDictionary(group => SurveyResponseGroup.Create("s", group.Collector, group.Version, null), group => group.Count);
 
     private static Dictionary<SurveyResponseStatus, long> Counts(long completed = 0, long inProgress = 0, long abandoned = 0, long screenedOut = 0)
         => new()

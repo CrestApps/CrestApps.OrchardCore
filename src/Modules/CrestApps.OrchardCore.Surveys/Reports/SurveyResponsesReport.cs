@@ -109,6 +109,15 @@ internal sealed class SurveyResponsesReport : IReport
 
             scope.ResultsScope.ExcludedStatuses = decision.HiddenStatuses.ToList();
 
+            // A response whose joint key (collector, version, context kind) is in a group too small to show leaves the
+            // query itself, so the total and the pages leave it out too (SurveyAnonymousAttributes).
+            if (await _groups.HiddenGroupsAsync(scope.Survey, cancellationToken) is not { } hiddenGroups)
+            {
+                return _data.TooFewResponses(scope);
+            }
+
+            scope.ResultsScope.HiddenGroups = [.. hiddenGroups];
+
             // The order rows were stored in follows when people started, so an anonymous survey reads by random id.
             scope.ResultsScope.OrderById = true;
         }
@@ -187,7 +196,7 @@ internal sealed class SurveyResponsesReport : IReport
             cells.Add(shows.ShowsVersion ? response.VersionNumber.ToString(CultureInfo.CurrentCulture) : string.Empty);
             cells.Add(scope.IsAnonymous ? await _data.LocalDayAsync(response.StartedUtc) : await _data.LocalAsync(response.StartedUtc));
             cells.Add(scope.IsAnonymous ? await _data.LocalDayAsync(response.CompletedUtc) : await _data.LocalAsync(response.CompletedUtc));
-            cells.Add(response.CompletedUtc is { } completed && completed >= response.StartedUtc ? ReportFormat.Duration((completed - response.StartedUtc).TotalSeconds) : string.Empty);
+            cells.Add(response.CompletedUtc is { } completed && completed >= response.StartedUtc ? ReportFormat.Duration(SurveyAnonymity.ShownDuration(completed - response.StartedUtc, scope.IsAnonymous).TotalSeconds) : string.Empty);
             cells.Add(response.Score is null ? string.Empty : SurveyReportData.Number(response.Score));
             cells.Add(response.Percent is null ? string.Empty : SurveyReportData.Percent(response.Percent));
             cells.Add(response.Passed switch

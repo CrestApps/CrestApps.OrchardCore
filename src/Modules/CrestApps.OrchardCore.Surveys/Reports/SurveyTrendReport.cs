@@ -71,7 +71,9 @@ internal sealed class SurveyTrendReport : IReport
 
         foreach (var (completedUtc, value) in await _queries.ListNumberValuesAsync(scope.AnswerFilter, question.Id, cancellationToken))
         {
-            var local = (await _data.ToLocalAsync(completedUtc)).Date;
+            // An anonymous survey's answers are bucketed by their day in the site's time zone, never the viewer's, so a
+            // viewer who steps their own time zone can't watch an answer move between buckets and learn its hour.
+            var local = scope.IsAnonymous ? await _data.SiteDayAsync(completedUtc) : (await _data.ToLocalAsync(completedUtc)).Date;
             var key = period switch
             {
                 "day" => local,

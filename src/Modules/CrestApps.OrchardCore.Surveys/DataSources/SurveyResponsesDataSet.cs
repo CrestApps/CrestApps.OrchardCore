@@ -25,6 +25,8 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
     private readonly SurveyRespondentNames _names;
     private readonly SurveyVersionStore _versions;
     private readonly SurveyCollectorStore _collectors;
+    private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _endings = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _collectorNames = new(StringComparer.Ordinal);
 
     public SurveyResponsesDataSet(
         ISession session,
@@ -64,7 +66,7 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
         AddField("Attempt", S["Attempt"], DataFieldType.Integer, row => AttemptOf(row.Response), group);
         AddField("StartedUtc", S["Started"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.StartedUtc), group);
         AddField("CompletedUtc", S["Completed"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.CompletedUtc), group);
-        AddField("DurationSeconds", S["Duration (seconds)"], DataFieldType.Integer, row => row.Response.CompletedUtc is { } completed && completed >= row.Response.StartedUtc ? (long)(completed - row.Response.StartedUtc).TotalSeconds : null, group);
+        AddField("DurationSeconds", S["Duration (seconds)"], DataFieldType.Integer, row => DurationOf(row.Response), group);
         AddField("Score", S["Score"], DataFieldType.Decimal, row => row.Response.Score, group);
         AddField("MaxScore", S["Max score"], DataFieldType.Decimal, row => row.Response.MaxScore, group);
         AddField("Percent", S["Percent"], DataFieldType.Decimal, row => row.Response.Percent, group);
@@ -100,55 +102,54 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
         };
     }
 
-    protected override async IAsyncEnumerable<SurveyResponseDataRow> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
+    // Fills in what needs a lookup before the conditions are evaluated for an anonymous survey's group sizes, so a
+    // condition on the collector, the ending or a provider's field counts the rows the consumer keeps.
+    protected override async IAsyncEnumerable<SurveyResponseDataRow> CompleteAsync(SurveyResponseDataRow row, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var endings = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
-        var collectors = new Dictionary<string, string>(StringComparer.Ordinal);
+        var response = row.Response;
 
-        await foreach (var row in base.LoadAsync(query, cancellationToken))
+        if (row.ShowsIdentity)
         {
-            var response = row.Response;
-
-            if (row.ShowsIdentity)
-            {
-                row.UserName = await _names.GetUserAsync(response.UserId, cancellationToken);
-            }
-
-            if (!string.IsNullOrEmpty(response.EndingId))
-            {
-                if (!endings.TryGetValue(response.SurveyVersionId ?? string.Empty, out var names))
-                {
-                    var version = await _versions.FindByIdAsync(response.SurveyVersionId, cancellationToken);
-                    endings[response.SurveyVersionId ?? string.Empty] = names = (version?.Definition?.Endings ?? [])
-                        .Where(ending => !string.IsNullOrEmpty(ending?.Id))
-                        .GroupBy(ending => ending.Id, StringComparer.Ordinal)
-                        .ToDictionary(group => group.Key, group => group.First().Name ?? group.First().Title, StringComparer.Ordinal);
-                }
-
-                row.Ending = names.GetValueOrDefault(response.EndingId);
-            }
-
-            if (!string.IsNullOrEmpty(response.CollectorId))
-            {
-                if (!collectors.TryGetValue(response.CollectorId, out var collector))
-                {
-                    collectors[response.CollectorId] = collector = (await _collectors.FindByIdAsync(response.CollectorId, cancellationToken))?.Name;
-                }
-
-                row.Collector = collector;
-            }
-
-            foreach (var provider in _providers)
-            {
-                await provider.WriteFieldsAsync(response, row.Extra, cancellationToken);
-            }
-
-            yield return row;
+            row.UserName = await _names.GetUserAsync(response.UserId, cancellationToken);
         }
+
+        if (!string.IsNullOrEmpty(response.EndingId))
+        {
+            if (!_endings.TryGetValue(response.SurveyVersionId ?? string.Empty, out var names))
+            {
+                var version = await _versions.FindByIdAsync(response.SurveyVersionId, cancellationToken);
+                _endings[response.SurveyVersionId ?? string.Empty] = names = (version?.Definition?.Endings ?? [])
+                    .Where(ending => !string.IsNullOrEmpty(ending?.Id))
+                    .GroupBy(ending => ending.Id, StringComparer.Ordinal)
+                    .ToDictionary(group => group.Key, group => group.First().Name ?? group.First().Title, StringComparer.Ordinal);
+            }
+
+            row.Ending = names.GetValueOrDefault(response.EndingId);
+        }
+
+        if (!string.IsNullOrEmpty(response.CollectorId))
+        {
+            if (!_collectorNames.TryGetValue(response.CollectorId, out var collector))
+            {
+                _collectorNames[response.CollectorId] = collector = (await _collectors.FindByIdAsync(response.CollectorId, cancellationToken))?.Name;
+            }
+
+            row.Collector = collector;
+        }
+
+        foreach (var provider in _providers)
+        {
+            await provider.WriteFieldsAsync(response, row.Extra, cancellationToken);
+        }
+
+        yield return row;
     }
 
     protected override IQueryIndex<SurveyResponseIndex> OfSurveys(IQueryIndex<SurveyResponseIndex> rows, string[] surveyIds)
         => surveyIds is null ? rows : rows.Where(index => index.SurveyId.IsIn(surveyIds));
+
+    protected override Expression<Func<SurveyResponseIndex, bool>> AnonymousRowsOf(string surveyId)
+        => index => index.SurveyId == surveyId;
 
     protected override SurveyResponse ResponseOf(SurveyResponseDataRow row)
         => row?.Response;

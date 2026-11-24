@@ -3,8 +3,11 @@ using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
@@ -212,6 +215,61 @@ public sealed class QuizResponseGradingQueueSourceTests
         Assert.Equal(0, item.SubmittedUtc.Minute);
         Assert.Equal(0, item.SubmittedUtc.Second);
         Assert.InRange(submitted - item.SubmittedUtc, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
+    }
+
+    [Fact]
+    public async Task R7M3_AnAnonymousAttemptWhoseCollectorVersionAndContextAreHidden_IsNotListed()
+    {
+        // Arrange: R7-M3, an anonymous quiz with five attempts on the course's link and one on a link sent to Bob; the
+        // small-group rule counts them on a real response index.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var results = await ResultsSqliteStore.CreateAsync();
+        var version = ResultsSqliteStore.Version("v1", "survey1", 1, ResultsSqliteStore.ChoiceQuestion("q1", "color", "red", "blue"));
+        var ids = new[] { "a0", "a1", "a2", "a3", "a4", "bob" };
+
+        await using (var write = results.OpenSession())
+        {
+            foreach (var id in ids)
+            {
+                var response = ResultsSqliteStore.Response(id, version, SurveyResponseStatus.Completed, LearningTestHarness.Now.AddMinutes(-10));
+                response.CollectorId = id == "bob" ? "for-bob" : "course-link";
+                response.Context = LearningSurveyContexts.Enrollment("enrollment-course1");
+                await write.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var resultsSession = results.OpenSession();
+        var surveyManager = new Mock<ISurveyManager>();
+        surveyManager
+            .Setup(manager => manager.ListByOwnersAsync(It.IsAny<IReadOnlyCollection<RecordRef>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<RecordRef> owners, CancellationToken _) => owners
+                .Where(owner => owner.Id == "quiz1")
+                .Select(owner => new Survey { ItemId = "survey1", Kind = SurveyKinds.Quiz, Owner = owner, Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous, MinimumGroupSize = 5 } })
+                .ToArray());
+        await using var h = await AssessmentTestHarness.CreateAsync(services =>
+        {
+            services.AddSingleton(surveyManager.Object);
+            services.AddSingleton(new SurveyAnonymousGroups(new SurveyResultsQueries(resultsSession), new ServiceCollection().BuildServiceProvider()));
+        });
+        h.Courses.AddCourse("course1");
+        h.AddQuiz("course1", "quiz1", null);
+
+        foreach (var id in ids)
+        {
+            var attempt = await AddAsync(h, id, "survey1", "course1", LearningTestHarness.Now.AddMinutes(-10));
+            attempt.VersionNumber = 1;
+            attempt.CollectorId = id == "bob" ? "for-bob" : "course-link";
+        }
+
+        // Act
+        var page = await h.RunAsync(services => Source(services).ListWaitingAsync(new GradingQueueQuery { CourseIds = ["course1"], Take = 10 }, cancellationToken));
+
+        // Assert: Bob's attempt is left out of the query itself (the Grade page refuses it), so the page and the count
+        // leave it out; the course link's five are listed.
+        Assert.Equal(5, page.Count);
+        Assert.DoesNotContain(page.Items, item => item.Id == "bob");
     }
 
     [Fact]

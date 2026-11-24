@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -45,6 +46,9 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
     private readonly ICourseStructureService _courseStructure;
     private readonly IServiceProvider _serviceProvider;
 
+    // The groups of the listed anonymous surveys too small to show, worked out with the hidden surveys of a page.
+    private List<SurveyResponseGroup> _hiddenGroups = [];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="QuizResponseGradingQueueSource"/> class.
     /// </summary>
@@ -81,7 +85,8 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
         var known = new Dictionary<string, Survey>(StringComparer.Ordinal);
         var take = Math.Clamp(query.Take, 1, MaxTake);
         var grader = string.IsNullOrEmpty(query.GraderUserId) ? null : query.GraderUserId;
-        var timeZone = CalendarTimeZone(await SiteTimeZoneAsync());
+        // The one definition of an anonymous response's day (the site's time zone), as the Surveys pages read it.
+        var timeZone = _serviceProvider.GetService<SurveyAnonymousDays>() is { } days ? await days.TimeZoneAsync() : CalendarTimeZone(await SiteTimeZoneAsync());
         IReadOnlyList<Survey> candidates;
 
         if (query.CourseIds is null && _serviceProvider.GetService<SurveyResultsQueries>() is null)
@@ -280,6 +285,7 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
                 Grading = GradingStatus.Pending,
                 ContextKinds = [LearningSurveyContexts.EnrollmentKind, LearningSurveyContexts.CourseKind],
                 ExcludedUserId = grader,
+                HiddenGroups = [.. _hiddenGroups.Where(group => surveyIds.Contains(group.SurveyId, StringComparer.Ordinal))],
                 OldestFirst = !byId,
                 OrderById = byId,
                 CompletedFromUtc = completedFromUtc,
@@ -301,18 +307,34 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
     }
 
     // The anonymous surveys whose completed responses are below the minimum group size: none of their attempts is
-    // listed until there is a crowd to hide in, as on the Surveys grading queue.
+    // listed until there is a crowd to hide in, as on the Surveys grading queue. An attempt whose joint key (collector,
+    // version, context kind) is in a group too small to show is left out too (SurveyAnonymousAttributes), as the Grade
+    // page refuses it; more such groups than one query can leave out hide the whole survey.
     private async Task<HashSet<string>> HiddenAnonymousSurveysAsync(IEnumerable<Survey> surveys, CancellationToken cancellationToken)
     {
         var hidden = new HashSet<string>(StringComparer.Ordinal);
         var groups = _serviceProvider.GetService<SurveyAnonymousGroups>();
+
+        _hiddenGroups = [];
 
         foreach (var survey in surveys.Where(candidate => candidate is not null && SurveyAnonymity.IsAnonymous(candidate)))
         {
             if (groups is null || (await groups.DecideAsync(survey, null, [SurveyResponseStatus.Completed], cancellationToken)).HidesAll)
             {
                 hidden.Add(survey.ItemId);
+
+                continue;
             }
+
+            if (await groups.HiddenGroupsAsync(survey, cancellationToken) is not { } small
+                || _hiddenGroups.Count + small.Count > SurveyResponseGroupFilter.MaxGroups)
+            {
+                hidden.Add(survey.ItemId);
+
+                continue;
+            }
+
+            _hiddenGroups.AddRange(small);
         }
 
         return hidden;

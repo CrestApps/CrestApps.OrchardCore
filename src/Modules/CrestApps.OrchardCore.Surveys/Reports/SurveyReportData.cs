@@ -28,6 +28,7 @@ internal sealed class SurveyReportData
     private readonly SurveyRespondentNames _names;
     private readonly SurveyAccessScopes _scopes;
     private readonly SurveyIndexReader _reader;
+    private readonly SurveyAnonymousDays _days;
 
     internal readonly IStringLocalizer S;
 
@@ -40,8 +41,10 @@ internal sealed class SurveyReportData
         SurveyRespondentNames names,
         IStringLocalizer<SurveyReportData> stringLocalizer,
         SurveyAccessScopes scopes,
-        SurveyIndexReader reader)
+        SurveyIndexReader reader,
+        SurveyAnonymousDays days = null)
     {
+        _days = days ?? new SurveyAnonymousDays(serviceProvider);
         _surveys = surveys;
         _versions = versions;
         _authorizationService = authorizationService;
@@ -258,22 +261,22 @@ internal sealed class SurveyReportData
     }
 
     /// <summary>
-    /// Converts a time stored in UTC to the user's or site's time zone and formats its date only, as the times of an
-    /// anonymous survey are shown.
+    /// Formats the date only of a time stored in UTC, as the times of an anonymous survey are shown: the day in the site's
+    /// time zone, never the viewer's (<see cref="SurveyAnonymousDays"/>), so changing one's own time zone can't move a
+    /// response's day and tell its hour.
     /// </summary>
     /// <param name="utc">The time in UTC.</param>
-    /// <returns>The local date as text, or an empty string.</returns>
-    public async Task<string> LocalDayAsync(DateTime? utc)
-    {
-        if (utc is not { } value || value == DateTime.MinValue)
-        {
-            return string.Empty;
-        }
+    /// <returns>The site's date as text, or an empty string.</returns>
+    public Task<string> LocalDayAsync(DateTime? utc)
+        => _days.TextAsync(utc);
 
-        var local = await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)));
-
-        return local.DateTime.ToString("d", CultureInfo.CurrentCulture);
-    }
+    /// <summary>
+    /// Gets the day a time stored in UTC falls on in the site's time zone, as the days of an anonymous survey are read.
+    /// </summary>
+    /// <param name="utc">The time in UTC.</param>
+    /// <returns>The day.</returns>
+    public async Task<DateTime> SiteDayAsync(DateTime utc)
+        => SurveyAnonymity.Day(utc, await SiteTimeZoneAsync()).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
 
     /// <summary>
     /// Gets the time the report runs in the user's or site's time zone, which relative color rules are measured from.
@@ -293,13 +296,9 @@ internal sealed class SurveyReportData
     /// <summary>
     /// Gets the site's time zone, which the days of anonymous responses are read in.
     /// </summary>
-    /// <returns>The time zone; UTC when the site has none.</returns>
-    public async Task<TimeZoneInfo> SiteTimeZoneAsync()
-    {
-        var timeZoneId = _serviceProvider.GetService<ISiteService>() is { } siteService ? (await siteService.GetSiteSettingsAsync())?.TimeZoneId : null;
-
-        return !string.IsNullOrEmpty(timeZoneId) && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var zone) ? zone : TimeZoneInfo.Utc;
-    }
+    /// <returns>The time zone (<see cref="SurveyAnonymousDays.TimeZoneAsync"/>).</returns>
+    public Task<TimeZoneInfo> SiteTimeZoneAsync()
+        => _days.TimeZoneAsync();
 
     private async Task<SurveySettings> SettingsAsync()
         => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;

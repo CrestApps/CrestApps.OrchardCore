@@ -227,29 +227,34 @@ public sealed class SurveyResultsQueries
     }
 
     /// <summary>
-    /// Counts the completed, non-test responses of a survey by each value of one index column (the collector, the
-    /// version number or the context kind), for the small-group rule of the per-row attributes of an anonymous survey.
+    /// Counts the non-test responses of a survey by their joint key (collector, version number, context kind), for the
+    /// small-group rule of the per-row attributes of an anonymous survey (<see cref="Access.SurveyAnonymousAttributes"/>).
     /// </summary>
     /// <param name="surveyId">The survey.</param>
-    /// <param name="column">The name of the <see cref="SurveyResponseIndex"/> column.</param>
+    /// <param name="completedOnly">Whether only completed responses count; otherwise every status does.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The counts, by the column's value as invariant text (empty for none).</returns>
-    public async Task<IReadOnlyDictionary<string, long>> CountCompletedByAsync(string surveyId, string column, CancellationToken cancellationToken = default)
+    /// <returns>The counts, by joint key.</returns>
+    public async Task<IReadOnlyDictionary<SurveyResponseGroup, long>> CountByGroupAsync(string surveyId, bool completedOnly, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(column);
-
-        var value = _sql.Column(column);
+        var collector = _sql.Column(nameof(SurveyResponseIndex.CollectorId));
+        var version = _sql.Column(nameof(SurveyResponseIndex.VersionNumber));
+        var kind = _sql.Column(nameof(SurveyResponseIndex.ContextKind));
         var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
         var parameters = new DynamicParameters();
-        builder.Selector($"{value} AS GroupValue, COUNT(*) AS Total");
-        Where(builder, parameters, new SurveyResultsScope { SurveyId = surveyId, CompletedOnly = true, IncludeTest = false });
-        builder.GroupBy(value);
+        builder.Selector($"{collector} AS CollectorId, {version} AS VersionNumber, {kind} AS ContextKind, COUNT(*) AS Total");
+        Where(builder, parameters, new SurveyResultsScope { SurveyId = surveyId, CompletedOnly = completedOnly, IncludeTest = false });
+        builder.GroupBy($"{collector}, {version}, {kind}");
 
-        var counts = new Dictionary<string, long>(StringComparer.Ordinal);
+        var counts = new Dictionary<SurveyResponseGroup, long>();
 
         foreach (var item in await _sql.QueryAsync(builder, parameters, cancellationToken))
         {
-            var key = item["GroupValue"] is null or DBNull ? string.Empty : Convert.ToString(item["GroupValue"], CultureInfo.InvariantCulture);
+            var key = SurveyResponseGroup.Create(
+                surveyId,
+                SurveyIndexSql.Text(item["CollectorId"]),
+                (int)SurveyIndexSql.Long(item["VersionNumber"]),
+                SurveyIndexSql.Text(item["ContextKind"]));
+
             counts[key] = counts.GetValueOrDefault(key) + SurveyIndexSql.Long(item["Total"]);
         }
 
@@ -495,7 +500,7 @@ public sealed class SurveyResultsQueries
             query = query.Where(index => index.ContextKind == kind);
         }
 
-        return query;
+        return query.Excluding(scope.HiddenGroups);
     }
 
     private void Where(ISqlBuilder builder, DynamicParameters parameters, SurveyResultsScope scope)
@@ -559,6 +564,54 @@ public sealed class SurveyResultsQueries
         {
             builder.WhereAnd($"{_sql.Column(nameof(SurveyResponseIndex.ContextKind))} = @ContextKind");
             parameters.Add("ContextKind", scope.ContextKind);
+        }
+
+        WhereNotHidden(builder, parameters, scope.HiddenGroups);
+    }
+
+    // Leaves the real responses of the hidden groups out (as SurveyResponseGroupFilter does on a YesSql query), with
+    // null-safe comparisons so a missing collector or context kind never makes the condition unknown.
+    private void WhereNotHidden(ISqlBuilder builder, DynamicParameters parameters, List<SurveyResponseGroup> groups)
+    {
+        if (groups is not { Count: > 0 })
+        {
+            return;
+        }
+
+        if (groups.Count > SurveyResponseGroupFilter.MaxGroups)
+        {
+            throw new ArgumentException($"At most {SurveyResponseGroupFilter.MaxGroups} groups can be left out of one query.", nameof(groups));
+        }
+
+        var isTest = _sql.Column(nameof(SurveyResponseIndex.IsTest));
+        var surveyId = _sql.Column(nameof(SurveyResponseIndex.SurveyId));
+        var collector = _sql.Column(nameof(SurveyResponseIndex.CollectorId));
+        var version = _sql.Column(nameof(SurveyResponseIndex.VersionNumber));
+        var kind = _sql.Column(nameof(SurveyResponseIndex.ContextKind));
+        var number = 0;
+
+        string Differs(string column, string value, string name)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return $"({column} IS NOT NULL AND {column} <> '')";
+            }
+
+            parameters.Add(name, value);
+
+            return $"({column} IS NULL OR {column} <> @{name})";
+        }
+
+        parameters.Add("HiddenTest", true);
+
+        foreach (var group in groups.Distinct())
+        {
+            var prefix = "Hidden" + number.ToString(CultureInfo.InvariantCulture);
+            number++;
+
+            parameters.Add(prefix + "Survey", group.SurveyId ?? string.Empty);
+            parameters.Add(prefix + "Version", group.VersionNumber);
+            builder.WhereAnd($"({isTest} = @HiddenTest OR {surveyId} <> @{prefix}Survey OR {Differs(collector, group.CollectorId, prefix + "Collector")} OR {version} <> @{prefix}Version OR {Differs(kind, group.ContextKind, prefix + "Kind")})");
         }
     }
 }
