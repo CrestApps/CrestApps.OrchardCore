@@ -17,6 +17,9 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Drivers;
 /// Shows, in the quiz editor, the survey the quiz owns with links to design it and to its settings, and edits how the
 /// attempts combine into the grade. It warns when the quiz completes "When the learner passes" but its survey has
 /// neither a pass mark nor a score band that passes or fails: nothing decides a pass, so any graded attempt completes it.
+/// It also warns when the
+/// quiz counts toward the course grade but its survey is anonymous: an anonymous quiz records the completion only, so it
+/// stays out of the course grade.
 /// </summary>
 internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
 {
@@ -48,6 +51,9 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
             model.NoPassDecision = model.Survey?.Draft is { } draft
                 && !DecidesPass(draft)
                 && string.Equals(await CompletionModeAsync(part), CompletionModes.Passed, StringComparison.Ordinal);
+            model.AnonymousGradable = model.Survey?.Access?.Anonymity == AnonymityMode.Anonymous
+                && part.ContentItem?.TryGet<CourseItemPart>(out var gradedItem) == true
+                && gradedItem.Gradable;
             model.GradingMethods =
             [
                 new SelectListItem(S["The highest score"], nameof(GradingMethod.Highest)),

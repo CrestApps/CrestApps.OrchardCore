@@ -34,4 +34,10 @@ public class QuizPartViewModel
     /// score band that passes or fails, so any graded attempt completes it, neither passed nor failed.
     /// </summary>
     public bool NoPassDecision { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the quiz counts toward the course grade while its survey is anonymous, so it records the
+    /// completion only and stays out of the course grade.
+    /// </summary>
+    public bool AnonymousGradable { get; set; }
 }

@@ -56,6 +56,43 @@ public sealed class SurveyGradingServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task R7M9_GradingTheEssay_LeavesTheAutomaticScoresAutomatic_SoScoreAgainAfterAKeyFixMovesThem()
+    {
+        // Arrange: the grader grades the essay; the page also posts the automatic question's points unchanged.
+        await RunAsync(service => service.GradeAsync("response1", new Dictionary<string, decimal> { ["q1"] = 2, ["essay"] = 3 }, null, null, "grader1"));
+        var graded = await LoadAsync();
+
+        // The author fixes q1's key: it is now worth 1 point.
+        _versions.Versions["version1"].Definition.Pages[0].Questions[0].Scoring.Points = 1;
+
+        // Act: Score again.
+        var result = await RunAsync(service => service.RegradeAsync("response1", "lead", "Key fix"));
+
+        // Assert: the essay keeps the grader's 3; q1 follows the fixed key.
+        Assert.True(result.Succeeded);
+        Assert.Null(graded.Answers["q1"].ManualScore);
+        Assert.Equal(3m, graded.Answers["essay"].ManualScore);
+        Assert.Equal("essay", Assert.Single(graded.ScoreHistory).QuestionId);
+
+        var response = await LoadAsync();
+        Assert.Equal(1m, response.Answers["q1"].Score);
+        Assert.Equal(3m, response.Answers["essay"].Score);
+        Assert.Equal(4m, response.Score);
+    }
+
+    [Fact]
+    public async Task R7M9_PointsThatDifferFromTheAutomaticScore_AreTheGradersScore()
+    {
+        // Act
+        await RunAsync(service => service.GradeAsync("response1", new Dictionary<string, decimal> { ["q1"] = 1, ["essay"] = 3 }, null, null, "lead"));
+
+        // Assert
+        var response = await LoadAsync();
+        Assert.Equal(1m, response.Answers["q1"].ManualScore);
+        Assert.Equal(4m, response.Score);
+    }
+
+    [Fact]
     public async Task GradeAsync_RefusesPointsAboveTheMost()
     {
         // Act

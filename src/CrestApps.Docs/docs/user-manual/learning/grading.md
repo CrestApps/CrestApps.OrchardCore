@@ -30,6 +30,7 @@ Most quiz questions are scored automatically. Essays and coursework need a perso
 - To void an attempt, open the survey's **Responses**, choose the response and void it with a reason. A voided attempt does not count in the quiz grade. Voiding or deleting a quiz attempt, or a response of a course survey that gives a score, needs **Override grades** too, because the grade can change.
 - A workflow's **Regrade Survey Response** task doesn't ask for **Override grades**: whoever sets up workflows decides when it runs.
 - An anonymous quiz or course survey counts toward the course as done once the learner finishes it. Its score never goes to the gradebook, and grading it later changes nobody's progress.
+- An anonymous quiz is left out of the course grade even when **Counts toward the course grade** is ticked: once the learner finishes it, the other graded items make up the whole grade (until then it counts as 0, like any unfinished item). The quiz editor and the survey's **Access and settings** page warn about this. To grade a quiz, keep its survey identified.
 
 Each change is kept in the attempt's score history and the Audit Trail. If the course was already completed and the change lowers the result, the enrollment stays completed and shows **Needs review**: a training manager opens it, decides what follows and clears the review with a note.
 

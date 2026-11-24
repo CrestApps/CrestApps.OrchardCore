@@ -19,4 +19,10 @@ public sealed class QuestionBankImportSummary
     /// Gets the localized problems found.
     /// </summary>
     public List<string> Errors { get; } = [];
+
+    /// <summary>
+    /// Gets the localized notes the author should check, such as a choice of an updated question that kept the id (and
+    /// the earlier answers) of the choice at its place although its text changed.
+    /// </summary>
+    public List<string> Notices { get; } = [];
 }

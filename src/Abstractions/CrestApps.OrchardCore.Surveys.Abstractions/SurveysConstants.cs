@@ -26,6 +26,12 @@ public static class SurveysConstants
     public const string ResponseRecordKind = "SurveyResponse";
 
     /// <summary>
+    /// The editor group of a survey's access and settings page. A module adds to that page with a
+    /// <c>DisplayDriver&lt;Survey&gt;</c> whose editor is on this group.
+    /// </summary>
+    public const string AccessEditorGroupId = "Access";
+
+    /// <summary>
     /// The record kind of a survey.
     /// </summary>
     public const string SurveyRecordKind = "Survey";

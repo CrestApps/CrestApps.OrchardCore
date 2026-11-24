@@ -212,6 +212,7 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
             Submitted = done,
             Graded = done,
             Attempts = result.Attempts,
+            CompletionOnly = true,
         };
     }
 

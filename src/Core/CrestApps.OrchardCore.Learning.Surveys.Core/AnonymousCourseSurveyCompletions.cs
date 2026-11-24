@@ -99,6 +99,7 @@ public sealed class AnonymousCourseSurveyCompletions
         {
             ItemId = itemId,
             Submitted = true,
+            CompletionOnly = true,
             AnonymousDayUtc = LearningSurveyResultObserver.StartOfDayUtc(_clock.UtcNow, site?.TimeZoneId),
         }, cancellationToken);
 

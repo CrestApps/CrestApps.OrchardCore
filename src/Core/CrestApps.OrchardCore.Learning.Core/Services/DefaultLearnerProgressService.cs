@@ -187,6 +187,14 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
                 item.Score = Math.Clamp(result.Score.Value, 0, 100);
             }
 
+            // A completion-only result (an anonymous survey) keeps no score, and the item leaves the course grade.
+            item.CompletionOnly = result.CompletionOnly;
+
+            if (result.CompletionOnly)
+            {
+                item.Score = null;
+            }
+
             item.Attempts = Math.Max(item.Attempts, result.Attempts);
             item.SelfReported = result.SelfReported;
             item.ResultSelfReported = result.SelfReported;

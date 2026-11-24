@@ -132,12 +132,27 @@ public static class SurveyDefinitionCloner
     /// value, then by position; a row by text, then by name, then by position. A value or name that only gives the item's
     /// place (1, 2, 3, or r1, r2, r3, as a spreadsheet or a QTI file without identifiers gives) identifies nothing, so it
     /// is not matched on: choices put in another order, or a new one added at the top, keep their ids. Choices and rows of
-    /// the earlier copy that match nothing are kept, retired, so answers given to them still read.
+    /// the earlier copy that match nothing are kept, retired, so answers given to them still read. A retired choice or row
+    /// comes back only when the same text returns: it never takes part in the key or position passes, so a new item never
+    /// takes the id (and the answers) of one that was dropped earlier.
     /// </summary>
     /// <param name="question">The new copy of the question, changed in place.</param>
     /// <param name="previous">The earlier copy.</param>
     /// <returns>The map from the new copy's ids to the kept ids.</returns>
     public static IReadOnlyDictionary<string, string> KeepIds(SurveyQuestion question, SurveyQuestion previous)
+        => KeepIds(question, previous, null);
+
+    /// <summary>
+    /// Gives the choices and rows of a question the ids of the matching choices and rows of an earlier copy of it, as
+    /// <see cref="KeepIds(SurveyQuestion, SurveyQuestion)"/> does, and reports each item matched by its position only
+    /// (its text changed and neither side has a key), so the author can see the earlier answers it now holds.
+    /// </summary>
+    /// <param name="question">The new copy of the question, changed in place.</param>
+    /// <param name="previous">The earlier copy.</param>
+    /// <param name="positionMatches">Receives, for each item matched by its position only, the earlier text and the new
+    /// text; <see langword="null"/> to report nothing.</param>
+    /// <returns>The map from the new copy's ids to the kept ids.</returns>
+    public static IReadOnlyDictionary<string, string> KeepIds(SurveyQuestion question, SurveyQuestion previous, ICollection<SurveyPositionMatch> positionMatches)
     {
         ArgumentNullException.ThrowIfNull(question);
 
@@ -148,7 +163,7 @@ public static class SurveyDefinitionCloner
             return map;
         }
 
-        var keptChoices = Match(question.Choices, previous.Choices, choice => choice.Id, (choice, id) => choice.Id = id, choice => choice.Value, choice => choice.Text, map);
+        var keptChoices = Match(question.Choices, previous.Choices, choice => choice.Id, (choice, id) => choice.Id = id, choice => choice.Value, choice => choice.Text, choice => choice.Retired, map, positionMatches);
 
         foreach (var choice in keptChoices)
         {
@@ -156,7 +171,7 @@ public static class SurveyDefinitionCloner
             question.Choices.Add(choice);
         }
 
-        var keptRows = Match(question.Rows, previous.Rows, row => row.Id, (row, id) => row.Id = id, row => row.Name, row => row.Text, map);
+        var keptRows = Match(question.Rows, previous.Rows, row => row.Id, (row, id) => row.Id = id, row => row.Name, row => row.Text, row => row.Retired, map, positionMatches);
 
         foreach (var row in keptRows)
         {
@@ -170,8 +185,19 @@ public static class SurveyDefinitionCloner
     }
 
     // Matches incoming items to earlier ones (by text, then by key, then by position), gives each matched item the
-    // earlier id, and returns the earlier items nothing matched. A key that only gives the item's place is no key.
-    private static List<T> Match<T>(List<T> incoming, List<T> earlier, Func<T, string> id, Action<T, string> setId, Func<T, string> key, Func<T, string> text, Dictionary<string, string> map)
+    // earlier id, and returns the earlier items nothing matched. A key that only gives the item's place is no key. An
+    // earlier item already retired comes back only by its text: never by key or position, which would hand its id and
+    // answers to a new item.
+    private static List<T> Match<T>(
+        List<T> incoming,
+        List<T> earlier,
+        Func<T, string> id,
+        Action<T, string> setId,
+        Func<T, string> key,
+        Func<T, string> text,
+        Func<T, bool> retired,
+        Dictionary<string, string> map,
+        ICollection<SurveyPositionMatch> positionMatches)
         where T : class
     {
         incoming ??= [];
@@ -185,7 +211,7 @@ public static class SurveyDefinitionCloner
         string EarlierKey(T item)
             => RealKey(key(item), earlierList.IndexOf(item));
 
-        void Pass(Func<int, string> incomingValue, Func<T, string> earlierValue)
+        void Pass(Func<int, string> incomingValue, Func<T, string> earlierValue, bool withRetired)
         {
             for (var i = 0; i < incoming.Count; i++)
             {
@@ -195,7 +221,7 @@ public static class SurveyDefinitionCloner
                 }
 
                 var value = incomingValue(i).Trim();
-                var found = left.FirstOrDefault(item => string.Equals(earlierValue(item)?.Trim(), value, StringComparison.OrdinalIgnoreCase));
+                var found = left.FirstOrDefault(item => (withRetired || !retired(item)) && string.Equals(earlierValue(item)?.Trim(), value, StringComparison.OrdinalIgnoreCase));
 
                 if (found is not null)
                 {
@@ -205,8 +231,8 @@ public static class SurveyDefinitionCloner
             }
         }
 
-        Pass(i => text(incoming[i]), text);
-        Pass(IncomingKey, EarlierKey);
+        Pass(i => text(incoming[i]), text, withRetired: true);
+        Pass(IncomingKey, EarlierKey, withRetired: false);
 
         // By position, only for items without a key on either side: the item at the same place, when it was not taken
         // by another. An item with a key that matched nothing is new, and the earlier one it replaces stays, retired.
@@ -217,10 +243,12 @@ public static class SurveyDefinitionCloner
                 && earlierList[i] is not null
                 && string.IsNullOrWhiteSpace(IncomingKey(i))
                 && string.IsNullOrWhiteSpace(EarlierKey(earlierList[i]))
+                && !retired(earlierList[i])
                 && left.Contains(earlierList[i]))
             {
                 matched[i] = earlierList[i];
                 left.Remove(earlierList[i]);
+                positionMatches?.Add(new SurveyPositionMatch { Position = i + 1, EarlierText = text(earlierList[i]), Text = text(incoming[i]) });
             }
         }
 

@@ -57,4 +57,9 @@ public class QuestionBankImportViewModel
     /// Gets or sets the problems found.
     /// </summary>
     public List<string> Errors { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the notes the author should check, such as choices that kept an earlier choice's id by their place.
+    /// </summary>
+    public List<string> Notices { get; set; } = [];
 }

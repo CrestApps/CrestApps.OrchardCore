@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
@@ -83,6 +84,76 @@ public sealed class QuizGradingRulesTests
         Assert.Equal(CourseItemState.Completed, learner?.State);
         Assert.Null(learner.Score);
         Assert.Null(learner.Passed);
+    }
+
+    [Fact]
+    public async Task R7M8_AGradableAnonymousQuiz_IsLeftOutOfTheCourseGrade_NotCountedAsZero()
+    {
+        // Arrange: an anonymous quiz that counts toward the course grade (weight 3), scored without a grader.
+        var setup = await CreateQuizAsync(anonymous: true, enrollInstructor: false, CompletionModes.Passed, definition =>
+        {
+            definition.Pages[0].Questions.RemoveAll(question => question.Id == "essay");
+        }, gradable: true);
+
+        // Act: the learner answers it right.
+        await _fixture.InTenantAsync(async services =>
+        {
+            var quiz = await services.GetRequiredService<IContentManager>().GetAsync(setup.QuizId, VersionOptions.Latest);
+
+            await LearningSurveyTestSupport.AnswerAsync(services, "learner1", quiz, new Dictionary<string, string> { ["q.planet"] = "mars" });
+        });
+
+        var (item, grade) = await _fixture.InTenantAsync(async services =>
+        {
+            var structure = services.GetRequiredService<ICourseStructureService>();
+            var progress = await services.GetRequiredService<ILearnerProgressService>().GetAsync(setup.LearnerEnrollmentId);
+            var outline = await structure.GetOutlineAsync(await structure.GetCourseAsync(setup.CourseId));
+
+            return (progress?.Find(setup.QuizId), CourseGradeCalculator.Compute(outline, progress));
+        });
+
+        // Assert: the quiz is completed with its completion only, and the course has no grade rather than 0%.
+        Assert.Equal(CourseItemState.Completed, item?.State);
+        Assert.True(item.CompletionOnly);
+        Assert.Null(item.Score);
+        Assert.Null(grade);
+    }
+
+    [Fact]
+    public async Task R7M9_GradingTheEssay_ThenFixingTheChoiceKey_ScoreAgainMovesTheChoiceScore()
+    {
+        // Arrange: a pending attempt that chose Venus (wrong, 0 points) with an essay waiting for a grader.
+        var setup = await CreateQuizAsync(anonymous: false, enrollInstructor: false, CompletionModes.Graded, definition => { });
+        var responseId = await AnswerAsync(setup.QuizId);
+        using var instructor = await _fixture.CreateClientAsync("instructor1");
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var page = await instructor.GetStringAsync($"Admin/surveys/grading/{responseId}", cancellationToken);
+
+        // The grader grades the essay; the choice's read-only points box is not posted.
+        await instructor.PostAsync($"Admin/surveys/grading/{responseId}", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = LearningSiteFixture.Token(page),
+            ["Points[essay]"] = "4",
+        }), cancellationToken);
+
+        // Act: the author fixes the key (Venus is right after all) and the response is scored again.
+        var rescored = await _fixture.InTenantAsync(async services =>
+        {
+            var response = await services.GetRequiredService<ISurveyResponseQueries>().FindByIdAsync(responseId);
+            var version = await services.GetRequiredService<ISurveyVersionCache>().GetAsync(response.SurveyVersionId);
+
+            version.Definition.Pages[0].Questions.Single(question => question.Id == "planet").Scoring.CorrectChoiceIds = ["venus"];
+
+            return await services.GetRequiredService<ISurveyGradingService>().RegradeAsync(responseId, _fixture.InstructorId, "Key fix", cancellationToken);
+        });
+
+        // Assert: the choice now scores 1 and the essay keeps the grader's 4.
+        Assert.DoesNotContain("name=\"Points[planet]\"", page);
+        Assert.True(rescored.Succeeded, rescored.Error.ToString());
+        Assert.Null(rescored.Response.Answers["planet"].ManualScore);
+        Assert.Equal(1m, rescored.Response.Answers["planet"].Score);
+        Assert.Equal(4m, rescored.Response.Answers["essay"].Score);
+        Assert.Equal(5m, rescored.Response.Score);
     }
 
     [Fact]
@@ -243,7 +314,7 @@ public sealed class QuizGradingRulesTests
     }
 
     // A course instructor1 teaches, with one quiz: a single choice worth 1 point (Mars is right) and an essay worth 5.
-    private Task<(string CourseId, string QuizId, string LearnerEnrollmentId, string InstructorEnrollmentId)> CreateQuizAsync(bool anonymous, bool enrollInstructor, string completionMode, Action<SurveyDefinition> configure)
+    private Task<(string CourseId, string QuizId, string LearnerEnrollmentId, string InstructorEnrollmentId)> CreateQuizAsync(bool anonymous, bool enrollInstructor, string completionMode, Action<SurveyDefinition> configure, bool gradable = false)
         => _fixture.InTenantAsync(async services =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
@@ -264,7 +335,16 @@ public sealed class QuizGradingRulesTests
             quiz.DisplayText = "Planets quiz " + suffix;
             quiz.Alter<TitlePart>(part => part.Title = quiz.DisplayText);
             quiz.Alter<QuizPart>(part => part.GradingMethod = GradingMethod.Highest);
-            quiz.Alter<CourseItemPart>(part => part.CompletionMode = completionMode);
+            quiz.Alter<CourseItemPart>(part =>
+            {
+                part.CompletionMode = completionMode;
+
+                if (gradable)
+                {
+                    part.Gradable = true;
+                    part.Weight = 3;
+                }
+            });
             quiz.Alter<ContainedPart>(part =>
             {
                 part.ListContentItemId = course.ContentItemId;
@@ -278,7 +358,11 @@ public sealed class QuizGradingRulesTests
             lesson.DisplayText = "Next step " + suffix;
             lesson.Alter<TitlePart>(part => part.Title = lesson.DisplayText);
             lesson.Alter<CourseSurveyPart>(_ => { });
-            lesson.Alter<CourseItemPart>(part => part.CompletionMode = CompletionModes.Submitted);
+            lesson.Alter<CourseItemPart>(part =>
+            {
+                part.CompletionMode = CompletionModes.Submitted;
+                part.Gradable = false;
+            });
             lesson.Alter<ContainedPart>(part =>
             {
                 part.ListContentItemId = course.ContentItemId;

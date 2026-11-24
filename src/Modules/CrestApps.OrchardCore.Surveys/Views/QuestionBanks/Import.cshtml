@@ -21,6 +21,19 @@
         <div class="alert alert-success">@T["{0} questions added and {1} updated.", Model.Created, Model.Updated]</div>
     }
 
+    @if (Model.Notices.Count > 0)
+    {
+        <div class="alert alert-info">
+            <p class="mb-1">@T["Check these choices and rows: their text changed, so each was matched to the earlier one at the same place, and answers given to that one now count for it."]</p>
+            <ul class="mb-0">
+                @foreach (var notice in Model.Notices.Take(200))
+                {
+                    <li>@notice</li>
+                }
+            </ul>
+        </div>
+    }
+
     @if (Model.Errors.Count > 0)
     {
         <div class="alert alert-warning">

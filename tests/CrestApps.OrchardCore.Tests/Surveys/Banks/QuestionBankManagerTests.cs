@@ -358,6 +358,86 @@ public sealed class QuestionBankManagerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task R7M10_ImportAsync_ThreeTimes_NeverGivesARetiredChoicesIdToANewChoice()
+    {
+        // Arrange: v1 is A;B;C, v2 drops C (kept, retired).
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _store.Store.CreateSession();
+        var manager = BanksTestStore.Manager(session);
+        var bank = await CreateBankAsync(manager, "letters-retired");
+
+        await manager.ImportAsync(bank.ItemId, [Positional("src-q", "A", "A", "B", "C")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var firstIds = (await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken)).Question.Choices.ToDictionary(choice => choice.Text, choice => choice.Id);
+
+        var second = await manager.ImportAsync(bank.ItemId, [Positional("src-q", "A", "A", "B")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Act: v3 is A;B;D, with D at C's old place and value.
+        var third = await manager.ImportAsync(bank.ItemId, [Positional("src-q", "D", "A", "B", "D")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Assert: D gets a new id, C stays retired with its own, and the key names D.
+        var updated = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        var choices = updated.Question.Choices.ToDictionary(choice => choice.Text);
+        Assert.Equal(firstIds["A"], choices["A"].Id);
+        Assert.Equal(firstIds["B"], choices["B"].Id);
+        Assert.DoesNotContain(choices["D"].Id, firstIds.Values);
+        Assert.False(choices["D"].Retired);
+        Assert.True(choices["C"].Retired);
+        Assert.Equal(firstIds["C"], choices["C"].Id);
+        Assert.Equal([choices["D"].Id], updated.Question.Scoring.CorrectChoiceIds);
+        Assert.Empty(second.Notices);
+        Assert.Empty(third.Notices);
+    }
+
+    [Fact]
+    public async Task R7M10_ImportAsync_ReportsAChoiceMatchedByItsPlaceOnly()
+    {
+        // Arrange: v1 is A;B;C.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _store.Store.CreateSession();
+        var manager = BanksTestStore.Manager(session);
+        var bank = await CreateBankAsync(manager, "letters-typo");
+
+        await manager.ImportAsync(bank.ItemId, [Positional("src-q", "A", "A", "B", "C")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var firstIds = (await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken)).Question.Choices.ToDictionary(choice => choice.Text, choice => choice.Id);
+
+        // Act: v2 is A;B;D, a typo fix by place.
+        var summary = await manager.ImportAsync(bank.ItemId, [Positional("src-q", "A", "A", "B", "D")], cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        // Assert: D keeps C's id, and the summary says so.
+        var updated = await new BankQuestionStore(session).FindBySourceAsync(bank.ItemId, "src-q", cancellationToken);
+        Assert.Equal(firstIds["C"], updated.Question.Choices.Single(choice => choice.Text == "D").Id);
+        var notice = Assert.Single(summary.Notices);
+        Assert.Contains("\"D\"", notice);
+        Assert.Contains("\"C\"", notice);
+    }
+
+    [Fact]
+    public void R7M10_KeepIds_BringsARetiredChoiceBackOnlyByItsText()
+    {
+        // Arrange: C was dropped earlier and kept, retired.
+        var previous = Question(("1", "A"), ("2", "B"), ("3", "C"));
+        previous.Choices[2].Retired = true;
+        var sameText = Question(("1", "A"), ("2", "B"), ("3", "C"));
+        var other = Question(("1", "A"), ("2", "B"), ("3", "D"));
+        var matches = new List<SurveyPositionMatch>();
+
+        // Act
+        SurveyDefinitionCloner.KeepIds(sameText, previous);
+        SurveyDefinitionCloner.KeepIds(other, previous, matches);
+
+        // Assert
+        Assert.Equal(previous.Choices[2].Id, sameText.Choices[2].Id);
+        Assert.NotEqual(previous.Choices[2].Id, other.Choices[2].Id);
+        Assert.Contains(other.Choices, choice => choice.Retired && choice.Id == previous.Choices[2].Id);
+        Assert.Empty(matches);
+    }
+
+    [Fact]
     public void R6M9_KeepIds_MatchesRealValuesWhenTheTextChanged_ButNeverAPlaceNumber()
     {
         // Arrange: QTI identifiers are real; a reworded choice keeps its id by them. Numbered values are only places.
