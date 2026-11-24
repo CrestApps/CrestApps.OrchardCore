@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Services;
@@ -201,6 +202,7 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
                 Reference = names is null ? (isAnonymous ? string.Empty : response.Number) : await names.GetLabelAsync(owner, response, cancellationToken),
                 Icon = "fa-solid fa-circle-question",
                 SubmittedUtc = isAnonymous ? SurveyAnonymity.StartOfDayUtc(response.CompletedUtc ?? response.StartedUtc, timeZone) : SubmittedOf(response),
+                SubmittedDay = isAnonymous ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(response.CompletedUtc ?? response.StartedUtc, DateTimeKind.Utc), timeZone).ToString("d", CultureInfo.CurrentCulture) : null,
                 Area = SurveysConstants.Features.Surveys,
                 Controller = "SurveyGrading",
                 Action = "Grade",

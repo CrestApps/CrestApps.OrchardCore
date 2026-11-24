@@ -106,6 +106,13 @@ public sealed class GradingQueueItem
     public DateTime SubmittedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the day the work was handed in, already formatted, when only its day may be shown, such as a response
+    /// to an anonymous survey, whose day is read in the site's time zone; otherwise <see langword="null"/>. A page shows
+    /// it as it is, so the day is never converted again in the viewer's time zone.
+    /// </summary>
+    public string SubmittedDay { get; set; }
+
+    /// <summary>
     /// Gets or sets the area of the page that grades the work.
     /// </summary>
     public string Area { get; set; }

@@ -215,6 +215,9 @@ public sealed class QuizResponseGradingQueueSourceTests
         Assert.Equal(0, item.SubmittedUtc.Minute);
         Assert.Equal(0, item.SubmittedUtc.Second);
         Assert.InRange(submitted - item.SubmittedUtc, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
+        // The page shows that day preformatted, as a date with no time, so the viewer's time zone never converts it.
+        Assert.False(string.IsNullOrEmpty(item.SubmittedDay));
+        Assert.DoesNotContain(":", item.SubmittedDay, StringComparison.Ordinal);
     }
 
     [Fact]
