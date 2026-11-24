@@ -1,5 +1,3 @@
-using System.Globalization;
-using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.Logging;
@@ -15,14 +13,17 @@ namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
 /// <summary>
 /// The site's daily limit of invitation and reminder e-mails, exact across servers and parallel requests. It is scoped,
 /// and a scope is one batch of sends, however many invitations, sends and reminders it runs: the settings are read once,
-/// and before its first e-mail of a day the scope takes the tenant's lock for that day of the site (Orchard Core's
-/// <see cref="IDistributedLock"/>, which is in-process unless a distributed lock such as Redis is enabled) and keeps it
-/// until its changes are saved, so the e-mails another sender counts always include every e-mail sent before. Under the
-/// lock the day's e-mails are counted once and the scope's own sends are added as they go out.
+/// and before its first e-mail the scope takes the tenant's invitation e-mail lock (<see cref="LockKey"/>, through
+/// Orchard Core's <see cref="IDistributedLock"/>, which is in-process unless a distributed lock such as Redis is enabled)
+/// and keeps it until its changes are saved, so the e-mails another sender counts always include every e-mail sent
+/// before. The lock is one per tenant, not one per day, so two sends on either side of midnight never read the same
+/// invitations at once. Under the lock the e-mails of the site's day are counted, once a day, and the scope's own sends
+/// are added as they go out.
 /// <para>
 /// A scope asks for the lock at most once: when it can't be had within <see cref="LockTimeout"/>, every later e-mail of
 /// the scope is held without waiting again. A scope sends only during the <see cref="SendingWindow"/> after it took the
-/// lock; its later e-mails are held. The lock lets go on its own after <see cref="LockExpiration"/>, which leaves the
+/// lock (or after <see cref="StartSendingWindow"/>, for a send that creates its invitations first); its later e-mails
+/// are held. The lock lets go on its own after <see cref="LockExpiration"/>, which leaves the
 /// scope far more than the rest of its work and its save once the window closes, so the lock doesn't expire while sent
 /// e-mails are still unsaved.
 /// </para>
@@ -51,21 +52,24 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
     /// </summary>
     public static readonly TimeSpan LockExpiration = TimeSpan.FromMinutes(30);
 
-    private const string LockKeyPrefix = "Surveys:InvitationEmails:";
+    /// <summary>
+    /// The key of the tenant's invitation e-mail lock.
+    /// </summary>
+    public const string LockKey = "Surveys:InvitationEmails";
 
     private readonly SurveyInvitationStore _invitationStore;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ISiteService _siteService;
     private readonly ILogger _logger;
-    private readonly Dictionary<string, ILocker> _lockers = new(StringComparer.Ordinal);
-
+    private ILocker _locker;
     private bool _releaseRegistered;
     private string _timeZoneId;
     private int _limit;
     private DateTime? _countedDayStartUtc;
     private int _emailed;
     private DateTime? _lockedUtc;
+    private DateTime? _windowStartUtc;
     private bool _lockUnavailable;
     private bool _holdAll;
     private bool _windowClosed;
@@ -101,6 +105,12 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
         => _lockUnavailable;
 
     /// <summary>
+    /// Gets whether the scope holds the tenant's invitation e-mail lock now.
+    /// </summary>
+    public bool HoldsLock
+        => _locker is not null;
+
+    /// <summary>
     /// Gets whether the mail server failed an e-mail of the scope (<see cref="HoldAfterMailServerFailure"/>), so the
     /// scope's later e-mails are held for a later run.
     /// </summary>
@@ -130,7 +140,7 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
 
             var utcNow = _clock.UtcNow;
 
-            if (_lockedUtc is { } locked && utcNow - locked >= SendingWindow)
+            if (_windowStartUtc is { } windowStart && utcNow - windowStart >= SendingWindow)
             {
                 return true;
             }
@@ -156,6 +166,19 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
         => _mailServerFailed = true;
 
     /// <summary>
+    /// Starts the scope's <see cref="SendingWindow"/> now, when it holds the lock: a send that took the lock before it
+    /// created its invitations (so it reads existing ones after every other sender saved) sends for the whole window
+    /// once they exist. The lock's <see cref="LockExpiration"/> still counts from when it was taken.
+    /// </summary>
+    public void StartSendingWindow()
+    {
+        if (_locker is not null)
+        {
+            _windowStartUtc = _clock.UtcNow;
+        }
+    }
+
+    /// <summary>
     /// Gets the start of today in the site's time zone, as UTC: the day the limit counts.
     /// </summary>
     /// <returns>The start of the site's day, in UTC.</returns>
@@ -170,8 +193,8 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
     }
 
     /// <summary>
-    /// Gets whether one more e-mail may go out now. Takes the lock of the site's day first when the scope doesn't hold
-    /// it yet; when the lock can't be taken in time, no later e-mail of the scope goes out, without waiting again.
+    /// Gets whether one more e-mail may go out now. Takes the tenant's invitation e-mail lock first when the scope doesn't
+    /// hold it yet; when the lock can't be taken in time, no later e-mail of the scope goes out, without waiting again.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns><see langword="true"/> when the e-mail may be sent; call <see cref="AddSent"/> once it went out.</returns>
@@ -189,12 +212,30 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
 
         var utcNow = _clock.UtcNow;
 
-        if (_lockedUtc is { } lockedUtc && utcNow - lockedUtc >= SendingWindow)
+        if (_windowStartUtc is { } windowStart && utcNow - windowStart >= SendingWindow)
         {
             _windowClosed = true;
             _logger.LogWarning("This send stopped sending invitation e-mails {Window} after it took the daily e-mail lock; the rest are held for the hourly reminder task.", SendingWindow);
 
             return false;
+        }
+
+        if (_locker is null)
+        {
+            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey, LockTimeout, LockExpiration);
+
+            if (!locked)
+            {
+                _lockUnavailable = true;
+                _logger.LogWarning("The invitation e-mail lock '{LockKey}' could not be acquired in time; the invitations wait for a later run.", LockKey);
+
+                return false;
+            }
+
+            _locker = locker;
+            _lockedUtc = _clock.UtcNow;
+            _windowStartUtc ??= _lockedUtc;
+            RegisterRelease();
         }
 
         var dayStartUtc = SurveyInvitationService.DayStartUtc(utcNow, _timeZoneId);
@@ -204,29 +245,8 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
             return _emailed < _limit;
         }
 
-        var key = LockKeyPrefix + CalendarTime.ToLocal(DateTime.SpecifyKind(utcNow, DateTimeKind.Utc), _timeZoneId).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-        if (!_lockers.ContainsKey(key))
-        {
-            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, LockTimeout, LockExpiration);
-
-            if (!locked)
-            {
-                _lockUnavailable = true;
-                _logger.LogWarning("The daily invitation e-mail lock '{LockKey}' could not be acquired in time; the invitations wait for a later run.", key);
-
-                return false;
-            }
-
-            _lockers[key] = locker;
-
-            // The window counts from the first lock the scope holds, which expires first.
-            _lockedUtc ??= _clock.UtcNow;
-            RegisterRelease();
-        }
-
-        // Counted under the lock: every other sender of the day saved its e-mails before it let go of the lock, and this
-        // scope's own earlier e-mails are flushed into the count.
+        // Counted under the lock, once per site day (again when a send runs past midnight): every other sender saved its
+        // e-mails before it let go of the lock, and this scope's own earlier e-mails are flushed into the count.
         _emailed = await _invitationStore.CountEmailedSinceAsync(dayStartUtc, cancellationToken);
         _countedDayStartUtc = dayStartUtc;
 
@@ -243,31 +263,30 @@ public sealed class SurveyInvitationEmailLimit : IAsyncDisposable
     }
 
     /// <summary>
-    /// Releases the locks the scope holds. Called once the scope's changes are saved.
+    /// Releases the lock the scope holds. Called once the scope's changes are saved. A later e-mail of the scope takes
+    /// the lock again, and counts the day's e-mails again under it.
     /// </summary>
     /// <returns>A task.</returns>
     public async Task ReleaseAsync()
     {
-        if (_lockers.Count == 0)
+        if (_locker is null)
         {
             return;
         }
 
         if (_lockedUtc is { } lockedUtc && _clock.UtcNow - lockedUtc >= LockExpiration)
         {
-            _logger.LogError("The daily invitation e-mail lock was held longer than its expiration of {Expiration} before the send was saved; another sender may have counted the day's e-mails without this send's.", LockExpiration);
+            _logger.LogError("The invitation e-mail lock was held longer than its expiration of {Expiration} before the send was saved; another sender may have counted the day's e-mails without this send's.", LockExpiration);
         }
 
-        var lockers = _lockers.Values.ToArray();
+        var locker = _locker;
 
-        _lockers.Clear();
+        _locker = null;
         _countedDayStartUtc = null;
         _lockedUtc = null;
+        _windowStartUtc = null;
 
-        foreach (var locker in lockers)
-        {
-            await locker.DisposeAsync();
-        }
+        await locker.DisposeAsync();
     }
 
     /// <inheritdoc />

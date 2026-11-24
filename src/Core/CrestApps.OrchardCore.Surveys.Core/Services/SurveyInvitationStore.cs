@@ -129,6 +129,12 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     /// then is one e-mail, and each invitation reminded since then is one more. Only the last reminder time is kept, so
     /// this counts every e-mail of a site day because an invitation gets at most one reminder a day: scheduled reminders
     /// are at least a day apart, and a manual resend skips an invitation already reminded that day.
+    /// <para>
+    /// One known gap: the day the clocks go back has 25 hours, so with reminders every day an invitation can get a
+    /// scheduled reminder at the start of that site day and another 24 hours later, still the same site day. Its last
+    /// reminder time replaces the first, so that day counts one e-mail fewer than went out. The limit is a safeguard,
+    /// not a quota, and the error is at most one e-mail per invitation once a year.
+    /// </para>
     /// </summary>
     /// <param name="sinceUtc">The time, in UTC.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -298,6 +304,56 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
+    /// Gets whether a collector has work for a send, by the index only: a held first send (when
+    /// <paramref name="emails"/> is <see langword="true"/>), or an invitation in some statuses that is due a reminder as
+    /// <see cref="VisitDueForReminderAsync"/> reads them, or, with no <paramref name="lastContactBefore"/>, any
+    /// invitation in those statuses (a manual resend). So a list with nothing to send costs a query or two and no lock.
+    /// </summary>
+    /// <param name="collectorId">The collector.</param>
+    /// <param name="statuses">The statuses reminded.</param>
+    /// <param name="lastContactBefore">The latest last contact of an invitation due a reminder, in UTC, or
+    /// <see langword="null"/> for every invitation in <paramref name="statuses"/>.</param>
+    /// <param name="maxReminders">The most reminders an invitation gets; ignored without <paramref name="lastContactBefore"/>.</param>
+    /// <param name="emails"><see langword="true"/> for e-mail invitations (an address and no user), <see langword="false"/>
+    /// for the others.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when there is something to send.</returns>
+    public async Task<bool> HasWorkAsync(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, DateTime? lastContactBefore, int maxReminders, bool emails, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+
+        if (string.IsNullOrEmpty(collectorId))
+        {
+            return false;
+        }
+
+        if (emails)
+        {
+            var pending = nameof(SurveyInvitationStatus.Pending);
+            var held = await QueryRows(index => index.CollectorId == collectorId && index.Held && index.Status == pending, emails: true).FirstOrDefaultAsync(cancellationToken);
+
+            if (held is not null)
+            {
+                return true;
+            }
+        }
+
+        if (statuses.Count == 0)
+        {
+            return false;
+        }
+
+        if (lastContactBefore is { } before)
+        {
+            return maxReminders > 0 && await QueryRows(DueForReminder(collectorId, statuses, before, maxReminders), emails).FirstOrDefaultAsync(cancellationToken) is not null;
+        }
+
+        var names = statuses.Select(status => status.ToString()).ToArray();
+
+        return await QueryRows(index => index.CollectorId == collectorId && index.Status.IsIn(names), emails).FirstOrDefaultAsync(cancellationToken) is not null;
+    }
+
+    /// <summary>
     /// Reads the index row of an invitation as the database has it now, after this session's own pending changes are
     /// written: what other requests committed (a completion, an open, another send) shows here even when the
     /// invitation was loaded earlier. Saving an invitation writes its row again under a new id, so the row's id tells
@@ -357,6 +413,15 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     /// <returns>A task.</returns>
     public Task FlushAsync(CancellationToken cancellationToken = default)
         => Session.FlushAsync(cancellationToken);
+
+    /// <summary>
+    /// Commits this session's changes, so other requests and senders see them before a lock is let go of. The session
+    /// stays usable; everything it loaded before is let go of.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public Task CommitAsync(CancellationToken cancellationToken = default)
+        => Session.SaveChangesAsync(cancellationToken);
 
     // The index filter of the invitations of a collector due a reminder.
     private static Expression<Func<SurveyInvitationIndex, bool>> DueForReminder(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, DateTime lastContactBefore, int maxReminders)

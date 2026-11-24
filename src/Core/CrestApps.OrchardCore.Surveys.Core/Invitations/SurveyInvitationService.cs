@@ -9,7 +9,10 @@ using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
@@ -19,6 +22,11 @@ namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
 /// </summary>
 public sealed class SurveyInvitationService : ISurveyInvitationService
 {
+    /// <summary>
+    /// The start of the key of a list's notification lock; the list's id follows.
+    /// </summary>
+    public const string NotificationLockPrefix = "Surveys:InvitationNotifications:";
+
     private static readonly SurveyInvitationStatus[] _remindable =
     [
         SurveyInvitationStatus.Sent,
@@ -39,6 +47,8 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private readonly SurveyAnonymitySecrets _secrets;
     private readonly IClock _clock;
     private readonly SurveyInvitationEmailLimit _emailLimit;
+    private readonly IDistributedLock _distributedLock;
+    private readonly ILogger _logger;
 
     // An e-mail of this scope the mail server failed while nothing of the scope had got through since: whether the failure
     // was the address's or an outage is judged by the next e-mail (see SurveyInvitationHold.FailedAttempts).
@@ -56,7 +66,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <param name="recipientPolicies">The opt-out and consent checks asked before an e-mail invitation is sent.</param>
     /// <param name="secrets">The anonymity secrets, which sign the invitation links.</param>
     /// <param name="clock">The clock.</param>
-    /// <param name="emailLimit">The site's daily e-mail limit, held under a lock per site day.</param>
+    /// <param name="emailLimit">The site's daily e-mail limit, held under the tenant's invitation e-mail lock.</param>
+    /// <param name="distributedLock">The tenant's lock service, for the lock a list's notifications to users are sent under.</param>
+    /// <param name="logger">The logger.</param>
     public SurveyInvitationService(
         SurveyStore surveyStore,
         SurveyCollectorStore collectorStore,
@@ -67,9 +79,13 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         IEnumerable<ISurveyInvitationRecipientPolicy> recipientPolicies,
         SurveyAnonymitySecrets secrets,
         IClock clock,
-        SurveyInvitationEmailLimit emailLimit)
+        SurveyInvitationEmailLimit emailLimit,
+        IDistributedLock distributedLock,
+        ILogger<SurveyInvitationService> logger)
     {
         _emailLimit = emailLimit;
+        _distributedLock = distributedLock;
+        _logger = logger;
         _surveyStore = surveyStore;
         _collectorStore = collectorStore;
         _invitationStore = invitationStore;
@@ -80,6 +96,26 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         _secrets = secrets;
         _clock = clock;
     }
+
+    /// <summary>
+    /// How long a list's notifications to users may go out under the list's notification lock in one send; the rest wait
+    /// for the next run. Well under <see cref="SurveyInvitationEmailLimit.LockExpiration"/>, so the lock never expires
+    /// while the notifications it covers are unsaved.
+    /// </summary>
+    public static readonly TimeSpan NotificationWindow = TimeSpan.FromMinutes(20);
+
+    /// <summary>
+    /// Gets whether a send of this scope found another send going out (the invitation e-mail lock, or a list's
+    /// notification lock, was busy past its wait) and so sent nothing of its own: the caller tells the user why.
+    /// </summary>
+    public bool AnotherSendIsGoingOut { get; private set; }
+
+    /// <summary>
+    /// Gets whether the mail server failed e-mails of this scope as in an outage, so its other e-mails wait for the hourly
+    /// reminder task.
+    /// </summary>
+    public bool MailServerFailed
+        => _emailLimit.MailServerFailed;
 
     /// <inheritdoc />
     /// <remarks>
@@ -151,6 +187,10 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         {
             return results;
         }
+
+        // The lock was taken before the invitations were created, so existing ones are read after every other sender
+        // saved; the sending window starts now, so creating up to 5,000 invitations doesn't use it up (R7-Mi11).
+        _emailLimit.StartSendingWindow();
 
         // Sent after every invitation exists, so once the batch stops sending only holds are left before the save, and
         // the daily limit's lock is held for the sends and little else.
@@ -302,35 +342,78 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <returns>How many were sent.</returns>
     public async Task<int> SendPendingAsync(string collectorId, CancellationToken cancellationToken = default)
     {
-        await EnterEmailSendAsync(cancellationToken);
+        ILocker notificationLock = null;
 
-        var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
-        var survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
-
-        if (survey is null)
+        if (CanEmail)
         {
-            return 0;
-        }
-
-        var sent = 0;
-
-        foreach (var invitation in await _invitationStore.ListByCollectorAsync(collector.ItemId, [SurveyInvitationStatus.Pending], SurveysConstants.PageSize, cancellationToken))
-        {
-            if ((await DeliverAsync(survey, collector, invitation, current => LinkAsync(survey, current, cancellationToken), isReminder: false, cancellationToken)).Sent)
+            // When the e-mail lock can't be had in time, another send is going out: nothing is read or written, so no
+            // copy read before that send saved is written back over it (R7-Mi6), and the caller says so.
+            if (!await EnterEmailSendAsync(cancellationToken))
             {
-                sent++;
+                return 0;
+            }
+        }
+        else
+        {
+            // Without an e-mail service nothing takes the e-mail lock, so the list's notification lock keeps a second Send
+            // from notifying the list's users again (R7-Mi7).
+            notificationLock = await EnterNotificationsAsync(collectorId);
+
+            if (notificationLock is null)
+            {
+                return 0;
             }
         }
 
-        await ResolveUnconfirmedFailureAsync(cancellationToken);
+        try
+        {
+            var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
+            var survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
 
-        return sent;
+            if (survey is null)
+            {
+                return 0;
+            }
+
+            var sent = 0;
+
+            foreach (var invitation in await _invitationStore.ListByCollectorAsync(collector.ItemId, [SurveyInvitationStatus.Pending], SurveysConstants.PageSize, cancellationToken))
+            {
+                if ((await DeliverAsync(survey, collector, invitation, current => LinkAsync(survey, current, cancellationToken), isReminder: false, cancellationToken)).Sent)
+                {
+                    sent++;
+                }
+            }
+
+            await ResolveUnconfirmedFailureAsync(cancellationToken);
+
+            if (notificationLock is not null)
+            {
+                await _invitationStore.CommitAsync(cancellationToken);
+            }
+
+            return sent;
+        }
+        finally
+        {
+            if (notificationLock is not null)
+            {
+                await notificationLock.DisposeAsync();
+            }
+        }
     }
 
     /// <summary>
     /// Sends the reminders that are due for a collector: invitations sent, opened or started but not completed, that
     /// have had fewer reminders than the collector allows and none for the collector's interval. First sends that were
-    /// held back (see <see cref="SurveyInvitationHold"/>) are sent first, for as long as the send may e-mail.
+    /// held back (see <see cref="SurveyInvitationHold"/>) are sent too, for as long as the send may e-mail: those the mail
+    /// server never failed before the reminders, the others after them.
+    /// <para>
+    /// The e-mails go out under the tenant's invitation e-mail lock, taken only when the list has a held send or an e-mail
+    /// reminder due, and before any of them is read. Their changes are committed and the lock let go of before the list's
+    /// users are notified, under the list's own notification lock, so the notifications never hold up other sends nor
+    /// outlive the e-mail lock, and two sends of the list never notify anyone twice.
+    /// </para>
     /// </summary>
     /// <param name="collectorId">The invitation collector.</param>
     /// <param name="force">Whether to remind every open invitation now, ignoring the interval (a manual resend). An
@@ -340,10 +423,6 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <returns>How many reminders, and invitations held back earlier, were sent.</returns>
     public async Task<int> RemindAsync(string collectorId, bool force, CancellationToken cancellationToken = default)
     {
-        // The day's e-mail lock comes before any invitation is read, so another send of the list that is still going out
-        // has saved what it sent before this one reads it.
-        await EnterEmailSendAsync(cancellationToken);
-
         var collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
         var survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
 
@@ -352,32 +431,24 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return 0;
         }
 
-        // First sends held back by the daily e-mail limit (or an unreadable opt-out list) go out now, before reminders.
-        // Those the mail server failed before go out after the reminders (R7-M6): an address the mail server keeps
-        // refusing never stands in front of the list's reminders, and by then an e-mail of the run that went out tells
-        // its failure from an outage.
         var justSent = new HashSet<string>(StringComparer.Ordinal);
         var heldTried = new HashSet<string>(StringComparer.Ordinal);
-        var sent = await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: false, cancellationToken);
         var settings = Settings(collector);
-
-        if (!force && settings.ReminderCount <= 0)
-        {
-            sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: true, cancellationToken);
-            await ResolveUnconfirmedFailureAsync(cancellationToken);
-
-            return sent;
-        }
-
+        var reminds = force || settings.ReminderCount > 0;
         var now = _clock.UtcNow;
         DateTime? remindedToday = force ? await _emailLimit.TodayStartUtcAsync() : null;
+        DateTime? lastContactBefore = force ? null : now.AddDays(-Math.Max(settings.ReminderEveryDays, 1));
+        var sent = 0;
 
-        // Expired invitations leave the open ones first, even when no reminder is due.
-        await _invitationStore.VisitExpiredAsync(collector.ItemId, _remindable, now, async invitation =>
+        if (reminds)
         {
-            invitation.Status = SurveyInvitationStatus.Expired;
-            await _invitationStore.UpdateAsync(invitation, cancellationToken);
-        }, SurveysConstants.PageSize, cancellationToken);
+            // Expired invitations leave the open ones first, even when no reminder is due.
+            await _invitationStore.VisitExpiredAsync(collector.ItemId, _remindable, now, async invitation =>
+            {
+                invitation.Status = SurveyInvitationStatus.Expired;
+                await _invitationStore.UpdateAsync(invitation, cancellationToken);
+            }, SurveysConstants.PageSize, cancellationToken);
+        }
 
         async Task RemindOneAsync(SurveyInvitation invitation)
         {
@@ -425,30 +496,75 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         async Task WalkAsync(bool emails, Func<bool> stop)
         {
-            if (force)
+            if (lastContactBefore is { } before)
+            {
+                // Only the invitations the index says are due are read, so a large list with nothing due costs one query.
+                await _invitationStore.VisitDueForReminderAsync(collector.ItemId, _remindable, before, settings.ReminderCount, RemindOneAsync, emails, stop, SurveysConstants.PageSize, cancellationToken);
+            }
+            else
             {
                 // A manual resend reminds every open invitation of the list, a page at a time.
                 await _invitationStore.VisitByCollectorAsync(collector.ItemId, _remindable, RemindOneAsync, emails, stop, SurveysConstants.PageSize, cancellationToken);
             }
-            else
-            {
-                // Only the invitations the index says are due are read, so a large list with nothing due costs one query.
-                var lastContactBefore = now.AddDays(-Math.Max(settings.ReminderEveryDays, 1));
+        }
 
-                await _invitationStore.VisitDueForReminderAsync(collector.ItemId, _remindable, lastContactBefore, settings.ReminderCount, RemindOneAsync, emails, stop, SurveysConstants.PageSize, cancellationToken);
+        // The e-mails, under the tenant's e-mail lock, taken only when the index shows a held send or an e-mail reminder
+        // due (R7-Mi11), and before any of them is read, so another send that is still going out has saved what it sent.
+        if (CanEmail && await _invitationStore.HasWorkAsync(collector.ItemId, reminds ? _remindable : [], lastContactBefore, settings.ReminderCount, emails: true, cancellationToken))
+        {
+            if (await EnterEmailSendAsync(cancellationToken))
+            {
+                // First sends held back by the daily e-mail limit (or an unreadable opt-out list) go out first. Those the
+                // mail server failed before go out after the reminders (R7-M6): an address it keeps refusing never stands in
+                // front of the list's reminders, and by then an e-mail of the run that went out tells its failure from an
+                // outage. The reminder walk ends as soon as no more e-mail of this send goes out (today's limit, the
+                // sending window or a mail outage), so nothing is read or re-issued for reminders that would only wait.
+                sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: false, cancellationToken);
+
+                if (reminds)
+                {
+                    await WalkAsync(emails: true, () => _emailLimit.IsClosed);
+                }
+
+                sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: true, cancellationToken);
+                await ResolveUnconfirmedFailureAsync(cancellationToken);
+
+                // Committed, then the lock let go of, before the users are notified (R7-Mi8): the next send reads what
+                // this one e-mailed, and the notifications never run under the e-mail lock's lease.
+                await _invitationStore.CommitAsync(cancellationToken);
+                await _emailLimit.ReleaseAsync();
+
+                // The commit let go of everything the session had loaded; the survey and the list are read again.
+                collector = await _collectorStore.FindByIdAsync(collectorId, cancellationToken);
+                survey = collector is null ? null : await FindLiveSurveyAsync(collector.SurveyId, cancellationToken);
+
+                if (survey is null)
+                {
+                    return sent;
+                }
             }
         }
 
-        // E-mail invitations first, while the send may e-mail: that walk ends as soon as no more e-mail of this send goes
-        // out (today's limit, a busy lock, the sending window or a mail outage), so nothing is read, re-issued or looked
-        // up for reminders that would only wait for the next run. Then the held first sends the mail server failed
-        // before, then the invitations of users, whose notifications the limit doesn't count.
-        var canEmail = CanEmail;
+        // Then the users, whose notifications the limit doesn't count, under the list's notification lock (R7-Mi7), so a
+        // second send of the list (a double click, with or without an e-mail service) notifies nobody twice: it waits for
+        // this one to commit and finds its users reminded, or gives up and says another send is going out.
+        if (reminds && await _invitationStore.HasWorkAsync(collector.ItemId, _remindable, lastContactBefore, settings.ReminderCount, emails: false, cancellationToken))
+        {
+            var notificationLock = await EnterNotificationsAsync(collector.ItemId);
 
-        await WalkAsync(emails: true, () => !canEmail || _emailLimit.IsClosed);
-        sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: true, cancellationToken);
-        await ResolveUnconfirmedFailureAsync(cancellationToken);
-        await WalkAsync(emails: false, stop: null);
+            if (notificationLock is not null)
+            {
+                await using (notificationLock)
+                {
+                    // Read after the lock, so a send that just notified them has committed; and bounded by a window, so the
+                    // walk of a large cohort ends well before the lock's lease (the rest are reminded on the next run).
+                    var started = _clock.UtcNow;
+
+                    await WalkAsync(emails: false, () => _clock.UtcNow - started >= NotificationWindow);
+                    await _invitationStore.CommitAsync(cancellationToken);
+                }
+            }
+        }
 
         return sent;
     }
@@ -894,16 +1010,46 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private static bool IsEmail(SurveyInvitationRequest request)
         => string.IsNullOrEmpty(request.UserId) && !string.IsNullOrWhiteSpace(request.Email);
 
-    // Takes the site's daily e-mail lock (see SurveyInvitationEmailLimit) before the invitations to e-mail are read, so
-    // they are read after every other sender of the day saved its sends: an invitation another send just sent or reminded
+    // Takes the tenant's invitation e-mail lock (see SurveyInvitationEmailLimit) before the invitations to e-mail are
+    // read, so they are read after every other sender saved its sends: an invitation another send just sent or reminded
     // is read as sent or reminded, and isn't e-mailed again. Without an e-mail service nothing is e-mailed, and the lock
-    // isn't taken.
-    private async Task EnterEmailSendAsync(CancellationToken cancellationToken)
+    // isn't taken. Returns whether the scope holds the lock.
+    private async Task<bool> EnterEmailSendAsync(CancellationToken cancellationToken)
     {
-        if (CanEmail && !_emailLimit.IsClosed)
+        if (!CanEmail)
+        {
+            return false;
+        }
+
+        if (!_emailLimit.HoldsLock && !_emailLimit.IsClosed)
         {
             await _emailLimit.CanSendAsync(cancellationToken);
         }
+
+        if (_emailLimit.LockUnavailable)
+        {
+            AnotherSendIsGoingOut = true;
+        }
+
+        return _emailLimit.HoldsLock;
+    }
+
+    // Takes a list's notification lock, which a send holds while it notifies the list's users, until it committed; or
+    // null, when another send holds it past the wait.
+    private async Task<ILocker> EnterNotificationsAsync(string collectorId)
+    {
+        var key = NotificationLockPrefix + collectorId;
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, SurveyInvitationEmailLimit.LockTimeout, SurveyInvitationEmailLimit.LockExpiration);
+
+        if (locked)
+        {
+            return locker;
+        }
+
+        AnotherSendIsGoingOut = true;
+        _logger.LogWarning("The notification lock '{LockKey}' of an invitation list could not be acquired in time; another send of the list is notifying its users.", key);
+
+        return null;
     }
 
     private async Task HoldAsync(SurveyInvitation invitation, bool isReminder, CancellationToken cancellationToken)

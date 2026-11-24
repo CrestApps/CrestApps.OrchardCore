@@ -68,7 +68,7 @@ public sealed class SurveyInvitationReminderTaskTests
 
         harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(2);
         var attemptsBefore = locks.Attempts;
-        await using var otherSender = await locks.AcquireLockAsync("Surveys:InvitationEmails:" + harness.Clock.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+        await using var otherSender = await locks.AcquireLockAsync(SurveyInvitationEmailLimit.LockKey);
 
         // Act
         await harness.RunInShellAsync(async services =>
