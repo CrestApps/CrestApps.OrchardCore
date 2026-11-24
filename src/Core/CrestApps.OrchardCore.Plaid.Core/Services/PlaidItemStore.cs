@@ -33,6 +33,22 @@ public sealed class PlaidItemStore : IPlaidItemStore
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<PlaidItem>> ListByItemIdAsync(string itemId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(itemId))
+        {
+            return [];
+        }
+
+        // One per account of the item, and a bank holds a handful of accounts per sign-in.
+        var items = await _session.Query<PlaidItem, PlaidItemIndex>(index => index.ItemId == itemId, collection: PlaidConstants.CollectionName)
+            .Take(100)
+            .ListAsync(cancellationToken);
+
+        return items.ToList();
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<PlaidItem>> ListByBankAccountAsync(string bankAccountId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(bankAccountId))

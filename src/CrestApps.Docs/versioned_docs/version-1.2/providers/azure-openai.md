@@ -43,7 +43,7 @@ Valid values for `AuthenticationType` are: `Default`, `ManagedIdentity`, or `Api
 #### Get the API Key and Endpoint
 
 1. Open the Azure Portal and navigate to your Azure OpenAI instance.
-2. Go to **Resource Management** > **Keys and Endpoint**.
+2. Go to **Resource Management** → **Keys and Endpoint**.
 3. Copy the **Endpoint**.
 4. Copy one of the two available **API keys**.
 
@@ -218,7 +218,7 @@ If your Elasticsearch cluster has security enabled, you’ll also need to genera
 
 #### 2. Navigate to API Key Management
 
-* Go to **Management** > **Stack Management**.
+* Go to **Management** → **Stack Management**.
 * Under **Security**, select **API Keys**.
 
 #### 3. Create a New API Key

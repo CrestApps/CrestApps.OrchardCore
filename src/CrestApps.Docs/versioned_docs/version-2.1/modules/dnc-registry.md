@@ -18,9 +18,9 @@ The module currently ships with these provider features:
 
 | Registry | Feature ID | Admin location |
 | --- | --- | --- |
-| USA FTC Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | **Settings** -> **DNC Registries** -> **USA FTC Registry** |
-| Canada LNNTE-DNCL Registry | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** |
-| Local Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.Local` | **Interaction Center** -> **Local DNC Registry** |
+| USA FTC Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | **Settings** → **DNC Registries** → **USA FTC Registry** |
+| Canada LNNTE-DNCL Registry | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | **Settings** → **DNC Registries** → **Canada LNNTE-DNCL Registry** |
+| Local Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.Local` | **Interaction Center** → **Local DNC Registry** |
 
 Enable the core **DNC Registry** feature first, then enable the provider features you want to use. The **USA FTC Registry**, **Canada LNNTE-DNCL Registry**, and **Local DNC Registry** admin pages are only added to the admin menu when their matching provider feature is enabled.
 
@@ -30,10 +30,10 @@ The module splits settings by responsibility:
 
 | Location | Purpose |
 | --- | --- |
-| **Settings** -> **Content Import** | Enforce do-not-call checks globally for imports and choose registries that must always run |
-| **Settings** -> **DNC Registries** -> **USA FTC Registry** | Configure USA FTC API access |
-| **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** | Configure Canada DNCL API access |
-| **Interaction Center** -> **Local DNC Registry** | Manage locally uploaded DNC lists |
+| **Settings** → **Content Import** | Enforce do-not-call checks globally for imports and choose registries that must always run |
+| **Settings** → **DNC Registries** → **USA FTC Registry** | Configure USA FTC API access |
+| **Settings** → **DNC Registries** → **Canada LNNTE-DNCL Registry** | Configure Canada DNCL API access |
+| **Interaction Center** → **Local DNC Registry** | Manage locally uploaded DNC lists |
 
 When global enforcement is enabled, Omnichannel imports always perform DNC checks even if the importer does not opt in on the import form.
 
@@ -95,10 +95,10 @@ The **Local DNC Registry** feature (`CrestApps.OrchardCore.DncRegistry.Local`) a
 
 ### Managing local lists
 
-Navigate to **Interaction Center** -> **Local DNC Registry** to:
+Navigate to **Interaction Center** → **Local DNC Registry** to:
 
 1. **View uploaded lists** — see all lists with their country, phone number count, and upload date
-2. **Upload a new list** — use either the page action or **Interaction Center** -> **Upload DNC List**, then select a country (the picker shows the dialing prefix), provide a name, and upload a CSV file
+2. **Upload a new list** — use either the page action or **Interaction Center** → **Upload DNC List**, then select a country (the picker shows the dialing prefix), provide a name, and upload a CSV file
 3. **Delete a list** — remove a list and all its phone numbers from the list grid when it is no longer needed
 
 After upload, the request returns immediately and the import continues in the background. The list grid shows whether a list is **Pending**, **Processing**, **Completed**, or **Failed**, together with row progress, success counts, and error counts.
@@ -156,7 +156,7 @@ When no `CountryCode` is specified (or the context is `null`), the local registr
 
 ### USA FTC Do Not Call Registry
 
-Configure the USA FTC provider under **Settings** -> **DNC Registries** -> **USA FTC Registry**.
+Configure the USA FTC provider under **Settings** → **DNC Registries** → **USA FTC Registry**.
 
 Current settings:
 
@@ -170,7 +170,7 @@ To obtain access, follow the FTC registration and API guidance provided by the o
 
 ### Canada LNNTE-DNCL Registry
 
-Configure the Canada provider under **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry**.
+Configure the Canada provider under **Settings** → **DNC Registries** → **Canada LNNTE-DNCL Registry**.
 
 Current settings:
 
@@ -190,7 +190,7 @@ To integrate another national do-not-call registry:
 2. Implement `INationalDoNotCallRegistry`.
 3. Provide a stable `Key`, plus localized `DisplayName` and `Description`.
 4. Register the implementation in `Startup` with `services.AddScoped<INationalDoNotCallRegistry, TRegistry>();`.
-5. If the provider needs configuration, add its own site settings model, display driver, and admin menu entry under **Settings** -> **DNC Registries**.
+5. If the provider needs configuration, add its own site settings model, display driver, and admin menu entry under **Settings** → **DNC Registries**.
 
 ```csharp
 services.AddScoped<INationalDoNotCallRegistry, MyRegistry>();

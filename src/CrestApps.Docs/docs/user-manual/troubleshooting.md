@@ -28,7 +28,7 @@ Find your symptom below and work through the checks in order. Most problems are 
 
 - **Live dashboard or shared voicemail is empty.** These show only the queues and campaigns on **your own** [agent entitlement](skills-and-entitlements.md) record, even for administrators. Ask your manager to give you an entitlement record with the queues you supervise.
 - **A report shows nothing.** See [A report is empty](#a-report-is-empty).
-- **Your activity list is empty.** **Interaction Center > Activities** lists only manual activities assigned to you that are not started yet. Unassigned dialer work and automated (AI) activities are not listed there. Check the list's filters too, such as **Scheduled**. See [Activities](activities.md).
+- **Your activity list is empty.** **Interaction Center** → **Activities** lists only manual activities assigned to you that are not started yet. Unassigned dialer work and automated (AI) activities are not listed there. Check the list's filters too, such as **Scheduled**. See [Activities](activities.md).
 
 ## I can't sign in to a queue or a campaign
 
@@ -129,9 +129,9 @@ See [Reports](reports.md).
 
 ## I can't find a contact
 
-1. **Search by name or number.** The search box on **Interaction Center > Contacts** matches a name or a phone number.
+1. **Search by name or number.** The search box on **Interaction Center** → **Contacts** matches a name or a phone number.
 2. **Try fewer digits.** `phone:` followed by part of the number finds numbers that contain those digits. Start with `+` only if you include the country code. See [Contacts](contacts.md).
-3. **Is it a lead?** Leads are listed under **Interaction Center > Leads**, not with contacts. A converted lead becomes a contact. See [Leads, accounts and opportunities](leads-accounts-opportunities.md).
+3. **Is it a lead?** Leads are listed under **Interaction Center** → **Leads**, not with contacts. A converted lead becomes a contact. See [Leads, accounts and opportunities](leads-accounts-opportunities.md).
 4. **Was it skipped on import?** An import that ends *Completed with errors* skipped some rows, for example numbers on a do-not-call list or duplicates. See [Contacts](contacts.md).
 5. **Still missing?** You may not have permission to see that type of record. Ask your administrator.
 

@@ -20,7 +20,7 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 
 ### Enabling Analytics
 
-Enable the **AI Chat Session Analytics** feature, then tick **Enable session metrics** on each chat profile that should collect data (on the profile editor's **Data Processing & Metrics** tab). The feature depends on **Reports** (`CrestApps.OrchardCore.Reports`), which is enabled with it. The reports are under **Reports > Artificial Intelligence Reports**: **AI Chat Session Analytics** (`/Admin/Reports/view/ai-chat-session-analytics`), **AI Chat Extracted Data** (`ai-chat-extracted-data`) and **AI Chat Conversion Goals** (`ai-chat-conversion-goals`), all gated by `ViewChatAnalytics`. **AI Usage Analytics** (`ai-usage-analytics`) belongs to the **AI Usage Analytics** feature, needs the same permission, and is listed under **Reports > Billing & Usage**.
+Enable the **AI Chat Session Analytics** feature, then tick **Enable session metrics** on each chat profile that should collect data (on the profile editor's **Data Processing & Metrics** tab). The feature depends on **Reports** (`CrestApps.OrchardCore.Reports`), which is enabled with it. The reports are under **Reports** → **Artificial Intelligence Reports**: **AI Chat Session Analytics** (`/Admin/Reports/view/ai-chat-session-analytics`), **AI Chat Extracted Data** (`ai-chat-extracted-data`) and **AI Chat Conversion Goals** (`ai-chat-conversion-goals`), all gated by `ViewChatAnalytics`. **AI Usage Analytics** (`ai-usage-analytics`) belongs to the **AI Usage Analytics** feature, needs the same permission, and is listed under **Reports** → **Billing & Usage**.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
 

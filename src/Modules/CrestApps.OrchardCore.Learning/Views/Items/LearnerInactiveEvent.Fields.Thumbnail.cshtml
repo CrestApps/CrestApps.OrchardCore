@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<LearnerInactiveEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-bed" aria-hidden="true"></i>
+    @T["Learner Inactive"]
+</h4>
+<p>@T["Starts once when a learner has not worked on a course for a while."]</p>

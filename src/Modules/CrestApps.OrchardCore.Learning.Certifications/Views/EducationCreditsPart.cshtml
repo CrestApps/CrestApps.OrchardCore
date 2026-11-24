@@ -1,0 +1,19 @@
+@model EducationCreditsDisplayViewModel
+
+<p class="education-credits mb-3">
+    <i class="fa-solid fa-award text-secondary me-1" aria-hidden="true"></i>
+    @T["Earns"]
+    @for (var i = 0; i < Model.Awards.Count; i++)
+    {
+        var award = Model.Awards[i];
+        <span class="fw-semibold">@award.Amount.ToString("0.##") @(string.IsNullOrEmpty(award.Unit) ? award.Name : award.Unit)</span>
+        @if (!string.IsNullOrEmpty(award.Unit))
+        {
+            <span class="text-muted">(@award.Name)</span>
+        }
+        @if (i < Model.Awards.Count - 1)
+        {
+            <span>, </span>
+        }
+    }
+</p>

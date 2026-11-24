@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ExternalLearningSubmittedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i> @T["External Learning Submitted"]</h4>
+<p>@T["Starts when a person records external learning. The workflow input holds SubmissionId, UserId, Title, CreditTypeId and Amount."]</p>

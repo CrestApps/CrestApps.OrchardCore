@@ -1,0 +1,185 @@
+@model ExternalToolViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The tool"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="255" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["The name authors pick the tool by, such as the product's name."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Description">
+            <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Enabled">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">@T["Can be launched"]</label>
+                    <span class="hint dashed">@T["Turn it off to stop every launch of the tool and refuse its service requests."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["The tool's client"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="ClientId">
+            <label asp-for="ClientId" class="ocat-label ocat-label-required">@T["Client ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="ClientId" class="form-control" maxlength="255" />
+                <span asp-validation-for="ClientId" class="text-danger"></span>
+                <span class="hint">@T["The tool's client id on this platform. The site keeps it as an OpenID application with the same id; give it to the tool."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="RedirectUris">
+            <label asp-for="RedirectUris" class="ocat-label ocat-label-required">@T["Redirect URIs"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="RedirectUris" class="form-control font-monospace" rows="2" placeholder="https://tool.example.com/lti/launch"></textarea>
+                <span asp-validation-for="RedirectUris" class="text-danger"></span>
+                <span class="hint">@T["Where the tool receives its launches, one per line. A launch to any other address is refused."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="JwksUrl">
+            <label asp-for="JwksUrl" class="ocat-label">@T["Tool's JWKS URL"]</label>
+            <div class="ocat-end">
+                <input asp-for="JwksUrl" class="form-control" maxlength="1000" placeholder="https://tool.example.com/.well-known/jwks.json" />
+                <span asp-validation-for="JwksUrl" class="text-danger"></span>
+                <span class="hint">@T["The address of the tool's public key set. It is read when you save and again when the tool signs with a new key."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="KeySet">
+            <label asp-for="KeySet" class="ocat-label">@T["Or the tool's key set"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="KeySet" class="form-control font-monospace" rows="4" placeholder='{"keys":[{"kty":"RSA","kid":"…","n":"…","e":"AQAB"}]}'></textarea>
+                <span asp-validation-for="KeySet" class="text-danger"></span>
+                <span class="hint">@T["When the tool has no JWKS URL, paste its public keys as a JSON Web Key Set. Never paste a private key."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Launch"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="DeploymentId">
+            <label asp-for="DeploymentId" class="ocat-label ocat-label-required">@T["Deployment ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="DeploymentId" class="form-control" maxlength="255" />
+                <span asp-validation-for="DeploymentId" class="text-danger"></span>
+                <span class="hint">@T["The id of this deployment of the tool, sent with every launch. Give it to the tool."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="LoginInitiationUrl">
+            <label asp-for="LoginInitiationUrl" class="ocat-label ocat-label-required">@T["Login initiation URL"]</label>
+            <div class="ocat-end">
+                <input asp-for="LoginInitiationUrl" class="form-control" maxlength="1000" placeholder="https://tool.example.com/lti/login" />
+                <span asp-validation-for="LoginInitiationUrl" class="text-danger"></span>
+                <span class="hint">@T["The tool's OIDC login initiation URL, where every launch starts."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TargetLinkUri">
+            <label asp-for="TargetLinkUri" class="ocat-label ocat-label-required">@T["Target link URI"]</label>
+            <div class="ocat-end">
+                <input asp-for="TargetLinkUri" class="form-control" maxlength="1000" placeholder="https://tool.example.com/lti/launch" />
+                <span asp-validation-for="TargetLinkUri" class="text-danger"></span>
+                <span class="hint">@T["The tool's default launch URL. A course item can name another one."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="DeepLinkingUrl">
+            <label asp-for="DeepLinkingUrl" class="ocat-label">@T["Deep Linking URL"]</label>
+            <div class="ocat-end">
+                <input asp-for="DeepLinkingUrl" class="form-control" maxlength="1000" placeholder="https://tool.example.com/lti/deep-link" />
+                <span asp-validation-for="DeepLinkingUrl" class="text-danger"></span>
+                <span class="hint">@T["Where course staff pick content from the tool. Empty when the tool does not offer Deep Linking."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CustomParameters">
+            <label asp-for="CustomParameters" class="ocat-label">@T["Custom parameters"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="CustomParameters" class="form-control font-monospace" rows="3" placeholder="level=beginner"></textarea>
+                <span class="hint">@T["Sent with every launch, one name=value per line. A value can be one of these variables: {0}. A variable the privacy level withholds is sent as written.", string.Join(", ", Model.SupportedVariables)]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Privacy and services"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="PrivacyLevel">
+            <label asp-for="PrivacyLevel" class="ocat-label">@T["What the tool learns"]</label>
+            <div class="ocat-end">
+                <select asp-for="PrivacyLevel" class="form-select">
+                    <option value="@LtiPrivacyLevel.Anonymous">@T["An anonymous id only"]</option>
+                    <option value="@LtiPrivacyLevel.Name">@T["The id and the person's name"]</option>
+                    <option value="@LtiPrivacyLevel.NameAndEmail">@T["The id, the name and the e-mail address"]</option>
+                </select>
+                <span class="hint">@T["The tool always gets an id made for it, never the person's user id. It applies to launches, custom parameters and the roster."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowNamesAndRoles">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowNamesAndRoles" class="form-check-input" />
+                    <label asp-for="AllowNamesAndRoles" class="form-check-label">@T["May read the course roster"]</label>
+                    <span class="hint dashed">@T["Names and Role Provisioning Services: the learners and staff of the courses the tool is used in, within the privacy level."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowGrades">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowGrades" class="form-check-input" />
+                    <label asp-for="AllowGrades" class="form-check-label">@T["May post grades"]</label>
+                    <span class="hint dashed">@T["Assignment and Grade Services: the tool manages line items and posts scores; a fully graded score counts in the learner's progress."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Give the tool these platform details"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Issuer"]</label>
+            <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.Issuer" aria-label="@T["Issuer"]" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Client ID"]</label>
+            <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.ClientId" aria-label="@T["Client ID"]" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Deployment ID"]</label>
+            <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.DeploymentId" aria-label="@T["Deployment ID"]" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Authorization endpoint"]</label>
+            <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.AuthorizationEndpoint" aria-label="@T["Authorization endpoint"]" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Token endpoint"]</label>
+            <div class="ocat-end">
+                <input class="form-control font-monospace" readonly value="@Model.TokenEndpoint" aria-label="@T["Token endpoint"]" />
+                <span class="hint">@T["The OpenID server's token endpoint. The tool signs in to it with a client assertion signed by its key (private_key_jwt); the OpenID server must allow the client credentials flow."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Platform JWKS URL"]</label>
+            <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.PlatformJwksUrl" aria-label="@T["Platform JWKS URL"]" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Deep Linking return URL"]</label>
+            <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.DeepLinkingReturnUrl" aria-label="@T["Deep Linking return URL"]" /></div>
+        </div>
+    </div>
+</div>

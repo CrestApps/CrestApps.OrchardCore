@@ -13,7 +13,7 @@ Creating a site happens after the purchase, in the background, so a slow or fail
 
 | | |
 | --- | --- |
-| **Menu** | Subscriptions > Site provisioning (administrators), Subscriptions > My Sites (customers) |
+| **Menu** | **Subscriptions** → **Site Provisioning (administrators)**, **Subscriptions** → **My Sites (customers)** |
 | **Permission** | Manage subscriptions (Site provisioning), Manage own subscriptions (My Sites) |
 | **Feature** | Subscriptions - Sites, available on the main (default) site only |
 
@@ -31,7 +31,7 @@ This video shows how to set up a plan that sells a site, the buyer signing up, M
 
 A site plan is an ordinary [subscription plan](subscriptions.md) with the **Tenant Onboarding** part added.
 
-1. Open **Design > Content Definition > Content Types** and edit your plan type, or create one as described in [Subscriptions](subscriptions.md#create-a-plan-type).
+1. Open **Design** → **Content Definition** → **Content Types** and edit your plan type, or create one as described in [Subscriptions](subscriptions.md#create-a-plan-type).
 2. Click **Add Parts**, tick **Tenant Onboarding**, and save.
 3. Open a plan of that type. In **Tenant Onboarding**, pick the **Recipe** the new site is set up from, for example a blog or an agency site. It is required.
 4. Set the price and billing terms as for any plan, then click **Publish**.
@@ -53,7 +53,7 @@ Everything the customer can fix is checked on this step, before they pay: a take
 
 ### Choose the database new sites use
 
-New sites are created on the database chosen on the **Tenant Onboarding** tab of **Settings > Subscriptions** (permission **Manage subscriptions settings**). The buyer never chooses it.
+New sites are created on the database chosen on the **Tenant Onboarding** tab of **Settings** → **Subscriptions** (permission **Manage subscriptions settings**). The buyer never chooses it.
 
 | Field | What it does |
 | --- | --- |
@@ -128,6 +128,6 @@ A sold site runs for as long as its subscription is current, including the perio
 ## Tips and troubleshooting
 
 - **Site provisioning or My Sites is missing.** **Subscriptions - Sites** can only be enabled on the main site. Ask your administrator to enable it there.
-- **A job is Abandoned.** Read the last error and fix the cause so the next sale does not fail the same way. Then create this customer's site by hand from the site management screens and [mark the job as created](#close-an-abandoned-job), or refund the purchase from **Commerce > Payments** (see [Payments and refunds](payments-and-refunds.md)).
-- **The customer says their site disappeared.** Check their subscription under **Subscriptions > Agreements**. A site whose subscription expired or was cancelled is disabled, not deleted.
+- **A job is Abandoned.** Read the last error and fix the cause so the next sale does not fail the same way. Then create this customer's site by hand from the site management screens and [mark the job as created](#close-an-abandoned-job), or refund the purchase from **Commerce** → **Payments** (see [Payments and refunds](payments-and-refunds.md)).
+- **The customer says their site disappeared.** Check their subscription under **Subscriptions** → **Agreements**. A site whose subscription expired or was cancelled is disabled, not deleted.
 - **The Recipe list on the plan is empty.** Only setup recipes are offered. Ask your administrator which site templates are installed.

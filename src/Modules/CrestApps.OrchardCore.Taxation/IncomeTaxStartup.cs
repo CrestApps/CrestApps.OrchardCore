@@ -134,6 +134,17 @@ public sealed class UnitedStatesIncomeTaxStartup : StartupBase
             global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("The IRS percentage method of Publication 15-T, by the filing status and amounts of each person's Form W-4."),
             UnitedStatesIncomeTax.FormW4Method,
             position: 50);
+
+        // A state's withholding certificate (MI-W4, M-4, VA-4...) and the annualized method of its withholding guide.
+        services.AddElectionFieldSet(UnitedStatesStateCertificateFields.Create());
+        services.AddIncomeTaxWithholdingMethod<UnitedStatesStateCertificateWithholdingMethod>();
+        services.AddIncomeTaxRuleSource(
+            UnitedStatesIncomeTax.StateCertificateMethod,
+            global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("State income tax (withholding certificate)"),
+            global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("A state's annualized method, by the exemptions, head of household and extra withholding of each person's state certificate: a no-tax threshold, standard and head of household deductions, exemption amounts, the employee's Social Security and Medicare up to a limit, and the year's brackets (Michigan, Massachusetts, Virginia...)."),
+            UnitedStatesIncomeTax.StateCertificateMethod,
+            position: 55,
+            fields: [.. IncomeTaxRuleSources.WithholdingFields, nameof(IncomeTaxRule.DeductedTaxCodes)]);
         services.AddIncomeTaxCategory(IncomeTaxCategories.ContractorWithholding, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("Backup withholding (contractors)"));
     }
 }
@@ -151,7 +162,7 @@ public sealed class CanadaIncomeTaxStartup : StartupBase
 }
 
 /// <summary>
-/// Adds Commerce &gt; Taxation &gt; Income tax rules, with the rest of Taxation's setup.
+/// Adds Commerce &gt; Taxation &gt; Income Tax Rules, with the rest of Taxation's setup.
 /// </summary>
 internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
 {
@@ -165,7 +176,7 @@ internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder.AddTaxation(S, taxation => taxation
-            .Add(S["Income tax rules"], S["Income tax rules"].PrefixPosition(), rules => rules
+            .Add(S["Income Tax Rules"], S["Income Tax Rules"].PrefixPosition(), rules => rules
                 .Id("taxationIncomeTaxRules")
                 .Action("Index", "IncomeTaxRules", "CrestApps.OrchardCore.Taxation")
                 .Permission(global::CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.ManageIncomeTaxRules)
@@ -176,13 +187,14 @@ internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
 }
 
 /// <summary>
-/// The permission to manage income tax rules.
+/// The permissions to manage income tax rules and to mark them verified.
 /// </summary>
 internal sealed class IncomeTaxPermissionsProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [
         global::CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.ManageIncomeTaxRules,
+        global::CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.VerifyIncomeTaxRules,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

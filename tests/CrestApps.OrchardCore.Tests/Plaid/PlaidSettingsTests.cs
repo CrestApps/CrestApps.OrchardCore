@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Plaid.Drivers;
 using CrestApps.OrchardCore.Plaid.Models;
 using CrestApps.OrchardCore.Plaid.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Plaid;
 
@@ -35,6 +36,34 @@ public sealed class PlaidSettingsTests
         Assert.False(empty.IsConfigured());
         Assert.False(noSecret.IsConfigured());
         Assert.True(full.IsConfigured());
+    }
+
+    [Fact]
+    public void SettingsPage_SaysTheHostSuppliesTheKeys_OnlyWhenAnotherProviderReplacedTheSettings()
+    {
+        // Arrange
+        var settingsBased = new PlaidCredentialsProvider(siteService: null, secretManager: null, NullLogger<PlaidCredentialsProvider>.Instance);
+        var hostKeys = new FixedPlaidCredentials();
+
+        // Act and assert
+        Assert.False(PlaidSettingsDisplayDriver.HostSuppliesKeys(settingsBased));
+        Assert.True(PlaidSettingsDisplayDriver.HostSuppliesKeys(hostKeys));
+    }
+
+    [Theory]
+    [InlineData("https://shop.example.com", "https://shop.example.com/plaid/webhook")]
+    [InlineData("https://example.com/tenant1/", "https://example.com/tenant1/plaid/webhook")]
+    [InlineData("https://example.com/tenant1?x=1", "https://example.com/tenant1/plaid/webhook")]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    [InlineData("not a url", null)]
+    public void WebhookUrl_OutsideARequest_IsUnderTheSitesBaseUrl(string baseUrl, string expected)
+    {
+        // Act
+        var url = PlaidLinkSite.WebhookUrlFrom(baseUrl);
+
+        // Assert
+        Assert.Equal(expected, url);
     }
 
     [Fact]

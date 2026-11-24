@@ -10,7 +10,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Accounts.B2B.Navigation;
 
 /// <summary>
-/// Commerce › B2B Accounts, the accounts that buy as a business, and Commerce › Price lists.
+/// Commerce › B2B Accounts, the accounts that buy as a business, and Commerce › Price Lists.
 /// </summary>
 public sealed class B2BAccountsAdminMenu : AdminNavigationProvider
 {
@@ -58,7 +58,7 @@ public sealed class B2BAccountsAdminMenu : AdminNavigationProvider
                     .Action(accountsRoute)
                     .Permission(B2BAccountsPermissions.ManageB2BAccounts)
                     .LocalNav())
-                .Add(S["Price lists"], S["Price lists"].PrefixPosition("3.1"), priceLists => priceLists
+                .Add(S["Price Lists"], S["Price Lists"].PrefixPosition("3.1"), priceLists => priceLists
                     .Id("commercePriceLists")
                     .Action(_priceLists)
                     .Permission(B2BAccountsPermissions.ManageB2BAccounts)

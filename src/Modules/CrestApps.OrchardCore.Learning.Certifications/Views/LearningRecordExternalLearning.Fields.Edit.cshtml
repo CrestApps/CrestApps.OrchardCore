@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Pipelines
+@model RecordExternalLearningStepViewModel
+
+<div class="mb-3">
+    <label asp-for="UserIdField" class="form-label">@T["User id field"]</label>
+    <input asp-for="UserIdField" class="form-control" />
+    <span asp-validation-for="UserIdField"></span>
+    <span class="hint">@T["The input field that holds the user id of each person, for example one joined from the Users data set by e-mail."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="TitleField" class="form-label">@T["Learning field"]</label>
+    <input asp-for="TitleField" class="form-control" />
+    <span asp-validation-for="TitleField"></span>
+    <span class="hint">@T["The input field that holds what the learning was."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="ProviderField" class="form-label">@T["Provider field"]</label>
+    <input asp-for="ProviderField" class="form-control" />
+    <span asp-validation-for="ProviderField"></span>
+    <span class="hint">@T["Optional. The input field that holds who provided the learning."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="AmountField" class="form-label">@T["Credits field"]</label>
+    <input asp-for="AmountField" class="form-control" />
+    <span asp-validation-for="AmountField"></span>
+    <span class="hint">@T["The input field that holds the number of credits."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="CompletedOnField" class="form-label">@T["Completion date field"]</label>
+    <input asp-for="CompletedOnField" class="form-control" />
+    <span asp-validation-for="CompletedOnField"></span>
+    <span class="hint">@T["The input field that holds the day the learning was completed."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="CreditTypeId" class="form-label">@T["Credit type"]</label>
+    <select asp-for="CreditTypeId" asp-items="Model.CreditTypeOptions" class="form-select">
+        <option value="">@T["Use the credit type field"]</option>
+    </select>
+    <span asp-validation-for="CreditTypeId"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="CreditTypeField" class="form-label">@T["Credit type field"]</label>
+    <input asp-for="CreditTypeField" class="form-control" />
+    <span class="hint">@T["Optional. The input field that holds the name or id of each row's credit type, instead of one type for every row."]</span>
+</div>
+<p class="hint">@T["Each row is recorded as accepted external learning and its credits are posted. Rows that cannot be recorded go to the Rejected output with the reason."]</p>

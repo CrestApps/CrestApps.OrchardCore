@@ -109,6 +109,13 @@ public sealed class StaffMemberStore : DocumentCatalog<StaffMember, StaffMemberI
             results = results.Where(index => index.Status == status);
         }
 
+        if (query?.EmploymentTypes is { Count: > 0 } employmentTypes)
+        {
+            var types = employmentTypes.Distinct().ToArray();
+
+            results = results.Where(index => index.EmploymentType.IsIn(types));
+        }
+
         if (query?.HasUser is { } hasUser)
         {
             results = hasUser

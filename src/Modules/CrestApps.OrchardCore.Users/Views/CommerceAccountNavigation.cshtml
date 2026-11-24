@@ -8,9 +8,8 @@
 *@
 
 @{
-    var items = (await NavigationManager.BuildMenuAsync(CrestApps.OrchardCore.Users.UsersConstants.Account.MenuName, ViewContext))
-        .Where(item => !string.IsNullOrEmpty(item.Href))
-        .ToList();
+    var items = CrestApps.OrchardCore.Users.Navigation.AccountMenuItems.Arrange((await NavigationManager.BuildMenuAsync(CrestApps.OrchardCore.Users.UsersConstants.Account.MenuName, ViewContext))
+        .Where(item => !string.IsNullOrEmpty(item.Href)));
 
     var path = Context.Request.PathBase.Add(Context.Request.Path).Value ?? string.Empty;
     var current = items

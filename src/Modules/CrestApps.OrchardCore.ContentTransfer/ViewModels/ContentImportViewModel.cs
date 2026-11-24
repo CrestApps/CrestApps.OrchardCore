@@ -14,4 +14,7 @@ public class ContentImportViewModel
 
     [BindNever]
     public string AcceptedFileTypes { get; set; }
+
+    [BindNever]
+    public bool ShowContentOptions { get; set; } = true;
 }

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Taxation;
 using OrchardCore.Modules.Manifest;
 
@@ -20,12 +19,11 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = TaxationConstants.Feature.Taxation,
     Name = "Sales Tax",
-    Description = "Sales tax on what is sold: a provider-agnostic, extensible engine with tax categories, rules, exemptions, sourcing and the TaxationPart, used by Commerce.",
+    Description = "Sales tax on what is sold: a provider-agnostic, extensible engine with tax categories, rules, exemptions, sourcing, the store's tax registrations and the TaxationPart. Commerce uses it; a site with its own books uses it without a store.",
     Category = "Commerce",
     Dependencies =
     [
         TaxationConstants.Feature.Tables,
-        CommerceConstants.Features.Foundation,
     ]
 )]
 
@@ -70,5 +68,27 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TaxationConstants.Feature.IncomeTax,
+    ]
+)]
+
+[assembly: Feature(
+    Id = TaxationConstants.Feature.Returns,
+    Name = "Tax Returns",
+    Description = "Sales and use tax returns: the periods each tax registration files for, from its filing frequency and due day, and a return per period with the figures the modules give (taxable sales, tax collected, use tax purchases), its form's boxes, the amount due, and its status (draft, ready, filed, amended), payments and amendments.",
+    Category = "Finance",
+    Dependencies =
+    [
+        TaxationConstants.Feature.Taxation,
+    ]
+)]
+
+[assembly: Feature(
+    Id = TaxationConstants.Feature.EFiling,
+    Name = "Tax E-Filing",
+    Description = "Files tax returns electronically through filing channels in file formats, records the agency's answer and marks an accepted return as filed. It has a manual channel that hands over a file to file on the agency's site; a state's own channel and format come from a pack.",
+    Category = "Finance",
+    Dependencies =
+    [
+        TaxationConstants.Feature.Returns,
     ]
 )]

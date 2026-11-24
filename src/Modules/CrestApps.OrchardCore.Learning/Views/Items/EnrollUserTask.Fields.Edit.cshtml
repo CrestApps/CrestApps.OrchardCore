@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+
+@model LearningTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="UserId" class="form-label">@T["User id"]</label>
+    <input asp-for="UserId" class="form-control code" />
+    <span class="hint">@T["The id of the user to enroll, a Liquid expression such as Workflow.Input.UserId between double braces."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="CourseId" class="form-label">@T["Course id"]</label>
+    <input asp-for="CourseId" class="form-control code" />
+    <span class="hint">@T["The content item id of the course."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AccessEnds" class="form-label">@T["Access ends"]</label>
+    <input asp-for="AccessEnds" class="form-control code" />
+    <span class="hint">@T["Optional. An ISO 8601 time, such as 2027-01-31T17:00:00Z. Empty keeps the current end, or no end for a new enrollment."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Due" class="form-label">@T["Due"]</label>
+    <input asp-for="Due" class="form-control code" />
+    <span class="hint">@T["Optional. An ISO 8601 time."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control" />
+    <span class="hint">@T["The name the result is saved under in the workflow output. Leave empty for Enrollment."]</span>
+</div>

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.BusinessDocuments;
@@ -17,5 +18,6 @@ public sealed class BusinessDocumentKind
     /// <summary>
     /// Gets or sets the title shown for the kind, such as on the template editor.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Title { get; set; }
 }

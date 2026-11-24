@@ -40,7 +40,7 @@ Additional advanced sections such as capabilities, response handling, analytics,
 
 For chat profiles, the required **Past messages included** parameter loads the default value automatically when a profile is opened without an explicit saved value.
 
-When the AI Documents features are enabled, the **Knowledge** tab for **AI Profiles**, **profile-source AI Templates**, and **Chat Interactions** also exposes a **Document retrieval mode** selector. Leaving it blank uses the site default from **Settings → Artificial Intelligence → Documents**. **Chunk** keeps chunk-level context, while **Hierarchical** retrieves matching chunks and then injects the full text of the matched documents.
+When the AI Documents features are enabled, the **Knowledge** tab for **AI Profiles**, **profile-source AI Templates**, and **Chat Interactions** also exposes a **Document retrieval mode** selector. Leaving it blank uses the site default from **Settings** → **Artificial Intelligence** → **Documents**. **Chunk** keeps chunk-level context, while **Hierarchical** retrieves matching chunks and then injects the full text of the matched documents.
 
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
@@ -69,10 +69,10 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 
 #### Prerequisites
 
-- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
+- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings** → **Artificial Intelligence** → **Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
 - **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
-- Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
-- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
+- Optionally, set a **Default Text-to-Speech Voice** in **Settings** → **Artificial Intelligence** → **Default Deployments**. This voice is used when no profile-specific voice is selected.
+- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings** → **Artificial Intelligence** → **Default Deployments** after checking the connection-level default.
 
 #### Configuring Chat Mode
 
@@ -122,12 +122,12 @@ Even when a profile is not using the full **Conversation** chat mode, you can en
 
 TTS playback can be enabled at two levels:
 
-- **Site level (Chat Interactions)**: Navigate to **Settings → Artificial Intelligence → Chat Interactions** and check **Enable text-to-speech playback**. This enables playback across all Chat Interaction sessions.
+- **Site level (Chat Interactions)**: Navigate to **Settings** → **Artificial Intelligence** → **Chat Interactions** and check **Enable text-to-speech playback**. This enables playback across all Chat Interaction sessions.
 - **Profile level**: On the AI Profile editor, under the **Chat Mode** section, check **Enable text-to-speech playback**. This enables playback for all chat UIs associated with that specific profile.
 
 #### Prerequisites
 
-- A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
+- A **Default Text-to-Speech Deployment** must be configured in **Settings** → **Artificial Intelligence** → **Default Deployments**.
 - The playback feature works with any chat mode (Text Only, Audio Input, or Conversation). In Conversation mode, TTS is already built-in and always active.
 
 #### Behavior
@@ -189,7 +189,7 @@ Referenced responses use the same citation rendering as the main admin chat UI, 
 
 #### Enabling the Admin Widget
 
-1. Go to **Tools** > **Features** in the admin menu.
+1. Go to **Tools** → **Features** in the admin menu.
 2. Search for **AI Chat Admin Widget** and enable it.
 3. The floating chat widget will appear in the bottom-right corner of the admin dashboard.
 
@@ -222,12 +222,12 @@ Frontend widgets now also work with the shared anonymous-visitor protection flow
 - Anonymous visitors receive a stable first-party visitor cookie for more accurate unique-visitor analytics.
 - Chat message throttling and anonymous session-start throttling use that visitor identity together with the configured remote-address mode.
 - Widgets no longer auto-create sessions on page load just because a profile has an initial prompt.
-- **Settings → Artificial Intelligence** now includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
+- **Settings** → **Artificial Intelligence** now includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
 
 #### Adding the Frontend Widget
 
 1. Ensure the **Widgets** feature (`OrchardCore.Widgets`) is enabled.
-2. Go to **Design** > **Widgets** in the admin menu.
+2. Go to **Design** → **Widgets** in the admin menu.
 3. Add a new **AI Chat Widget** to the desired zone (e.g., Footer, Content).
 4. Configure the widget by selecting the AI chat profile and optionally choosing a prompt template.
 
@@ -239,7 +239,7 @@ Frontend widgets now also work with the shared anonymous-visitor protection flow
 
 ### Security and Visitor Identity Settings
 
-Both the admin widget and the frontend widget share a common protection layer that guards against prompt injection, prompt leakage, abusive traffic, and anonymous session churn. These options are configured per tenant under **Settings** > **Artificial Intelligence**, and require the **Manage AI Profiles** permission.
+Both the admin widget and the frontend widget share a common protection layer that guards against prompt injection, prompt leakage, abusive traffic, and anonymous session churn. These options are configured per tenant under **Settings** → **Artificial Intelligence**, and require the **Manage AI Profiles** permission.
 
 Saving either section may restart the tenant so the updated options take effect.
 

@@ -162,7 +162,7 @@ public sealed class TimeTrackerBillableSource : IBillableSource
 }
 
 /// <summary>
-/// Adds Commerce > Unbilled charges.
+/// Adds Commerce > Unbilled Charges.
 /// </summary>
 public sealed class BillableItemsAdminMenu : AdminNavigationProvider
 {
@@ -177,7 +177,7 @@ public sealed class BillableItemsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
-                .Add(S["Unbilled charges"], S["Unbilled charges"].PrefixPosition("4.6"), charges => charges
+                .Add(S["Unbilled Charges"], S["Unbilled Charges"].PrefixPosition("4.6"), charges => charges
                     .Id("unbilledcharges")
                     .Action("Index", "BillableItems", new RouteValueDictionary { { "area", InvoicingConstants.Features.Area } })
                     .Permission(InvoicingPermissions.ManageInvoices)

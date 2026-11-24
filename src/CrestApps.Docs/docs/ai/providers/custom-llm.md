@@ -15,7 +15,7 @@ Use this provider when the model or agent that should answer runs on your own se
 ## Set it up
 
 1. Enable **Custom LLM (WebSocket)**.
-2. Under **Artificial Intelligence → Provider Connections**, add a **Custom LLM (WebSocket)** connection. Its **Endpoint** is your server's address (`wss://`, or `https://`, which is used as `wss://`), and its **API key**, when set, is sent as `Authorization: Bearer` when the socket opens.
+2. Under **Artificial Intelligence** → **Provider Connections**, add a **Custom LLM (WebSocket)** connection. Its **Endpoint** is your server's address (`wss://`, or `https://`, which is used as `wss://`), and its **API key**, when set, is sent as `Authorization: Bearer` when the socket opens.
 3. Add a deployment on that connection. Its model name is sent with each request, so one server can host several agents.
 4. Choose the deployment as the chat deployment of an AI profile.
 

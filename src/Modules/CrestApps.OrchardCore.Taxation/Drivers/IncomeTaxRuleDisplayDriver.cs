@@ -78,6 +78,10 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
         rule.CollectedBy = string.IsNullOrWhiteSpace(model.CollectedBy) ? null : model.CollectedBy;
         rule.ExceptJurisdictions = [.. (model.ExceptJurisdictions ?? string.Empty).Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
         rule.ByPlaceOfWork = model.ByPlaceOfWork;
+        rule.Residency = Enum.TryParse<IncomeTaxResidency>(model.Residency, out var residency) ? residency : IncomeTaxResidency.Any;
+        rule.ExclusiveGroup = string.IsNullOrWhiteSpace(model.ExclusiveGroup) ? null : model.ExclusiveGroup;
+        rule.GroupPriority = model.GroupPriority;
+        rule.ElectionsFrom = string.IsNullOrWhiteSpace(model.ElectionsFrom) ? null : model.ElectionsFrom;
         rule.Category = model.Category;
         rule.IncomeKinds = [.. (model.IncomeKinds ?? []).Select(kind => Enum.TryParse<IncomeKind>(kind, out var parsed) ? (IncomeKind?)parsed : null).Where(kind => kind is not null).Select(kind => kind.Value)];
         rule.Payer = Enum.TryParse<IncomeTaxPayer>(model.Payer, out var payer) ? payer : IncomeTaxPayer.Employee;
@@ -98,6 +102,10 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
         model.CollectedBy = rule.CollectedBy;
         model.ExceptJurisdictions = string.Join(", ", rule.ExceptJurisdictions ?? []);
         model.ByPlaceOfWork = rule.ByPlaceOfWork;
+        model.Residency = rule.Residency.ToString();
+        model.ExclusiveGroup = rule.ExclusiveGroup;
+        model.GroupPriority = rule.GroupPriority;
+        model.ElectionsFrom = rule.ElectionsFrom;
         model.Category = rule.Category;
         model.IncomeKinds = [.. (rule.IncomeKinds ?? []).Select(kind => kind.ToString())];
         model.Payer = rule.Payer.ToString();

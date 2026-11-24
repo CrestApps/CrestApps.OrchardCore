@@ -1,0 +1,53 @@
+@model RequiredLearningPeopleViewModel
+
+<zone Name="Title">
+    <breadcrumb name="RequiredLearningPeople" title="@T["People required to complete '{0}'", Model.Requirement.Name]">
+        <breadcrumb-item id="RequiredLearning" action="Index" controller="RequiredLearning" area="CrestApps.OrchardCore.Learning.Programs">@T["Required Learning"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                <form method="get" asp-action="People" asp-route-id="@Model.Requirement.ItemId" class="d-flex gap-2 align-items-center">
+                    <select name="state" class="form-select" style="max-width: 14rem" onchange="this.form.submit()" aria-label="@T["State"]">
+                        <option value="">@T["Every state"]</option>
+                        <option value="@RequiredLearningState.Required" selected="@(Model.State == RequiredLearningState.Required)">@T["Not started"]</option>
+                        <option value="@RequiredLearningState.InProgress" selected="@(Model.State == RequiredLearningState.InProgress)">@T["In progress"]</option>
+                        <option value="@RequiredLearningState.Overdue" selected="@(Model.State == RequiredLearningState.Overdue)">@T["Overdue"]</option>
+                        <option value="@RequiredLearningState.Completed" selected="@(Model.State == RequiredLearningState.Completed)">@T["Completed"]</option>
+                        <option value="@RequiredLearningState.Exempt" selected="@(Model.State == RequiredLearningState.Exempt)">@T["Exempt"]</option>
+                        <option value="@RequiredLearningState.NotRequired" selected="@(Model.State == RequiredLearningState.NotRequired)">@T["No longer required"]</option>
+                    </select>
+                    <span class="text-muted small text-nowrap">
+                        @if (Model.LastRun is null)
+                        {
+                            @T["Never run."]
+                        }
+                        else
+                        {
+                            @T["Last run {0}.", Model.LastRun]
+                        }
+                    </span>
+                </form>
+            </div>
+            <div class="col-auto d-flex gap-2">
+                <a asp-action="Preview" asp-route-id="@Model.Requirement.ItemId" class="btn btn-secondary">@T["Who it covers"]</a>
+                <form method="post" asp-action="Run" asp-route-id="@Model.Requirement.ItemId">
+                    <button type="submit" class="btn btn-primary">@T["Run now"]</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="RequiredLearningPeople" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> The rule has not required this of anyone yet. Click Run now to apply it."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Person"]" />
+        <admin-list-column name="State" position="30" title="@T["State"]" width="auto" />
+        <admin-list-column name="Dates" position="40" title="@T["Due"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

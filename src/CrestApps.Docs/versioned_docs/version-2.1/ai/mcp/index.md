@@ -22,7 +22,7 @@ CrestApps provides both **client** and **server** MCP support:
 
 When the relevant features are enabled, Orchard adds these MCP screens under **Artificial Intelligence**:
 
-- **Model Context Protocol -> MCP Hosts**
+- **Model Context Protocol** → **MCP Hosts**
 - **MCP Prompts**
 - **MCP Resources**
 

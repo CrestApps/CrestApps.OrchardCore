@@ -65,4 +65,4 @@ The `Memberships` recipe step (`MembershipsStep`) creates or updates memberships
 
 ## Pages
 
-**Commerce > Memberships** (`ManageMemberships`) lists memberships with their member, roles and end date, filtered by status. **End now** ends one without a refund. The storefront account's **Memberships** page (`account/memberships`, the `AccountMemberships` shape) lists the member's own.
+**Commerce** → **Memberships** (`ManageMemberships`) lists memberships with their member, roles and end date, filtered by status. **End now** ends one without a refund. The storefront account's **Memberships** page (`account/memberships`, the `AccountMemberships` shape) lists the member's own.

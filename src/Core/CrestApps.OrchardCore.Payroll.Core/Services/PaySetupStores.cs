@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Services;
 /// <summary>
 /// Stores pay schedules in the Payroll collection. A schedule a module still uses is not deleted.
 /// </summary>
-public sealed class PayScheduleStore : DocumentCatalog<PaySchedule, PayScheduleIndex>
+public sealed class PayScheduleStore : DocumentCatalog<PaySchedule, PayrollPayScheduleIndex>
 {
     private readonly IEnumerable<IPaySetupUsage> _usages;
     private readonly IStringLocalizer S;
@@ -36,7 +36,7 @@ public sealed class PayScheduleStore : DocumentCatalog<PaySchedule, PayScheduleI
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The schedules.</returns>
     public async Task<IReadOnlyList<PaySchedule>> ListAsync(CancellationToken cancellationToken = default)
-        => (await Session.Query<PaySchedule, PayScheduleIndex>(collection: CollectionName).OrderBy(index => index.Name).ListAsync(cancellationToken)).ToList();
+        => (await Session.Query<PaySchedule, PayrollPayScheduleIndex>(collection: CollectionName).OrderBy(index => index.Name).ListAsync(cancellationToken)).ToList();
 
     /// <inheritdoc />
     protected override async ValueTask DeletingAsync(PaySchedule entry)
@@ -54,7 +54,7 @@ public sealed class PayScheduleStore : DocumentCatalog<PaySchedule, PayScheduleI
 /// <summary>
 /// Stores pay codes in the Payroll collection. A code a module still uses is not deleted.
 /// </summary>
-public sealed class PayCodeStore : DocumentCatalog<PayCode, PayCodeIndex>
+public sealed class PayCodeStore : DocumentCatalog<PayCode, PayrollPayCodeIndex>
 {
     private readonly IEnumerable<IPaySetupUsage> _usages;
     private readonly IStringLocalizer S;
@@ -79,7 +79,7 @@ public sealed class PayCodeStore : DocumentCatalog<PayCode, PayCodeIndex>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The codes.</returns>
     public async Task<IReadOnlyList<PayCode>> ListAsync(CancellationToken cancellationToken = default)
-        => (await Session.Query<PayCode, PayCodeIndex>(collection: CollectionName).OrderBy(index => index.Code).ListAsync(cancellationToken)).ToList();
+        => (await Session.Query<PayCode, PayrollPayCodeIndex>(collection: CollectionName).OrderBy(index => index.Code).ListAsync(cancellationToken)).ToList();
 
     /// <summary>
     /// Finds a code by its short code.
@@ -91,7 +91,7 @@ public sealed class PayCodeStore : DocumentCatalog<PayCode, PayCodeIndex>
     {
         var normalized = code?.Trim().ToUpperInvariant();
 
-        return Session.Query<PayCode, PayCodeIndex>(index => index.Code == normalized, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
+        return Session.Query<PayCode, PayrollPayCodeIndex>(index => index.Code == normalized, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc />

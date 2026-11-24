@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Localization;
@@ -54,11 +55,13 @@ public sealed class ReportDescriptor
     /// <summary>
     /// Gets the label shown to users, to localize with <c>IStringLocalizerFactory.Localize</c>.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; }
 
     /// <summary>
     /// Gets the description shown to users, to localize with <c>IStringLocalizerFactory.Localize</c>.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Description { get; }
 
     /// <summary>

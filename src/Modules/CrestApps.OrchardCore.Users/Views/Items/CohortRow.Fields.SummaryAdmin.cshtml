@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model ShapeViewModel<CohortRow>
+
+<a asp-controller="Cohorts" asp-action="Members" asp-route-id="@Model.Value.CohortId">@Model.Value.Name</a>
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="admin-list-secondary">@Model.Value.Description</div>
+}

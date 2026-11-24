@@ -10,7 +10,7 @@ A saved view is a ready-made filter of the ticket list, such as **My open ticket
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Views |
+| **Menu** | **Service Desk** → **Views** |
 | **Permission** | Manage ticket settings |
 | **Feature** | Tickets |
 
@@ -18,7 +18,7 @@ A saved view is a ready-made filter of the ticket list, such as **My open ticket
 
 ## Add or edit a view
 
-Go to **Service Desk > Views** and select **Add ticket view**, or a view to edit it.
+Go to **Service Desk** → **Views** and select **Add ticket view**, or a view to edit it.
 
 | Field | What it does |
 | --- | --- |

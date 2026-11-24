@@ -10,7 +10,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Products.Feeds;
 
 /// <summary>
-/// Settings › Commerce › Product feeds: the defaults for products that say nothing, the feed's key, the feeds'
+/// Settings › Commerce › Product Feeds: the defaults for products that say nothing, the feed's key, the feeds'
 /// addresses, and what Merchant Center would refuse.
 /// </summary>
 public sealed class ProductFeedSettingsDisplayDriver : SiteDisplayDriver<ProductFeedSettings>

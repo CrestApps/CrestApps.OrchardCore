@@ -11,7 +11,7 @@ A **cadence** is a reusable series of follow-up messages for automated SMS conve
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Cadences |
+| **Menu** | **Interaction Center** → **Management** → **Cadences** |
 | **Permission** | Manage cadences |
 | **Feature** | Omnichannel Management; follow-ups are sent by SMS Omnichannel Automation |
 
@@ -23,7 +23,7 @@ A **cadence** is a reusable series of follow-up messages for automated SMS conve
 
 <YouTube video="omnichannel-cadences" title="Video of building a cadence with a defined message step and an AI-generated step" start={45} end={96} />
 
-1. Open **Interaction Center > Management > Cadences** and click **Add cadence**.
+1. Open **Interaction Center** → **Management** → **Cadences** and click **Add cadence**.
 2. Enter a **Name** and optional **Description**, and leave **Enabled** ticked. A disabled cadence never sends follow-ups.
 3. Under **Follow-up steps**, click **Add step** for each follow-up:
    - **After (minutes)**: how long the customer must be silent, counted from the last message the automation sent.

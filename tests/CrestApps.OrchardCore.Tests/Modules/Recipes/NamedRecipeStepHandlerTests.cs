@@ -307,10 +307,13 @@ public sealed class NamedRecipeStepHandlerTests
         templateManager.Setup(x => x.FindByIdAsync("template-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(template));
 
+        var stepType = Type.GetType("CrestApps.OrchardCore.AI.Recipes.CreateAIProfileFromTemplateStep, CrestApps.OrchardCore.AI", throwOnError: true)!;
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.CreateAIProfileFromTemplateStep, CrestApps.OrchardCore.AI",
             profileManager.Object,
             templateManager.Object,
+            Array.Empty<CrestApps.OrchardCore.AI.Core.IAIProfileTemplateApplicationHandler>(),
+            Activator.CreateInstance(typeof(Microsoft.Extensions.Logging.Abstractions.NullLogger<>).MakeGenericType(stepType)),
             null);
 
         var context = CreateContext("CreateAIProfileFromTemplate", new JsonObject

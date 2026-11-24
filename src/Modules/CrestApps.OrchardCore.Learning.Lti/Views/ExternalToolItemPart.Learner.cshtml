@@ -1,0 +1,57 @@
+@model ExternalToolPanelViewModel
+
+<div class="card mb-3 learning-external-tool" data-learning-external-tool>
+    <div class="card-body">
+        @if (!Model.SignedIn)
+        {
+            <p class="mb-0">@T["Sign in to open this activity."]</p>
+        }
+        else if (!Model.Enrolled)
+        {
+            <p class="mb-0">@T["Enroll in the course to open this activity."]</p>
+        }
+        else if (!Model.ToolAvailable)
+        {
+            <p class="mb-0">@T["This activity is not available right now."]</p>
+        }
+        else
+        {
+            <ul class="list-inline text-secondary small mb-3">
+                <li class="list-inline-item"><i class="fa-solid fa-plug me-1" aria-hidden="true"></i>@Model.ToolName</li>
+                @if (Model.Score is { } score)
+                {
+                    if (score.ScoreGiven is { } given && score.ScoreMaximum is { } maximum && maximum > 0)
+                    {
+                        <li class="list-inline-item"><i class="fa-solid fa-star-half-stroke me-1" aria-hidden="true"></i>@T["Score: {0} of {1}", given.ToString("0.##"), maximum.ToString("0.##")]</li>
+                    }
+
+                    <li class="list-inline-item">
+                        <span class="badge @(score.GradingProgress == "FullyGraded" ? "text-bg-success" : "text-bg-info")">
+                            @(score.GradingProgress switch
+                            {
+                                "FullyGraded" => T["Graded"],
+                                "Pending" or "PendingManual" => T["Grading pending"],
+                                "Failed" => T["Grading failed"],
+                                _ => T["In progress"],
+                            })
+                        </span>
+                    </li>
+                    <li class="list-inline-item"><i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>@T["Last score"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(score.TimestampUtc, DateTimeKind.Utc), Format: "g"))</li>
+                }
+            </ul>
+
+            <p class="small text-secondary">@T["The activity opens in the tool, in a new window. The tool reports your score itself."]</p>
+
+            @if (Model.CanLaunch)
+            {
+                <a class="btn btn-primary" href="@Url.RouteUrl("LearningLtiLaunch", new { itemId = Model.ItemId })" target="_blank" rel="noopener">
+                    <i class="fa-solid fa-arrow-up-right-from-square me-1" aria-hidden="true"></i>@T["Launch"]
+                </a>
+            }
+            else
+            {
+                <p class="mb-0">@T["Your enrollment is not active, so the activity cannot be opened."]</p>
+            }
+        }
+    </div>
+</div>

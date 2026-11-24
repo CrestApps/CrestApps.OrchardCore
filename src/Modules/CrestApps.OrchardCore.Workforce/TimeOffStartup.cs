@@ -31,13 +31,14 @@ public sealed class TimeOffStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkforceConstants.TimeOffLedgerCollectionName));
         services.AddWorkforceTimeOffCore();
+        services.AddScoped<IModularTenantEvents, TimeOffLedgerCopyTenantEvents>();
         services.AddPersonalDataContributor<TimeOffRequestPersonalDataContributor>();
         services.AddDataMigration<TimeOffMigrations>()
             .AddIndexProvider<TimeOffTypeIndexProvider>()
             .AddIndexProvider<TimeOffPolicyIndexProvider>()
             .AddIndexProvider<TimeOffPolicyAssignmentIndexProvider>()
-            .AddIndexProvider<TimeOffLedgerEntryIndexProvider>()
             .AddIndexProvider<TimeOffRequestIndexProvider>()
             .AddIndexProvider<TimeOffAllotmentIndexProvider>()
             .AddIndexProvider<BlackoutPeriodIndexProvider>();

@@ -1,0 +1,110 @@
+@model RubricPartViewModel
+
+@{
+    var prefix = Html.NameFor(m => m.Criteria).ToString();
+    var editorId = Html.IdFor(m => m.Criteria) + "-editor";
+    var criteria = Model.Criteria.ToList();
+
+    if (criteria.Count == 0)
+    {
+        criteria.Add(new RubricCriterionRow());
+    }
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Criteria"]</div>
+    <div class="card-body" id="@editorId">
+        <span class="hint d-block mb-2">@T["The grader picks one level of each criterion. The grade is the points of the chosen levels out of the best level of every criterion. Rows without a title are left out."]</span>
+        <span asp-validation-for="Criteria"></span>
+        <div data-rubric-criteria>
+            @for (var i = 0; i < criteria.Count; i++)
+            {
+                <partial name="RubricCriterionRow" model="@(new RubricCriterionRowModel { Prefix = prefix, Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), Criterion = criteria[i] })" />
+            }
+        </div>
+        <template data-rubric-criterion-template>
+            <partial name="RubricCriterionRow" model="@(new RubricCriterionRowModel { Prefix = prefix, Index = "0", Criterion = new RubricCriterionRow() })" />
+        </template>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-rubric-add-criterion><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a criterion"]</button>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const editor = document.getElementById('@editorId');
+        const rows = editor.querySelector('[data-rubric-criteria]');
+        const criterionTemplate = editor.querySelector('[data-rubric-criterion-template]');
+        const prefix = '@prefix';
+
+        // Field names are Prefix[i].Title and Prefix[i].Levels[j].Points: number the rows again after any change, so the
+        // posted lists have no gaps.
+        function renumber() {
+            rows.querySelectorAll('[data-rubric-criterion]').forEach(function (criterion, i) {
+                criterion.querySelectorAll('[name]').forEach(function (input) {
+                    if (input.name.indexOf(prefix + '[') === 0) {
+                        input.name = prefix + '[' + i + ']' + input.name.substring(input.name.indexOf(']') + 1);
+                    }
+                });
+
+                criterion.querySelectorAll('[data-rubric-level]').forEach(function (level, j) {
+                    level.querySelectorAll('[name]').forEach(function (input) {
+                        input.name = input.name.replace(/\.Levels\[[^\]]*\]/, '.Levels[' + j + ']');
+                    });
+                });
+            });
+        }
+
+        function clearLevel(level) {
+            level.querySelectorAll('input').forEach(function (input) {
+                input.value = '';
+            });
+        }
+
+        rows.addEventListener('click', function (event) {
+            const removeCriterion = event.target.closest('[data-rubric-remove-criterion]');
+
+            if (removeCriterion) {
+                removeCriterion.closest('[data-rubric-criterion]').remove();
+                renumber();
+
+                return;
+            }
+
+            const removeLevel = event.target.closest('[data-rubric-remove-level]');
+
+            if (removeLevel) {
+                const levels = removeLevel.closest('[data-rubric-levels]');
+                const level = removeLevel.closest('[data-rubric-level]');
+
+                // A criterion keeps one level row to add more from; the last one is only cleared.
+                if (levels.querySelectorAll('[data-rubric-level]').length > 1) {
+                    level.remove();
+                } else {
+                    clearLevel(level);
+                }
+
+                renumber();
+
+                return;
+            }
+
+            const addLevel = event.target.closest('[data-rubric-add-level]');
+
+            if (addLevel) {
+                const levels = addLevel.closest('[data-rubric-criterion]').querySelector('[data-rubric-levels]');
+                const copy = levels.querySelector('[data-rubric-level]').cloneNode(true);
+
+                clearLevel(copy);
+                levels.appendChild(copy);
+                renumber();
+            }
+        });
+
+        editor.querySelector('[data-rubric-add-criterion]').addEventListener('click', function () {
+            rows.appendChild(criterionTemplate.content.cloneNode(true));
+            renumber();
+        });
+
+        renumber();
+    })();
+</script>

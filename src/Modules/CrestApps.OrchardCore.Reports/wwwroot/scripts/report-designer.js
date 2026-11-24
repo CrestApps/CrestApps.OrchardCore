@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-state.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-state.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner = root.CrestAppsReportDesigner || {};
@@ -889,8 +889,7 @@
 			return (column.aggregate && column.aggregate !== "None" ? (labels && labels[column.aggregate] || column.aggregate) + " " : "") + base;
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-ui.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-ui.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner = root.CrestAppsReportDesigner || {};
@@ -1150,8 +1149,7 @@
 			};
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-app.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-app.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner = root.CrestAppsReportDesigner || {};
@@ -1925,8 +1923,7 @@
 		if (root.document && root.document.readyState === "loading") root.document.addEventListener("DOMContentLoaded", boot);
 		else if (root.document) root.setTimeout(boot, 0);
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-data.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-data.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner;
@@ -2673,8 +2670,7 @@
 			], "modal-xl");
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-canvas.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-canvas.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner;
@@ -4180,8 +4176,7 @@
 			}, ui.icon("fa-plus"), " ", app.t("Add container"))), selectedContainer ? h("div", { className: "card-body p-2 border-top" }, containerProperties(selectedContainer)) : null));
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-model.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-model.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner;
@@ -4438,8 +4433,7 @@
 			root.requestAnimationFrame(app.drawModelLines);
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-sharing.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-sharing.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner;
@@ -4763,8 +4757,7 @@
 			]);
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-refresh.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-refresh.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner = root.CrestAppsReportDesigner || {};
@@ -4865,8 +4858,7 @@
 			}, app.t("Refresh")), h("div", { className: "ocat-end" }, select, h("span", { className: "hint" }, app.t("Live runs the view every time a report reads it. A schedule stores the result, so reports read it quickly; the data is as old as the last refresh.")), design.id && app.savedRefreshIntervalMinutes > 0 ? h("div", { className: "mt-2" }, status()) : null));
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-history.js
+	// src/Modules/CrestApps.OrchardCore.Reports/Assets/js/report-designer/designer-history.js
 	(function(root) {
 		"use strict";
 		var designer = root.CrestAppsReportDesigner = root.CrestAppsReportDesigner || {};
@@ -5287,5 +5279,4 @@
 			app.startLive();
 		};
 	})(typeof window !== "undefined" ? window : globalThis);
-	//#endregion
 })();

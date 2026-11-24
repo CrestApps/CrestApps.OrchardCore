@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -16,6 +17,7 @@ public sealed class PartyKindDescriptor
     /// <summary>
     /// Gets or sets the name of the kind shown to users, such as "Contact".
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>

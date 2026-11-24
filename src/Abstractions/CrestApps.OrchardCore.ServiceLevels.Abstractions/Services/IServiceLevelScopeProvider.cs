@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using OrchardCore.Localization;
 
@@ -19,11 +20,13 @@ public interface IServiceLevelScopeProvider
     /// <summary>
     /// Gets the name of the scope shown to users.
     /// </summary>
+    [JsonIgnore]
     LocalizationSource DisplayName { get; }
 
     /// <summary>
     /// Gets what the scope's policies are for, shown when choosing the kind of a new policy; <see langword="null"/> for none.
     /// </summary>
+    [JsonIgnore]
     LocalizationSource Description => null;
 
     /// <summary>

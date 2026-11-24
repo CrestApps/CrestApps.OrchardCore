@@ -251,8 +251,9 @@ public sealed class PayStatementSourceAccess : ISourceAccess
 }
 
 /// <summary>
-/// Prints the pay statement as the voucher of the check that pays it: each line with its hours, the current amount and
-/// the year's, then gross and net pay.
+/// Prints the pay statement as the voucher of the check that pays it, as a pay stub: the earnings with their hours,
+/// rate, current amount and the year's, then the taxes and the deductions with the current amount and the year's, then
+/// net pay and how it was split.
 /// </summary>
 public sealed class PayStatementCheckVoucherSource : ICheckVoucherSource
 {
@@ -288,6 +289,9 @@ public sealed class PayStatementCheckVoucherSource : ICheckVoucherSource
         }
 
         var accumulators = await _accumulators.GetAsync(statement.StaffMemberId, statement.EmployerId, statement.PayDate, statement.PeriodStart, statement.PeriodEnd, cancellationToken);
+        var earnings = new List<CheckVoucherLine>();
+        var taxes = new List<CheckVoucherLine>();
+        var deductions = new List<CheckVoucherLine>();
         var lines = new List<CheckVoucherLine>();
 
         string Money(decimal value)
@@ -303,20 +307,36 @@ public sealed class PayStatementCheckVoucherSource : ICheckVoucherSource
                 continue;
             }
 
-            lines.Add(new CheckVoucherLine
+            var label = string.IsNullOrEmpty(line.Description) ? line.TaxCode : line.Description;
+            var current = Money(sign * line.Amount);
+            var year = Money(sign * accumulators.For(key).Year);
+
+            switch (line.Type)
             {
-                Label = string.IsNullOrEmpty(line.Description) ? line.TaxCode : line.Description,
-                Values =
-                [
-                    line.Hours is { } hours ? hours.ToString("0.##", CultureInfo.InvariantCulture) : string.Empty,
-                    Money(sign * line.Amount),
-                    Money(sign * accumulators.For(key).Year),
-                ],
-            });
+                case PayLineType.Tax:
+                    taxes.Add(new CheckVoucherLine { Label = label, Values = [current, year] });
+                    break;
+                case PayLineType.Deduction:
+                    deductions.Add(new CheckVoucherLine { Label = label, Values = [current, year] });
+                    break;
+                default:
+                    earnings.Add(new CheckVoucherLine
+                    {
+                        Label = label,
+                        Values =
+                        [
+                            line.Hours is { } hours ? hours.ToString("0.##", CultureInfo.InvariantCulture) : string.Empty,
+                            line.Rate is { } rate ? rate.ToString("0.00##", CultureInfo.CurrentCulture) : string.Empty,
+                            current,
+                            year,
+                        ],
+                    });
+                    break;
+            }
         }
 
-        lines.Add(new CheckVoucherLine { Label = S["Gross pay"], Values = [string.Empty, Money(statement.Gross), string.Empty], IsEmphasized = true });
-        lines.Add(new CheckVoucherLine { Label = S["Net pay"], Values = [string.Empty, Money(statement.Net), string.Empty], IsEmphasized = true });
+        earnings.Add(new CheckVoucherLine { Label = S["Gross pay"], Values = [string.Empty, string.Empty, Money(statement.Gross), string.Empty], IsEmphasized = true });
+        lines.Add(new CheckVoucherLine { Label = S["Net pay"], Values = [Money(statement.Net)], IsEmphasized = true });
 
         // Net pay split between payments: each one, so the check's amount adds up.
         if (statement.Payments.Count > 1)
@@ -329,15 +349,31 @@ public sealed class PayStatementCheckVoucherSource : ICheckVoucherSource
                         ? string.IsNullOrEmpty(payment.Reference) ? S["Deposit"].Value : S["Deposit {0}", payment.Reference].Value
                         : payment.Reference ?? S["Check"].Value;
 
-                lines.Add(new CheckVoucherLine { Label = label, Values = [string.Empty, Money(payment.Amount), string.Empty] });
+                lines.Add(new CheckVoucherLine { Label = label, Values = [Money(payment.Amount)] });
             }
         }
+
+        var sections = new List<CheckVoucherSection>
+        {
+            new() { Title = S["Earnings"], Columns = [S["Earning"], S["Hours"], S["Rate"], S["Current"], S["Year to date"]], Lines = earnings },
+        };
+
+        if (taxes.Count > 0)
+        {
+            sections.Add(new CheckVoucherSection { Title = S["Taxes"], Columns = [S["Tax"], S["Current"], S["Year to date"]], Lines = taxes });
+        }
+
+        if (deductions.Count > 0)
+        {
+            sections.Add(new CheckVoucherSection { Title = S["Deductions"], Columns = [S["Deduction"], S["Current"], S["Year to date"]], Lines = deductions });
+        }
+
+        sections.Add(new CheckVoucherSection { Lines = lines });
 
         return new CheckVoucher
         {
             Title = S["Pay statement {0}, period {1} to {2}", statement.Number, statement.PeriodStart.ToString("d", CultureInfo.CurrentCulture), statement.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)],
-            Columns = [S["Pay"], S["Hours"], S["Current"], S["Year to date"]],
-            Lines = lines,
+            Sections = sections,
         };
     }
 }

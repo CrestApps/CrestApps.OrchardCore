@@ -38,7 +38,7 @@ The MCP server exposes the following capabilities:
 
 Tool exposure is **opt-in**. Nothing is listed or callable by default: the server only exposes the AI tools and configured [tool instances](../tool-instances.md) that you explicitly allow. The allow-list is enforced by both the list and the call handlers, so a tool that is not exposed can neither be discovered nor invoked.
 
-You configure the exposed tools from the **Settings → Artificial Intelligence** page, on the **MCP Server** card. The card has two ways to control exposure:
+You configure the exposed tools from the **Settings** → **Artificial Intelligence** page, on the **MCP Server** card. The card has two ways to control exposure:
 
 - **Expose all tools** — when enabled, every *selectable* tool and every configured tool instance is exposed and the selection below is ignored. System tools and hidden tools are never exposed, even in this mode. Enabling it hides the **Tools** and **Tool instances** selectors, because the selection no longer applies. Use this only when you trust every client of the server.
 - **Tools** and **Tool instances** selectors — when **Expose all tools** is disabled (the default), only the tools and tool instances you select are exposed. The selectors list only the tools and instances the current user is allowed to access, exactly like the AI Profile editor.
@@ -54,12 +54,12 @@ A common reason to run an MCP server is to let an external AI agent answer quest
 The following steps expose three documentation sites — [core.crestapps.com](https://core.crestapps.com), [orchardcore.crestapps.com](https://orchardcore.crestapps.com), and [docs.orchardcore.net](https://docs.orchardcore.net) — to MCP clients:
 
 1. Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstances`). This registers the built-in documentation search sources alongside the HTTP API request source.
-2. Navigate to **Artificial Intelligence → Tool Instances** and add one instance per site. All three sites are Docusaurus sites that publish a standard `sitemap.xml`, so use the **Documentation search (sitemap)** source for each:
+2. Navigate to **Artificial Intelligence** → **Tool Instances** and add one instance per site. All three sites are Docusaurus sites that publish a standard `sitemap.xml`, so use the **Documentation search (sitemap)** source for each:
    - **Name** `crestapps-core-docs`, **Description** "Search the CrestApps Core documentation.", **Base URL** `https://core.crestapps.com`.
    - **Name** `crestapps-orchardcore-docs`, **Description** "Search the CrestApps OrchardCore documentation.", **Base URL** `https://orchardcore.crestapps.com`.
    - **Name** `orchardcore-docs`, **Description** "Search the Orchard Core framework documentation.", **Base URL** `https://docs.orchardcore.net`.
 3. Enable the **MCP Server** feature and configure its authentication.
-4. Navigate to **Settings → Artificial Intelligence**, open the **MCP Server** card, leave **Expose all tools** disabled, and select the three documentation instances under **Tool instances**. Save.
+4. Navigate to **Settings** → **Artificial Intelligence**, open the **MCP Server** card, leave **Expose all tools** disabled, and select the three documentation instances under **Tool instances**. Save.
 
 MCP clients now discover exactly three tools — one per documentation site — and can search each site on demand, while every other tool and instance stays private.
 
@@ -79,7 +79,7 @@ When `OpenId` is used, you can also require the `AccessMcpServer` permission for
 
 ## Configuration
 
-You can configure the MCP server from the admin **Settings → Artificial Intelligence** page (on the **MCP Server** card) without redeploying. The stored site settings are also the source of the [tool exposure](#tool-exposure) allow-list.
+You can configure the MCP server from the admin **Settings** → **Artificial Intelligence** page (on the **MCP Server** card) without redeploying. The stored site settings are also the source of the [tool exposure](#tool-exposure) allow-list.
 
 For deployment scenarios, the same options can be set in `appsettings.json`, which overrides the stored site settings:
 
@@ -107,6 +107,7 @@ For deployment scenarios, the same options can be set in `appsettings.json`, whi
 | `RequireAccessPermission` | `bool` | `true` | Whether to require the `AccessMcpServer` permission in `OpenId` mode |
 | `ExposeAllTools` | `bool` | `false` | When `true`, every non-hidden tool and tool instance is exposed and the `Tools` allow-list is ignored |
 | `Tools` | `string[]` | `[]` | The allow-list of tool and tool instance names exposed when `ExposeAllTools` is `false`. Matching is case-insensitive |
+| `SessionMode` | `string` | `StatefulForInitializeClients` | How the Streamable HTTP transport tracks sessions: `StatefulForInitializeClients`, `Stateful`, or `Stateless`. Read from `appsettings.json` only, when the tenant starts. See [Sessions](#sessions) |
 
 ### Authentication types
 
@@ -168,10 +169,10 @@ Use only for local development and testing.
 
 ## Getting started
 
-1. Enable **Model Context Protocol (MCP) Server** under **Tools -> Features**.
+1. Enable **Model Context Protocol (MCP) Server** under **Tools** → **Features**.
 2. Choose and configure an authentication mode.
 3. Grant the `AccessMcpServer` permission when you use `OpenId` with access checks enabled.
-4. Opt in the tools and tool instances to expose from **Settings → Artificial Intelligence** on the **MCP Server** card. Nothing is exposed until you select it (or enable **Expose all tools**).
+4. Opt in the tools and tool instances to expose from **Settings** → **Artificial Intelligence** on the **MCP Server** card. Nothing is exposed until you select it (or enable **Expose all tools**).
 5. Connect an MCP client to the server endpoint.
 
 ## MCP endpoint
@@ -197,6 +198,26 @@ The deprecated HTTP+SSE transport from the 2024-11-05 specification — a `GET /
 `POST /mcp/message` — is **not** mapped. Point clients at `/mcp` instead. A client that only speaks the
 older transport cannot connect to this server.
 :::
+
+### Sessions
+
+By default the server keeps a session for each client that starts with the `initialize` handshake, so the client gets an `Mcp-Session-Id` and can use `GET /mcp` and `DELETE /mcp`. Clients that use the `2026-07-28` protocol revision or later are served without a session, and get `405 Method Not Allowed` for `GET` and `DELETE`, because that revision has no sessions.
+
+A session lives in the memory of the node that created it. When the site runs on several nodes, either route a client's requests to the same node (session affinity), or set `SessionMode` to `Stateless`. In `Stateless` mode no client gets a session, and `GET` and `DELETE` are not mapped. Set `Stateful` to give every client a session, which makes newer clients fall back to the `initialize` handshake.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "McpServer": {
+          "SessionMode": "Stateless"
+        }
+      }
+    }
+  }
+}
+```
 
 ## Example client configuration
 
@@ -430,7 +451,7 @@ The screencast below shows the admin chat UI interacting with content and tools 
 
 - Verify the required Orchard Core and CrestApps features are enabled.
 - Check that the expected AI tools, prompts, or resources are registered.
-- Confirm the tool or tool instance is opted in on the **MCP Server** card under **Settings → Artificial Intelligence** (or that **Expose all tools** is enabled). Tools are not exposed until you select them.
+- Confirm the tool or tool instance is opted in on the **MCP Server** card under **Settings** → **Artificial Intelligence** (or that **Expose all tools** is enabled). Tools are not exposed until you select them.
 - Confirm the calling identity is authorized for the tool, because exposed tools still respect Orchard Core permissions.
 
 ### Configuration does not apply

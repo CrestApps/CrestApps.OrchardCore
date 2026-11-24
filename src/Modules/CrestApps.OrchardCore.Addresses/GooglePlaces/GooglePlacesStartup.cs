@@ -26,7 +26,7 @@ public sealed class GooglePlacesStartup : StartupBase
 }
 
 /// <summary>
-/// Settings › Address suggestions.
+/// Settings › Address Suggestions.
 /// </summary>
 public sealed class GooglePlacesAdminMenu : AdminNavigationProvider
 {
@@ -41,7 +41,7 @@ public sealed class GooglePlacesAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Settings"], settings => settings
-                .Add(S["Address suggestions"], S["Address suggestions"].PrefixPosition(), suggestions => suggestions
+                .Add(S["Address Suggestions"], S["Address Suggestions"].PrefixPosition(), suggestions => suggestions
                     .Id("addressSuggestions")
                     .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", GooglePlacesSettingsDisplayDriver.GroupId } })
                     .Permission(AddressPermissions.ManageAddressSuggestions)

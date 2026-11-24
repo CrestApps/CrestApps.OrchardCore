@@ -28,7 +28,7 @@ Use profile templates when you want to:
 
 After enabling the base AI module, Orchard adds:
 
-- **Artificial Intelligence -> Templates** (permission `ManageAIProfileTemplates`)
+- **Artificial Intelligence** → **Templates** (permission `ManageAIProfileTemplates`)
 
 This screen is backed by the Orchard profile-template manager and related display drivers contributed by enabled AI features. The template sources (**Profile** and **System Prompt**) are registered by CrestApps.Core. Creating and editing templates in the admin is described in the User Manual under [Templates](../user-manual/ai/prompt-templates.md).
 
@@ -48,9 +48,9 @@ The picker builds its cards from the profile templates themselves, so a new temp
 | **Listable** is checked (`IsListable: true` in a template file, which is the default). | Uncheck **Listable** on the template to keep it out of the picker. |
 | Its profile type is not **Template generated prompt**. | Such a profile runs inside an existing chat session rather than standing on its own. |
 
-Templates come from every source the site has: the ones created under **Artificial Intelligence -> Templates**, the files shipped in modules (including the starter scenarios and the building-block agents), and files placed in `App_Data`. A template created under **Artificial Intelligence -> Templates** gets a card with its title, description and category; only template files can be featured today (see [Featuring your own template](#featuring-your-own-template)).
+Templates come from every source the site has: the ones created under **Artificial Intelligence** → **Templates**, the files shipped in modules (including the starter scenarios and the building-block agents), and files placed in `App_Data`. A template created under **Artificial Intelligence** → **Templates** gets a card with its title, description and category; only template files can be featured today (see [Featuring your own template](#featuring-your-own-template)).
 
-A template left out of the picker can still create a profile: **Artificial Intelligence -> Templates** shows a **Create profile** button on every profile template, for users who can manage AI profiles, and it opens the same setup step.
+A template left out of the picker can still create a profile: **Artificial Intelligence** → **Templates** shows a **Create profile** button on every profile template, for users who can manage AI profiles, and it opens the same setup step.
 
 `/Admin/ai/profile/new` opens the profiles list with the picker showing, so it can be linked to directly.
 

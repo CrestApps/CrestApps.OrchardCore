@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of the learning management system: courses and their outline, course items and their kinds,
+      enrollments with their grants and states, learner progress, completion criteria, release rules, the content
+      access decision and the permissions other Learning modules build on.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Courses Enrollment Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

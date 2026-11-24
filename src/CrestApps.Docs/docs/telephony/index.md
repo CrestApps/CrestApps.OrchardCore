@@ -24,7 +24,7 @@ In this module, **provider** means the configured **telephony backend adapter** 
 or another PBX/carrier API integration), not the user's phone company in the business or
 billing sense.
 
-`CrestApps.OrchardCore.Telephony` registers the provider-neutral runtime services and the **Settings → Communication → Telephony** configuration screen. Every provider feature depends on Telephony and contributes its settings tab directly, so enabling a provider always makes its configuration available. The floating widget remains optional and is registered only by `CrestApps.OrchardCore.Telephony.SoftPhone`.
+`CrestApps.OrchardCore.Telephony` registers the provider-neutral runtime services and the **Settings** → **Communication** → **Telephony** configuration screen. Every provider feature depends on Telephony and contributes its settings tab directly, so enabling a provider always makes its configuration available. The floating widget remains optional and is registered only by `CrestApps.OrchardCore.Telephony.SoftPhone`.
 
 ## Architecture
 
@@ -133,7 +133,7 @@ Every hub method runs in its own Orchard Core shell scope and is authorized agai
 
 ## Site settings
 
-Telephony settings live under **Settings → Communication → Telephony** and require the
+Telephony settings live under **Settings** → **Communication** → **Telephony** and require the
 `Manage telephony settings` permission.
 
 :::note
@@ -239,7 +239,7 @@ this feature is enabled:
   from the [Telephony Soft Phone Extension](#standalone-soft-phone-page-and-browser-extension) feature keep
   working while it is off.
 - **Show the soft phone on the admin dashboard** displays the widget on admin pages. This is enabled
-  by default. To show the phone on the front end, add the **Soft Phone** widget from **Design → Widgets**
+  by default. To show the phone on the front end, add the **Soft Phone** widget from **Design** → **Widgets**
   (see [Adding the soft phone to the website](#adding-the-soft-phone-to-the-website)).
 - **Enable the diagnostics tab** shows a **Diagnostics** tab on the soft phone for troubleshooting (see
   [Diagnostics](#diagnostics)). It is off by default.
@@ -540,7 +540,7 @@ dashboard** is enabled — the widget is injected into the layout's `Footer` zon
 
 For the **front end**, add the soft phone as a widget:
 
-- Go to **Design → Widgets**.
+- Go to **Design** → **Widgets**.
 - Add the **Soft Phone** widget to a zone (and, if you use layers, to the layers where you want the
   phone available — for example an *Authenticated* layer). The phone floats over the page wherever it
   is placed, and only renders for users who have the `Use the telephony soft phone` permission.

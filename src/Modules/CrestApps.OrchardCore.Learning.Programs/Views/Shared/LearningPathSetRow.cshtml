@@ -1,0 +1,41 @@
+@model LearningPathSetRowModel
+
+@{
+    // The picker starts with the set's chosen courses and searches the rest on the server.
+    var chosenJson = System.Text.Json.JsonSerializer.Serialize(Model.Set.CourseIds
+        .Where(id => Model.CourseTitles.ContainsKey(id))
+        .Select(id => new { value = id, text = Model.CourseTitles[id] }));
+    var coursesId = System.Text.RegularExpressions.Regex.Replace($"{Model.Prefix}_{Model.Index}_CourseIds", "[^A-Za-z0-9_]", "_");
+}
+
+<div class="card mb-2" data-path-set>
+    <div class="card-body py-2">
+        <input type="hidden" name="@(Model.Prefix)[@Model.Index].Id" value="@Model.Set.Id" />
+        <div class="row g-2 align-items-start">
+            <div class="col-md-2" data-path-connector>
+                <select name="@(Model.Prefix)[@Model.Index].Connector" class="form-select" aria-label="@T["Joined to the set before by"]">
+                    <option value="@LearningPathConnector.Then" selected="@(Model.Set.Connector == LearningPathConnector.Then)">@T["Then"]</option>
+                    <option value="@LearningPathConnector.And" selected="@(Model.Set.Connector == LearningPathConnector.And)">@T["And"]</option>
+                    <option value="@LearningPathConnector.Or" selected="@(Model.Set.Connector == LearningPathConnector.Or)">@T["Or"]</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input name="@(Model.Prefix)[@Model.Index].Title" value="@Model.Set.Title" class="form-control" placeholder="@T["Set title"]" aria-label="@T["Set title"]" />
+                <div class="input-group mt-2">
+                    <select name="@(Model.Prefix)[@Model.Index].Join" class="form-select" data-path-join aria-label="@T["Completed by"]">
+                        <option value="@LearningPathSetJoin.All" selected="@(Model.Set.Join == LearningPathSetJoin.All)">@T["Every course"]</option>
+                        <option value="@LearningPathSetJoin.Any" selected="@(Model.Set.Join == LearningPathSetJoin.Any)">@T["Any one course"]</option>
+                        <option value="@LearningPathSetJoin.AtLeast" selected="@(Model.Set.Join == LearningPathSetJoin.AtLeast)">@T["At least"]</option>
+                    </select>
+                    <input type="number" min="1" name="@(Model.Prefix)[@Model.Index].MinimumCount" value="@(Model.Set.MinimumCount > 0 ? Model.Set.MinimumCount : 1)" class="form-control" style="max-width: 5rem" data-path-minimum aria-label="@T["How many courses"]" />
+                </div>
+            </div>
+            <div class="col">
+                @await Component.InvokeAsync("ItemSelector", new { id = coursesId, inputName = $"{Model.Prefix}[{Model.Index}].CourseIds", endpoint = Url.RouteUrl("LearningCourseSearch"), initialItemsJson = chosenJson, multiple = true, buttonText = T["Choose courses"].Value, searchPlaceholder = T["Search courses by title"].Value, emptyResultsText = T["No course has this title."].Value, smallButton = false })
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-outline-danger" data-path-remove title="@T["Remove the set"]" aria-label="@T["Remove the set"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>

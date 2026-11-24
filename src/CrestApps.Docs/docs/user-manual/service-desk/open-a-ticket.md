@@ -11,7 +11,7 @@ Agents open tickets for people who call, write or stop by. Customers can also op
 
 | | |
 | --- | --- |
-| **Menu** | Service Desk > Tickets > New ticket |
+| **Menu** | **Service Desk** → **Tickets** → **New ticket** |
 | **Permission** | Reply to tickets on the desk |
 | **Feature** | Tickets |
 

@@ -127,7 +127,7 @@ The part's settings editor (`schema-org-editor.js`) lists the types by group. Ea
 | `SeoMeta` (500) | Orchard Core SEO | `description` from the meta description, and `image` from the Open Graph or Twitter image |
 | `SchemaOrgPart` (1000) | Schema.org part | The part's mappings and the values editors entered |
 | `EditorJsonLd` (2000) | Editor's JSON-LD | The **Google Schema** field of the SEO part |
-| 3000 | Site | Publisher and `WebSite` nodes; `publisher` and `isPartOf` on articles and web pages, when they are not set yet |
+| `Site` (3000) | Site | Publisher and `WebSite` nodes; `publisher` and `isPartOf` on articles and web pages, when they are not set yet. A provider that refers to those nodes runs after it and finds them with `StructuredDataNodeIds.Publisher(baseUrl)` and `StructuredDataNodeIds.WebSite(baseUrl)`. |
 
 After the providers run:
 

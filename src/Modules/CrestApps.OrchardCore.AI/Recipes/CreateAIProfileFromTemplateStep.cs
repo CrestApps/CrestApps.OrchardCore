@@ -4,8 +4,13 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -17,17 +22,23 @@ internal sealed class CreateAIProfileFromTemplateStep : NamedRecipeStepHandler
 
     private readonly IAIProfileManager _profileManager;
     private readonly INamedSourceCatalogManager<AIProfileTemplate> _templateManager;
+    private readonly IEnumerable<IAIProfileTemplateApplicationHandler> _handlers;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
     public CreateAIProfileFromTemplateStep(
         IAIProfileManager profileManager,
         INamedSourceCatalogManager<AIProfileTemplate> templateManager,
+        IEnumerable<IAIProfileTemplateApplicationHandler> handlers,
+        ILogger<CreateAIProfileFromTemplateStep> logger,
         IStringLocalizer<CreateAIProfileFromTemplateStep> stringLocalizer)
         : base(StepKey)
     {
         _profileManager = profileManager;
         _templateManager = templateManager;
+        _handlers = handlers;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -95,6 +106,10 @@ internal sealed class CreateAIProfileFromTemplateStep : NamedRecipeStepHandler
 
                 continue;
             }
+
+            // As the editor's factory does: every template handler finishes the profile before it is saved, so a
+            // profile made by a recipe is the same as one made on the page.
+            await _handlers.InvokeAsync((handler, ctx) => handler.AppliedAsync(ctx), new AIProfileTemplateAppliedContext(profile, template), _logger);
 
             if (isNew)
             {

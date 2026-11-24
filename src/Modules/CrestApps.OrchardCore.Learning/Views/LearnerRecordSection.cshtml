@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Learning.Controllers
+@model CrestApps.OrchardCore.Learning.ViewModels.LearnerRecordSectionViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>@T["Learning"]</span>
+        <span class="text-secondary small">@T["{0} enrollments, {1} in progress, {2} completed", Model.Total, Model.Open, Model.Completed]</span>
+    </div>
+    <div class="card-body">
+        @if (Model.Rows.Count == 0)
+        {
+            <p class="hint mb-0">@T["Not enrolled in any course."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Course"]</th>
+                            <th scope="col">@T["Status"]</th>
+                            <th scope="col" class="text-end">@T["Progress"]</th>
+                            <th scope="col">@T["Due"]</th>
+                            <th scope="col">@T["Completed"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td><a asp-action="@nameof(EnrollmentsController.Detail)" asp-controller="Enrollments" asp-area="CrestApps.OrchardCore.Learning" asp-route-id="@row.EnrollmentId">@row.CourseTitle</a> <span class="text-secondary small">@row.Number</span></td>
+                                <td>@T[row.Status.ToString()]</td>
+                                <td class="text-end">@row.ProgressPercent%</td>
+                                <td>@row.Due</td>
+                                <td>@row.Completed</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (Model.Total > Model.Rows.Count)
+            {
+                <p class="hint mt-2 mb-0">@T["Showing the newest {0} enrollments.", Model.Rows.Count]</p>
+            }
+        }
+    </div>
+</div>

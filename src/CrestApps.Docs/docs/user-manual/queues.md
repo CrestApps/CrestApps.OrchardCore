@@ -12,7 +12,7 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 
 | | |
 | --- | --- |
-| **Menu** | Interaction Center > Management > Queues (and Queue groups) |
+| **Menu** | **Interaction Center** → **Management** → **Queues (and Queue Groups)** |
 | **Permission** | Manage Contact Center queues (queue groups also accept Manage Contact Center queue groups) |
 | **Feature** | Contact Center Work Distribution |
 
@@ -28,7 +28,7 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 
 Queue groups only organize queues for administration and reports, for example *Sales* and *Service*. They never change routing.
 
-1. Open **Interaction Center > Management > Queue groups** and click **Add queue group**.
+1. Open **Interaction Center** → **Management** → **Queue Groups** and click **Add queue group**.
 2. Enter a **Name** and, optionally, a **Description**, then **Save**.
 
 :::note[AI answering]
@@ -43,7 +43,7 @@ To start a queue from an existing one, open its **Actions** menu in the queue li
 
 ## Create a queue
 
-1. Open **Interaction Center > Management > Queues** and click **Add Queue**.
+1. Open **Interaction Center** → **Management** → **Queues** and click **Add Queue**.
 2. Fill in the cards described below. Only **Name** is required; every other value has a sensible default.
 3. Click **Save**.
 

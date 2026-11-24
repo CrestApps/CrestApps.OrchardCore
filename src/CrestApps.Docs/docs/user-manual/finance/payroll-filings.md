@@ -10,7 +10,7 @@ Payroll works out what you owe and prepares the forms; you deposit the money and
 
 | | |
 | --- | --- |
-| **Menu** | Payroll > Liabilities and Filings |
+| **Menu** | **Payroll** → **Liabilities and Filings** |
 | **Permission** | Manage payroll filings (for every employer, or for one) |
 | **Feature** | Payroll; the United States forms come with United States Payroll Filings, and the Canadian slips with Canada Payroll Filings |
 
@@ -18,7 +18,7 @@ Payroll works out what you owe and prepares the forms; you deposit the money and
 
 ## Liabilities and deposits
 
-1. Open **Payroll > Liabilities and Filings > Liabilities**, choose the employer and the year, and choose **Show**.
+1. Open **Payroll** → **Liabilities and Filings** → **Liabilities**, choose the employer and the year, and choose **Show**.
 2. Each row is a deposit period of the agency the taxes are paid to: what the employees' and the employer's taxes owe, what you deposited, and what is left with its due date. A tax another agency collects is in that agency's row, such as a province's tax in the CRA's (CA). Withholding follows the **Deposits** schedule of the employer's registration: monthly, semi-weekly, quarterly or yearly, or for a Canadian remitter quarterly by the 15th, twice a month or four times a month. US unemployment taxes are by quarter. Backup withholding from contractors' payments is its own row, **Withholding from other payments**: record its deposits with that choice under **Taxes**.
 3. After you make a deposit, enter it under **Record a deposit**: the jurisdiction, the taxes, the period's first and last days as shown in the list, the amount, the day you paid and the confirmation number. The row shows it as paid once the deposits cover it.
 
@@ -28,12 +28,12 @@ A deposit counted in a filed return can't be deleted; amend the return instead.
 
 1. Open **Filings**, choose the employer and choose **Show**.
 2. Under **Prepare a filing**, choose the form, the year and, for a quarterly form, the quarter, then choose **Prepare**. The totals come from the final pay statements with pay dates in the period and the deposits you recorded.
-3. Check the boxes on the filing's page. For wage statements, each person's statement is listed with a **PDF** to print or check. Correct the pay if needed and choose **Prepare again**.
+3. Check the boxes on the filing's page. For wage statements, each person's statement is listed with a **PDF** to print or check. A W-2 shows the state and local wages and income tax withheld (boxes 15 to 20) of each state and city whose income tax the person paid, with your account id from the employer's registration for that state or city. Correct the pay if needed and choose **Prepare again**.
 4. File the form with the agency, then enter the day and the confirmation number and choose **Mark as filed**. A filed form never changes, and each person with a statement in it is told it is ready under **My pay**.
 
 To correct a filed form, open it and choose **Amend**: a new draft is prepared from the statements as they are now. File it, then mark it as filed; the first one is then marked amended.
 
-For the Social Security Administration's wage report, run **United States Payroll: W-2 wage records as an SSA EFW2 file** from **Tools > Recipes**, then publish the pipeline it adds with a delivery step that keeps the file private, such as an SFTP server. Add a registration to the employer with the agency **SSA** and your SSA user id as its account id. Only a user who may see full tax ids gets the social security numbers in the file, and each one read is recorded. Canadian T4 slips have their own file: see [Canadian payroll](./canada-payroll.md).
+For the Social Security Administration's wage report, run **United States Payroll: W-2 wage records as an SSA EFW2 file** from **Tools** → **Recipes**, then publish the pipeline it adds with a delivery step that keeps the file private, such as an SFTP server. Add a registration to the employer with the agency **SSA** and your SSA user id as its account id. Only a user who may see full tax ids gets the social security numbers in the file, and each one read is recorded. Canadian T4 slips have their own file: see [Canadian payroll](./canada-payroll.md).
 
 ## Contractors and Form 1099-NEC
 

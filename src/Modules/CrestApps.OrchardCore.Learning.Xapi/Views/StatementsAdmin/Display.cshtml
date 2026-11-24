@@ -1,0 +1,87 @@
+@model StatementDetailViewModel
+
+@{
+    var record = Model.Record;
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningStatement" title="@T["Statement"]">
+        <breadcrumb-item id="LearningStatements" url="@Url.RouteUrl("LearningStatements")">@T["Learning statements"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@Model.Actor @Model.Summary.Verb @Model.Summary.Object</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Statement id"]</span>
+            <div class="ocat-end"><p class="form-control-plaintext mb-0"><code>@record.StatementId</code></p></div>
+        </div>
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Verb"]</span>
+            <div class="ocat-end"><p class="form-control-plaintext mb-0">@Model.Summary.Verb <span class="text-secondary">(@record.Verb)</span></p></div>
+        </div>
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Object"]</span>
+            <div class="ocat-end"><p class="form-control-plaintext mb-0">@Model.Summary.Object <span class="text-secondary">(@record.ObjectType)</span></p></div>
+        </div>
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Stored"]</span>
+            <div class="ocat-end"><p class="form-control-plaintext mb-0">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(record.StoredUtc, DateTimeKind.Utc), Format: "G"))</p></div>
+        </div>
+        @if (record.TimestampUtc is { } timestamp)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Timestamp"]</span>
+                <div class="ocat-end"><p class="form-control-plaintext mb-0">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(timestamp, DateTimeKind.Utc), Format: "G"))</p></div>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(record.Registration))
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Registration"]</span>
+                <div class="ocat-end"><p class="form-control-plaintext mb-0"><a href="@Url.RouteUrl("LearningStatements", new Dictionary<string, string> { ["Options.Registration"] = record.Registration })"><code>@record.Registration</code></a></p></div>
+            </div>
+        }
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Stored by"]</span>
+            <div class="ocat-end"><p class="form-control-plaintext mb-0">@(record.ClientId ?? record.AuthorityKey)</p></div>
+        </div>
+        @if (record.Voided)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Voided by"]</span>
+                <div class="ocat-end"><p class="form-control-plaintext mb-0"><a href="@Url.RouteUrl("LearningStatement", new { id = record.VoidedBy })"><code>@record.VoidedBy</code></a></p></div>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(record.TargetStatementId))
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@(record.IsVoiding ? T["Voids"] : T["Refers to"])</span>
+                <div class="ocat-end"><p class="form-control-plaintext mb-0"><a href="@Url.RouteUrl("LearningStatement", new { id = record.TargetStatementId })"><code>@record.TargetStatementId</code></a></p></div>
+            </div>
+        }
+        @if (record.Attachments.Count > 0)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Attachments"]</span>
+                <div class="ocat-end">
+                    <ul class="list-unstyled form-control-plaintext mb-0">
+                        @foreach (var attachment in record.Attachments)
+                        {
+                            <li>@attachment.ContentType, @T["{0} bytes", attachment.Length] <code class="small">@attachment.Sha2</code></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Statement as stored"]</div>
+    <div class="card-body">
+        <p class="hint">@T["The times inside the statement are in UTC, as xAPI stores them; the times above are in your time zone."]</p>
+        <pre class="mb-0 small"><code>@Model.Json</code></pre>
+    </div>
+</div>

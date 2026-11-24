@@ -18,7 +18,7 @@ Provides recipe steps for all modules.
 
 ## In the admin
 
-Under **Tools > Recipes**, the feature adds a description and tags to every recipe, and a search box, so an administrator can read what a recipe does before running it. Under **Tools > Deployments > JSON Import**, the **Recipe JSON** editor uses the step schemas to suggest step names and settings as you type and to underline mistakes before anything is imported. To export the setup of a site as a recipe, build a deployment plan under **Tools > Deployments > Plans** and execute it to a file.
+Under **Tools** → **Recipes**, the feature adds a description and tags to every recipe, and a search box, so an administrator can read what a recipe does before running it. Under **Tools** → **Deployments** → **JSON Import**, the **Recipe JSON** editor uses the step schemas to suggest step names and settings as you type and to underline mistakes before anything is imported. To export the setup of a site as a recipe, build a deployment plan under **Tools** → **Deployments** → **Plans** and execute it to a file.
 
 <YouTube video="recipes" title="Video of the recipe catalog, the JSON editor and a deployment plan" />
 
@@ -42,7 +42,7 @@ The repository's `CrestApps.OrchardCore.RecipeSchemaExporter` utility now instan
 
 ## AI profile creation from templates
 
-The AI module contributes a `CreateAIProfileFromTemplate` recipe step for creating or updating profiles from reusable AI templates whose source is **Profile**.
+The AI module contributes a `CreateAIProfileFromTemplate` recipe step for creating or updating profiles from reusable AI templates whose source is **Profile**. Like the New AI Profile flow, it runs the template application handlers (`IAIProfileTemplateApplicationHandler`) before it saves the profile, so features that finish a profile made from their template (such as Learning AI's tutor mark) apply to recipes too.
 
 ```json
 {

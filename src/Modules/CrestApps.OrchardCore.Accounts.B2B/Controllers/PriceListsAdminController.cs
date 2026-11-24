@@ -21,7 +21,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Accounts.B2B.Controllers;
 
 /// <summary>
-/// Commerce › Price lists: the prices accounts buy at, chosen on each account.
+/// Commerce › Price Lists: the prices accounts buy at, chosen on each account.
 /// </summary>
 [Admin("b2b/price-lists/{action}/{itemId?}", "PriceLists{action}")]
 public sealed class PriceListsAdminController : Controller

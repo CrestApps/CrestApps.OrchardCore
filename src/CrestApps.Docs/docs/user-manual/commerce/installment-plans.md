@@ -14,7 +14,7 @@ Customers can also set up a plan themselves: when they pay an outstanding balanc
 
 | | |
 | --- | --- |
-| **Menu** | Subscriptions > Installment Plans |
+| **Menu** | **Subscriptions** → **Installment Plans** |
 | **Permission** | Manage installment plans and charge customers' saved cards |
 | **Feature** | Subscriptions - Installment Plans |
 
@@ -42,13 +42,13 @@ A plan is made of:
 
 The rest of the total is split into equal payments. When it does not divide exactly, the last payment takes the difference, so the schedule always adds up to the total. Monthly and three-monthly payments fall on the same day of the month as the first one; in a shorter month they fall on its last day.
 
-Nothing is scheduled until the down payment (or, without one, the first payment) is received. Every payment on the plan, the down payment included, is also a [transaction](transactions.md), so it appears in **Commerce > Transactions** and in the customer's **My Transactions**, and a payment that was received can be refunded from **Commerce > Payments** like any other (see [Payments and refunds](payments-and-refunds.md)).
+Nothing is scheduled until the down payment (or, without one, the first payment) is received. Every payment on the plan, the down payment included, is also a [transaction](transactions.md), so it appears in **Commerce** → **Transactions** and in the customer's **My Transactions**, and a payment that was received can be refunded from **Commerce** → **Payments** like any other (see [Payments and refunds](payments-and-refunds.md)).
 
 ## Create a plan
 
 <YouTube video="installment-plans" title="Video of creating an installment plan" start={135} end={200} />
 
-1. Open **Subscriptions > Installment Plans** and click **New plan**.
+1. Open **Subscriptions** → **Installment Plans** and click **New plan**.
 2. In **Customer**, choose who is paying (see [Pick or create the customer](#pick-or-create-the-customer)).
 3. Fill in the **Plan** card. The **Schedule** card at the bottom of the page shows every payment, its due date and its amount as you type.
 4. In **Collecting the payments**, choose how the scheduled payments are collected.
@@ -139,7 +139,7 @@ The page then says whether the payment was charged and received, or that it was 
 2. Click **Cancel the plan**.
 3. In the confirmation, click **Cancel the plan** again, or **Keep the plan**.
 
-Payments already received stay received and can be refunded from **Commerce > Payments**. Payments not yet received are canceled and will not be collected. When the plan had started, the customer is notified that it was canceled, with how much was received. A plan still **Waiting for down payment** took nothing from the customer, so no notice is sent.
+Payments already received stay received and can be refunded from **Commerce** → **Payments**. Payments not yet received are canceled and will not be collected. When the plan had started, the customer is notified that it was canceled, with how much was received. A plan still **Waiting for down payment** took nothing from the customer, so no notice is sent.
 
 ## When a card is declined
 
@@ -147,7 +147,7 @@ Payments already received stay received and can be refunded from **Commerce > Pa
 
 When the plan charges the card, each payment is charged on its due date. If the card is declined:
 
-1. The payment is marked **Failed**, and its transaction in **Commerce > Transactions** shows **Failed** too. The plan becomes **Past due**, and the customer is notified that the payment could not be taken and when it will be tried again.
+1. The payment is marked **Failed**, and its transaction in **Commerce** → **Transactions** shows **Failed** too. The plan becomes **Past due**, and the customer is notified that the payment could not be taken and when it will be tried again.
 2. The card is tried again after the number of days set in **Retry a declined card after (days)**, by default 1, 3 and 5 days after each failure.
 3. After the last retry, the payment becomes **Due**: an outstanding balance the customer pays themselves from **My Transactions**. The customer is told the payment is overdue, and the site's overdue payment reminders take over (see [Transactions](transactions.md)).
 
@@ -204,17 +204,17 @@ A customer paying an outstanding balance, from **My Transactions** or from the l
 2. Once the first payment is received, the plan is **Active**, the original balance is canceled because the plan replaces it, and the remaining payments are charged to the saved card on their due dates, exactly like a plan you set up yourself.
 3. If the customer leaves checkout without paying, the plan is closed and they still owe the original balance.
 
-You turn this on in **Settings > Installment Plans**, in the **Installments at checkout** section (see [Change the plan settings](#change-the-plan-settings)): pick the kinds of balance it is offered for in **Offer for balances from**, and the choices in **Numbers of payments offered**. Other parts of your site can offer their own choices too, for example a registration that lets families pay a season fee in three payments.
+You turn this on in **Settings** → **Installment Plans**, in the **Installments at checkout** section (see [Change the plan settings](#change-the-plan-settings)): pick the kinds of balance it is offered for in **Offer for balances from**, and the choices in **Numbers of payments offered**. Other parts of your site can offer their own choices too, for example a registration that lets families pay a season fee in three payments.
 
 Installments are offered only for a balance still owed in full by a customer with an account, and only when a payment provider that can keep a card, such as Stripe, is enabled. A balance that is already a plan payment, or a recurring charge, is never split again.
 
-A plan a customer chose appears in **Subscriptions > Installment Plans** like any other. While its first payment has not been paid, its page says *The customer chose this plan at checkout and has not paid the first payment yet.* and has no **Take the down payment** button: the customer pays it in their own checkout.
+A plan a customer chose appears in **Subscriptions** → **Installment Plans** like any other. While its first payment has not been paid, its page says *The customer chose this plan at checkout and has not paid the first payment yet.* and has no **Take the down payment** button: the customer pays it in their own checkout.
 
 ## Change the plan settings
 
 <YouTube video="installment-plans" title="Video of the installment plan settings" start={87} end={135} />
 
-The plan settings are on **Settings > Installment Plans**, which needs the **Manage installment plans and charge customers' saved cards** permission.
+The plan settings are on **Settings** → **Installment Plans**, which needs the **Manage installment plans and charge customers' saved cards** permission.
 
 | Field | What it does |
 | --- | --- |
@@ -230,14 +230,14 @@ The plan settings are on **Settings > Installment Plans**, which needs the **Man
 | **Payments fall due** | **Every week**, **Every two weeks**, **Every month** or **Every three months**. |
 | **Smallest balance** | Balances below this amount can only be paid in full. **0** allows any balance. |
 
-How many days before a due date the customer is reminded is set in **Remind before the due date (days)** under **Settings > Commerce > Transactions** (see [Transactions](transactions.md)).
+How many days before a due date the customer is reminded is set in **Remind before the due date (days)** under **Settings** → **Commerce** → **Transactions** (see [Transactions](transactions.md)).
 
 ## Tips and troubleshooting
 
 - **The menu or New plan is missing.** Ask your administrator to enable **Subscriptions - Installment Plans** and to give you the **Manage installment plans and charge customers' saved cards** permission. The feature does not need **Subscriptions** or **Products** to be enabled.
-- **Customers don't see Choose how to pay.** Check **Settings > Installment Plans**: the kind of balance must be ticked in **Offer for balances from** and **Numbers of payments offered** must not be empty. The balance must be owed in full by a customer with an account, and a payment provider that can keep a card must be enabled.
+- **Customers don't see Choose how to pay.** Check **Settings** → **Installment Plans**: the kind of balance must be ticked in **Offer for balances from** and **Numbers of payments offered** must not be empty. The balance must be owed in full by a customer with an account, and a payment provider that can keep a card must be enabled.
 - **The down payment page has no card form.** No payment provider that can keep a card is enabled. Ask your administrator to set one up, such as Stripe.
 - **The customer cannot sign in.** A customer created from the plan has no password. Ask them to use **Forgot password** on the sign-in page with the email you entered.
 - **The card has changed.** The plan keeps the card used for the down payment. Use **Charge now** only after the customer confirms the card works; otherwise let the declined payment become due so the customer pays it themselves from **My Transactions**.
 - **You need to change the amounts or dates.** A plan cannot be edited after it is created. Cancel it and create a new one for the remaining balance.
-- **Refund a payment.** Open the payment's **Transaction**, or go to **Commerce > Payments**, and refund it there. See [Payments and refunds](payments-and-refunds.md).
+- **Refund a payment.** Open the payment's **Transaction**, or go to **Commerce** → **Payments**, and refund it there. See [Payments and refunds](payments-and-refunds.md).

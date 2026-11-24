@@ -1,0 +1,14 @@
+@model ShapeViewModel<ClassSessionRow>
+
+@if (Model.Value.Session.Status == SchedulingSessionStatus.Cancelled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-danger me-1" aria-hidden="true"></i>@T["Cancelled"]</span>
+}
+else if (Model.Value.Taken >= Model.Value.Session.Capacity)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle text-warning me-1" aria-hidden="true"></i>@T["Full"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle text-success me-1" aria-hidden="true"></i>@T["Scheduled"]</span>
+}

@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Payments;
 using CrestApps.OrchardCore.AgenticCommerce.Recipes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.SigningKeys;
 using CrestApps.OrchardCore.Stripe.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -49,6 +50,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAgentCheckoutService, AgentCheckoutService>()
             .AddScoped<IAgentItemResolver, ProductAgentItemResolver>()
             .AddScoped<IMerchantSigningKeyService, MerchantSigningKeyService>()
+            .AddScoped<ISigningKeyImportSource, MerchantSigningKeyImportSource>()
             .AddScoped<AgentSiteUrls>();
 
         services
@@ -63,7 +65,10 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<AgenticCommerceAdminMenu>();
 
         services.AddSingleton<IBackgroundTask, AgentCheckoutExpiryBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, MerchantKeyRotationBackgroundTask>();
+        // The store's signing keys are a key set of the shared signing keys, in Orchard Core Secrets; its rotation task
+        // replaces the store's own.
+        services.AddSigningKeys();
+        services.AddSigningKeySet(MerchantSigningKeyService.KeySet, MerchantSigningKeyService.Configure);
 
         services.AddRecipeExecutionStep<AgentPlatformsStep>();
     }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Records;
 using Microsoft.AspNetCore.Authorization;
@@ -56,6 +57,7 @@ public sealed class OrderRecordSource : IRecordSource
     public string Kind => OrderConstants.RecordKind;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource DisplayName => LocalizationSource.Create<OrderRecordSource>("Order");
 
     /// <inheritdoc/>

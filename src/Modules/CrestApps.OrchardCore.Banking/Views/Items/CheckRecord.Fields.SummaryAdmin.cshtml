@@ -1,4 +1,11 @@
 @model ShapeViewModel<CheckRecord>
 
-<span class="fw-semibold">@T["Check {0}", Model.Value.Number]</span>
+@if (Model.Value.Number > 0)
+{
+    <span class="fw-semibold">@T["Check {0}", Model.Value.Number]</span>
+}
+else
+{
+    <span class="fw-semibold">@T["No number yet"]</span>
+}
 <span class="text-secondary ms-1">@Model.Value.BankAccountName</span>

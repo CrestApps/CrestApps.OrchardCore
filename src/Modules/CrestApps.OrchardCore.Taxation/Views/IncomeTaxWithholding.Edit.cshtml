@@ -59,6 +59,16 @@
                 <span class="hint">@T["What one allowance on an older withholding form lowers a year's income by; empty for none."]</span>
             </div>
         </div>
+        @if (Model.ShowDeductedTaxCodes)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="DeductedTaxCodes" class="ocat-label">@T["Deducts the taxes"]</label>
+                <div class="ocat-end">
+                    <input asp-for="DeductedTaxCodes" class="form-control text-uppercase" style="max-width: 24rem" placeholder="US-SS-EE, US-MED-EE, US-MED-ADD" />
+                    <span class="hint">@T["The codes, separated by commas, of the employee's taxes of the same pay deducted from the income withheld on (up to the method's yearly limit), such as Social Security and Medicare; empty for none."]</span>
+                </div>
+            </div>
+        }
     </div>
 </div>
 

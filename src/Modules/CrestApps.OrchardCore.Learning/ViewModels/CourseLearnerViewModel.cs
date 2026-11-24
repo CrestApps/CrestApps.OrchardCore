@@ -1,0 +1,70 @@
+using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Learning.Services;
+
+namespace CrestApps.OrchardCore.Learning.ViewModels;
+
+/// <summary>
+/// The learner's block on a course page: where they stand, what they can do next, and the outline.
+/// </summary>
+public class CourseLearnerViewModel
+{
+    public CoursePart Part { get; set; }
+
+    public string CourseId { get; set; }
+
+    public bool SignedIn { get; set; }
+
+    public bool CanSelfEnroll { get; set; }
+
+    public bool IsStaff { get; set; }
+
+    public Enrollment Enrollment { get; set; }
+
+    public EnrollmentProgress Progress { get; set; }
+
+    public CourseOutline Outline { get; set; }
+
+    /// <summary>
+    /// Gets or sets the items locked to the enrolled learner, or <see langword="null"/> when the visitor is not enrolled.
+    /// </summary>
+    public IDictionary<string, ReleaseDecision> LockedItems { get; set; }
+
+    public IDictionary<string, string> KindIcons { get; set; } = new Dictionary<string, string>();
+
+    public IDictionary<string, string> KindNames { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the links of the course completion panel, for a completed enrollment.
+    /// </summary>
+    public IReadOnlyList<CourseCompletionLink> CompletionLinks { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the public address of the course's cover picture, or <see langword="null"/> without one.
+    /// </summary>
+    public string CoverUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many items count toward completion.
+    /// </summary>
+    public int RequiredCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many of the items that count toward completion the learner completed.
+    /// </summary>
+    public int CompletedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the item the learner continues with: the first one neither completed nor locked.
+    /// </summary>
+    public CourseOutlineEntry NextItem { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the course is between its start and end dates.
+    /// </summary>
+    public CourseSchedule Schedule { get; set; }
+
+    /// <summary>
+    /// Gets or sets the course's categories, each as its path of names, such as "Leadership > Coaching".
+    /// </summary>
+    public IList<string> Categories { get; set; } = [];
+}

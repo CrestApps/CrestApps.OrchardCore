@@ -1238,6 +1238,20 @@ These tools act for the signed-in person using the AI, with that person's access
 | `moveCalendarEvent` | Moves an event, or one occurrence of a repeating event, to another time. |
 | `cancelCalendarEvent` | Cancels an event, or one occurrence of a repeating event. |
 
+### Learning tools
+
+**Available when:** `CrestApps.OrchardCore.Learning.AI` on (`explainMyQuizResult` also needs `CrestApps.OrchardCore.Learning.Assessments`)
+
+These tools act for the signed-in person using the AI and refuse anonymous callers. The learner tools need **Access learning** and read only the person's own enrollments and attempts; the staff tools list only learners in the person's scope (everyone with **View learner records**, the learners of the courses the person teaches, or the people the person manages). See [Learning AI](../modules/learning-ai.md#learning-ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `getMyLearningProgress` | Lists the learner's courses with their status, progress, due date, access end and course grade. |
+| `getMyNextLesson` | Finds the next lesson the learner has not completed and may open now, with its link. |
+| `explainMyQuizResult` | Gets the learner's quiz result: the score when the quiz shows it, and the questions, answers, right answers and feedback only when the quiz's review policy allows. |
+| `listOverdueLearners` | Lists the learners whose course is past its due date, within the caller's scope. |
+| `listLearnersExpiringSoon` | Lists the learners whose access to a course ends within the coming days, within the caller's scope. |
+
 ### Scheduling tools
 
 **Available when:** `CrestApps.OrchardCore.Scheduling` with `CrestApps.OrchardCore.AI` on

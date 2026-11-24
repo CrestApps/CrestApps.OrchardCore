@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Dispatch/Assets/js/field-app.js
+	// src/Modules/CrestApps.OrchardCore.Dispatch/Assets/js/field-app.js
 	(function() {
 		"use strict";
 		const root = document.getElementById("field-app");
@@ -892,5 +892,4 @@
 			scheduleSync(syncEveryMs);
 		})();
 	})();
-	//#endregion
 })();

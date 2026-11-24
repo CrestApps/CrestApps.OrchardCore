@@ -185,7 +185,9 @@ it to the `Account` type at position 4; another account type can be given the pa
   account.
 - **Index.** `AccountMemberIndex` (`AccountContentItemId`, `UserId`, `Published`, `Latest`) holds one row per member
   of each version.
-- **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for;
+- **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for, and
+  the `FindMembershipAsync(user)` extension returns that account with the signed-in user's member entry and whether
+  they are an admin (`AccountMembership`), so a page and its account menu link agree on who may open it;
   `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one;
   `GetMemberUserIdsAsync(accountId)` returns the user ids of the members of the published account, and
   `GetMembersAsync(accountId)` its members with their roles.
@@ -204,6 +206,31 @@ limit that way:
 var account = await accountMemberService.FindAccountAsync(userId);
 var member = account?.Get<AccountMembersPart>()?.FindMember(userId);
 ```
+
+### Invitations
+
+An account admin invites people by e-mail instead of asking an administrator to add them. `IAccountInvitationService`
+(in `Accounts.Abstractions`, with the default in `Accounts.Core`) keeps each invitation as an `AccountInvitation` in the
+`AccountInvitations` collection:
+
+| Method | What it does |
+| --- | --- |
+| `InviteAsync(request)` | Makes an invitation for an e-mail and a role, valid 14 days unless the request says otherwise, and returns the link token once. Only the SHA-256 hash of the token is stored. `Source` and `SourceId` say what the invitation is for, such as a course seat. |
+| `FindByTokenAsync(token)` | The invitation of a link. |
+| `AcceptAsync(token, userId)` | Adds the person as a member with the invited role. It is refused when the invitation expired, was taken back or used, when the user's e-mail is not the invited one, or when the user is a member of another account. |
+| `RevokeAsync(id, actor)` | Takes a pending invitation back. |
+
+`IAccountInvitationObserver` hears `InvitedAsync` (with the token, to send the link), `AcceptedAsync` and
+`RevokedAsync`; register one with `services.AddAccountInvitationObserver<T>()`. With Email on, the invitation e-mail
+carries the absolute link `/account/invitations/{token}` (on the site's base URL, or on the address of the request
+that sent it when no base URL is set) and the expiry in the site's time zone.
+
+**Account members** in the storefront account menu (`/account/members`) lists the members of the signed-in user's
+account; an account admin also sees the pending invitations, invites someone with a role and takes an invitation back.
+The menu offers the page only to the members of an account, and the page is not found for anyone else. The invitation page asks the person to sign in or
+register with the invited e-mail and to accept. Workflows get the **Account Invitation Sent** and **Account Invitation
+Accepted** events and the **Invite to Account** task, and the personal-data contributor exports and deletes a person's
+invitations.
 
 ## Account locations
 
@@ -262,7 +289,7 @@ needs no reference to the Accounts module to do it:
 services.Configure<AccountsAdminMenuOptions>(options => options.ShowAccountsMenu = false);
 ```
 
-The CRM does this and lists accounts under **Interaction Center > Accounts**.
+The CRM does this and lists accounts under **Interaction Center** → **Accounts**.
 
 ## Recipes and deployment
 

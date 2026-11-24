@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-reminders.js
+	// src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-reminders.js
 	(function() {
 		const settings = document.querySelector("[data-calendar-reminders]");
 		const container = document.querySelector("[data-calendar-reminders-container]");
@@ -156,5 +156,4 @@
 			if (document.visibilityState === "visible") refresh();
 		});
 	})();
-	//#endregion
 })();

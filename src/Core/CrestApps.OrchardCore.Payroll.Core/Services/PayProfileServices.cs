@@ -7,12 +7,14 @@ using CrestApps.Core;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.SensitiveData;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +33,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Services;
 /// <summary>
 /// Stores pay profiles. A profile with pay items is not deleted.
 /// </summary>
-public sealed class PayProfileStore : DocumentCatalog<EmployeePayProfile, PayProfileIndex>
+public sealed class PayProfileStore : DocumentCatalog<EmployeePayProfile, PayrollPayProfileIndex>
 {
     private readonly IStringLocalizer S;
 
@@ -55,7 +57,7 @@ public sealed class PayProfileStore : DocumentCatalog<EmployeePayProfile, PayPro
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The profile, or <see langword="null"/>.</returns>
     public Task<EmployeePayProfile> FindAsync(string staffMemberId, string employerId, CancellationToken cancellationToken = default)
-        => Session.Query<EmployeePayProfile, PayProfileIndex>(index => index.StaffMemberId == staffMemberId && index.EmployerId == employerId, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
+        => Session.Query<EmployeePayProfile, PayrollPayProfileIndex>(index => index.StaffMemberId == staffMemberId && index.EmployerId == employerId, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
 
     /// <summary>
     /// Lists the profiles matching a filter on the index.
@@ -63,8 +65,8 @@ public sealed class PayProfileStore : DocumentCatalog<EmployeePayProfile, PayPro
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The profiles.</returns>
-    public async Task<IReadOnlyList<EmployeePayProfile>> ListAsync(System.Linq.Expressions.Expression<Func<PayProfileIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => (await (filter is null ? Session.Query<EmployeePayProfile, PayProfileIndex>(collection: CollectionName) : Session.Query<EmployeePayProfile, PayProfileIndex>(filter, collection: CollectionName)).ListAsync(cancellationToken)).ToList();
+    public async Task<IReadOnlyList<EmployeePayProfile>> ListAsync(System.Linq.Expressions.Expression<Func<PayrollPayProfileIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => (await (filter is null ? Session.Query<EmployeePayProfile, PayrollPayProfileIndex>(collection: CollectionName) : Session.Query<EmployeePayProfile, PayrollPayProfileIndex>(filter, collection: CollectionName)).ListAsync(cancellationToken)).ToList();
 
     /// <summary>
     /// Counts the profiles matching a filter on the index.
@@ -72,13 +74,13 @@ public sealed class PayProfileStore : DocumentCatalog<EmployeePayProfile, PayPro
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count.</returns>
-    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<PayProfileIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => Session.QueryIndex<PayProfileIndex>(filter, collection: CollectionName).CountAsync(cancellationToken);
+    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<PayrollPayProfileIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => Session.QueryIndex<PayrollPayProfileIndex>(filter, collection: CollectionName).CountAsync(cancellationToken);
 
     /// <inheritdoc />
     protected override async ValueTask DeletingAsync(EmployeePayProfile entry)
     {
-        var items = await Session.QueryIndex<PayItemIndex>(index => index.ProfileId == entry.ItemId, collection: CollectionName).CountAsync();
+        var items = await Session.QueryIndex<PayrollPayItemIndex>(index => index.ProfileId == entry.ItemId, collection: CollectionName).CountAsync();
 
         if (items > 0)
         {
@@ -90,7 +92,7 @@ public sealed class PayProfileStore : DocumentCatalog<EmployeePayProfile, PayPro
 /// <summary>
 /// Stores pay items.
 /// </summary>
-public sealed class PayItemStore : DocumentCatalog<EmployeePayItem, PayItemIndex>
+public sealed class PayItemStore : DocumentCatalog<EmployeePayItem, PayrollPayItemIndex>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PayItemStore"/> class.
@@ -108,8 +110,8 @@ public sealed class PayItemStore : DocumentCatalog<EmployeePayItem, PayItemIndex
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The items.</returns>
-    public async Task<IReadOnlyList<EmployeePayItem>> ListAsync(System.Linq.Expressions.Expression<Func<PayItemIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => (await Session.Query<EmployeePayItem, PayItemIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
+    public async Task<IReadOnlyList<EmployeePayItem>> ListAsync(System.Linq.Expressions.Expression<Func<PayrollPayItemIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => (await Session.Query<EmployeePayItem, PayrollPayItemIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
 
     /// <summary>
     /// Counts the items matching a filter on the index.
@@ -117,8 +119,8 @@ public sealed class PayItemStore : DocumentCatalog<EmployeePayItem, PayItemIndex
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count.</returns>
-    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<PayItemIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => Session.QueryIndex<PayItemIndex>(filter, collection: CollectionName).CountAsync(cancellationToken);
+    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<PayrollPayItemIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => Session.QueryIndex<PayrollPayItemIndex>(filter, collection: CollectionName).CountAsync(cancellationToken);
 }
 
 /// <summary>
@@ -420,15 +422,22 @@ public sealed class PayItemHandler : CatalogEntryHandlerBase<EmployeePayItem>
 /// <summary>
 /// The keyed hash of tax ids: an HMAC with a random key kept once per tenant, protected by the tenant's data protection
 /// keys, so a number used twice is found without keeping it in clear, and a database backup alone can't turn the hashes
-/// back into numbers. The key is made once, under a lock; a key kept in clear by an earlier version is protected in
-/// place, with the same value, so the hashes already stored still match.
+/// back into numbers. The key is made by the Payroll migration and, when it is still missing, on first use, under a lock;
+/// a key kept in clear by an earlier version is protected in place, with the same value, so the hashes already stored
+/// still match.
 /// </summary>
+/// <remarks>
+/// The key is read and saved through the scope's own session, in its unit of work: a second session would be a second
+/// writer, which SQLite refuses ("database is locked") while the scope's session holds its write transaction, as it does
+/// in a recipe or an import that saved records before it hashed a tax id. A key made on first use is committed with the
+/// work that first used it, so a hash is never kept without its key.
+/// </remarks>
 public sealed class PayrollTaxIdHasher
 {
     /// <summary>The data protection purpose of the key.</summary>
     public const string KeyPurpose = "CrestApps.OrchardCore.Payroll.TaxIdHashKey";
 
-    private readonly IStore _store;
+    private readonly ISession _session;
     private readonly Microsoft.AspNetCore.DataProtection.IDataProtectionProvider _dataProtection;
     private readonly global::OrchardCore.Locking.Distributed.IDistributedLock _locks;
     private byte[] _key;
@@ -436,12 +445,12 @@ public sealed class PayrollTaxIdHasher
     /// <summary>
     /// Initializes a new instance of the <see cref="PayrollTaxIdHasher"/> class.
     /// </summary>
-    /// <param name="store">The store, for a session of its own that reads and saves the key.</param>
+    /// <param name="session">The scope's session, which reads and saves the key in the scope's unit of work.</param>
     /// <param name="dataProtection">The data protection provider that protects the key.</param>
     /// <param name="locks">The distributed lock, so the key is made once.</param>
-    public PayrollTaxIdHasher(IStore store, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtection, global::OrchardCore.Locking.Distributed.IDistributedLock locks)
+    public PayrollTaxIdHasher(ISession session, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtection, global::OrchardCore.Locking.Distributed.IDistributedLock locks)
     {
-        _store = store;
+        _session = session;
         _dataProtection = dataProtection;
         _locks = locks;
     }
@@ -464,6 +473,13 @@ public sealed class PayrollTaxIdHasher
     }
 
     /// <summary>
+    /// Makes the key when the tenant has none yet, and protects a key an earlier version kept in clear.
+    /// </summary>
+    /// <returns>A task.</returns>
+    public Task EnsureKeyAsync()
+        => GetKeyAsync();
+
+    /// <summary>
     /// Keeps only a tax id's letters and digits, in upper case.
     /// </summary>
     /// <param name="taxId">The tax id.</param>
@@ -481,12 +497,9 @@ public sealed class PayrollTaxIdHasher
         var protector = global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.CreateProtector(_dataProtection, KeyPurpose);
 
         // Read first without the lock: once the key is made and protected, every later read is just this.
-        await using (var reader = _store.CreateSession())
+        if (await ReadAsync() is { ProtectedTaxIdHashKey.Length: > 0 } ready)
         {
-            if (await reader.Query<PayrollKeys>(collection: PayrollConstants.CollectionName).FirstOrDefaultAsync() is { ProtectedTaxIdHashKey.Length: > 0 } ready)
-            {
-                return _key = Convert.FromBase64String(global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.Unprotect(protector, ready.ProtectedTaxIdHashKey));
-            }
+            return _key = Convert.FromBase64String(global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.Unprotect(protector, ready.ProtectedTaxIdHashKey));
         }
 
         var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:TaxIdHashKey", TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1));
@@ -498,10 +511,7 @@ public sealed class PayrollTaxIdHasher
 
         await using (locker)
         {
-            // In a session of its own, committed before the lock is let go: another one waiting reads the key made.
-            await using var session = _store.CreateSession();
-            var stored = await session.Query<PayrollKeys>(collection: PayrollConstants.CollectionName).FirstOrDefaultAsync();
-            string key;
+            var stored = await ReadAsync();
 
             if (stored is { ProtectedTaxIdHashKey.Length: > 0 })
             {
@@ -509,17 +519,21 @@ public sealed class PayrollTaxIdHasher
             }
 
             // A key kept in clear by an earlier version keeps its value, so the hashes already stored still match.
-            key = stored is { TaxIdHashKey.Length: > 0 } ? stored.TaxIdHashKey : Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            var key = stored is { TaxIdHashKey.Length: > 0 } ? stored.TaxIdHashKey : Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
             stored ??= new PayrollKeys();
             stored.ProtectedTaxIdHashKey = global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.Protect(protector, key);
             stored.TaxIdHashKey = null;
 
-            await session.SaveAsync(stored, false, PayrollConstants.CollectionName);
-            await session.SaveChangesAsync();
+            await _session.SaveAsync(stored, false, PayrollConstants.CollectionName);
+            await _session.FlushAsync();
 
             return _key = Convert.FromBase64String(key);
         }
     }
+
+    private Task<PayrollKeys> ReadAsync()
+        => _session.Query<PayrollKeys>(collection: PayrollConstants.CollectionName).FirstOrDefaultAsync();
 }
 
 /// <summary>
@@ -717,9 +731,13 @@ public sealed class DefaultPayProfileService : IPayProfileService
 
         if (profile.WorkerType == PayWorkerType.Employee)
         {
+            var takingElections = await ElectionJurisdictionsAsync(today, cancellationToken);
+
             foreach (var jurisdiction in await JurisdictionsAsync(profile, employer, cancellationToken))
             {
-                if (profile.ElectionOn(jurisdiction, today) is null)
+                // Only a jurisdiction with a tax in effect that reads an election asks for one: a work city with no
+                // income tax, or whose tax reads the state's certificate, doesn't.
+                if ((takingElections is null || takingElections.Contains(jurisdiction)) && profile.ElectionOn(jurisdiction, today) is null)
                 {
                     blockers.Add(new PayBlocker("NoElection", S["Enter the tax election for {0}.", jurisdiction]));
                 }
@@ -774,11 +792,28 @@ public sealed class DefaultPayProfileService : IPayProfileService
         return _services.GetService<ISiteService>() is { } site && (await site.GetSettingsAsync<PayrollSettings>())?.AllowChangingOwnPay == true;
     }
 
+    // The jurisdictions whose election the tax provider in use reads on a day, or null when there is no provider or it
+    // can't tell (then every jurisdiction asks for one).
+    private async Task<HashSet<string>> ElectionJurisdictionsAsync(DateOnly day, CancellationToken cancellationToken)
+    {
+        var name = _services.GetService<ISiteService>() is { } site
+            ? (await site.GetSettingsAsync<PayrollSettings>())?.TaxProvider
+            : null;
+
+        if (TaxesPayCalculationStep.ChooseProvider(_services.GetServices<IIncomeTaxProvider>(), name) is not { } provider
+            || await provider.GetElectionJurisdictionsAsync(day, cancellationToken) is not { } jurisdictions)
+        {
+            return null;
+        }
+
+        return new HashSet<string>(jurisdictions, StringComparer.OrdinalIgnoreCase);
+    }
+
     // The jurisdictions a person needs an election for: the employer's registrations and the work site's.
     private async Task<IReadOnlyList<string>> JurisdictionsAsync(EmployeePayProfile profile, Employer employer, CancellationToken cancellationToken)
     {
         var jurisdictions = new List<string>();
-        var work = await PayrollWorkSites.JurisdictionsAsync(_services, profile, cancellationToken);
+        var work = await PayrollWorkSites.JurisdictionsAsync(_services, profile, employer, cancellationToken);
 
         // Where the person lives and works: a registration below a country (with a dash, such as CA-QC) asks for an
         // election only from the people there.

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Taxation.Models;
 using OrchardCore.Localization;
 
@@ -20,7 +21,7 @@ public sealed class IncomeTaxCategoryOptions
 /// </summary>
 /// <param name="Name">The stored name.</param>
 /// <param name="DisplayName">What people see.</param>
-public sealed record IncomeTaxCategory(string Name, LocalizationSource DisplayName);
+public sealed record IncomeTaxCategory(string Name, [property: JsonIgnore] LocalizationSource DisplayName);
 
 /// <summary>
 /// The fields of a tax election for jurisdictions, such as a country pack's withholding form (Form W-4, TD1).
@@ -36,6 +37,7 @@ public sealed class ElectionFieldSet
     /// <summary>
     /// Gets or sets the set's name, such as the form it follows.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
@@ -60,7 +62,7 @@ public sealed class ElectionFieldSet
 /// <param name="Name">The stored name.</param>
 /// <param name="Label">The label.</param>
 /// <param name="Kind">The kind of value.</param>
-public sealed record ElectionField(string Name, LocalizationSource Label, ElectionFieldKind Kind)
+public sealed record ElectionField(string Name, [property: JsonIgnore] LocalizationSource Label, ElectionFieldKind Kind)
 {
     /// <summary>
     /// Gets the choices of a choice field, by stored value.

@@ -1,0 +1,19 @@
+@{
+    var model = (EnrollmentListViewModel)Model.Model;
+}
+<div class="btn-group filter">
+    <select name="courseId" form="enrollments-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Course"]" data-dropdown-align-right="auto" aria-label="@T["Course"]" data-learning-filter>
+        @foreach (var option in model.CourseOptions)
+        {
+            <option value="@option.Value" selected="@(option.Value == (model.CourseId ?? string.Empty))">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="status" form="enrollments-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" data-learning-filter>
+        @foreach (var option in model.StatusOptions)
+        {
+            <option value="@option.Value" selected="@(option.Value == (model.Status ?? string.Empty))">@option.Text</option>
+        }
+    </select>
+</div>

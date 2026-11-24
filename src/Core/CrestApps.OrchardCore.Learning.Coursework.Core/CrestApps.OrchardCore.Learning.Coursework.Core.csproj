@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Coursework.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Coursework Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services of Learning coursework: the coursework course item kind, submissions with files in the protected
+      store, late marking and resubmission, rubric scoring, grading and regrading with a reason, the grade reported to the
+      course grade, and the submissions in the grading list.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Coursework Submissions Rubrics Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Learning.Coursework" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Coursework.Abstractions\CrestApps.OrchardCore.Learning.Coursework.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.FileStorage.Core\CrestApps.OrchardCore.FileStorage.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Assessments.Core\CrestApps.OrchardCore.Learning.Assessments.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

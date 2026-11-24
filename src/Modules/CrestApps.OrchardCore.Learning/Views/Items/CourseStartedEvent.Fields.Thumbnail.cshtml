@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CourseStartedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-play" aria-hidden="true"></i>
+    @T["Course Started"]
+</h4>
+<p>@T["Starts when a learner opens the first item of a course."]</p>

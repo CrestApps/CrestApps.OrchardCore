@@ -1,0 +1,20 @@
+@model LearningUserMenuViewModel
+
+@* My courses in the user menu: a link to My learning, then each active course, which opens the course player. *@
+<li>
+    <a class="dropdown-item" href="@Url.RouteUrl("LearningMyLearning")">
+        <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> @T["My courses"]
+    </a>
+</li>
+@foreach (var course in Model.Courses)
+{
+    <li>
+        <a class="dropdown-item ps-5 text-truncate learning-user-menu-course" href="@Url.RouteUrl("LearningPlayer", new { courseId = course.CourseId })" title="@course.Title">@course.Title</a>
+    </li>
+}
+@if (Model.HasMore)
+{
+    <li>
+        <a class="dropdown-item ps-5 small" href="@Url.RouteUrl("LearningMyLearning")">@T["See all"]</a>
+    </li>
+}

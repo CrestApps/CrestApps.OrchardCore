@@ -49,4 +49,4 @@ Its settings on the type (`ClassifiedPartSettings`) are `TermDays` (30) and `Req
 - `listings/post/{type}` and `listings/edit/{id}` (`PostClassifieds`, granted to Authenticated): the type's editor on the storefront.
 - `account/listings` (the `ClassifiedsOwn` shape): the owner's listings with their status, **Renew**, and a button for each upgrade.
 - `listings` (the `ClassifiedsSearch` shape): the search by type, words, and distance from where the visitor is, with a map. The map is Leaflet with OpenStreetMap tiles, loaded from cdnjs.
-- **Content > Posted listings** (`ModerateClassifieds`): the admin list of listings by status, with **Approve** and **Reject**.
+- **Content** → **Posted Listings** (`ModerateClassifieds`): the admin list of listings by status, with **Approve** and **Reject**.

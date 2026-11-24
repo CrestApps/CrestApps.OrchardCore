@@ -1,0 +1,3 @@
+@model ShapeViewModel<XapiStatementRow>
+
+<a href="@Url.RouteUrl("LearningStatement", new { id = Model.Value.Record.StatementId })" class="btn btn-primary btn-sm">@T["View"]</a>

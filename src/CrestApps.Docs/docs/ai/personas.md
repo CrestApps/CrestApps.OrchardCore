@@ -10,7 +10,7 @@ user_manual:
 # AI Personas
 
 An **AI persona** is a reusable character: who the assistant is, how it talks, the name it uses, the avatar it
-shows and the voice it speaks with. You create personas under **Artificial Intelligence → Personas**, then choose
+shows and the voice it speaks with. You create personas under **Artificial Intelligence** → **Personas**, then choose
 one on an AI profile, a profile template, a chat interaction or the **AI completion with configuration** workflow
 task.
 
@@ -31,7 +31,7 @@ The video shows how an administrator creates a persona in the admin and chooses 
 
 Enable the **AI Personas** feature (`CrestApps.OrchardCore.AI.Personas`). It adds:
 
-- **Artificial Intelligence → Personas**, guarded by the **Manage AI personas** permission;
+- **Artificial Intelligence** → **Personas**, guarded by the **Manage AI personas** permission;
 - the **AI persona** picker on AI profiles, Profile templates, chat interactions and the workflow task;
 - the persona name and avatar in AI Chat sessions, the chat widgets and Chat Interactions;
 - the `AIPersonas` recipe step and the **AI Personas** deployment step (see [Importing and exporting](#importing-and-exporting)).
@@ -46,7 +46,7 @@ instructions, label and voice.
 
 <YouTube video="ai-profiles-personas-templates" title="Video of creating a persona and choosing it in a profile" start={372} end={440} />
 
-1. Go to **Artificial Intelligence → Personas** and choose **Add Persona**.
+1. Go to **Artificial Intelligence** → **Personas** and choose **Add Persona**.
 2. Fill in:
    - **Title** and **Technical name**. Profiles link to the technical name, so it cannot change once saved.
    - **Description** (optional): helps editors choose the right persona.
@@ -145,7 +145,7 @@ together in either order.
 ### Deployment plan
 
 Enable **OrchardCore.Deployment** together with **AI Personas**. The **AI Personas** deployment step then becomes
-available when you build a deployment plan under **Tools > Deployments > Plans**. It exports either every saved
+available when you build a deployment plan under **Tools** → **Deployments** → **Plans**. It exports either every saved
 persona (**Include all saved personas**) or only the ones you select. Each exported persona keeps its technical name,
 title, description, instructions, assistant name, language, voice, avatar, owner and properties.
 

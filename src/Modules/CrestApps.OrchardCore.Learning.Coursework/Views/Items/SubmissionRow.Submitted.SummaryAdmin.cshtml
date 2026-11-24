@@ -1,0 +1,7 @@
+@model ShapeViewModel<SubmissionRow>
+
+<span class="badge ta-badge fw-normal"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.Value.Submission.SubmittedUtc, DateTimeKind.Utc), Format: "g"))</span>
+@if (Model.Value.Submission.Late)
+{
+    <span class="badge text-bg-warning fw-normal">@T["Late"]</span>
+}

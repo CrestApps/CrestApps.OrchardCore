@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Records;
@@ -18,6 +19,7 @@ public interface IRecordSource
     /// <summary>
     /// Gets the name of the kind shown to users, such as "Order".
     /// </summary>
+    [JsonIgnore]
     LocalizationSource DisplayName { get; }
 
     /// <summary>

@@ -1,0 +1,24 @@
+@model GradeCategoryRowModel
+
+@{
+    var name = $"{Model.Prefix}[{Model.Index}]";
+}
+
+<div class="row g-2 align-items-end mb-2" data-grade-category>
+    <input type="hidden" name="@(name).Id" value="@Model.Category.Id" />
+    <div class="col-12 col-md">
+        <label class="form-label">@T["Category"]</label>
+        <input type="text" name="@(name).Name" value="@Model.Category.Name" class="form-control" maxlength="100" placeholder="@T["Such as Homework"]" />
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label">@T["Weight"]</label>
+        <input type="number" step="0.01" min="0.01" name="@(name).Weight" value="@(Model.Category.Weight?.ToString(System.Globalization.CultureInfo.InvariantCulture))" class="form-control" />
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label">@T["Drop lowest"]</label>
+        <input type="number" step="1" min="0" name="@(name).DropLowest" value="@(Model.Category.DropLowest?.ToString(System.Globalization.CultureInfo.InvariantCulture))" class="form-control" />
+    </div>
+    <div class="col-12 col-md-auto">
+        <button type="button" class="btn btn-outline-danger" data-grade-category-remove title="@T["Remove the category"]" aria-label="@T["Remove the category"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+    </div>
+</div>

@@ -24,6 +24,10 @@ public class TaxationPartSettingsViewModel
     /// </summary>
     public bool AllowClassificationOverride { get; set; }
 
+    public bool ShowClassification { get; set; }
+
+    public bool ShowExternalTaxCode { get; set; }
+
     /// <summary>
     /// Gets or sets the list of available tax categories used to populate the category and
     /// classification dropdowns.

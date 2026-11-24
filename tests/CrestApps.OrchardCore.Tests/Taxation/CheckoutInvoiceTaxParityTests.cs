@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Tests.Taxation;
 
 /// <summary>
 /// A cart and an invoice with the same lines come to the same tax at every rounding level: both take their rates from the
-/// Taxation module's rules and round at the one level the site sets (Settings > Commerce > Tax calculation).
+/// Taxation module's rules and round at the one level the site sets (Settings > Commerce > Tax Calculation).
 /// </summary>
 public sealed class CheckoutInvoiceTaxParityTests
 {

@@ -398,13 +398,54 @@ public sealed class PayrollIntegrationTests
         Assert.False(refused.Succeeded);
 
         static PayHistoryRecipeStep Step(IServiceProvider services)
-            => new(
-                services.GetRequiredService<PayStatementStore>(),
-                services.GetRequiredService<IPayRunManager>(),
-                services.GetRequiredService<EmployerStore>(),
-                services.GetRequiredService<CrestApps.OrchardCore.Staff.Services.IStaffMemberManager>(),
-                services.GetRequiredService<CrestApps.OrchardCore.Numbering.INumberSequence>(),
-                services.GetRequiredService<IClock>());
+            => new(services.GetRequiredService<IPayHistoryImporter>());
+    }
+
+    [Fact]
+    public async Task PayHistory_IsImportedFromCode_AsHistory_SkippingWhatIsThere()
+    {
+        await using var harness = await PayRunTests.CreateHarnessAsync();
+        var setup = await PayRunTests.SetUpAsync(harness);
+
+        PayHistoryEntry Entry(string number)
+            => new()
+            {
+                EmployeeNumber = "1001",
+                Statement = new PayStatement
+                {
+                    Number = number,
+                    EmployerId = setup.EmployerId,
+                    PayDate = new DateOnly(2026, 2, 13),
+                    PeriodStart = new DateOnly(2026, 2, 1),
+                    PeriodEnd = new DateOnly(2026, 2, 14),
+                    Currency = "USD",
+                    Gross = 1000m,
+                    Net = 923.50m,
+                    Status = PayStatementStatus.Final,
+                    Lines =
+                    [
+                        new PayStatementLine { Type = PayLineType.Earning, PayCodeId = setup.BonusCodeId, Amount = 1000m },
+                        new PayStatementLine { Type = PayLineType.Tax, TaxCode = "US-MI-SIT", TaxCategory = "IncomeTax", Jurisdiction = "US-MI", Payer = PayLinePayer.Employee, Amount = 38.27m, TaxableWages = 1000m },
+                    ],
+                },
+            };
+
+        var first = await harness.RunAsync(async services => await services.GetRequiredService<IPayHistoryImporter>().ImportAsync([Entry("OLD-1"), Entry("OLD-2"), new PayHistoryEntry { Statement = new PayStatement { EmployerId = "nobody" } }], "Legacy import", TestContext.Current.CancellationToken));
+        var again = await harness.RunAsync(async services => await services.GetRequiredService<IPayHistoryImporter>().ImportAsync([Entry("OLD-1")], cancellationToken: TestContext.Current.CancellationToken));
+
+        var (statements, run) = await harness.RunAsync(async services =>
+        {
+            var stored = await services.GetRequiredService<PayStatementStore>().ListAsync(index => index.PayDay == 20260213);
+
+            return (stored, await services.GetRequiredService<IPayRunManager>().FindByIdAsync(stored[0].RunId));
+        }, commit: false);
+
+        // Two imported Paid into one historical run of the pay date, one refused; run again, the statement is skipped.
+        Assert.Equal((2, 0), (first.Imported.Count, first.Skipped));
+        Assert.Single(first.Errors);
+        Assert.Equal((0, 1), (again.Imported.Count, again.Skipped));
+        Assert.All(statements, statement => Assert.Equal(PayStatementStatus.Paid, statement.Status));
+        Assert.Equal((PayRunType.Historical, PayRunStatus.Paid, "Legacy import", 2), (run.Type, run.Status, run.ProcessedBy, run.Totals.Statements));
     }
 
     [Fact]

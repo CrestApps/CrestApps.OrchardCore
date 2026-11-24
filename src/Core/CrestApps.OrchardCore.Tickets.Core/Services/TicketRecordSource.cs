@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -54,6 +55,7 @@ public sealed class TicketRecordSource : IRecordSource
     public string Kind => TicketsConstants.RecordKind;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource DisplayName => LocalizationSource.Create<TicketRecordSource>("Ticket");
 
     /// <inheritdoc/>

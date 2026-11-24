@@ -1,0 +1,79 @@
+@using CrestApps.OrchardCore.Skills.IssuedCertificates.ViewModels
+@model CertificateVerificationViewModel
+
+@{
+    ViewData["Title"] = T["Verify a certificate"];
+}
+
+<meta name="robots" content="noindex, nofollow" />
+
+<div class="container my-5" style="max-width: 44rem">
+    <h1 class="h3 mb-4">@T["Verify a certificate"]</h1>
+
+    <form method="get" asp-action="Index" class="mb-4" role="search">
+        <label for="code" class="form-label">@T["Verification code"]</label>
+        <div class="input-group">
+            <input id="code" name="code" class="form-control font-monospace" value="@Model.Code" placeholder="ABCD-EFGH-JKLM-NPQR" autocomplete="off" required />
+            <button class="btn btn-primary" type="submit">@T["Verify"]</button>
+        </div>
+        <div class="form-text">@T["The code is printed on the certificate, under its QR code."]</div>
+    </form>
+
+    @if (Model.NotFound)
+    {
+        <div class="alert alert-warning" role="alert">@T["No certificate has this code. Check the code, or ask the holder for the certificate."]</div>
+    }
+
+    @if (Model.Found)
+    {
+        var (badge, text) = Model.State switch
+        {
+            CertificateVerificationState.Valid => ("bg-success text-white", T["Valid"]),
+            CertificateVerificationState.Expired => ("bg-secondary text-white", T["Expired"]),
+            CertificateVerificationState.Revoked => ("bg-danger text-white", T["Revoked"]),
+            _ => ("bg-warning text-dark", T["Not valid yet"]),
+        };
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h2 class="h4 mb-0">@Model.CertificationName</h2>
+                    <span class="badge @badge fs-6">@text</span>
+                </div>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">@T["Holder"]</dt>
+                    <dd class="col-sm-8">@(Model.HolderName ?? T["Not shown"].Value)</dd>
+                    @if (!string.IsNullOrEmpty(Model.Issuer))
+                    {
+                        <dt class="col-sm-4">@T["Issued by"]</dt>
+                        <dd class="col-sm-8">@Model.Issuer</dd>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Number))
+                    {
+                        <dt class="col-sm-4">@T["Number"]</dt>
+                        <dd class="col-sm-8">@Model.Number</dd>
+                    }
+                    <dt class="col-sm-4">@T["Issued on"]</dt>
+                    <dd class="col-sm-8">@Model.IssuedOn?.ToString("D")</dd>
+                    <dt class="col-sm-4">@T["Valid until"]</dt>
+                    <dd class="col-sm-8">@(Model.ExpiresOn?.ToString("D") ?? T["Does not expire"].Value)</dd>
+                    @if (Model.State == CertificateVerificationState.Revoked && Model.RevokedOn is not null)
+                    {
+                        <dt class="col-sm-4">@T["Revoked on"]</dt>
+                        <dd class="col-sm-8">@Model.RevokedOn?.ToString("D")</dd>
+                    }
+                    <dt class="col-sm-4">@T["Code"]</dt>
+                    <dd class="col-sm-8 font-monospace">@Model.Code</dd>
+                </dl>
+                @if (Model.Renewed)
+                {
+                    <p class="text-muted mt-3 mb-0">@T["This certificate has been renewed with a newer one."]</p>
+                }
+                @if (Model.State != CertificateVerificationState.Revoked)
+                {
+                    <a class="btn btn-outline-secondary mt-3" asp-action="Pdf" asp-route-code="@Model.Code" target="_blank"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["View the certificate"]</a>
+                }
+            </div>
+        </div>
+    }
+</div>

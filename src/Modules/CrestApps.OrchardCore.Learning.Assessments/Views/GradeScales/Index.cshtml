@@ -1,0 +1,21 @@
+@model GradeScaleListViewModel
+
+<zone Name="Title"><breadcrumb name="LearningGradeScales" title="@T["Grade scales"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col"></div>
+            <div class="col-auto"><a asp-action="Create" class="btn btn-secondary create">@T["Add a grade scale"]</a></div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="LearningGradeScales" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add a scale to show grades as letters or pass and fail."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Name"]" />
+        <admin-list-column name="Bands" position="30" title="@T["Bands"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

@@ -14,7 +14,7 @@ Refunding is kept apart from managing transactions on purpose: giving money back
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Payments, Commerce > Refunds |
+| **Menu** | **Commerce** → **Payments**, **Commerce** → **Refunds** |
 | **Permission** | Manage payments and refunds |
 | **Feature** | Transactions, together with Checkout. The two menu items appear only when Checkout is on. |
 
@@ -24,7 +24,7 @@ Refunding is kept apart from managing transactions on purpose: giving money back
 
 ## Review payments
 
-1. Open **Commerce > Payments**. The newest payments are at the top.
+1. Open **Commerce** → **Payments**. The newest payments are at the top.
 2. To narrow the list, pick a state in the **Any state** list in the list header, or a payment method in the **Any method** list. The list updates as soon as you pick.
 
 The header shows how many payments are on this page and how many match in total. Use the pager under the list to move between pages, and **Items per page** to show more or fewer rows.
@@ -62,7 +62,7 @@ The buttons on the right:
 
 <YouTube video="payments" title="Video of the payments list and a refund" start={266} end={308} />
 
-1. Open **Commerce > Payments** and find the payment. Picking **Succeeded** in the **Any state** list helps.
+1. Open **Commerce** → **Payments** and find the payment. Picking **Succeeded** in the **Any state** list helps.
 2. Click **Refund**. The **Refund payment** page shows the **Method**, the provider's **Payment** reference, how much was **Collected**, and how much is **Already refunded**.
 3. Check **Amount to refund**. It starts at everything that can still be refunded. Lower it for a partial refund.
 4. Type a **Reason**. It is kept with the refund, so anyone reading the list later knows why the money went back.
@@ -94,7 +94,7 @@ A finished refund is also recorded on the transaction it gives money back for: i
 
 ## Review refunds
 
-1. Open **Commerce > Refunds**. The newest refunds are at the top.
+1. Open **Commerce** → **Refunds**. The newest refunds are at the top.
 2. To narrow the list, pick a status in the **Any status** list in the list header, or a payment method in the **Any method** list.
 
 The row's title is the amount refunded. Its badge shows the status:
@@ -114,7 +114,7 @@ The row also shows the **Method**, when it was **Updated**, and the **Tax refund
 
 A refund **Needs manual settlement** when the site can't send the money back itself, for example for a payment method with no online refunds, or when the payment collected tax and the site can't work out how much of it to give back. Pay the customer back yourself, by bank transfer, check or through your payment provider's dashboard, then record it:
 
-1. Open **Commerce > Refunds**. Picking **Needs manual settlement** in the **Any status** list helps.
+1. Open **Commerce** → **Refunds**. Picking **Needs manual settlement** in the **Any status** list helps.
 2. Optionally, type your own reference for the repayment, such as a bank transfer number, in **Reference** on the refund's row.
 3. Click **Mark settled**, then click **Mark settled** in the confirmation box.
 

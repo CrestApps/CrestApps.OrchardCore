@@ -2,6 +2,7 @@ using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using YesSql.Indexes;
 using YesSql.Sql;
 
@@ -10,7 +11,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Indexes;
 /// <summary>
 /// Indexes pay statements.
 /// </summary>
-public sealed class PayStatementIndex : CatalogItemIndex
+public sealed class PayrollPayStatementIndex : CatalogItemIndex
 {
     /// <summary>Gets or sets the pay run.</summary>
     public string RunId { get; set; }
@@ -39,7 +40,7 @@ public sealed class PayStatementIndex : CatalogItemIndex
 /// minor units and hours are hundredths, in integer columns: on SQLite a decimal column keeps whole values as integers
 /// and the others as reals, and reading rows that mix them fails.
 /// </summary>
-public sealed class PayStatementLineIndex : MapIndex
+public sealed class PayrollPayStatementLineIndex : MapIndex
 {
     /// <summary>Gets or sets the statement.</summary>
     public string StatementId { get; set; }
@@ -90,7 +91,7 @@ public sealed class PayStatementLineIndex : MapIndex
 }
 
 /// <summary>
-/// Maps pay statements to <see cref="PayStatementIndex"/> rows.
+/// Maps pay statements to <see cref="PayrollPayStatementIndex"/> rows.
 /// </summary>
 public sealed class PayStatementIndexProvider : IndexProvider<PayStatement>
 {
@@ -106,16 +107,16 @@ public sealed class PayStatementIndexProvider : IndexProvider<PayStatement>
     public override void Describe(DescribeContext<PayStatement> context)
     {
         context
-            .For<PayStatementIndex>()
+            .For<PayrollPayStatementIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(statement => new PayStatementIndex
+            .Map(statement => new PayrollPayStatementIndex
             {
                 ItemId = statement.ItemId,
                 RunId = statement.RunId,
                 StaffMemberId = statement.StaffMemberId,
                 EmployerId = statement.EmployerId,
-                PayDay = PayStatementLineIndex.DayNumber(statement.PayDate),
+                PayDay = PayrollPayStatementLineIndex.DayNumber(statement.PayDate),
                 Number = statement.Number,
                 Status = statement.Status.ToString(),
                 VoidOf = statement.VoidOf,
@@ -124,7 +125,7 @@ public sealed class PayStatementIndexProvider : IndexProvider<PayStatement>
 }
 
 /// <summary>
-/// Maps the lines of statements that are not drafts to <see cref="PayStatementLineIndex"/> rows.
+/// Maps the lines of statements that are not drafts to <see cref="PayrollPayStatementLineIndex"/> rows.
 /// </summary>
 public sealed class PayStatementLineIndexProvider : IndexProvider<PayStatement>
 {
@@ -140,18 +141,18 @@ public sealed class PayStatementLineIndexProvider : IndexProvider<PayStatement>
     public override void Describe(DescribeContext<PayStatement> context)
     {
         context
-            .For<PayStatementLineIndex>()
+            .For<PayrollPayStatementLineIndex>()
             .ExclusiveToDocumentType()
             .Map(statement => statement.Status == PayStatementStatus.Draft
                 ? []
-                : statement.Lines.Select(line => new PayStatementLineIndex
+                : statement.Lines.Select(line => new PayrollPayStatementLineIndex
                 {
                     StatementId = statement.ItemId,
                     StaffMemberId = statement.StaffMemberId,
                     EmployerId = statement.EmployerId,
-                    PayDay = PayStatementLineIndex.DayNumber(statement.PayDate),
-                    PeriodStartDay = PayStatementLineIndex.DayNumber(statement.PeriodStart),
-                    PeriodEndDay = PayStatementLineIndex.DayNumber(statement.PeriodEnd),
+                    PayDay = PayrollPayStatementLineIndex.DayNumber(statement.PayDate),
+                    PeriodStartDay = PayrollPayStatementLineIndex.DayNumber(statement.PeriodStart),
+                    PeriodEndDay = PayrollPayStatementLineIndex.DayNumber(statement.PeriodEnd),
                     LineKey = line.Type == PayLineType.Tax ? PayAccumulators.TaxKey(line.TaxCode) : PayAccumulators.CodeKey(line.PayCodeId),
                     LineType = line.Type.ToString(),
                     Jurisdiction = line.Jurisdiction,
@@ -172,7 +173,8 @@ public sealed class PayStatementLineIndexProvider : IndexProvider<PayStatement>
 public static class PayStatementIndexSchema
 {
     /// <summary>
-    /// Adds the flat-rate wages of tax lines to the line rows of a site made before them.
+    /// Adds the flat-rate wages of tax lines to the line rows of a site made before them, unless the table has them (it
+    /// was made by a later version of <see cref="CreateAsync"/>).
     /// </summary>
     /// <param name="schemaBuilder">The schema builder.</param>
     /// <returns>A task.</returns>
@@ -180,9 +182,11 @@ public static class PayStatementIndexSchema
     {
         ArgumentNullException.ThrowIfNull(schemaBuilder);
 
-        return schemaBuilder.AlterIndexTableAsync<PayStatementLineIndex>(
-            table => table.AddColumn<long>("FlatWagesMinor", column => column.NotNull().WithDefault(0L)),
-            collection: PayrollConstants.CollectionName);
+        return IndexTableColumnCreation.AddIfMissingAsync<PayrollPayStatementLineIndex>(
+            schemaBuilder,
+            PayrollConstants.CollectionName,
+            "FlatWagesMinor",
+            table => table.AddColumn<long>("FlatWagesMinor", column => column.NotNull().WithDefault(0L)));
     }
 
     /// <summary>
@@ -196,7 +200,7 @@ public static class PayStatementIndexSchema
 
         const string collection = PayrollConstants.CollectionName;
 
-        await schemaBuilder.CreateMapIndexTableAsync<PayStatementIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollPayStatementIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("RunId", column => column.Nullable().WithLength(26))
             .Column<string>("StaffMemberId", column => column.Nullable().WithLength(26))
@@ -207,14 +211,14 @@ public static class PayStatementIndexSchema
             .Column<string>("VoidOf", column => column.Nullable().WithLength(26)),
             collection: collection);
 
-        await schemaBuilder.AlterIndexTableAsync<PayStatementIndex>(table =>
+        await schemaBuilder.AlterIndexTableAsync<PayrollPayStatementIndex>(table =>
         {
-            table.CreateIndex("IDX_PayStatementIndex_ItemId", "ItemId", "DocumentId");
-            table.CreateIndex("IDX_PayStatementIndex_Run", "RunId", "DocumentId");
-            table.CreateIndex("IDX_PayStatementIndex_Staff", "StaffMemberId", "EmployerId", "PayDay", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayStatementIndex_ItemId", "ItemId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayStatementIndex_Run", "RunId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayStatementIndex_Staff", "StaffMemberId", "EmployerId", "PayDay", "DocumentId");
         }, collection: collection);
 
-        await schemaBuilder.CreateMapIndexTableAsync<PayStatementLineIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollPayStatementLineIndex>(table => table
             .Column<string>("StatementId", column => column.WithLength(26))
             .Column<string>("StaffMemberId", column => column.Nullable().WithLength(26))
             .Column<string>("EmployerId", column => column.Nullable().WithLength(26))
@@ -230,10 +234,10 @@ public static class PayStatementIndexSchema
             .Column<long>("FlatWagesMinor", column => column.WithDefault(0L)),
             collection: collection);
 
-        await schemaBuilder.AlterIndexTableAsync<PayStatementLineIndex>(table =>
+        await schemaBuilder.AlterIndexTableAsync<PayrollPayStatementLineIndex>(table =>
         {
-            table.CreateIndex("IDX_PayStatementLineIndex_Staff", "StaffMemberId", "EmployerId", "PayDay", "DocumentId");
-            table.CreateIndex("IDX_PayStatementLineIndex_Statement", "StatementId", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayStatementLineIndex_Staff", "StaffMemberId", "EmployerId", "PayDay", "DocumentId");
+            table.CreateIndex("IDX_PayrollPayStatementLineIndex_Statement", "StatementId", "DocumentId");
         }, collection: collection);
     }
 }

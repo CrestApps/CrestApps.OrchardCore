@@ -1,0 +1,4 @@
+@model GradeScaleRowViewModel
+
+<a asp-controller="GradeScales" asp-action="Edit" asp-route-id="@Model.Scale.ItemId" class="dropdown-item">@T["Edit"]</a>
+<a asp-controller="GradeScales" asp-action="Delete" asp-route-id="@Model.Scale.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete this grade scale?"]">@T["Delete"]</a>

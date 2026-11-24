@@ -57,6 +57,10 @@ public sealed class UnitedStatesPayrollTests
 
             // A 2019 form: 2500 x 26 = 65000 - 3 x 4300 = 52100; married: 2480 + 12% of 8000 = 3440; / 26 = 132.31.
             { "2019 form, married, 3 allowances", """{ "FormYear": "2019", "FilingStatus": "MarriedFilingJointly", "Allowances": "3", "Wages": "2500" }""", 132.31m },
+
+            // A nonresident alien: 2000 x 26 = 52000 - 8600 + 16100 (the recipe's Publication 15-T amount) = 59500;
+            // single: 5800 + 22% of (59500 - 57900) = 6152; / 26 = 236.62.
+            { "Nonresident alien, single", """{ "FormYear": "2020", "FilingStatus": "Single", "NonresidentAlien": "true" }""", 236.62m },
         };
 
     [Theory]
@@ -393,9 +397,18 @@ public sealed class UnitedStatesPayrollTests
         var federal = options.For("US");
 
         Assert.Equal(UnitedStatesIncomeTax.Jurisdiction, federal.Jurisdiction);
-        Assert.Equal(["FormYear", "FilingStatus", "MultipleJobs", "Dependents", "OtherIncome", "Deductions", "ExtraWithholding", "Allowances", "Exempt"], federal.Fields.Select(field => field.Name));
+        Assert.Equal(["FormYear", "FilingStatus", "MultipleJobs", "Dependents", "OtherIncome", "Deductions", "ExtraWithholding", "Allowances", "Exempt", "NonresidentAlien"], federal.Fields.Select(field => field.Name));
         Assert.Equal(["Single", "MarriedFilingJointly", "HeadOfHousehold"], federal.Fields.Single(field => field.Name == "FilingStatus").Choices.Select(choice => choice.Value));
         Assert.Equal("*", options.For("US-CA").Jurisdiction);
+
+        // With the state certificate on, every state and local jurisdiction gets it, and the country keeps Form W-4.
+        options.FieldSets.Add(UnitedStatesStateCertificateFields.Create());
+
+        Assert.Equal("US-*", options.For("US-MI").Jurisdiction);
+        Assert.Equal("US-*", options.For("US-MI-DETROIT").Jurisdiction);
+        Assert.Equal(UnitedStatesIncomeTax.Jurisdiction, options.For("US").Jurisdiction);
+        Assert.Equal("*", options.For("CA-ON").Jurisdiction);
+        Assert.Equal(["Exemptions", "SpecialExemptions", "HeadOfHousehold", "Allowances", "ExtraWithholding", "Exempt"], options.For("US-VA").Fields.Select(field => field.Name));
     }
 
     [Fact]
@@ -429,8 +442,8 @@ public sealed class UnitedStatesPayrollTests
     {
         var rows = new[]
         {
-            new PayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261120, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 15615, TaxableWagesMinor = 200000 },
-            new PayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261106, PeriodStartDay = 20261018, PeriodEndDay = 20261031, AmountMinor = 15615, TaxableWagesMinor = 200000 },
+            new PayrollPayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261120, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 15615, TaxableWagesMinor = 200000 },
+            new PayrollPayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261106, PeriodStartDay = 20261018, PeriodEndDay = 20261031, AmountMinor = 15615, TaxableWagesMinor = 200000 },
         };
 
         var totals = PayAccumulatorService.Sum(rows, new DateOnly(2026, 11, 27), 20261101, 20261114, "USD").For(PayAccumulators.TaxKey("US-FIT"));
@@ -438,7 +451,7 @@ public sealed class UnitedStatesPayrollTests
         Assert.Equal((2000m, 4000m), (totals.PeriodTaxableWages, totals.YearTaxableWages));
 
         // A bonus withheld on at the flat rate in the same period is kept apart.
-        var withBonus = rows.Append(new PayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261118, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 110000, TaxableWagesMinor = 500000, FlatWagesMinor = 500000 });
+        var withBonus = rows.Append(new PayrollPayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261118, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 110000, TaxableWagesMinor = 500000, FlatWagesMinor = 500000 });
         var bonusTotals = PayAccumulatorService.Sum(withBonus, new DateOnly(2026, 11, 27), 20261101, 20261114, "USD").For(PayAccumulators.TaxKey("US-FIT"));
 
         Assert.Equal((7000m, 5000m), (bonusTotals.PeriodTaxableWages, bonusTotals.PeriodFlatWages));

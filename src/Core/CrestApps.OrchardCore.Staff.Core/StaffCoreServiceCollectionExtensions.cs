@@ -51,6 +51,8 @@ public static class StaffCoreServiceCollectionExtensions
         services.AddStaffLifecycleObserver<StaffRoleLifecycleObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserAudienceProvider, StaffUserAudienceProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserAudienceProvider, StaffUnlinkedUserAudienceProvider>());
+        services.AddUserAudienceRuleSource<StaffHireDateAudienceRuleSource>();
+        services.AddUserAudienceRuleSource<StaffEmploymentTypeAudienceRuleSource>();
 
         return services;
     }

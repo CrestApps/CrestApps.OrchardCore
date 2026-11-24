@@ -28,7 +28,7 @@ using YesSql;
 namespace CrestApps.OrchardCore.Inventory.Controllers;
 
 /// <summary>
-/// Commerce › Purchase orders: stock ordered from suppliers, and received at a location when it arrives.
+/// Commerce › Purchase Orders: stock ordered from suppliers, and received at a location when it arrives.
 /// </summary>
 [Feature(InventoryConstants.Features.PurchaseOrders)]
 public sealed class PurchaseOrdersAdminController : Controller

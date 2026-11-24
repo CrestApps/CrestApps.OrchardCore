@@ -4,6 +4,8 @@ title: Skills
 description: "The shared skill catalog: skills held at a 1 to 5 proficiency with effective dates, certifications that expire, certificates, the daily expiry check, the contracts other modules build on, and how Contact Center shares the catalog."
 user_manual:
   - user-manual/workforce/skills-and-certifications
+  - user-manual/learning/competencies
+  - user-manual/learning/certifications
 ---
 
 The **Skills** module keeps one skill catalog for the site. Contact Center routing and workforce scheduling read the same skills, so a person's skills are set once. It adds:
@@ -21,6 +23,23 @@ The admin screens are described in the User Manual: [Skills and Certifications](
 | `CrestApps.OrchardCore.Skills` | Skills | `CrestApps.OrchardCore.Users`, `CrestApps.OrchardCore.Resources` |
 
 Projects: `CrestApps.OrchardCore.Skills.Abstractions` (models and contracts), `CrestApps.OrchardCore.Skills.Core` (stores, indexes, services), `CrestApps.OrchardCore.Skills` (the module).
+
+## Issued certificates
+
+The site can issue certificates itself, numbered and provable in public, instead of only recording certificates someone else issued.
+
+- **`ICertificateIssuer`** (`IssueAsync`, `RenewAsync`, `RevokeAsync`, `FindByVerificationCodeAsync`) creates a record with `Source`, `SourceId` and an evidence summary, a number from `INumberSequence` when the certification says so (prefix and six digits, after any hand-recorded number with the same prefix), and a 16-character verification code (80 random bits, separate from the number). Issuing is idempotent: one certificate per certification, source and source id (a revoked one does not count), and one renewal per certificate, under a lock, committed inside it.
+- A **renewal** is a new record linked both ways (`PreviousRecordId`, `RenewedByRecordId`); the old one keeps its dates. The daily check sends no reminder for a renewed certificate and expires it quietly.
+- **Revocation** records the reason, who and when, without touching the notes. A certificate the site issued is withdrawn, never edited or deleted.
+- **`ICertificationRecordObserver`** (issued, renewed, revoked) runs after the commit; workflows (Certificate Issued, Renewed, Revoked events) and webhooks (`skills.certificate.issued`, `.renewed`, `.revoked`, without the code) listen.
+
+The **Skills: Issued Certificates** feature (`CrestApps.OrchardCore.Skills.IssuedCertificates`) prints and proves them:
+
+- The **Certificate Template** content type: paper (Letter or A4, landscape or portrait), an installed font family (embedded in each PDF, for letters beyond Latin), colors, a border, a background image (media field), the QR code position and size, and text blocks in Liquid (`Certificate.HolderName`, `Number`, `IssuedOn`, `ExpiresOn`, `Evidence`, `VerificationCode`, `VerificationUrl`; `Certification.Name`, `Issuer`, `Description`). A certification picks its template on its editor; without one the default design prints.
+- The certificate PDF, built with the PDF building block (`IPdfDocumentRenderer` in `CrestApps.OrchardCore.Pdf.Abstractions`): from the verification page, from **My certifications**, and for staff from the certificates list (a revoked one is marked revoked).
+- The **public verification page** `/certificates/verify` (by code, `/certificates/verify/{code}`), behind Orchard Core rate limits (30 lookups a minute per visitor when Rate Limits is on), marked `noindex`. It shows the least that proves the claim: holder, certification, issuer, number, dates and status.
+
+The certification editor renders through `IDisplayManager<Certification>`, so modules add cards to it with display drivers (Learning Certifications adds **Earned through learning**). The `Skills` data source (Certifications and Certificates data sets, never the code) and the personal-data contributor (exports skills and certificates; anonymizing keeps issued certificates without the name and evidence) come with the module.
 
 ## Storage
 
@@ -110,6 +129,19 @@ The `Skills` step imports certifications and skills (by id, or by name when the 
 ```
 
 The **Skills and certifications** deployment step exports every skill and certification, and optionally the assignments and certificates.
+
+## Import skills from a file
+
+With [Content Transfer](./content-transfer) on, skills and competency frameworks are a ContentTransfer import target (`SkillsImportTarget`, named `Skills.Skill`, checked by **Manage skills and certifications** (`ManageSkills`); see [Import targets that are not content types](./content-transfer#import-targets-that-are-not-content-types)). They share its background run, progress, pause and resume, and file of failed rows. The **Import** button on **Content** → **Skills** opens the import (`/Admin/import/contents/Skills.Skill`); it shows only when ContentTransfer is on. The columns are `Name`, `Category`, `Description` and `Enabled`. `SkillImportRowReader` (Skills.Core) reads each row and `SkillImporter` saves it:
+
+- A **Moodle competency framework export** (Moodle's *Export competency framework*, known by its `isframework` column): the framework row's short name is the category, and each competency becomes a skill named by its short name (or ID number), its description made plain text. Nested competencies (`parentidnumber`) are imported flat.
+- A **plain file** with a `Name` column and optional `Category`, `Description` and `Enabled` columns, in any case.
+
+Skills are matched by name in any case. A new name adds a skill; a known one in the same category, or with none, is updated (an empty cell keeps the value); a known one in another category, and a name repeated in the same batch, fail with the reason, and are listed in the failed-rows file. Importing a file again changes nothing. The framework of a Moodle export is kept on the import between batches, so a resumed import keeps it. Learning shows skills as competencies and categories as competency frameworks; see [Learning Certifications](./learning-certifications#competencies).
+
+## Reports
+
+With Reports on, the **Skill holders** report (`skills-skill-holders`, View skills) shows who holds each enabled skill today: holders and average level per skill, and one row per person and skill with the level, the effective dates and who gave it, up to 5,000 rows. The **Category (framework)** filter (`SkillsReportFilters.Category`) narrows it to one category; the date range counts the skills given or changed in it.
 
 ## Permissions
 

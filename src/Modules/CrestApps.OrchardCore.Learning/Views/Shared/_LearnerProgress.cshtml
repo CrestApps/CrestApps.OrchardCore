@@ -1,0 +1,19 @@
+@model (int Percent, int Completed, int Required, string Label)
+
+@*
+    A learner's progress in a course: the bar, and "3 of 7 complete · 43%" beside it, so the bar never stands alone at 0%.
+    The player updates both through data-learning-progress when an item completes.
+*@
+
+@{
+    var text = Model.Required > 0
+        ? T.GetString("{0} of {1} complete · {2}%", Model.Completed, Model.Required, Model.Percent).Value
+        : T.GetString("{0}% complete", Model.Percent).Value;
+}
+
+<div class="learning-progress" data-learning-progress data-completed="@Model.Completed" data-required="@Model.Required" data-text-template="@T["{0} of {1} complete · {2}%", "{0}", "{1}", "{2}"]">
+    <div class="progress" role="progressbar" aria-label="@Model.Label" aria-valuenow="@Model.Percent" aria-valuemin="0" aria-valuemax="100" aria-valuetext="@text" style="height: .5rem;">
+        <div class="progress-bar@(Model.Percent >= 100 ? " bg-success" : string.Empty)" style="width: @(Model.Percent)%"></div>
+    </div>
+    <div class="small text-body-secondary mt-1" data-learning-progress-text>@text</div>
+</div>

@@ -68,8 +68,9 @@ public sealed class ScheduleChange : CatalogItem
     public string Reason { get; set; }
 
     /// <summary>
-    /// Gets or sets what made the change: <c>Publish</c> for a republished schedule, or empty for a change made to
-    /// one shift, such as a trade or a claim.
+    /// Gets or sets what made the change: <c>Publish</c> for a republished schedule, the source of a segment another
+    /// module placed or took back (see <see cref="ShiftSegment.Source"/>), or empty for a change made to one shift, such
+    /// as a trade or a claim.
     /// </summary>
     public string Source { get; set; }
 

@@ -12,7 +12,8 @@ Instant bank account verification with Plaid for the Banking building block: a p
 - Plaid Auth over plain HTTP (`IHttpClientFactory`, the standard resilience handler, retries only for calls safe to repeat). No new package.
 - **Configuration > Settings > Plaid** (`ManagePlaidSettings`): environment, client id and the name of the Orchard secret that holds the Plaid secret. The secret is never in the settings.
 - The item is removed as soon as the numbers are read. For an account number the bank made for Plaid (tokenized), the item is kept with its access token protected, and the account goes back to unverified when the person takes back Plaid's access.
-- `POST /plaid/webhook`: the ES256 signature, age and body hash are checked, then the webhook is stored in the provider webhook inbox.
+- `POST /plaid/webhook`: the ES256 signature, age and body hash are checked once, then the webhook is stored in the provider webhook inbox and handed to every `IPlaidWebhookHandler`.
+- One Plaid setup per tenant for other modules (`CrestApps.OrchardCore.Plaid.Abstractions`): `IPlaidClient` (link tokens, public token exchange, accounts, transactions sync, institutions, item removal with the tenant's credentials), `AddPlaidWebhookHandler<T>()` and `AddPlaidCredentialsProvider<T>()` for host-supplied keys.
 
 ## Installation
 

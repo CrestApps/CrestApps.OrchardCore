@@ -1,0 +1,159 @@
+@model MyCreditsViewModel
+@using Microsoft.AspNetCore.Html
+
+@{
+    ViewData["Title"] = T["My education credits"];
+}
+
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    Func<object, IHtmlContent> content = @<text>
+    @if (Model.Balances.Count == 0)
+    {
+        <div class="mb-4">
+            @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-award", Title: T["You have no education credits yet."], Hint: T["Completing a course that awards credits, or external learning that is accepted, adds them here."]))
+        </div>
+    }
+    else
+    {
+        <div class="row g-3 mb-4">
+            @foreach (var balance in Model.Balances)
+            {
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">@balance.Name</div>
+                            <div class="fs-3 fw-semibold">@balance.Amount.ToString("0.##") <span class="fs-6 fw-normal">@balance.Unit</span></div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Entries.Count > 0)
+    {
+        <h2 class="h5">@T["Credits earned"]</h2>
+        <div class="list-group mb-4">
+            @foreach (var entry in Model.Entries)
+            {
+                <div class="list-group-item d-flex justify-content-between flex-wrap gap-2">
+                    <div>
+                        <div class="fw-semibold">@entry.Entry.Note</div>
+                        <div class="text-muted small">
+                            @T["Earned {0}", entry.Earned]
+                            @if (entry.Expires is not null)
+                            {
+                                <span>· @T["expires {0}", entry.Expires]</span>
+                            }
+                        </div>
+                    </div>
+                    <span class="fw-semibold">@entry.Entry.Amount.ToString("0.##") @entry.TypeName</span>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Submissions.Count > 0 || Model.ExternalTypes.Count > 0)
+    {
+        <h2 class="h5">@T["External learning"]</h2>
+    }
+    @if (Model.Submissions.Count > 0)
+    {
+        <div class="list-group mb-3">
+            @foreach (var item in Model.Submissions)
+            {
+                <div class="list-group-item d-flex justify-content-between flex-wrap gap-2">
+                    <div>
+                        <div class="fw-semibold">@item.Submission.Title</div>
+                        <div class="text-muted small">
+                            @item.Submission.Amount.ToString("0.##") @item.TypeName · @T["completed {0}", item.Completed]
+                            @if (!string.IsNullOrEmpty(item.Submission.ReviewNote))
+                            {
+                                <span>· @item.Submission.ReviewNote</span>
+                            }
+                        </div>
+                    </div>
+                    @switch (item.Submission.State)
+                    {
+                        case ExternalLearningState.Accepted:
+                            <span class="badge bg-success text-white align-self-center">@T["Accepted"]</span>
+                            break;
+                        case ExternalLearningState.Rejected:
+                            <span class="badge bg-secondary text-white align-self-center">@T["Rejected"]</span>
+                            break;
+                        default:
+                            <span class="badge bg-warning text-dark align-self-center">@T["Waiting for review"]</span>
+                            break;
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.ExternalTypes.Count > 0)
+    {
+        <div class="card">
+            <div class="card-body">
+                <h3 class="h6">@T["Record external learning"]</h3>
+                <form method="post" action="~/learning/credits" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    @Html.ValidationSummary()
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label" for="Form_Title">@T["What you did"]</label>
+                            <input class="form-control" id="Form_Title" name="Form.Title" value="@Model.Form.Title" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="Form_Provider">@T["Provider"]</label>
+                            <input class="form-control" id="Form_Provider" name="Form.Provider" value="@Model.Form.Provider" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="Form_CompletedOn">@T["Completed on"]</label>
+                            <input class="form-control" type="date" id="Form_CompletedOn" name="Form.CompletedOn" value="@Model.Form.CompletedOn?.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="Form_CreditTypeId">@T["Credit type"]</label>
+                            <select class="form-select" id="Form_CreditTypeId" name="Form.CreditTypeId" asp-items="Model.ExternalTypes"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="Form_Amount">@T["Credits"]</label>
+                            <input class="form-control" type="number" min="0" step="0.25" id="Form_Amount" name="Form.Amount" value="@Model.Form.Amount" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="evidence">@T["Evidence"]</label>
+                            <input class="form-control" type="file" id="evidence" name="evidence" />
+                            <div class="form-text">@T["A certificate or a transcript, up to 10 MB. Only you and reviewers can open it."]</div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">@T["Record"]</button>
+                </form>
+            </div>
+        </div>
+    }
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningMyCredits" title="@T["My education credits"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My education credits"], Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningMyCredits" title="@T["My education credits"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["My education credits"]</h1>
+        @content(null)
+    </div>
+}

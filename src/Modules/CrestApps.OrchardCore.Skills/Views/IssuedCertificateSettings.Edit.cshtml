@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Skills.IssuedCertificates.ViewModels
+@model IssuedCertificateSettingsViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Issued certificates"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="GenerateNumbers" class="form-check-input" /><label asp-for="GenerateNumbers" class="form-check-label">@T["Number the certificates the site issues"]</label><span class="hint dashed">@T["Each issued certificate gets the next number of its prefix, such as CPR-000042."]</span></div></div></div>
+        <div class="ocat-wrapper"><label asp-for="NumberPrefix" class="ocat-label">@T["Number prefix"]</label><div class="ocat-end"><input asp-for="NumberPrefix" class="form-control" style="max-width: 12rem" placeholder="CERT-" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="CertificateTemplateId" class="ocat-label">@T["Certificate template"]</label><div class="ocat-end">
+            <select asp-for="CertificateTemplateId" asp-items="Model.TemplateOptions" class="form-select" style="max-width: 24rem"><option value="">@T["The default design"]</option></select>
+            <span class="hint">@T["Certificate templates are content items of the Certificate Template type."]</span>
+            @if (!string.IsNullOrEmpty(Model.CertificationId))
+            {
+                <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" asp-controller="IssuedCertificatesAdmin" asp-action="Preview" asp-route-id="@Model.CertificationId" asp-route-area="CrestApps.OrchardCore.Skills"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Preview a certificate"]</a>
+                <span class="hint">@T["The preview uses the saved settings and template."]</span>
+            }
+        </div></div>
+    </div>
+</div>

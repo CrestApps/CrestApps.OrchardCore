@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.DataConnectors;
@@ -40,11 +41,13 @@ public sealed class DataConnectorDescriptor
     /// <summary>
     /// Gets the name shown to users.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; }
 
     /// <summary>
     /// Gets the description shown to users.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Description { get; }
 
     /// <summary>

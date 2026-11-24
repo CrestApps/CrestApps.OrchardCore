@@ -10,7 +10,7 @@ Business documents are the papers your business sends: receipts, payment request
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Business documents > Document templates, Settings > Business documents > Number series |
+| **Menu** | **Settings** → **Business Documents** → **Document Templates**, **Settings** → **Business Documents** → **Number Series** |
 | **Permission** | Manage business document templates (templates), Manage number series (number series) |
 | **Feature** | Business Documents, and Business Documents PDF for PDF files |
 
@@ -18,7 +18,7 @@ Business documents are the papers your business sends: receipts, payment request
 
 ## Add a document template
 
-1. Go to **Settings > Business documents > Document templates**.
+1. Go to **Settings** → **Business Documents** → **Document Templates**.
 2. Click **Add template**.
 3. Fill in the fields below.
 4. Click **Save**.
@@ -52,7 +52,7 @@ A document that names a template is printed with it when the template is for the
 
 ## Choose how document numbers are written
 
-1. Go to **Settings > Business documents > Number series**. Every number series of the features you have enabled is listed, such as receipts and invoices.
+1. Go to **Settings** → **Business Documents** → **Number Series**. Every number series of the features you have enabled is listed, such as receipts and invoices.
 2. For a series, change the fields below. The **Example** changes as you type.
 3. Click **Save**.
 

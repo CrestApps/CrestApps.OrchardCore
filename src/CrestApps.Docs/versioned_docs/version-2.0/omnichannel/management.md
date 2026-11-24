@@ -135,9 +135,9 @@ To load automated SMS activities:
 
 1. Enable the **SMS Omnichannel Automation** feature so the SMS channel processor is available.
 2. Create an **AI profile** (type **Chat**) with **Add initial prompt** enabled and an initial prompt written for your outreach.
-3. In **Interaction Center → Channel Endpoints**, add an **SMS** endpoint for the number you send from.
-4. In **Load Inventory**, click **Add Inventory Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
-5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.
+3. In **Interaction Center** → **Channel Endpoints**, add an **SMS** endpoint for the number you send from.
+4. In **Load Inventory**, click **Add Inventory Load** → **Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
+5. Save the load, then open its **Actions** → **Load batch** menu to generate the activities in the background.
 
 The screencast below creates an automatic SMS inventory load for the *New Customer - Welcome* subject powered by the *SMS Outreach Assistant* profile, then loads the batch to generate the automated activities.
 
@@ -201,11 +201,11 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - imports can normalize national-format phone numbers to E.164 by using the selected lead country before duplicate checks, before DNC registry lookups run, and before contact-method storage runs
 - channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
 - contact publish and update operations now keep the omnichannel contact indexes in sync automatically
-Use **Settings** -> **Content Import** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
+Use **Settings** → **Content Import** to enforce DNC checks globally for imports, and use **Settings** → **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
 
 When the import file is not already using E.164 phone numbers, select the default country represented by that file in the import UI. Files for content types with `OmnichannelContactPart` should contain leads from one country per file unless every phone number is already expressed in E.164. The picker mirrors the Local DNC country list, shows each option as `Country (+calling code)`, and is required before the import can start so phone normalization always has region context.
 
-The screencast below shows both directions. It first exports the existing contacts as a CSV workbook through the **Export** panel (choose the CSV format and the `Contact` type, then **Export Data**), then imports a batch of new leads through **Content** -> **Import** -> **Contact**. During import it selects the lead country, enables **Ignore duplicate by phone number**, and turns on **Ignore numbers on national do-not-call registries** with the **Local Do Not Call Registry** selected, so any lead whose phone number is already on the DNC list is scrubbed automatically before contacts are created.
+The screencast below shows both directions. It first exports the existing contacts as a CSV workbook through the **Export** panel (choose the CSV format and the `Contact` type, then **Export Data**), then imports a batch of new leads through **Content** → **Import** → **Contact**. During import it selects the lead country, enables **Ignore duplicate by phone number**, and turns on **Ignore numbers on national do-not-call registries** with the **Local Do Not Call Registry** selected, so any lead whose phone number is already on the DNC list is scrubbed automatically before contacts are created.
 
 <YouTube video="contact-center-agent-walkthroughs" title="Video of exporting contacts and importing leads with DNC auto-scrub" start={373} end={421} />
 
@@ -338,7 +338,7 @@ The screencast below shows an agent working their assigned queue. The first call
 
 ### Scheduled activities list
 
-Navigate to **Interaction Center** -> **Activities** to review scheduled omnichannel work at `Admin/omnichannel/activities`.
+Navigate to **Interaction Center** → **Activities** to review scheduled omnichannel work at `Admin/omnichannel/activities`.
 
 The scheduled activities list now includes a **Time zone** filter alongside the existing urgency, subject, channel, and attempt filters so agents can narrow work to leads in call-safe regions. Activity summary rows also display the contact's current local time when a lead time zone is stored, and the tooltip shows the full local date/time plus the IANA time zone id so agents can confirm whether the lead is ahead of or behind their own day before opening or completing the activity.
 
@@ -385,7 +385,7 @@ The **Manage Activities** page provides a centralized interface for managing act
 
 ### Accessing the page
 
-Navigate to **Interaction Center → Management → Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
+Navigate to **Interaction Center** → **Management** → **Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
 
 Route: `Admin/omnichannel/manage-activities`
 
@@ -471,7 +471,7 @@ Each configurable entity has its own deployment step and a matching recipe step:
 | Campaigns | Omnichannel Campaigns | `OmnichannelCampaign` |
 | Subject actions | Omnichannel Subject Actions | `OmnichannelSubjectAction` |
 
-To export, open **Configuration -> Import/Export -> Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
+To export, open **Configuration** → **Import/Export** → **Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
 
 On import, entries are matched by their identifier: an entry that already exists is updated in place, and a new entry is created with its original identifier preserved. Because identifiers are preserved, cross-references (for example a campaign that points at a campaign group, or a subject action that points at a disposition) keep working after the import.
 

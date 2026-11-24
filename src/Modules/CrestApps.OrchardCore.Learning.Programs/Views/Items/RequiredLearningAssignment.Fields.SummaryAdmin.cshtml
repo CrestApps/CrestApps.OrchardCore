@@ -1,0 +1,13 @@
+@model RequiredLearningAssignmentRowViewModel
+
+<span class="fw-semibold">@Model.UserName</span>
+@if (Model.Assignment.Exemption is { } exemption)
+{
+    <div class="text-muted small">
+        @T["Exempt: {0}", exemption.Reason ?? string.Empty]
+        @if (!string.IsNullOrEmpty(exemption.EvidenceFileId))
+        {
+            <a asp-controller="RequiredLearning" asp-action="Evidence" asp-route-id="@Model.Assignment.ItemId" class="ms-1">@exemption.EvidenceFileName</a>
+        }
+    </div>
+}

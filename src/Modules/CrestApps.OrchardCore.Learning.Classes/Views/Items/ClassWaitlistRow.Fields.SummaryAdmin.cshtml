@@ -1,0 +1,7 @@
+@model ShapeViewModel<ClassWaitlistRow>
+
+<span>@Model.Value.Position. @Model.Value.Name</span>
+@if (!string.IsNullOrEmpty(Model.Value.Entry.CustomerEmail))
+{
+    <div class="admin-list-secondary">@Model.Value.Entry.CustomerEmail</div>
+}

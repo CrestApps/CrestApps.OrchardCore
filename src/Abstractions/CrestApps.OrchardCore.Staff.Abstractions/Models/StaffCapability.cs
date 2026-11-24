@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -17,11 +18,13 @@ public sealed class StaffCapability
     /// <summary>
     /// Gets or sets the name shown in the editor and filters.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets what the capability lets the person do.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Description { get; set; }
 
     /// <summary>

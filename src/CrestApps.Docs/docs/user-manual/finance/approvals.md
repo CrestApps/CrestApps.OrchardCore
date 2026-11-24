@@ -10,7 +10,7 @@ Some work needs someone else's yes before it goes ahead: a pay run before it pay
 
 | | |
 | --- | --- |
-| **Menu** | Approvals > Requests, Approvals > Policies |
+| **Menu** | **Approvals** → **Requests**, **Approvals** → **Policies** |
 | **Permission** | None to decide what you are asked; View approval requests and Manage approval requests to see others' requests; Manage approval policies |
 | **Feature** | Approvals |
 
@@ -18,7 +18,7 @@ Some work needs someone else's yes before it goes ahead: a pay run before it pay
 
 ## Decide a request
 
-1. Open the notice in your notifications, or open **Approvals > Requests**, which opens on **Waiting for me**: the requests waiting for your decision; filter them by **Type**, such as pay runs or tickets.
+1. Open the notice in your notifications, or open **Approvals** → **Requests**, which opens on **Waiting for me**: the requests waiting for your decision; filter them by **Type**, such as pay runs or tickets.
 2. Choose **Open** to see the type, what is asked, by whom, the amount, the stages and the decisions so far. **Open what this is about** shows the record itself.
 3. Choose **Approve**, or write why in **Note** and choose **Reject**. A rejection always needs a note: the person who asked sees it.
 
@@ -34,7 +34,7 @@ You don't need any Approvals permission to decide what a policy asks you to deci
 
 ## Set who may approve
 
-1. Open **Approvals > Policies** and choose **Add approval policy**. Choose what the policy approves, such as **Pay run**: the form then shows only the fields that type needs. To change a policy, choose **Edit**; what it approves can't change.
+1. Open **Approvals** → **Policies** and choose **Add approval policy**. Choose what the policy approves, such as **Pay run**: the form then shows only the fields that type needs. To change a policy, choose **Edit**; what it approves can't change.
 2. Give it a **Title** and a **Technical name**. A feature that names its policy asks for it by name (Payroll asks for `PayRunApproval`).
 3. If it is only for some requests, fill in the conditions its type offers, such as an **Amount** range and currency, or a **Scope** such as one employer for pay runs. Policies are tried by **Order**, lowest first; the first enabled one that matches a request is used. Clear **Choose this policy for requests that name none** to use it only when a feature names it.
 4. Under **Stage 1**, give the stage a title and choose **Who decides** first: anyone with a permission (pick it by its description, or search for it), anyone in a role, named users, the manager of the person the request is about, or named staff members (features can add more, such as a ticket's team). Choose **Add a rule** for more people, and set **Approvals needed**.
@@ -48,7 +48,7 @@ A policy saved before policies had one type, and that served several types or ev
 
 ## Remind approvers
 
-Apply the recipe **Automation: remind approvers** from **Configuration > Recipes**. It adds a workflow, turned off, that reminds the approvers every weekday at 9 while a request waits. Open **Workflows > Remind approvers of pending requests** to change the time, then turn it on. A workflow's approval events can be limited to one approval type. Workflows can also start when a request is asked, partly approved, when a stage is approved, when it is approved or rejected, and when it is withdrawn.
+Apply the recipe **Automation: remind approvers** from **Configuration** → **Recipes**. It adds a workflow, turned off, that reminds the approvers every weekday at 9 while a request waits. Open **Workflows** → **Remind approvers of pending requests** to change the time, then turn it on. A workflow's approval events can be limited to one approval type. Workflows can also start when a request is asked, partly approved, when a stage is approved, when it is approved or rejected, and when it is withdrawn.
 
 ## Choose how you are told
 

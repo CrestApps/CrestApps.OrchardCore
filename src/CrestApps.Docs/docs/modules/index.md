@@ -86,7 +86,7 @@ dotnet add package CrestApps.OrchardCore.Users
 # etc.
 ```
 
-After installation, enable the features under **Tools** -> **Features**, or with the `Feature` recipe step. Features
+After installation, enable the features under **Tools** → **Features**, or with the `Feature` recipe step. Features
 marked "dependency only" do not appear as a toggle; they are enabled automatically by the features that need them.
 Settings that the modules read from `appsettings.json` and environment variables are listed on the
 [Configuration](../configuration.md) page.

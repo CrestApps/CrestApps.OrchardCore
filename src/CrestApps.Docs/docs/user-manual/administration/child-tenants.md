@@ -16,7 +16,7 @@ Your platform administrator may have renamed these words for your organization. 
 
 | | |
 | --- | --- |
-| **Menu** | Child tenants > All child tenants; Child tenants > Open a child tenant; Child tenants > Access; Child tenants > Activity |
+| **Menu** | **Child tenants** → **All child tenants**; **Child tenants** → **Open a child tenant**; **Child tenants** → **Access**; **Child tenants** → **Activity** |
 | **Permission** | View child tenants; Create child tenants; Edit, suspend, resume and reload child tenants; Enable and disable features in child tenants; Remove child tenants; Manage who may enter child tenants; Enter child tenants that an access grant covers; View Audit Trail (for **Activity**) |
 | **Feature** | Parent Tenant (turned on by your platform administrator), which also turns on Audit Trail |
 
@@ -35,7 +35,7 @@ Your platform administrator may have renamed these words for your organization. 
 
 <YouTube video="tenant-hierarchy-operations" title="Video of the client list: the state filter, the sort menu, and fixing a setup that failed" start={50} end={102} />
 
-Open **Child tenants > All child tenants**. Each row shows the name, the address, the description and the state:
+Open **Child tenants** → **All child tenants**. Each row shows the name, the address, the description and the state:
 
 | State | Meaning |
 | --- | --- |
@@ -53,7 +53,7 @@ Your plan sets how many child tenants you may have. When you reach it, **Add chi
 
 <YouTube video="tenant-hierarchy" title="Video of adding a child tenant: typing its name, checking its address, picking what it starts from, and watching it go from Setting up to Running" start={195} end={228} />
 
-1. Open **Child tenants > All child tenants** and click **Add child tenant**.
+1. Open **Child tenants** → **All child tenants** and click **Add child tenant**.
 2. Type the **Name** everybody sees, for example *Northwind Traders*.
 3. Check the **Address**. It is filled in from the name, and you can change it. Use lowercase letters, digits and hyphens, 3 to 40 characters. The screen tells you at once whether the address is available.
 4. Optionally add a **Description**. Only your team sees it, in the list.
@@ -67,7 +67,7 @@ The list shows the new child tenant as **Setting up**, then **Running**. When it
 <YouTube video="tenant-hierarchy" title="Video of opening a child tenant without a password, the building icon that shows where you are, switching to another child tenant and going back" start={227} end={271} />
 
 - Click **Open** next to the child tenant in the list, or
-- open **Child tenants > Open a child tenant** and pick it from the list.
+- open **Child tenants** → **Open a child tenant** and pick it from the list.
 
 You arrive in the child tenant's admin, already signed in. Click the building icon in the top bar to see where you are, for example *You are working in Northwind Traders, through Your Firm*, and these choices:
 
@@ -91,7 +91,7 @@ When you sign out of your own site, are disabled, change your password, or lose 
 
 <YouTube video="tenant-hierarchy" title="Video of managing a child tenant: its features, suspending and resuming it, removing it, and restoring it while its removal is scheduled" start={270} end={325} />
 
-Open **Child tenants > All child tenants**, click **Manage** next to the child tenant, and pick a choice:
+Open **Child tenants** → **All child tenants**, click **Manage** next to the child tenant, and pick a choice:
 
 | Choice | What it does |
 | --- | --- |
@@ -110,7 +110,7 @@ To change several child tenants at once, tick them in the list and use the bulk 
 ### Remove a child tenant
 
 1. **Suspend** the child tenant first.
-2. Click **Manage > Remove**.
+2. Click **Manage** → **Remove**.
 3. Type the child tenant's name exactly as it is shown, and click **Remove child tenant**.
 
 If your plan keeps removed child tenants for a number of days, the child tenant shows **Removal scheduled** and you can **Restore** it until the waiting period ends. Otherwise it is removed at once with all its users, content and data, and this cannot be undone.
@@ -121,7 +121,7 @@ If your plan keeps removed child tenants for a number of days, the child tenant 
 
 People on your team never get a password for a child tenant. They open it from your site and are signed in to it automatically. **Access rules** decide who may open which child tenants, and which roles they have once they are inside. Someone who matches no rule cannot open a child tenant.
 
-Open **Child tenants > Access** for rules that cover every child tenant, or **Manage > Access** next to one child tenant for rules that cover only that one. The **Rules** table reads like a sentence: *Who in your organization*, *Can open*, *Roles inside the child tenant*. A child tenant's page also lists the rules for every child tenant, because they apply there too.
+Open **Child tenants** → **Access** for rules that cover every child tenant, or **Manage** → **Access** next to one child tenant for rules that cover only that one. The **Rules** table reads like a sentence: *Who in your organization*, *Can open*, *Roles inside the child tenant*. A child tenant's page also lists the rules for every child tenant, because they apply there too.
 
 To add a rule:
 
@@ -139,9 +139,9 @@ Give access through roles rather than one user at a time. When someone joins or 
 
 <YouTube video="tenant-hierarchy" title="Video of the activity in the Audit Trail: the tenant hierarchy events, who did each one, and the details of an event" start={366} end={398} />
 
-Everything that happens to your child tenants is recorded in the **Audit Trail**, under the **Tenant Hierarchy** category. Open **Child tenants > Activity** for the whole history, or **Manage > Activity** for one child tenant. Each line shows what happened, when, who did it, and which child tenant, with details such as the roles someone received, how they signed in, why a session ended and the network address it came from. Click **Details** for the full event.
+Everything that happens to your child tenants is recorded in the **Audit Trail**, under the **Tenant Hierarchy** category. Open **Child tenants** → **Activity** for the whole history, or **Manage** → **Activity** for one child tenant. Each line shows what happened, when, who did it, and which child tenant, with details such as the roles someone received, how they signed in, why a session ended and the network address it came from. Click **Details** for the full event.
 
-The Audit Trail keeps events for as long as its settings say, under **Settings > Audit Trail**. There you can also turn single events off.
+The Audit Trail keeps events for as long as its settings say, under **Settings** → **Audit Trail**. There you can also turn single events off.
 
 ## Kept apart from other organizations
 

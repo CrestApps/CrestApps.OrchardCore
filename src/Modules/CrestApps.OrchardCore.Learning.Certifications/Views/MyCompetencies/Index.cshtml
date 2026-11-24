@@ -1,0 +1,81 @@
+@model MyCompetenciesViewModel
+@using Microsoft.AspNetCore.Html
+
+@{
+    ViewData["Title"] = T["My competencies"];
+
+    string Level(int proficiency) => proficiency switch
+    {
+        1 => T["1 - Trainee"].Value,
+        2 => T["2 - Basic"].Value,
+        3 => T["3 - Competent"].Value,
+        4 => T["4 - Advanced"].Value,
+        _ => T["5 - Expert"].Value,
+    };
+}
+
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    Func<object, IHtmlContent> content = @<text>
+    @if (Model.Frameworks.Count == 0)
+    {
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-medal", Title: T["You hold no competencies yet."], Hint: T["Completing a course or a learning path that grants competencies adds them here."]))
+    }
+    else
+    {
+        @foreach (var framework in Model.Frameworks)
+        {
+            <h2 class="h5 mt-3">@framework.Name</h2>
+            <div class="list-group mb-3">
+                @foreach (var competency in framework.Competencies)
+                {
+                    <div class="list-group-item d-flex justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div class="fw-semibold">@competency.Name</div>
+                            @if (!string.IsNullOrEmpty(competency.Description))
+                            {
+                                <div class="text-muted small">@competency.Description</div>
+                            }
+                            <div class="text-muted small">
+                                @if (competency.Since is not null)
+                                {
+                                    <span>@T["Since {0}", competency.Since.Value.ToString("d")]</span>
+                                }
+                                @if (competency.Until is not null)
+                                {
+                                    <span>· @T["until {0}", competency.Until.Value.ToString("d")]</span>
+                                }
+                            </div>
+                        </div>
+                        <span class="badge bg-success text-white align-self-center">@Level(competency.Proficiency)</span>
+                    </div>
+                }
+            </div>
+        }
+    }
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningMyCompetencies" title="@T["My competencies"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My competencies"], Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningMyCompetencies" title="@T["My competencies"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["My competencies"]</h1>
+        @content(null)
+    </div>
+}

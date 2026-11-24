@@ -113,7 +113,7 @@ public sealed class IncomeTaxRuleSourceTests
             Assert.Contains("icon-class-fa-store", node.Classes);
         });
         Assert.Equal(["Jurisdictions", "Tables"], Assert.Single(commerceNodes[0].Items, item => item.Id == "taxation").Items.Select(item => item.Text.Value));
-        Assert.Equal(["Income tax rules"], Assert.Single(commerceNodes[1].Items, item => item.Id == "taxation").Items.Select(item => item.Text.Value));
+        Assert.Equal(["Income Tax Rules"], Assert.Single(commerceNodes[1].Items, item => item.Id == "taxation").Items.Select(item => item.Text.Value));
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public sealed class IncomeTaxRuleSourceTests
         var canada = Sources(services => new CanadaIncomeTaxStartup().ConfigureServices(services));
 
         // A United States site never sees Canada's formulas, and the other way round.
-        Assert.Equal([UnitedStatesIncomeTax.FormW4Method], unitedStates.Select(source => source.Name));
+        Assert.Equal([UnitedStatesIncomeTax.FormW4Method, UnitedStatesIncomeTax.StateCertificateMethod], unitedStates.OrderBy(source => source.Position).Select(source => source.Name));
         Assert.Equal([CanadaIncomeTax.FederalMethod, CanadaIncomeTax.ProvincialMethod, CanadaIncomeTax.QuebecMethod], canada.OrderBy(source => source.Position).Select(source => source.Name));
         Assert.All(unitedStates.Concat(canada), source => Assert.Equal(source.Name, source.Method));
     }

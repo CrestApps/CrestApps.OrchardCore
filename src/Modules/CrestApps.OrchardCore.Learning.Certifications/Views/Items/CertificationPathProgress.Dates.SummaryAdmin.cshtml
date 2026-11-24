@@ -1,0 +1,19 @@
+@model CertificationPathProgressRowViewModel
+
+@if (Model.Progress.ExpiresOn is { } expiresOn)
+{
+    <span>@T["Valid until {0}", expiresOn.ToString("d")]</span>
+    @if (Model.Progress.RenewalOpensOn is { } opensOn && Model.Progress.State == CertificationPathState.Certified)
+    {
+        <span class="small ms-1">@T["(renewal opens {0})", opensOn.ToString("d")]</span>
+    }
+}
+else if (!string.IsNullOrEmpty(Model.Progress.CurrentRecordId))
+{
+    <span>@T["Does not expire"]</span>
+}
+else
+{
+    var cycle = Model.Progress.CurrentCycle();
+    <span>@T["{0} requirement(s) met", cycle?.Evidence.Count ?? 0]</span>
+}

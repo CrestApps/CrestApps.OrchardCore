@@ -37,9 +37,9 @@ This module depends on:
 
 1. Enable **AI Memory indexing using Elasticsearch**.
 2. Enable the Orchard Core Elasticsearch feature that provides search indexes.
-3. Open **Search -> Indexing** and create an **AI Memory (Elasticsearch)** index.
+3. Open **Search** → **Indexing** and create an **AI Memory (Elasticsearch)** index.
 4. Select the embedding deployment that should be used for memory embeddings and queries.
-5. Go to **Settings -> Artificial Intelligence -> Memory** and choose that index as the **Index profile**.
+5. Go to **Settings** → **Artificial Intelligence** → **Memory** and choose that index as the **Index profile**.
 
 ## Operational notes
 

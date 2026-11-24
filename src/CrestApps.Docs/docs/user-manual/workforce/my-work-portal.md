@@ -10,13 +10,13 @@ technical_manual:
 
 | | |
 | --- | --- |
-| **Menu** | My Work > Home, Schedule, Timesheet, Time off, Shifts, Availability, Settings; Approvals and Who's working for managers |
+| **Menu** | **My Work** → **Home**, Schedule, Timesheet, Time Off, Shifts, Availability, Settings; Approvals and Who's Working for managers |
 | **Permission** | Use the My Work portal; Request time off for the time off page |
 | **Feature** | Workforce My Work Portal (it needs Workforce) |
 
 <AskYourAdmin />
 
-A user gets My Work once a manager links their user account to their worker under **Workforce > Workers** (the **User** field). Workers sign in as usual and land in the admin, where they see the **My Work** menu and only the other pages their roles allow: a worker who isn't terminated and has **Use the My Work portal** may open the admin without the **Access admin panel** permission. Addresses from before My Work moved into the admin (**/my-work/...**, such as links in older notifications) open the same page in the admin.
+A user gets My Work once a manager links their user account to their worker under **Workforce** → **Workers** (the **User** field). Workers sign in as usual and land in the admin, where they see the **My Work** menu and only the other pages their roles allow: a worker who isn't terminated and has **Use the My Work portal** may open the admin without the **Access admin panel** permission. Addresses from before My Work moved into the admin (**/my-work/...**, such as links in older notifications) open the same page in the admin.
 
 ## Pages for workers
 
@@ -25,7 +25,7 @@ A user gets My Work once a manager links their user account to their worker unde
 | **Home** | The time clock (when the worker clocks in), the next shift with its breaks and a countdown, what is on today, and the latest notifications. **Mark all read** clears the count in the menu. |
 | **Schedule** | The worker's published shifts and approved time off for the next four weeks, by day. |
 | **Timesheet** | The worker's hours for each pay period, with their punches, anything that looks off, a way to ask for a missed punch, and **Submit**. It appears when the [Time Clock](./time-clock.md) is on and their team has a time clock policy. |
-| **Time off** | What is available under each policy, a form to ask for time off (with **Check first** to see what it counts and what would happen to it), and the worker's requests, which they can withdraw, or cancel once approved. It appears when [Time Off](./time-off.md) is on. |
+| **Time Off** | What is available under each policy, a form to ask for time off (with **Check first** to see what it counts and what would happen to it), and the worker's requests, which they can withdraw, or cancel once approved. It appears when [Time Off](./time-off.md) is on. |
 | **Shifts** | Open shifts of the worker's teams they can **Claim** (or why they can't), shifts offered to them to **Accept** or **Turn down**, and their own shifts to **Trade**: give one to a colleague or anyone who can take it, or swap it for a colleague's shift. It appears when [Shift Planning](./shift-planning.md) is on. |
 | **Availability** | When the worker can work, one line per day, such as *Monday 09:00-17:00*, *Tuesday 08:00-12:00 preferred* or *Saturday unavailable*. New schedules follow it. |
 | **Settings** | Push notifications on this device, what the worker hears about and how, and their calendar feed. |
@@ -43,7 +43,7 @@ Workers hear about:
 - a trade offered to them, and their own trades being accepted, turned down or declined;
 - a shift of theirs about to start, an hour before by default.
 
-Every notification goes to the **My Work** inbox on the home page. Under **Settings > What I hear about**, a worker chooses which other ways to use (**Push notifications**, and **Email** when the site sends email) and which topics to hear about. Topics turned off still show in the inbox.
+Every notification goes to the **My Work** inbox on the home page. Under **Settings** → **What I hear about**, a worker chooses which other ways to use (**Push notifications**, and **Email** when the site sends email) and which topics to hear about. Topics turned off still show in the inbox.
 
 Under **Reminders**, choose how long before a shift to be reminded of it, or **Never**. Under **Quiet hours**, enter the hours when nothing should be pushed to the phone or emailed, such as 22:00 to 07:00; everything still shows in the inbox, and the hours are in the worker's time zone.
 
@@ -53,7 +53,7 @@ Under **Settings**, choose **Turn on** and allow notifications when the browser 
 
 ## Calendar feed
 
-**Settings > My calendar app** shows a private address to subscribe to in Google Calendar, Outlook or a phone's calendar. The calendar shows the worker's shifts from four weeks ago to twelve weeks ahead, and their approved time off. Anyone with the address can see the schedule, so **Replace this address** makes a new one and stops the old one working.
+**Settings** → **My calendar app** shows a private address to subscribe to in Google Calendar, Outlook or a phone's calendar. The calendar shows the worker's shifts from four weeks ago to twelve weeks ahead, and their approved time off. Anyone with the address can see the schedule, so **Replace this address** makes a new one and stops the old one working.
 
 ## Pages for managers
 
@@ -62,8 +62,8 @@ A user who manages teams also sees:
 | Page | What it shows |
 | --- | --- |
 | **Approvals** | Time off waiting for a decision, trades accepted and waiting for approval, open shifts with claims, submitted timesheets, punches workers asked for, and open attendance exceptions, each with buttons to decide them. **Details** and **Review** open them in the admin. |
-| **Who's working** | Who is on shift now in the teams they manage, with their hours and whether they are on a break, and who is off. |
+| **Who's Working** | Who is on shift now in the teams they manage, with their hours and whether they are on a break, and who is off. |
 
 ## Notifications on this device
 
-My Work works in any browser. Under **My Work > Settings**, turn on push notifications to get them on this phone or computer; the site's service worker shows them and opens their page when you tap one. Without a connection, a My Work page shows a message saying it needs one, except the pages that work offline, such as **Field**.
+My Work works in any browser. Under **My Work** → **Settings**, turn on push notifications to get them on this phone or computer; the site's service worker shows them and opens their page when you tap one. Without a connection, a My Work page shows a message saying it needs one, except the pages that work offline, such as **Field**.

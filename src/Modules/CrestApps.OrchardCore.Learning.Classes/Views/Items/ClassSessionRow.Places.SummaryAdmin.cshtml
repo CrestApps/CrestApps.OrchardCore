@@ -1,0 +1,7 @@
+@model ShapeViewModel<ClassSessionRow>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Places taken of the capacity"]"><i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@Model.Value.Taken / @Model.Value.Session.Capacity</span>
+@if (Model.Value.Waiting > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Waiting for a place"]"><i class="fa-solid fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Value.Waiting, "1 waiting", "{0} waiting")</span>
+}

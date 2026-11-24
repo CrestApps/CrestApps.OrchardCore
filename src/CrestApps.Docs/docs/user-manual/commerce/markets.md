@@ -10,7 +10,7 @@ A **market** is a group of countries you sell to on the same terms. Its shoppers
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Markets |
+| **Menu** | **Commerce** → **Markets** |
 | **Permission** | Manage markets |
 | **Feature** | Markets (it needs Products) |
 
@@ -22,7 +22,7 @@ Watch the video for a tour of every screen, from adding a market to a checkout w
 
 ## How a market works
 
-Your store has one currency of its own: the one set under **Settings > Commerce > Checkout**. In this page it's called **your store's currency**. A market adds another currency, and an **exchange rate**: how much of the market's currency 1 unit of your store's currency is worth.
+Your store has one currency of its own: the one set under **Settings** → **Commerce** → **Checkout**. In this page it's called **your store's currency**. A market adds another currency, and an **exchange rate**: how much of the market's currency 1 unit of your store's currency is worth.
 
 When a shopper is in a market:
 
@@ -37,7 +37,7 @@ Shoppers in countries that aren't in a market, and everyone in the admin, see yo
 
 <YouTube video="markets" title="Add a market" start={89} end={141} />
 
-1. Open **Commerce > Markets** and click **Add market**.
+1. Open **Commerce** → **Markets** and click **Add market**.
 2. Fill in the fields (below), and click **Save**.
 
 *The market was added. Shoppers in its countries now see prices in EUR.* confirms it. Each market in the list shows whether it's **On** or **Off**, its currency and rate, **Tax included** when its prices include tax, and its language.
@@ -49,7 +49,7 @@ Shoppers in countries that aren't in a market, and everyone in the admin, see yo
 | **Currency** | The three-letter code of the currency the market's shoppers pay in, such as *EUR*. |
 | **Exchange rate** | How much of the market's currency 1 unit of your store's currency is worth. Prices in your store's currency are multiplied by it. It must be more than zero. |
 | **Price rounding** | How a converted price is rounded up. See [Price rounding](#price-rounding). A price you entered in the market's currency is never rounded. |
-| **Language** | The language the storefront switches to when a shopper picks the market, or **Keep the shopper's language**. The list shows your site's languages; add one under **Configuration > Settings > Localization**. |
+| **Language** | The language the storefront switches to when a shopper picks the market, or **Keep the shopper's language**. The list shows your site's languages; add one under **Configuration** → **Settings** → **Localization**. |
 | **Prices include tax** | Shoppers pay the price they see, and the tax, such as VAT, is taken out of it. Off, tax is added at checkout. See [Prices that include tax](#prices-that-include-tax). |
 | **On** | A market that's off isn't offered, and its shoppers see your store's own prices. |
 
@@ -150,7 +150,7 @@ To show your products in several languages, turn on Orchard Core's **Content Loc
 ## Example: sell in Europe with VAT included
 
 1. Your store's currency is *USD*.
-2. Under **Commerce > Markets**, add *Europe* with the countries *DE, FR, IT, ES, NL, AT*, currency *EUR*, exchange rate *0.92*, rounding **Up to .99, such as 23.99**, language *German (Germany)* and **Prices include tax** on.
+2. Under **Commerce** → **Markets**, add *Europe* with the countries *DE, FR, IT, ES, NL, AT*, currency *EUR*, exchange rate *0.92*, rounding **Up to .99, such as 23.99**, language *German (Germany)* and **Prices include tax** on.
 3. Run the **EU VAT standard rates** recipe to add VAT for each EU country; see [Taxes](taxes.md#eu-vat-standard-rates).
 4. Add a shipping method in *EUR* to your Europe shipping zone, such as *Standard* at 6.90.
 
@@ -162,7 +162,7 @@ A shopper in France who picks *Europe* sees a $26.00 product at 23.99 euros, and
 | --- | --- |
 | The market picker doesn't show. | You need a market that's **On**, with a currency and an exchange rate above zero. |
 | A shopper sees your store's own prices. | Their country isn't in a market, or they picked **Everywhere else**, or the market is **Off**. |
-| The storefront doesn't switch language. | The market's **Language** must be one of your site's languages under **Configuration > Settings > Localization**. |
+| The storefront doesn't switch language. | The market's **Language** must be one of your site's languages under **Configuration** → **Settings** → **Localization**. |
 | The cart says an item *is priced in GBP, and your cart is in EUR.* | The product is priced in a currency that isn't your store's or a market's, so it can't be converted. Give it a price in your store's currency or in the market's. |
 | No shipping method is offered in a market. | Check that the zone has methods in the market's currency or in your store's currency, and that they're **On**. |
 

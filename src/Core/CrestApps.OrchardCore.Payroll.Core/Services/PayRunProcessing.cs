@@ -543,7 +543,7 @@ public sealed partial class DefaultPayRunService
     {
         await using var session = _services.GetRequiredService<global::YesSql.IStore>().CreateSession();
 
-        return await session.Query<PayRun, PayRunIndex>(index => index.ItemId == runId, collection: PayrollConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
+        return await session.Query<PayRun, PayrollPayRunIndex>(index => index.ItemId == runId, collection: PayrollConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
     }
 
     // The statement as stored now, read by a session of its own.
@@ -551,7 +551,7 @@ public sealed partial class DefaultPayRunService
     {
         await using var session = _services.GetRequiredService<global::YesSql.IStore>().CreateSession();
 
-        return await session.Query<PayStatement, CrestApps.OrchardCore.Payroll.Core.Indexes.PayStatementIndex>(index => index.ItemId == statementId, collection: PayrollConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
+        return await session.Query<PayStatement, CrestApps.OrchardCore.Payroll.Core.Indexes.PayrollPayStatementIndex>(index => index.ItemId == statementId, collection: PayrollConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
     }
 
     // The statements of a run that count: neither voided nor reversing.

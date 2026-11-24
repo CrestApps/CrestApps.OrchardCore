@@ -14,7 +14,7 @@ A dashboard puts everything about a question on one page: a scorecard per queue,
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Builder > *a report* > Design |
+| **Menu** | **Reports** → **Report Builder** → *a report* → **Design** |
 | **Permission** | Build reports and manage own custom reports and views |
 | **Feature** | Report Builder |
 

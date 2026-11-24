@@ -1,0 +1,64 @@
+@model TaxReturnDetailsViewModel
+@using System.Globalization
+
+@{
+    var taxReturn = Model.Return;
+    var canFileNow = Model.CanFile && taxReturn.Status is TaxReturnStatus.Draft or TaxReturnStatus.Ready;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TaxReturnsDetails" title="@T["{0}", Model.Title]">
+        <breadcrumb-item id="TaxReturns" action="Index" controller="TaxReturns" area="CrestApps.OrchardCore.Taxation" route-year="@taxReturn.PeriodEnd.Year">@T["Tax returns"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@await DisplayAsync(Model.Display)
+
+<form asp-action="MarkFiled" asp-route-id="@taxReturn.ItemId" method="post" class="no-multisubmit">
+    @if (canFileNow)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Mark as filed"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <label for="filedOn" class="ocat-label">@T["Filed on"]</label>
+                    <div class="ocat-end">
+                        <input id="filedOn" name="filedOn" type="date" value="@Model.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="form-control" style="max-width: 12rem" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label for="confirmationNumber" class="ocat-label">@T["Confirmation number"]</label>
+                    <div class="ocat-end">
+                        <input id="confirmationNumber" name="confirmationNumber" class="form-control" style="max-width: 20rem" />
+                        <span class="hint">@T["Once marked as filed, the return never changes: correct it with an amendment. Its boxes are worked out again as filed on that day, so a late return keeps its penalty."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="action-bar-bottom">
+        @if (canFileNow)
+        {
+            <button type="submit" class="btn btn-primary">@T["Mark as filed"]</button>
+        }
+        @if (taxReturn.Status == TaxReturnStatus.Draft)
+        {
+            <button type="submit" class="btn btn-secondary" formaction="@Url.Action("MarkReady", new { id = taxReturn.ItemId })">@T["Mark ready to file"]</button>
+            <button type="submit" class="btn btn-secondary action-bar-secondary" formaction="@Url.Action("PrepareAgain", new { id = taxReturn.ItemId })">@T["Prepare again"]</button>
+            @if (taxReturn.Payments.Count == 0)
+            {
+                <button type="submit" class="btn btn-danger action-bar-secondary" formaction="@Url.Action("Delete", new { id = taxReturn.ItemId })" data-url-af="UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete the draft?"]">@T["Delete"]</button>
+            }
+        }
+        @if (taxReturn.Status == TaxReturnStatus.Ready)
+        {
+            <button type="submit" class="btn btn-secondary action-bar-secondary" formaction="@Url.Action("Reopen", new { id = taxReturn.ItemId })">@T["Reopen"]</button>
+        }
+        @if (taxReturn.Status == TaxReturnStatus.Filed && Model.CanFile)
+        {
+            <button type="submit" class="btn btn-secondary" formaction="@Url.Action("Amend", new { id = taxReturn.ItemId })" data-url-af="UnsafeUrl" data-title="@T["Amend"]" data-message="@T["Start an amended return? It is prepared again from the figures of the period, and counts what was paid with this one."]">@T["Amend"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-year="@taxReturn.PeriodEnd.Year">@T["Back"]</a>
+    </div>
+</form>

@@ -23,14 +23,22 @@ snapshot rather than re-rating with today's rules.
 
 ## Features
 
-- **Taxation** (`CrestApps.OrchardCore.Taxation`) — the determination engine, the jurisdiction, rule, table,
-  exemption, and nexus catalogs, the `TaxationPart`, and the reports.
+- **Sales Tax** (`CrestApps.OrchardCore.Taxation`) — the determination engine, the jurisdiction, rule, table,
+  exemption, and nexus catalogs, the business's tax registrations, the `TaxationPart`, and the reports. It needs no
+  store (no Commerce Foundation dependency).
+- **Tax Returns** (`CrestApps.OrchardCore.Taxation.Returns`) — a filing schedule on each tax registration (frequency, due
+  day, form, an annual return), the periods it files for, and a return per period from the figures modules give
+  through `ITaxReturnDataProvider`, worked out by an `ITaxReturnForm`, with its status (draft, ready, filed, amended),
+  payments, amendments and `ITaxReturnObserver`s.
+- **Tax E-Filing** (`CrestApps.OrchardCore.Taxation.EFiling`) — filing channels (`IEFileTransport`), file formats
+  (`IEFileFormat`) and targets (`IEFileTargetProvider`), a manual channel that hands over the file, a JSON format of
+  any return, and a task that asks channels for the agency's answers.
 - **Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax`) — income tax rules for any jurisdiction of any
   country (a rate, a fixed amount, a table, progressive brackets or a country's withholding method, paid by the
   earner or the payer, with wage bases, yearly exemptions and maximums, and the payer's own registration rate), the
-  built-in `IIncomeTaxProvider`, and **Commerce > Taxation > Income tax rules**, behind the Administrator-only
+  built-in `IIncomeTaxProvider`, and **Commerce > Taxation > Income Tax Rules**, behind the Administrator-only
   `ManageIncomeTaxRules` permission (security critical: the rules decide every payer's withholding).
-- **United States Income Tax** — Form W-4 withholding (Publication 15-T) and the 2026 federal rules as a recipe.
+- **United States Income Tax** — Form W-4 withholding (Publication 15-T, with the nonresident alien amount), a state's annualized withholding by its state certificate (`UnitedStatesStateCertificate`), and the 2026 federal rules as a recipe. Rules can apply to residents or nonresidents only, be one of an exclusive group (city taxes), read another jurisdiction's election, and be marked verified.
 - **Canada Income Tax** — the CRA's T4127 federal and provincial formulas and Revenu Québec's TP-1015.F, with
   CPP, CPP2, EI, QPP, QPP2, QPIP and the Quebec health services fund, and the 2026 rules as a recipe.
 

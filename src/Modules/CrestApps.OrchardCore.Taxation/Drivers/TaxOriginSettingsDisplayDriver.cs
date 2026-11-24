@@ -12,7 +12,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Taxation.Drivers;
 
 /// <summary>
-/// Where the store sells from, under Settings > Commerce > Tax origin.
+/// Where the store sells from, under Settings > Commerce > Tax Origin.
 /// </summary>
 public sealed class TaxOriginSettingsDisplayDriver : SiteDisplayDriver<TaxOriginSettings>
 {

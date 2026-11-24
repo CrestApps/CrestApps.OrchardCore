@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/conditional-fields.js
+	// src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/conditional-fields.js
 	/**
 	* Shows and hides the fields of a content editor whose settings say "Show this field when". The server makes the
 	* same decision when the form is posted, drops what a hidden field holds and ignores its validation; this script
@@ -272,5 +272,4 @@
 		hiddenKeys,
 		startAll
 	};
-	//#endregion
 })();

@@ -1,0 +1,41 @@
+@model (CourseOutlineEntry Entry, CourseItemProgress Progress, bool Tracked)
+@inject CrestApps.OrchardCore.Learning.Services.CourseItemConditionText ConditionText
+
+@*
+    What completes an item, as Moodle's completion conditions: "To do: Mark it as done", turning into "Done: ..." once
+    met, or "Not passed: ..." after a failed result. Without a learner (Tracked false) only the condition shows.
+*@
+
+@{
+    var condition = ConditionText.Get(Model.Entry);
+    var state = Model.Progress?.State ?? CourseItemState.NotStarted;
+}
+
+@if (condition is not null || Model.Entry?.Required == false)
+{
+    <span class="learning-conditions d-inline-flex flex-wrap gap-1" data-learning-condition>
+        @if (condition is not null)
+        {
+            if (!Model.Tracked)
+            {
+                <span class="badge text-bg-light border fw-normal">@condition</span>
+            }
+            else if (state == CourseItemState.Completed)
+            {
+                <span class="badge text-bg-success fw-normal" data-learning-condition-state="done"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Done: {0}", condition.Value]</span>
+            }
+            else if (state == CourseItemState.Failed)
+            {
+                <span class="badge text-bg-danger fw-normal" data-learning-condition-state="failed"><i class="fa-solid fa-xmark me-1" aria-hidden="true"></i>@T["Not passed: {0}", condition.Value]</span>
+            }
+            else
+            {
+                <span class="badge text-bg-light border fw-normal" data-learning-condition-state="todo" data-done-text="@T["Done: {0}", condition.Value]">@T["To do: {0}", condition.Value]</span>
+            }
+        }
+        @if (Model.Entry?.Required == false)
+        {
+            <span class="badge text-bg-light border fw-normal">@T["Optional"]</span>
+        }
+    </span>
+}

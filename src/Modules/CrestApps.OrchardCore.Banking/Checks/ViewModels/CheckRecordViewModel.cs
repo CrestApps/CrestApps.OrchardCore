@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Addresses.Core.Editing;
+using CrestApps.OrchardCore.Banking.Checks.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement;
@@ -10,6 +11,25 @@ namespace CrestApps.OrchardCore.Banking.Checks.ViewModels;
 /// </summary>
 public class CheckRecordViewModel
 {
+    /// <summary>
+    /// Gets or sets whether the check is being written; <see langword="false"/> while a check waiting to print is edited,
+    /// which keeps its bank account and number.
+    /// </summary>
+    [BindNever]
+    public bool IsNew { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the bank account of a check being edited.
+    /// </summary>
+    [BindNever]
+    public string BankAccountName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of a check being edited, or 0 while it waits for a print run to number it.
+    /// </summary>
+    [BindNever]
+    public long CheckNumber { get; set; }
+
     /// <summary>
     /// Gets or sets the bank account the check is drawn on.
     /// </summary>
@@ -31,10 +51,21 @@ public class CheckRecordViewModel
     [BindNever]
     public IShape PayeeAddressEditor { get; set; }
 
+    /// <summary>
+    /// Gets or sets how the check gets its number.
+    /// </summary>
+    public CheckNumbering Numbering { get; set; }
 
+    /// <summary>
+    /// Gets or sets the number of a check written by hand, as text.
+    /// </summary>
+    public string Number { get; set; }
 
-
-
+    /// <summary>
+    /// Gets or sets the ways a check can get its number.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> NumberingOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the amount, as invariant text.

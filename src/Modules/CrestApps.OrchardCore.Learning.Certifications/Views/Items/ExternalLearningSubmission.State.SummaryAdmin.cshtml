@@ -1,0 +1,14 @@
+@model ExternalLearningRowViewModel
+
+@switch (Model.Submission.State)
+{
+    case ExternalLearningState.Accepted:
+        <span class="badge bg-success text-white fw-normal">@T["Accepted"]</span>
+        break;
+    case ExternalLearningState.Rejected:
+        <span class="badge bg-secondary text-white fw-normal">@T["Rejected"]</span>
+        break;
+    default:
+        <span class="badge bg-warning text-dark fw-normal">@T["Waiting for review"]</span>
+        break;
+}

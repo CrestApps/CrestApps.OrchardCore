@@ -1,0 +1,120 @@
+@model SurveyPanelViewModel
+
+@{
+    var part = Model.Part;
+    var response = Model.Response;
+}
+
+<div class="card mb-3 learning-survey" data-learning-survey>
+    <div class="card-body">
+        <ul class="list-inline text-secondary small mb-3">
+            @if (part.CloseUtc is { } close)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@(Model.Closed ? T["Closed"] : T["Closes"]) @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(close, DateTimeKind.Utc), Format: "g"))</li>
+            }
+            @if (part.Anonymous)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-user-secret me-1" aria-hidden="true"></i>@T["Your answers are anonymous: the course staff see them without your name."]</li>
+            }
+        </ul>
+
+        @if (!Model.SignedIn)
+        {
+            <p class="mb-0">@T["Sign in to answer."]</p>
+        }
+        else if (!Model.Enrolled)
+        {
+            <p class="mb-0">@T["Enroll in the course to answer."]</p>
+        }
+
+        @if (response is not null)
+        {
+            <div class="alert alert-success" role="status">
+                <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You answered on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.UpdatedUtc ?? response.SubmittedUtc, DateTimeKind.Utc), Format: "g")).
+            </div>
+        }
+
+        @switch (Model.CannotAnswerReason)
+        {
+            case "Closed":
+                if (response is null)
+                {
+                    <p class="text-secondary small mb-0" data-learning-survey-reason><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This survey no longer takes answers."]</p>
+                }
+                break;
+            case "Answered":
+                <p class="text-secondary small mb-0" data-learning-survey-reason>@T["Your answers are in. This survey does not let you change them."]</p>
+                break;
+            case "Pending":
+                <p class="text-secondary small mb-0" data-learning-survey-reason><i class="fa-solid fa-hourglass-half me-1" aria-hidden="true"></i>@T["You can answer once your request to enroll is approved."]</p>
+                break;
+            case "Suspended":
+                <p class="text-secondary small mb-0" data-learning-survey-reason>@T["Your enrollment is paused, so you cannot answer now. Contact the course staff."]</p>
+                break;
+            case "AccessEnded":
+                <p class="text-secondary small mb-0" data-learning-survey-reason>@T["Your access to this course has ended, so you cannot answer."]</p>
+                break;
+            case "NotOpen":
+                <p class="text-secondary small mb-0" data-learning-survey-reason><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This survey is not open to you yet."]</p>
+                break;
+        }
+
+        @if (Model.CanAnswer)
+        {
+            <form method="post" action="@Url.RouteUrl("LearningSurveyAnswer", new { surveyId = Model.SurveyId })">
+                @Html.AntiForgeryToken()
+                @for (var i = 0; i < part.Questions.Count; i++)
+                {
+                    var question = part.Questions[i];
+                    var field = "q." + question.Id;
+                    var fieldId = "survey-" + Model.SurveyId + "-" + i;
+                    IList<string> given = response is not null && response.Answers.TryGetValue(question.Id, out var values) && values is not null ? values : Array.Empty<string>();
+
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6">@question.Text @if (question.Required) { <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden">@T["(required)"]</span> }</legend>
+                        @switch (question.Type)
+                        {
+                            case SurveyQuestionType.Text:
+                                <textarea id="@fieldId" name="@field" rows="4" class="form-control" maxlength="@SurveysConstants.MaxTextAnswerLength" required="@question.Required" aria-label="@question.Text">@given.FirstOrDefault()</textarea>
+                                break;
+
+                            case SurveyQuestionType.Rating:
+                                <div class="btn-group" role="group" aria-label="@question.Text">
+                                    @for (var rating = SurveysConstants.MinRating; rating <= SurveysConstants.MaxRating; rating++)
+                                    {
+                                        var value = rating.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                                        <input type="radio" class="btn-check" name="@field" id="@(fieldId)-@value" value="@value" checked="@given.Contains(value)" required="@question.Required" />
+                                        <label class="btn btn-outline-primary" for="@(fieldId)-@value">@value</label>
+                                    }
+                                </div>
+                                <div class="form-text">@T["1 is the lowest, 5 the highest."]</div>
+                                break;
+
+                            default:
+                                var multiple = question.Type == SurveyQuestionType.MultipleChoice;
+
+                                for (var j = 0; j < question.Options.Count; j++)
+                                {
+                                    var option = question.Options[j];
+
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="@(multiple ? "checkbox" : "radio")" name="@field" id="@(fieldId)-@j" value="@option" checked="@given.Contains(option)" required="@(question.Required && !multiple)" />
+                                        <label class="form-check-label" for="@(fieldId)-@j">@option</label>
+                                    </div>
+                                }
+                                break;
+                        }
+                    </fieldset>
+                }
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(response is null ? T["Send my answers"] : T["Change my answers"])</button>
+            </form>
+        }
+
+        @if (Model.Summary is not null)
+        {
+            <h2 class="h6 mt-4">@T["How everyone answered"]</h2>
+            <partial name="SurveyTotals" model="Model.Summary" />
+        }
+    </div>
+</div>

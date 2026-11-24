@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ApproveEnrollmentTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Approve Enrollment"])
+    </h4>
+</header>

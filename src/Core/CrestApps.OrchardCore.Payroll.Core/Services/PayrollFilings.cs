@@ -26,7 +26,7 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Payroll.Core.Services;
 
 /// <summary>Indexes tax deposits.</summary>
-public sealed class TaxDepositIndex : CatalogItemIndex
+public sealed class PayrollTaxDepositIndex : CatalogItemIndex
 {
     /// <summary>Gets or sets the employer.</summary>
     public string EmployerId { get; set; }
@@ -66,10 +66,10 @@ public sealed class PayrollFilingIndexProvider : IndexProvider<TaxDeposit>
     /// <inheritdoc />
     public override void Describe(DescribeContext<TaxDeposit> context)
         => context
-            .For<TaxDepositIndex>()
+            .For<PayrollTaxDepositIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(deposit => new TaxDepositIndex
+            .Map(deposit => new PayrollTaxDepositIndex
             {
                 ItemId = deposit.ItemId,
                 EmployerId = deposit.EmployerId,
@@ -123,15 +123,7 @@ public static class PayrollFilingIndexSchema
     {
         ArgumentNullException.ThrowIfNull(schemaBuilder);
 
-        await schemaBuilder.CreateMapIndexTableAsync<TaxDepositIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("EmployerId", column => column.Nullable().WithLength(26))
-            .Column<int>("PeriodEndDay"),
-            collection: PayrollConstants.CollectionName);
-
-        await schemaBuilder.AlterIndexTableAsync<TaxDepositIndex>(table => table
-            .CreateIndex("IDX_TaxDepositIndex_Employer", "EmployerId", "PeriodEndDay"),
-            collection: PayrollConstants.CollectionName);
+        await CreateTaxDepositTableAsync(schemaBuilder);
 
         await schemaBuilder.CreateMapIndexTableAsync<PayrollFilingIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
@@ -146,10 +138,28 @@ public static class PayrollFilingIndexSchema
             .CreateIndex("IDX_PayrollFilingIndex_Employer", "EmployerId", "Form", "Year", "Quarter"),
             collection: PayrollConstants.CollectionName);
     }
+
+    /// <summary>Creates the table of tax deposits.</summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateTaxDepositTableAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<PayrollTaxDepositIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("EmployerId", column => column.Nullable().WithLength(26))
+            .Column<int>("PeriodEndDay"),
+            collection: PayrollConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<PayrollTaxDepositIndex>(table => table
+            .CreateIndex("IDX_PayrollTaxDepositIndex_Employer", "EmployerId", "PeriodEndDay"),
+            collection: PayrollConstants.CollectionName);
+    }
 }
 
 /// <summary>Stores tax deposits.</summary>
-public sealed class TaxDepositStore : DocumentCatalog<TaxDeposit, TaxDepositIndex>
+public sealed class TaxDepositStore : DocumentCatalog<TaxDeposit, PayrollTaxDepositIndex>
 {
     /// <summary>Initializes a new instance of the <see cref="TaxDepositStore"/> class.</summary>
     /// <param name="session">The session.</param>
@@ -163,8 +173,8 @@ public sealed class TaxDepositStore : DocumentCatalog<TaxDeposit, TaxDepositInde
     /// <param name="filter">The filter.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The deposits.</returns>
-    public async Task<IReadOnlyList<TaxDeposit>> ListAsync(System.Linq.Expressions.Expression<Func<TaxDepositIndex, bool>> filter, CancellationToken cancellationToken = default)
-        => (await Session.Query<TaxDeposit, TaxDepositIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
+    public async Task<IReadOnlyList<TaxDeposit>> ListAsync(System.Linq.Expressions.Expression<Func<PayrollTaxDepositIndex, bool>> filter, CancellationToken cancellationToken = default)
+        => (await Session.Query<TaxDeposit, PayrollTaxDepositIndex>(filter, collection: CollectionName).ListAsync(cancellationToken)).ToList();
 }
 
 /// <summary>Stores filings.</summary>

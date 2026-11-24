@@ -54,13 +54,13 @@ Once enabled, the main AI screens are available under **Artificial Intelligence*
 
 | Admin screen | Permission | User Manual |
 | --- | --- | --- |
-| **Artificial Intelligence -> Provider Connections** | `ManageProviderConnections` | [Connections and deployments](../user-manual/ai/connections.md) |
-| **Artificial Intelligence -> Deployments** | `ManageAIDeployments` | [Connections and deployments](../user-manual/ai/connections.md) |
-| **Artificial Intelligence -> Personas** | `ManageAIPersonas` | [AI Personas](personas) |
-| **Artificial Intelligence -> Profiles** | `ManageAIProfiles` | [AI profiles](../user-manual/ai/profiles.md) |
-| **Artificial Intelligence -> Templates** | `ManageAIProfileTemplates` | [Templates](../user-manual/ai/prompt-templates.md) |
-| **Artificial Intelligence -> Tool Instances** | `ManageAIToolInstances` | [Tools and agents](../user-manual/ai/tools-and-agents.md) |
-| **Settings -> Artificial Intelligence** | `ManageAIProfiles` | [Connections and deployments](../user-manual/ai/connections.md#choose-the-default-models) |
+| **Artificial Intelligence** → **Provider Connections** | `ManageProviderConnections` | [Connections and deployments](../user-manual/ai/connections.md) |
+| **Artificial Intelligence** → **Deployments** | `ManageAIDeployments` | [Connections and deployments](../user-manual/ai/connections.md) |
+| **Artificial Intelligence** → **Personas** | `ManageAIPersonas` | [AI Personas](personas) |
+| **Artificial Intelligence** → **Profiles** | `ManageAIProfiles` | [AI profiles](../user-manual/ai/profiles.md) |
+| **Artificial Intelligence** → **Templates** | `ManageAIProfileTemplates` | [Templates](../user-manual/ai/prompt-templates.md) |
+| **Artificial Intelligence** → **Tool Instances** | `ManageAIToolInstances` | [Tools and agents](../user-manual/ai/tools-and-agents.md) |
+| **Settings** → **Artificial Intelligence** | `ManageAIProfiles` | [Connections and deployments](../user-manual/ai/connections.md#choose-the-default-models) |
 
 The [AI features at a glance](../user-manual/ai/index.md) page in the User Manual has a screencast that tours these screens.
 
@@ -79,8 +79,8 @@ The [AI features at a glance](../user-manual/ai/index.md) page in the User Manua
 
 After enabling the relevant features, Orchard Core exposes AI management in the admin UI, including:
 
-- AI settings under **Settings -> Artificial Intelligence**
-- feature enablement under **Tools -> Features**
+- AI settings under **Settings** → **Artificial Intelligence**
+- feature enablement under **Tools** → **Features**
 - AI connection and deployment editors
 - AI profile editors used by chat, agents, and related modules
 - submit-based AI list screens that keep **Enter** support and now expose a visible **Go** button next to the search box on screens such as AI Profiles, AI Templates, AI Provider Connections, and Chat Interactions
@@ -113,7 +113,7 @@ This configuration is useful for default completion parameters. Provider-specifi
 
 ### Site settings
 
-Use **Settings -> Artificial Intelligence** for tenant-managed options such as:
+Use **Settings** → **Artificial Intelligence** for tenant-managed options such as:
 
 - preemptive memory retrieval
 - orchestrator defaults
@@ -123,7 +123,7 @@ The page is made of cards contributed by the enabled features. The **General** c
 
 ## Creating AI profiles
 
-Once at least one provider is configured, create AI profiles from **Artificial Intelligence -> Profiles** and attach the capabilities you need for that profile, such as:
+Once at least one provider is configured, create AI profiles from **Artificial Intelligence** → **Profiles** and attach the capabilities you need for that profile, such as:
 
 - documents
 - data sources
@@ -153,9 +153,9 @@ This module also wires Orchard integrations beyond the admin UI:
 
 <YouTube video="ai-export-import" title="Video of building an AI deployment plan, exporting it and importing it" start={52} end={162} />
 
-Enable **OrchardCore.Deployment** (and the same AI features on both sites), then open **Tools > Deployments > Plans**, add a plan, and add the steps you need under **Artificial Intelligence**: **AI Provider Connections**, **AI Deployments**, **AI Profiles**, **AI Profile Templates**, **AI Tool Instances**, **AI Data Sources**, and the **MCP Connections**, **MCP Prompts** and **MCP Resources** steps. Each step exports every item (**Include all**) or only the ones you pick. Put the steps in this order: connections, deployments, tool instances and data sources, then profiles, because profiles point at the others.
+Enable **OrchardCore.Deployment** (and the same AI features on both sites), then open **Tools** → **Deployments** → **Plans**, add a plan, and add the steps you need under **Artificial Intelligence**: **AI Provider Connections**, **AI Deployments**, **AI Profiles**, **AI Profile Templates**, **AI Tool Instances**, **AI Data Sources**, and the **MCP Connections**, **MCP Prompts** and **MCP Resources** steps. Each step exports every item (**Include all**) or only the ones you pick. Put the steps in this order: connections, deployments, tool instances and data sources, then profiles, because profiles point at the others.
 
-Click **Execute** on the plan and choose **File Download** to get the result as a file, then import it on the other site with **Tools > Deployments > JSON Import** (paste a recipe) or **Package Import** (upload the file). Treat the exported file as sensitive, re-enter any secret that was left out, and run the knowledge syncs again on the new site: uploaded files and indexed content are not part of these steps.
+Click **Execute** on the plan and choose **File Download** to get the result as a file, then import it on the other site with **Tools** → **Deployments** → **JSON Import** (paste a recipe) or **Package Import** (upload the file). Treat the exported file as sensitive, re-enter any secret that was left out, and run the knowledge syncs again on the new site: uploaded files and indexed content are not part of these steps.
 
 ## Upgrade migrations that skip records
 

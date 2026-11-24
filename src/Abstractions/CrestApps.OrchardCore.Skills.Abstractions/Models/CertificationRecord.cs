@@ -45,6 +45,54 @@ public sealed class CertificationRecord : CatalogItem
     public DateOnly? ExpiresOn { get; set; }
 
     /// <summary>
+    /// Gets or sets what earned an issued certificate, such as <c>Learning.CertificationPath</c>; <see langword="null"/>
+    /// for a certificate recorded by hand.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id, within <see cref="Source"/>, of what earned the certificate. One certificate is issued per
+    /// certification, source and source id.
+    /// </summary>
+    public string SourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a short summary of the evidence, written by the issuer, such as the course and exam passed.
+    /// </summary>
+    public string Evidence { get; set; }
+
+    /// <summary>
+    /// Gets or sets the random code that proves an issued certificate on the public verification page, or
+    /// <see langword="null"/> for a certificate recorded by hand.
+    /// </summary>
+    public string VerificationCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the certificate this one renews.
+    /// </summary>
+    public string PreviousRecordId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the certificate that renews this one. The daily check sends no reminder for a renewed certificate.
+    /// </summary>
+    public string RenewedByRecordId { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the certificate was revoked.
+    /// </summary>
+    public string RevokedReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets who revoked the certificate.
+    /// </summary>
+    public string RevokedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the certificate was revoked.
+    /// </summary>
+    public DateTime? RevokedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the media library path of a copy of the certificate.
     /// </summary>
     public string DocumentPath { get; set; }

@@ -29,3 +29,23 @@
         </div>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ShowClassification">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="ShowClassification" class="form-check-input" />
+            <label asp-for="ShowClassification" class="form-check-label">@T["Show the tax classification"]</label>
+            <span class="hint dashed">@T["Clear it for a type that only needs a tax category; editors then choose the category alone."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ShowExternalTaxCode">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="ShowExternalTaxCode" class="form-check-input" />
+            <label asp-for="ShowExternalTaxCode" class="form-check-label">@T["Show the external tax code"]</label>
+            <span class="hint dashed">@T["Clear it for a type taxed only by the site's own tax rules, with no tax service code."]</span>
+        </div>
+    </div>
+</div>

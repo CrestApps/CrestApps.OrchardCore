@@ -21,7 +21,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.PointOfSale.Controllers;
 
 /// <summary>
-/// Commerce › Point of sale › Departments: what registers ring amounts up in, without an item to track.
+/// Commerce › Point of Sale › Departments: what registers ring amounts up in, without an item to track.
 /// </summary>
 /// <remarks>
 /// Its routes start with their own prefix: the registers controller's <c>point-of-sale/{action}</c> would take

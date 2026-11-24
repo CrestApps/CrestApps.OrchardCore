@@ -34,4 +34,4 @@ What happens on your tickets reaches you in the notification center (the bell at
 
 The notification center still lists every notice, so nothing is lost. A desk can stop assignment and team notices for all its tickets with **Tell the assignee** in its settings. See [Desks](./desks.md).
 
-What requesters get, and the words of those messages, are set under **Settings > Service Desk**. See [Notification templates](./notification-templates.md).
+What requesters get, and the words of those messages, are set under **Settings** → **Service Desk**. See [Notification templates](./notification-templates.md).

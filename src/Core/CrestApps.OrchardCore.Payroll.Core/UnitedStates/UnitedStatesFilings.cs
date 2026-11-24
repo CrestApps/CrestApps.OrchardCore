@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -122,6 +123,7 @@ public sealed class Form941 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -187,6 +189,7 @@ public sealed class Form945 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -231,6 +234,7 @@ public sealed class Form940 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -275,7 +279,8 @@ public sealed class Form940 : IPayrollFilingForm
 /// <summary>
 /// Forms W-2, the wage and tax statement of each person for a year, and W-3, their totals: wages (box 1), income tax
 /// (2), Social Security wages and tax (3, 4) and tips (7), Medicare wages and tax with the additional tax (5, 6), and
-/// the box 12 amounts of the pay codes that name one (such as W2:12D). A person with no tax id on file is noted.
+/// the box 12 amounts of the pay codes that name one (such as W2:12D), and the state and local wages and income tax of
+/// boxes 15 to 20 (W-3 boxes 16 to 19). A person with no tax id on file is noted.
 /// </summary>
 public sealed class FormW2 : IPayrollFilingForm
 {
@@ -291,6 +296,7 @@ public sealed class FormW2 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -332,21 +338,78 @@ public sealed class FormW2 : IPayrollFilingForm
                 Address = [.. latest.Snapshot?.EmployeeAddress ?? []],
                 TaxIdHint = profile?.TaxId?.Hint,
                 Boxes = boxes,
+                JurisdictionAmounts = [.. JurisdictionAmounts(statements, context.Employer)],
             });
         }
 
-        // W-3: the totals of the wage statements.
+        // W-3: the totals of the wage statements, with the state (16, 17) and local (18, 19) wages and income tax.
         foreach (var person in context.Filing.People)
         {
             foreach (var (box, amount) in person.Boxes)
             {
                 context.Filing.Boxes[box] = context.Filing.Boxes.GetValueOrDefault(box) + amount;
             }
+
+            foreach (var amount in person.JurisdictionAmounts)
+            {
+                var (wagesBox, taxBox) = amount.IsLocal ? ("18", "19") : ("16", "17");
+
+                context.Filing.Boxes[wagesBox] = context.Filing.Boxes.GetValueOrDefault(wagesBox) + amount.Wages;
+                context.Filing.Boxes[taxBox] = context.Filing.Boxes.GetValueOrDefault(taxBox) + amount.Tax;
+            }
         }
 
         context.Filing.Boxes["c"] = context.Filing.People.Count;
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets the state and local amounts of one person's statements of a year (a W-2's boxes 15 to 20): for each
+    /// jurisdiction below the country of an income tax the person paid, the wages it was worked out on and the tax, the
+    /// employer's account id from its registration with the jurisdiction (the one for income tax first) and, for a local
+    /// jurisdiction, the name printed, the code's part after the region (DETROIT for US-MI-DETROIT). States come first,
+    /// each followed by its local jurisdictions.
+    /// </summary>
+    /// <param name="statements">The statements.</param>
+    /// <param name="employer">The employer, for its account ids; or <see langword="null"/>.</param>
+    /// <returns>The amounts.</returns>
+    public static IReadOnlyList<PayrollFilingJurisdictionAmount> JurisdictionAmounts(IReadOnlyList<PayStatement> statements, Employer employer)
+    {
+        ArgumentNullException.ThrowIfNull(statements);
+
+        return [.. statements
+            .SelectMany(statement => statement.Lines)
+            .Where(line => line.Type == PayLineType.Tax
+                && line.Payer == PayLinePayer.Employee
+                && string.Equals(line.TaxCategory, IncomeTaxCategories.IncomeTax, StringComparison.Ordinal)
+                && line.Jurisdiction?.Contains('-', StringComparison.Ordinal) == true)
+            .GroupBy(line => line.Jurisdiction.ToUpperInvariant(), StringComparer.Ordinal)
+            .Select(group =>
+            {
+                var registrations = (employer?.Registrations ?? []).Where(registration => string.Equals(registration.Jurisdiction, group.Key, StringComparison.OrdinalIgnoreCase)).ToList();
+                var registration = registrations.FirstOrDefault(candidate => (candidate.Categories ?? []).Contains(IncomeTaxCategories.IncomeTax, StringComparer.OrdinalIgnoreCase))
+                    ?? registrations.FirstOrDefault(candidate => candidate.Categories is not { Count: > 0 })
+                    ?? registrations.FirstOrDefault();
+                var amount = new PayrollFilingJurisdictionAmount
+                {
+                    Jurisdiction = group.Key,
+                    AccountId = registration?.AccountId,
+                    Wages = group.Sum(line => line.TaxableWages ?? 0),
+                    Tax = group.Sum(line => line.Amount),
+                };
+
+                if (amount.IsLocal)
+                {
+                    amount.Name = string.Join('-', group.Key.Split('-').Skip(2));
+                }
+
+                return amount;
+            })
+            .Where(amount => amount.Wages != 0 || amount.Tax != 0)
+            .OrderBy(amount => amount.Region, StringComparer.Ordinal)
+            .ThenBy(amount => amount.IsLocal)
+            .ThenBy(amount => amount.Jurisdiction, StringComparer.Ordinal)];
     }
 
     /// <summary>
@@ -412,6 +475,7 @@ public sealed class Form1099Nec : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -729,6 +793,21 @@ public sealed class FormW2Texts
         ["7"] = "7 Social security tips",
     };
 
+    /// <summary>
+    /// Gets or sets the column labels of the state and local rows, boxes 15 to 20 in order: the state, the employer's
+    /// state id, the state wages, the state income tax, the local wages, the local income tax and the locality name.
+    /// </summary>
+    public IList<string> StateColumns { get; set; } =
+    [
+        "15 State",
+        "Employer's state ID number",
+        "16 State wages, tips, etc.",
+        "17 State income tax",
+        "18 Local wages, tips, etc.",
+        "19 Local income tax",
+        "20 Locality name",
+    ];
+
     /// <summary>Gets or sets the label of the employee's tax id.</summary>
     public string TaxId { get; set; } = "Employee's social security number";
 
@@ -845,11 +924,45 @@ public static class Form1099NecDocument
 
 /// <summary>
 /// Prints a person's wage statement for their records: the employer, the person (the tax id shown by its last
-/// characters), and the boxes, with box 12 amounts by their code.
+/// characters), and the boxes, with box 12 amounts by their code and the state and local rows of boxes 15 to 20.
 /// </summary>
 public static class FormW2Document
 {
     private const double Margin = 48;
+
+    /// <summary>
+    /// Pairs a statement's state and local amounts into the rows of boxes 15 to 20: each state with its first local
+    /// jurisdiction, then a row for each further local jurisdiction of the state (with no state amounts), and a row for
+    /// a local jurisdiction of a state with no state amounts.
+    /// </summary>
+    /// <param name="amounts">The amounts.</param>
+    /// <returns>The rows, each a state's amounts (or <see langword="null"/>) and a local jurisdiction's (or <see langword="null"/>).</returns>
+    public static IReadOnlyList<(PayrollFilingJurisdictionAmount State, PayrollFilingJurisdictionAmount Local)> StateRows(IEnumerable<PayrollFilingJurisdictionAmount> amounts)
+    {
+        ArgumentNullException.ThrowIfNull(amounts);
+
+        var rows = new List<(PayrollFilingJurisdictionAmount State, PayrollFilingJurisdictionAmount Local)>();
+
+        foreach (var region in amounts.Where(amount => amount is not null).GroupBy(amount => amount.Region, StringComparer.OrdinalIgnoreCase))
+        {
+            var state = region.FirstOrDefault(amount => !amount.IsLocal);
+            var locals = region.Where(amount => amount.IsLocal).ToList();
+
+            if (locals.Count == 0)
+            {
+                rows.Add((state, null));
+
+                continue;
+            }
+
+            for (var index = 0; index < locals.Count; index++)
+            {
+                rows.Add((index == 0 ? state : null, locals[index]));
+            }
+        }
+
+        return rows;
+    }
 
     /// <summary>
     /// Writes the PDF.
@@ -932,6 +1045,47 @@ public static class FormW2Document
         {
             Text($"12{box[2..]}  {amount.ToString("N2", CultureInfo.InvariantCulture)}", regular, 9, Margin, y);
             y += 12;
+        }
+
+        // Boxes 15 to 20: a row for each state, with its first local jurisdiction, and a row for each further one.
+        var rows = StateRows(person.JurisdictionAmounts ?? []);
+
+        if (rows.Count > 0 && texts.StateColumns is { Count: 7 } columns)
+        {
+            y += 10;
+
+            var widths = new[] { 0.08, 0.20, 0.14, 0.14, 0.14, 0.14, 0.16 };
+            var lefts = new double[widths.Length];
+            var width = right - Margin;
+
+            for (var column = 0; column < widths.Length; column++)
+            {
+                lefts[column] = Margin + (width * widths.Take(column).Sum());
+            }
+
+            for (var column = 0; column < columns.Count; column++)
+            {
+                Text(columns[column], regular, 6, lefts[column] + 2, y);
+            }
+
+            y += 10;
+            page.DrawLine(Margin, y, right, y, PdfColor.Black, 0.5);
+            y += 4;
+
+            foreach (var (state, local) in rows)
+            {
+                string Amount(decimal? value)
+                    => value?.ToString("N2", CultureInfo.InvariantCulture) ?? string.Empty;
+
+                Text(state?.Region?.Split('-').Last() ?? local?.Region?.Split('-').Last(), bold, 9, lefts[0] + 2, y);
+                Text(state?.AccountId, regular, 8, lefts[1] + 2, y);
+                TextRight(Amount(state?.Wages), regular, 9, lefts[3] - 4, y);
+                TextRight(Amount(state?.Tax), regular, 9, lefts[4] - 4, y);
+                TextRight(Amount(local?.Wages), regular, 9, lefts[5] - 4, y);
+                TextRight(Amount(local?.Tax), regular, 9, lefts[6] - 4, y);
+                Text(local?.Name, regular, 8, lefts[6] + 2, y);
+                y += 13;
+            }
         }
 
         return writer.Build();

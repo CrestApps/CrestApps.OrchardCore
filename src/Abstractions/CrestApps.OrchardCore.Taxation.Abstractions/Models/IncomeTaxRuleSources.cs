@@ -39,6 +39,7 @@ public static class IncomeTaxRuleSources
         nameof(IncomeTaxRule.WageThreshold),
         nameof(IncomeTaxRule.YearlyExemption),
         nameof(IncomeTaxRule.YearlyMaximum),
+        nameof(IncomeTaxRule.ExemptionAllowance),
     ];
 
     /// <summary>
@@ -169,6 +170,8 @@ public static class IncomeTaxRuleSources
         yield return (nameof(IncomeTaxRule.Annualize), rule.Annualize, () => rule.Annualize = false);
         yield return (nameof(IncomeTaxRule.UsesElections), rule.UsesElections, () => rule.UsesElections = false);
         yield return (nameof(IncomeTaxRule.AllowanceAmount), rule.AllowanceAmount is not null, () => rule.AllowanceAmount = null);
+        yield return (nameof(IncomeTaxRule.ExemptionAllowance), rule.ExemptionAllowance is not null, () => rule.ExemptionAllowance = null);
+        yield return (nameof(IncomeTaxRule.DeductedTaxCodes), rule.DeductedTaxCodes is { Count: > 0 }, () => rule.DeductedTaxCodes = []);
         yield return (nameof(IncomeTaxRule.SupplementalRate), rule.SupplementalRate is not null, () => rule.SupplementalRate = null);
         yield return (nameof(IncomeTaxRule.SupplementalExcessRate), rule.SupplementalExcessRate is not null, () => rule.SupplementalExcessRate = null);
         yield return (nameof(IncomeTaxRule.SupplementalExcessThreshold), rule.SupplementalExcessThreshold is not null, () => rule.SupplementalExcessThreshold = null);

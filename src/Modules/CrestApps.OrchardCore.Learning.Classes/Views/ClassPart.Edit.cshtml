@@ -1,0 +1,98 @@
+@model ClassPartViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Class"]</div>
+    <div class="card-body">
+        @if (Model.IsNew)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["Save the class first, then add its dated sessions."]</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <a class="btn btn-secondary btn-sm" href="@Url.Action("Index", "ClassSessions", new { area = "CrestApps.OrchardCore.Learning.Classes", classItemId = Model.ClassItemId })"><i class="fa-solid fa-calendar-days me-1" aria-hidden="true"></i>@T["Sessions"]</a>
+                    <span class="hint">@T["The dated sessions learners register for, their rosters and attendance."]</span>
+                </div>
+            </div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="AppointmentTypeId">
+            <label asp-for="AppointmentTypeId" class="ocat-label">@T["Appointment type"]</label>
+            <div class="ocat-end">
+                <select asp-for="AppointmentTypeId" asp-items="Model.AppointmentTypeOptions" class="form-select">
+                    <option value="">@T["Choose an appointment type"]</option>
+                </select>
+                <span asp-validation-for="AppointmentTypeId"></span>
+                <span class="hint">@T["The Scheduling appointment type whose rules (confirmation, cancel notice) the registrations follow. Sessions need one."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="ResourceIds">
+            <label asp-for="ResourceIds" class="ocat-label">@T["Instructors and rooms"]</label>
+            <div class="ocat-end">
+                <select asp-for="ResourceIds" asp-items="Model.ResourceOptions" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-selected-text-format="count > 3" title="@T["Choose instructors and rooms"]"></select>
+                <span class="hint">@T["Scheduling resources new sessions use. The first one's calendar holds the session."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Defaults of new sessions"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Capacity">
+            <label asp-for="Capacity" class="ocat-label">@T["Capacity"]</label>
+            <div class="ocat-end">
+                <input asp-for="Capacity" type="number" min="1" class="form-control" />
+                <span asp-validation-for="Capacity"></span>
+                <span class="hint">@T["How many learners a session takes."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Location">
+            <label asp-for="Location" class="ocat-label">@T["Location"]</label>
+            <div class="ocat-end">
+                <input asp-for="Location" class="form-control" maxlength="500" />
+                <span class="hint">@T["Where sessions take place, such as a room or an address."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="MeetingUrl">
+            <label asp-for="MeetingUrl" class="ocat-label">@T["Meeting link"]</label>
+            <div class="ocat-end">
+                <input asp-for="MeetingUrl" type="url" class="form-control" maxlength="2000" />
+                <span asp-validation-for="MeetingUrl"></span>
+                <span class="hint">@T["An online meeting link to paste. Only learners with a place see it."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="WaitlistMode">
+            <label asp-for="WaitlistMode" class="ocat-label">@T["When a session is full"]</label>
+            <div class="ocat-end">
+                <select asp-for="WaitlistMode" asp-items="Model.WaitlistModeOptions" class="form-select"></select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Attendance"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumMinutes">
+            <label asp-for="MinimumMinutes" class="ocat-label">@T["Minimum minutes"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumMinutes" type="number" min="1" class="form-control" />
+                <span asp-validation-for="MinimumMinutes"></span>
+                <span class="hint">@T["A partial attendance of at least these minutes completes the class. Leave it empty so only full attendance completes it."]</span>
+            </div>
+        </div>
+    </div>
+</div>

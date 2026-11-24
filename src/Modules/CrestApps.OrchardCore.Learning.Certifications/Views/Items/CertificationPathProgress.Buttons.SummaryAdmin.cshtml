@@ -1,0 +1,9 @@
+@model CertificationPathProgressRowViewModel
+
+@if (!string.IsNullOrEmpty(Model.Progress.CurrentRecordId))
+{
+    <a asp-controller="IssuedCertificatesAdmin" asp-action="Document" asp-route-id="@Model.Progress.CurrentRecordId" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Certificate"]</a>
+}
+<form method="post" asp-controller="CertificationPaths" asp-action="Check" asp-route-id="@Model.Progress.PathId" asp-route-userId="@Model.Progress.UserId" class="d-inline">
+    <button type="submit" class="btn btn-secondary btn-sm">@T["Check now"]</button>
+</form>

@@ -1,0 +1,145 @@
+@model SurveyPartViewModel
+
+@{
+    var prefix = Html.NameFor(m => m.Questions).ToString();
+    var editorId = Html.IdFor(m => m.Questions) + "-editor";
+    ViewData["SurveyPrefix"] = prefix;
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@(Model.SingleQuestion ? T["Choice"] : T["Survey"])</div>
+    <div class="card-body">
+        @if (Model.IsNew)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["Save the survey first; then its totals are shown here."]</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningSurveyResults", new { surveyId = Model.SurveyId })"><i class="fa-solid fa-square-poll-vertical me-1" aria-hidden="true"></i>@T["Totals"]</a>
+                    <span class="hint">@T["How learners answered."]</span>
+                </div>
+            </div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="Close">
+            <label asp-for="Close" class="ocat-label">@T["Closes"]</label>
+            <div class="ocat-end">
+                <input asp-for="Close" type="datetime-local" class="form-control" />
+                <span class="hint">@T["In your time zone. Learners can no longer answer after it. Empty keeps it open."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="ResultsVisibility">
+            <label asp-for="ResultsVisibility" class="ocat-label">@T["Learners see the totals"]</label>
+            <div class="ocat-end">
+                <select asp-for="ResultsVisibility" asp-items="Model.ResultsVisibilityOptions" class="form-select"></select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowChangeAnswer" class="form-check-input" />
+                    <label asp-for="AllowChangeAnswer" class="form-check-label">@T["Learners may change their answers until it closes"]</label>
+                    <span class="hint dashed">@T["The new answers replace the earlier ones."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Anonymous" class="form-check-input" />
+                    <label asp-for="Anonymous" class="form-check-label">@T["Anonymous"]</label>
+                    <span class="hint dashed">@T["The totals page lists written answers without the names of the learners who gave them, and learners are told their answers are anonymous. Each learner still answers once, and a learner's own answers can still be exported or erased for them."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@(Model.SingleQuestion ? T["Question"] : T["Questions"])</div>
+    <div class="card-body" id="@editorId">
+        <span class="hint d-block mb-2">@T["Questions without text are left out. A choice question needs at least two choices, one a line; a rating is from 1 to 5."]</span>
+        <span asp-validation-for="Questions"></span>
+        <div data-survey-questions>
+            @for (var i = 0; i < Model.Questions.Count; i++)
+            {
+                <partial name="SurveyQuestionRow" model="@(new SurveyQuestionRowModel(i, Model.Questions[i], Model.TypeOptions, Model.SingleQuestion))" view-data="ViewData" />
+            }
+        </div>
+        @if (!Model.SingleQuestion)
+        {
+            <template data-survey-question-template>
+                <partial name="SurveyQuestionRow" model="@(new SurveyQuestionRowModel(0, new SurveyQuestionRow(), Model.TypeOptions, false))" view-data="ViewData" />
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-add-question><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a question"]</button>
+        }
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const editor = document.getElementById('@editorId');
+        const rows = editor.querySelector('[data-survey-questions]');
+        const template = editor.querySelector('[data-survey-question-template]');
+        const addButton = editor.querySelector('[data-survey-add-question]');
+        const prefix = '@prefix';
+
+        // Field names are Prefix[i].Text: number the rows again after any change, so the posted list has no gaps.
+        function renumber() {
+            rows.querySelectorAll('[data-survey-question]').forEach(function (question, i) {
+                question.querySelectorAll('[name]').forEach(function (input) {
+                    if (input.name.indexOf(prefix + '[') === 0) {
+                        input.name = prefix + '[' + i + ']' + input.name.substring(input.name.indexOf(']') + 1);
+                    }
+                });
+                question.querySelectorAll('[id]').forEach(function (element) {
+                    element.id = element.id.replace(/_\d+__/, '_' + i + '__');
+                });
+                question.querySelectorAll('label[for]').forEach(function (label) {
+                    label.htmlFor = label.htmlFor.replace(/_\d+__/, '_' + i + '__');
+                });
+            });
+        }
+
+        // The choices box shows only for a question answered with choices.
+        function showOptions(question) {
+            const type = question.querySelector('[data-survey-type]').value;
+            question.querySelector('[data-survey-options]').hidden = type === 'Rating' || type === 'Text';
+        }
+
+        rows.addEventListener('change', function (event) {
+            if (event.target.matches('[data-survey-type]')) {
+                showOptions(event.target.closest('[data-survey-question]'));
+            }
+        });
+
+        rows.addEventListener('click', function (event) {
+            const remove = event.target.closest('[data-survey-remove-question]');
+
+            if (remove) {
+                remove.closest('[data-survey-question]').remove();
+                renumber();
+            }
+        });
+
+        if (addButton && template) {
+            addButton.addEventListener('click', function () {
+                rows.appendChild(template.content.cloneNode(true));
+                renumber();
+                showOptions(rows.lastElementChild);
+            });
+        }
+
+        rows.querySelectorAll('[data-survey-question]').forEach(showOptions);
+        renumber();
+    })();
+</script>

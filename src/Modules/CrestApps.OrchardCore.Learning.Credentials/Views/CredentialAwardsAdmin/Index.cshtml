@@ -1,0 +1,43 @@
+@model CredentialAwardListViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningCredentialAwards" title="@T["Credential awards"]" />
+</zone>
+
+@* One GET form for the search and the filters: the filters render in the list's toolbar, inside it. *@
+<form asp-action="Index" method="get" class="no-multisubmit" id="learning-credential-awards-filter">
+    @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
+    {
+        <input type="hidden" name="pageSize" value="@selectedPageSize" />
+    }
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input type="search" id="Options_Search" name="Options.Search" class="form-control" value="@Model.Options.Search" placeholder="@T["Search by the recipient's user name"]" autocomplete="off" />
+                        <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (Model.CanAward)
+                {
+                    <div class="col-auto">
+                        <a href="@Url.RouteUrl("LearningCredentialAwardsNew")" class="btn btn-secondary create">@T["Award a credential"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="LearningCredentialAwards" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No credential award matches. Awards appear here when a rule of a credential definition awards one, or when staff award one by hand."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Credential" position="20" title="@T["Credential"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Issued" position="40" title="@T["Issued"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

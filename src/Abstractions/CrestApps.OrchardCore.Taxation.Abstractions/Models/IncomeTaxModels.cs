@@ -64,3 +64,19 @@ public enum SupplementalWithholdingMethod
     /// <summary>At the tax's flat supplemental rate.</summary>
     Flat,
 }
+
+/// <summary>
+/// Whose home or place of work an income tax rule applies to, for a rule below a country (such as a city's tax at one
+/// rate on its residents and another on the people who only work there).
+/// </summary>
+public enum IncomeTaxResidency
+{
+    /// <summary>Anyone in the jurisdiction, by home or by place of work.</summary>
+    Any,
+
+    /// <summary>Only a person whose home is in the jurisdiction.</summary>
+    Resident,
+
+    /// <summary>Only a person who works in the jurisdiction and whose home is not in it.</summary>
+    Nonresident,
+}

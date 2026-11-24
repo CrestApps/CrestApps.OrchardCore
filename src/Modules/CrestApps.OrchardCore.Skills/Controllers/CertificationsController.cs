@@ -1,4 +1,5 @@
-using System.Globalization;
+using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Skills.ViewModels;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 
@@ -23,6 +25,8 @@ public sealed class CertificationsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ICertificationManager _certificationManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<Certification> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -39,12 +43,16 @@ public sealed class CertificationsController : Controller
         IAuthorizationService authorizationService,
         ICertificationManager certificationManager,
         INotifier notifier,
+        IDisplayManager<Certification> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CertificationsController> htmlLocalizer,
         IStringLocalizer<CertificationsController> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _certificationManager = certificationManager;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -79,11 +87,6 @@ public sealed class CertificationsController : Controller
         });
     }
 
-    /// <summary>
-    /// Shows the editor of a new or existing certification.
-    /// </summary>
-    /// <param name="id">The certification id, or empty for a new one.</param>
-    /// <returns>The editor.</returns>
     [Admin("certifications/edit/{id?}", "CertificationsEdit")]
     public async Task<IActionResult> Edit(string id)
     {
@@ -92,7 +95,8 @@ public sealed class CertificationsController : Controller
             return Forbid();
         }
 
-        var certification = string.IsNullOrEmpty(id)
+        var isNew = string.IsNullOrEmpty(id);
+        var certification = isNew
             ? await _certificationManager.NewAsync()
             : await _certificationManager.FindByIdAsync(id);
 
@@ -101,76 +105,44 @@ public sealed class CertificationsController : Controller
             return NotFound();
         }
 
-        return View(new CertificationEditViewModel
+        return View(new EditCatalogEntryViewModel
         {
-            Id = id,
-            Name = certification.Name,
-            Issuer = certification.Issuer,
-            Description = certification.Description,
-            ValidityMonths = certification.ValidityMonths,
-            RequiresDocument = certification.RequiresDocument,
-            ReminderDays = string.Join(", ", certification.ReminderDays),
-            Enabled = certification.Enabled,
+            DisplayName = certification.Name,
+            Editor = await _displayManager.BuildEditorAsync(certification, _updateModelAccessor.ModelUpdater, isNew),
         });
     }
 
-    /// <summary>
-    /// Saves a certification.
-    /// </summary>
-    /// <param name="model">The fields.</param>
-    /// <returns>A redirect to the list, or the editor with errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("certifications/edit/{id?}", "CertificationsEdit")]
-    public async Task<IActionResult> EditPost(CertificationEditViewModel model)
+    public async Task<IActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SkillsPermissions.ManageSkills))
         {
             return Forbid();
         }
 
-        var isNew = string.IsNullOrEmpty(model.Id);
+        var isNew = string.IsNullOrEmpty(id);
         var certification = isNew
             ? await _certificationManager.NewAsync()
-            : await _certificationManager.FindByIdAsync(model.Id);
+            : await _certificationManager.FindByIdAsync(id);
 
         if (certification is null)
         {
             return NotFound();
         }
 
-        var reminderDays = new List<int>();
+        var displayName = certification.Name;
+        var editor = await _displayManager.UpdateEditorAsync(certification, _updateModelAccessor.ModelUpdater, isNew);
+        var isValid = await CatalogEntryValidation.ValidateAsync(_certificationManager, certification, _updateModelAccessor.ModelUpdater, nameof(Certification), HttpContext.RequestAborted);
 
-        foreach (var part in (model.ReminderDays ?? string.Empty).Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        if (!isValid || !ModelState.IsValid)
         {
-            if (int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var days))
+            return View(new EditCatalogEntryViewModel
             {
-                reminderDays.Add(days);
-            }
-            else
-            {
-                ModelState.AddModelError(nameof(model.ReminderDays), S["'{0}' is not a number of days.", part]);
-            }
-        }
-
-        certification.Name = model.Name;
-        certification.Issuer = model.Issuer;
-        certification.Description = model.Description;
-        certification.ValidityMonths = model.ValidityMonths;
-        certification.RequiresDocument = model.RequiresDocument;
-        certification.ReminderDays = reminderDays;
-        certification.Enabled = model.Enabled;
-
-        var validation = await _certificationManager.ValidateAsync(certification);
-
-        foreach (var error in validation.Errors)
-        {
-            ModelState.AddModelError(error.MemberNames.FirstOrDefault() ?? string.Empty, error.ErrorMessage);
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return View(model);
+                DisplayName = displayName,
+                Editor = editor,
+            });
         }
 
         if (isNew)

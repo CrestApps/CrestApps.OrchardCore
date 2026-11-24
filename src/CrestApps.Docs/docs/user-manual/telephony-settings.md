@@ -13,7 +13,7 @@ Calls and texts go through a provider account. This page covers the settings an 
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Communication > Telephony, and Settings > Communication > SMS |
+| **Menu** | **Settings** → **Communication** → **Telephony**, and **Settings** → **Communication** → **SMS** |
 | **Permission** | Manage telephony settings; Manage SMS Settings |
 | **Features** | Telephony and a provider feature such as **Telnyx** or **Asterisk**; **Telnyx SMS** or Orchard Core's Twilio SMS for texting |
 
@@ -23,22 +23,22 @@ Calls and texts go through a provider account. This page covers the settings an 
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the Telephony settings tabs and the SMS provider settings" start={38} end={72} />
 
-Each provider you turn on adds its own tab to **Settings > Communication > Telephony**. The **Soft Phone** tab holds the settings that apply whichever provider you use.
+Each provider you turn on adds its own tab to **Settings** → **Communication** → **Telephony**. The **Soft Phone** tab holds the settings that apply whichever provider you use.
 
 ## Connect Telnyx for calls
 
 <YouTube video="telephony-telnyx-settings" title="Video overview of the Telnyx settings: connect, noise suppression, answering machine detection and speech" />
 <YouTube video="telephony" title="Video of connecting Telnyx" start={219} end={289} />
 
-Before you start, create an API key in the Telnyx portal under **Account > Keys & Credentials > API Keys** (a V2 key). Sign in to Telnyx as an account **Owner** or **Admin** when you create it: a key made by a restricted member can read the account but cannot create what **Connect Telnyx** needs, and connecting fails with *Not authorized*.
+Before you start, create an API key in the Telnyx portal under **Account** → **Keys & Credentials** → **API Keys** (a V2 key). Sign in to Telnyx as an account **Owner** or **Admin** when you create it: a key made by a restricted member can read the account but cannot create what **Connect Telnyx** needs, and connecting fails with *Not authorized*.
 
 <YouTube video="telephony-telnyx-settings" title="Video of the Telnyx tab before connecting" start={47} end={92} />
 
-1. Open **Settings > Communication > Telephony** and choose the **Telnyx** tab.
+1. Open **Settings** → **Communication** → **Telephony** and choose the **Telnyx** tab.
 2. Tick **Enable Telnyx provider**, paste the key into **API key**, and save. The **Connect Telnyx** button appears once the key is stored.
 3. Click **Connect Telnyx**. The site creates the Telnyx resources it needs and shows a green **Connected to Telnyx** panel with their ids. The other settings appear once you are connected.
 4. Pick the **Default outbound caller id**: the Telnyx number customers see when a call does not bring its own. The list holds your [Omnichannel Addresses](channel-endpoints.md) used for **Voice calls**; Connect suggests one.
-5. Paste the **Webhook public key**. You find it in the Telnyx portal under **Account > Keys & Credentials**, as the **Public Key**. Until it is set, a yellow **Add the webhook public key to finish setup** panel reminds you, and every call event from Telnyx is rejected: calls do not connect and inbound calls are not routed.
+5. Paste the **Webhook public key**. You find it in the Telnyx portal under **Account** → **Keys & Credentials**, as the **Public Key**. Until it is set, a yellow **Add the webhook public key to finish setup** panel reminds you, and every call event from Telnyx is rejected: calls do not connect and inbound calls are not routed.
 6. Save.
 
 | Field | What it does |
@@ -59,7 +59,7 @@ The **Advanced — browser WebRTC (optional)** section holds settings you rarely
 
 <YouTube video="telephony-telnyx-settings" title="Video of the advanced Telnyx settings" start={166} end={203} />
 
-**Soft phone region** picks the Telnyx region the browser connects to: **Automatic (chosen by Telnyx)**, or one of the regions in the list. Telnyx can also send texts; its SMS settings are under **Settings > Communication > SMS** when Telnyx SMS is on.
+**Soft phone region** picks the Telnyx region the browser connects to: **Automatic (chosen by Telnyx)**, or one of the regions in the list. Telnyx can also send texts; its SMS settings are under **Settings** → **Communication** → **SMS** when Telnyx SMS is on.
 
 **Disconnect** deletes the resources Connect created on Telnyx, after you confirm. To start over, click **Disconnect** and then **Connect Telnyx** again.
 
@@ -70,7 +70,7 @@ The **Advanced — browser WebRTC (optional)** section holds settings you rarely
 
 Use Asterisk when your company runs its own Asterisk phone system. The values come from whoever looks after that system.
 
-1. Open **Settings > Communication > Telephony** and choose the **Asterisk** tab.
+1. Open **Settings** → **Communication** → **Telephony** and choose the **Asterisk** tab.
 2. Tick **Enable Asterisk provider**. The rest of the fields appear.
 3. Enter the **ARI base URL**, **ARI user name**, **ARI password** and **Stasis application name**. The application name is required; when several sites share one Asterisk server, each site needs its own name.
 4. Optionally fill in the **Endpoint template**, **Outbound caller id**, **Dial timeout (seconds)** and the voicemail fields.
@@ -112,7 +112,7 @@ On the **Costs** tab of the same page, set what your phone carrier charges, so t
 
 ## Set up SMS
 
-1. Open **Settings > Communication > SMS**.
+1. Open **Settings** → **Communication** → **SMS**.
 2. On the **Providers** tab, pick the **Default SMS provider**.
 3. Fill in that provider's own tab, as described below.
 4. Save.
@@ -126,7 +126,7 @@ On the **Costs** tab of the same page, set what your phone carrier charges, so t
 | **API key** | The Telnyx V2 API key. |
 | **Messaging profile id** | Optional. Sends through one Telnyx messaging profile; leave it empty to send using only the From number. |
 | **Public Key** | The Telnyx public key that proves incoming texts and delivery receipts really come from Telnyx. |
-| **Webhook URL** | Read-only. In the Telnyx portal, create a messaging profile under **Messaging Suite > Programmable Messaging**, and set both its **Webhook URL** and **Webhook Failover URL** to this address. |
+| **Webhook URL** | Read-only. In the Telnyx portal, create a messaging profile under **Messaging Suite** → **Programmable Messaging**, and set both its **Webhook URL** and **Webhook Failover URL** to this address. |
 
 The tab has buttons that open the right Telnyx portal pages. If your site sits behind a proxy and the **Webhook URL** shows the wrong address, ask your IT team to fix the site's base URL.
 

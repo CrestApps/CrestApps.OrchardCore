@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 
@@ -250,4 +251,45 @@ public sealed class PayrollFilingPerson
 
     /// <summary>Gets or sets the boxes.</summary>
     public Dictionary<string, decimal> Boxes { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets or sets the amounts of each jurisdiction below the country on the statement, such as a W-2's state and local
+    /// boxes (15 to 20): stored when the filing is prepared.
+    /// </summary>
+    public IList<PayrollFilingJurisdictionAmount> JurisdictionAmounts { get; set; } = [];
+}
+
+/// <summary>
+/// The wages and the income tax of one jurisdiction below the country on a person's statement, such as a state's or a
+/// city's (a W-2's boxes 15 to 17 or 18 to 20).
+/// </summary>
+public sealed class PayrollFilingJurisdictionAmount
+{
+    /// <summary>Gets or sets the jurisdiction, such as US-MI or US-MI-DETROIT.</summary>
+    public string Jurisdiction { get; set; }
+
+    /// <summary>Gets or sets the name printed for a local jurisdiction, such as DETROIT (a W-2's box 20).</summary>
+    public string Name { get; set; }
+
+    /// <summary>Gets or sets the employer's account id with the jurisdiction, from its registration (a W-2's box 15).</summary>
+    public string AccountId { get; set; }
+
+    /// <summary>Gets or sets the wages the jurisdiction's income tax was worked out on.</summary>
+    public decimal Wages { get; set; }
+
+    /// <summary>Gets or sets the income tax withheld for the jurisdiction.</summary>
+    public decimal Tax { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the jurisdiction is local (a county, a city, a school district): it has a region
+    /// and more, such as US-MI-DETROIT.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsLocal
+        => Jurisdiction?.Count(character => character == '-') >= 2;
+
+    /// <summary>Gets the jurisdiction of the country and region, such as US-MI for US-MI-DETROIT.</summary>
+    [JsonIgnore]
+    public string Region
+        => Jurisdiction?.Split('-') is { Length: >= 2 } parts ? $"{parts[0]}-{parts[1]}" : Jurisdiction;
 }

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Learning.Assessments.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<VoidAttemptTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-ban" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Void Quiz Attempt"])
+    </h4>
+</header>

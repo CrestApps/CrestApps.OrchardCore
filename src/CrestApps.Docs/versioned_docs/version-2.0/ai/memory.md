@@ -99,7 +99,7 @@ The core **AI Memory** feature is enabled by dependency when one of those provid
 ### 2. Create a memory index
 
 1. Enable the corresponding Orchard Core search feature for your provider.
-2. Navigate to **Search → Indexing**.
+2. Navigate to **Search** → **Indexing**.
 3. Create a new index using either:
    - **AI Memory (Azure AI Search)**
    - **AI Memory (Elasticsearch)**
@@ -109,12 +109,12 @@ The selected embedding deployment is only configurable when the memory index pro
 
 ### 3. Configure global memory settings
 
-Navigate to **Settings → Artificial Intelligence → Memory** and configure:
+Navigate to **Settings** → **Artificial Intelligence** → **Memory** and configure:
 
 - **Index profile** — the master memory index used for storing memories
 - **Default top N** — the default number of matching memories returned by searches
 
-Preemptive memory retrieval itself is controlled separately under **Settings → Artificial Intelligence → General** through **Enable Preemptive Memory Retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
+Preemptive memory retrieval itself is controlled separately under **Settings** → **Artificial Intelligence** → **General** through **Enable Preemptive Memory Retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
 
 :::warning
 After you start storing production memory data, avoid changing the configured master index unless you plan a full re-index.
@@ -142,7 +142,7 @@ This makes it easy to preconfigure memory behavior when you create reusable chat
 
 #### Chat Interactions
 
-Chat Interactions add a site setting under **Settings → Artificial Intelligence → Chat Interactions**:
+Chat Interactions add a site setting under **Settings** → **Artificial Intelligence** → **Chat Interactions**:
 
 - **Enable User Memory**
 - Default: **enabled**

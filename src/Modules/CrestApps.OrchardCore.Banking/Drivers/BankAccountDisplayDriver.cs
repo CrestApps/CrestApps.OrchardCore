@@ -91,13 +91,18 @@ internal sealed class BankAccountDisplayDriver : DisplayDriver<BankAccount>
             model.Currency = account.Currency;
             model.BankName = account.BankName;
             model.RoutingNumber = account.RoutingNumber;
-            model.MaskedAccountNumber = BankAccountNumbers.Masked(account);
+            model.MaskedAccountNumber = account.AccountNumber is { HasValue: true } ? BankAccountNumbers.Masked(account) : null;
+            model.AccountNumberLastFour = account.AccountNumberLastFour;
             model.Status = account.Status;
             model.StatusReason = account.StatusReason;
             model.KindOptions =
             [
                 new SelectListItem(S["Checking"], nameof(BankAccountKind.Checking), account.Kind == BankAccountKind.Checking),
                 new SelectListItem(S["Savings"], nameof(BankAccountKind.Savings), account.Kind == BankAccountKind.Savings),
+                new SelectListItem(S["Credit card"], nameof(BankAccountKind.CreditCard), account.Kind == BankAccountKind.CreditCard),
+                new SelectListItem(S["Line of credit"], nameof(BankAccountKind.LineOfCredit), account.Kind == BankAccountKind.LineOfCredit),
+                new SelectListItem(S["Cash"], nameof(BankAccountKind.Cash), account.Kind == BankAccountKind.Cash),
+                new SelectListItem(S["Other"], nameof(BankAccountKind.Other), account.Kind == BankAccountKind.Other),
             ];
             model.StatusOptions = StatusOptions(account.Status);
         }).Location("Content:1").OnGroup(context.GroupId ?? string.Empty);
@@ -133,10 +138,27 @@ internal sealed class BankAccountDisplayDriver : DisplayDriver<BankAccount>
             context.Updater.ModelState.AddModelError(Prefix + "." + error.Field, error.Message);
         }
 
-        // A refused number already says what to fix.
-        if (numberErrors.Count == 0 && !BankAccountNumbers.HasNumbers(account) && (context.IsNew || isOwn))
+        // A refused number already says what to fix. A payee's account is added with its numbers, since it exists to be
+        // paid; one of the business's own accounts may wait for them until a check line, a bank file or a disbursement
+        // needs them.
+        if (numberErrors.Count == 0 && !BankAccountNumbers.HasNumbers(account) && ((context.IsNew && !account.Owner.IsEmpty) || isOwn))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.AccountNumber), S["Enter the routing and account numbers."]);
+        }
+
+        // An account the site doesn't hold the number of may be known by its last digits; the full number replaces them.
+        if (!isOwn && account.AccountNumber is not { HasValue: true })
+        {
+            var lastFour = Clean(model.AccountNumberLastFour);
+
+            if (BankAccountNumbers.IsValidLastFour(lastFour))
+            {
+                account.AccountNumberLastFour = lastFour;
+            }
+            else
+            {
+                context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.AccountNumberLastFour), S["Enter at most the last four letters or digits of the account number."]);
+            }
         }
 
         if (!isOwn && !context.IsNew && model.Status != account.Status

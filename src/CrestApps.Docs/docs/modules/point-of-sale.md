@@ -341,7 +341,7 @@ A closed shift keeps the declared tips (`RegisterShift.CardTips`, `CashTips`); `
 
 ## Web register
 
-The **Point of Sale Web Register** feature (`CrestApps.OrchardCore.PointOfSale.WebRegister`) adds **Commerce > Point of sale > Web register** (`pos-register`, `WebRegisterController`, for **Sell at a register**). It lists the registers the user may sell at, or opens the only one, at `pos-register/Till/{registerId}`. The page calls the controller's JSON actions with the admin cookie and an antiforgery token (`RequestVerificationToken` header), and they call the same services as the API, so its sales are the same orders and checkouts:
+The **Point of Sale Web Register** feature (`CrestApps.OrchardCore.PointOfSale.WebRegister`) adds **Commerce** → **Point of Sale** → **Web Register** (`pos-register`, `WebRegisterController`, for **Sell at a register**). It lists the registers the user may sell at, or opens the only one, at `pos-register/Till/{registerId}`. The page calls the controller's JSON actions with the admin cookie and an antiforgery token (`RequestVerificationToken` header), and they call the same services as the API, so its sales are the same orders and checkouts:
 
 | Action | What it does |
 | --- | --- |
@@ -357,9 +357,9 @@ Amounts are keyed in as on a cash register, cents first, and `×` multiplies. Th
 
 ## Admin
 
-- **Commerce > Point of sale > Registers** (`point-of-sale/registers`, `RegistersAdminController`) lists registers through the `AdminList` shape, with **Add register** and each register's editor. Its **Department keys** card programs the register's keys: a department, what the key reads, and a preset amount, in order.
-- **Commerce > Point of sale > Departments** (`pos-departments`, `PosDepartmentsAdminController`) lists departments through the `AdminList` shape, with **Add department**, each department's editor (its tax category is picked from Taxation's categories when Taxation is on), and **Delete**. A deleted department's sales keep its name.
-- **Commerce > Point of sale > Shifts** (`point-of-sale/shifts`) lists shifts, newest first, with a register filter in the list toolbar; a shift's page shows its sales by tender and its cash drawer (float, put in less taken out, expected, counted, difference), its cash movements and its close note.
+- **Commerce** → **Point of Sale** → **Registers** (`point-of-sale/registers`, `RegistersAdminController`) lists registers through the `AdminList` shape, with **Add register** and each register's editor. Its **Department keys** card programs the register's keys: a department, what the key reads, and a preset amount, in order.
+- **Commerce** → **Point of Sale** → **Departments** (`pos-departments`, `PosDepartmentsAdminController`) lists departments through the `AdminList` shape, with **Add department**, each department's editor (its tax category is picked from Taxation's categories when Taxation is on), and **Delete**. A deleted department's sales keep its name.
+- **Commerce** → **Point of Sale** → **Shifts** (`point-of-sale/shifts`) lists shifts, newest first, with a register filter in the list toolbar; a shift's page shows its sales by tender and its cash drawer (float, put in less taken out, expected, counted, difference), its cash movements and its close note.
 
 ## Recipes and deployment
 

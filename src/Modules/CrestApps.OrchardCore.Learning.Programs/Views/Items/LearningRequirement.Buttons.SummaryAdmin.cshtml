@@ -1,0 +1,4 @@
+@model LearningRequirementRowViewModel
+
+<a asp-controller="RequiredLearning" asp-action="People" asp-route-id="@Model.Requirement.ItemId" class="btn btn-secondary btn-sm">@T["People"]</a>
+<a asp-controller="RequiredLearning" asp-action="Edit" asp-route-id="@Model.Requirement.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>

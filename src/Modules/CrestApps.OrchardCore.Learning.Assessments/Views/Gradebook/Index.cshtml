@@ -1,0 +1,126 @@
+@model GradebookViewModel
+
+<zone Name="Title"><breadcrumb name="LearningGradebook" title="@T["Gradebook"]" /></zone>
+
+<form method="get" asp-action="Index" id="gradebook-filter">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2">
+                <div class="col-sm">
+                    <select name="courseId" class="form-select" aria-label="@T["Course"]" onchange="this.form.submit()">
+                        <option value="">@T["Choose a course"]</option>
+                        @foreach (var option in Model.CourseOptions)
+                        {
+                            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <select name="scaleId" class="form-select" aria-label="@T["Grade scale"]" onchange="this.form.submit()">
+                        <option value="">@T["Percentages"]</option>
+                        @foreach (var option in Model.ScaleOptions)
+                        {
+                            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.CourseId is null)
+{
+    <p>@T["Choose a course to see its learners and their grades."]</p>
+}
+else if (Model.Rows.Count == 0)
+{
+    <p>@T["No one is enrolled in this course yet."]</p>
+}
+else
+{
+    string Grade(decimal? percent) => percent is not { } value ? string.Empty : Model.Scale?.Find(value) is { } band ? band.Label + " (" + value.ToString("0.##") + "%)" : value.ToString("0.##") + "%";
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Learner"]</th>
+                        @foreach (var item in Model.Items)
+                        {
+                            var itemCategory = Model.Categories.FirstOrDefault(category => category.ItemIds.Contains(item.Id));
+
+                            <th scope="col" class="text-end">
+                                @item.Title
+                                <span class="text-secondary small d-block">@T["weight {0}", item.Weight.ToString("0.##")]</span>
+                                @if (itemCategory is not null)
+                                {
+                                    <span class="text-secondary small d-block">@(itemCategory.Name ?? T["No category"].Value)</span>
+                                }
+                            </th>
+                        }
+                        @foreach (var category in Model.Categories)
+                        {
+                            <th scope="col" class="text-end border-start">
+                                @(category.Name ?? T["No category"].Value)
+                                <span class="text-secondary small d-block">@T["weight {0}", category.Weight.ToString("0.##")]</span>
+                            </th>
+                        }
+                        <th scope="col" class="text-end">@T["Course grade"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <th scope="row" class="fw-normal">
+                                @row.LearnerName
+                                <span class="text-secondary small d-block">@row.Enrollment.Number</span>
+                            </th>
+                            @foreach (var item in Model.Items)
+                            {
+                                var dropped = row.Breakdown.IsDropped(item.Id);
+
+                                <td class="text-end">
+                                    @if (row.Items.TryGetValue(item.Id, out var progress) && progress.Score is { } score)
+                                    {
+                                        <span class="@(dropped ? "text-decoration-line-through text-secondary" : progress.Passed == false ? "text-danger" : null)">@Grade(score)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-secondary">-</span>
+                                    }
+                                    @if (dropped)
+                                    {
+                                        <span class="badge ta-badge fw-normal ms-1" title="@T["One of the lowest scores of its category, left out of the category score."]">@T["dropped"]</span>
+                                    }
+                                </td>
+                            }
+                            @foreach (var category in Model.Categories)
+                            {
+                                var result = row.Breakdown.Categories.FirstOrDefault(candidate => candidate.CategoryId == category.CategoryId);
+
+                                <td class="text-end border-start">
+                                    @if (result?.Score is { } categoryScore)
+                                    {
+                                        @Grade(categoryScore)
+                                    }
+                                    else
+                                    {
+                                        <span class="text-secondary">-</span>
+                                    }
+                                </td>
+                            }
+                            <td class="text-end fw-semibold">@Grade(row.Enrollment.Grade)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if (Model.Truncated)
+    {
+        <p class="hint mt-2">@T["Only the first 500 enrollments are shown."]</p>
+    }
+}

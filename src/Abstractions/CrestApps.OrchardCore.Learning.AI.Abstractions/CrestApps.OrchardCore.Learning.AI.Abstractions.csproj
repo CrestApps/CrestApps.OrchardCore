@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.AI</RootNamespace>
+    <Title>CrestApps OrchardCore Learning AI Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Learning AI: the feature ids, permissions, tool and template names, the course switch of the
+      learning assistant and the marker of a tutor AI profile.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS AI Tutor Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

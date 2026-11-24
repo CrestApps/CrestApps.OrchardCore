@@ -1,0 +1,14 @@
+@model CertificationEditViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Certification"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /><span asp-validation-for="Name"></span></div></div>
+        <div class="ocat-wrapper"><label asp-for="Issuer" class="ocat-label">@T["Issued by"]</label><div class="ocat-end"><input asp-for="Issuer" class="form-control" style="max-width: 22rem" /></div></div>
+        <div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="3"></textarea></div></div>
+        <div class="ocat-wrapper"><label asp-for="ValidityMonths" class="ocat-label">@T["Valid for (months)"]</label><div class="ocat-end"><input asp-for="ValidityMonths" type="number" min="1" class="form-control" style="max-width: 10rem" /><span class="hint">@T["How long a certificate lasts after it is issued, used when a certificate has no expiry date of its own. Leave empty when it never expires."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="ReminderDays" class="ocat-label">@T["Reminders (days before expiry)"]</label><div class="ocat-end"><input asp-for="ReminderDays" class="form-control" style="max-width: 16rem" placeholder="60, 30, 7" /><span class="hint">@T["One reminder for each number, raised once per certificate. Workflows can listen for it to email the holder or their manager."]</span><span asp-validation-for="ReminderDays"></span></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="RequiresDocument" class="form-check-input" /><label asp-for="RequiresDocument" class="form-check-label">@T["Needs a copy of the certificate"]</label><span class="hint dashed">@T["A certificate recorded by hand can't be marked valid until a copy is attached. Certificates the site issues are printed from their template."]</span></div></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div></div></div>
+    </div>
+</div>

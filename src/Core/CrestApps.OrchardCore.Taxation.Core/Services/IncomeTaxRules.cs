@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
@@ -165,6 +167,7 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
         CatalogDeploymentSerializer.Populate(context.Model, context.Data);
         Normalize(context.Model);
         EnsureSource(context.Model);
+        KeepVerificationOnlyFrom(context.Model, context.Data);
 
         return Task.CompletedTask;
     }
@@ -183,9 +186,26 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
         CatalogDeploymentSerializer.Populate(context.Model, context.Data);
         Normalize(context.Model);
         EnsureSource(context.Model);
+        KeepVerificationOnlyFrom(context.Model, context.Data);
         context.Model.ModifiedUtc = _clock.UtcNow;
 
         return Task.CompletedTask;
+    }
+
+    // A rule is checked as it is: any change clears the check, unless the values handed in carry one (the Verify action,
+    // or a recipe or deployment plan of a rule checked where it was exported).
+    private static void KeepVerificationOnlyFrom(IncomeTaxRule rule, JsonNode data)
+    {
+        if (data is JsonObject values && values.ContainsKey(nameof(IncomeTaxRule.VerifiedUtc)) && rule.VerifiedUtc is not null)
+        {
+            rule.VerifiedUtc = DateTime.SpecifyKind(rule.VerifiedUtc.Value, DateTimeKind.Utc);
+
+            return;
+        }
+
+        rule.VerifiedBy = null;
+        rule.VerifiedUtc = null;
+        rule.VerificationSource = null;
     }
 
     // A rule saved or imported before rules had a source gets one from what it holds; a source with a method of its own
@@ -240,6 +260,12 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
             .Select(jurisdiction => jurisdiction.Trim().ToUpperInvariant())
             .Distinct(StringComparer.Ordinal)];
         rule.IncomeKinds = [.. (rule.IncomeKinds ?? []).Distinct()];
+        rule.ExclusiveGroup = string.IsNullOrWhiteSpace(rule.ExclusiveGroup) ? null : rule.ExclusiveGroup.Trim().ToUpperInvariant();
+        rule.ElectionsFrom = string.IsNullOrWhiteSpace(rule.ElectionsFrom) ? null : rule.ElectionsFrom.Trim().ToUpperInvariant();
+        rule.DeductedTaxCodes = [.. (rule.DeductedTaxCodes ?? [])
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(code => code.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal)];
     }
 
     /// <inheritdoc />
@@ -302,7 +328,7 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
             context.Result.Fail(new ValidationResult(S["A rate is a percent from 0 to 100."], [nameof(IncomeTaxRule.Rate)]));
         }
 
-        if (rule.FixedAmount is < 0 || rule.WageBase is < 0 || rule.AllowanceAmount is < 0 || rule.WageThreshold is < 0 || rule.SupplementalExcessThreshold is < 0 || rule.YearlyExemption is < 0 || rule.YearlyMaximum is < 0)
+        if (rule.FixedAmount is < 0 || rule.WageBase is < 0 || rule.AllowanceAmount is < 0 || rule.ExemptionAllowance is < 0 || rule.WageThreshold is < 0 || rule.SupplementalExcessThreshold is < 0 || rule.YearlyExemption is < 0 || rule.YearlyMaximum is < 0)
         {
             context.Result.Fail(new ValidationResult(S["An amount is zero or more."], [nameof(IncomeTaxRule.WageBase)]));
         }
@@ -391,6 +417,10 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
 
     private static readonly LocalizationSource _displayName = LocalizationSource.Create<IncomeTaxRulesProvider>("Income tax rules");
 
+    // The election fields a rule's exemption allowance reads.
+    private const string ExemptionsFieldName = "Exemptions";
+    private const string ExemptFieldName = "Exempt";
+
     private readonly IIncomeTaxRuleManager _rules;
     private readonly ITaxCalculationMethodProvider _methods;
     private readonly INamedCatalog<TaxTable> _tables;
@@ -419,7 +449,34 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
     public string Name => ProviderName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A rule reads an election when it uses elections or takes the exemptions an election claims (an exemption
+    /// allowance), and it reads the election of the jurisdiction it names in <see cref="IncomeTaxRule.ElectionsFrom"/>, or
+    /// else of its own. Only rules turned on and in effect on the day count.
+    /// </remarks>
+    public async Task<IReadOnlySet<string>> GetElectionJurisdictionsAsync(DateOnly date, CancellationToken cancellationToken = default)
+    {
+        var jurisdictions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rule in await _rules.ListAsync(cancellationToken))
+        {
+            if (rule.AppliesOn(date) && (rule.UsesElections || rule.ExemptionAllowance is not null))
+            {
+                var jurisdiction = string.IsNullOrWhiteSpace(rule.ElectionsFrom) ? rule.Jurisdiction : rule.ElectionsFrom;
+
+                if (!string.IsNullOrWhiteSpace(jurisdiction))
+                {
+                    jurisdictions.Add(jurisdiction.Trim());
+                }
+            }
+        }
+
+        return jurisdictions;
+    }
 
     /// <inheritdoc />
     public async Task<IncomeTaxResult> CalculateAsync(IncomeTaxRequest request, CancellationToken cancellationToken = default)
@@ -469,11 +526,14 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
                     && registered.Contains(rule.CollectedBy ?? rule.Jurisdiction)
                     && rule.AppliesTo(request.IncomeKind)
                     && (!rule.Jurisdiction.Contains('-', StringComparison.Ordinal) || place.Count == 0 || place.Contains(rule.Jurisdiction))
-                    && !(rule.ExceptJurisdictions ?? []).Any(place.Contains);
+                    && !(rule.ExceptJurisdictions ?? []).Any(place.Contains)
+                    && AppliesToResidency(rule, request);
             })
-            .OrderBy(rule => rule.Jurisdiction, StringComparer.Ordinal)
-            .ThenBy(rule => rule.TaxCode, StringComparer.Ordinal)
             .ToList();
+
+        rules = [.. Exclusive(rules)
+            .OrderBy(rule => rule.Jurisdiction, StringComparer.Ordinal)
+            .ThenBy(rule => rule.TaxCode, StringComparer.Ordinal)];
         var lines = new List<(int Order, IncomeTaxLine Line)>();
 
         foreach (var country in unplaced)
@@ -540,6 +600,74 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
         return work;
     }
 
+    /// <summary>
+    /// Gets whether a rule applies to a person by where they live and work: any rule of <see cref="IncomeTaxResidency.Any"/>;
+    /// a resident's rule only when its jurisdiction is among the person's home jurisdictions; a nonresident's rule only
+    /// when it is among their work jurisdictions and not among their home ones.
+    /// </summary>
+    /// <param name="rule">The rule.</param>
+    /// <param name="request">The request.</param>
+    /// <returns>Whether it applies.</returns>
+    public static bool AppliesToResidency(IncomeTaxRule rule, IncomeTaxRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var home = (request.HomeJurisdictions ?? []).Contains(rule.Jurisdiction, StringComparer.OrdinalIgnoreCase);
+
+        return rule.Residency switch
+        {
+            IncomeTaxResidency.Resident => home,
+            IncomeTaxResidency.Nonresident => !home && (request.WorkJurisdictions ?? []).Contains(rule.Jurisdiction, StringComparer.OrdinalIgnoreCase),
+            _ => true,
+        };
+    }
+
+    /// <summary>
+    /// Keeps, of the rules that share an exclusive group, only the one with the lowest group priority (then the lowest
+    /// jurisdiction and tax code); a rule of no group is always kept.
+    /// </summary>
+    /// <param name="rules">The rules that apply.</param>
+    /// <returns>The rules worked out.</returns>
+    public static IEnumerable<IncomeTaxRule> Exclusive(IEnumerable<IncomeTaxRule> rules)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+
+        var list = rules.ToList();
+        var winners = list
+            .Where(rule => !string.IsNullOrWhiteSpace(rule.ExclusiveGroup))
+            .GroupBy(rule => rule.ExclusiveGroup.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderBy(rule => rule.GroupPriority)
+                .ThenBy(rule => rule.Jurisdiction, StringComparer.Ordinal)
+                .ThenBy(rule => rule.TaxCode, StringComparer.Ordinal)
+                .First())
+            .ToHashSet();
+
+        return list.Where(rule => string.IsNullOrWhiteSpace(rule.ExclusiveGroup) || winners.Contains(rule));
+    }
+
+    /// <summary>
+    /// Gets the payer's registration a rule takes its own rate from: of the registrations with the jurisdiction that
+    /// collects the tax, the one that covers the rule's tax category, else one that names no category, else the first.
+    /// </summary>
+    /// <param name="rule">The rule.</param>
+    /// <param name="registrations">The payer's registrations.</param>
+    /// <returns>The registration, or <see langword="null"/>.</returns>
+    public static IncomeTaxRegistration RegistrationFor(IncomeTaxRule rule, IEnumerable<IncomeTaxRegistration> registrations)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+
+        var collector = rule.CollectedBy ?? rule.Jurisdiction;
+        var candidates = (registrations ?? [])
+            .Where(registration => string.Equals(registration?.Jurisdiction, collector, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return candidates.FirstOrDefault(registration => (registration.Categories ?? []).Contains(rule.Category, StringComparer.OrdinalIgnoreCase))
+            ?? candidates.FirstOrDefault(registration => registration.Categories is not { Count: > 0 })
+            ?? candidates.FirstOrDefault();
+    }
+
     private IIncomeTaxWithholdingMethod WithholdingMethod(IncomeTaxRule rule)
         => _withholdingMethods.FirstOrDefault(method => string.Equals(method.Name, rule.Method, StringComparison.OrdinalIgnoreCase));
 
@@ -586,7 +714,7 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
         if (rule.RateFromRegistration)
         {
             var collector = rule.CollectedBy ?? rule.Jurisdiction;
-            var payerRate = (request.Registrations ?? []).FirstOrDefault(registration => string.Equals(registration?.Jurisdiction, collector, StringComparison.OrdinalIgnoreCase))?.Rate;
+            var payerRate = RegistrationFor(rule, request.Registrations)?.Rate;
 
             if (payerRate is { } rate)
             {
@@ -605,9 +733,14 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
 
     private async Task<IncomeTaxLine> CalculateAsync(IncomeTaxRule rule, IIncomeTaxWithholdingMethod withholding, IncomeTaxRequest request, IReadOnlyList<IncomeTaxLine> others, CancellationToken cancellationToken)
     {
-        var election = rule.UsesElections
-            ? request.Elections.FirstOrDefault(candidate => string.Equals(candidate.Jurisdiction, rule.Jurisdiction, StringComparison.OrdinalIgnoreCase))
-            : null;
+        // The election of the rule's jurisdiction, or of the one it reads its election from (a city's tax that takes the
+        // state certificate's exemptions).
+        var certificate = (request.Elections ?? []).FirstOrDefault(candidate => string.Equals(candidate?.Jurisdiction, rule.ElectionsFrom ?? rule.Jurisdiction, StringComparison.OrdinalIgnoreCase));
+        var election = rule.UsesElections ? certificate : null;
+        var exemptions = rule.ExemptionAllowance is { } exemptionAllowance && certificate?.Value(ExemptFieldName) != "true"
+            && int.TryParse(certificate?.Value(ExemptionsFieldName), NumberStyles.Integer, CultureInfo.InvariantCulture, out var exemptionCount)
+            ? Math.Max(0, exemptionCount) * exemptionAllowance
+            : 0m;
         var regular = request.Income.TryGetValue(rule.Category, out var income) ? income : 0;
         var supplemental = request.SupplementalIncome.TryGetValue(rule.Category, out var supplementalIncome) ? supplementalIncome : 0;
         var periods = Math.Max(1, request.PeriodsPerYear);
@@ -711,8 +844,8 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             if (regular > 0)
             {
                 tax = prior > 0
-                    ? Math.Max(0, await RegularAsync(rule, withholding, request, election, prior + regular, others, cancellationToken) - await RegularAsync(rule, withholding, request, election, prior, others, cancellationToken))
-                    : await RegularAsync(rule, withholding, request, election, regular, others, cancellationToken);
+                    ? Math.Max(0, await RegularAsync(rule, withholding, request, election, exemptions, prior + regular, others, cancellationToken) - await RegularAsync(rule, withholding, request, election, exemptions, prior, others, cancellationToken))
+                    : await RegularAsync(rule, withholding, request, election, exemptions, regular, others, cancellationToken);
             }
 
             if (supplemental > 0)
@@ -760,8 +893,8 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
         };
 
     // The tax of a period's regular income: by the withholding method, or by Taxation's method (annualized, less
-    // allowances).
-    private async Task<decimal> RegularAsync(IncomeTaxRule rule, IIncomeTaxWithholdingMethod withholding, IncomeTaxRequest request, IncomeTaxElection election, decimal regular, IReadOnlyList<IncomeTaxLine> others, CancellationToken cancellationToken)
+    // allowances and the yearly amount of the exemptions claimed).
+    private async Task<decimal> RegularAsync(IncomeTaxRule rule, IIncomeTaxWithholdingMethod withholding, IncomeTaxRequest request, IncomeTaxElection election, decimal exemptions, decimal regular, IReadOnlyList<IncomeTaxLine> others, CancellationToken cancellationToken)
     {
         if (regular <= 0)
         {
@@ -775,9 +908,9 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             return await WithholdAsync(rule, withholding, request, election, regular, 0, others, cancellationToken);
         }
 
-        var allowances = election is not null && decimal.TryParse(election.Value("Allowances"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
+        var allowances = exemptions + (election is not null && decimal.TryParse(election.Value("Allowances"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
             ? count * (rule.AllowanceAmount ?? 0)
-            : 0;
+            : 0);
 
         return rule.Annualize
             ? await ComputeAsync(rule, Math.Max(0, (regular * periods) - allowances), cancellationToken) / periods

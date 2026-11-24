@@ -20,7 +20,7 @@ using OrchardCore.Users.Services;
 namespace CrestApps.OrchardCore.Classifieds.Controllers;
 
 /// <summary>
-/// Content › Posted listings: approving and rejecting what visitors post, and every listing's status.
+/// Content › Posted Listings: approving and rejecting what visitors post, and every listing's status.
 /// </summary>
 [Admin("classifieds/{action}/{contentItemId?}", "Classifieds{action}")]
 public sealed class ClassifiedsAdminController : Controller

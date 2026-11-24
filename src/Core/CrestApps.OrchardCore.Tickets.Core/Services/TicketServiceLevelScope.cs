@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
@@ -34,9 +35,11 @@ public sealed class TicketServiceLevelScope : IServiceLevelScopeProvider
     public string Name => TicketsConstants.ServiceLevelScope;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource Description { get; } = LocalizationSource.Create<TicketServiceLevelScope>("How fast tickets get a first response, a next response and a resolution, at each priority, on a desk's business hours.");
 
     /// <inheritdoc/>

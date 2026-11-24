@@ -43,17 +43,7 @@ public sealed class Startup : StartupBase
 
         // The files sit under the tenant's App_Data, which no URL serves. Each upload goes through the file creation
         // pipeline first, whose handlers can be scoped.
-        services.TryAddTransient<FileCreationService>();
-        services.AddScoped<IDigitalFileStore>(serviceProvider =>
-        {
-            var shellOptions = serviceProvider.GetRequiredService<IOptions<ShellOptions>>().Value;
-            var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
-            var path = Path.Combine(shellOptions.ShellsApplicationDataPath, shellOptions.ShellsContainerName, shellSettings.Name, DownloadsConstants.StoreFolder);
-
-            return new DigitalFileStore(
-                new FileSystemStore(path, serviceProvider.GetRequiredService<ILogger<FileSystemStore>>()),
-                serviceProvider.GetRequiredService<FileCreationService>());
-        });
+        services.AddProtectedFileArea<DigitalDownloadFiles>(DownloadsConstants.StoreFolder);
 
         services.AddSignedLinks();
         services.AddScoped<DownloadService>();
