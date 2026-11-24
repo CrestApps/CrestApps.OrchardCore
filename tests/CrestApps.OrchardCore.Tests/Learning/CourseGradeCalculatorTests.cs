@@ -210,6 +210,62 @@ public sealed class CourseGradeCalculatorTests
         Assert.DoesNotContain(breakdown.Categories, category => category.CategoryId is null);
     }
 
+    [Fact]
+    public async Task R7M8_ACompletionOnlyItem_IsLeftOutOfTheGrade_TheOthersReweighted()
+    {
+        // Arrange: an anonymous gradable quiz (weight 3) records its completion only; the other items are 80 and 40.
+        var courses = new InMemoryCourses();
+        courses.AddCourse(Course);
+        Item(courses, "a", weight: 1);
+        Item(courses, "anonymous", weight: 3);
+        Item(courses, "c", weight: 1);
+        var progress = Progress(("a", 80), ("c", 40));
+        progress.Items.Add(new CourseItemProgress { ContentItemId = "anonymous", State = CourseItemState.Completed, CompletionOnly = true });
+        var outline = await courses.GetOutlineAsync(courses.Get(Course));
+
+        // Act
+        var grade = CourseGradeCalculator.Compute(outline, progress);
+
+        // Assert: (80 + 40) / 2, not (80 + 3 x 0 + 40) / 5.
+        Assert.Equal(60m, grade);
+    }
+
+    [Fact]
+    public async Task R7M8_ACompletionOnlyItemInACategory_IsLeftOutOfTheCategory_AndNeverDropped()
+    {
+        // Arrange: Homework drops its lowest; the anonymous quiz is in it with no score.
+        var courses = new InMemoryCourses();
+        courses.AddCourse(Course, part => part.GradeCategories = [Category("hw", "Homework", 1, dropLowest: 1)]);
+        Item(courses, "h1", category: "hw");
+        Item(courses, "h2", category: "hw");
+        Item(courses, "anonymous", category: "hw");
+        var progress = Progress(("h1", 90), ("h2", 50));
+        progress.Items.Add(new CourseItemProgress { ContentItemId = "anonymous", State = CourseItemState.Completed, CompletionOnly = true });
+        var outline = await courses.GetOutlineAsync(courses.Get(Course));
+
+        // Act
+        var breakdown = CourseGradeCalculator.ComputeBreakdown(outline, progress);
+
+        // Assert: the lowest real score (50) is dropped, not the anonymous quiz.
+        Assert.Equal(90m, breakdown.Grade);
+        Assert.Equal(["h2"], breakdown.Categories.Single().DroppedItemIds);
+    }
+
+    [Fact]
+    public async Task R7M8_ACourseWhoseOnlyGradableItemIsCompletionOnly_HasNoGrade()
+    {
+        // Arrange
+        var courses = new InMemoryCourses();
+        courses.AddCourse(Course);
+        Item(courses, "anonymous", weight: 2);
+        var progress = Progress();
+        progress.Items.Add(new CourseItemProgress { ContentItemId = "anonymous", State = CourseItemState.Completed, CompletionOnly = true });
+        var outline = await courses.GetOutlineAsync(courses.Get(Course));
+
+        // Act and assert: no grade, rather than 0.
+        Assert.Null(CourseGradeCalculator.Compute(outline, progress));
+    }
+
     private static void Item(InMemoryCourses courses, string id, decimal weight = 1, string category = null)
         => courses.AddItem(Course, id, configure: part =>
         {

@@ -62,7 +62,7 @@ The setting is a shortcut for an **After completing** rule on every lesson. Use 
 
 ## Grade categories
 
-The course grade is the weighted mean of the graded lessons. To group them, such as homework and exams, add rows to the **Grade categories** card: a **Category** name, its **Weight** and how many of its lowest scores to **Drop lowest**. A category's score is the weighted mean of its lessons after the lowest are dropped, and the course grade is the weighted mean of the categories. Choose each graded lesson's **Grade category** on its **Course item** card. A graded lesson without a category counts as a category of its own, weighted by its lesson weight. Rows without a name are left out.
+The course grade is the weighted mean of the graded lessons. To group them, such as homework and exams, add rows to the **Grade categories** card: a **Category** name, its **Weight** and how many of its lowest scores to **Drop lowest**. A category's score is the weighted mean of its lessons after the lowest are dropped, and the course grade is the weighted mean of the categories. Choose each graded lesson's **Grade category** on its **Course item** card. A graded lesson without a category counts as a category of its own, weighted by its lesson weight. Rows without a name are left out. An anonymous quiz or survey has no score, so once the learner finishes it, it is left out of the course grade and the other lessons are weighed without it.
 
 Leave **Pass mark (%)** empty for a course without a grade.
 

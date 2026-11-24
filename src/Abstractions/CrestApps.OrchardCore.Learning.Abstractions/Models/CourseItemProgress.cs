@@ -46,6 +46,12 @@ public sealed class CourseItemProgress
     public bool? Passed { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the item's result is its completion only, with no score, as an anonymous survey's is. Such an
+    /// item stays out of the course grade: the other items are weighed without it, rather than counting it as zero.
+    /// </summary>
+    public bool CompletionOnly { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of attempts, when the item is graded.
     /// </summary>
     public int Attempts { get; set; }

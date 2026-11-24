@@ -39,7 +39,7 @@ public sealed class AssessmentsSurveyAccessProvider : ISurveyAccessProvider
         => operation switch
         {
             SurveyOperation.Grade or SurveyOperation.ViewResponses => AssessmentPermissions.GradeAssessments,
-            SurveyOperation.DeleteResponses => AssessmentPermissions.OverrideGrades,
+            SurveyOperation.DeleteResponses or SurveyOperation.RetryUpkeep => AssessmentPermissions.OverrideGrades,
             _ => null,
         };
 

@@ -261,9 +261,13 @@ public sealed partial class QuestionBankManager : IQuestionBankManager
             // read again gives every choice and row a new id, so an update keeps the ids of the matching choices and rows
             // (and remaps the scoring keys to them): results across versions then count one choice once, and a regrade
             // with a later version's key still scores the earlier answers.
+            // A choice or row matched by its place only (its text changed, and neither side has a key) now holds the
+            // earlier item's answers and key, so the summary lists it for the author to check.
+            var positionMatches = new List<SurveyPositionMatch>();
+
             if (existing?.Question is not null)
             {
-                SurveyDefinitionCloner.KeepIds(imported.Question, existing.Question);
+                SurveyDefinitionCloner.KeepIds(imported.Question, existing.Question, positionMatches);
             }
 
             target.Question = imported.Question;
@@ -294,6 +298,11 @@ public sealed partial class QuestionBankManager : IQuestionBankManager
             else
             {
                 summary.Updated++;
+            }
+
+            foreach (var match in positionMatches)
+            {
+                summary.Notices.Add(S["Question {0} ({1}): \"{2}\" took the place of \"{3}\" (item {4}) and keeps its earlier answers and key. Check that it means the same.", position, target.Question.Title, match.Text, match.EarlierText, match.Position]);
             }
         }
 

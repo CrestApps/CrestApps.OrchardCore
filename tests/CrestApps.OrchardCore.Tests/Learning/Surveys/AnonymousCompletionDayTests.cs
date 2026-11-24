@@ -42,6 +42,9 @@ public sealed class AnonymousCompletionDayTests
         Assert.True(anonymous.Graded);
         Assert.False(anonymous.ResetScore);
         Assert.Equal(2, anonymous.Attempts);
+
+        // R7-M8: the item stays out of the course grade instead of counting as zero.
+        Assert.True(anonymous.CompletionOnly);
     }
 
     [Fact]

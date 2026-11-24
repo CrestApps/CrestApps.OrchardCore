@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
+using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -217,7 +218,7 @@ public sealed class SurveyResponsesController : Controller
 
         options.UpkeepStoppedCount = await CountUpkeepStoppedAsync(surveyId);
         // The permission is checked first, so it never depends on the stuck count.
-        var canRetryUpkeep = await AuthorizeAsync(survey, SurveyOperation.DeleteResponses);
+        var canRetryUpkeep = await AuthorizeAsync(survey, SurveyOperation.RetryUpkeep);
         options.CanRetryUpkeep = canRetryUpkeep && options.UpkeepStoppedCount > 0;
 
         options.StatusOptions =
@@ -304,8 +305,9 @@ public sealed class SurveyResponsesController : Controller
         {
             var response = await _responseStore.FindByIdAsync(responseId);
 
-            // Nobody voids or deletes their own response, which would give a failed attempt back.
-            if (response is null || response.SurveyId != survey.ItemId || SurveyOwnWork.IsOwn(User, response))
+            // Nobody voids or deletes their own response, which would give a failed attempt back; a given grade changes
+            // only for whoever may change scores.
+            if (response is null || response.SurveyId != survey.ItemId || SurveyOwnWork.IsOwn(User, response) || !await MayRemoveAsync(survey, response))
             {
                 continue;
             }
@@ -455,6 +457,11 @@ public sealed class SurveyResponsesController : Controller
             return Forbid();
         }
 
+        if (!await MayRemoveAsync(survey, response))
+        {
+            return Forbid();
+        }
+
         if (SurveyOwnWork.IsOwn(User, response))
         {
             await _notifier.ErrorAsync(H["You can't void your own response. Someone else must."]);
@@ -498,6 +505,11 @@ public sealed class SurveyResponsesController : Controller
             return Forbid();
         }
 
+        if (!await MayRemoveAsync(survey, response))
+        {
+            return Forbid();
+        }
+
         if (SurveyOwnWork.IsOwn(User, response))
         {
             await _notifier.ErrorAsync(H["You can't delete your own response. Someone else must."]);
@@ -529,7 +541,7 @@ public sealed class SurveyResponsesController : Controller
             return NotFound();
         }
 
-        if (!await AuthorizeAsync(survey, SurveyOperation.DeleteResponses))
+        if (!await AuthorizeAsync(survey, SurveyOperation.RetryUpkeep))
         {
             return Forbid();
         }
@@ -728,6 +740,13 @@ public sealed class SurveyResponsesController : Controller
         => _session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UpkeepFailures >= SurveyMaintenanceService.MaxUpkeepFailures, collection: SurveysConstants.ResponsesCollectionName)
             .CountAsync(HttpContext.RequestAborted);
 
+    // Voiding or deleting a completed, scored response changes a given grade: every score change check must allow it
+    // (with Learning Assessments, Override grades on a survey a course item owns).
+    private async Task<bool> MayRemoveAsync(Survey survey, SurveyResponse response)
+        => !SurveyScoreChangeChecks.RemovingChangesGivenScore(response)
+            || _serviceProvider.GetService<SurveyScoreChangeChecks>() is not { } checks
+            || await checks.AllowAsync(User, survey, response, HttpContext.RequestAborted);
+
     private async Task<bool> AuthorizeAsync(Survey survey, SurveyOperation operation)
     {
         if (_serviceProvider.GetService<ISurveyAuthorizationService>() is { } surveys)
@@ -741,7 +760,7 @@ public sealed class SurveyResponsesController : Controller
         {
             SurveyOperation.ViewResponses => await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ViewSurveyResponses)
                 || (own && await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ViewOwnSurveyResponses)),
-            SurveyOperation.DeleteResponses => await _authorizationService.AuthorizeAsync(User, SurveysPermissions.DeleteSurveyResponses),
+            SurveyOperation.DeleteResponses or SurveyOperation.RetryUpkeep => await _authorizationService.AuthorizeAsync(User, SurveysPermissions.DeleteSurveyResponses),
             _ => await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ManageSurveys)
                 || (own && await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ManageOwnSurveys)),
         };

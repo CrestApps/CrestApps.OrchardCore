@@ -12,13 +12,17 @@ namespace CrestApps.OrchardCore.Learning.Surveys.Core;
 /// <summary>
 /// Creates the survey a course survey or choice owns when the item is first saved, and keeps the survey's title in step
 /// with the item's. A copied item gets a copy of the original's survey. An item whose survey is gone (such as one
-/// restored from the audit trail after its removal purged the survey) gets a new one when it is next saved.
+/// restored from the audit trail after its removal purged the survey) gets a new one when it is next saved. An import
+/// keeps the survey id it brings, also when it updates an item the site has: a deployment may run its content step before
+/// the Surveys step that brings the survey, and a new survey made then would leave the item pointing at a blank survey
+/// while the imported one is orphaned.
 /// </summary>
 public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPart>
 {
     private readonly ILearningSurveyService _learningSurveys;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISurveyManager _surveyManager;
+    private readonly HashSet<string> _importing = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CourseSurveyPartHandler"/> class.
@@ -42,7 +46,29 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
 
     /// <inheritdoc />
     public override Task UpdatingAsync(UpdateContentContext context, CourseSurveyPart part)
-        => EnsureSurveyAsync(part, recreateMissing: true);
+        => EnsureSurveyAsync(part, recreateMissing: !_importing.Contains(part.ContentItem.ContentItemId));
+
+    /// <inheritdoc />
+    public override Task ImportingAsync(ImportContentContext context, CourseSurveyPart part)
+    {
+        if (!string.IsNullOrEmpty(part?.ContentItem?.ContentItemId))
+        {
+            _importing.Add(part.ContentItem.ContentItemId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override Task ImportedAsync(ImportContentContext context, CourseSurveyPart part)
+    {
+        if (!string.IsNullOrEmpty(part?.ContentItem?.ContentItemId))
+        {
+            _importing.Remove(part.ContentItem.ContentItemId);
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc />
     public override async Task CloningAsync(CloneContentContext context, CourseSurveyPart part)

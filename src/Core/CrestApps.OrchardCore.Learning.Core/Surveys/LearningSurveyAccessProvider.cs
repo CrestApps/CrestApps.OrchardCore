@@ -1,19 +1,18 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Services;
-using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 
 /// <summary>
 /// Lets course staff work on the surveys their course items own without the global Surveys permissions: instructors and
-/// assistants manage and publish them and see their responses, and graders grade them. Voiding or deleting a response of
-/// a graded survey (a quiz, or a scored course survey) changes a given grade, so it also needs every score change check
-/// to allow it (with Assessments, Override grades); the responses of a course survey that isn't graded stay with the
-/// instructors and assistants.
+/// assistants manage and publish them and see their responses, void and delete them and have upkeep retry them, and
+/// graders grade them. Voiding or deleting a completed, scored response changes a given grade, so Surveys also asks every
+/// score change check about that response (<c>SurveyScoreChangeChecks.RemovingChangesGivenScore</c>; with Assessments,
+/// Override grades); an attempt in progress, abandoned or a test, and the responses of a survey that isn't scored, stay
+/// with the instructors and assistants.
 /// </summary>
 public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
 {
@@ -33,8 +32,6 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
     private readonly ILearningSurveyService _learningSurveys;
     private readonly ICourseStructureService _courseStructure;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IEnumerable<ISurveyScoreChangeCheck> _scoreChangeChecks;
-    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningSurveyAccessProvider"/> class.
@@ -42,20 +39,14 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
     /// <param name="learningSurveys">The Learning survey service.</param>
     /// <param name="courseStructure">The course structure service.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="scoreChangeChecks">The checks a change of a given score must pass.</param>
-    /// <param name="serviceProvider">The services, for the published version of a survey.</param>
     public LearningSurveyAccessProvider(
         ILearningSurveyService learningSurveys,
         ICourseStructureService courseStructure,
-        IAuthorizationService authorizationService,
-        IEnumerable<ISurveyScoreChangeCheck> scoreChangeChecks,
-        IServiceProvider serviceProvider)
+        IAuthorizationService authorizationService)
     {
         _learningSurveys = learningSurveys;
         _courseStructure = courseStructure;
         _authorizationService = authorizationService;
-        _scoreChangeChecks = scoreChangeChecks;
-        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc />
@@ -90,16 +81,9 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
 
         var roles = RolesFor(operation);
 
-        if (roles.Length == 0 || !await _courseStructure.IsCourseStaffAsync(userId, courseId, roles))
-        {
-            return false;
-        }
-
-        // Voiding or deleting an attempt changes a given grade: the earlier attempt becomes the grade, or the attempt is
-        // given back. On a graded survey that needs what changing a score needs.
-        return operation != SurveyOperation.DeleteResponses
-            || !await IsGradedAsync(survey, cancellationToken)
-            || await ScoreChangesAllowedAsync(user, survey, cancellationToken);
+        // Voiding or deleting a completed, scored attempt changes a given grade: Surveys asks the score change checks
+        // about that response, so the survey-level grant here never refuses the attempts that carry no grade.
+        return roles.Length > 0 && await _courseStructure.IsCourseStaffAsync(userId, courseId, roles);
     }
 
     /// <inheritdoc />
@@ -111,13 +95,6 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
         if (string.IsNullOrEmpty(userId) || roles.Length == 0 || !await _authorizationService.AuthorizeAsync(user, LearningPermissions.ManageOwnCourses))
         {
             return SurveyAccessGrants.None;
-        }
-
-        // Deleting responses depends on each survey (graded or not) and the score change checks it must pass: each survey
-        // is asked.
-        if (operation == SurveyOperation.DeleteResponses && _scoreChangeChecks.Any())
-        {
-            return null;
         }
 
         // The surveys of the items of the courses the user is staff on, by their owners: no survey is loaded.
@@ -137,40 +114,6 @@ public sealed class LearningSurveyAccessProvider : ISurveyAccessProvider
                 .Select(LearningSurveyContexts.Owner)
                 .ToList(),
         };
-    }
-
-    /// <summary>
-    /// Gets whether a survey gives grades: a quiz, or a survey whose draft or published version is scored.
-    /// </summary>
-    /// <param name="survey">The survey.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns><see langword="true"/> when the survey is graded.</returns>
-    private async Task<bool> IsGradedAsync(Survey survey, CancellationToken cancellationToken)
-    {
-        if (string.Equals(survey.Kind, SurveyKinds.Quiz, StringComparison.Ordinal) || survey.Draft?.Scoring?.Enabled == true)
-        {
-            return true;
-        }
-
-        if (string.IsNullOrEmpty(survey.PublishedVersionId) || _serviceProvider.GetService<ISurveyVersionCache>() is not { } versions)
-        {
-            return false;
-        }
-
-        return (await versions.GetAsync(survey.PublishedVersionId, cancellationToken))?.Definition?.Scoring?.Enabled == true;
-    }
-
-    private async Task<bool> ScoreChangesAllowedAsync(ClaimsPrincipal user, Survey survey, CancellationToken cancellationToken)
-    {
-        foreach (var check in _scoreChangeChecks)
-        {
-            if (!await check.AllowsAsync(user, survey, null, cancellationToken))
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private static string[] RolesFor(SurveyOperation operation)

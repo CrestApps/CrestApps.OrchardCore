@@ -44,4 +44,10 @@ public enum SurveyOperation
     /// Send invitations.
     /// </summary>
     ManageInvitations,
+
+    /// <summary>
+    /// Have background upkeep try again the responses it stopped trying. It changes no answer or score, so it is apart
+    /// from <see cref="DeleteResponses"/>, which a module may tie to the grades a void or delete changes.
+    /// </summary>
+    RetryUpkeep,
 }

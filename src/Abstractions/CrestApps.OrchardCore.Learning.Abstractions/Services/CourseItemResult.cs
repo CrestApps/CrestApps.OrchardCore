@@ -85,4 +85,11 @@ public sealed class CourseItemResult
     /// learner to their anonymous answers. <see langword="null"/> records the current time.
     /// </summary>
     public DateTime? AnonymousDayUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the result is the item's completion only, with no score, as an anonymous survey's is. The item
+    /// then stays out of the course grade (the other items are weighed without it) instead of counting as zero, and a
+    /// score recorded on it earlier is cleared.
+    /// </summary>
+    public bool CompletionOnly { get; set; }
 }

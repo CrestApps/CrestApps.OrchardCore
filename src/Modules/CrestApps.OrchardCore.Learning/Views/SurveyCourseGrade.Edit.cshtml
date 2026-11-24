@@ -1,0 +1,15 @@
+@model SurveyCourseGradeViewModel
+
+@if (Model.Gradable)
+{
+    <div class="alert @(Model.Anonymous ? "alert-warning" : "alert-info") mb-3">
+        @if (Model.Anonymous)
+        {
+            @T["The course item of this survey counts toward the course grade, but the survey is anonymous. An anonymous survey records only that the learner completed it, with no score, so the item stays out of the course grade and the other items are weighed without it. Make the survey identified, or clear \"Counts toward the course grade\" on the course item."]
+        }
+        else
+        {
+            @T["The course item of this survey counts toward the course grade. If you make the survey anonymous, it records only that the learner completed it, with no score, and the item leaves the course grade."]
+        }
+    </div>
+}

@@ -641,6 +641,7 @@ public sealed class QuestionBanksController : Controller
         model.Created = summary.Created;
         model.Updated = summary.Updated;
         model.Errors.AddRange(summary.Errors);
+        model.Notices.AddRange(summary.Notices);
 
         await _notifier.SuccessAsync(H["{0} questions added and {1} updated.", summary.Created, summary.Updated]);
 

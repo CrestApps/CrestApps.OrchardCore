@@ -105,6 +105,13 @@ public sealed class SurveyGradingService : ISurveyGradingService
                 return Fail(SurveyErrorCode.InvalidAnswer, response);
             }
 
+            // Only an answer that waits for a grader, or whose points the grader changed, takes a grader's score. Posted
+            // points equal to the automatic score stay automatic, so a later "Score again" after a key fix still moves them.
+            if (answer.ManualScore is null && answer.AutoScore is not null && answer.Score == points)
+            {
+                continue;
+            }
+
             if (answer.Score != points)
             {
                 changes.Add(new ScoreChange

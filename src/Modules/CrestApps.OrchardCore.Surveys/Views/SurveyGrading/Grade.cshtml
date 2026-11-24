@@ -62,7 +62,15 @@
                     <label class="ocat-label" for="points-@question.QuestionId">@T["Points"]</label>
                     <div class="ocat-end">
                         <div class="input-group">
-                            <input id="points-@question.QuestionId" name="Points[@question.QuestionId]" type="number" min="0" max="@question.MaxPoints" step="any" class="form-control" value="@question.Points" readonly="@(!Model.CanChangeScores && !question.NeedsGrading)" />
+                            @if (!Model.CanChangeScores && !question.NeedsGrading)
+                            {
+                                @* A read-only score is not posted, so saving never turns it into a grader's score. *@
+                                <input id="points-@question.QuestionId" type="number" class="form-control" value="@question.Points" readonly />
+                            }
+                            else
+                            {
+                                <input id="points-@question.QuestionId" name="Points[@question.QuestionId]" type="number" min="0" max="@question.MaxPoints" step="any" class="form-control" value="@question.Points" />
+                            }
                             <span class="input-group-text">@T["of {0}", question.MaxPoints]</span>
                         </div>
                     </div>

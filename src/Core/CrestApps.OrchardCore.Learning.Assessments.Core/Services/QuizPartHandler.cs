@@ -11,12 +11,15 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 /// Creates the survey a quiz owns when the quiz is first saved: a scored survey from the quiz template. A copied quiz
 /// gets a copy of the original's survey, never the original itself. A quiz whose survey is gone (such as one restored
 /// from the audit trail after its removal purged the survey) gets a new one when it is next saved, so it never
-/// points at nothing.
+/// points at nothing. An import keeps the survey id it brings, also when it updates a quiz the site has: a deployment
+/// may run its content step before the Surveys step that brings the survey, and a new survey made then would leave the
+/// quiz pointing at a blank survey while the imported one is orphaned.
 /// </summary>
 public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
 {
     private readonly ILearningSurveyService _learningSurveys;
     private readonly ISurveyManager _surveyManager;
+    private readonly HashSet<string> _importing = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QuizPartHandler"/> class.
@@ -35,7 +38,29 @@ public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
 
     /// <inheritdoc />
     public override Task UpdatingAsync(UpdateContentContext context, QuizPart part)
-        => EnsureSurveyAsync(part, recreateMissing: true);
+        => EnsureSurveyAsync(part, recreateMissing: !_importing.Contains(part.ContentItem.ContentItemId));
+
+    /// <inheritdoc />
+    public override Task ImportingAsync(ImportContentContext context, QuizPart part)
+    {
+        if (!string.IsNullOrEmpty(part?.ContentItem?.ContentItemId))
+        {
+            _importing.Add(part.ContentItem.ContentItemId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override Task ImportedAsync(ImportContentContext context, QuizPart part)
+    {
+        if (!string.IsNullOrEmpty(part?.ContentItem?.ContentItemId))
+        {
+            _importing.Remove(part.ContentItem.ContentItemId);
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc />
     public override async Task CloningAsync(CloneContentContext context, QuizPart part)

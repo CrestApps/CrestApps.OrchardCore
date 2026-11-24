@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.Learning.Core.Surveys;
+using CrestApps.OrchardCore.Learning.Drivers;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning;
@@ -16,6 +19,7 @@ public sealed class SurveysStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddLearningSurveysBridge();
+        services.AddDisplayDriver<Survey, SurveyCourseGradeDisplayDriver>();
     }
 }
 

@@ -6,7 +6,9 @@ namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
 /// Computes the course grade and whether it meets the course pass mark. An item counts when it is gradable and its
-/// weight is more than zero; an item without a score counts as zero.
+/// weight is more than zero; an item without a score counts as zero. An item whose recorded result is its completion only
+/// (<see cref="CourseItemProgress.CompletionOnly"/>, as an anonymous quiz's is) never counts: the others are weighed
+/// without it, so it neither lowers nor raises the grade.
 /// <list type="bullet">
 /// <item>A course without gradebook categories: the grade is the weighted mean (item weights) of the items.</item>
 /// <item>A course with categories: the score of a category is the weighted mean (item weights) of its items after its
@@ -39,7 +41,10 @@ public static class CourseGradeCalculator
     {
         ArgumentNullException.ThrowIfNull(outline);
 
-        var gradable = outline.Entries.Where(entry => entry.Part?.Gradable == true).ToList();
+        // A completion-only result (an anonymous survey) has no score to give: the item is left out, not counted as zero.
+        var gradable = outline.Entries
+            .Where(entry => entry.Part?.Gradable == true && progress?.Find(entry.Item.ContentItemId)?.CompletionOnly != true)
+            .ToList();
         var categories = (outline.Course?.Get<CoursePart>(nameof(CoursePart))?.GradeCategories ?? [])
             .Where(category => !string.IsNullOrEmpty(category?.Id))
             .ToList();

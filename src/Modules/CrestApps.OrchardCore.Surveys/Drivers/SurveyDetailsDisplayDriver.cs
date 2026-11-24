@@ -16,7 +16,7 @@ internal sealed class SurveyDetailsDisplayDriver : DisplayDriver<Survey>
     /// <summary>
     /// The editor group of the access and settings page.
     /// </summary>
-    public const string GroupId = "Access";
+    public const string GroupId = SurveysConstants.AccessEditorGroupId;
 
     private readonly SurveyStore _store;
 

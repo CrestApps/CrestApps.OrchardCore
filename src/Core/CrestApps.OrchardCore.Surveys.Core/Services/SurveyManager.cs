@@ -307,6 +307,36 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     }
 
     /// <inheritdoc />
+    public async Task<SurveyErrorCode> DeleteNewSurveyAsync(Survey survey, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+
+        if (await _responseQueries.CountForSurveyAsync(survey.ItemId, cancellationToken) > 0)
+        {
+            return SurveyErrorCode.HasResponses;
+        }
+
+        foreach (var collector in await _collectorStore.ListBySurveyAsync(survey.ItemId, cancellationToken))
+        {
+            await _collectorStore.DeleteAsync(collector, cancellationToken);
+        }
+
+        foreach (var version in await _versionStore.ListBySurveyAsync(survey.ItemId, cancellationToken))
+        {
+            await _versionStore.DeleteAsync(version, cancellationToken);
+        }
+
+        await DeleteAsync(survey, cancellationToken);
+
+        foreach (var observer in _observers)
+        {
+            await observer.DeletedAsync(survey);
+        }
+
+        return SurveyErrorCode.None;
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<Survey>> ListByOwnerAsync(RecordRef owner, CancellationToken cancellationToken = default)
         => _store.ListByOwnerAsync(owner.ToString(), cancellationToken);
 

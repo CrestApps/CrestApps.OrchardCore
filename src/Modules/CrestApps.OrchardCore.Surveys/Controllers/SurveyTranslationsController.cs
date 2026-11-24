@@ -221,20 +221,11 @@ public sealed class SurveyTranslationsController : Controller
         }
 
         var draft = SurveyDefinitionCloner.Clone(survey.Draft) ?? new SurveyDefinition();
-        var html = SurveyTextCatalog.Describe(draft).Where(entry => entry.IsHtml).Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
 
-        // A text whose original in the file differs from the survey's now was translated before an author reworded it:
-        // writing it would give respondents the old meaning, so it is left out and counted.
-        var (current, changed) = SurveyTranslations.SplitByOriginal(draft, content.Texts);
-
-        // A text the file gives with the survey's current original was translated from it, so it is current.
-        var confirmed = current
-            .Where(entry => !string.IsNullOrWhiteSpace(entry.Original))
-            .Select(entry => entry.Key)
-            .ToHashSet(StringComparer.Ordinal);
-        var written = SurveyTranslations.Merge(draft, culture, current
-            .Where(entry => !string.IsNullOrWhiteSpace(entry.Translation))
-            .Select(entry => new KeyValuePair<string, string>(entry.Key, html.Contains(entry.Key) ? _htmlSanitizer.Sanitize(entry.Translation) : entry.Translation)), overwrite: true, confirmed);
+        // A text whose original in the file differs from the survey's now was translated before an author reworded it, so
+        // it is left out and counted. A translation given back unchanged is not confirmed: only the texts the file
+        // changes record the current original, so a stale translation stays marked out of date.
+        var (written, changed) = SurveyTranslations.Import(draft, culture, content.Texts, _htmlSanitizer.Sanitize);
 
         await _manager.SaveDraftAsync(survey, draft, cancellationToken: HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["{0} texts were imported into the draft.", written]);
