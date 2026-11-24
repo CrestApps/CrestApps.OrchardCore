@@ -6,12 +6,14 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Core.Services;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using YesSql.Indexes;
@@ -20,8 +22,8 @@ namespace CrestApps.OrchardCore.Tests.Taxation;
 
 /// <summary>
 /// Tax Returns and E-Filing: the periods and due dates of a filing schedule, a return prepared from a data provider and
-/// worked out by its form, its life (ready, filed, paid, amended), a late draft worked out as filed today, and filing it
-/// by hand through the manual channel. Today is 2 November 2026 (the harness's clock); the registration files monthly,
+/// worked out by its form (the generic return the Tax Returns recipe adds as a tax form), its life (ready, filed, paid,
+/// amended), a late draft worked out as filed today, and filing it by hand through the manual channel. Today is 2 November 2026 (the harness's clock); the registration files monthly,
 /// due the 20th of the month after, with an annual return due 28 February.
 /// </summary>
 public sealed class TaxReturnsTests
@@ -101,7 +103,7 @@ public sealed class TaxReturnsTests
     }
 
     [Fact]
-    public async Task GenericForm_SumsTheLinesByKind()
+    public void GenericForm_SumsTheLinesByKind()
     {
         // Arrange
         var taxReturn = new TaxReturn
@@ -118,12 +120,7 @@ public sealed class TaxReturnsTests
         };
 
         // Act
-        await new GenericTaxReturnForm().ComputeAsync(new TaxReturnFormContext
-        {
-            Registration = new MerchantTaxRegistration(),
-            Return = taxReturn,
-            Services = new ServiceCollection().BuildServiceProvider(),
-        }, TestContext.Current.CancellationToken);
+        SalesTaxFormRecipes.Compute(SalesTaxFormRecipes.GenericForm(), taxReturn);
 
         // Assert
         Assert.Equal((10000m, 2000m, 8000m, 480m, 30m, 120m), (taxReturn.Boxes["GrossSales"], taxReturn.Boxes["ExemptSales"], taxReturn.Boxes["TaxableSales"], taxReturn.Boxes["SalesTax"], taxReturn.Boxes["UseTax"], taxReturn.Boxes["Withholding"]));
@@ -211,25 +208,91 @@ public sealed class TaxReturnsTests
     [Fact]
     public async Task LateDraft_IsWorkedOutAsFiledToday_AndAFiledReturnAsFiledThatDay()
     {
-        // Arrange
+        // Arrange: the generic form gets a field of the days late, as the Tax Forms page adds one.
         await using var harness = await CreateHarnessAsync();
         var user = CalendarTestHarness.User("filer", TaxationPermissions.FileTaxReturns.Name);
-        var form = harness.Services.GetRequiredService<RecordingForm>();
+
+        await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<ITaxFormManager>();
+            var generic = await manager.FindByNameAsync(TaxationConstants.GenericTaxReturnFormName);
+
+            generic.Fields.Add(new TaxFormField { Number = "DaysLate", Label = "Days late", Level = TaxFormFieldLevel.Filing, Formula = "DAYSLATE()" });
+            Assert.True((await manager.ValidateAsync(generic)).Succeeded);
+            await manager.UpdateAsync(generic);
+        });
 
         // Act: September was due 20 October; today is 2 November (New York).
         var draft = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnService>().PrepareAsync(RegistrationId, "2026-09", annualReconciliation: false, user));
-        var preparedAsOf = form.FiledOn;
 
-        await harness.RunAsync(async services =>
+        var filed = await harness.RunAsync(async services =>
         {
             var taxReturn = await services.GetRequiredService<ITaxReturnManager>().FindByIdAsync(draft.Return.ItemId);
 
             await services.GetRequiredService<ITaxReturnService>().MarkFiledAsync(taxReturn, new DateOnly(2026, 10, 30), null, null, user);
+
+            return taxReturn;
         });
 
-        // Assert
-        Assert.Equal(new DateOnly(2026, 11, 2), preparedAsOf);
-        Assert.Equal(new DateOnly(2026, 10, 30), form.FiledOn);
+        // Assert: 13 days late as of today; 10 days as filed on 30 October.
+        Assert.Equal(13m, draft.Return.Boxes["DaysLate"]);
+        Assert.Equal(10m, filed.Boxes["DaysLate"]);
+    }
+
+    [Fact]
+    public async Task EditorBuiltForm_IsTheRegistrationsReturnForm_AndItsAmountDueField_IsTheAmountDue()
+    {
+        // Arrange
+        await using var harness = await CreateHarnessAsync();
+        var user = CalendarTestHarness.User("filer", TaxationPermissions.FileTaxReturns.Name);
+
+        var (refused, noAmountDue) = await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<ITaxFormManager>();
+
+            // A sales tax form has no recipients, and its amount due is one of its filing fields.
+            var withRecipient = SalesTaxFormRecipes.MichiganStyleForm();
+
+            withRecipient.Name = "US-MI-TEST-2";
+            withRecipient.Fields.Add(new TaxFormField { Number = "P", Level = TaxFormFieldLevel.Recipient, Formula = "1" });
+
+            var withoutDue = SalesTaxFormRecipes.MichiganStyleForm();
+
+            withoutDue.Name = "US-MI-TEST-3";
+            withoutDue.Fields = [.. withoutDue.Fields.Where(field => field.Number != "21")];
+
+            var form = SalesTaxFormRecipes.MichiganStyleForm();
+
+            Assert.True((await manager.ValidateAsync(form)).Succeeded);
+            await manager.CreateAsync(form);
+
+            return ((await manager.ValidateAsync(withRecipient)).Succeeded, (await manager.ValidateAsync(withoutDue)).Succeeded);
+        });
+
+        var registrations = harness.Services.GetRequiredService<IMerchantTaxRegistrationStore>();
+
+        var registration = await registrations.FindByIdAsync(RegistrationId, TestContext.Current.CancellationToken);
+
+        registration.Filing.Form = "US-MI-TEST";
+        await registrations.UpdateAsync(registration, TestContext.Current.CancellationToken);
+
+        // Act
+        var forms = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnService>().GetFormsAsync(), commit: false);
+        var prepared = await harness.RunAsync(services => services.GetRequiredService<ITaxReturnService>().PrepareAsync(RegistrationId, "2026-10", annualReconciliation: false, user));
+
+        // Assert: the tax forms and the form a module adds in code are offered.
+        Assert.False(refused);
+        Assert.False(noAmountDue);
+        Assert.Contains("US-MI-TEST", forms.Keys);
+        Assert.True(forms.ContainsKey(TaxationConstants.GenericTaxReturnFormName));
+        Assert.IsType<AnnualForm>(forms["US-MI-ANNUAL"]);
+
+        // 60 of sales tax and 3 of use tax, filed on time (due 20 November): a discount of 0.32.
+        Assert.True(prepared.Succeeded);
+        Assert.Equal("US-MI-TEST", prepared.Return.Form);
+        Assert.Equal((60m, 3m, 63m, 0.32m), (prepared.Return.Boxes["4"], prepared.Return.Boxes["5"], prepared.Return.Boxes["6"], prepared.Return.Boxes["7"]));
+        Assert.Equal(62.68m, prepared.Return.AmountDue);
+        Assert.Contains("The registration number is not a Michigan account number.", prepared.Return.Notes);
     }
 
     [Fact]
@@ -476,8 +539,9 @@ public sealed class TaxReturnsTests
         services.AddSingleton<IEFileFormat>(provider => provider.GetRequiredService<ChoicesFormat>());
     }
 
-    private static Task<CalendarTestHarness> CreateHarnessAsync(Action<IServiceCollection> configure = null)
-        => CalendarTestHarness.CreateAsync(
+    private static async Task<CalendarTestHarness> CreateHarnessAsync(Action<IServiceCollection> configure = null)
+    {
+        var harness = await CalendarTestHarness.CreateAsync(
             services =>
             {
                 configure?.Invoke(services);
@@ -509,17 +573,23 @@ public sealed class TaxReturnsTests
                 services.AddSingleton<ITaxReturnDataProvider>(provider => provider.GetRequiredService<FixedDataProvider>());
                 services.AddSingleton<RecordingObserver>();
                 services.AddSingleton<ITaxReturnObserver>(provider => provider.GetRequiredService<RecordingObserver>());
-                services.AddSingleton<RecordingForm>();
-                services.AddSingleton<ITaxReturnForm>(provider => provider.GetRequiredService<RecordingForm>());
                 services.AddSingleton<ITaxReturnForm>(new AnnualForm());
+                services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxForm>, TaxFormHandler>());
             },
             async schemaBuilder =>
             {
                 await TaxReturnIndexSchema.CreateAsync(schemaBuilder);
                 await EFileSubmissionIndexSchema.CreateAsync(schemaBuilder);
+                await TaxFormIndexSchema.CreateAsync(schemaBuilder);
             },
-            indexProviders: [new TaxReturnIndexProvider(), new EFileSubmissionIndexProvider()],
-            collections: [TaxationConstants.TaxReturnsCollectionName]);
+            indexProviders: [new TaxReturnIndexProvider(), new EFileSubmissionIndexProvider(), new TaxFormIndexProvider()],
+            collections: [TaxationConstants.TaxReturnsCollectionName, TaxationConstants.TaxFormsCollectionName]);
+
+        // The generic return, as Tax Returns' migration adds it from its recipe.
+        await SalesTaxFormRecipes.SeedAsync(harness);
+
+        return harness;
+    }
 
     private sealed class FixedDataProvider : ITaxReturnDataProvider
     {
@@ -553,28 +623,6 @@ public sealed class TaxReturnsTests
             });
 
             return Task.CompletedTask;
-        }
-    }
-
-    // Replaces the generic form (same name, registered after it) and remembers the day it was worked out as filed on.
-    private sealed class RecordingForm : ITaxReturnForm
-    {
-        private readonly GenericTaxReturnForm _generic = new();
-
-        public DateOnly? FiledOn { get; private set; }
-
-        public string Name
-            => GenericTaxReturnForm.FormName;
-
-        [JsonIgnore]
-        public LocalizationSource DisplayName
-            => _generic.DisplayName;
-
-        public Task ComputeAsync(TaxReturnFormContext context, CancellationToken cancellationToken = default)
-        {
-            FiledOn = context.FiledOn;
-
-            return _generic.ComputeAsync(context, cancellationToken);
         }
     }
 

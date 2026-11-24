@@ -1,30 +1,30 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Extensions;
 
-namespace CrestApps.OrchardCore.Payroll.Services;
+namespace CrestApps.OrchardCore.Taxation.Core.TaxForms;
 
 /// <summary>
-/// Adds the tax forms of one of Payroll's tax forms recipes (Recipes folder) that a site doesn't have yet, by name,
-/// without running the recipe's other steps: a country feature's migration uses it, so turning the feature on, or
-/// updating a site that had it on, gives the forms, and the same recipe stays on the Recipes page to put them back.
+/// Adds the tax forms of a module's tax forms recipe (its Recipes folder) that a site doesn't have yet, by name, without
+/// running the recipe's other steps: a feature's migration uses it, so turning the feature on, or updating a site that
+/// had it on, gives the forms, and the same recipe stays on the Recipes page to put them back. Payroll's country
+/// features seed their forms with it, and Tax Returns its generic return.
 /// </summary>
-public sealed class PayrollTaxFormRecipeSeeder
+public sealed class TaxFormRecipeSeeder
 {
     private readonly ITaxFormManager _forms;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IExtensionManager _extensionManager;
     private readonly ILogger _logger;
 
-    public PayrollTaxFormRecipeSeeder(
+    public TaxFormRecipeSeeder(
         ITaxFormManager forms,
         IHostEnvironment hostEnvironment,
         IExtensionManager extensionManager,
-        ILogger<PayrollTaxFormRecipeSeeder> logger)
+        ILogger<TaxFormRecipeSeeder> logger)
     {
         _forms = forms;
         _hostEnvironment = hostEnvironment;
@@ -44,24 +44,26 @@ public sealed class PayrollTaxFormRecipeSeeder
             .SelectMany(step => (step["Forms"] as JsonArray ?? []).OfType<JsonObject>());
 
     /// <summary>
-    /// Adds the forms of a recipe that the site doesn't have yet.
+    /// Adds the forms of a module's recipe that the site doesn't have yet.
     /// </summary>
-    /// <param name="recipeFileName">The recipe's file name in Payroll's Recipes folder.</param>
+    /// <param name="moduleId">The module whose Recipes folder has the recipe, such as CrestApps.OrchardCore.Payroll.</param>
+    /// <param name="recipeFileName">The recipe's file name in the module's Recipes folder.</param>
     /// <returns>The forms added.</returns>
-    public async Task<IReadOnlyList<TaxForm>> SeedAsync(string recipeFileName)
+    public async Task<IReadOnlyList<TaxForm>> SeedAsync(string moduleId, string recipeFileName)
     {
+        ArgumentException.ThrowIfNullOrEmpty(moduleId);
         ArgumentException.ThrowIfNullOrEmpty(recipeFileName);
 
         // The module's files, embedded in it, are under its sub path of the content root, as Orchard's recipe migrator
         // reads a migration recipe.
-        var extension = _extensionManager.GetExtension(typeof(PayrollTaxFormRecipeSeeder).Assembly.GetName().Name);
+        var extension = _extensionManager.GetExtension(moduleId);
         var file = extension?.Exists == true
             ? _hostEnvironment.ContentRootFileProvider.GetFileInfo(Path.Combine(extension.SubPath, "Recipes", recipeFileName))
             : null;
 
         if (file?.Exists != true)
         {
-            _logger.LogWarning("The tax forms recipe '{Recipe}' was not found; no tax form was added.", recipeFileName);
+            _logger.LogWarning("The tax forms recipe '{Recipe}' of '{Module}' was not found; no tax form was added.", recipeFileName, moduleId);
 
             return [];
         }

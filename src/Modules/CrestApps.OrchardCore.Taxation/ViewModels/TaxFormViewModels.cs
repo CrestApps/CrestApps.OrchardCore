@@ -58,6 +58,18 @@ public class TaxFormViewModel
     [BindNever]
     public bool IsUsed { get; set; }
 
+    /// <summary>Gets or sets whether the form is being added (its source can still be chosen before anything is typed).</summary>
+    public bool IsNew { get; set; }
+
+    /// <summary>Gets or sets whether the source's forms report recipients, with recipient fields and statements.</summary>
+    public bool HasRecipients { get; set; } = true;
+
+    /// <summary>Gets or sets whether a form of the source says the period it is filed for.</summary>
+    public bool HasPeriod { get; set; } = true;
+
+    /// <summary>Gets or sets whether a form of the source must name its jurisdiction.</summary>
+    public bool RequiresJurisdiction { get; set; } = true;
+
     /// <summary>
     /// Gets or sets the sources a form can have.
     /// </summary>
@@ -119,4 +131,20 @@ public class TaxFormCheckViewModel
     public string Condition { get; set; }
 
     public string Note { get; set; }
+}
+
+/// <summary>
+/// The Sales tax return card of the tax form editor.
+/// </summary>
+public class SalesTaxFormSettingsViewModel
+{
+    /// <summary>Gets or sets the source posted with the form, to tell whether the card applies; the card has no input of it.</summary>
+    public string Source { get; set; }
+
+    /// <summary>Gets or sets the number of the filing field that is the amount due.</summary>
+    public string AmountDueField { get; set; }
+
+    /// <summary>Gets or sets the numbers of the form's filing fields, to choose from.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<string> FilingFields { get; set; } = [];
 }

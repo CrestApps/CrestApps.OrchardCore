@@ -96,30 +96,53 @@
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="Jurisdiction">
-            <label asp-for="Jurisdiction" class="ocat-label ocat-label-required">@T["Jurisdiction"]</label>
+            <label asp-for="Jurisdiction" class="ocat-label @(Model.RequiresJurisdiction ? "ocat-label-required" : null)">@T["Jurisdiction"]</label>
             <div class="ocat-end">
                 <input asp-for="Jurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
                 <span asp-validation-for="Jurisdiction" class="text-danger"></span>
-                <span class="hint">@T["A filer registered in this jurisdiction files the form, such as US, CA or CA-QC."]</span>
+                @if (Model.RequiresJurisdiction)
+                {
+                    <span class="hint">@T["A filer registered in this jurisdiction files the form, such as US, CA or CA-QC."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["The jurisdiction the form is for, such as US-MI. Leave it empty for a form any jurisdiction files."]</span>
+                }
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="Source">
             <label asp-for="Source" class="ocat-label ocat-label-required">@T["Prepared from"]</label>
             <div class="ocat-end">
-                <select asp-for="Source" asp-items="Model.Sources" class="form-select" style="max-width: 18rem"></select>
+                <select asp-for="Source" asp-items="Model.Sources" class="form-select" style="max-width: 18rem" data-reload-on-change="@(Model.IsNew ? Url.RouteUrl("TaxFormsCreate") : null)"></select>
                 <span asp-validation-for="Source" class="text-danger"></span>
-                <span class="hint">@T["The module that prepares and files the form from its own records, such as Payroll from pay statements. It decides which functions the formulas can call; save the form after changing it to see its functions."]</span>
+                <span class="hint">
+                    @if (Model.IsNew)
+                    {
+                        @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call, so choose it first."]
+                    }
+                    else
+                    {
+                        @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call; save the form after changing it to see its functions."]
+                    }
+                </span>
             </div>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Period" class="ocat-label">@T["Filed for"]</label>
-            <div class="ocat-end">
-                <select asp-for="Period" class="form-select" style="max-width: 14rem">
-                    <option value="Year">@T["A year"]</option>
-                    <option value="Quarter">@T["A quarter"]</option>
-                </select>
+        @if (Model.HasPeriod)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="Period" class="ocat-label">@T["Filed for"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Period" class="form-select" style="max-width: 14rem">
+                        <option value="Year">@T["A year"]</option>
+                        <option value="Quarter">@T["A quarter"]</option>
+                    </select>
+                </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <input type="hidden" asp-for="Period" />
+        }
         <div class="ocat-wrapper">
             <div class="ocat-end-offset">
                 <div class="form-check">
@@ -132,6 +155,8 @@
     </div>
 </div>
 
+@if (Model.HasRecipients)
+{
 <div class="card mb-3">
     <div class="card-header">@T["Recipients"]</div>
     <div class="card-body">
@@ -165,19 +190,30 @@
         </div>
     </div>
 </div>
+}
 
 <div class="card mb-3" data-tax-form-fields data-check-url="@Url.RouteUrl("TaxFormsCheckFormula")" data-source="@Model.Source">
     <div class="card-header">@T["Fields"]</div>
     <div class="card-body">
-        <p class="hint mb-3">@T["The form's boxes and lines. A recipient field is worked out from each reported recipient's records, a filing field from every reported recipient's records. A formula reads other fields of its level by their number in brackets, such as [5a]; a filing field also reads the recipient fields added up on the filing. Fields are worked out in the order their formulas need, so the order here is only how they are shown."]</p>
+        @if (Model.HasRecipients)
+        {
+            <p class="hint mb-3">@T["The form's boxes and lines. A recipient field is worked out from each reported recipient's records, a filing field from every reported recipient's records. A formula reads other fields of its level by their number in brackets, such as [5a]; a filing field also reads the recipient fields added up on the filing. Fields are worked out in the order their formulas need, so the order here is only how they are shown."]</p>
+        }
+        else
+        {
+            <p class="hint mb-3">@T["The form's boxes and lines, worked out from the source's records. A formula reads other fields by their number in brackets, such as [TotalTax]. Fields are worked out in the order their formulas need, so the order here is only how they are shown."]</p>
+        }
 
         @foreach (var (level, title, empty) in new[]
         {
             ("Recipient", T["On each recipient's statement"], T["No field is on a recipient's statement yet."]),
             ("Filing", T["On the filing"], T["No field is on the filing yet."]),
-        })
+        }.Where(level => Model.HasRecipients || level.Item1 == "Filing"))
         {
-            <h6 class="mt-2">@title</h6>
+            @if (Model.HasRecipients)
+            {
+                <h6 class="mt-2">@title</h6>
+            }
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle mb-1" data-field-list="@level">
                     <thead>
@@ -230,7 +266,7 @@
                         <label for="taxFormFieldLabel" class="form-label">@T["Label"]</label>
                         <input id="taxFormFieldLabel" class="form-control" data-field-input="Label" />
                     </div>
-                    <div class="col-sm-3">
+                    <div class="col-sm-3" hidden="@(!Model.HasRecipients)">
                         <label for="taxFormFieldLevel" class="form-label">@T["On"]</label>
                         <select id="taxFormFieldLevel" class="form-select" data-field-input="Level">
                             <option value="Recipient">@T["Each recipient's statement"]</option>
@@ -341,6 +377,8 @@
     </div>
 </div>
 
+@if (Model.HasRecipients)
+{
 <div class="card mb-3">
     <div class="card-header">@T["A recipient's statement"]</div>
     <div class="card-body">
@@ -390,9 +428,23 @@
         </div>
     </div>
 </div>
+}
 
 
 <script at="Foot">
+    (() => {
+        // A new form shows what its source has (its card, its functions, recipients or not), so choosing another source
+        // opens the page for it.
+        const source = document.querySelector('select[data-reload-on-change]');
+
+        source?.addEventListener('change', () => {
+            const url = new URL(source.getAttribute('data-reload-on-change'), window.location.href);
+
+            url.searchParams.set('source', source.value);
+            window.location.assign(url.toString());
+        });
+    })();
+
     (() => {
         const card = document.querySelector('[data-tax-form-fields]');
         const modalElement = document.getElementById('taxFormFieldModal');

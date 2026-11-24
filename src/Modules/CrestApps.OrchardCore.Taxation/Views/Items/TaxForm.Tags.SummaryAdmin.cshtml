@@ -1,13 +1,24 @@
 @model ShapeViewModel<TaxForm>
 @using Microsoft.AspNetCore.Mvc.Localization
+@using Microsoft.Extensions.Localization
+@using OrchardCore
+@inject Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Taxation.Services.TaxFormSourceOptions> SourceOptions
+@inject IStringLocalizerFactory LocalizerFactory
 
 @{
     var form = Model.Value;
+    var source = SourceOptions.Value.Sources.FirstOrDefault(candidate => string.Equals(candidate.Name, form.Source, StringComparison.OrdinalIgnoreCase));
 }
 
-<span class="badge ta-badge fw-normal"><i class="fa-solid fa-flag text-secondary me-1" aria-hidden="true"></i>@form.Jurisdiction</span>
-<span class="badge ta-badge fw-normal"><i class="fa-solid fa-database text-secondary me-1" aria-hidden="true"></i>@form.Source</span>
-<span class="badge ta-badge fw-normal"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@(form.IsQuarterly ? T["Every quarter"] : T["Every year"])</span>
+@if (!string.IsNullOrEmpty(form.Jurisdiction))
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-flag text-secondary me-1" aria-hidden="true"></i>@form.Jurisdiction</span>
+}
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-database text-secondary me-1" aria-hidden="true"></i>@(source?.DisplayName is { } displayName ? LocalizerFactory.Localize(displayName).Value : form.Source)</span>
+@if (source?.HasPeriod != false)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@(form.IsQuarterly ? T["Every quarter"] : T["Every year"])</span>
+}
 <span class="badge ta-badge fw-normal"><i class="fa-solid fa-table-cells text-secondary me-1" aria-hidden="true"></i>@T.Plural(form.Fields.Count, "1 field", "{0} fields")</span>
 @if (form.HasRecipientStatements)
 {

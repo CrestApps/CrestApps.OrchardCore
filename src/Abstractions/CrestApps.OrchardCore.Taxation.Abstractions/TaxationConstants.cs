@@ -85,6 +85,18 @@ public static class TaxationConstants
     public const string TaxFormsRecipeStepName = "TaxForms";
 
     /// <summary>
+    /// The tax form source of sales and use tax returns: a tax form of this source works out a return's boxes and its
+    /// amount due from the return's lines (Tax Returns).
+    /// </summary>
+    public const string SalesTaxFormSource = "SalesTax";
+
+    /// <summary>
+    /// The name of the generic return form a registration files with when its filing schedule names none: the lines
+    /// totaled by kind. Tax Returns adds it as a tax form from its recipe.
+    /// </summary>
+    public const string GenericTaxReturnFormName = "Generic";
+
+    /// <summary>
     /// The YesSql collection of income tax rules.
     /// </summary>
     public const string IncomeTaxCollectionName = "IncomeTax";

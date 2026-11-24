@@ -168,10 +168,17 @@ internal sealed class TaxFormDisplayDriver : DisplayDriver<TaxForm>
                 .Select(value => new TaxFormValueViewModel { Name = value.Name, Year = value.Year, Amount = value.Amount })];
             model.Checks = typed?.Checks ?? [.. form.Checks.Select(check => new TaxFormCheckViewModel { Condition = check.Condition, Note = check.Note })];
             model.IsUsed = !isNew && !string.IsNullOrEmpty(form.Name) && await IsUsedAsync(form);
+            model.IsNew = isNew;
+            model.HasRecipients = source?.HasRecipients ?? true;
+            model.HasPeriod = source?.HasPeriod ?? true;
+            model.RequiresJurisdiction = source?.RequiresJurisdiction ?? true;
             model.Sources = [.. _sources.Sources.Select(candidate => new SelectListItem(_localizerFactory.Localize(candidate.DisplayName).Value, candidate.Name, string.Equals(candidate.Name, sourceName, StringComparison.OrdinalIgnoreCase)))];
             model.ReportedAmountsLabel = source?.ReportedAmountsLabel is { } label ? _localizerFactory.Localize(label).Value : null;
             model.Functions = [.. _functions.For(sourceName).Functions
                 .Where(function => !function.IsAggregate)
+
+                // A source without recipients has nothing for the functions that read them.
+                .Where(function => model.HasRecipients || function.Name is not ("RECIPIENTS" or "TOTAL"))
                 .OrderBy(function => function.Category == TaxFormFunctions.Category ? 1 : IsBuiltIn(function.Category) ? 2 : 0)
                 .ThenBy(function => function.Category, StringComparer.Ordinal)
                 .ThenBy(function => function.Name, StringComparer.Ordinal)

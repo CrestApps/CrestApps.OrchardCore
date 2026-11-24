@@ -23,10 +23,26 @@ public static class TaxFormsServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrEmpty(name);
 
+        return services.AddTaxFormSource(new TaxFormSource(name, displayName, description, reportedAmountsLabel));
+    }
+
+    /// <summary>
+    /// Adds a tax form source: a module that prepares tax forms from its own records, such as Payroll, with what its
+    /// forms have (recipients, a period, a jurisdiction). A source added twice keeps the last one.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="source">The source.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddTaxFormSource(this IServiceCollection services, TaxFormSource source)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentException.ThrowIfNullOrEmpty(source.Name);
+
         return services.Configure<TaxFormSourceOptions>(options =>
         {
-            options.Sources.RemoveAll(source => string.Equals(source.Name, name, StringComparison.OrdinalIgnoreCase));
-            options.Sources.Add(new TaxFormSource(name, displayName, description, reportedAmountsLabel));
+            options.Sources.RemoveAll(candidate => string.Equals(candidate.Name, source.Name, StringComparison.OrdinalIgnoreCase));
+            options.Sources.Add(source);
         });
     }
 

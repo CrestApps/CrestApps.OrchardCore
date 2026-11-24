@@ -218,18 +218,26 @@ public sealed class TaxFormHandler : CatalogEntryHandlerBase<TaxForm>
             context.Result.Fail(new ValidationResult(S["The title is required."], [nameof(TaxForm.DisplayName)]));
         }
 
+        var source = string.IsNullOrEmpty(form.Source) ? null : _sources.Sources.FirstOrDefault(candidate => string.Equals(candidate.Name, form.Source, StringComparison.OrdinalIgnoreCase));
+
         if (string.IsNullOrEmpty(form.Source))
         {
             context.Result.Fail(new ValidationResult(S["Choose the source that prepares the form."], [nameof(TaxForm.Source)]));
         }
-        else if (!_sources.Sources.Any(source => string.Equals(source.Name, form.Source, StringComparison.OrdinalIgnoreCase)))
+        else if (source is null)
         {
             context.Result.Fail(new ValidationResult(S["No module prepares forms from {0}: turn on the feature that does, such as Payroll.", form.Source], [nameof(TaxForm.Source)]));
         }
 
-        if (string.IsNullOrEmpty(form.Jurisdiction))
+        if (string.IsNullOrEmpty(form.Jurisdiction) && source?.RequiresJurisdiction != false)
         {
             context.Result.Fail(new ValidationResult(S["Give the jurisdiction a filer files the form in, such as US."], [nameof(TaxForm.Jurisdiction)]));
+        }
+
+        // A source without recipients, such as sales tax returns, works out only filing fields.
+        if (source is { HasRecipients: false } && (form.HasRecipientStatements || form.Fields.Any(field => field.Level == TaxFormFieldLevel.Recipient)))
+        {
+            context.Result.Fail(new ValidationResult(S["A form prepared from {0} has no recipients: make every field a filing field.", form.Source], [nameof(TaxForm.Fields)]));
         }
 
         if (form.Fields.Count == 0)

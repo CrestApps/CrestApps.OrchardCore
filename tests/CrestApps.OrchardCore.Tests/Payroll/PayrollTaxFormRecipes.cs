@@ -28,7 +28,7 @@ internal static class PayrollTaxFormRecipes
 
     /// <summary>Gets the forms of a recipe, as JSON.</summary>
     public static IReadOnlyList<JsonObject> Forms(string recipe)
-        => [.. PayrollTaxFormRecipeSeeder.Forms(JsonNode.Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Payroll", "Recipes", recipe))))];
+        => [.. TaxFormRecipeSeeder.Forms(JsonNode.Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Payroll", "Recipes", recipe))))];
 
     /// <summary>Gets a form of a recipe, as the record the recipe step makes of it.</summary>
     public static TaxForm Form(string recipe, string name)
@@ -42,7 +42,7 @@ internal static class PayrollTaxFormRecipes
         => harness.RunAsync(async services =>
         {
             var forms = Forms(recipe).Where(form => names.Length == 0 || names.Contains(form["Name"]!.GetValue<string>())).ToList();
-            var added = await PayrollTaxFormRecipeSeeder.SeedAsync(services.GetRequiredService<ITaxFormManager>(), forms, NullLogger.Instance);
+            var added = await TaxFormRecipeSeeder.SeedAsync(services.GetRequiredService<ITaxFormManager>(), forms, NullLogger.Instance);
 
             Assert.Equal(forms.Count, added.Count);
         });

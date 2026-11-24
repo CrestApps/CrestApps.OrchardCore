@@ -32,7 +32,8 @@ public sealed class TaxReturn : CatalogItem, IModifiedUtcAwareModel
     public string RegistrationNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the return form (<c>ITaxReturnForm</c>).
+    /// Gets or sets the name of the return form: a tax form of the sales tax source, or a form a module adds in code
+    /// (<c>ITaxReturnForm</c>).
     /// </summary>
     public string Form { get; set; }
 

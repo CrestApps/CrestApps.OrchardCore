@@ -375,7 +375,7 @@ public sealed class PayrollTaxFormTests
         Assert.Equal(["CA-RL1", "CA-T4", "US-1099NEC", "US-940", "US-941", "US-945", "US-W2"], names);
 
         // Running a recipe again adds nothing that is there.
-        await harness.RunAsync(async services => Assert.Empty(await PayrollTaxFormRecipeSeeder.SeedAsync(services.GetRequiredService<ITaxFormManager>(), PayrollTaxFormRecipes.Forms(PayrollTaxFormRecipes.UnitedStates), null)));
+        await harness.RunAsync(async services => Assert.Empty(await TaxFormRecipeSeeder.SeedAsync(services.GetRequiredService<ITaxFormManager>(), PayrollTaxFormRecipes.Forms(PayrollTaxFormRecipes.UnitedStates), null)));
     }
 
     [Fact]

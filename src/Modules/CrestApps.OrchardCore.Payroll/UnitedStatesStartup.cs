@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Migrations;
-using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
 
@@ -19,7 +17,6 @@ public sealed class UnitedStatesStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddScoped<PayrollTaxFormRecipeSeeder>();
         services.AddDataMigration<UnitedStatesTaxFormsMigrations>();
     }
 }

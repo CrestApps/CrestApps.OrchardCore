@@ -47,7 +47,27 @@ public sealed record TaxFormSource(
     string Name,
     [property: JsonIgnore] LocalizationSource DisplayName,
     [property: JsonIgnore] LocalizationSource Description,
-    [property: JsonIgnore] LocalizationSource ReportedAmountsLabel = null);
+    [property: JsonIgnore] LocalizationSource ReportedAmountsLabel = null)
+{
+    /// <summary>
+    /// Gets whether the source's forms report recipients (people, payees) with recipient fields and statements, such as
+    /// Payroll's W-2. A source without them, such as sales tax returns, has only filing fields, and the editor hides
+    /// what is about recipients.
+    /// </summary>
+    public bool HasRecipients { get; init; } = true;
+
+    /// <summary>
+    /// Gets whether a form says the period it is filed for (a year or a quarter). A source whose filers have their own
+    /// schedule, such as a tax registration's filing frequency, has none, and the editor hides it.
+    /// </summary>
+    public bool HasPeriod { get; init; } = true;
+
+    /// <summary>
+    /// Gets whether a form must name the jurisdiction a filer is registered in to file it. A source whose filers choose
+    /// their form, such as a tax registration's return form, may leave it empty for a form any jurisdiction files.
+    /// </summary>
+    public bool RequiresJurisdiction { get; init; } = true;
+}
 
 /// <summary>
 /// Tells what uses a tax form, such as the filings a module prepared from it: a used form keeps its name (filings keep

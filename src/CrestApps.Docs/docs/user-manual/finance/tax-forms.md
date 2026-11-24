@@ -1,19 +1,19 @@
 ---
 sidebar_label: Tax forms
 title: Tax forms and their formulas
-description: "Build the tax forms your business files without code: their boxes and lines as fields, a formula for each field, yearly values such as thresholds, checks that flag missing details, and how each recipient's statement is printed. Every function a formula can call, with examples."
+description: "Build the tax forms your business files without code, payroll forms and sales tax returns alike: their boxes and lines as fields, a formula for each field, yearly values such as thresholds and rates, checks that flag missing details, and how each recipient's statement is printed. Every function a formula can call, with examples."
 technical_manual:
   - modules/taxation
   - modules/payroll
 ---
 
-A tax form is the list of boxes and lines an agency asks for, such as Form 941, Form W-2 or a T4 slip, with a formula that says how each one is worked out. You can change a form when the agency changes it, or add a new form, without waiting for a new version of the site. The module that files the form (Payroll, for payroll forms) prepares it from its own records using your formulas.
+A tax form is the list of boxes and lines an agency asks for, such as Form 941, Form W-2, a T4 slip or a state's sales and use tax return, with a formula that says how each one is worked out. You can change a form when the agency changes it, or add a new form, without waiting for a new version of the site. The module that files the form prepares it from its own records using your formulas: Payroll from pay statements, Tax Returns from the figures of a return's period.
 
 | | |
 | --- | --- |
 | **Menu** | **Commerce** → **Taxation** → **Tax Forms** |
 | **Permission** | Manage tax forms |
-| **Feature** | Tax Forms. Payroll's forms need Payroll; the United States and Canadian payroll forms come with United States Payroll Filings and Canada Payroll Filings |
+| **Feature** | Tax Forms. Payroll's forms need Payroll; the United States and Canadian payroll forms come with United States Payroll Filings and Canada Payroll Filings. Sales tax returns need Tax Returns, which turns Tax Forms on |
 
 <AskYourAdmin />
 
@@ -23,25 +23,26 @@ You don't have to build the common forms yourself:
 
 - **United States Payroll Filings** adds Forms 941, 940, 945, W-2 and W-3, and 1099-NEC and 1096 the first time it's turned on.
 - **Canada Payroll Filings** adds the T4 slips and T4 Summary, and the RL-1 slips and RL-1 Summary.
+- **Tax Returns** adds the **Generic return (totals by kind)**, the return a tax registration files with when its filing schedule names no other form.
 
-They're also recipes under **Configuration** → **Recipes**: **United States Payroll: federal tax forms** and **Canada Payroll: T4 and RL-1 tax forms**. Running one again puts the shipped fields and formulas back, replacing your changes to those forms, and leaves your other forms alone. Check the figures, such as yearly maximums and rates, against the agency's current instructions before you file.
+They're also recipes under **Configuration** → **Recipes**: **United States Payroll: federal tax forms**, **Canada Payroll: T4 and RL-1 tax forms** and **Tax Returns: generic return form**. Running one again puts the shipped fields and formulas back, replacing your changes to those forms, and leaves your other forms alone. Check the figures, such as yearly maximums and rates, against the agency's current instructions before you file.
 
 ## Build a form
 
-1. Open **Commerce** → **Taxation** → **Tax Forms** and choose **Add tax form**, or **Edit** on a form to change it.
+1. Open **Commerce** → **Taxation** → **Tax Forms** and choose **Add tax form**, or **Edit** on a form to change it. When more than one module prepares forms, **Add tax form** asks which one first, such as **Prepared from Payroll** or **Prepared from Sales tax returns**: the page then shows what that kind of form has.
 2. Under **The form**:
    - **Title** is what people see, such as *Form 941 (quarterly federal return)*.
    - **Name** is the short name filings keep, such as `US-941`: letters, digits and dashes. Once a filing has been prepared from the form, the name can't change.
-   - **Jurisdiction**: a filer registered in this jurisdiction files the form, such as `US`, `CA` or `CA-QC`. For Payroll, that's the employer's registrations.
-   - **Prepared from**: the module that prepares and files the form, such as **Payroll**. It decides which functions the formulas can call (see [Functions](#functions)).
-   - **Filed for**: a year or a quarter.
+   - **Jurisdiction**: a filer registered in this jurisdiction files the form, such as `US`, `CA` or `CA-QC`. For Payroll, that's the employer's registrations. A sales tax return may leave it empty: a registration chooses its return form itself.
+   - **Prepared from**: the module that prepares and files the form, such as **Payroll** or **Sales tax returns**. It decides which functions the formulas can call (see [Functions](#functions)). On a new form, choosing another one opens the page for it.
+   - **Filed for**: a year or a quarter. A sales tax return has none: the registration's filing frequency decides its periods.
    - **Filers can prepare it**: untick it to stop offering the form. Turn a form off rather than deleting it once filings have been prepared from it; a form in use can't be deleted.
-3. Under **Recipients** (for forms with a statement for each person or payee):
+3. Under **Recipients** (for forms with a statement for each person or payee; a sales tax return has none):
    - **Each recipient gets a statement**: a W-2, a 1099 or a T4 slip. Each statement is kept on the filing, printed, and given to the recipient once the form is filed. Without it, recipient fields are worked out only to be added up on the filing (Form 940 does this for the pay over each person's wage base).
    - **A statement for each jurisdiction under the form's**: a T4 slip for each province a person was employed in.
    - **A recipient is reported when**: a formula over the recipient fields, such as `[1] >= VALUE('ReportingThreshold') OR [4] > 0`. Leave it empty to report anyone with a field that isn't zero.
    - **Note for no tax id**: added to the filing for a reported recipient with no tax id on file. `{0}` is their name, such as `{0}: no tax id on file.`
-4. The source's own card, such as **Payroll**, holds what only it needs. For Payroll that's whose pay the form reports (employees, contractors or both), **Only people taxed in** a jurisdiction (`CA-QC` reports people with a Quebec tax line), **List the income taxes below the country** (a W-2's state and local boxes 15 to 20), and the **Pay code prefix** pay codes use to report to the form's fields (`W2:` for `W2:12D`).
+4. The source's own card, such as **Payroll**, holds what only it needs. For Payroll that's whose pay the form reports (employees, contractors or both), **Only people taxed in** a jurisdiction (`CA-QC` reports people with a Quebec tax line), **List the income taxes below the country** (a W-2's state and local boxes 15 to 20), and the **Pay code prefix** pay codes use to report to the form's fields (`W2:` for `W2:12D`). For a sales tax return, the **Sales tax return** card names the **Amount due field** (see [Sales tax returns](#sales-tax-returns)).
 5. Add the **Fields**, the **Yearly values** and the **Checks** (below), and fill in **A recipient's statement**.
 6. Choose **Save**. A form whose formulas don't work isn't saved: the page says which field is wrong and why.
 
@@ -127,6 +128,58 @@ These read pay statements: a recipient field reads that person's statements (or 
 | `ACCOUNT(jurisdiction)` | The account number on the employer's registration in a jurisdiction | `ACCOUNT('CA-QC')` |
 | `DENTALCODE()` | With Canada Payroll Filings: the employer's dental benefits code (T4 box 45) | `IN(DENTALCODE(), 1, 2, 3, 4, 5)` |
 
+### For sales tax returns
+
+These read the return being worked out: the figures the modules gave for the period (its lines), the registration it's filed under, how late it is and what was paid. A line has a kind, such as `'GrossSales'`, `'ExemptSales'`, `'TaxableSales'`, `'UseTaxPurchases'`, `'Withholding'`, `'Credit'` or `'ExcessCollected'`, an amount (the sales or purchases), a tax, and may have a jurisdiction, a tax type, a category (such as an exemption reason) and the line of the form it goes on. A return's lines are on its page, under **Figures**.
+
+In `AMOUNT`, `TAX` and `HASLINES`, leave a filter out, or give `''` or `'*'`, to match anything; `*` matches any characters, such as `'us-*'`. A line with no jurisdiction counts as the return's own.
+
+| Function | What it gives | Example |
+| --- | --- | --- |
+| `AMOUNT(kind, [jurisdiction], [taxType], [category])` | The amounts of the lines of a kind | `AMOUNT('GrossSales')`; `AMOUNT('ExemptSales', '', '', 'Resale')`: sales for resale |
+| `TAX(kind, [jurisdiction], [taxType], [category])` | The tax of the lines of a kind | `TAX('TaxableSales', 'us-mi')`: Michigan's tax only, when a provider gives other states' lines too |
+| `HASLINES(kind, ...)` | True when there's a line of that kind | `IF(HASLINES('TaxableSales'), AMOUNT('TaxableSales'), [GrossSales] - [ExemptSales])` |
+| `LINEAMOUNT(line)`, `LINETAX(line)` | The amounts, or the tax, of the lines a module gave for a line of the form | `LINETAX('5g')` |
+| `REGISTRATION(figure)` | A figure of the registration: `'Number'`, `'Jurisdiction'`, `'TaxType'` or `'Name'` | `ISACCOUNT(REGISTRATION('Number'), '##-#######')` |
+| `DAYSLATE()` | The days after the due date the return is filed; 0 when it's on time. A draft past its due date counts as filed today | `ROUND([6] * VALUE('InterestRate') / 365 * DAYSLATE(), 2)`: interest by the day |
+| `MONTHSLATE()` | The months after the due date, a month begun counting as a whole one | `LEAST([6] * 0.05 * MONTHSLATE(), [6] * 0.25)`: 5% a month or part of a month, up to 25% |
+| `ONTIME()` | True when the return is filed on or before its due date | `IF(ONTIME(), LEAST(ROUND([6] * 0.005, 2), 15), 0)`: a discount for filing on time |
+| `PAID()` | What was paid on the return, with what was paid with the returns it corrects | `PAID()` |
+| `PAIDEARLIER()` | What was paid with the returns an amendment corrects | `PAIDEARLIER()`: an amended return's line for the tax paid with the original |
+| `AMENDMENT()` | 0 for the original return, 1 for its first amendment | `IF(AMENDMENT() > 0, PAIDEARLIER(), 0)` |
+| `ISRECONCILIATION()` | True for the yearly return filed besides the monthly or quarterly ones | `IF(ISRECONCILIATION(), ..., 0)` |
+| `PERIODMONTHS()` | The months the return covers: 1, 3 or 12 | `LEAST(ROUND([6] * 0.005, 2), 15 * PERIODMONTHS())`: a monthly cap on a quarterly return |
+
+`FILINGYEAR()` is the year the return's period ends in, and `FILINGQUARTER()` its quarter (0 for a yearly return).
+
+## Sales tax returns
+
+A tax registration's returns (**Commerce** → **Taxation** → **Tax Returns**) are worked out by a tax form prepared from **Sales tax returns**. Its fields are the return's boxes; they're all on the filing, since a return has no recipients. The registration's **Return form** and **Annual return form**, in its filing schedule, say which form its returns use; with none chosen, it uses the **Generic return (totals by kind)**.
+
+- **Amount due field**, on the **Sales tax return** card: the box that is what the return says is due, after credits, discounts, penalty and interest, such as `21`. It's `AmountDue` unless you name another. Payments recorded on the return are taken off it for the return's balance, so don't take `PAID()` off in that field.
+- A draft past its due date is worked out as filed today, so it shows its penalty and interest, and a return marked as filed is worked out again as filed that day.
+- A check that fails adds its note to the return.
+- Changing a form changes drafts when they're prepared again. Returns marked ready or filed keep their boxes.
+
+A form that a module adds in code still works, and a tax form with the same name is used instead of it.
+
+**A state's monthly return** (filing fields, with *DiscountRate* 0.005, *DiscountCap* 15 and *InterestRate* 0.0365 as yearly values, and **Amount due field** `21`):
+
+| Line | Formula |
+| --- | --- |
+| `1` Gross sales | `AMOUNT('GrossSales')` |
+| `2` Sales for resale | `AMOUNT('ExemptSales', '', '', 'Resale')` |
+| `4` Sales tax | `TAX('TaxableSales', 'us-mi')` |
+| `5` Use tax | `TAX('UseTaxPurchases')` |
+| `6` Total tax | `[4] + [5]` |
+| `7` Discount | `IF(ONTIME(), LEAST(ROUND([6] * VALUE('DiscountRate'), 2), VALUE('DiscountCap')), 0)` |
+| `8` Penalty | `IF(ONTIME(), 0, ROUND(LEAST([6] * 0.05 * MONTHSLATE(), [6] * 0.25), 2))` |
+| `9` Interest | `ROUND([6] * VALUE('InterestRate') / 365 * DAYSLATE(), 2)` |
+| `10` Credits | `TAX('Credit')` |
+| `21` Amount due | `[6] - [7] + [8] + [9] - [10]` |
+
+With 552 of tax and 20 of credits, filed on time, the discount is 2.76 and 529.24 is due. Filed 45 days late, there's no discount, the penalty is 55.20 (two months begun), the interest 2.48, and 589.68 is due. A check of `ISACCOUNT(REGISTRATION('Number'), '##-#######')` notes a registration number that isn't the state's shape.
+
 ## Yearly values
 
 Figures that change by year go under **Yearly values**, so a formula doesn't need editing every January. Each value has a **Name**, the first **year** it applies to, and the **value**. A filing uses the latest year at or before its own: with *MaximumInsurableEarnings* at 65,700 from 2025 and 68,900 from 2026, a 2027 filing still uses 68,900 until you add 2027.
@@ -181,3 +234,6 @@ The statement prints the recipient fields you marked as printed, two to a row, i
 | *Two recipient fields are numbered 1* | Numbers must be unique within a list | Renumber one |
 | Preparing a filing says the form's formulas don't work | A function's feature was turned off after the form was saved | Turn the feature back on, or edit the form |
 | A field shows 0 | A yearly value has no year at or before the filing's, or the records have nothing for it | Add the year's value; check the tax codes and categories |
+| *A return's amount due is read from field AmountDue* | A sales tax return has no filing field with the number its **Amount due field** names | Add the field, or name the right one on the **Sales tax return** card |
+| *A form prepared from Sales tax returns has no recipients* | A sales tax return has a field on each recipient's statement | Make every field a filing field |
+| A return's notes say its form's formulas don't work | A formula broke after the form was saved | Edit the form; the return has no boxes until it's prepared again |

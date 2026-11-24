@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -26,11 +27,13 @@ public sealed class TaxFormsController : CatalogAdminController<TaxForm>
     private readonly IEnumerable<ITaxFormUsage> _usages;
     private readonly IAuthorizationService _authorizationService;
     private readonly TaxFormFunctionCatalog _functions;
+    private readonly TaxFormSourceOptions _sources;
 
     public TaxFormsController(
         ITaxFormManager manager,
         IEnumerable<ITaxFormUsage> usages,
         TaxFormFunctionCatalog functions,
+        IOptions<TaxFormSourceOptions> sources,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<TaxForm> displayManager,
@@ -41,6 +44,7 @@ public sealed class TaxFormsController : CatalogAdminController<TaxForm>
     {
         _usages = usages;
         _functions = functions;
+        _sources = sources.Value;
         _authorizationService = authorizationService;
     }
 
@@ -64,6 +68,19 @@ public sealed class TaxFormsController : CatalogAdminController<TaxForm>
 
     protected override string GetName(TaxForm entry)
         => string.IsNullOrWhiteSpace(entry?.DisplayName) ? entry?.Name ?? entry?.ItemId : entry.DisplayName;
+
+    // A new form is of the source the page asks for (?source=SalesTax), else of the first one, so its editor shows that
+    // source's card, functions and fields from the start.
+    protected override Task<bool> InitializeNewAsync(TaxForm model)
+    {
+        var requested = Request.Query["source"].ToString();
+        var source = _sources.Sources.FirstOrDefault(candidate => string.Equals(candidate.Name, requested, StringComparison.OrdinalIgnoreCase))
+            ?? _sources.Sources.FirstOrDefault();
+
+        model.Source = source?.Name;
+
+        return Task.FromResult(true);
+    }
 
     // A used form (one with filings) is kept: what uses it names it. Turn it off instead.
     protected override async Task<bool> CanDeleteAsync(TaxForm model)
