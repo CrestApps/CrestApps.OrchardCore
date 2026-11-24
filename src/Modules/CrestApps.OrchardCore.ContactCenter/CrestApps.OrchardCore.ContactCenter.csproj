@@ -35,6 +35,8 @@
     <PackageReference Include="OrchardCore.SignalR" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="NLayer" />
+    <PackageReference Include="CrestApps.Core.AI" />
+    <PackageReference Include="OrchardCore.Media.Core" />
   </ItemGroup>
 
   <ItemGroup>

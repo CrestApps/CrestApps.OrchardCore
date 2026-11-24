@@ -50,6 +50,26 @@ public sealed class BookingBalanceCharger
     }
 
     /// <summary>
+    /// Charges the balance now on a person's request, as the booking's Charge balance now does: a balance whose charges
+    /// failed for good is tried again from the start. Returns why it wasn't charged, or <see langword="null"/> when it was
+    /// (or is settling).
+    /// </summary>
+    /// <param name="balance">The balance.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public Task<string> ChargeNowAsync(BookingBalance balance, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(balance);
+
+        if (balance.Status == BookingBalanceStatus.Failed)
+        {
+            balance.Status = BookingBalanceStatus.Scheduled;
+            balance.Attempts = 0;
+        }
+
+        return ChargeAsync(balance, cancellationToken);
+    }
+
+    /// <summary>
     /// Gets the days between the balance's declined charges: charged again a day later, twice, so three times in all.
     /// </summary>
     public static int[] RetryDays

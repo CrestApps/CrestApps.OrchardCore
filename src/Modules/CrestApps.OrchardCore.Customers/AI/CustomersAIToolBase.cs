@@ -78,11 +78,20 @@ internal abstract class CustomersAIToolBase : AIFunction
 
         if (arguments.Keys.FirstOrDefault(name => !_argumentNames.Contains(name)) is { } unknown)
         {
-            return $"Nothing was done: '{unknown}' is not an argument of {Name}. Use only the arguments the tool declares.";
+            return DescribeUnknownArgument(unknown);
         }
 
         return await InvokeAsync(arguments, services, caller, cancellationToken);
     }
+
+    /// <summary>
+    /// Gets the answer to an argument the tool's schema does not declare. A tool overrides it to say where a field it no
+    /// longer takes is changed instead.
+    /// </summary>
+    /// <param name="name">The argument's name.</param>
+    /// <returns>The sentence the tool returns; nothing is done.</returns>
+    protected virtual string DescribeUnknownArgument(string name)
+        => $"Nothing was done: '{name}' is not an argument of {Name}. Use only the arguments the tool declares.";
 
     /// <summary>
     /// Runs the tool for a signed-in caller who has the permission.

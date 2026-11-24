@@ -103,7 +103,7 @@ internal sealed class CancelOrderTool : OrdersAIToolBase
             refundable = money.Refundable,
             currency = order.Currency,
             message = money.Refundable > 0m
-                ? $"Order {order.OrderNumber} was canceled. Nothing was refunded: {Format(money.Refundable, order.Currency)} paid for it can still be refunded with refundOrder."
+                ? $"Order {order.OrderNumber} was canceled. Nothing was refunded: {Format(money.Refundable, order.Currency)} paid for it can still be refunded: preview it with previewRefund, then refund it with refundOrder."
                 : $"Order {order.OrderNumber} was canceled.",
         });
     }

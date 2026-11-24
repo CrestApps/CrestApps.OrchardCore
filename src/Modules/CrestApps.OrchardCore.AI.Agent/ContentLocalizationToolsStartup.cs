@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list the translations of a content item and create a translation, when the Content
+/// Registers the tool that creates a translation of a content item, when the Content
 /// Localization feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.ContentLocalization)]
@@ -27,12 +27,6 @@ public sealed class ContentLocalizationToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreAITool<ListContentItemLocalizationsTool>(ListContentItemLocalizationsTool.TheName)
-            .WithTitle(S["List Content Item Localizations"])
-            .WithDescription(S["Lists the translations of a content item: for each site culture, the content item ID, title and published state of its version in that culture, or that it is missing. Use it to find the item for a language or to see what still needs translating."])
-            .WithCategory(S["Content Management"])
-            .Selectable();
-
         services.AddCoreAITool<LocalizeContentItemTool>(LocalizeContentItemTool.TheName)
             .WithTitle(S["Localize Content Item"])
             .WithDescription(S["Creates the version of a content item in another culture as a draft copy linked to the same localization set, and returns the new content item ID. Fails if that culture already exists or the type has no localization part; translate the copy with createOrUpdateContentItem afterwards."])

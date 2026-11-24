@@ -43,11 +43,5 @@ public sealed class AIToolsStartup : StartupBase
             .WithCategory(S["Commerce"])
             .RequireApproval()
             .Selectable();
-
-        services.AddCoreAITool<SkipStoreSetupStepTool>(SkipStoreSetupStepTool.TheName)
-            .WithTitle(S["Skip Store Setup Step"])
-            .WithDescription(S["Marks a setup step as skipped, or clears the skip, so the guide moves on. It changes only the guide's progress."])
-            .WithCategory(S["Commerce"])
-            .Selectable();
     }
 }

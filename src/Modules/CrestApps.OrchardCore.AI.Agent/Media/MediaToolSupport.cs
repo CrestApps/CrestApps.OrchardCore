@@ -158,7 +158,7 @@ internal static class MediaToolSupport
 
         return mediaOptions.RestrictedFileExtensions?.Contains(extension) == true
             ? $"the extension '{extension}' is restricted on this site and you do not hold the permission to upload restricted media."
-            : $"the extension '{extension}' is not allowed on this site. Use getMediaOptions to see the allowed extensions.";
+            : $"the extension '{extension}' is not allowed on this site. The allowed extensions are set in the Media settings of the admin.";
     }
 
     /// <summary>

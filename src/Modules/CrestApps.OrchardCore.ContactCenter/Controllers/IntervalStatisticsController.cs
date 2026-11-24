@@ -19,8 +19,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// </summary>
 public sealed class IntervalStatisticsController : Controller
 {
-    private static readonly TimeSpan _stalledAfter = TimeSpan.FromMinutes(30);
-
     private readonly IAuthorizationService _authorizationService;
     private readonly IntervalStatisticsRoller _roller;
     private readonly IIntervalStatisticsReader _reader;
@@ -70,30 +68,21 @@ public sealed class IntervalStatisticsController : Controller
             return Forbid();
         }
 
-        var now = _clock.UtcNow;
-        var today = IntervalStatisticsConstants.DayStart(now);
-        var state = await _roller.GetStateAsync(HttpContext.RequestAborted);
-        var days = await _reader.GetDaysAsync(today.AddDays(-29), today.AddDays(1), HttpContext.RequestAborted);
-        var todayIntervals = await _reader.GetQueueIntervalsAsync(null, today, today.AddDays(1), HttpContext.RequestAborted);
-        var total = new QueueIntervalStatistic();
-
-        foreach (var interval in todayIntervals)
-        {
-            total.Add(interval);
-        }
+        var status = await IntervalStatisticsStatus.ReadAsync(_roller, _reader, _clock.UtcNow, HttpContext.RequestAborted);
+        var today = status.TodayUtc;
 
         var model = new IntervalStatisticsViewModel
         {
-            State = state,
-            DaysComputed = days.Count,
-            DaysFinal = days.Count(day => day.Final),
-            Today = days.FirstOrDefault(day => DateTime.SpecifyKind(day.Date, DateTimeKind.Utc) == today),
-            TodayTotal = total,
-            QueuesToday = todayIntervals.Select(interval => interval.QueueId).Distinct(StringComparer.Ordinal).Count(),
+            State = status.State,
+            DaysComputed = status.DaysComputed,
+            DaysFinal = status.DaysFinal,
+            Today = status.Today,
+            TodayTotal = status.TodayTotal,
+            QueuesToday = status.QueuesToday,
             RetentionDays = _options.RetentionDays,
             BackfillDays = _options.BackfillDays,
             CanRebuild = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageContactCenter),
-            Stalled = state.IsRebuilding && now - (state.LastProgressUtc > state.RebuildRequestedUtc ? state.LastProgressUtc : state.RebuildRequestedUtc) > _stalledAfter,
+            Stalled = status.Stalled,
             RebuildFrom = today.AddDays(-7),
             RebuildTo = today,
         };

@@ -52,7 +52,7 @@ internal sealed class ListAccountsTool : AccountsAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Finds accounts (businesses and households) by name across every account content type and returns id, name, type, status, member count, locations and owner. Use it to get the account id; use getContentItemById for the full record.";
+    public override string Description => "Finds accounts (businesses and households) by name across every account content type and returns id, name, type, status, member count, locations and owner. Use it to get the account id; use getAccount for the account's members, locations and team.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

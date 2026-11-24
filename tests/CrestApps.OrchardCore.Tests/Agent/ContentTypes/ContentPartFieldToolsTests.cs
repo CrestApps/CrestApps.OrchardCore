@@ -9,7 +9,7 @@ using OrchardCore.ContentTypes;
 namespace CrestApps.OrchardCore.Tests.Agent.ContentTypes;
 
 /// <summary>
-/// The tools that add a field to a content part, change it, remove it, and reorder the fields.
+/// The tools that add a field to a content part, change it and remove it.
 /// </summary>
 public sealed class ContentPartFieldToolsTests
 {
@@ -167,55 +167,6 @@ public sealed class ContentPartFieldToolsTests
         Assert.StartsWith("Nothing was removed", result, StringComparison.Ordinal);
         Assert.Contains("Subtitle", result, StringComparison.Ordinal);
         store.Service.Verify(service => service.RemoveFieldFromPartAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ReorderContentTypeElements_ForAPart_OrdersItsFieldsThroughTheDefinitionService()
-    {
-        // Arrange
-        string[] ordered = null;
-        var store = new ContentDefinitionTestStore();
-        var article = store.AddPart("Article", part => part
-            .WithField("Subtitle", field => field.OfType("TextField"))
-            .WithField("Summary", field => field.OfType("TextField")));
-        store.Service
-            .Setup(service => service.AlterPartFieldsOrderAsync(article, It.IsAny<string[]>()))
-            .Callback((ContentPartDefinition _, string[] names) => ordered = names)
-            .Returns(Task.CompletedTask);
-        var services = store.BuildServices();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ReorderContentTypeElementsTool(), services, new()
-        {
-            ["part"] = "Article",
-            ["names"] = new[] { "Summary", "Subtitle" },
-        });
-
-        // Assert
-        Assert.True(AgentToolTestContext.ReadJson(result).GetProperty("reordered").GetBoolean());
-        Assert.Equal(new[] { "Summary", "Subtitle" }, ordered);
-    }
-
-    [Fact]
-    public async Task ReorderContentTypeElements_WhenAFieldNameIsUnknown_ChangesNothing()
-    {
-        // Arrange
-        var store = new ContentDefinitionTestStore();
-        store.AddPart("Article", part => part
-            .WithField("Subtitle", field => field.OfType("TextField"))
-            .WithField("Summary", field => field.OfType("TextField")));
-        var services = store.BuildServices();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ReorderContentTypeElementsTool(), services, new()
-        {
-            ["part"] = "Article",
-            ["names"] = new[] { "Summary", "Nope" },
-        });
-
-        // Assert
-        Assert.StartsWith("Nothing was changed", result, StringComparison.Ordinal);
-        store.Service.Verify(service => service.AlterPartFieldsOrderAsync(It.IsAny<ContentPartDefinition>(), It.IsAny<string[]>()), Times.Never);
     }
 
     private sealed class TextField : ContentField;

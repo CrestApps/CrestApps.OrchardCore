@@ -12,8 +12,8 @@ using OrchardCore.Sitemaps.Services;
 namespace CrestApps.OrchardCore.Tests.Agent.Sitemaps;
 
 /// <summary>
-/// The tools that list, save and delete sitemaps and clear the sitemap cache. They go through the sitemap manager, the
-/// path check and the cache provider the Sitemaps admin pages use, and a refused save leaves the sitemap as it was.
+/// The tools that list, save and delete sitemaps. They go through the sitemap manager and the path check the Sitemaps
+/// admin pages use, and a refused save leaves the sitemap as it was.
 /// </summary>
 public sealed class SitemapToolsTests
 {
@@ -360,80 +360,6 @@ public sealed class SitemapToolsTests
         // Assert
         Assert.StartsWith("Nothing was deleted: there is no sitemap with the ID 'nope'.", result, StringComparison.Ordinal);
         Assert.Empty(harness.SitemapManager.Deleted);
-    }
-
-    [Fact]
-    public async Task PurgeSitemapCache_WithoutAFile_ClearsEveryCachedFile()
-    {
-        // Arrange
-        var harness = new Harness();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new PurgeSitemapCacheTool(), harness.Services);
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.True(json.GetProperty("purged").GetBoolean());
-        Assert.True(json.GetProperty("all").GetBoolean());
-        Assert.Equal(2, json.GetProperty("purgedFiles").GetInt32());
-        harness.CacheProvider.Verify(provider => provider.PurgeAllAsync(), Times.Once);
-        harness.CacheProvider.Verify(provider => provider.PurgeAsync(It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task PurgeSitemapCache_WithAFile_ClearsThatCachedFile()
-    {
-        // Arrange
-        var harness = new Harness();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new PurgeSitemapCacheTool(), harness.Services, new()
-        {
-            ["cacheFileName"] = "main_abc.xml",
-        });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.False(json.GetProperty("all").GetBoolean());
-        Assert.Equal("Main_abc.xml", json.GetProperty("cacheFileName").GetString());
-        harness.CacheProvider.Verify(provider => provider.PurgeAsync("Main_abc.xml"), Times.Once);
-        harness.CacheProvider.Verify(provider => provider.PurgeAllAsync(), Times.Never);
-    }
-
-    [Theory]
-    [InlineData("nope.xml")]
-    [InlineData("../web.config")]
-    public async Task PurgeSitemapCache_WithAFileTheCacheDoesNotList_ClearsNothing(string cacheFileName)
-    {
-        // Arrange
-        var harness = new Harness();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new PurgeSitemapCacheTool(), harness.Services, new()
-        {
-            ["cacheFileName"] = cacheFileName,
-        });
-
-        // Assert
-        Assert.StartsWith("Nothing was cleared", result, StringComparison.Ordinal);
-        harness.CacheProvider.Verify(provider => provider.PurgeAsync(It.IsAny<string>()), Times.Never);
-        harness.CacheProvider.Verify(provider => provider.PurgeAllAsync(), Times.Never);
-    }
-
-    [Fact]
-    public async Task PurgeSitemapCache_WhenSomeFilesCouldNotBeRemoved_SaysSo()
-    {
-        // Arrange
-        var harness = new Harness();
-        harness.CacheProvider.Setup(provider => provider.PurgeAllAsync()).ReturnsAsync(true);
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new PurgeSitemapCacheTool(), harness.Services);
-
-        // Assert
-        Assert.StartsWith("The sitemap cache was cleared, but some files could not be removed.", result, StringComparison.Ordinal);
     }
 
     /// <summary>

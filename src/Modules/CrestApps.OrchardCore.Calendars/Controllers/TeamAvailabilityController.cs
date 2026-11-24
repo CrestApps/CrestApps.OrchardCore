@@ -8,26 +8,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using Calendar = CrestApps.OrchardCore.Calendars.Models.Calendar;
 
 namespace CrestApps.OrchardCore.Calendars.Controllers;
 
 /// <summary>
-/// Shows when a team's members are busy on a day, and when they are all free.
+/// The Team Availability page: for a team calendar and a day, when each member of the team is busy, and the first times
+/// everyone is free.
 /// </summary>
 [Feature(CalendarsConstants.Features.Teams)]
 public sealed class TeamAvailabilityController : Controller
 {
-    private const int MaxMembers = 50;
-
     private readonly IAuthorizationService _authorizationService;
     private readonly ICalendarAccessService _accessService;
-    private readonly ICalendarService _calendarService;
-    private readonly ICalendarAvailabilityService _availabilityService;
-    private readonly ISession _session;
+    private readonly TeamAvailabilityService _teamAvailabilityService;
     private readonly IClock _clock;
 
     /// <summary>
@@ -35,32 +28,26 @@ public sealed class TeamAvailabilityController : Controller
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="accessService">The calendar access service.</param>
-    /// <param name="calendarService">The calendar service.</param>
-    /// <param name="availabilityService">The free/busy service.</param>
-    /// <param name="session">The YesSql session.</param>
+    /// <param name="teamAvailabilityService">The team availability service.</param>
     /// <param name="clock">The clock.</param>
     public TeamAvailabilityController(
         IAuthorizationService authorizationService,
         ICalendarAccessService accessService,
-        ICalendarService calendarService,
-        ICalendarAvailabilityService availabilityService,
-        ISession session,
+        TeamAvailabilityService teamAvailabilityService,
         IClock clock)
     {
         _authorizationService = authorizationService;
         _accessService = accessService;
-        _calendarService = calendarService;
-        _availabilityService = availabilityService;
-        _session = session;
+        _teamAvailabilityService = teamAvailabilityService;
         _clock = clock;
     }
 
     /// <summary>
-    /// Shows a team's day.
+    /// Shows the team availability of a day.
     /// </summary>
-    /// <param name="calendarId">The team calendar.</param>
-    /// <param name="date">The day, as yyyy-MM-dd.</param>
-    /// <param name="minutes">How long a meeting must be.</param>
+    /// <param name="calendarId">The team calendar's id.</param>
+    /// <param name="date">The day (yyyy-MM-dd).</param>
+    /// <param name="minutes">The length of the meeting to find free times for.</param>
     /// <returns>The page.</returns>
     [Admin("calendar/availability", "CalendarTeamAvailability")]
     public async Task<IActionResult> Index(string calendarId, string date, int minutes = 30)
@@ -86,55 +73,30 @@ public sealed class TeamAvailabilityController : Controller
             return View(model);
         }
 
-        model.TimeZoneId = CalendarTime.NormalizeZoneId(selected.TimeZoneId) ?? "UTC";
+        var availability = await _teamAvailabilityService.GetAsync(
+            selected,
+            DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) ? parsed : null,
+            model.Minutes,
+            model.FirstHour,
+            model.LastHour,
+            HttpContext.RequestAborted);
 
-        var today = CalendarTime.ToLocal(_clock.UtcNow, model.TimeZoneId).Date;
-        var day = DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) ? parsed : today;
+        model.TimeZoneId = availability.TimeZoneId;
+        model.Date = availability.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-        model.Date = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-        var fromUtc = CalendarTime.ToUtc(day.AddHours(model.FirstHour), model.TimeZoneId);
-        var toUtc = CalendarTime.ToUtc(day.AddHours(model.LastHour), model.TimeZoneId);
-        var role = selected.OwnerId?.ToUpperInvariant();
-        var members = string.IsNullOrEmpty(role)
-            ? []
-            : await _session.Query<User, UserByRoleNameIndex>(index => index.RoleName == role).Take(MaxMembers).ListAsync();
-
-        var busy = await _availabilityService.GetBusyAsync(new CalendarBusyQuery
-        {
-            UserIds = members.Select(member => member.UserId).ToList(),
-            FromUtc = fromUtc,
-            ToUtc = toUtc,
-        });
-
-        var slots = (model.LastHour - model.FirstHour) * 2;
-
-        foreach (var member in members.OrderBy(member => member.UserName, StringComparer.OrdinalIgnoreCase))
+        foreach (var member in availability.Members)
         {
             var row = new TeamAvailabilityRow { Name = member.UserName };
-            var memberBusy = busy.Where(interval => interval.UserId == member.UserId).ToList();
 
-            for (var slot = 0; slot < slots; slot++)
+            foreach (var slot in member.Slots)
             {
-                var slotStart = fromUtc.AddMinutes(slot * 30);
-                var slotEnd = slotStart.AddMinutes(30);
-                var overlapping = memberBusy.Where(interval => interval.StartUtc < slotEnd && interval.EndUtc > slotStart).ToList();
-
-                row.Slots.Add(overlapping.Count == 0 ? 0 : overlapping.All(interval => interval.Tentative) ? 1 : 2);
+                row.Slots.Add(slot);
             }
 
             model.Rows.Add(row);
         }
 
-        var free = await _availabilityService.FindFreeWindowsAsync(new CalendarBusyQuery
-        {
-            UserIds = members.Select(member => member.UserId).ToList(),
-            FromUtc = fromUtc,
-            ToUtc = toUtc,
-            IncludeTentative = false,
-        }, TimeSpan.FromMinutes(model.Minutes), maxResults: 10);
-
-        foreach (var window in free)
+        foreach (var window in availability.FreeTimes)
         {
             model.FreeTimes.Add(new KeyValuePair<DateTime, DateTime>(CalendarTime.ToLocal(window.StartUtc, model.TimeZoneId), CalendarTime.ToLocal(window.EndUtc, model.TimeZoneId)));
         }

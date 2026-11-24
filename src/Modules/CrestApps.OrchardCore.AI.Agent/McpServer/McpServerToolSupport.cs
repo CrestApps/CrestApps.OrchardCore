@@ -19,6 +19,12 @@ internal static class McpServerToolSupport
     public static readonly string[] RemoteResourceTypes = ["ftp", "sftp"];
 
     /// <summary>
+    /// The resource type that reads files of the server's own file providers, the name of the AI MCP module's
+    /// <c>FileResourceTypeHandler</c>, whose assembly this module does not reference.
+    /// </summary>
+    public const string FileResourceType = "file";
+
+    /// <summary>
     /// The keys the FTP and SFTP resource types keep their connection under. The types live in packages this module
     /// does not reference, so the entries are read by name.
     /// </summary>

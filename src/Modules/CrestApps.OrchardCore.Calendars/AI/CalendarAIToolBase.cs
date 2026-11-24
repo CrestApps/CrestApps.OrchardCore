@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -28,7 +29,11 @@ public abstract class CalendarAIToolBase : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var user = arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        // The chat hubs publish the caller through IUserAccessor for the whole invocation; the request's user is the fallback.
+        var published = arguments.Services?.GetService<IUserAccessor>()?.User;
+        var user = published?.Identity?.IsAuthenticated == true
+            ? published
+            : arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true)
         {

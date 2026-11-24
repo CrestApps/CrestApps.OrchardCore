@@ -17,10 +17,10 @@ using ProductsAIToolsStartup = CrestApps.OrchardCore.Products.AIToolsStartup;
 namespace CrestApps.OrchardCore.Tests.Commerce.AI;
 
 /// <summary>
-/// The tools of batch 22 (store setup, products, currencies, product feeds, inventory and stock locations) are registered
-/// with a title, a description and a category, can be picked on a profile, ask for approval as the catalog says (running a
-/// setup step, deleting a currency, the feed key, deleting a stock location), and are registered by the startup of the
-/// feature they belong to, which requires the AI feature.
+/// The tools of batch 22 (store setup, products, product feeds, inventory and stock locations) are registered with a
+/// title, a description and a category, can be picked on a profile, ask for approval as the catalog says (running a setup
+/// step, the feed key, deleting a stock location), and are registered by the startup of the feature they belong to, which
+/// requires the AI feature. Currencies are a record kind of the generic record tools (see CurrencyRecordKindTests).
 /// </summary>
 public sealed class Batch22ToolRegistrationTests
 {
@@ -36,13 +36,9 @@ public sealed class Batch22ToolRegistrationTests
     {
         { GetStoreSetupGuideTool.TheName, false },
         { RunStoreSetupStepTool.TheName, true },
-        { SkipStoreSetupStepTool.TheName, false },
         { ListProductsTool.TheName, false },
         { SaveProductVariantsTool.TheName, false },
         { UpdateProductPricingTool.TheName, false },
-        { ListCurrenciesTool.TheName, false },
-        { SaveCurrencyTool.TheName, false },
-        { DeleteCurrencyTool.TheName, true },
         { GetProductFeedStatusTool.TheName, false },
         { RegenerateProductFeedKeyTool.TheName, true },
         { ListStockItemsTool.TheName, false },
@@ -50,7 +46,6 @@ public sealed class Batch22ToolRegistrationTests
         { AdjustStockTool.TheName, false },
         { TransferStockTool.TheName, false },
         { ImportStockCountsTool.TheName, false },
-        { RebuildStockItemTool.TheName, false },
         { SyncInventoryTool.TheName, false },
         { ListStockLocationsTool.TheName, false },
         { SaveStockLocationTool.TheName, false },
@@ -79,20 +74,20 @@ public sealed class Batch22ToolRegistrationTests
     }
 
     [Fact]
-    public void TheBatch_RegistersTwentyOneTools()
+    public void TheBatch_RegistersSixteenTools()
     {
         // Act
         var tools = GetTools(_startups);
 
         // Assert
-        Assert.Equal(21, tools.Count);
+        Assert.Equal(16, tools.Count);
     }
 
     [Theory]
-    [InlineData(typeof(CommerceAIToolsStartup), 3, CommerceConstants.Features.Area)]
-    [InlineData(typeof(ProductsAIToolsStartup), 6, ProductConstants.Feature.ModuleId)]
+    [InlineData(typeof(CommerceAIToolsStartup), 2, CommerceConstants.Features.Area)]
+    [InlineData(typeof(ProductsAIToolsStartup), 3, ProductConstants.Feature.ModuleId)]
     [InlineData(typeof(FeedsAIToolsStartup), 2, ProductConstants.Feature.Feeds)]
-    [InlineData(typeof(InventoryAIToolsStartup), 10, InventoryConstants.Features.Inventory)]
+    [InlineData(typeof(InventoryAIToolsStartup), 9, InventoryConstants.Features.Inventory)]
     public void EachStartup_RegistersItsTools_ForItsFeature_WhenTheAIFeatureIsOn(Type startupType, int expectedCount, string featureId)
     {
         // Act

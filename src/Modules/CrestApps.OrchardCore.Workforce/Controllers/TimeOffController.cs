@@ -586,9 +586,9 @@ public sealed class TimeOffController : Controller
             return NotFound();
         }
 
-        policy.Assignments.Add(new TimeOffPolicyAssignment { WorkerId = worker.ItemId, EffectiveFrom = model.EffectiveFrom, EffectiveTo = model.EffectiveTo });
+        var validation = await TimeOffPolicyAssignments.AssignAsync(_policyManager, policy, worker.ItemId, model.EffectiveFrom, model.EffectiveTo, HttpContext.RequestAborted);
 
-        await SavePolicyAsync(policy, H["{0} now has the '{1}' policy.", worker.DisplayName, policy.Name]);
+        await ReportPolicyAsync(validation, H["{0} now has the '{1}' policy.", worker.DisplayName, policy.Name]);
 
         return RedirectToAction(nameof(Worker), new { workerId = worker.ItemId });
     }
@@ -615,23 +615,17 @@ public sealed class TimeOffController : Controller
             return NotFound();
         }
 
-        foreach (var assignment in policy.Assignments.Where(assignment => assignment.WorkerId == workerId).ToArray())
-        {
-            policy.Assignments.Remove(assignment);
-        }
+        var (_, validation) = await TimeOffPolicyAssignments.UnassignAsync(_policyManager, policy, workerId, HttpContext.RequestAborted);
 
-        await SavePolicyAsync(policy, H["The policy is no longer assigned to the worker alone."]);
+        await ReportPolicyAsync(validation, H["The policy is no longer assigned to the worker alone."]);
 
         return RedirectToAction(nameof(Worker), new { workerId });
     }
 
-    private async Task SavePolicyAsync(TimeOffPolicy policy, LocalizedHtmlString success)
+    private async Task ReportPolicyAsync(global::CrestApps.Core.Models.ValidationResultDetails validation, LocalizedHtmlString success)
     {
-        var validation = await _policyManager.ValidateAsync(policy);
-
         if (validation.Succeeded)
         {
-            await _policyManager.UpdateAsync(policy);
             await _notifier.SuccessAsync(success);
         }
         else

@@ -30,7 +30,7 @@ internal sealed class SaveCertificationTypeTool : SkillsAIToolBase
       "properties": {
         "certificationId": {
           "type": "string",
-          "description": "The id of the certification type to change, from listCertificationTypes. Leave it out to create one."
+          "description": "The id of the certification type to change, from listSkills with kind certificationType. Leave it out to create one."
         },
         "name": {
           "type": "string",
@@ -96,7 +96,7 @@ internal sealed class SaveCertificationTypeTool : SkillsAIToolBase
 
             if (certification is null)
             {
-                return $"Nothing was saved: there is no certification type with the id '{certificationId}'. Use listCertificationTypes to find it, or leave certificationId out to create one.";
+                return $"Nothing was saved: there is no certification type with the id '{certificationId}'. Use listSkills with kind certificationType to find it, or leave certificationId out to create one.";
             }
 
             if (!_fieldNames.Any(name => Has(arguments, name)))

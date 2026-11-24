@@ -19,11 +19,11 @@ public sealed class OrchardSecurityToolCallerTests
     public static TheoryData<string> ToolNames => [.. SecurityToolCalls.ToolNames];
 
     [Fact]
-    public void TheBatch_HasTwentyThreeTools()
+    public void TheBatch_HasTwelveTools()
     {
         // Assert
-        Assert.Equal(23, SecurityToolCalls.ToolNames.Length);
-        Assert.Equal(23, SecurityToolCalls.ToolNames.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(12, SecurityToolCalls.ToolNames.Length);
+        Assert.Equal(12, SecurityToolCalls.ToolNames.Distinct(StringComparer.Ordinal).Count());
     }
 
     [Theory]

@@ -66,7 +66,7 @@ public sealed class SaveContentPartFieldTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Adds a field to a content part (or to a content type's own part) or updates an existing field: display name, field type on creation, editor, display mode and the field's settings. The field type cannot be changed after creation. Only the arguments given are changed. To change the order of the fields, use reorderContentTypeElements.";
+    public override string Description => "Adds a field to a content part (or to a content type's own part) or updates an existing field: display name, field type on creation, editor, display mode and the field's settings. The field type cannot be changed after creation. Only the arguments given are changed. The order of the fields is changed on the content part's edit page in the admin.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

@@ -149,7 +149,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         queue.SlaThresholdSeconds = model.SlaThresholdSeconds;
         queue.ReservationTimeoutSeconds = model.ReservationTimeoutSeconds;
         queue.UnansweredOfferAction = model.UnansweredOfferAction;
-        queue.RequiredSkills = SkillTag.NormalizeAll(model.RequiredSkills);
+        queue.RequiredSkills = model.RequiredSkills;
         queue.SkillRequirements = ReadSkillRequirements(model.SkillRequirements);
         if (!_routesFromEntryPoints)
         {
@@ -161,18 +161,19 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             ? null
             : model.BusinessHoursCalendarId.Trim();
         queue.AfterHoursAction = model.AfterHoursAction;
-        queue.OverflowQueueId = string.IsNullOrWhiteSpace(model.OverflowQueueId) || string.Equals(model.OverflowQueueId, queue.ItemId, StringComparison.Ordinal)
-            ? null
-            : model.OverflowQueueId.Trim();
-        queue.OverflowAfterSeconds = Math.Max(0, model.OverflowAfterSeconds);
-        queue.OverflowTargets = ReadOverflowTargets(model.OverflowTargets, queue.ItemId);
-        queue.MaxQueueSize = Math.Max(0, model.MaxQueueSize);
+        queue.OverflowQueueId = model.OverflowQueueId;
+        queue.OverflowAfterSeconds = model.OverflowAfterSeconds;
+        queue.OverflowTargets = ReadOverflowTargets(model.OverflowTargets);
+        queue.MaxQueueSize = model.MaxQueueSize;
         queue.QueueFullAction = model.QueueFullAction;
-        queue.MaxWaitSeconds = Math.Max(0, model.MaxWaitSeconds);
+        queue.MaxWaitSeconds = model.MaxWaitSeconds;
         queue.MaxWaitAction = model.MaxWaitAction;
-        queue.FirstResponseTargetSeconds = Math.Max(0, model.FirstResponseTargetSeconds);
+        queue.FirstResponseTargetSeconds = model.FirstResponseTargetSeconds;
         queue.Treatment = ReadTreatment(model.Treatment ?? new QueueTreatmentViewModel());
         queue.Enabled = model.Enabled;
+
+        // Skill tags, overflow hops, counts and the treatment are tidied by the same rules the AI queue tool applies.
+        ActivityQueueEditorRules.Normalize(queue);
 
         // Whether the limits and treatment make sense together (an overflow action with nowhere to overflow
         // to, a callback key that is not a telephone key) is the queue's own rule, enforced by
@@ -244,82 +245,47 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
     }
 
     /// <summary>
-    /// Reads the skill rows, keeping one per skill and only those that name a skill; a blank row is one the
-    /// operator added and never filled in.
+    /// Reads the skill rows as entered; <see cref="ActivityQueueEditorRules"/> keeps one per skill and only those that
+    /// name a skill, since a blank row is one the operator added and never filled in.
     /// </summary>
     private static List<QueueSkillRequirement> ReadSkillRequirements(IEnumerable<QueueSkillRequirementViewModel> rows)
-    {
-        var requirements = new List<QueueSkillRequirement>();
-        var seen = new HashSet<SkillTag>();
-
-        foreach (var row in rows ?? [])
-        {
-            if (row is null || !SkillTag.TryCreate(row.SkillId, out var skill) || !seen.Add(skill))
+        => (rows ?? [])
+            .Where(row => row is not null)
+            .Select(row => new QueueSkillRequirement
             {
-                continue;
-            }
-
-            requirements.Add(new QueueSkillRequirement
-            {
-                SkillId = skill.Value,
-                MinimumProficiency = Math.Clamp(row.MinimumProficiency, AgentSkill.MinimumProficiency, AgentSkill.MaximumProficiency),
+                SkillId = row.SkillId,
+                MinimumProficiency = row.MinimumProficiency,
                 Required = row.Required,
-                RelaxAfterSeconds = row.RelaxAfterSeconds > 0 ? row.RelaxAfterSeconds : null,
-            });
-        }
-
-        return requirements;
-    }
+                RelaxAfterSeconds = row.RelaxAfterSeconds,
+            })
+            .ToList();
 
     /// <summary>
-    /// Reads the overflow hops, dropping blank rows and a hop back to this queue, keeping the first row for a
-    /// queue named twice, and ordering them the way callers walk them.
+    /// Reads the overflow hops as entered; <see cref="ActivityQueueEditorRules"/> drops blank rows and a hop back to
+    /// this queue, keeps the first row for a queue named twice, and orders them the way callers walk them.
     /// </summary>
-    private static List<QueueOverflowTarget> ReadOverflowTargets(IEnumerable<QueueOverflowTargetViewModel> rows, string queueId)
-    {
-        var targets = new List<QueueOverflowTarget>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var row in rows ?? [])
-        {
-            var targetQueueId = row?.QueueId?.Trim();
-
-            if (string.IsNullOrEmpty(targetQueueId) ||
-                string.Equals(targetQueueId, queueId, StringComparison.OrdinalIgnoreCase) ||
-                !seen.Add(targetQueueId))
+    private static List<QueueOverflowTarget> ReadOverflowTargets(IEnumerable<QueueOverflowTargetViewModel> rows)
+        => (rows ?? [])
+            .Where(row => row is not null)
+            .Select(row => new QueueOverflowTarget
             {
-                continue;
-            }
-
-            targets.Add(new QueueOverflowTarget
-            {
-                QueueId = targetQueueId,
-                AfterSeconds = Math.Max(0, row.AfterSeconds),
-            });
-        }
-
-        return targets
-            .OrderBy(target => target.AfterSeconds)
+                QueueId = row.QueueId,
+                AfterSeconds = row.AfterSeconds,
+            })
             .ToList();
-    }
 
     private static QueueTreatmentSettings ReadTreatment(QueueTreatmentViewModel model)
-    {
-        var callbackKey = model.CallbackDtmfKey?.Trim();
-        var minimumEstimate = Math.Max(0, model.MinimumEstimateSeconds);
-
-        return new QueueTreatmentSettings
+        => new()
         {
-            WelcomeMessage = string.IsNullOrWhiteSpace(model.WelcomeMessage) ? null : model.WelcomeMessage.Trim(),
-            AnnouncementIntervalSeconds = Math.Max(0, model.AnnouncementIntervalSeconds),
+            WelcomeMessage = model.WelcomeMessage,
+            AnnouncementIntervalSeconds = model.AnnouncementIntervalSeconds,
             AnnouncePosition = model.AnnouncePosition,
             AnnounceEstimatedWait = model.AnnounceEstimatedWait,
-            HoldMusicMediaId = string.IsNullOrWhiteSpace(model.HoldMusicMediaId) ? null : model.HoldMusicMediaId.Trim(),
-            CallbackDtmfKey = string.IsNullOrEmpty(callbackKey) ? null : callbackKey,
-            CallbackOfferAfterSeconds = Math.Max(0, model.CallbackOfferAfterSeconds),
-            MinimumEstimateSeconds = minimumEstimate,
-            MaximumEstimateSeconds = Math.Max(minimumEstimate, model.MaximumEstimateSeconds),
-            AverageHandleTimeSeconds = Math.Max(0, model.AverageHandleTimeSeconds),
+            HoldMusicMediaId = model.HoldMusicMediaId,
+            CallbackDtmfKey = model.CallbackDtmfKey,
+            CallbackOfferAfterSeconds = model.CallbackOfferAfterSeconds,
+            MinimumEstimateSeconds = model.MinimumEstimateSeconds,
+            MaximumEstimateSeconds = model.MaximumEstimateSeconds,
+            AverageHandleTimeSeconds = model.AverageHandleTimeSeconds,
         };
-    }
 }

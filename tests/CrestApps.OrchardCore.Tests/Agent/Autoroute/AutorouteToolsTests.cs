@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Autoroute;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -17,126 +16,11 @@ using YSession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Tests.Agent.Autoroute;
 
 /// <summary>
-/// The tool that finds the content item behind an address, an alias or a handle, and the tool that makes a published
-/// content item the home page the way the content editor does.
+/// The tool that makes a published content item the home page the way the content editor does. Finding the content item
+/// behind an address is tested with getContentItem.
 /// </summary>
 public sealed class AutorouteToolsTests
 {
-    [Fact]
-    public async Task FindContentItemByHandle_ForAUrl_LooksUpItsPathWithoutTheTenantPrefix()
-    {
-        // Arrange
-        var harness = new Harness();
-        harness.Services.GetRequiredService<IHttpContextAccessor>().HttpContext.Request.PathBase = "/tenant1";
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new FindContentItemByHandleTool(), harness.Services, new()
-        {
-            ["handle"] = "https://example.com/tenant1/about-us/?utm=1#top",
-        });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.True(json.GetProperty("found").GetBoolean());
-        Assert.Equal("slug:/about-us", json.GetProperty("matchedBy").GetString());
-        Assert.Equal("page-1", json.GetProperty("contentItemId").GetString());
-        Assert.Equal("Page", json.GetProperty("contentType").GetString());
-        Assert.Equal("About", json.GetProperty("displayText").GetString());
-        Assert.True(json.GetProperty("published").GetBoolean());
-        Assert.False(json.GetProperty("hasDraft").GetBoolean());
-
-        var check = Assert.Single(harness.Services.GetRequiredService<FakeAuthorizationService>().Checks);
-
-        Assert.Equal("ViewContent", check.Permission);
-        Assert.Same(harness.Page, check.Resource);
-    }
-
-    [Theory]
-    [InlineData("about-us", "slug:about-us")]
-    [InlineData("main-menu", "alias:main-menu")]
-    [InlineData("alias:main-menu", "alias:main-menu")]
-    [InlineData("page-1", "contentitemid:page-1")]
-    public async Task FindContentItemByHandle_ForAWordOrAHandle_TriesTheHandlesInOrder(string handle, string matchedBy)
-    {
-        // Arrange
-        var harness = new Harness();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new FindContentItemByHandleTool(), harness.Services, new()
-        {
-            ["handle"] = handle,
-        });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.True(json.GetProperty("found").GetBoolean());
-        Assert.Equal(matchedBy, json.GetProperty("matchedBy").GetString());
-        Assert.Equal("page-1", json.GetProperty("contentItemId").GetString());
-    }
-
-    [Fact]
-    public async Task FindContentItemByHandle_ForTheRootPath_ReturnsTheHomePage()
-    {
-        // Arrange
-        var harness = new Harness(homeContentItemId: "page-1");
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new FindContentItemByHandleTool(), harness.Services, new()
-        {
-            ["handle"] = "/",
-        });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.True(json.GetProperty("found").GetBoolean());
-        Assert.Equal("homepage", json.GetProperty("matchedBy").GetString());
-        Assert.Equal("page-1", json.GetProperty("contentItemId").GetString());
-        harness.HandleManager.Verify(manager => manager.GetContentItemIdAsync(It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task FindContentItemByHandle_WhenTheHomePageIsNotAContentItem_ReturnsItsRoute()
-    {
-        // Arrange
-        var harness = new Harness(homeContentItemId: null);
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new FindContentItemByHandleTool(), harness.Services, new()
-        {
-            ["handle"] = "/",
-        });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.False(json.GetProperty("found").GetBoolean());
-        Assert.Equal("OrchardCore.Contents", json.GetProperty("homeRoute").GetProperty("area").GetString());
-        Assert.Equal("Display", json.GetProperty("homeRoute").GetProperty("action").GetString());
-    }
-
-    [Fact]
-    public async Task FindContentItemByHandle_WhenNothingHasTheAddress_SaysNotFound()
-    {
-        // Arrange
-        var harness = new Harness();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new FindContentItemByHandleTool(), harness.Services, new()
-        {
-            ["handle"] = "/nope",
-        });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.False(json.GetProperty("found").GetBoolean());
-        Assert.Equal("/nope", json.GetProperty("handle").GetString());
-        Assert.Empty(harness.Services.GetRequiredService<FakeAuthorizationService>().Checks);
-    }
-
     [Fact]
     public async Task SetHomepage_SetsTheFlagOfTheAutoroutePartAndPublishesTheContentItem()
     {

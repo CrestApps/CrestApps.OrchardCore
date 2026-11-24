@@ -46,23 +46,6 @@ internal static class SearchQueryProviders
         => IsLucene(name) || IsElasticsearch(name);
 
     /// <summary>
-    /// Gets the permission the "Run query" admin page of a provider checks.
-    /// </summary>
-    /// <param name="providerName">The name of the provider.</param>
-    /// <returns>The permission, or <see langword="null"/> when the provider has no such page.</returns>
-    public static Permission GetRunQueryPermission(string providerName)
-    {
-        if (IsLucene(providerName))
-        {
-            return LuceneSearchPermissions.ManageLuceneIndexes;
-        }
-
-        return IsElasticsearch(providerName)
-            ? ElasticsearchPermissions.ManageElasticIndexes
-            : null;
-    }
-
-    /// <summary>
     /// Gets the number of documents a search query matched, which can be more than the documents it returned.
     /// </summary>
     /// <param name="results">The results of the query.</param>

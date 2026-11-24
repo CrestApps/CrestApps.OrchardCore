@@ -28,6 +28,8 @@
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="YesSql.Core" />
+    <PackageReference Include="CrestApps.Core.AI" />
+    <PackageReference Include="OrchardCore.Media.Core" />
   </ItemGroup>
 
   <ItemGroup>

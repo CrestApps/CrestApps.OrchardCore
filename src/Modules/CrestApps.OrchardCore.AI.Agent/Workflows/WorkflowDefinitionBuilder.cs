@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Agent.Roles;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Json.Schema;
 using OrchardCore.Workflows.Activities;
@@ -48,6 +49,17 @@ internal sealed class WorkflowDefinitionBuilder
     /// Gets the alias of each activity, in the order given.
     /// </summary>
     public List<(string Alias, ActivityRecord Record)> Activities { get; } = [];
+
+    /// <summary>
+    /// Gets how many activities have no registered schema, so their properties were not checked.
+    /// </summary>
+    public int UncheckedProperties { get; private set; }
+
+    /// <summary>
+    /// Gets how many transitions follow an outcome that could not be checked (outcomes that depend on the settings, or
+    /// that are not registered).
+    /// </summary>
+    public int UncheckedOutcomes { get; private set; }
 
     /// <summary>
     /// Builds the workflow type. Its <see cref="WorkflowType.WorkflowTypeId"/> and activity IDs are not set yet: the
@@ -108,26 +120,109 @@ internal sealed class WorkflowDefinitionBuilder
         }
     }
 
-    private static void ReadSettings(WorkflowType workflowType, JsonObject settings)
+    // The execution settings setSettings takes, as the tool's schema declares them.
+    private static readonly string[] _settingNames =
+    [
+        "instances",
+        "lockTimeout",
+        "lockExpiration",
+        "deleteFinishedWorkflows",
+        "usableAsActivity",
+        "branchingMode",
+        "faultOnScriptErrors",
+        "recordActivityData",
+    ];
+
+    private static readonly string[] _instanceChoices = ["Any", "One", "OnePerCorrelation"];
+
+    private static readonly string[] _branchingChoices = ["FirstOnly", "All"];
+
+    // Reads the execution settings. An unknown setting, a value outside its choices or a value of the wrong type is an
+    // error with the valid names or choices, never dropped or replaced by the default.
+    private void ReadSettings(WorkflowType workflowType, JsonObject settings)
     {
         if (settings is null)
         {
             return;
         }
 
-        var instances = ReadString(settings, "instances");
+        foreach (var (key, _) in settings)
+        {
+            if (!_settingNames.Contains(key, StringComparer.Ordinal))
+            {
+                Error(null, $"The setting '{key}' does not exist. The settings are: {string.Join(", ", _settingNames)}.");
+            }
+        }
 
-        workflowType.IsSingleton = string.Equals(instances, "One", StringComparison.OrdinalIgnoreCase);
-        workflowType.IsSingletonPerCorrelation = string.Equals(instances, "OnePerCorrelation", StringComparison.OrdinalIgnoreCase);
-        workflowType.LockTimeout = ReadInt(settings, "lockTimeout") ?? 0;
-        workflowType.LockExpiration = ReadInt(settings, "lockExpiration") ?? 0;
-        workflowType.DeleteFinishedWorkflows = ReadBool(settings, "deleteFinishedWorkflows") ?? false;
-        workflowType.IsActivity = ReadBool(settings, "usableAsActivity") ?? false;
-        workflowType.BranchingMode = string.Equals(ReadString(settings, "branchingMode"), "All", StringComparison.OrdinalIgnoreCase)
+        var instances = ReadChoice(settings, "instances", _instanceChoices) ?? "Any";
+
+        workflowType.IsSingleton = instances == "One";
+        workflowType.IsSingletonPerCorrelation = instances == "OnePerCorrelation";
+        workflowType.LockTimeout = ReadSettingInt(settings, "lockTimeout") ?? 0;
+        workflowType.LockExpiration = ReadSettingInt(settings, "lockExpiration") ?? 0;
+        workflowType.DeleteFinishedWorkflows = ReadSettingBool(settings, "deleteFinishedWorkflows") ?? false;
+        workflowType.IsActivity = ReadSettingBool(settings, "usableAsActivity") ?? false;
+        workflowType.BranchingMode = ReadChoice(settings, "branchingMode", _branchingChoices) == "All"
             ? WorkflowBranchingMode.All
             : WorkflowBranchingMode.FirstOnly;
-        workflowType.FaultOnScriptErrors = ReadBool(settings, "faultOnScriptErrors") ?? false;
-        workflowType.RecordActivityData = ReadBool(settings, "recordActivityData") ?? true;
+        workflowType.FaultOnScriptErrors = ReadSettingBool(settings, "faultOnScriptErrors") ?? false;
+        workflowType.RecordActivityData = ReadSettingBool(settings, "recordActivityData") ?? true;
+    }
+
+    // The choice a setting names, written as the choice is (case aside), or null when the setting is not given. A value
+    // that is not one of the choices is an error.
+    private string ReadChoice(JsonObject settings, string key, string[] choices)
+    {
+        if (!settings.ContainsKey(key) || settings[key] is null)
+        {
+            return null;
+        }
+
+        var text = ReadString(settings, key);
+        var choice = choices.FirstOrDefault(item => string.Equals(item, text, StringComparison.OrdinalIgnoreCase));
+
+        if (choice is null)
+        {
+            Error(null, $"The setting '{key}' must be one of: {string.Join(", ", choices)}.");
+        }
+
+        return choice;
+    }
+
+    private int? ReadSettingInt(JsonObject settings, string key)
+    {
+        if (!settings.ContainsKey(key) || settings[key] is null)
+        {
+            return null;
+        }
+
+        var number = ReadInt(settings, key);
+
+        if (number is null)
+        {
+            Error(null, $"The setting '{key}' must be a whole number of milliseconds.");
+
+            return null;
+        }
+
+        return number;
+    }
+
+    private bool? ReadSettingBool(JsonObject settings, string key)
+    {
+        if (!settings.ContainsKey(key) || settings[key] is null)
+        {
+            return null;
+        }
+
+        var flag = ReadBool(settings, key);
+
+        if (flag is null)
+        {
+            Error(null, $"The setting '{key}' must be true or false.");
+        }
+
+        return flag;
     }
 
     private List<WorkflowVariableDefinition> ReadVariables(JsonArray variables)
@@ -209,7 +304,11 @@ internal sealed class WorkflowDefinitionBuilder
 
             if (type is null)
             {
-                Error(alias, $"There is no activity named '{name}' on this site. Use a name listWorkflowActivities returns.");
+                var close = RoleToolSupport.FindCloseNames(name, _activityLibrary.ListActivities().Select(item => item.Name));
+
+                Error(alias, name is null
+                    ? "Give the activity name, from listWorkflowActivities."
+                    : $"There is no activity named '{name}' on this site.{(close.Count > 0 ? $" Did you mean {string.Join(", ", close)}?" : string.Empty)} Use a name listWorkflowActivities returns.");
 
                 continue;
             }
@@ -263,12 +362,39 @@ internal sealed class WorkflowDefinitionBuilder
 
         if (descriptor?.Properties is null)
         {
+            UncheckedProperties++;
             Warning(alias, $"No schema is registered for '{record.Name}', so its properties were not checked.");
 
             return;
         }
 
-        var results = descriptor.Properties.Build().Evaluate(JsonSerializer.SerializeToElement(record.Properties), new EvaluationOptions
+        var schema = descriptor.Properties.Build();
+
+        // A setting the schema does not declare is refused, with the closest declared names, unless the schema itself
+        // allows other settings: a misspelled key would otherwise be stored and silently ignored by the activity.
+        if (JsonSerializer.SerializeToNode(schema) is JsonObject schemaNode &&
+            schemaNode["properties"] is JsonObject declared &&
+            OnlyDeclaredPropertiesAllowed(schemaNode))
+        {
+            var unknown = record.Properties
+                .Select(property => property.Key)
+                .Where(key => !declared.ContainsKey(key))
+                .ToList();
+
+            foreach (var key in unknown)
+            {
+                var close = RoleToolSupport.FindCloseNames(key, declared.Select(property => property.Key));
+
+                Error(alias, $"'{key}' is not a setting of '{record.Name}'.{(close.Count > 0 ? $" Did you mean {string.Join(", ", close)}?" : string.Empty)} Its settings are: {string.Join(", ", declared.Select(property => property.Key))}.");
+            }
+
+            if (unknown.Count > 0)
+            {
+                return;
+            }
+        }
+
+        var results = schema.Evaluate(JsonSerializer.SerializeToElement(record.Properties), new EvaluationOptions
         {
             OutputFormat = OutputFormat.List,
         });
@@ -348,9 +474,20 @@ internal sealed class WorkflowDefinitionBuilder
             if (descriptor is not null && descriptor.Outcomes.Count > 0 && !descriptor.HasDynamicOutcomes &&
                 !descriptor.Outcomes.Contains(outcome, StringComparer.Ordinal))
             {
-                Error(source, $"'{sourceActivity.Record.Name}' has no outcome '{outcome}'. Its outcomes are: {string.Join(", ", descriptor.Outcomes)}.");
+                var close = RoleToolSupport.FindCloseNames(outcome, descriptor.Outcomes);
+
+                Error(source, $"'{sourceActivity.Record.Name}' has no outcome '{outcome}'.{(close.Count > 0 ? $" Did you mean {string.Join(", ", close)}?" : string.Empty)} Its outcomes are: {string.Join(", ", descriptor.Outcomes)}.");
 
                 continue;
+            }
+
+            // An outcome that cannot be checked here is said so, never passed as checked.
+            if (descriptor is null || descriptor.HasDynamicOutcomes || descriptor.Outcomes.Count == 0)
+            {
+                UncheckedOutcomes++;
+                Warning(source, descriptor is not null && descriptor.HasDynamicOutcomes
+                    ? $"The outcomes of '{sourceActivity.Record.Name}' depend on its settings, so the outcome '{outcome}' was not checked. Check the connection in the designer."
+                    : $"No outcomes are registered for '{sourceActivity.Record.Name}', so the outcome '{outcome}' was not checked. Check the connection in the designer.");
             }
 
             if (result.Any(existing => existing.SourceActivityId == source && existing.SourceOutcomeName == outcome && existing.DestinationActivityId == destination))
@@ -402,6 +539,23 @@ internal sealed class WorkflowDefinitionBuilder
         {
             Warning(alias, "This activity cannot be reached from a start activity, so it never runs.");
         }
+    }
+
+    // Whether a schema allows only the properties it declares: it says so with additionalProperties false, or says
+    // nothing about other properties, which the tools read as "only these" so a misspelled setting is caught.
+    private static bool OnlyDeclaredPropertiesAllowed(JsonObject schema)
+    {
+        if (schema.ContainsKey("patternProperties"))
+        {
+            return false;
+        }
+
+        return schema["additionalProperties"] switch
+        {
+            null => true,
+            JsonValue value when value.TryGetValue<bool>(out var allowed) => !allowed,
+            _ => false,
+        };
     }
 
     private void Error(string alias, string message)

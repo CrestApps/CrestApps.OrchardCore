@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
+using CrestApps.OrchardCore.Assets.Services;
 using CrestApps.OrchardCore.Assets.ViewModels;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
@@ -96,36 +97,16 @@ public sealed class AssetsController : Controller
         }
 
         var types = (await _typeManager.GetAllAsync(HttpContext.RequestAborted)).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-        var query = _session.Query<Asset, AssetIndex>(collection: AssetsConstants.CollectionName);
+        AssetStatus? status = Enum.TryParse<AssetStatus>(form.Status, out var parsedStatus) ? parsedStatus : null;
+        AssetOwnerKind? ownerKind = null;
 
-        if (!string.IsNullOrEmpty(form.TypeId))
+        if (Enum.TryParse<AssetOwnerKind>(form.OwnerKind, out var parsedOwnerKind) && !string.IsNullOrEmpty(form.OwnerId))
         {
-            query = query.Where(index => index.AssetTypeId == form.TypeId);
+            ownerKind = parsedOwnerKind;
+            form.OwnerName = await _owners.GetNameAsync(parsedOwnerKind, form.OwnerId, HttpContext.RequestAborted) ?? form.OwnerId;
         }
 
-        if (Enum.TryParse<AssetStatus>(form.Status, out var status))
-        {
-            var value = status.ToString();
-
-            query = query.Where(index => index.Status == value);
-        }
-
-        if (Enum.TryParse<AssetOwnerKind>(form.OwnerKind, out var ownerKind) && !string.IsNullOrEmpty(form.OwnerId))
-        {
-            var kind = ownerKind.ToString();
-            var ownerId = form.OwnerId;
-
-            query = query.Where(index => index.OwnerKind == kind && index.OwnerId == ownerId);
-            form.OwnerName = await _owners.GetNameAsync(ownerKind, ownerId, HttpContext.RequestAborted) ?? ownerId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(form.Q))
-        {
-            var q = form.Q.Trim();
-
-            query = query.Where(index => index.Name.Contains(q) || index.Number.Contains(q) || index.SerialNumber.Contains(q));
-        }
-
+        var query = AssetListQuery.Build(_session, form.TypeId, status, ownerKind, form.OwnerId, form.Q);
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var count = await query.CountAsync(HttpContext.RequestAborted);
         var page = await query.OrderBy(index => index.Name).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync(HttpContext.RequestAborted);

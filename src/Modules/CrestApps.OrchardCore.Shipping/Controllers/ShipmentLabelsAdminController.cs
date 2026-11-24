@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
@@ -105,19 +104,7 @@ public sealed class ShipmentLabelsAdminController : Controller
             return View(nameof(Label), model);
         }
 
-        var quote = await carrier.QuoteAsync(new CarrierShipmentRequest
-        {
-            From = shipFrom,
-            To = order.ShippingAddress,
-            Reference = $"{order.OrderNumber}-{shipment.Number}",
-            Parcel = new CarrierParcel
-            {
-                WeightOunces = CarrierParcel.ToOunces(model.Weight, settings.WeightUnit),
-                LengthInches = CarrierParcel.ToInches(model.Length, settings.WeightUnit),
-                WidthInches = CarrierParcel.ToInches(model.Width, settings.WeightUnit),
-                HeightInches = CarrierParcel.ToInches(model.Height, settings.WeightUnit),
-            },
-        }, HttpContext.RequestAborted);
+        var quote = await carrier.QuoteAsync(ShipmentLabels.BuildRequest(order, shipment, shipFrom, settings, model.Weight, model.Length, model.Width, model.Height), HttpContext.RequestAborted);
 
         model.Error = quote.Error;
         model.QuoteId = quote.QuoteId;
@@ -206,8 +193,8 @@ public sealed class ShipmentLabelsAdminController : Controller
     }
 
     // The shipping settings' ship-from address, or the store's address when it's empty.
-    private async Task<Addresses.Models.Address> GetShipFromAsync(ShippingSettings settings)
-        => settings.ShipFrom ?? (await _siteService.GetStoreProfileAsync()).Address;
+    private Task<Addresses.Models.Address> GetShipFromAsync(ShippingSettings settings)
+        => ShipmentLabels.GetShipFromAsync(_siteService, settings);
 
     private static ShipmentLabelViewModel Populate(ShipmentLabelViewModel model, Shipment shipment, Orders.Core.Models.Order order, ICarrierProvider carrier, ShippingSettings settings, Addresses.Models.Address shipFrom)
     {
@@ -221,19 +208,6 @@ public sealed class ShipmentLabelsAdminController : Controller
     }
 
     // The shipment's items, weighed as the checkout weighed them, plus the box.
-    private async Task<decimal> WeighAsync(Shipment shipment, Orders.Core.Models.Order order, ShippingSettings settings)
-    {
-        var request = await _orderRates.BuildRequestAsync(order, order.ShippingAddress, HttpContext.RequestAborted);
-        var weight = 0m;
-
-        foreach (var line in shipment.Lines)
-        {
-            var ordered = order.Lines.FirstOrDefault(entry => entry.LineId == line.LineId);
-            var requested = ordered is null ? null : request.Lines.FirstOrDefault(entry => entry.ContentItemId == ordered.ContentItemId && entry.VariantId == ordered.VariantId);
-
-            weight += (requested?.Weight ?? 0) * line.Quantity;
-        }
-
-        return Math.Round(weight + settings.PackagingWeight, 2);
-    }
+    private Task<decimal> WeighAsync(Shipment shipment, Orders.Core.Models.Order order, ShippingSettings settings)
+        => ShipmentLabels.WeighAsync(_orderRates, shipment, order, settings, HttpContext.RequestAborted);
 }

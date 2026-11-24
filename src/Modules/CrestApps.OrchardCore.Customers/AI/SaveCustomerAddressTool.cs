@@ -137,7 +137,7 @@ internal sealed class SaveCustomerAddressTool : CustomersAIToolBase
             {
                 var messages = modelState.Values.SelectMany(entry => entry.Errors).Select(entry => entry.ErrorMessage).Where(message => !string.IsNullOrEmpty(message));
 
-                return $"Nothing was changed: {string.Join(" ", messages)} Use validateAddress to see which fields the country needs.";
+                return $"Nothing was changed: {string.Join(" ", messages)} The address editor on the admin page shows which fields the country needs.";
             }
         }
         else if (existing is null)

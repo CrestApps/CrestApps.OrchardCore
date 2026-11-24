@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Addresses.Core;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Customers;
 using CrestApps.OrchardCore.Customers.AI;
@@ -163,19 +164,60 @@ public sealed class CustomerToolTests
     }
 
     [Fact]
-    public async Task SaveCustomer_CreatesAGuest_AndRefusesABusinessWithoutACompany_OrAnAnonymizedCustomer()
+    public async Task SaveCustomer_CreatesAPersonAsAGuest_AndRefusesAnAnonymizedCustomer()
     {
         // Act
         var created = AgentToolTestContext.ReadJson(await InvokeAsync(SaveCustomerTool.TheName, Build(), new() { ["firstName"] = "Ana", ["email"] = "ana@example.com" }));
-        var business = await InvokeAsync(SaveCustomerTool.TheName, Build(), new() { ["kind"] = "Business", ["email"] = "buyer@contoso.example" });
         var anonymized = await InvokeAsync(SaveCustomerTool.TheName, Build(), new() { ["customerId"] = "c-gone", ["firstName"] = "Back" });
 
         // Assert
         Assert.True(created.GetProperty("created").GetBoolean());
+        Assert.Equal("Person", created.GetProperty("kind").GetString());
         Assert.Equal("ana@example.com", _customers.Customers.Last().Email);
-        Assert.Equal("Nothing was saved: A business needs a company name.", business);
+        Assert.Equal(CustomerKind.Person, _customers.Customers.Last().Kind);
         Assert.StartsWith("Nothing was changed: the customer's personal data was erased", anonymized, StringComparison.Ordinal);
         Assert.Equal(4, _customers.Customers.Count);
+    }
+
+    [Theory]
+    [InlineData("kind", "Business")]
+    [InlineData("companyName", "Contoso")]
+    [InlineData("taxId", "GB123456789")]
+    public async Task SaveCustomer_TakesNoBusinessField_AndSendsBusinessesToAccounts(string field, string value)
+    {
+        // Act
+        var result = await InvokeAsync(SaveCustomerTool.TheName, Build(), new() { ["email"] = "buyer@contoso.example", [field] = value });
+
+        // Assert
+        Assert.StartsWith($"Nothing was saved: saveCustomer keeps people only and takes no '{field}'.", result, StringComparison.Ordinal);
+        Assert.Contains("is an Account", result, StringComparison.Ordinal);
+        Assert.Equal(3, _customers.Customers.Count);
+    }
+
+    [Fact]
+    public async Task SaveCustomer_RefusesToChangeACustomerStoredAsABusiness()
+    {
+        // Arrange
+        var business = new Customer
+        {
+            ItemId = "c-acme",
+            Kind = CustomerKind.Business,
+            CompanyName = "Acme",
+            Email = "buyer@acme.example",
+            Phone = "+15555550199",
+            LastActivityUtc = _now.AddDays(-5),
+        };
+
+        _customers.Customers.Add(business);
+
+        // Act
+        var result = await InvokeAsync(SaveCustomerTool.TheName, Build(), new() { ["customerId"] = "c-acme", ["phone"] = "+15555550111" });
+
+        // Assert
+        Assert.StartsWith("Nothing was changed: Acme is stored as a business customer, and saveCustomer changes people only.", result, StringComparison.Ordinal);
+        Assert.Contains("listAccounts", result, StringComparison.Ordinal);
+        Assert.Equal("+15555550199", business.Phone);
+        Assert.Equal(CustomerKind.Business, business.Kind);
     }
 
     [Fact]
@@ -357,6 +399,7 @@ public sealed class CustomerToolTests
             });
         credit.Setup(store => store.UpdateAsync(It.IsAny<StoreCreditAccount>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
         services.AddSingleton(credit.Object);
+        services.AddSingleton(Mock.Of<IBalanceLedgerArchive>());
         services.AddScoped<StoreCreditService>();
 
         var points = new Mock<ILoyaltyStore>();

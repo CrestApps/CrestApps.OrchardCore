@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, save and delete sitemaps and clear the sitemap cache, when the Sitemaps feature is on.
+/// Registers the tools that list, save and delete sitemaps, when the Sitemaps feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Sitemaps)]
 public sealed class SitemapsToolsStartup : StartupBase
@@ -43,12 +43,6 @@ public sealed class SitemapsToolsStartup : StartupBase
             .WithDescription(S["Deletes a sitemap or a sitemap index. Indexes that contain the sitemap are not updated."])
             .WithCategory(S["Search Engine Optimization"])
             .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<PurgeSitemapCacheTool>(PurgeSitemapCacheTool.TheName)
-            .WithTitle(S["Purge Sitemap Cache"])
-            .WithDescription(S["Clears the cached sitemap files, one file or all of them, so sitemaps are rebuilt on the next request. Use it after changing sitemaps or publishing many items."])
-            .WithCategory(S["Search Engine Optimization"])
             .Selectable();
     }
 }

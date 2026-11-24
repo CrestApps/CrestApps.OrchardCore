@@ -19,8 +19,8 @@ namespace CrestApps.OrchardCore.Tests.Commerce.AI;
 /// The tools of batch 23 (purchase orders, coupons and orders) are registered with a title, a description and a
 /// category, can be picked on a profile, ask for approval as the catalog and the owner's review say (canceling and
 /// deleting a purchase order; saving, deleting and generating codes for a coupon; refunding, canceling, and emailing a
-/// confirmation or an invoice), and are registered by the startup of the feature they belong to, which requires the AI
-/// feature.
+/// confirmation or an invoice; previewing a refund moves no money and does not ask), and are registered by the startup of
+/// the feature they belong to, which requires the AI feature.
 /// </summary>
 public sealed class Batch23ToolRegistrationTests
 {
@@ -47,7 +47,7 @@ public sealed class Batch23ToolRegistrationTests
         { GenerateCouponCodesTool.TheName, true },
         { ListOrdersTool.TheName, false },
         { GetOrderTool.TheName, false },
-        { AddOrderNoteTool.TheName, false },
+        { PreviewRefundTool.TheName, false },
         { RefundOrderTool.TheName, true },
         { CancelOrderTool.TheName, true },
         { ResendOrderConfirmationTool.TheName, true },

@@ -10,8 +10,9 @@ namespace CrestApps.OrchardCore.Checkout.AI;
 /// Generates unique codes that share a coupon's discount and rules, as the Generate codes form of Commerce › Coupons
 /// does (<see cref="CouponEditor.CheckCodeGeneration"/>, then <see cref="ICouponStore.GenerateCodesAsync"/>). Narrower
 /// than the catalog row: the codes are never returned, because each is a discount anyone holding it can spend and chat
-/// transcripts are kept; the result gives how many were made and the coupon's page, where they are downloaded. It always
-/// asks for approval, because approval is fixed when the tool is registered and every code shares the coupon's limits.
+/// transcripts are kept; the result gives how many were made and the link of the coupon page's Export action, which
+/// downloads them as a CSV file (the review's "codes as a file"). It always asks for approval, because approval is fixed
+/// when the tool is registered and every code shares the coupon's limits.
 /// </summary>
 internal sealed class GenerateCouponCodesTool : CouponAIToolBase
 {
@@ -55,7 +56,7 @@ internal sealed class GenerateCouponCodesTool : CouponAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Generates 1 to 5,000 unique codes that share a coupon's discount and rules, with an optional prefix and a use limit per code. The codes are never returned: the result gives how many were made and the coupon's page, where they are downloaded. Not available for an automatic discount.";
+    public override string Description => "Generates 1 to 5,000 unique codes that share a coupon's discount and rules, with an optional prefix and a use limit per code. The codes are never returned in the chat: the result gives how many were made and a link that downloads them as a CSV file. Not available for an automatic discount.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -113,7 +114,8 @@ internal sealed class GenerateCouponCodesTool : CouponAIToolBase
             usesPerCode,
             generatedCodes = new { total, used },
             adminPage = GetAdminPath(services, "CouponsEdit", new { itemId = coupon.ItemId }),
-            message = $"Generated {codes.Count} codes for {coupon.Code}. They are not shown here: download them with their use counts from the coupon's page.",
+            codesFile = GetAdminPath(services, "CouponsExportCodes", new { itemId = coupon.ItemId }),
+            message = $"Generated {codes.Count} codes for {coupon.Code}. They are not shown here: codesFile downloads them as a CSV file with their use counts (the Export action of the coupon's page).",
             warning = IsUnbounded(coupon) && usesPerCode is null
                 ? "The coupon is enabled with neither a use limit nor an end date, and these codes have no use limit, so a leaked code keeps discounting."
                 : null,

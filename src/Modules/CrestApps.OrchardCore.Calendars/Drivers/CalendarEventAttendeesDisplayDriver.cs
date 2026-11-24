@@ -1,4 +1,3 @@
-using System.Net.Mail;
 using System.Text.Json;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
@@ -77,69 +76,15 @@ internal sealed class CalendarEventAttendeesDisplayDriver : DisplayDriver<Calend
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var existing = calendarEvent.Attendees.Where(attendee => attendee.GetKey() is not null).GroupBy(attendee => attendee.GetKey()).ToDictionary(group => group.Key, group => group.First());
-        var attendees = new List<CalendarAttendee>();
-        var users = await _userLookup.GetAsync(model.UserIds ?? []);
-
-        foreach (var user in users)
-        {
-            var contact = await _userLookup.GetContactAsync(user.Value);
-
-            attendees.Add(Keep(existing, new CalendarAttendee
-            {
-                UserId = user.Value,
-                Name = contact?.Name ?? user.Text,
-                Email = contact?.Email,
-                Role = CalendarAttendeeRole.Required,
-            }));
-        }
-
-        foreach (var line in (model.Guests ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            if (MailAddress.TryCreate(line, out var address))
-            {
-                attendees.Add(Keep(existing, new CalendarAttendee
-                {
-                    Email = address.Address,
-                    Name = string.IsNullOrWhiteSpace(address.DisplayName) ? null : address.DisplayName,
-                    Role = CalendarAttendeeRole.Required,
-                }));
-            }
-            else
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Guests), S["'{0}' is not an email address.", line]);
-            }
-        }
-
-        foreach (var resourceId in (model.ResourceIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct())
-        {
-            var resource = await _calendarService.FindByIdAsync(resourceId);
-
-            attendees.Add(Keep(existing, new CalendarAttendee
-            {
-                ResourceCalendarId = resourceId,
-                Name = resource?.Name,
-                Role = CalendarAttendeeRole.Resource,
-                Response = CalendarAttendeeResponse.Accepted,
-            }));
-        }
-
-        calendarEvent.Attendees = attendees;
+        calendarEvent.Attendees = await CalendarAttendeeList.BuildAsync(
+            calendarEvent.Attendees,
+            model.UserIds,
+            (model.Guests ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            model.ResourceIds,
+            _userLookup,
+            _calendarService,
+            line => context.Updater.ModelState.AddModelError(Prefix, nameof(model.Guests), S["'{0}' is not an email address.", line]));
 
         return await EditAsync(calendarEvent, context);
-    }
-
-    // An attendee who was already invited keeps their answer.
-    private static CalendarAttendee Keep(Dictionary<string, CalendarAttendee> existing, CalendarAttendee attendee)
-    {
-        if (existing.TryGetValue(attendee.GetKey(), out var earlier))
-        {
-            attendee.Response = earlier.Response;
-            attendee.RespondedUtc = earlier.RespondedUtc;
-            attendee.ResponseToken = earlier.ResponseToken;
-            attendee.Role = earlier.Role == CalendarAttendeeRole.Organizer ? earlier.Role : attendee.Role;
-        }
-
-        return attendee;
     }
 }

@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.TimeZones.AI;
 
 /// <summary>
 /// Lists the time zone maps, the friendly names every time zone picker shows while the Time Zones feature is on, as the
-/// Time Zones admin list does, with the maps changed earlier in the same chat message.
+/// Time Zones admin list does.
 /// </summary>
 internal sealed class ListTimeZoneMapsTool : TimeZonesAIToolBase
 {
@@ -55,8 +55,7 @@ internal sealed class ListTimeZoneMapsTool : TimeZonesAIToolBase
         var filter = ReadString(arguments, "name");
         var page = Math.Max(1, ReadInt(arguments, "page") ?? 1);
         var pageSize = Math.Clamp(ReadInt(arguments, "pageSize") ?? DefaultPageSize, 1, MaxPageSize);
-        var all = await services.GetRequiredService<TimeZoneMapScopeChanges>()
-            .GetAllAsync(services.GetRequiredService<INamedCatalog<TimeZoneMap>>(), cancellationToken);
+        var all = await services.GetRequiredService<INamedCatalog<TimeZoneMap>>().GetAllAsync(cancellationToken);
 
         var matches = all
             .Where(map => filter is null
@@ -85,7 +84,7 @@ internal sealed class ListTimeZoneMapsTool : TimeZonesAIToolBase
             pageSize,
             truncated = page * pageSize < matches.Count,
             message = matches.Count == 0 && filter is null
-                ? "No time zone map exists, so time zone pickers offer no time zone. Add one with saveTimeZoneMap."
+                ? "No time zone map exists, so time zone pickers offer no time zone. Add one on the Time Zones admin page."
                 : "Time zone pickers offer exactly these names, each storing its time zone id. Use listTimeZones for every valid time zone id.",
         });
     }

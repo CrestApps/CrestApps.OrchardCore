@@ -46,37 +46,15 @@ public sealed class UsersToolsStartup : StartupBase
             .RequireApproval()
             .Selectable();
 
-        services.AddCoreAITool<EnableUserTool>(EnableUserTool.TheName)
-            .WithTitle(S["Enable User"])
-            .WithDescription(S["Enables one or more disabled user accounts so they can sign in again. Use it to approve users waiting for moderation."])
+        services.AddCoreAITool<SetUserAccountStateTool>(SetUserAccountStateTool.TheName)
+            .WithTitle(S["Set User Account State"])
+            .WithDescription(S["Enables, disables or unlocks one or more user accounts, or marks their email as confirmed without sending an email. Disabling refuses the calling user's own account, the site super user and the only enabled administrator. Use enable to approve users waiting for moderation and unlock when getUser shows a lockout."])
             .WithCategory(S["Users Management"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<DisableUserTool>(DisableUserTool.TheName)
-            .WithTitle(S["Disable User"])
-            .WithDescription(S["Disables one or more user accounts so they can no longer sign in. It refuses for the calling user's own account, the site super user and the only enabled administrator."])
-            .WithCategory(S["Users Management"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<UnlockUserTool>(UnlockUserTool.TheName)
-            .WithTitle(S["Unlock User"])
-            .WithDescription(S["Clears a user's lockout and failed sign-in count after too many failed attempts. Use it when getUser shows the user is locked out."])
-            .WithCategory(S["Users Management"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<ConfirmUserEmailTool>(ConfirmUserEmailTool.TheName)
-            .WithTitle(S["Confirm User Email"])
-            .WithDescription(S["Marks a user's email address as confirmed without sending an email. Use it only when the admin says the address is already verified."])
-            .WithCategory(S["Users Management"])
-            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<DeleteUserTool>(DeleteUserTool.TheName)
             .WithTitle(S["Delete User"])
-            .WithDescription(S["Permanently deletes a user account; this cannot be undone. It refuses for the calling user's own account, the site super user and the only enabled administrator; suggest disableUser when the admin only wants to block access."])
+            .WithDescription(S["Permanently deletes a user account; this cannot be undone. It refuses for the calling user's own account, the site super user and the only enabled administrator; suggest setUserAccountState with action disable when the admin only wants to block access."])
             .WithCategory(S["Users Management"])
             .RequireApproval()
             .Selectable();

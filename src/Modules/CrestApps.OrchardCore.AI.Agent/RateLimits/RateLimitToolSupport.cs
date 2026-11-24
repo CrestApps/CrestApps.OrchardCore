@@ -200,25 +200,6 @@ internal static class RateLimitToolSupport
     }
 
     /// <summary>
-    /// Gets the rate-limit groups the endpoints of the site carry, the ones the Rate Limits admin page offers for a
-    /// group policy.
-    /// </summary>
-    /// <param name="services">The services of the tool invocation.</param>
-    /// <returns>The group names, in alphabetical order.</returns>
-    public static List<string> GetEndpointGroups(IServiceProvider services)
-    {
-        var endpoints = services.GetService<EndpointDataSource>()?.Endpoints ?? [];
-
-        return endpoints
-            .SelectMany(endpoint => endpoint.Metadata.OfType<IRateLimitGroupMetadata>())
-            .SelectMany(metadata => metadata.GroupNames)
-            .Where(groupName => !string.IsNullOrWhiteSpace(groupName))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    /// <summary>
     /// Gets the address of the Edit page of a policy.
     /// </summary>
     /// <param name="services">The services of the tool invocation.</param>

@@ -50,7 +50,7 @@ public sealed class RunReportTool : ReportsAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Runs a report for a period and filter values and returns its headline numbers and its tables as columns and rows, capped at a row limit with the total row count. A built-in report can only be given a period; its other filters keep their defaults. Use it to answer questions from a report; use exportReport when the user wants a file.";
+    public override string Description => "Runs a report for a period and filter values and returns its headline numbers and its tables as columns and rows, capped at a row limit with the total row count, and echoes the filters it applied and any it could not apply. A built-in report can only be given a period; its other filters keep their defaults. Use it to answer questions from a report; use exportReport when the user wants a file.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -142,6 +142,17 @@ public sealed class RunReportTool : ReportsAIToolBase
             },
             sections,
             truncated = truncated ? true : (bool?)null,
+            appliedFilters = new
+            {
+                period = new
+                {
+                    requestedFrom = run.From?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    requestedTo = run.To?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    requestedAllTime = run.AllTime ? true : (bool?)null,
+                    usedDefaultPeriod = run.HasPeriod ? (bool?)null : true,
+                },
+            },
+            filtersNote = "A built-in report applies only the period here; every other filter keeps its default. Do not describe the result as filtered by anything else.",
             note = truncated ? "Some rows were left out to keep the answer short. Use exportReport for every row." : null,
         });
     }
@@ -172,6 +183,37 @@ public sealed class RunReportTool : ReportsAIToolBase
         // access, so a column of the query that no visual shows is not for its viewers.
         var (sections, truncated) = ReportToolResults.FlattenSections(result.Document, maxRows);
 
+        // Echo what was applied, so the answer never claims a filter the run could not apply.
+        var applied = new List<object>();
+        var notApplied = new List<string>();
+
+        foreach (var (filterId, values) in run.Filters ?? new Dictionary<string, IList<string>>())
+        {
+            var filter = result.Filters.FirstOrDefault(exposed => string.Equals(exposed.Definition?.Id, filterId, StringComparison.Ordinal));
+
+            if (filter is not null)
+            {
+                applied.Add(new
+                {
+                    id = filterId,
+                    label = filter.Definition.Label ?? filter.Definition.Field,
+                    requested = values,
+                    applied = filter.Values,
+                });
+            }
+            else
+            {
+                notApplied.Add($"The filter '{filterId}' was not applied: the report did not run with it.");
+            }
+        }
+
+        var periodApplied = run.HasPeriod && result.PeriodFilterId is not null;
+
+        if (run.HasPeriod && !periodApplied)
+        {
+            notApplied.Add("The period was not applied: the report has no date filter its viewers can change.");
+        }
+
         return Json(new
         {
             id = design.ItemId,
@@ -187,6 +229,20 @@ public sealed class RunReportTool : ReportsAIToolBase
                 values = filter.Values,
             }).ToArray(),
             periodFilter = result.PeriodFilterId,
+            appliedFilters = new
+            {
+                period = periodApplied
+                    ? new
+                    {
+                        filterId = result.PeriodFilterId,
+                        from = run.From?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        to = run.To?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        allTime = run.AllTime ? true : (bool?)null,
+                    }
+                    : null,
+                filters = applied,
+            },
+            notApplied = notApplied.Count > 0 ? notApplied : null,
             periodNote = run.HasPeriod && result.PeriodFilterId is null && result.Errors.Count == 0
                 ? "This report has no date filter its viewers can change, so the period was not applied."
                 : null,

@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Agent.BackgroundTasks;
 using CrestApps.OrchardCore.AI.Agent.DataLocalization;
-using CrestApps.OrchardCore.AI.Agent.HealthChecks;
 using CrestApps.OrchardCore.AI.Agent.UrlRewriting;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
@@ -23,7 +22,6 @@ public sealed class SiteOperationsToolCallerTests
         { ListUrlRewriteRulesTool.TheName, "ManageUrlRewritingRules" },
         { SaveUrlRewriteRuleTool.TheName, "ManageUrlRewritingRules" },
         { DeleteUrlRewriteRuleTool.TheName, "ManageUrlRewritingRules" },
-        { GetSiteHealthTool.TheName, "AccessAdminPanel" },
         { ListDynamicTranslationsTool.TheName, "ViewDynamicTranslations" },
         { SaveDynamicTranslationsTool.TheName, "ManageTranslations" },
     };
@@ -142,7 +140,6 @@ public sealed class SiteOperationsToolCallerTests
                 ["substitutionPattern"] = "/offers",
             }),
             DeleteUrlRewriteRuleTool.TheName => (new DeleteUrlRewriteRuleTool(), new() { ["ids"] = new[] { SiteOperationsToolHarness.RedirectRuleId } }),
-            GetSiteHealthTool.TheName => (new GetSiteHealthTool(), []),
             ListDynamicTranslationsTool.TheName => (new ListDynamicTranslationsTool(), new() { ["culture"] = "fr-FR" }),
             SaveDynamicTranslationsTool.TheName => (new SaveDynamicTranslationsTool(), new()
             {

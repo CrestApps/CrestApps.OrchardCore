@@ -26,7 +26,7 @@ internal sealed class DeleteCertificationTypeTool : SkillsAIToolBase
       "properties": {
         "certificationId": {
           "type": "string",
-          "description": "The id of the certification type to delete, from listCertificationTypes."
+          "description": "The id of the certification type to delete, from listSkills with kind certificationType."
         }
       },
       "required": ["certificationId"],
@@ -53,7 +53,7 @@ internal sealed class DeleteCertificationTypeTool : SkillsAIToolBase
 
         if (certificationId is null)
         {
-            return "Nothing was deleted: give the certificationId, from listCertificationTypes.";
+            return "Nothing was deleted: give the certificationId, from listSkills with kind certificationType.";
         }
 
         var manager = services.GetRequiredService<ICertificationManager>();
@@ -61,7 +61,7 @@ internal sealed class DeleteCertificationTypeTool : SkillsAIToolBase
 
         if (certification is null)
         {
-            return $"Nothing was deleted: there is no certification type with the id '{certificationId}'. Use listCertificationTypes to find it.";
+            return $"Nothing was deleted: there is no certification type with the id '{certificationId}'. Use listSkills with kind certificationType to find it.";
         }
 
         var deleted = await manager.DeleteAsync(certification, cancellationToken);

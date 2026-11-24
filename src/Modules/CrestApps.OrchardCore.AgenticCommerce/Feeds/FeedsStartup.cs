@@ -24,6 +24,7 @@ public sealed class FeedsStartup : StartupBase
         services.AddScoped<AgentFeedSftpPusher>();
         services.AddScoped<AcpFeedApiClient>();
         services.AddScoped<AcpFeedPusher>();
+        services.AddScoped<AgentFeedPushService>();
         services.AddScoped<AgentFeedChangeTracker>();
         services.AddEgressGuardedHttpClient(AcpFeedApiClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(60));
         services.AddScoped<IContentHandler, AgentFeedProductHandler>();

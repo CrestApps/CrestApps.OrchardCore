@@ -1,12 +1,10 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.AI.Agent.DataPipelines;
 using CrestApps.OrchardCore.AI.Agent.SharedLinks;
 
 namespace CrestApps.OrchardCore.Tests.Agent.DataPipelines;
 
 /// <summary>
-/// The data pipeline tools list the step types with their ports and the data sets the caller may read with their fields,
-/// asking the data sources with the caller; the shared link tools list links without their secrets and revoke and delete
+/// The data pipeline tools list the step types with their ports; the shared link tools list links without their secrets and revoke and delete
 /// them through the shared link manager.
 /// </summary>
 public sealed class DataPipelineToolsTests
@@ -69,98 +67,6 @@ public sealed class DataPipelineToolsTests
 
         // Assert
         Assert.Contains("There is no step category 'Loader'", result);
-    }
-
-    [Fact]
-    public async Task ListDataSets_ListsTheDataSetsTheCallerMayReadAskingTheDataSourceWithTheCaller()
-    {
-        // Arrange
-        var harness = new DataPipelineToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ListDataSetsTool(), services, new() { ["query"] = "order" });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        var item = Assert.Single(json.GetProperty("items").EnumerateArray().ToList());
-
-        Assert.Equal("Shop::Orders", item.GetProperty("value").GetString());
-        Assert.Equal("Shop data", item.GetProperty("sourceName").GetString());
-        Assert.Equal("Sales", item.GetProperty("group").GetString());
-        Assert.Equal(1, json.GetProperty("total").GetInt32());
-        Assert.Equal(AgentToolTestContext.UserId, Assert.Single(harness.DataSource.Users).FindFirst(ClaimTypes.NameIdentifier)?.Value);
-    }
-
-    [Fact]
-    public async Task ListDataSets_WithAnotherDataSource_ListsNothing()
-    {
-        // Arrange
-        var harness = new DataPipelineToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ListDataSetsTool(), services, new() { ["source"] = "Contents" });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.Equal(0, json.GetProperty("total").GetInt32());
-        Assert.Equal("Shop", json.GetProperty("sources")[0].GetProperty("source").GetString());
-    }
-
-    [Fact]
-    public async Task GetDataSetSchema_ReturnsTheFieldsWithTheirTypesAndReferences()
-    {
-        // Arrange
-        var harness = new DataPipelineToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetDataSetSchemaTool(), services, new() { ["dataSet"] = "shop::Orders" });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        var fields = json.GetProperty("items").EnumerateArray().ToList();
-
-        Assert.Equal("Shop::Orders", json.GetProperty("dataSet").GetString());
-        Assert.Equal("PlacedUtc", json.GetProperty("defaultDateField").GetString());
-        Assert.Equal(3, json.GetProperty("total").GetInt32());
-        Assert.True(fields[0].GetProperty("isIdentifier").GetBoolean());
-        Assert.Equal("Decimal", fields[1].GetProperty("type").GetString());
-        Assert.Equal("Users::Users", fields[2].GetProperty("references")[0].GetProperty("dataSet").GetString());
-        Assert.All(harness.DataSource.Users, user => Assert.NotNull(user));
-    }
-
-    [Theory]
-    [InlineData("Shop::Payroll")]
-    [InlineData("Contents::BlogPost")]
-    public async Task GetDataSetSchema_WhenTheDataSetIsNotOneTheCallerMayRead_GivesOneAnswerForBoth(string dataSet)
-    {
-        // Arrange
-        var harness = new DataPipelineToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetDataSetSchemaTool(), services, new() { ["dataSet"] = dataSet });
-
-        // Assert
-        Assert.Equal($"There is no data set '{dataSet}' you may read. Call listDataSets to find the data sets you can use.", result);
-    }
-
-    [Fact]
-    public async Task GetDataSetSchema_WithoutTheSeparator_AsksForSourceAndDataSet()
-    {
-        // Arrange
-        var harness = new DataPipelineToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetDataSetSchemaTool(), services, new() { ["dataSet"] = "Orders" });
-
-        // Assert
-        Assert.StartsWith("Give 'dataSet' as Source::DataSet", result);
-        Assert.Empty(harness.DataSource.Users);
     }
 
     [Fact]

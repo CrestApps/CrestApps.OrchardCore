@@ -18,7 +18,8 @@ namespace CrestApps.OrchardCore.Staff.AI;
 /// needs a staff scope (<see cref="StaffPermissions.ManageStaff"/>, or <see cref="StaffPermissions.ManageOwnStaff"/> for the
 /// people one manages), adds people only to teams the caller manages, and changes the date of birth only with
 /// <see cref="StaffPermissions.ViewSensitiveStaffData"/>. Pay, badge, skills and the cards other modules add to the editor
-/// are not changed.
+/// are not changed. It never ends anyone's employment: the Terminated status and a last working day are set with
+/// <see cref="TerminateStaffMemberTool"/>, which asks for approval; this tool can only clear a planned last working day.
 /// </summary>
 internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
 {
@@ -66,12 +67,12 @@ internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
         },
         "status": {
           "type": "string",
-          "enum": ["Active", "OnLeave", "Suspended", "Terminated"],
-          "description": "Whether the person is working. Terminated starts the offboarding of other modules (shifts, queues, access)."
+          "enum": ["Active", "OnLeave", "Suspended"],
+          "description": "Whether the person is working. To end someone's employment use terminateStaffMember."
         },
         "hireDate": { "type": "string", "description": "The day the person was hired, as yyyy-MM-dd. An empty text removes it." },
         "seniorityDate": { "type": "string", "description": "The day seniority counts from, when not the hire date, as yyyy-MM-dd. An empty text removes it." },
-        "terminationDate": { "type": "string", "description": "The person's last working day, as yyyy-MM-dd. An empty text removes it." },
+        "terminationDate": { "type": "string", "description": "Only an empty text, to cancel a planned last working day. A last working day is set with terminateStaffMember." },
         "dateOfBirth": { "type": "string", "description": "The date of birth, as yyyy-MM-dd. Only for people allowed to see sensitive staff data." },
         "managerId": { "type": "string", "description": "The id of the staff member the person reports to, from getStaffMember. An empty text removes the manager." },
         "timeZoneId": { "type": "string", "description": "The person's IANA time zone, such as America/Phoenix. An empty text uses the main team's, then the site's." },
@@ -85,11 +86,11 @@ internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
         },
         "teamMemberships": {
           "type": "array",
-          "description": "The teams the person belongs to, from listTeams; the list replaces the stored one and the first becomes the main team. A manager can only add people to the teams they manage.",
+          "description": "The teams the person belongs to, from listRecords with kind team; the list replaces the stored one and the first becomes the main team. A manager can only add people to the teams they manage.",
           "items": {
             "type": "object",
             "properties": {
-              "teamId": { "type": "string", "description": "The team's id, from listTeams." },
+              "teamId": { "type": "string", "description": "The team's id, from listRecords with kind team." },
               "role": { "type": "string", "enum": ["Member", "Lead", "Scheduler", "Manager"], "description": "The role in the team. Member when left out." },
               "effectiveFrom": { "type": "string", "description": "The first day of the membership, as yyyy-MM-dd." },
               "effectiveTo": { "type": "string", "description": "The last day of the membership, as yyyy-MM-dd." }
@@ -108,7 +109,7 @@ internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Creates a staff member or updates one: job title, employment type, status, dates, manager, time zone, locations, contracted hours, capabilities and team memberships; can link a user account once. Setting a termination date or status Terminated starts offboarding in other modules. Pay, badge and skills have their own tools.";
+    public override string Description => "Creates a staff member or updates one: job title, employment type, status (Active, OnLeave or Suspended), dates, manager, time zone, locations, contracted hours, capabilities and team memberships; can link a user account once. To end someone's employment or set their last working day use terminateStaffMember; this tool can only cancel a planned last working day. Pay and the badge PIN are set on the staff editor; skills have their own tools.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -206,7 +207,6 @@ internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
         {
             ("hireDate", value => staff.HireDate = value),
             ("seniorityDate", value => staff.SeniorityDate = value),
-            ("terminationDate", value => staff.TerminationDate = value),
         })
         {
             if (!Has(arguments, name))
@@ -220,6 +220,18 @@ internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
             }
 
             apply(date);
+        }
+
+        // A last working day ends the employment once it has passed (the Staff upkeep task terminates the person), so it
+        // is set only with terminateStaffMember, which asks for approval. Clearing a planned one is safe.
+        if (Has(arguments, "terminationDate"))
+        {
+            if (ReadString(arguments, "terminationDate") is not null)
+            {
+                return "Nothing was saved: a last working day is set with terminateStaffMember, which asks for approval. saveStaffMember can only cancel a planned one (an empty terminationDate).";
+            }
+
+            staff.TerminationDate = null;
         }
 
         if (Has(arguments, "employmentType"))
@@ -236,7 +248,14 @@ internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
         {
             if (!Enum.TryParse<StaffStatus>(ReadString(arguments, "status"), ignoreCase: true, out var status) || !Enum.IsDefined(status))
             {
-                return "Nothing was saved: status must be Active, OnLeave, Suspended or Terminated.";
+                return "Nothing was saved: status must be Active, OnLeave or Suspended.";
+            }
+
+            // Terminating someone offboards them in every module and cannot be undone, so it has its own tool, which
+            // asks for approval.
+            if (status == StaffStatus.Terminated)
+            {
+                return "Nothing was saved: to end someone's employment use terminateStaffMember, which asks for approval.";
             }
 
             staff.Status = status;
@@ -416,7 +435,7 @@ internal sealed class SaveStaffMemberTool : StaffManagementAIToolBase
 
             if (teamId is null)
             {
-                return (null, "each team membership needs a teamId, from listTeams.");
+                return (null, "each team membership needs a teamId, from listRecords with kind team.");
             }
 
             var role = TeamMemberRole.Member;

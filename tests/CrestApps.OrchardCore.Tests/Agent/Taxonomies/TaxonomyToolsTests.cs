@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Agent.Contents;
@@ -186,6 +185,29 @@ public sealed class TaxonomyToolsTests
     }
 
     [Fact]
+    public async Task SaveTaxonomyTerm_WithAnAfterId_MovesTheTermRightAfterThatSibling()
+    {
+        // Arrange
+        var harness = new Harness();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveTaxonomyTermTool(), harness.Services, new()
+        {
+            ["taxonomyContentItemId"] = "tax-1",
+            ["termId"] = "news-1",
+            ["afterId"] = "events-1",
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.Equal("moved", json.GetProperty("action").GetString());
+        Assert.Equal(1, json.GetProperty("position").GetInt32());
+        Assert.Equal(new[] { "events-1", "news-1", "resources-1" }, harness.Terms.Select(term => term["ContentItemId"].GetValue<string>()));
+        Assert.Equal("press-1", Assert.Single(harness.Terms[1]["Terms"].AsArray())["ContentItemId"].GetValue<string>());
+    }
+
+    [Fact]
     public async Task SaveTaxonomyTerm_WithAParent_MovesTheTermUnderIt()
     {
         // Arrange
@@ -212,7 +234,9 @@ public sealed class TaxonomyToolsTests
     [InlineData("termId", "news-1", "parentTermId", "press-1", "cannot be moved under itself")]
     [InlineData("termId", "nope", "title", "X", "has no term with the ID 'nope'")]
     [InlineData("title", "X", "parentTermId", "nope", "has no term with the ID 'nope'")]
-    [InlineData("parentTermId", "news-1", "position", "0", "give title to add a term")]
+    [InlineData("parentTermId", "news-1", "afterId", "press-1", "give title to add a term")]
+    [InlineData("termId", "resources-1", "afterId", "press-1", "'press-1' is not a term directly under the parent")]
+    [InlineData("termId", "resources-1", "afterId", "resources-1", "cannot be placed after itself")]
     [InlineData("termId", "news-1", "publish", "false", "give title or content to change the term")]
     public async Task SaveTaxonomyTerm_WhenTheChangeIsNotAllowed_SavesNothing(string name, string value, string otherName, string otherValue, string expected)
     {
@@ -220,7 +244,6 @@ public sealed class TaxonomyToolsTests
         var harness = new Harness();
         object other = otherName switch
         {
-            "position" => int.Parse(otherValue, CultureInfo.InvariantCulture),
             "publish" => bool.Parse(otherValue),
             _ => otherValue,
         };

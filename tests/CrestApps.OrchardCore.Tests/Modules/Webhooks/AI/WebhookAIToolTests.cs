@@ -21,9 +21,8 @@ public sealed class WebhookAIToolTests
         SaveWebhookTool.TheName,
         RotateWebhookSecretTool.TheName,
         DeleteWebhookTool.TheName,
-        SendWebhookPingTool.TheName,
         ListWebhookDeliveriesTool.TheName,
-        ResendWebhookDeliveryTool.TheName,
+        SendWebhookDeliveryTool.TheName,
     };
 
     [Theory]
@@ -279,7 +278,7 @@ public sealed class WebhookAIToolTests
     }
 
     [Fact]
-    public async Task SendWebhookPing_PostsASignedPingAndReturnsTheAnswer()
+    public async Task SendWebhookDelivery_WithPing_PostsASignedPingAndReturnsTheAnswer()
     {
         // Arrange
         var webhook = _harness.AddWebhook();
@@ -287,7 +286,7 @@ public sealed class WebhookAIToolTests
         var services = _harness.Build();
 
         // Act
-        var result = await InvokeAsync(SendWebhookPingTool.TheName, services, new() { ["id"] = "w1" });
+        var result = await InvokeAsync(SendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1", ["ping"] = true });
         var json = AgentToolTestContext.ReadJson(result).GetProperty("result");
 
         // Assert
@@ -304,7 +303,7 @@ public sealed class WebhookAIToolTests
     }
 
     [Fact]
-    public async Task SendWebhookPing_WhenTheReceiverFails_ReturnsTheError()
+    public async Task SendWebhookDelivery_WithPing_WhenTheReceiverFails_ReturnsTheError()
     {
         // Arrange
         _harness.AddWebhook();
@@ -312,7 +311,7 @@ public sealed class WebhookAIToolTests
         var services = _harness.Build();
 
         // Act
-        var json = AgentToolTestContext.ReadJson(await InvokeAsync(SendWebhookPingTool.TheName, services, new() { ["id"] = "w1" })).GetProperty("result");
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(SendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1", ["ping"] = true })).GetProperty("result");
 
         // Assert
         Assert.False(json.GetProperty("delivered").GetBoolean());
@@ -357,7 +356,7 @@ public sealed class WebhookAIToolTests
     }
 
     [Fact]
-    public async Task ResendWebhookDelivery_SendsTheDeliveryAgain()
+    public async Task SendWebhookDelivery_WithADeliveryId_SendsTheDeliveryAgain()
     {
         // Arrange
         _harness.AddWebhook();
@@ -365,7 +364,7 @@ public sealed class WebhookAIToolTests
         var services = _harness.Build();
 
         // Act
-        var json = AgentToolTestContext.ReadJson(await InvokeAsync(ResendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1", ["deliveryId"] = "d1" })).GetProperty("result");
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(SendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1", ["deliveryId"] = "d1" })).GetProperty("result");
 
         // Assert
         Assert.Single(_harness.Sent);
@@ -375,7 +374,7 @@ public sealed class WebhookAIToolTests
     }
 
     [Fact]
-    public async Task ResendWebhookDelivery_RefusesADeliveryOfAnotherWebhook()
+    public async Task SendWebhookDelivery_RefusesADeliveryOfAnotherWebhook()
     {
         // Arrange
         _harness.AddWebhook();
@@ -384,12 +383,45 @@ public sealed class WebhookAIToolTests
         var services = _harness.Build();
 
         // Act
-        var result = await InvokeAsync(ResendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1", ["deliveryId"] = "d2" });
+        var result = await InvokeAsync(SendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1", ["deliveryId"] = "d2" });
 
         // Assert
         Assert.Contains("has no delivery with the id 'd2'", result, StringComparison.Ordinal);
         Assert.Empty(_harness.Sent);
         Assert.Equal(WebhookDeliveryStatus.Failed, delivery.Status);
+    }
+
+    [Fact]
+    public async Task SendWebhookDelivery_WithBothPingAndADeliveryId_SendsNothing()
+    {
+        // Arrange
+        _harness.AddWebhook();
+        _harness.AddDelivery("d1", "w1", WebhookDeliveryStatus.Failed);
+        var services = _harness.Build();
+
+        // Act
+        var both = await InvokeAsync(SendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1", ["deliveryId"] = "d1", ["ping"] = true });
+        var neither = await InvokeAsync(SendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "w1" });
+
+        // Assert
+        Assert.StartsWith("Nothing was sent: give either ping true", both, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was sent: give either ping true", neither, StringComparison.Ordinal);
+        Assert.Empty(_harness.Sent);
+    }
+
+    [Fact]
+    public async Task SendWebhookDelivery_WithPing_SaysWhenTheWebhookIsUnknown()
+    {
+        // Arrange
+        _harness.AddWebhook();
+        var services = _harness.Build();
+
+        // Act
+        var result = await InvokeAsync(SendWebhookDeliveryTool.TheName, services, new() { ["webhookId"] = "missing", ["ping"] = true });
+
+        // Assert
+        Assert.Contains("no webhook with the id 'missing'", result, StringComparison.Ordinal);
+        Assert.Empty(_harness.Sent);
     }
 
     private void AssertUnchanged(string protectedSecret)
@@ -434,9 +466,8 @@ public sealed class WebhookAIToolTests
             SaveWebhookTool.TheName => new SaveWebhookTool(),
             RotateWebhookSecretTool.TheName => new RotateWebhookSecretTool(),
             DeleteWebhookTool.TheName => new DeleteWebhookTool(),
-            SendWebhookPingTool.TheName => new SendWebhookPingTool(),
             ListWebhookDeliveriesTool.TheName => new ListWebhookDeliveriesTool(),
-            ResendWebhookDeliveryTool.TheName => new ResendWebhookDeliveryTool(),
+            SendWebhookDeliveryTool.TheName => new SendWebhookDeliveryTool(),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, null),
         };
 }

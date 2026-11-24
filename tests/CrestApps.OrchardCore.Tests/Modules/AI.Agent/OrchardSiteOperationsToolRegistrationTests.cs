@@ -2,7 +2,6 @@ using System.Globalization;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Agent.BackgroundTasks;
 using CrestApps.OrchardCore.AI.Agent.DataLocalization;
-using CrestApps.OrchardCore.AI.Agent.HealthChecks;
 using CrestApps.OrchardCore.AI.Agent.UrlRewriting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -12,8 +11,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Agent;
 
 /// <summary>
-/// The Orchard Core site operations tools of the AI Agent module (background tasks, URL rewriting, health checks and
-/// dynamic translations) are registered with a title, a description and a category, can be picked on a profile, and
+/// The Orchard Core site operations tools of the AI Agent module (background tasks, URL rewriting and dynamic
+/// translations) are registered with a title, a description and a category, can be picked on a profile, and
 /// ask for approval exactly where the tool coverage plan says so. The tools this batch deferred are not registered.
 /// </summary>
 public sealed class OrchardSiteOperationsToolRegistrationTests
@@ -25,7 +24,6 @@ public sealed class OrchardSiteOperationsToolRegistrationTests
         ListUrlRewriteRulesTool.TheName,
         SaveUrlRewriteRuleTool.TheName,
         DeleteUrlRewriteRuleTool.TheName,
-        GetSiteHealthTool.TheName,
         ListDynamicTranslationsTool.TheName,
         SaveDynamicTranslationsTool.TheName,
     ];
@@ -33,11 +31,10 @@ public sealed class OrchardSiteOperationsToolRegistrationTests
     public static TheoryData<string, bool> Tools => new()
     {
         { ListBackgroundTasksTool.TheName, false },
-        { RunBackgroundTaskTool.TheName, false },
+        { RunBackgroundTaskTool.TheName, true },
         { ListUrlRewriteRulesTool.TheName, false },
         { SaveUrlRewriteRuleTool.TheName, false },
         { DeleteUrlRewriteRuleTool.TheName, true },
-        { GetSiteHealthTool.TheName, false },
         { ListDynamicTranslationsTool.TheName, false },
         { SaveDynamicTranslationsTool.TheName, false },
     };
@@ -67,7 +64,6 @@ public sealed class OrchardSiteOperationsToolRegistrationTests
     [Theory]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.BackgroundTasksToolsStartup), 2)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.UrlRewritingToolsStartup), 3)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.HealthChecksToolsStartup), 1)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.DataLocalizationToolsStartup), 2)]
     public void EachFeatureStartup_RegistersItsTools(Type startupType, int expectedCount)
     {

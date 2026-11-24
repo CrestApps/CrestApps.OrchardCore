@@ -3,11 +3,14 @@ using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
 /// <summary>
-/// Represents the create or update content type definitions tool.
+/// Represents the create or update content type definitions tool. The recipe is imported as the JSON import of the
+/// Deployment admin imports one and can hold any step, so the caller needs that page's permission (Import) as well as
+/// the right to edit content types.
 /// </summary>
 public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseTool
 {
@@ -21,6 +24,14 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        // Recipe import gate (review of PR 1334, F1 and F5): the same check as importOrchardCoreRecipe, applySiteSettings
+        // and createOrUpdateWorkflow, because the recipe can hold steps other than content definitions.
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(arguments.Services, OrchardCorePermissions.EditContentTypes) ||
+            !await AgentToolAuthorization.IsAuthorizedAsync(arguments.Services, DeploymentPermissions.Import))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTypeDefinitionsTool>>();
 

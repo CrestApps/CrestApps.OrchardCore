@@ -159,6 +159,56 @@ internal sealed class ContentItemListTree
     }
 
     /// <summary>
+    /// Finds the item of a list that another item is to be placed after.
+    /// </summary>
+    /// <param name="target">The list.</param>
+    /// <param name="afterId">The ID of the item to place after.</param>
+    /// <returns>The item, or <see langword="null"/> when the list has no item with the ID.</returns>
+    public static JsonObject FindSibling(NestedContentItemContainer target, string afterId)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        return target.Items
+            .OfType<JsonObject>()
+            .FirstOrDefault(sibling => string.Equals(
+                NestedContentItemTree.GetString(sibling, nameof(ContentItem.ContentItemId)),
+                afterId,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Puts an item first in a list or right after one of its items. An item that is already in the tree is taken out of
+    /// its list first. With neither, an item keeps its position in the same list and goes to the end of another list.
+    /// </summary>
+    /// <param name="entry">Where the item is now, or <see langword="null"/> for a new item.</param>
+    /// <param name="item">The JSON of the item.</param>
+    /// <param name="target">The list that takes the item.</param>
+    /// <param name="first">Whether the item goes first in the list.</param>
+    /// <param name="sibling">The item of the list the item goes after, from <see cref="FindSibling"/>, or <see langword="null"/>.</param>
+    /// <returns>The position the item got.</returns>
+    public static int PlaceAfter(NestedContentItemEntry entry, JsonObject item, NestedContentItemContainer target, bool first, JsonObject sibling)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(target);
+
+        if (!first && sibling is null)
+        {
+            return Place(entry, item, target, null);
+        }
+
+        entry?.Container.Items.RemoveAt(entry.Position);
+
+        // The sibling is found by reference after the item is taken out, so its index is the one of the changed list.
+        var newPosition = first
+            ? 0
+            : target.Items.IndexOf(sibling) + 1;
+
+        target.Items.Insert(newPosition, item);
+
+        return newPosition;
+    }
+
+    /// <summary>
     /// Saves the changed tree into the content item, validates it, and saves the draft or publishes it. As the menu and
     /// taxonomy editors do, a content type that can have a draft takes the change in a draft; any other takes it in its
     /// latest version, where the change is live at once when that version is published.

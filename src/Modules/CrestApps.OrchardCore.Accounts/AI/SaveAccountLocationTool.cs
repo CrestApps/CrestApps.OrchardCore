@@ -16,8 +16,9 @@ namespace CrestApps.OrchardCore.Accounts.AI;
 /// <summary>
 /// Adds a location to an account, or changes one by its location id, with the locations editor's rules
 /// (<see cref="AccountLocationRules"/>): the address is addressed to the account and checked by the shared address editor
-/// against its country's rules, a location keeps its id, and a location with no name is named after its city. It needs
-/// <c>EditContent</c> on the account.
+/// against its country's rules, a location keeps its id (and its billing setting unless one is given), a location with no
+/// name is named after its city, and an account has one billing location at most. It needs <c>EditContent</c> on the
+/// account.
 /// </summary>
 internal sealed class SaveAccountLocationTool : AccountsAIToolBase
 {
@@ -47,6 +48,11 @@ internal sealed class SaveAccountLocationTool : AccountsAIToolBase
                 ["description"] = "The location's name, such as 'Head office' or 'Oakland warehouse'. A new location with no name is named after its city.",
             },
             ["address"] = AddressArguments.CreateSchema("The location's address, with its two-letter country code. Required for a new location; when changing a location, leave it out to keep its address. The account's name is used as the company.", includeRecipient: false),
+            ["isBilling"] = new JsonObject
+            {
+                ["type"] = "boolean",
+                ["description"] = "Whether the account's invoices and other billing documents are addressed to this location. An account has one billing location at most; without one, the first location is used. Leave it out to keep the location's current setting; a new location is not the billing location.",
+            },
             ["saveAsDraft"] = new JsonObject
             {
                 ["type"] = "boolean",
@@ -114,7 +120,7 @@ internal sealed class SaveAccountLocationTool : AccountsAIToolBase
             {
                 var messages = modelState.Values.SelectMany(entry => entry.Errors).Select(entry => entry.ErrorMessage).Where(message => !string.IsNullOrEmpty(message));
 
-                return $"Nothing was changed: the address does not have its country's form. {string.Join(" ", messages)} Use validateAddress to see which fields the country needs.";
+                return $"Nothing was changed: the address does not have its country's form. {string.Join(" ", messages)} The address editor on the admin page shows which fields the country needs.";
             }
 
             address = result.Address;
@@ -129,7 +135,18 @@ internal sealed class SaveAccountLocationTool : AccountsAIToolBase
         }
 
         var name = Has(arguments, "name") ? ReadString(arguments, "name") : existing?.Name;
-        var location = AccountLocationRules.CreateLocation(existing?.LocationId, name, address, existing?.IsBilling == true);
+        var isBilling = Has(arguments, "isBilling") ? ReadBool(arguments, "isBilling") == true : existing?.IsBilling == true;
+        var otherBillingLocations = locations
+            .Where(other => other.IsBilling && !string.Equals(other.LocationId, existing?.LocationId, StringComparison.Ordinal))
+            .ToList();
+
+        // An account is billed at one location at most.
+        if (AccountLocationRules.IsExtraBillingLocation(isBilling, otherBillingLocations.Count))
+        {
+            return $"Nothing was changed: only one location can be the billing location, and '{otherBillingLocations[0].Name}' (location id '{otherBillingLocations[0].LocationId}') is one. Save that location with isBilling false first.";
+        }
+
+        var location = AccountLocationRules.CreateLocation(existing?.LocationId, name, address, isBilling);
         List<AccountLocation> updated = existing is null
             ? [.. locations, location]
             : locations.Select(item => item.LocationId == existing.LocationId ? location : item).ToList();
@@ -149,6 +166,7 @@ internal sealed class SaveAccountLocationTool : AccountsAIToolBase
             locationId = location.LocationId,
             name = location.Name,
             address = AddressArguments.Describe(location.Address),
+            isBilling = location.IsBilling,
             created = existing is null,
             published,
             savedAsDraft = !published,

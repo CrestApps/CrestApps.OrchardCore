@@ -65,3 +65,34 @@ public sealed class AvatarAIToolsStartup : StartupBase
             .Selectable();
     }
 }
+
+/// <summary>
+/// Registers the party search AI tool whenever the Users Core Components and AI features are on; that feature registers
+/// the party directory with its user source, and other modules add their kinds. The tool searches only the kinds the
+/// caller may see.
+/// </summary>
+[Feature(UsersConstants.Feature.Area)]
+[RequireFeatures(AIFeatureIds.Area)]
+public sealed class PartiesAIToolsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PartiesAIToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public PartiesAIToolsStartup(IStringLocalizer<PartiesAIToolsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCoreAITool<FindPartyTool>(FindPartyTool.TheName)
+            .WithTitle(S["Find Party"])
+            .WithDescription(S["Finds people and organizations by name across every party kind (users, customers, business accounts, CRM contacts, staff) in one search, and says which kind each one is. Use it first when the user names someone and the kind is not clear."])
+            .WithCategory(S["Users"])
+            .Selectable();
+    }
+}

@@ -84,7 +84,7 @@ public sealed class ReloadTenantTool : AIFunction
         {
             logger.LogWarning("AI tool '{ToolName}' failed: cannot reload the default tenant.", Name);
 
-            return "You cannot enable the default tenant.";
+            return "The default tenant cannot be reloaded from the chat, because the chat runs on it. Restart the site to reload it.";
         }
 
         await shellHost.ReloadShellContextAsync(tenantSettings);

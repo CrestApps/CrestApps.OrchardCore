@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
@@ -21,6 +22,13 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        // Recipe import gate (review of PR 1334, F1 and F5): the recipe is imported as the JSON import of the Deployment
+        // admin imports one and can hold any step, so the caller needs that page's permission.
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(arguments.Services, DeploymentPermissions.Import))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<ApplySystemSettingsTool>>();
 

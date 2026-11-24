@@ -71,7 +71,7 @@ public sealed class SaveContentTypePartTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Attaches a part to a content type or updates how it is attached: display name and description (named parts), editor, display mode and the part's settings for this type. Use it to add or reconfigure a single part without resending the whole type definition. Only the arguments given are changed. To change the order of the parts, use reorderContentTypeElements.";
+    public override string Description => "Attaches a part to a content type or updates how it is attached: display name and description (named parts), editor, display mode and the part's settings for this type. Use it to add or reconfigure a single part without resending the whole type definition. Only the arguments given are changed. The order of the parts is changed on the content type's edit page in the admin.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

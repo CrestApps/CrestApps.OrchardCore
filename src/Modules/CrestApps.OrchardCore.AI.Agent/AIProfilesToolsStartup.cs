@@ -41,7 +41,7 @@ public sealed class AIProfilesToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveAIProfileTool>(SaveAIProfileTool.TheName)
             .WithTitle(S["Save AI Profile"])
-            .WithDescription(S["Creates a profile or agent, or updates one by id: title, description, type, instructions, welcome message, deployments, model parameters, persona and prompt templates. It does not change tools, agents or connections (use setAIProfileCapabilities) and cannot change the assistant that is running or its agents."])
+            .WithDescription(S["Creates a profile or agent (from scratch, or from a profile template with templateId), or updates one by id: title, description, type, instructions, welcome message, deployments, model parameters, persona and prompt templates. It does not change tools, agents or connections (use setAIProfileCapabilities) and cannot change the assistant that is running or its agents."])
             .WithCategory(S["AI Profiles"])
             .Selectable();
 
@@ -52,17 +52,17 @@ public sealed class AIProfilesToolsStartup : StartupBase
             .RequireApproval()
             .Selectable();
 
-        services.AddCoreAITool<CreateAIProfileFromTemplateTool>(CreateAIProfileFromTemplateTool.TheName)
-            .WithTitle(S["Create AI Profile From Template"])
-            .WithDescription(S["Creates a profile from a profile template (the New Profile wizard): give the template id, a title, a technical name and optionally a chat deployment. Fails with the missing feature names when the template's scenario is not available."])
-            .WithCategory(S["AI Profiles"])
-            .Selectable();
-
         services.AddCoreAITool<DeleteAIProfileTool>(DeleteAIProfileTool.TheName)
-            .WithTitle(S["Delete AI Profiles"])
-            .WithDescription(S["Deletes one or more profiles by id. Profiles marked not removable, the running assistant and its agents are skipped and reported."])
+            .WithTitle(S["Delete AI Profile"])
+            .WithDescription(S["Deletes one profile by id; it cannot be restored. Refused for a profile marked not removable, the running assistant and its agents, a profile people or clients can reach (chat widget, admin chat, API key, visitors) and a profile another profile uses as an agent."])
             .WithCategory(S["AI Profiles"])
             .RequireApproval()
+            .Selectable();
+
+        services.AddCoreAITool<DiagnoseAIProfileTool>(DiagnoseAIProfileTool.TheName)
+            .WithTitle(S["Diagnose AI Profile"])
+            .WithDescription(S["Checks one profile for what would stop it working: whether its chat and utility deployments exist and the chat one supports tool calling, whether every tool, tool instance and agent it names still exists, and whether its persona and data source exist. Returns each check with a fix."])
+            .WithCategory(S["AI Profiles"])
             .Selectable();
 
         services.AddCoreAITool<ListAIProfileVersionsTool>(ListAIProfileVersionsTool.TheName)
@@ -87,13 +87,7 @@ public sealed class AIProfilesToolsStartup : StartupBase
 
         services.AddCoreAITool<ListAIProfileTemplatesTool>(ListAIProfileTemplatesTool.TheName)
             .WithTitle(S["List AI Profile Templates"])
-            .WithDescription(S["Lists templates with source (Profile or SystemPrompt), category, title, whether they are shipped with a module (read-only) and whether their scenario is available. Filter by source, category (for example speaking styles or guardrail topics) or name."])
-            .WithCategory(S["AI Profile Templates"])
-            .Selectable();
-
-        services.AddCoreAITool<GetAIProfileTemplateTool>(GetAIProfileTemplateTool.TheName)
-            .WithTitle(S["Get AI Profile Template"])
-            .WithDescription(S["Returns one template's full content: instructions, profile settings, tool and agent names."])
+            .WithDescription(S["Lists templates with source (Profile or SystemPrompt), category, title, whether they are shipped with a module (read-only) and whether their scenario is available. Filter by source, category (for example speaking styles or guardrail topics) or name. With id it returns one template's full content: instructions, profile settings, tool and agent names."])
             .WithCategory(S["AI Profile Templates"])
             .Selectable();
 

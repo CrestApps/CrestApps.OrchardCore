@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Agent.BackgroundTasks;
 using CrestApps.OrchardCore.AI.Agent.DataLocalization;
-using CrestApps.OrchardCore.AI.Agent.HealthChecks;
 using CrestApps.OrchardCore.AI.Agent.UrlRewriting;
 using OrchardCore.Entities;
 using OrchardCore.UrlRewriting.Models;
@@ -11,8 +10,7 @@ namespace CrestApps.OrchardCore.Tests.Agent.SiteOperations;
 /// <summary>
 /// The site operations tools: background tasks are listed with their state and run on demand through the background
 /// service monitor; URL rewriting rules are listed, saved and deleted through the rule manager, which validates them;
-/// the health checks run through the health check service; dynamic translations are read per culture and saved through
-/// the Translations recipe step.
+/// dynamic translations are read per culture and saved through the Translations recipe step.
 /// </summary>
 public sealed class SiteOperationsToolsTests
 {
@@ -295,40 +293,6 @@ public sealed class SiteOperationsToolsTests
         Assert.StartsWith("Nothing was deleted", result);
         Assert.Single(harness.Rules);
         Assert.Equal(0, harness.Releases);
-    }
-
-    [Fact]
-    public async Task GetSiteHealth_ReturnsEachCheckWithoutTheException()
-    {
-        // Arrange
-        var harness = new SiteOperationsToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetSiteHealthTool(), services);
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        var checks = json.GetProperty("checks").EnumerateArray().ToList();
-
-        Assert.Equal("Unhealthy", json.GetProperty("status").GetString());
-        Assert.Equal(["Database", "Redis"], checks.Select(check => check.GetProperty("name").GetString()));
-        Assert.Equal("Couldn't connect to the Redis server.", checks[1].GetProperty("description").GetString());
-        Assert.DoesNotContain("secret", result);
-    }
-
-    [Fact]
-    public async Task GetSiteHealth_WithAnUnknownCheck_SaysSo()
-    {
-        // Arrange
-        var harness = new SiteOperationsToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetSiteHealthTool(), services, new() { ["checkName"] = "Nope" });
-
-        // Assert
-        Assert.Contains("There is no health check named 'Nope'", result);
     }
 
     [Fact]

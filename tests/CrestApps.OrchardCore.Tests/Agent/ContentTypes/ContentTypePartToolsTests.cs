@@ -8,7 +8,7 @@ using OrchardCore.ContentTypes;
 namespace CrestApps.OrchardCore.Tests.Agent.ContentTypes;
 
 /// <summary>
-/// The tools that attach a part to a content type, change how it is attached, remove it, and reorder the parts.
+/// The tools that attach a part to a content type, change how it is attached and remove it.
 /// </summary>
 public sealed class ContentTypePartToolsTests
 {
@@ -211,54 +211,5 @@ public sealed class ContentTypePartToolsTests
 
         // Assert
         Assert.Contains("defined by the system", result, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ReorderContentTypeElements_ForAContentType_OrdersItsPartsThroughTheDefinitionService()
-    {
-        // Arrange
-        string[] ordered = null;
-        var store = new ContentDefinitionTestStore();
-        var article = store.AddType("Article", type => type.WithPart("TitlePart").WithPart("AutoroutePart").WithPart("HtmlBodyPart"));
-        store.Service
-            .Setup(service => service.AlterTypePartsOrderAsync(article, It.IsAny<string[]>()))
-            .Callback((ContentTypeDefinition _, string[] names) => ordered = names)
-            .Returns(Task.CompletedTask);
-        var services = store.BuildServices();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ReorderContentTypeElementsTool(), services, new()
-        {
-            ["contentType"] = "Article",
-            ["names"] = new[] { "htmlbodypart", "TitlePart", "AutoroutePart" },
-        });
-
-        // Assert
-        Assert.True(AgentToolTestContext.ReadJson(result).GetProperty("reordered").GetBoolean());
-        Assert.Equal(new[] { "HtmlBodyPart", "TitlePart", "AutoroutePart" }, ordered);
-    }
-
-    [Theory]
-    [InlineData("TitlePart")]
-    [InlineData("TitlePart,TitlePart")]
-    [InlineData("TitlePart,AutoroutePart,Nope")]
-    public async Task ReorderContentTypeElements_WhenTheListDoesNotNameEveryPartOnce_ChangesNothing(string names)
-    {
-        // Arrange
-        var store = new ContentDefinitionTestStore();
-        store.AddType("Article", type => type.WithPart("TitlePart").WithPart("AutoroutePart"));
-        var services = store.BuildServices();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ReorderContentTypeElementsTool(), services, new()
-        {
-            ["contentType"] = "Article",
-            ["names"] = names.Split(','),
-        });
-
-        // Assert
-        Assert.StartsWith("Nothing was changed", result, StringComparison.Ordinal);
-        Assert.Contains("TitlePart, AutoroutePart", result, StringComparison.Ordinal);
-        store.Service.Verify(service => service.AlterTypePartsOrderAsync(It.IsAny<ContentTypeDefinition>(), It.IsAny<string[]>()), Times.Never);
     }
 }

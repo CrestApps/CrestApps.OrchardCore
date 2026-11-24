@@ -33,7 +33,7 @@ internal sealed class ListCertificatesTool : SkillsAIToolBase
         },
         "certificationId": {
           "type": "string",
-          "description": "Only certificates of this certification type, from listCertificationTypes."
+          "description": "Only certificates of this certification type, from listSkills with kind certificationType."
         },
         "status": {
           "type": "string",

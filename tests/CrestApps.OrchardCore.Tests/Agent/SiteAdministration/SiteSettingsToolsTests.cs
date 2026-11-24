@@ -180,4 +180,29 @@ public sealed class SiteSettingsToolsTests
         Assert.Equal(CrestApps.OrchardCore.AI.Core.AIToolCallerAuthorization.NotAllowedMessage, result);
         Assert.Equal(0, harness.SiteSaves);
     }
+
+    [Theory]
+    [InlineData("Https")]
+    [InlineData("userRegistration")]
+    [InlineData("userLogin")]
+    [InlineData("reverseproxy")]
+    public async Task UpdateSiteSettings_ForASettingsPageThatCanLockPeopleOut_SavesNothing(string groupId)
+    {
+        // Arrange
+        var harness = new SiteAdministrationToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new UpdateSiteSettingsTool(), services, new()
+        {
+            ["groupId"] = groupId,
+            ["changes"] = JsonNode.Parse($$"""{ "{{Section}}": { "ShowBanner": true } }"""),
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: the '", result, StringComparison.Ordinal);
+        Assert.Contains("are not changed from the chat", result, StringComparison.Ordinal);
+        Assert.Equal(0, harness.SiteSaves);
+    }
 }

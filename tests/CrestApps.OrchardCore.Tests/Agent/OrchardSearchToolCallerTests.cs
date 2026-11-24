@@ -25,12 +25,8 @@ public sealed class OrchardSearchToolCallerTests
         RebuildIndexProfileTool.TheName,
         DeleteIndexProfileTool.TheName,
         SearchIndexTool.TheName,
-        RunSearchQueryTool.TheName,
         ListQueriesTool.TheName,
-        SaveQueryTool.TheName,
-        DeleteQueryTool.TheName,
         RunQueryTool.TheName,
-        RunSqlQueryTool.TheName,
     ];
 
     [Theory]
@@ -62,10 +58,7 @@ public sealed class OrchardSearchToolCallerTests
     [InlineData(RebuildIndexProfileTool.TheName, "ManageIndexes")]
     [InlineData(DeleteIndexProfileTool.TheName, "ManageIndexes")]
     [InlineData(ListQueriesTool.TheName, "ManageQueries")]
-    [InlineData(SaveQueryTool.TheName, "ManageQueries")]
-    [InlineData(DeleteQueryTool.TheName, "ManageQueries")]
     [InlineData(RunQueryTool.TheName, "ExecuteApi_RecentPosts")]
-    [InlineData(RunSqlQueryTool.TheName, "ManageSqlQueries")]
     public async Task InvokeAsync_WhenTheCallerLacksThePermissionOfTheAdminAction_RefusesAndChangesNothing(string toolName, string permission)
     {
         // Arrange
@@ -113,53 +106,6 @@ public sealed class OrchardSearchToolCallerTests
         // As on the search page, the permission is checked on the index profile, so the permission of one index is
         // enough to search it.
         Assert.Same(harness.Blog, check.Resource);
-        harness.VerifyNothingChangedOrRan();
-    }
-
-    [Fact]
-    public async Task RunSearchQuery_WhenTheCallerHoldsNoRunQueryPermission_RefusesBeforeLookingUpTheIndex()
-    {
-        // Arrange
-        var harness = CreateHarness();
-
-        harness.Authorize = (_, _) => false;
-
-        using var services = harness.Build();
-
-        var (tool, arguments) = CreateTool(RunSearchQueryTool.TheName);
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(tool, services, arguments);
-
-        // Assert
-        var checks = services.GetRequiredService<FakeAuthorizationService>().Checks;
-
-        Assert.Equal(AIToolCallerAuthorization.NotAllowedMessage, result);
-        Assert.Equal(new[] { "ManageLuceneIndexes", "ManageElasticIndexes" }, checks.Select(check => check.Permission));
-        Assert.All(checks, check => Assert.Null(check.Resource));
-        harness.VerifyNothingChangedOrRan();
-    }
-
-    [Fact]
-    public async Task RunSearchQuery_WhenTheCallerHoldsThePermissionOfAnotherProvider_RefusesAndRunsNothing()
-    {
-        // Arrange
-        var harness = CreateHarness();
-
-        // The caller may run Lucene queries, and asks for an Elasticsearch index.
-        harness.Authorize = (permission, _) => permission.Name == "ManageLuceneIndexes";
-
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new RunSearchQueryTool(), services, new()
-        {
-            ["index"] = "products",
-            ["query"] = """{ "query": { "match_all": {} } }""",
-        });
-
-        // Assert
-        Assert.Equal(AIToolCallerAuthorization.NotAllowedMessage, result);
         harness.VerifyNothingChangedOrRan();
     }
 
@@ -232,12 +178,8 @@ public sealed class OrchardSearchToolCallerTests
             RebuildIndexProfileTool.TheName => (new RebuildIndexProfileTool(), new() { ["indexes"] = new[] { "blog" } }),
             DeleteIndexProfileTool.TheName => (new DeleteIndexProfileTool(), new() { ["indexes"] = new[] { "blog" } }),
             SearchIndexTool.TheName => (new SearchIndexTool(), new() { ["terms"] = "orchard" }),
-            RunSearchQueryTool.TheName => (new RunSearchQueryTool(), new() { ["index"] = "blog", ["query"] = """{ "query": { "match_all": {} } }""" }),
             ListQueriesTool.TheName => (new ListQueriesTool(), []),
-            SaveQueryTool.TheName => (new SaveQueryTool(), new() { ["name"] = "RecentPosts", ["template"] = """{ "query": { "match_all": {} }, "size": 5 }""" }),
-            DeleteQueryTool.TheName => (new DeleteQueryTool(), new() { ["names"] = new[] { "RecentPosts" } }),
             RunQueryTool.TheName => (new RunQueryTool(), new() { ["name"] = "RecentPosts" }),
-            RunSqlQueryTool.TheName => (new RunSqlQueryTool(), new() { ["query"] = "SELECT * FROM ContentItemIndex LIMIT 5" }),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, "The tool has no test arguments."),
         };
     }

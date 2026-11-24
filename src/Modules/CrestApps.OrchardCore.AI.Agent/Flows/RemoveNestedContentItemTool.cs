@@ -31,7 +31,7 @@ public sealed class RemoveNestedContentItemTool : AIFunction
         },
         "nestedContentItemId": {
           "type": "string",
-          "description": "The ID of the nested item to delete, from listNestedContentItems."
+          "description": "The ID of the nested item to delete, from getContentItem with include nested."
         },
         "isDraft": {
           "type": "boolean",
@@ -105,7 +105,7 @@ public sealed class RemoveNestedContentItemTool : AIFunction
 
         if (entry is null)
         {
-            return $"Nothing was removed: content item '{contentItemId}' has no nested item with the ID '{nestedContentItemId}'. Use listNestedContentItems to get the IDs.";
+            return $"Nothing was removed: content item '{contentItemId}' has no nested item with the ID '{nestedContentItemId}'. Use getContentItem with include nested to get the IDs.";
         }
 
         var nestedType = NestedContentItemTree.GetString(entry.Item, nameof(ContentItem.ContentType));

@@ -88,7 +88,7 @@ public sealed class RunWorkflowTypeTool : AIFunction
 
         if (!workflowType.IsEnabled)
         {
-            return $"Nothing was run: the workflow '{workflowType.Name}' is disabled. Enable it with enableWorkflowType to run it.";
+            return $"Nothing was run: the workflow '{workflowType.Name}' is disabled. Enable it with setWorkflowTypeEnabled to run it.";
         }
 
         var starts = workflowType.Activities.Where(activity => activity.IsStart).ToList();

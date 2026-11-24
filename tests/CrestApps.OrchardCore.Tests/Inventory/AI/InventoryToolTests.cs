@@ -46,7 +46,6 @@ public sealed class InventoryToolTests : IAsyncLifetime
         { AdjustStockTool.TheName, InventoryPermissions.ManageInventory.Name },
         { TransferStockTool.TheName, InventoryPermissions.ManageInventory.Name },
         { ImportStockCountsTool.TheName, InventoryPermissions.ManageInventory.Name },
-        { RebuildStockItemTool.TheName, InventoryPermissions.ManageInventory.Name },
         { SyncInventoryTool.TheName, InventoryPermissions.ManageInventory.Name },
         { ListStockLocationsTool.TheName, InventoryPermissions.ViewInventory.Name },
         { SaveStockLocationTool.TheName, InventoryPermissions.ManageInventory.Name },
@@ -239,18 +238,6 @@ public sealed class InventoryToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RebuildStockItem_RecountsFromTheHistory()
-    {
-        // Act
-        var json = AgentToolTestContext.ReadJson(await InvokeAsync(RebuildStockItemTool.TheName, Build(), new() { ["stockItemId"] = "mug" }));
-        var missing = await InvokeAsync(RebuildStockItemTool.TheName, Build(), new() { ["stockItemId"] = "nothing" });
-
-        // Assert
-        Assert.Equal(20, json.GetProperty("item").GetProperty("onHand").GetInt32());
-        Assert.StartsWith("Nothing was done: no stock item has the id 'nothing'", missing, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public async Task AStockChangeThatLosesARace_IsBusy_AndLaterChangesInTheMessageAreRefused()
     {
         // Arrange: two units of work change the same stock item; the second to commit loses.
@@ -351,7 +338,7 @@ public sealed class InventoryToolTests : IAsyncLifetime
     private static Dictionary<string, object> Arguments(string toolName)
         => toolName switch
         {
-            GetStockItemTool.TheName or RebuildStockItemTool.TheName => new() { ["stockItemId"] = "mug" },
+            GetStockItemTool.TheName => new() { ["stockItemId"] = "mug" },
             AdjustStockTool.TheName => new() { ["stockItemId"] = "mug", ["kind"] = "receive", ["quantity"] = 5, ["reason"] = "Delivery" },
             TransferStockTool.TheName => new() { ["stockItemId"] = "mug", ["fromLocationId"] = "default", ["toLocationId"] = Shop, ["quantity"] = 1 },
             ImportStockCountsTool.TheName => new() { ["rows"] = Rows("""[{ "sku": "MUG-BLUE", "count": 1 }]"""), ["reason"] = "Count" },
@@ -414,7 +401,6 @@ public sealed class InventoryToolTests : IAsyncLifetime
             AdjustStockTool.TheName => new AdjustStockTool(),
             TransferStockTool.TheName => new TransferStockTool(),
             ImportStockCountsTool.TheName => new ImportStockCountsTool(),
-            RebuildStockItemTool.TheName => new RebuildStockItemTool(),
             SyncInventoryTool.TheName => new SyncInventoryTool(),
             ListStockLocationsTool.TheName => new ListStockLocationsTool(),
             SaveStockLocationTool.TheName => new SaveStockLocationTool(),

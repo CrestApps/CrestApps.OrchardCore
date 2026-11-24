@@ -1,16 +1,16 @@
-using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
-using CrestApps.OrchardCore.Commerce.Api;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
-using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Orders.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
-using YesSql;
+using OrchardCore.Modules;
 using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Orders.AI;
@@ -24,14 +24,18 @@ namespace CrestApps.OrchardCore.Orders.AI;
 /// errors as they are, which explain partial, pending and by-hand refunds.
 /// </summary>
 /// <remarks>
-/// Stricter than the page, as the owner asked: the amount and its currency are always given, the currency must be the
-/// order's and the amount must fit its decimal places; refunding everything still refundable needs <c>refundAll</c> with
-/// that amount; and every call carries an idempotency key, kept for a day per site and caller
-/// (<see cref="IdempotentOperation"/>), so a repeated call with the same key is refused instead of refunding twice. A
-/// refund that moved money is committed before the answer, and its key is kept even when the commit fails, because the
-/// provider may already have given the money back.
+/// Stricter than the page, as the owner asked (F23): the amount and its currency are always given, the currency must be
+/// the order's and the amount must fit its decimal places; refunding everything still refundable needs <c>refundAll</c>
+/// with that amount (the rules of <see cref="OrderRefundAIToolBase.ReadRefundAsync"/>, which <c>previewRefund</c> shares);
+/// every call carries the token <c>previewRefund</c> issued for the same caller and the same refund, taken once and only
+/// before it expires (<see cref="AIActionPreviewTokens"/>); and every call carries an idempotency key, kept for a day per
+/// site and caller (<see cref="IdempotentOperation"/>), so a repeated call with the same key is refused instead of
+/// refunding twice. The token is taken inside the idempotent operation, so a retry with the same key gets the first
+/// answer back without a new token, and a refused token keeps the key free. A refund that moved money is committed
+/// before the answer. Every call that ran keeps its key, even one the service refused or one that failed with an error or
+/// at the commit, because the provider may already have given the money back.
 /// </remarks>
-internal sealed class RefundOrderTool : OrdersAIToolBase
+internal sealed class RefundOrderTool : OrderRefundAIToolBase
 {
     /// <summary>
     /// The name of the tool.
@@ -79,12 +83,20 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
           "type": "boolean",
           "description": "Give the amount as store credit for the buyer instead of back to how they paid (only when getOrder says canRefundAsStoreCredit)."
         },
+        "previewToken": {
+          "type": "string",
+          "description": "The previewToken previewRefund returned for this same order, amount, currency and options. It works once and expires 10 minutes after the preview; call previewRefund again for a new one."
+        },
         "idempotencyKey": {
           "type": "string",
           "description": "A new unique key for this refund, up to 128 characters, such as refund-1042-damaged-box. A second call with the same key is refused, so a retry never refunds twice."
+        },
+        "returnId": {
+          "type": "string",
+          "description": "The id of an approved or received return of this order, from listOrderReturns, when the money is given back for that return: the refund then closes the return and emails the buyer. It cannot be combined with restock (receiveOrderReturn puts returned items back) or asStoreCredit."
         }
       },
-      "required": ["amount", "currency", "idempotencyKey"],
+      "required": ["amount", "currency", "previewToken", "idempotencyKey"],
       "additionalProperties": false
     }
     """);
@@ -93,7 +105,7 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Gives money back for an order: a stated amount and currency, or everything still refundable with refundAll, newest payment first through the payment provider, optionally putting the items back into stock or giving the amount as store credit instead. Every call needs a new idempotency key; a repeated key is refused. A refund cannot be undone; a payment method that cannot refund automatically is recorded for settling by hand.";
+    public override string Description => "Gives money back for an order: a stated amount and currency, or everything still refundable with refundAll, newest payment first through the payment provider, optionally putting the items back into stock or giving the amount as store credit instead. Call previewRefund first and show its result to the user: this tool needs the previewToken it returns, for the same order, amount, currency and options, and a new idempotency key; a used or expired token and a repeated key are refused. A refund cannot be undone; a payment method that cannot refund automatically is recorded for settling by hand. For a buyer's return, give its returnId: the refund then closes the return and emails the buyer.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -115,49 +127,18 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
             return $"Nothing was refunded: give a new idempotencyKey of up to {MaxKeyLength} characters for this refund.";
         }
 
-        if (!TryReadDecimal(arguments, "amount", out var amount) || amount is not > 0m)
+        var (request, refusal) = await ReadRefundAsync(services, arguments, order, "Nothing was refunded", cancellationToken);
+
+        if (request is null)
         {
-            return "Nothing was refunded: give the amount to give back, more than zero.";
+            return refusal;
         }
 
-        var currency = ReadString(arguments, "currency");
+        var previewToken = ReadString(arguments, "previewToken");
 
-        if (!string.Equals(currency, order.Currency, StringComparison.OrdinalIgnoreCase))
+        if (previewToken is null)
         {
-            return $"Nothing was refunded: order {order.OrderNumber} was paid in {order.Currency}; give the amount in {order.Currency}.";
-        }
-
-        if (Money.Round(amount.Value, order.Currency) != amount.Value)
-        {
-            return $"Nothing was refunded: {amount.Value.ToString(CultureInfo.InvariantCulture)} has more decimal places than {order.Currency} allows.";
-        }
-
-        var refundAll = ReadBool(arguments, "refundAll") == true;
-        var asStoreCredit = ReadBool(arguments, "asStoreCredit") == true;
-        var restock = ReadBool(arguments, "restock") == true;
-        var operations = services.GetRequiredService<IOrderOperationsService>();
-        var money = await operations.GetMoneyAsync(order, cancellationToken);
-
-        if (money.Refundable <= 0m)
-        {
-            return $"Nothing was refunded: nothing paid for order {order.OrderNumber} can be refunded.";
-        }
-
-        if (refundAll && amount.Value != money.Refundable)
-        {
-            return $"Nothing was refunded: everything still refundable for order {order.OrderNumber} is {Format(money.Refundable, order.Currency)}. Give that amount with refundAll, or a smaller amount without it.";
-        }
-
-        if (!refundAll && amount.Value >= money.Refundable)
-        {
-            return amount.Value == money.Refundable
-                ? $"Nothing was refunded: {Format(amount.Value, order.Currency)} is everything still refundable for order {order.OrderNumber}. Set refundAll to true to give it all back."
-                : $"Nothing was refunded: only {Format(money.Refundable, order.Currency)} can still be refunded for order {order.OrderNumber}.";
-        }
-
-        if (asStoreCredit && !money.CanRefundAsStoreCredit)
-        {
-            return "Nothing was refunded: this order's refund can't be given as store credit. The buyer needs an account and the Store credit feature must be on.";
+            return "Nothing was refunded: call previewRefund first with the same order, amount, currency and options, show its result to the user, and pass the previewToken it returns. A token works once and expires 10 minutes after the preview.";
         }
 
         var cache = services.GetService<IDistributedCache>();
@@ -174,12 +155,44 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
         }
 
         var reason = ReadString(arguments, "reason");
+        var amount = request.Amount;
+        var asStoreCredit = request.AsStoreCredit;
+        var operations = services.GetRequiredService<IOrderOperationsService>();
         var scope = $"{services.GetService<ShellSettings>()?.Name}|ai-tool:{TheName}|{caller.FindFirstValue(ClaimTypes.NameIdentifier) ?? caller.Identity?.Name}";
-        var fingerprint = string.Join('|', order.ItemId, amount.Value.ToString(CultureInfo.InvariantCulture), order.Currency, refundAll, asStoreCredit, restock);
 
-        var outcome = await IdempotentOperation.RunAsync(cache, locks, scope, key, fingerprint, _keyLifetime, async token =>
+        var outcome = await IdempotentOperation.RunAsync(cache, locks, scope, key, request.RequestFingerprint, _keyLifetime, async token =>
         {
-            var result = await operations.RefundAsync(order, amount.Value, reason, restock, GetActor(caller), asStoreCredit, token);
+            // The preview's token is taken only when the refund runs: a retry with the same key is answered without it,
+            // and a refused token is not kept, so the key stays free for a call with a valid token.
+            var utcNow = services.GetRequiredService<IClock>().UtcNow;
+            var taken = await AIActionPreviewTokens.TakeAsync(cache, locks, PreviewPurpose, GetPreviewScope(services, caller), previewToken, request.Fingerprint, utcNow, token);
+
+            if (taken != AIActionPreviewTokenResult.Taken)
+            {
+                return new IdempotentOperationAnswer(DescribeRefusedToken(taken, order), Keep: false);
+            }
+
+            if (request.Return is not null)
+            {
+                return await RefundReturnAsync(services, request.ReturnService, order, request.Return, amount, GetActor(caller), token);
+            }
+
+            OrderOperationResult result;
+
+            try
+            {
+                result = await operations.RefundAsync(order, amount, reason, request.Restock, GetActor(caller), asStoreCredit, token);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                // Part of the refund may have reached the provider; the key is used up so a retry can't refund twice.
+                await services.GetRequiredService<YesSqlSession>().CancelAsync();
+                CloseSession(services);
+
+                return new IdempotentOperationAnswer(
+                    $"The refund of order {order.OrderNumber} stopped with an error, and whether money was given back is unknown. Do not retry with this or another key; check the order's page and the Refunds page.",
+                    Keep: true);
+            }
             var movedMoney = result.Refunded > 0m || result.Messages.Count > 0;
             var saved = true;
 
@@ -192,7 +205,7 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
             {
                 orderId = order.ItemId,
                 number = order.OrderNumber,
-                asked = amount.Value,
+                asked = amount,
                 refunded = result.Refunded,
                 currency = order.Currency,
                 asStoreCredit,
@@ -205,11 +218,11 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
                         ? $"Refunded {Format(result.Refunded, order.Currency)} on order {order.OrderNumber}."
                         : result.Messages.Count > 0
                             ? "The refund was recorded; read the messages for what happens next."
-                            : "Nothing was refunded; read the errors.",
+                            : "Nothing was refunded; read the errors. This previewToken and idempotency key are used up: to try again, call previewRefund for a new token and use a new key.",
             });
 
-            // An answer is kept, and the key refused from then on, once any money may have moved.
-            return new IdempotentOperationAnswer(answer, Keep: movedMoney);
+            // Every answer is kept, so the key is refused from then on, whatever the refund came to.
+            return new IdempotentOperationAnswer(answer, Keep: true);
         }, cancellationToken);
 
         return outcome.Outcome switch
@@ -221,8 +234,83 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
         };
     }
 
-    // Commits the refund's record at once. When the order changed at the same moment, the record is not saved, though the
-    // provider may have refunded.
+    private static string DescribeRefusedToken(AIActionPreviewTokenResult result, Order order)
+        => result switch
+        {
+            AIActionPreviewTokenResult.Mismatch => $"Nothing was refunded: the previewToken was issued for another refund, or the order's refunds or payments changed since the preview. Call previewRefund again for this refund of order {order.OrderNumber}, show the result to the user, and use the new token.",
+            AIActionPreviewTokenResult.Expired => $"Nothing was refunded: the previewToken expired. Call previewRefund again for order {order.OrderNumber}, show the result to the user, and use the new token.",
+            AIActionPreviewTokenResult.Busy => "Nothing was refunded: another refund is using the same previewToken at this moment. Read the order again with getOrder in your next message.",
+            _ => $"Nothing was refunded: the previewToken is not one previewRefund issued to you, or it was already used or has expired. Call previewRefund again for order {order.OrderNumber}, show the result to the user, and use the new token.",
+        };
+
+    // Refunds a return as the Returns page does (OrderReturnService.RefundAsync: refund the order, close the return,
+    // email the buyer). The service closes the return even when the payment method records the refund for settling by
+    // hand, so the answer gives what the return's refunded amount grew by, never that the money was paid back.
+    private static async Task<IdempotentOperationAnswer> RefundReturnAsync(
+        IServiceProvider services,
+        OrderReturnService returnService,
+        Order order,
+        OrderReturn orderReturn,
+        decimal amount,
+        string actor,
+        CancellationToken cancellationToken)
+    {
+        var before = orderReturn.RefundedAmount;
+        IReadOnlyList<string> problems;
+
+        try
+        {
+            problems = await returnService.RefundAsync(orderReturn, amount, actor, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await services.GetRequiredService<YesSqlSession>().CancelAsync();
+            CloseSession(services);
+
+            return new IdempotentOperationAnswer(
+                $"The refund of return {orderReturn.Number} stopped with an error, and whether money was given back is unknown. Do not retry with this or another key; check the return's page and the Refunds page.",
+                Keep: true);
+        }
+
+        if (problems.Count > 0)
+        {
+            // As the Returns page: a refused step keeps nothing of it.
+            await services.GetRequiredService<YesSqlSession>().CancelAsync();
+            CloseSession(services);
+
+            return new IdempotentOperationAnswer(Json(new
+            {
+                orderId = order.ItemId,
+                number = order.OrderNumber,
+                returnId = orderReturn.ItemId,
+                returnNumber = orderReturn.Number,
+                errors = problems,
+                message = "The return was not refunded or closed; read the errors. Check the Refunds page before trying again, with a new previewToken from previewRefund and a new key.",
+            }), Keep: true);
+        }
+
+        var saved = await SaveAsync(services, cancellationToken);
+        var recorded = orderReturn.RefundedAmount - before;
+
+        return new IdempotentOperationAnswer(Json(new
+        {
+            orderId = order.ItemId,
+            number = order.OrderNumber,
+            returnId = orderReturn.ItemId,
+            returnNumber = orderReturn.Number,
+            asked = amount,
+            recordedForReturn = recorded,
+            currency = order.Currency,
+            returnStatus = saved ? ToCamel(orderReturn.Status.ToString()) : null,
+            recordSaved = saved,
+            message = saved
+                ? $"Return {orderReturn.Number} was closed with {Format(recorded, order.Currency)} recorded as refunded; the buyer is emailed when the site's email is set up. Read the order with getOrder, or the Refunds page, to see whether the payment method paid it back or it waits to be settled by hand."
+                : $"The payment provider may already have given money back for return {orderReturn.Number}, but the record was not saved because the order or return changed at the same moment. Do not retry; check the return's page and the Refunds page.",
+        }), Keep: true);
+    }
+
+    // Commits the refund's record at once. When the commit fails, such as when the order changed at the same moment,
+    // the record is not saved, though the provider may have refunded.
     private static async Task<bool> SaveAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var session = services.GetRequiredService<YesSqlSession>();
@@ -233,16 +321,20 @@ internal sealed class RefundOrderTool : OrdersAIToolBase
 
             return true;
         }
-        catch (ConcurrencyException)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             await session.CancelAsync();
-
-            if (services.GetService<OrdersToolScope>() is { } scope)
-            {
-                scope.SessionClosed = true;
-            }
+            CloseSession(services);
 
             return false;
+        }
+    }
+
+    private static void CloseSession(IServiceProvider services)
+    {
+        if (services.GetService<OrdersToolScope>() is { } scope)
+        {
+            scope.SessionClosed = true;
         }
     }
 }

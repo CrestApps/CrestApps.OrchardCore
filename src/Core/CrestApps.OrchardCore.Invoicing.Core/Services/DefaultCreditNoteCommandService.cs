@@ -164,7 +164,7 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
                 continue;
             }
 
-            creditNote.Lines.Add(CreditLine(line, left, invoice.Currency));
+            creditNote.Lines.Add(CreditNoteLines.ForLine(line, left, invoice.Currency));
         }
 
         await InvoiceCalculation.ApplyAsync(_calculator, creditNote, await GetSettingsAsync(), invoice.IssueDate, cancellationToken);
@@ -248,18 +248,19 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
         var total = creditNote.Totals.Total;
         var currency = creditNote.Currency;
         var transaction = string.IsNullOrEmpty(invoice.TransactionId) ? null : await _transactions.FindByIdAsync(invoice.TransactionId, cancellationToken);
+        var limit = CreditNoteRules.GetDispositionLimit(creditNote.Disposition, transaction);
 
         // Decided before anything is numbered or moved, so a credit note that can't go through takes no number.
         switch (creditNote.Disposition)
         {
-            case CreditNoteDisposition.ReduceBalance when transaction is null || transaction.OutstandingAmount < total:
-                return result.Fail(S["Only {0} is still owed on this invoice, so the credit note can't lower the balance by {1}. Refund it or keep it as the customer's credit instead.", Money(transaction?.OutstandingAmount ?? 0m, currency), Money(total, currency)]);
+            case CreditNoteDisposition.ReduceBalance when limit < total:
+                return result.Fail(S["Only {0} is still owed on this invoice, so the credit note can't lower the balance by {1}. Refund it or keep it as the customer's credit instead.", Money(limit.Value, currency), Money(total, currency)]);
 
-            case CreditNoteDisposition.Refund when transaction is null || transaction.AmountPaid - transaction.AmountRefunded < total:
-                return result.Fail(S["Only {0} was paid on this invoice, so {1} can't be refunded.", Money(Math.Max(0m, (transaction?.AmountPaid ?? 0m) - (transaction?.AmountRefunded ?? 0m)), currency), Money(total, currency)]);
+            case CreditNoteDisposition.Refund when limit < total:
+                return result.Fail(S["Only {0} was paid on this invoice, so {1} can't be refunded.", Money(limit.Value, currency), Money(total, currency)]);
 
-            case CreditNoteDisposition.RefundedElsewhere when transaction is null || transaction.AmountPaid < total:
-                return result.Fail(S["Only {0} was paid on this invoice, so a refund of {1} made elsewhere can't be recorded against it.", Money(transaction?.AmountPaid ?? 0m, currency), Money(total, currency)]);
+            case CreditNoteDisposition.RefundedElsewhere when limit < total:
+                return result.Fail(S["Only {0} was paid on this invoice, so a refund of {1} made elsewhere can't be recorded against it.", Money(limit.Value, currency), Money(total, currency)]);
 
             case CreditNoteDisposition.CustomerCredit when _serviceProvider.GetService<ICustomerCreditService>() is not { } credit || !credit.CanHold(invoice.BillTo?.Party ?? default):
                 return result.Fail(S["The customer can't hold credit (the Store Credit feature is off, or the invoice is billed to someone without an account). Choose another way to credit it."]);
@@ -412,39 +413,6 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
 
                 return true;
         }
-    }
-
-    // A line still creditable in full is copied as it is; one partly credited already is credited by what is left, as a
-    // single amount, which staff can change on the draft.
-    private static DocumentLine CreditLine(DocumentLine line, decimal left, string currency)
-    {
-        // Part of the line is left to credit: that part of its net, at its own taxes.
-        if (left < line.Total && line.Total > 0m)
-        {
-            return CreditNoteLines.ForPartOf(line, line.Net * left / line.Total, currency);
-        }
-
-        return new DocumentLine
-        {
-            Id = IdGenerator.GenerateId(),
-            Kind = line.Kind,
-            ProductId = line.ProductId,
-            Sku = line.Sku,
-            Name = line.Name,
-            Description = line.Description,
-            Quantity = line.Quantity,
-            Unit = line.Unit,
-            UnitPrice = line.UnitPrice,
-            DiscountPercent = line.DiscountPercent,
-            DiscountAmount = line.DiscountAmount,
-            TaxCategoryCode = line.TaxCategoryCode,
-            Taxes = [.. line.Taxes],
-            TaxTreatment = line.TaxTreatment,
-            TaxTreatmentReason = line.TaxTreatmentReason,
-            ServiceStart = line.ServiceStart,
-            ServiceEnd = line.ServiceEnd,
-            CreditedLineId = line.Id,
-        };
     }
 
     private async Task<CreditNoteDisposition> GetDefaultDispositionAsync(Invoice invoice, CancellationToken cancellationToken)

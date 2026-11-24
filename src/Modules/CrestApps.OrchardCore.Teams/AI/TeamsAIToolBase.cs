@@ -4,7 +4,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CrestApps.Core.Security;
-using CrestApps.OrchardCore.Teams.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -85,28 +84,6 @@ internal abstract class TeamsAIToolBase : AIFunction
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The tool's result.</returns>
     protected abstract Task<object> InvokeAsync(AIFunctionArguments arguments, IServiceProvider services, ClaimsPrincipal caller, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Describes a team from an explicit list of its fields; the settings other modules keep on it are left out.
-    /// </summary>
-    /// <param name="team">The team.</param>
-    /// <param name="names">The names of the teams by id, to name the parent.</param>
-    /// <param name="depth">The team's depth in the tree, or <see langword="null"/>.</param>
-    /// <returns>The description.</returns>
-    protected static object Describe(Team team, IReadOnlyDictionary<string, string> names, int? depth = null)
-        => new
-        {
-            id = team.ItemId,
-            name = team.Name,
-            kind = team.Kind.ToString(),
-            depth,
-            parentId = team.ParentId,
-            parentName = team.ParentId is not null && names is not null && names.TryGetValue(team.ParentId, out var parentName) ? parentName : null,
-            description = team.Description,
-            linkedRoleName = team.LinkedRoleName,
-            timeZoneId = team.TimeZoneId,
-            enabled = team.Enabled,
-        };
 
     /// <summary>
     /// Writes a result as JSON.

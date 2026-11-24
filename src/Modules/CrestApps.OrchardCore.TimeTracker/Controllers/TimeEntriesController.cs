@@ -1,5 +1,4 @@
 using System.Globalization;
-using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
@@ -64,28 +63,16 @@ public sealed class TimeEntriesController : Controller
 
         var zone = await _timeZone.GetAsync();
         var stages = (await _stages.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(stage => stage.ItemId, StringComparer.Ordinal);
-        var query = _session.Query<TimeEntry, TimeEntryIndex>(collection: TimeTrackerConstants.CollectionName);
-
-        if (!string.IsNullOrWhiteSpace(form.Q))
-        {
-            var q = form.Q.Trim();
-
-            query = query.Where(index => index.UserName.Contains(q));
-        }
-
-        if (!string.IsNullOrEmpty(form.StageId))
-        {
-            query = query.Where(index => index.StageId == form.StageId);
-        }
+        DateTime? from = null;
+        DateTime? to = null;
 
         if (DateTime.TryParseExact(form.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
         {
-            var from = TimeTrackerTimeZone.ToUtc(day, zone);
-            var to = TimeTrackerTimeZone.ToUtc(day.AddDays(1), zone);
-
-            query = query.Where(index => index.StartUtc < to && index.EndUtc > from);
+            from = TimeTrackerTimeZone.ToUtc(day, zone);
+            to = TimeTrackerTimeZone.ToUtc(day.AddDays(1), zone);
         }
 
+        var query = TimeEntryListQuery.Build(_session, form.Q, form.StageId, from, to);
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var count = await query.CountAsync(HttpContext.RequestAborted);
         var page = await query.OrderByDescending(index => index.StartUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync(HttpContext.RequestAborted);

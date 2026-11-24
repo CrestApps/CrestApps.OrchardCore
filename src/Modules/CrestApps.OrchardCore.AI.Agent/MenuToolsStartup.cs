@@ -34,7 +34,7 @@ public sealed class MenuToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveMenuItemTool>(SaveMenuItemTool.TheName)
             .WithTitle(S["Save Menu Item"])
-            .WithDescription(S["Adds an item to a menu, updates an existing item, or moves it under another parent or to another position, leaving the other items untouched. Supports link, content and HTML menu items; the change is saved as a draft of the menu unless told to publish."])
+            .WithDescription(S["Adds an item to a menu, updates an existing item, or moves it under another parent or after another item, leaving the other items untouched. Supports link, content and HTML menu items; the change is saved as a draft of the menu unless told to publish."])
             .WithCategory(S["Content Management"])
             .Selectable();
 

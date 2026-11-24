@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, mark and remove the notifications of the signed-in caller, when the Notifications
+/// Registers the tools that list and mark the notifications of the signed-in caller, when the Notifications
 /// feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Notifications)]
@@ -37,13 +37,6 @@ public sealed class NotificationsToolsStartup : StartupBase
             .WithTitle(S["Mark Notifications"])
             .WithDescription(S["Marks the calling user's notifications as read or unread, either the given ids or all of them."])
             .WithCategory(S["Communications"])
-            .Selectable();
-
-        services.AddCoreAITool<DeleteNotificationsTool>(DeleteNotificationsTool.TheName)
-            .WithTitle(S["Delete Notifications"])
-            .WithDescription(S["Permanently removes the given notifications of the calling user."])
-            .WithCategory(S["Communications"])
-            .RequireApproval()
             .Selectable();
     }
 }

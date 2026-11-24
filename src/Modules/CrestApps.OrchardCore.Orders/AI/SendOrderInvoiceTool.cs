@@ -8,9 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CrestApps.OrchardCore.Orders.AI;
 
 /// <summary>
-/// Emails the buyer the invoice of an order the store put together, or the quote, with the link to review and pay it,
-/// as the order page's Send invoice button does (<see cref="DraftOrderService.SendInvoiceAsync"/>). Sending again is
-/// allowed while it is unpaid. It sends an email, so it asks for approval.
+/// Sends the buyer the invoice of an order the store put together, or the quote, with the link to review and pay it, as
+/// the order page's Send invoice button does (<see cref="DraftOrderService.SendAsync"/>): as an invoicing module's document
+/// when one sends it, otherwise as the order's own e-mail. Sending again is allowed while it is unpaid. It sends an email,
+/// so it asks for approval.
 /// </summary>
 internal sealed class SendOrderInvoiceTool : OrdersAIToolBase
 {
@@ -72,9 +73,13 @@ internal sealed class SendOrderInvoiceTool : OrdersAIToolBase
             return earlierError;
         }
 
-        if (!await services.GetRequiredService<DraftOrderService>().SendInvoiceAsync(order, GetActor(caller), cancellationToken))
+        // Sent as the order page's Send button sends it: as another module's document when one sends it (an invoicing
+        // module's invoice or estimate), otherwise as the order's own e-mail with its pay link.
+        var sent = await services.GetRequiredService<DraftOrderService>().SendAsync(order, GetActor(caller), cancellationToken);
+
+        if (!sent.Sent)
         {
-            return "The invoice couldn't be emailed. Check the email settings and the site's base URL.";
+            return "Nothing was sent: " + (sent.Errors.Count > 0 ? string.Join(" ", sent.Errors) : "the invoice couldn't be emailed. Check the email settings and the site's base URL.");
         }
 
         var kind = order.Quote is null ? "invoice" : "quote";
@@ -91,7 +96,8 @@ internal sealed class SendOrderInvoiceTool : OrdersAIToolBase
             sent = kind,
             sentTo = order.CustomerEmail,
             payBy = order.Invoice.DueUtc?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
-            message = order.Quote is null ? $"Invoice emailed to {order.CustomerEmail}." : $"Quote emailed to {order.CustomerEmail}.",
+            document = sent.DocumentNumber,
+            message = sent.Message,
         });
     }
 }

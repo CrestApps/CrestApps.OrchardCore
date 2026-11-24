@@ -47,18 +47,8 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
     {
         return Initialize<SchedulingResourceViewModel>("SchedulingResourceFields_Edit", async model =>
         {
-            model.Name = resource.Name;
-            model.Kind = resource.Kind.ToString();
-            model.UserId = resource.UserId;
-            model.CalendarId = resource.CalendarId;
-
             // A new resource starts in the site's time zone rather than the first one in the list.
-            model.TimeZoneId = resource.TimeZoneId ?? (await _siteService.GetSiteSettingsAsync()).TimeZoneId;
-            model.AvailabilityMode = resource.AvailabilityMode.ToString();
-            model.ShiftCalendarIds = (resource.ShiftCalendarIds ?? []).Append(resource.ShiftCalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
-            model.WorkingHours = SchedulingFormat.WriteHours(resource.WorkingHours);
-            model.DateOverrides = SchedulingFormat.WriteOverrides(resource.DateOverrides);
-            model.Enabled = resource.Enabled;
+            SchedulingResourceEditorRules.Fill(model, resource, resource.TimeZoneId ?? (await _siteService.GetSiteSettingsAsync()).TimeZoneId);
 
             await FillAsync(model);
         }).Location("Content:1");
@@ -70,36 +60,10 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
 
         await context.Updater.TryUpdateModelAsync(posted, Prefix);
 
-        var errors = new List<string>();
-        var hours = SchedulingFormat.ReadHours(posted.WorkingHours, errors);
-        var overrides = SchedulingFormat.ReadOverrides(posted.DateOverrides, errors);
-
-        if (string.IsNullOrWhiteSpace(posted.Name))
+        foreach (var error in SchedulingResourceEditorRules.Apply(resource, posted, S))
         {
-            context.Updater.ModelState.AddModelError(Key(nameof(posted.Name)), S["The name is required."]);
+            context.Updater.ModelState.AddModelError(Key(error.Key), error.Value);
         }
-
-        foreach (var error in errors)
-        {
-            context.Updater.ModelState.AddModelError(Key(nameof(posted.WorkingHours)), S["This line can't be read: {0}", error]);
-        }
-
-        if (!string.IsNullOrWhiteSpace(posted.TimeZoneId) && !CalendarTime.IsValidZone(posted.TimeZoneId))
-        {
-            context.Updater.ModelState.AddModelError(Key(nameof(posted.TimeZoneId)), S["'{0}' is not a time zone.", posted.TimeZoneId]);
-        }
-
-        resource.Name = posted.Name?.Trim();
-        resource.Kind = Enum.TryParse<SchedulingResourceKind>(posted.Kind, out var kind) ? kind : SchedulingResourceKind.Staff;
-        resource.UserId = resource.Kind == SchedulingResourceKind.Staff && !string.IsNullOrWhiteSpace(posted.UserId) ? posted.UserId.Trim() : null;
-        resource.CalendarId = string.IsNullOrWhiteSpace(posted.CalendarId) ? null : posted.CalendarId;
-        resource.TimeZoneId = CalendarTime.NormalizeZoneId(posted.TimeZoneId) ?? resource.TimeZoneId ?? "UTC";
-        resource.AvailabilityMode = Enum.TryParse<SchedulingAvailabilityMode>(posted.AvailabilityMode, out var mode) ? mode : SchedulingAvailabilityMode.WorkingHours;
-        resource.ShiftCalendarIds = (posted.ShiftCalendarIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToList();
-        resource.ShiftCalendarId = null;
-        resource.WorkingHours = hours;
-        resource.DateOverrides = overrides;
-        resource.Enabled = posted.Enabled;
 
         // The form shows what was posted, so a line that can't be read stays as typed.
         return Initialize<SchedulingResourceViewModel>("SchedulingResourceFields_Edit", async model =>

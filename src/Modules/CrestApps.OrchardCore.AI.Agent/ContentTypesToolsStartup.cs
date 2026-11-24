@@ -7,8 +7,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the content definition tools that attach, configure, reorder and remove single parts and fields, when the
-/// Content Types feature is on.
+/// Registers the content definition tools that attach, configure and remove single parts and fields, and the tool that
+/// lists the template names (shape alternates) of a content type, when the Content Types feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.ContentTypes)]
 public sealed class ContentTypesToolsStartup : StartupBase
@@ -53,9 +53,9 @@ public sealed class ContentTypesToolsStartup : StartupBase
             .RequireApproval()
             .Selectable();
 
-        services.AddCoreAITool<ReorderContentTypeElementsTool>(ReorderContentTypeElementsTool.TheName)
-            .WithTitle(S["Reorder Content Type Elements"])
-            .WithDescription(S["Sets the order of the parts on a content type, or of the fields on a part, from an ordered list of names. Use it instead of editing each position."])
+        services.AddCoreAITool<ListShapeAlternatesTool>(ListShapeAlternatesTool.TheName)
+            .WithTitle(S["List Shape Alternates"])
+            .WithDescription(S["Lists the template names Orchard Core looks for when it shows items of a content type in a display type (Detail or Summary): the content item shape and the shapes of each part and field, each with its shape name (for the Templates admin page) and its theme file name. Use it before naming a template, so the name is one Orchard Core actually uses; the last matching name with a template wins."])
             .WithCategory(S["Content Definitions"])
             .Selectable();
     }

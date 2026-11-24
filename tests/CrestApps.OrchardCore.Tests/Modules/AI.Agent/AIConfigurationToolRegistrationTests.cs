@@ -25,13 +25,12 @@ public sealed class AIConfigurationToolRegistrationTests
         { ListAIToolsTool.TheName, false },
         { SaveAIProfileTool.TheName, false },
         { SetAIProfileCapabilitiesTool.TheName, true },
-        { CreateAIProfileFromTemplateTool.TheName, false },
         { DeleteAIProfileTool.TheName, true },
+        { DiagnoseAIProfileTool.TheName, false },
         { ListAIProfileVersionsTool.TheName, false },
         { RestoreAIProfileVersionTool.TheName, true },
         { TestAIProfileTool.TheName, true },
         { ListAIProfileTemplatesTool.TheName, false },
-        { GetAIProfileTemplateTool.TheName, false },
         { SaveAIProfileTemplateTool.TheName, false },
         { DeleteAIProfileTemplateTool.TheName, true },
         { ListAIPersonasTool.TheName, false },
@@ -65,7 +64,7 @@ public sealed class AIConfigurationToolRegistrationTests
     }
 
     [Theory]
-    [InlineData(typeof(AIProfilesToolsStartup), 12, AIConstants.Feature.Area)]
+    [InlineData(typeof(AIProfilesToolsStartup), 11, AIConstants.Feature.Area)]
     [InlineData(typeof(AIPersonasToolsStartup), 3, AIConstants.Feature.Personas)]
     [InlineData(typeof(AIToolInstancesToolsStartup), 3, AIConstants.Feature.ToolInstances)]
     public void EachFeatureStartup_RegistersItsToolsAndRequiresItsFeature(Type startupType, int expectedCount, string featureId)

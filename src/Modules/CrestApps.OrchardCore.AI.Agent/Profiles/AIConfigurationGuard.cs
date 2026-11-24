@@ -483,7 +483,12 @@ internal static class AIConfigurationGuard
         return models;
     }
 
-    private static async Task<string> GetAdminWidgetProfileIdAsync(IServiceProvider services)
+    /// <summary>
+    /// Gets the ID of the profile the admin chat widget uses, from the site settings.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <returns>The profile ID, or <see langword="null"/> when no admin widget profile is set.</returns>
+    internal static async Task<string> GetAdminWidgetProfileIdAsync(IServiceProvider services)
     {
         var siteService = services.GetService<ISiteService>();
 

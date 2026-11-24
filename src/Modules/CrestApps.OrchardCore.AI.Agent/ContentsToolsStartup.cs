@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the content item tools that list items and versions, restore a version, discard a draft and change the
+/// Registers the content item tools that get one item, list items and versions, compare and restore versions, discard a draft and change the
 /// owner, when the Contents feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Contents)]
@@ -27,6 +27,12 @@ public sealed class ContentsToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreAITool<GetContentItemTool>(GetContentItemTool.TheName)
+            .WithTitle(S["Get Content Item"])
+            .WithDescription(S["Gets one content item by its ID or by a URL, path, alias or handle (slug:about-us, alias:main-menu), and returns its ID, type, title and state; a path of / returns the home page. Add include localizations for its translation in each site culture, and nested for the outline of the widgets and items in its Flow, Bag and widget-zone parts."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
+
         services.AddCoreAITool<ListContentItemsTool>(ListContentItemsTool.TheName)
             .WithTitle(S["List Content Items"])
             .WithDescription(S["Lists content items with the same filters as the admin Content Items page: text, content types, stereotype, status (latest, published, draft, owned by me, all versions), sort, culture, and paging. Use it to find items and their IDs; it returns summaries, not full bodies."])
@@ -36,6 +42,12 @@ public sealed class ContentsToolsStartup : StartupBase
         services.AddCoreAITool<ListContentItemVersionsTool>(ListContentItemVersionsTool.TheName)
             .WithTitle(S["List Content Item Versions"])
             .WithDescription(S["Lists the stored versions of one content item (version ID, created/modified/published dates, author, latest and published flags). Use it before restoring a version."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
+
+        services.AddCoreAITool<CompareContentItemVersionsTool>(CompareContentItemVersionsTool.TheName)
+            .WithTitle(S["Compare Content Item Versions"])
+            .WithDescription(S["Shows what changed between two versions of a content item, field by field, with each value before and after; by default the draft against the published version, or the latest version against the one before it. Use it for \"what changed on this page?\" and before restoreContentItemVersion. Needs the right to edit the item."])
             .WithCategory(S["Content Management"])
             .Selectable();
 

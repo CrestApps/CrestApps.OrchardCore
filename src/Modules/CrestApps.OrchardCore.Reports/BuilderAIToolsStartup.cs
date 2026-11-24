@@ -76,16 +76,9 @@ public sealed class BuilderAIToolsStartup : StartupBase
             .RequireApproval()
             .Selectable();
 
-        services.AddCoreAITool<CreateReportShareLinkTool>(CreateReportShareLinkTool.TheName)
-            .WithTitle(S["Create Report Share Link"])
-            .WithDescription(S["Creates a link that opens a designed report for named recipients, with an expiry in days, an optional maximum number of uses, whether export is allowed and a note, and emails it to the recipients. The link itself is never returned: it holds a secret token and reaches the recipients by email only."])
-            .WithCategory(S["Report Builder"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<RevokeReportShareLinkTool>(RevokeReportShareLinkTool.TheName)
-            .WithTitle(S["Revoke Report Share Link"])
-            .WithDescription(S["Revokes one share link of a designed report so it stops working. Use getReport with share links to find the link id."])
+        services.AddCoreAITool<SetReportShareLinkTool>(SetReportShareLinkTool.TheName)
+            .WithTitle(S["Set Report Share Link"])
+            .WithDescription(S["Creates or revokes a link that opens a designed report for named recipients. create takes the recipients, an expiry in days, an optional maximum number of uses, whether export is allowed and a note, and emails the link to the recipients; the link itself is never returned, since it holds a secret token. revoke takes the link id from getReport with share links and stops the link from working."])
             .WithCategory(S["Report Builder"])
             .RequireApproval()
             .Selectable();
@@ -99,12 +92,6 @@ public sealed class BuilderAIToolsStartup : StartupBase
         services.AddCoreAITool<SaveReportViewTool>(SaveReportViewTool.TheName)
             .WithTitle(S["Save Report View"])
             .WithDescription(S["Creates a report view from a query, or updates one by id, with an optional refresh interval for its stored snapshot. Returns the planner's errors and warnings."])
-            .WithCategory(S["Report Builder"])
-            .Selectable();
-
-        services.AddCoreAITool<RefreshReportViewTool>(RefreshReportViewTool.TheName)
-            .WithTitle(S["Refresh Report View"])
-            .WithDescription(S["Recomputes the stored snapshot of a report view now. Only views with a refresh interval keep a snapshot."])
             .WithCategory(S["Report Builder"])
             .Selectable();
 

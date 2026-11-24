@@ -13,10 +13,21 @@ internal sealed class FakeUserStore :
     IUserEmailStore<IUser>,
     IUserLockoutStore<IUser>,
     IUserTwoFactorStore<IUser>,
+    IUserAuthenticatorKeyStore<IUser>,
     IUserSecurityStampStore<IUser>,
     IUserPasswordStore<IUser>,
     IUserPhoneNumberStore<IUser>
 {
+    /// <summary>
+    /// The login provider of the authenticator key token.
+    /// </summary>
+    public const string AuthenticatorKeyProvider = "[AspNetUserStore]";
+
+    /// <summary>
+    /// The name of the authenticator key token.
+    /// </summary>
+    public const string AuthenticatorKeyName = "AuthenticatorKey";
+
     /// <summary>
     /// Gets the stored users.
     /// </summary>
@@ -208,6 +219,24 @@ internal sealed class FakeUserStore :
 
     public Task<bool> GetTwoFactorEnabledAsync(IUser user, CancellationToken cancellationToken)
         => Task.FromResult(((User)user).TwoFactorEnabled);
+
+    // The user store keeps the authenticator key as a token of the user, as Orchard Core's user store does.
+    public Task SetAuthenticatorKeyAsync(IUser user, string key, CancellationToken cancellationToken)
+    {
+        var tokens = ((User)user).UserTokens;
+
+        foreach (var existing in tokens.Where(token => token.LoginProvider == AuthenticatorKeyProvider && token.Name == AuthenticatorKeyName).ToList())
+        {
+            tokens.Remove(existing);
+        }
+
+        tokens.Add(new UserToken { LoginProvider = AuthenticatorKeyProvider, Name = AuthenticatorKeyName, Value = key });
+
+        return Task.CompletedTask;
+    }
+
+    public Task<string> GetAuthenticatorKeyAsync(IUser user, CancellationToken cancellationToken)
+        => Task.FromResult(((User)user).UserTokens.FirstOrDefault(token => token.LoginProvider == AuthenticatorKeyProvider && token.Name == AuthenticatorKeyName)?.Value);
 
     public Task SetSecurityStampAsync(IUser user, string stamp, CancellationToken cancellationToken)
     {

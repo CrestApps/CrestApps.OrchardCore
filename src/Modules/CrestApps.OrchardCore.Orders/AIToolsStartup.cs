@@ -1,6 +1,7 @@
 using CrestApps.Core.AI;
 using CrestApps.OrchardCore.Orders.AI;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Orders.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -10,7 +11,8 @@ namespace CrestApps.OrchardCore.Orders;
 /// <summary>
 /// Registers the order AI tools whenever the Orders and AI features are on. Every tool needs <c>ManageOrders</c>, as
 /// Commerce › Orders. Refunding, canceling, and emailing a confirmation or an invoice ask for approval; a refund needs
-/// its amount, currency and an idempotency key, and a cancellation never refunds.
+/// its amount, currency, an idempotency key and the token of a <c>previewRefund</c> of the same refund, and a
+/// cancellation never refunds.
 /// </summary>
 [Feature(OrderConstants.Features.Orders)]
 [RequireFeatures(AIFeatureIds.Area)]
@@ -32,6 +34,9 @@ public sealed class AIToolsStartup : StartupBase
     {
         services.AddScoped<OrdersToolScope>();
 
+        // previewRefund plans a refund with the order operations service itself, so the plan follows the refund.
+        services.AddScoped<IOrderRefundPlanner>(serviceProvider => serviceProvider.GetRequiredService<OrderOperationsService>());
+
         services.AddCoreAITool<ListOrdersTool>(ListOrdersTool.TheName)
             .WithTitle(S["List Orders"])
             .WithDescription(S["Lists orders with number, date, customer, status, channel, fulfilment status, total, refunded amount and whether money is still owed. Filters by order number or customer email, status (placed, paid, awaiting payment, canceled, drafts, any), channel, customer, and placed-between dates, with paging; it also returns the link that exports the same list as CSV."])
@@ -44,15 +49,15 @@ public sealed class AIToolsStartup : StartupBase
             .WithCategory(S["Orders"])
             .Selectable();
 
-        services.AddCoreAITool<AddOrderNoteTool>(AddOrderNoteTool.TheName)
-            .WithTitle(S["Add Order Note"])
-            .WithDescription(S["Adds an internal note to an order's history under the current user's name. The buyer does not see it."])
+        services.AddCoreAITool<PreviewRefundTool>(PreviewRefundTool.TheName)
+            .WithTitle(S["Preview Refund"])
+            .WithDescription(S["Shows what refundOrder would do, without moving money: what is still refundable for the order, the amount, and where it would go back to (newest online payment first, then Pay Later and offline payments, then gift cards and store credit, or store credit when asked), with any payment that would be skipped. Call it before every refund and show the result to the user. It returns a previewToken that refundOrder requires: it works once, only for you and for the same order, amount, currency and options, and expires after 10 minutes."])
             .WithCategory(S["Orders"])
             .Selectable();
 
         services.AddCoreAITool<RefundOrderTool>(RefundOrderTool.TheName)
             .WithTitle(S["Refund Order"])
-            .WithDescription(S["Gives money back for an order: a stated amount and currency, or everything still refundable with refundAll, newest payment first through the payment provider, optionally putting the items back into stock or giving the amount as store credit instead. Every call needs a new idempotency key; a repeated key is refused. A refund cannot be undone; a payment method that cannot refund automatically is recorded for settling by hand."])
+            .WithDescription(S["Gives money back for an order: a stated amount and currency, or everything still refundable with refundAll, newest payment first through the payment provider, optionally putting the items back into stock or giving the amount as store credit instead. Call previewRefund first and show its result to the user: this tool needs the previewToken it returns, for the same order, amount, currency and options, and a new idempotency key; a used or expired token and a repeated key are refused. A refund cannot be undone; a payment method that cannot refund automatically is recorded for settling by hand. For a buyer's return, give its returnId: the refund then closes the return and emails the buyer."])
             .WithCategory(S["Orders"])
             .RequireApproval()
             .Selectable();

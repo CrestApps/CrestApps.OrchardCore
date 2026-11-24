@@ -7,8 +7,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.TimeZones;
 
 /// <summary>
-/// Registers the time zone map AI tools whenever the Time Zones and AI features are on. Each needs
-/// <c>ManageTimeZoneMaps</c>, as the Time Zones admin pages do, and deleting a map asks for approval.
+/// Registers the time zone map AI tool whenever the Time Zones and AI features are on. It needs
+/// <c>ManageTimeZoneMaps</c>, as the Time Zones admin pages do.
 /// </summary>
 [RequireFeatures(AIFeatureIds.Area)]
 public sealed class AIToolsStartup : StartupBase
@@ -27,25 +27,10 @@ public sealed class AIToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<TimeZoneMapScopeChanges>();
-
         services.AddCoreAITool<ListTimeZoneMapsTool>(ListTimeZoneMapsTool.TheName)
             .WithTitle(S["List Time Zone Maps"])
             .WithDescription(S["Lists the friendly time zone names shown in time zone pickers and the time zone each maps to, with an optional name filter."])
             .WithCategory(S["Time Zones"])
-            .Selectable();
-
-        services.AddCoreAITool<SaveTimeZoneMapTool>(SaveTimeZoneMapTool.TheName)
-            .WithTitle(S["Save Time Zone Map"])
-            .WithDescription(S["Creates or updates a friendly time zone name for a time zone id. The name must be unique; use listTimeZones to find a valid time zone id."])
-            .WithCategory(S["Time Zones"])
-            .Selectable();
-
-        services.AddCoreAITool<DeleteTimeZoneMapTool>(DeleteTimeZoneMapTool.TheName)
-            .WithTitle(S["Delete Time Zone Map"])
-            .WithDescription(S["Deletes a friendly time zone name, so pickers no longer offer it. Records that already store the time zone id keep working."])
-            .WithCategory(S["Time Zones"])
-            .RequireApproval()
             .Selectable();
     }
 }

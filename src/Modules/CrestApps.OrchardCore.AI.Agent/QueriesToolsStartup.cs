@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, save, delete and run saved queries, when the Queries feature is on.
+/// Registers the tools that list and run saved queries, when the Queries feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Queries)]
 public sealed class QueriesToolsStartup : StartupBase
@@ -30,20 +30,6 @@ public sealed class QueriesToolsStartup : StartupBase
             .WithTitle(S["List Queries"])
             .WithDescription(S["Lists the saved queries with name, source (Sql, Lucene, Elasticsearch), template, target index, result schema and whether they return content items, plus the query sources enabled on the site; supports a name filter and paging. Use it to find a query to run or edit."])
             .WithCategory(S["Query Management"])
-            .Selectable();
-
-        services.AddCoreAITool<SaveQueryTool>(SaveQueryTool.TheName)
-            .WithTitle(S["Save Query"])
-            .WithDescription(S["Creates or updates a saved Lucene or Elasticsearch query: name, source, template (a JSON search query, Liquid allowed), index, optional result schema and the return-content-items flag. A saved query becomes callable from Liquid, GraphQL and `api/queries/{name}`, so test the template first with `runSearchQuery`."])
-            .WithCategory(S["Query Management"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<DeleteQueryTool>(DeleteQueryTool.TheName)
-            .WithTitle(S["Delete Query"])
-            .WithDescription(S["Deletes one or more saved queries by name. Templates, GraphQL clients and API consumers that call them will stop getting results."])
-            .WithCategory(S["Query Management"])
-            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<RunQueryTool>(RunQueryTool.TheName)

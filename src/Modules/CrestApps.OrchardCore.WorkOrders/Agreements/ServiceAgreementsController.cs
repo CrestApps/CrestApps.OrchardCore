@@ -1,9 +1,7 @@
-using CrestApps.Core;
 using CrestApps.OrchardCore.Agreements;
 using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.WorkOrders.Agreements.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
-using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -12,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using NodaTime;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
@@ -97,17 +94,9 @@ public sealed class ServiceAgreementsController : Controller
             return NotFound();
         }
 
-        var terms = agreement.TryGet<WorkOrderAgreementTerms>(out var kept) && kept is not null ? kept : new WorkOrderAgreementTerms();
-        var zone = ServiceAgreementScheduler.ZoneOf(agreement.TimeZoneId);
-        var today = Instant.FromDateTimeUtc(DateTime.SpecifyKind(_clock.UtcNow, DateTimeKind.Utc)).InZone(zone).Date;
-        var from = LocalDate.Max(today, LocalDate.FromDateOnly(agreement.StartDate));
+        var terms = ServiceAgreementEditorRules.TermsOf(agreement);
         var types = (await _types.GetAllAsync()).ToDictionary(type => type.ItemId, type => type.Name, StringComparer.Ordinal);
-        var prefix = agreement.ItemId + ":";
-        var source = nameof(WorkOrderSource.Agreement);
-        var workOrders = await _session.Query<WorkOrder, WorkOrderIndex>(index => index.Source == source && index.SourceId.StartsWith(prefix), collection: WorkOrdersConstants.CollectionName)
-            .OrderByDescending(index => index.CreatedUtc)
-            .Take(50)
-            .ListAsync(HttpContext.RequestAborted);
+        var workOrders = await ServiceAgreementEditorRules.WorkOrdersAsync(_session, agreement.ItemId, 50, HttpContext.RequestAborted);
         var assets = terms.AssetIds.Count == 0 ? [] : await _lookups.AssetsAsync(HttpContext.RequestAborted);
         var presets = WorkOrderAgreementTermsDisplayDriver.Presets(S);
 
@@ -120,7 +109,7 @@ public sealed class ServiceAgreementsController : Controller
                 Schedule = schedule,
                 TypeName = types.GetValueOrDefault(schedule.TypeId ?? string.Empty),
                 Repeats = presets.TryGetValue(schedule.Rule ?? string.Empty, out var words) ? words : schedule.Rule,
-                Next = [.. ServiceAgreementScheduler.Occurrences(agreement, schedule, zone, from, from.PlusYears(5)).Take(NextVisits).Select(date => date.ToDateOnly())],
+                Next = [.. ServiceAgreementEditorRules.NextVisits(agreement, schedule, _clock.UtcNow, NextVisits)],
             })],
             WorkOrders = [.. workOrders],
             CustomerNames = await HttpContext.RequestServices.GetRequiredService<Integrations.WorkOrderCustomers>().NamesAsync(terms.CustomerId, agreement.AccountId, null, pickers: false, HttpContext.RequestAborted),

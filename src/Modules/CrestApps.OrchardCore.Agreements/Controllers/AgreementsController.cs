@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Agreements.Core.Services;
 using CrestApps.OrchardCore.Agreements.Models;
 using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
@@ -104,7 +105,7 @@ public sealed class AgreementsController : CatalogAdminController<Agreement>
     /// <inheritdoc/>
     protected override async Task<bool> CanDeleteAsync(Agreement model)
     {
-        if (model.Status == AgreementStatus.Draft)
+        if (AgreementEditorRules.CanDelete(model))
         {
             return true;
         }

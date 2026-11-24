@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Autoroute;
+using CrestApps.OrchardCore.AI.Agent.Contents;
 using CrestApps.OrchardCore.AI.Agent.Menus;
 using CrestApps.OrchardCore.AI.Agent.Seo;
 using CrestApps.OrchardCore.AI.Agent.Sitemaps;
@@ -27,7 +28,7 @@ public sealed class OrchardSiteStructureToolCallerTests
 {
     public static TheoryData<string> ToolNames =>
     [
-        FindContentItemByHandleTool.TheName,
+        GetContentItemTool.TheName,
         SetHomepageTool.TheName,
         GetTaxonomyTermsTool.TheName,
         SaveTaxonomyTermTool.TheName,
@@ -39,7 +40,6 @@ public sealed class OrchardSiteStructureToolCallerTests
         ListSitemapsTool.TheName,
         SaveSitemapTool.TheName,
         DeleteSitemapTool.TheName,
-        PurgeSitemapCacheTool.TheName,
     ];
 
     [Theory]
@@ -78,7 +78,7 @@ public sealed class OrchardSiteStructureToolCallerTests
     }
 
     [Theory]
-    [InlineData(FindContentItemByHandleTool.TheName, "ViewContent")]
+    [InlineData(GetContentItemTool.TheName, "ViewContent")]
     [InlineData(SetHomepageTool.TheName, "SetHomepage")]
     [InlineData(GetTaxonomyTermsTool.TheName, "ViewContent")]
     [InlineData(SaveTaxonomyTermTool.TheName, "ManageTaxonomy")]
@@ -90,7 +90,6 @@ public sealed class OrchardSiteStructureToolCallerTests
     [InlineData(ListSitemapsTool.TheName, "ManageSitemaps")]
     [InlineData(SaveSitemapTool.TheName, "ManageSitemaps")]
     [InlineData(DeleteSitemapTool.TheName, "ManageSitemaps")]
-    [InlineData(PurgeSitemapCacheTool.TheName, "ManageSitemaps")]
     public async Task InvokeAsync_ChecksThePermissionOfTheAdminAction(string toolName, string permission)
     {
         // Arrange
@@ -131,7 +130,7 @@ public sealed class OrchardSiteStructureToolCallerTests
     {
         return toolName switch
         {
-            FindContentItemByHandleTool.TheName => (new FindContentItemByHandleTool(), new() { ["handle"] = "/about-us" }),
+            GetContentItemTool.TheName => (new GetContentItemTool(), new() { ["handle"] = "/about-us", ["include"] = new[] { "localizations", "nested" } }),
             SetHomepageTool.TheName => (new SetHomepageTool(), new() { ["contentItemId"] = "item-1" }),
             GetTaxonomyTermsTool.TheName => (new GetTaxonomyTermsTool(), new() { ["taxonomy"] = "item-1" }),
             SaveTaxonomyTermTool.TheName => (new SaveTaxonomyTermTool(), new() { ["taxonomyContentItemId"] = "item-1", ["title"] = "News" }),
@@ -143,7 +142,6 @@ public sealed class OrchardSiteStructureToolCallerTests
             ListSitemapsTool.TheName => (new ListSitemapsTool(), []),
             SaveSitemapTool.TheName => (new SaveSitemapTool(), new() { ["name"] = "Blog" }),
             DeleteSitemapTool.TheName => (new DeleteSitemapTool(), new() { ["sitemapId"] = "sitemap-1" }),
-            PurgeSitemapCacheTool.TheName => (new PurgeSitemapCacheTool(), []),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, "The tool has no test arguments."),
         };
     }

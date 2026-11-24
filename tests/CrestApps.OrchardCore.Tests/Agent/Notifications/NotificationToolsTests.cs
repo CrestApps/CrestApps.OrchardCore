@@ -199,44 +199,4 @@ public sealed class NotificationToolsTests
         Assert.Contains(expected, result, StringComparison.Ordinal);
         harness.VerifyNothingChanged();
     }
-
-    [Fact]
-    public async Task DeleteNotifications_RemovesTheCallersNotificationsAndLeavesTheOneOfAnotherUser()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new DeleteNotificationsTool(), services, new()
-        {
-            ["notificationIds"] = new[] { "note-2", NotificationToolDoubles.OtherUserNotificationId },
-        }));
-
-        // Assert
-        Assert.Equal(["note-2"], result.GetProperty("deleted").EnumerateArray().Select(id => id.GetString()));
-        Assert.Equal([NotificationToolDoubles.OtherUserNotificationId], result.GetProperty("notFound").EnumerateArray().Select(id => id.GetString()));
-        Assert.DoesNotContain(harness.Notifications.Notifications, notification => notification.NotificationId == "note-2");
-        Assert.Contains(harness.Notifications.Notifications, notification => notification.NotificationId == NotificationToolDoubles.OtherUserNotificationId);
-    }
-
-    [Fact]
-    public async Task DeleteNotifications_WithoutIds_RemovesNothing()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteNotificationsTool(), services, new()
-        {
-            ["notificationIds"] = Array.Empty<string>(),
-        });
-
-        // Assert
-        Assert.StartsWith("Nothing was removed: give notificationIds", result, StringComparison.Ordinal);
-        harness.VerifyNothingChanged();
-    }
 }

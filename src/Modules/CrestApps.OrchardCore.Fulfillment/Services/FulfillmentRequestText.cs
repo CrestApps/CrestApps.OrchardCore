@@ -93,6 +93,5 @@ public sealed class FulfillmentRequestText
     /// <param name="request">The request.</param>
     /// <returns><see langword="true"/> when a person should check with the partner first.</returns>
     public static bool MayAlreadyBeMade(FulfillmentRequest request)
-        => request?.Status == FulfillmentRequestStatus.NeedsAttention
-        && request.Reason is FulfillmentReasons.Unclear or FulfillmentReasons.Interrupted;
+        => FulfillmentReasons.MayAlreadyBeMade(request);
 }

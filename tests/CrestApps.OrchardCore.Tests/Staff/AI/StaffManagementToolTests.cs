@@ -24,10 +24,11 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Tests.Staff.AI;
 
 /// <summary>
-/// The staff record, badge and capability tools gate on the permission or the staff scope of the matching staff page,
+/// The staff record and capability tools gate on the permission or the staff scope of the matching staff page,
 /// write through the staff manager and capability service so their rules decide, keep the editor's rules (user linked
 /// once, teams the caller manages, sensitive data), and never return a PIN, its hash or what other modules keep on a
-/// staff member.
+/// staff member. Only <c>terminateStaffMember</c> ends someone's employment, through the staff manager, so the other
+/// modules are told; <c>saveStaffMember</c> refuses the Terminated status and a last working day.
 /// </summary>
 public sealed class StaffManagementToolTests
 {
@@ -35,8 +36,8 @@ public sealed class StaffManagementToolTests
     {
         GetStaffMemberTool.TheName,
         SaveStaffMemberTool.TheName,
+        TerminateStaffMemberTool.TheName,
         DeleteStaffMemberTool.TheName,
-        SetStaffBadgePinTool.TheName,
         ListStaffCapabilitiesTool.TheName,
         SaveStaffCapabilityTool.TheName,
         DeleteStaffCapabilityTool.TheName,
@@ -204,6 +205,37 @@ public sealed class StaffManagementToolTests
     }
 
     [Fact]
+    public async Task GetStaffMember_ShowsThePayBasisCurrencySalariesAndCommission_OfThePayCard()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var priya = await WorkforceTests.AddWorkerAsync(harness, "Priya", staff => staff.Put(new StaffPayRates
+        {
+            PayBasis = StaffPayBasis.Salary,
+            Currency = "EUR",
+            CommissionRate = 2.5m,
+            Salaries =
+            [
+                new StaffSalary { EffectiveFrom = new DateOnly(2026, 7, 1), AnnualAmount = 64000m },
+                new StaffSalary { EffectiveFrom = new DateOnly(2026, 1, 1), AnnualAmount = 60000m },
+            ],
+        }));
+        var hr = CalendarTestHarness.User("hr", StaffPermissions.ViewStaff.Name, StaffPermissions.ManageStaffPay.Name);
+
+        // Act
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(harness, hr, new GetStaffMemberTool(), new() { ["staffMemberId"] = priya.ItemId }));
+
+        // Assert
+        var pay = json.GetProperty("pay");
+        Assert.Equal("Salary", pay.GetProperty("payBasis").GetString());
+        Assert.Equal("EUR", pay.GetProperty("currency").GetString());
+        Assert.Equal(2.5m, pay.GetProperty("commissionRate").GetDecimal());
+        var salaries = pay.GetProperty("salaries").EnumerateArray().ToList();
+        Assert.Equal(["2026-01-01", "2026-07-01"], salaries.Select(salary => salary.GetProperty("effectiveFrom").GetString()));
+        Assert.Equal(64000m, salaries[1].GetProperty("annualAmount").GetDecimal());
+    }
+
+    [Fact]
     public async Task GetStaffMember_ListsCandidates_WhenANameIsAmbiguous_AndRefusesSomeoneOutsideTheScope()
     {
         // Arrange
@@ -253,8 +285,8 @@ public sealed class StaffManagementToolTests
 
     [Theory]
     [InlineData(SaveStaffMemberTool.TheName, false)]
+    [InlineData(TerminateStaffMemberTool.TheName, false)]
     [InlineData(DeleteStaffMemberTool.TheName, true)]
-    [InlineData(SetStaffBadgePinTool.TheName, false)]
     [InlineData(SaveStaffCapabilityTool.TheName, true)]
     [InlineData(DeleteStaffCapabilityTool.TheName, true)]
     public async Task ChangeTool_RefusesACallerWhoMayOnlyViewStaff(string toolName, bool asksForManageStaff)
@@ -272,6 +304,163 @@ public sealed class StaffManagementToolTests
         {
             Assert.Contains(services.GetRequiredService<FakeAuthorizationService>().Checks, check => check.Permission == StaffPermissions.ManageStaff.Name);
         }
+    }
+
+    [Fact]
+    public async Task SaveStaffMember_RefusesTheTerminatedStatusAndALastWorkingDay_ButCancelsAPlannedOne()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee", staff => staff.TerminationDate = new DateOnly(2026, 12, 31));
+        var admin = CalendarTestHarness.User("admin", StaffPermissions.ManageStaff.Name);
+
+        // Act
+        var terminated = await InvokeAsync(harness, admin, new SaveStaffMemberTool(), new() { ["staffMemberId"] = lee.ItemId, ["status"] = "Terminated" });
+        var lastDay = await InvokeAsync(harness, admin, new SaveStaffMemberTool(), new() { ["staffMemberId"] = lee.ItemId, ["terminationDate"] = "2026-11-15" });
+        var unchanged = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(lee.ItemId), commit: false);
+        var cancelled = AgentToolTestContext.ReadJson(await InvokeAsync(harness, admin, new SaveStaffMemberTool(), new() { ["staffMemberId"] = lee.ItemId, ["terminationDate"] = "" }));
+        var stored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(lee.ItemId), commit: false);
+
+        // Assert
+        Assert.Equal("Nothing was saved: to end someone's employment use terminateStaffMember, which asks for approval.", terminated);
+        Assert.StartsWith("Nothing was saved: a last working day is set with terminateStaffMember", lastDay, StringComparison.Ordinal);
+        Assert.Equal(StaffStatus.Active, unchanged.Status);
+        Assert.Equal(new DateOnly(2026, 12, 31), unchanged.TerminationDate);
+        Assert.Equal("Active", cancelled.GetProperty("status").GetString());
+        Assert.Null(stored.TerminationDate);
+        Assert.Equal(StaffStatus.Active, stored.Status);
+    }
+
+    [Fact]
+    public async Task TerminateStaffMember_TerminatesNow_ThroughTheStaffManager_SoTheOtherModulesAreTold()
+    {
+        // Arrange
+        await using var harness = await CreateAsync(services =>
+        {
+            services.AddSingleton<RecordingLifecycleObserver>();
+            services.AddScoped<IStaffLifecycleObserver>(provider => provider.GetRequiredService<RecordingLifecycleObserver>());
+        });
+        var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee Park");
+        var admin = CalendarTestHarness.User("admin", StaffPermissions.ManageStaff.Name);
+
+        // Act
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(harness, admin, new TerminateStaffMemberTool(), new() { ["staffMemberId"] = lee.ItemId }));
+        var stored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(lee.ItemId), commit: false);
+        var observer = harness.Services.GetRequiredService<RecordingLifecycleObserver>();
+
+        // Assert
+        Assert.True(json.GetProperty("terminated").GetBoolean());
+        Assert.Equal("Terminated", json.GetProperty("status").GetString());
+
+        // Today in the site's time zone (noon UTC on 2 November is the morning of the 2nd in New York).
+        Assert.Equal("2026-11-02", json.GetProperty("lastWorkingDay").GetString());
+        Assert.Equal(StaffStatus.Terminated, stored.Status);
+        Assert.Equal(new DateOnly(2026, 11, 2), stored.TerminationDate);
+        Assert.Contains(observer.Changes, change => change.StaffMember.ItemId == lee.ItemId && change.Terminated);
+    }
+
+    [Fact]
+    public async Task TerminateStaffMember_ByName_OnlyListsWhoMatches_AndChangesNothing()
+    {
+        // Arrange: termination cannot be undone, so a name, even one that matches a single person, never acts.
+        await using var harness = await CreateAsync();
+        var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee Park");
+        var admin = CalendarTestHarness.User("admin", StaffPermissions.ManageStaff.Name);
+
+        // Act
+        var result = await InvokeAsync(harness, admin, new TerminateStaffMemberTool(), new() { ["name"] = "Lee Park" });
+        var stored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(lee.ItemId), commit: false);
+
+        // Assert
+        Assert.StartsWith("Nothing was changed: A name is not enough to end someone's employment.", result, StringComparison.Ordinal);
+        Assert.Contains($"id {lee.ItemId}", result, StringComparison.Ordinal);
+        Assert.Equal(StaffStatus.Active, stored.Status);
+        Assert.Null(stored.TerminationDate);
+    }
+
+    [Fact]
+    public async Task TerminateStaffMember_ByEmail_NeedsAnExactAddressOfOnePerson()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee Park", staff => staff.Email = "lee.park@example.com");
+        var leeAnn = await WorkforceTests.AddWorkerAsync(harness, "Lee Ann", staff => staff.Email = "lee.parker@example.com");
+        var admin = CalendarTestHarness.User("admin", StaffPermissions.ManageStaff.Name);
+
+        // Act: part of an address matches both people and is refused; the exact address terminates one.
+        var partial = await InvokeAsync(harness, admin, new TerminateStaffMemberTool(), new() { ["email"] = "lee.park" });
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(harness, admin, new TerminateStaffMemberTool(), new() { ["email"] = "lee.park@example.com" }));
+        var leeStored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(lee.ItemId), commit: false);
+        var leeAnnStored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(leeAnn.ItemId), commit: false);
+
+        // Assert
+        Assert.Equal("Nothing was changed: No staff member you may see has the e-mail address 'lee.park'. Give the staffMemberId instead.", partial);
+        Assert.Equal(lee.ItemId, json.GetProperty("id").GetString());
+        Assert.True(json.GetProperty("terminated").GetBoolean());
+        Assert.Equal(StaffStatus.Terminated, leeStored.Status);
+        Assert.Equal(StaffStatus.Active, leeAnnStored.Status);
+    }
+
+    [Fact]
+    public async Task TerminateStaffMember_RecordsALastWorkingDayToCome_WithoutTerminatingYet()
+    {
+        // Arrange
+        await using var harness = await CreateAsync(services =>
+        {
+            services.AddSingleton<RecordingLifecycleObserver>();
+            services.AddScoped<IStaffLifecycleObserver>(provider => provider.GetRequiredService<RecordingLifecycleObserver>());
+        });
+        var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee Park");
+        var admin = CalendarTestHarness.User("admin", StaffPermissions.ManageStaff.Name);
+
+        // Act
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(harness, admin, new TerminateStaffMemberTool(), new() { ["staffMemberId"] = lee.ItemId, ["lastWorkingDay"] = "2026-11-30" }));
+        var stored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(lee.ItemId), commit: false);
+        var observer = harness.Services.GetRequiredService<RecordingLifecycleObserver>();
+
+        // Assert
+        Assert.False(json.GetProperty("terminated").GetBoolean());
+        Assert.Equal("Active", json.GetProperty("status").GetString());
+        Assert.Equal("2026-11-30", json.GetProperty("lastWorkingDay").GetString());
+        Assert.Equal(StaffStatus.Active, stored.Status);
+        Assert.Equal(new DateOnly(2026, 11, 30), stored.TerminationDate);
+        Assert.DoesNotContain(observer.Changes, change => change.Terminated);
+    }
+
+    [Fact]
+    public async Task TerminateStaffMember_RefusesSomeoneOutsideTheScope_ABadDay_AndSomeoneAlreadyTerminated()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var phoenix = await WorkforceTests.AddTeamAsync(harness, "Phoenix", TeamKind.Team);
+        await WorkforceTests.AddWorkerAsync(harness, "Marco", staff =>
+        {
+            staff.UserId = "marco";
+            staff.TeamMemberships.Add(new TeamMembership { TeamId = phoenix.ItemId, Role = TeamMemberRole.Manager });
+        });
+        var member = await WorkforceTests.AddWorkerAsync(harness, "Lee", staff => staff.TeamMemberships.Add(new TeamMembership { TeamId = phoenix.ItemId }));
+        var stranger = await WorkforceTests.AddWorkerAsync(harness, "Stranger");
+        var gone = await WorkforceTests.AddWorkerAsync(harness, "Gone", staff => staff.TeamMemberships.Add(new TeamMembership { TeamId = phoenix.ItemId }));
+        var marco = CalendarTestHarness.User("marco", StaffPermissions.ManageOwnStaff.Name);
+        var admin = CalendarTestHarness.User("admin", StaffPermissions.ManageStaff.Name);
+
+        await InvokeAsync(harness, admin, new TerminateStaffMemberTool(), new() { ["staffMemberId"] = gone.ItemId });
+
+        // Act
+        var outsideScope = await InvokeAsync(harness, marco, new TerminateStaffMemberTool(), new() { ["staffMemberId"] = stranger.ItemId });
+        var badDay = await InvokeAsync(harness, marco, new TerminateStaffMemberTool(), new() { ["staffMemberId"] = member.ItemId, ["lastWorkingDay"] = "end of the month" });
+        var again = AgentToolTestContext.ReadJson(await InvokeAsync(harness, admin, new TerminateStaffMemberTool(), new() { ["staffMemberId"] = gone.ItemId }));
+        var strangerStored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(stranger.ItemId), commit: false);
+        var memberStored = await harness.RunAsync(async services => await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(member.ItemId), commit: false);
+
+        // Assert
+        Assert.Equal($"Nothing was changed: No staff member you may see has the id '{stranger.ItemId}'. Use getStaffMember with a name to find them.", outsideScope);
+        Assert.Equal("Nothing was changed: lastWorkingDay must be a date written as yyyy-MM-dd.", badDay);
+        Assert.False(again.GetProperty("terminated").GetBoolean());
+        Assert.StartsWith("Nothing was changed: Gone is already terminated.", again.GetProperty("message").GetString(), StringComparison.Ordinal);
+        Assert.Equal(StaffStatus.Active, strangerStored.Status);
+        Assert.Equal(StaffStatus.Active, memberStored.Status);
+        Assert.Null(memberStored.TerminationDate);
     }
 
     [Fact]
@@ -293,53 +482,6 @@ public sealed class StaffManagementToolTests
         Assert.Equal("Report", Assert.Single(refused.GetProperty("directReports").EnumerateArray()).GetProperty("name").GetString());
         Assert.True(deleted.GetProperty("deleted").GetBoolean());
         Assert.Null(gone);
-    }
-
-    [Fact]
-    public async Task SetStaffBadgePin_ClearsAPinOnlyForSomeoneInTheScope_AndNeverTakesOne()
-    {
-        // Arrange
-        await using var harness = await CreateAsync();
-        var team = await WorkforceTests.AddTeamAsync(harness, "Store", TeamKind.Team);
-        await WorkforceTests.AddWorkerAsync(harness, "Manager", staff =>
-        {
-            staff.UserId = "manager";
-            staff.TeamMemberships.Add(new TeamMembership { TeamId = team.ItemId, Role = TeamMemberRole.Manager });
-        });
-        var cashier = await WorkforceTests.AddWorkerAsync(harness, "Cashier", staff =>
-        {
-            staff.EmployeeNumber = "E-1";
-            staff.TeamMemberships.Add(new TeamMembership { TeamId = team.ItemId });
-        });
-        var stranger = await WorkforceTests.AddWorkerAsync(harness, "Stranger", staff => staff.EmployeeNumber = "E-2");
-
-        foreach (var id in new[] { cashier.ItemId, stranger.ItemId })
-        {
-            await harness.RunAsync(async services =>
-            {
-                var manager = services.GetRequiredService<IStaffMemberManager>();
-                var stored = await manager.FindByIdAsync(id);
-
-                Assert.Null(services.GetRequiredService<IStaffBadgeService>().SetPin(stored, "4821"));
-                await manager.UpdateAsync(stored);
-            });
-        }
-
-        var caller = CalendarTestHarness.User("manager", StaffPermissions.ManageOwnStaff.Name);
-
-        // Act
-        var status = AgentToolTestContext.ReadJson(await InvokeAsync(harness, caller, new SetStaffBadgePinTool(), new() { ["staffMemberId"] = cashier.ItemId }));
-        var pin = await InvokeAsync(harness, caller, new SetStaffBadgePinTool(), new() { ["staffMemberId"] = cashier.ItemId, ["pin"] = "1111" });
-        var outside = await InvokeAsync(harness, caller, new SetStaffBadgePinTool(), new() { ["staffMemberId"] = stranger.ItemId, ["clearPin"] = true });
-        var cleared = AgentToolTestContext.ReadJson(await InvokeAsync(harness, caller, new SetStaffBadgePinTool(), new() { ["staffMemberId"] = cashier.ItemId, ["clearPin"] = true }));
-        var hasPin = await harness.RunAsync(async services => services.GetRequiredService<IStaffBadgeService>().HasPin(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(cashier.ItemId)), commit: false);
-
-        // Assert
-        Assert.True(status.GetProperty("hasPin").GetBoolean());
-        Assert.StartsWith("Nothing was done: 'pin' is not an argument of setStaffBadgePin.", pin, StringComparison.Ordinal);
-        Assert.StartsWith("Nothing was changed: you are not allowed to change Stranger's badge", outside, StringComparison.Ordinal);
-        Assert.True(cleared.GetProperty("cleared").GetBoolean());
-        Assert.False(hasPin);
     }
 
     [Fact]
@@ -473,8 +615,8 @@ public sealed class StaffManagementToolTests
         {
             GetStaffMemberTool.TheName => new GetStaffMemberTool(),
             SaveStaffMemberTool.TheName => new SaveStaffMemberTool(),
+            TerminateStaffMemberTool.TheName => new TerminateStaffMemberTool(),
             DeleteStaffMemberTool.TheName => new DeleteStaffMemberTool(),
-            SetStaffBadgePinTool.TheName => new SetStaffBadgePinTool(),
             ListStaffCapabilitiesTool.TheName => new ListStaffCapabilitiesTool(),
             SaveStaffCapabilityTool.TheName => new SaveStaffCapabilityTool(),
             _ => new DeleteStaffCapabilityTool(),
@@ -483,5 +625,17 @@ public sealed class StaffManagementToolTests
     private sealed class FakeUserAccessor : IUserAccessor
     {
         public ClaimsPrincipal User { get; set; }
+    }
+
+    private sealed class RecordingLifecycleObserver : IStaffLifecycleObserver
+    {
+        public List<StaffChangedContext> Changes { get; } = [];
+
+        public Task ChangedAsync(StaffChangedContext context, CancellationToken cancellationToken = default)
+        {
+            Changes.Add(context);
+
+            return Task.CompletedTask;
+        }
     }
 }

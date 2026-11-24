@@ -8,10 +8,9 @@ using OrchardCore.RateLimits.Models;
 namespace CrestApps.OrchardCore.Tests.Agent.RateLimits;
 
 /// <summary>
-/// The rate-limit tools work on the policy store of the Rate Limits admin page with the rules of that page: a new
-/// policy is saved disabled, the target and the limiters of an enabled policy cannot be changed, and the tenant
-/// reloads when a policy starts or stops applying. A policy that protects the sign-in and account endpoints is not
-/// disabled or deleted unless the call says so.
+/// The rate-limit tools work on the policy store of the Rate Limits admin page with the rules of that page: the tenant
+/// reloads when a policy starts or stops applying, and a policy that protects the sign-in and account endpoints is not
+/// disabled unless the call says so.
 /// </summary>
 public sealed class RateLimitToolsTests
 {
@@ -94,7 +93,7 @@ public sealed class RateLimitToolsTests
     }
 
     [Fact]
-    public async Task SaveRateLimitPolicy_WithoutAnId_CreatesADisabledPolicyAndDoesNotReloadTheTenant()
+    public async Task SetRateLimitPolicyEnabled_Enabling_EnablesTheDisabledPoliciesAndReloadsTheTenantOnce()
     {
         // Arrange
         var harness = new SecurityToolHarness();
@@ -102,181 +101,18 @@ public sealed class RateLimitToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SaveRateLimitPolicyTool(), services, new()
-        {
-            ["name"] = "Search API",
-            ["description"] = "Protects the search.",
-            ["scope"] = "endpoint",
-            ["path"] = "/api/find",
-            ["limiters"] = """
-                [
-                  { "type": "slidingWindow", "permitLimit": 30, "windowSeconds": 60, "segmentsPerWindow": 6, "queueLimit": 2 },
-                  { "type": "tokenBucket", "tokenLimit": 100, "tokensPerPeriod": 10, "replenishmentPeriodSeconds": 5, "queueProcessingOrder": "newestFirst" }
-                ]
-                """,
-        }));
-
-        // Assert
-        var policy = Assert.Single(harness.RateLimits.Policies, stored => stored.Name == "Search API");
-        var sliding = policy.Limiters[0].GetOrCreate<SlidingWindowRateLimiterData>();
-        var bucket = policy.Limiters[1].GetOrCreate<TokenBucketRateLimiterData>();
-
-        Assert.True(result.GetProperty("created").GetBoolean());
-        Assert.False(policy.IsEnabled);
-        Assert.Null(policy.EnabledUtc);
-        Assert.Equal(0, harness.RateLimits.ReleaseRequests);
-        Assert.Equal(RateLimitPolicyScope.Endpoint, policy.Scope);
-        Assert.Equal("/api/find", policy.Path);
-        Assert.Null(policy.GroupName);
-        Assert.Equal("Protects the search.", policy.Description);
-        Assert.Equal(AgentToolTestContext.UserId, policy.OwnerId);
-        Assert.Equal(AgentToolTestContext.UserName, policy.Author);
-        Assert.Equal(["SlidingWindow", "TokenBucket"], policy.Limiters.Select(limiter => limiter.Source));
-        Assert.All(policy.Limiters, limiter => Assert.False(string.IsNullOrEmpty(limiter.Id)));
-        Assert.Equal((30, 60, 6, 2), (sliding.PermitLimit, sliding.WindowSeconds, sliding.SegmentsPerWindow, sliding.QueueLimit));
-        Assert.Equal((100, 10, 5, 0), (bucket.TokenLimit, bucket.TokensPerPeriod, bucket.ReplenishmentPeriodSeconds, bucket.QueueLimit));
-        Assert.Equal(QueueProcessingOrder.NewestFirst, bucket.QueueProcessingOrder);
-        Assert.False(result.GetProperty("policy").GetProperty("enabled").GetBoolean());
-        Assert.Contains("enableRateLimitPolicy", result.GetProperty("note").GetString(), StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("""{ "name": "Contact API", "scope": "global" }""", "a policy named 'Contact API' exists")]
-    [InlineData("""{ "name": "New", "scope": "endpoint", "path": "api/x" }""", "the request path must start with '/'")]
-    [InlineData("""{ "name": "New", "scope": "endpoint" }""", "give path for an endpoint policy")]
-    [InlineData("""{ "name": "New", "scope": "group" }""", "give group for a group policy")]
-    [InlineData("""{ "name": "New" }""", "give name and scope for a new policy")]
-    [InlineData("""{ "name": "New", "scope": "site" }""", "scope must be global, endpoint or group")]
-    [InlineData("""{ "name": "New", "scope": "global", "limiters": [ { "type": "fixedWindow", "permitLimit": 0, "windowSeconds": 60 } ] }""", "limiter 1: permitLimit must be a whole number of at least 1")]
-    [InlineData("""{ "name": "New", "scope": "global", "limiters": [ { "type": "fixedWindow", "permitLimit": 5 } ] }""", "limiter 1: give windowSeconds")]
-    [InlineData("""{ "name": "New", "scope": "global", "limiters": [ { "type": "concurrency", "permitLimit": 5, "queueLimit": -1 } ] }""", "limiter 1: queueLimit must be a whole number of at least 0")]
-    [InlineData("""{ "name": "New", "scope": "global", "limiters": [ { "type": "leakyBucket", "permitLimit": 5 } ] }""", "limiter 1: type must be one of")]
-    public async Task SaveRateLimitPolicy_WithWhatTheAdminPageRefuses_SavesNothing(string json, string expected)
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        var arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
-            .ToDictionary(pair => pair.Key, pair => (object)pair.Value);
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new SaveRateLimitPolicyTool(), services, arguments);
-
-        // Assert
-        Assert.StartsWith("Nothing was saved:", result, StringComparison.Ordinal);
-        Assert.Contains(expected, result, StringComparison.Ordinal);
-        harness.VerifyNothingChanged();
-    }
-
-    [Theory]
-    [InlineData("""{ "policyId": "policy-contact", "limiters": [ { "type": "fixedWindow", "permitLimit": 1000, "windowSeconds": 1 } ] }""")]
-    [InlineData("""{ "policyId": "policy-contact", "path": "/api" }""")]
-    [InlineData("""{ "policyId": "policy-contact", "scope": "global" }""")]
-    public async Task SaveRateLimitPolicy_ThatChangesTheTargetOrTheLimitersOfAnEnabledPolicy_IsRefused(string json)
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        var arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
-            .ToDictionary(pair => pair.Key, pair => (object)pair.Value);
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new SaveRateLimitPolicyTool(), services, arguments);
-
-        // Assert
-        Assert.StartsWith("Nothing was saved: the policy 'Contact API' is enabled", result, StringComparison.Ordinal);
-        Assert.Contains("disableRateLimitPolicy", result, StringComparison.Ordinal);
-        harness.VerifyNothingChanged();
-    }
-
-    [Fact]
-    public async Task SaveRateLimitPolicy_ForAnEnabledPolicy_ChangesItsNameAndDescriptionOnly()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SaveRateLimitPolicyTool(), services, new()
-        {
-            ["policyId"] = "policy-contact",
-            ["name"] = "Contact form",
-            ["description"] = "Ten messages a minute.",
-        }));
-
-        // Assert
-        var policy = Assert.Single(harness.RateLimits.Policies, stored => stored.PolicyId == "policy-contact");
-
-        Assert.False(result.GetProperty("created").GetBoolean());
-        Assert.Equal("Contact form", policy.Name);
-        Assert.Equal("Ten messages a minute.", policy.Description);
-        Assert.True(policy.IsEnabled);
-        Assert.Equal("/api/contact", policy.Path);
-        Assert.Equal("user-owner", policy.OwnerId);
-        Assert.Single(policy.Limiters);
-        Assert.Equal(0, harness.RateLimits.ReleaseRequests);
-    }
-
-    [Fact]
-    public async Task SaveRateLimitPolicy_ForADisabledPolicy_ReplacesItsTargetAndLimiters()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SaveRateLimitPolicyTool(), services, new()
-        {
-            ["policyId"] = "policy-draft",
-            ["scope"] = "group",
-            ["group"] = "newsletter",
-            ["limiters"] = """[ { "type": "concurrency", "permitLimit": 4 } ]""",
-        }));
-
-        // Assert
-        var policy = Assert.Single(harness.RateLimits.Policies, stored => stored.PolicyId == "policy-draft");
-        var limiter = Assert.Single(policy.Limiters);
-
-        Assert.Equal(RateLimitPolicyScope.Group, policy.Scope);
-        Assert.Equal("newsletter", policy.GroupName);
-        Assert.Null(policy.Path);
-        Assert.Equal("Concurrency", limiter.Source);
-        Assert.Equal(4, limiter.GetOrCreate<ConcurrencyRateLimiterData>().PermitLimit);
-        Assert.False(policy.IsEnabled);
-
-        // No endpoint of the site is in that group, so the policy would limit nothing.
-        var warning = Assert.Single(result.GetProperty("warnings").EnumerateArray());
-
-        Assert.Contains("No endpoint of the site is in the rate-limit group 'newsletter'", warning.GetString(), StringComparison.Ordinal);
-        Assert.Contains("contact-forms, password-authentication", warning.GetString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task EnableRateLimitPolicy_EnablesTheDisabledPoliciesAndReloadsTheTenantOnce()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new EnableRateLimitPolicyTool(), services, new()
+        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, new()
         {
             ["policyIds"] = new[] { "policy-draft", "policy-contact", "policy-missing" },
+            ["enabled"] = true,
         }));
 
         // Assert
-        var enabled = Assert.Single(result.GetProperty("enabled").EnumerateArray());
+        var enabled = Assert.Single(result.GetProperty("changed").EnumerateArray());
 
         Assert.Equal("policy-draft", enabled.GetProperty("id").GetString());
         Assert.True(enabled.GetProperty("enabled").GetBoolean());
-        Assert.Equal(["Contact API"], result.GetProperty("alreadyEnabled").EnumerateArray().Select(name => name.GetString()));
+        Assert.Equal(["Contact API"], result.GetProperty("alreadySet").EnumerateArray().Select(name => name.GetString()));
         Assert.Equal(["policy-missing"], result.GetProperty("notFound").EnumerateArray().Select(id => id.GetString()));
         Assert.True(result.GetProperty("tenantReloads").GetBoolean());
         Assert.True(harness.RateLimits.Draft.IsEnabled);
@@ -284,7 +120,7 @@ public sealed class RateLimitToolsTests
     }
 
     [Fact]
-    public async Task EnableRateLimitPolicy_WhenNothingChanges_DoesNotReloadTheTenant()
+    public async Task SetRateLimitPolicyEnabled_WhenNothingChanges_DoesNotReloadTheTenant()
     {
         // Arrange
         var harness = new SecurityToolHarness();
@@ -292,19 +128,20 @@ public sealed class RateLimitToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new EnableRateLimitPolicyTool(), services, new()
+        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, new()
         {
             ["policyIds"] = new[] { "policy-contact", "policy-missing" },
+            ["enabled"] = true,
         }));
 
         // Assert
-        Assert.Empty(result.GetProperty("enabled").EnumerateArray());
+        Assert.Empty(result.GetProperty("changed").EnumerateArray());
         Assert.False(result.TryGetProperty("tenantReloads", out _));
         harness.VerifyNothingChanged();
     }
 
     [Fact]
-    public async Task DisableRateLimitPolicy_ForAPolicyThatDoesNotProtectSignIn_DisablesItAndReloadsTheTenant()
+    public async Task SetRateLimitPolicyEnabled_DisablingAPolicyThatDoesNotProtectSignIn_DisablesItAndReloadsTheTenant()
     {
         // Arrange
         var harness = new SecurityToolHarness();
@@ -312,16 +149,19 @@ public sealed class RateLimitToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new DisableRateLimitPolicyTool(), services, new()
+        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, new()
         {
             ["policyIds"] = new[] { "policy-contact", "policy-draft" },
+            ["enabled"] = false,
         }));
 
         // Assert
-        var disabled = Assert.Single(result.GetProperty("disabled").EnumerateArray());
+        var disabled = Assert.Single(result.GetProperty("changed").EnumerateArray());
+
+        Assert.False(result.GetProperty("enabled").GetBoolean());
 
         Assert.Equal("policy-contact", disabled.GetProperty("id").GetString());
-        Assert.Equal(["Draft policy"], result.GetProperty("alreadyDisabled").EnumerateArray().Select(name => name.GetString()));
+        Assert.Equal(["Draft policy"], result.GetProperty("alreadySet").EnumerateArray().Select(name => name.GetString()));
         Assert.False(result.TryGetProperty("signInProtectionRemoved", out _));
         Assert.False(harness.RateLimits.ContactApi.IsEnabled);
         Assert.Equal(1, harness.RateLimits.ReleaseRequests);
@@ -330,7 +170,7 @@ public sealed class RateLimitToolsTests
     [Theory]
     [InlineData("policy-global", "is a global policy")]
     [InlineData("policy-login", "limits the group 'password-authentication'")]
-    public async Task DisableRateLimitPolicy_ForAPolicyThatProtectsSignIn_NeedsTheConfirmation(string policyId, string reason)
+    public async Task SetRateLimitPolicyEnabled_DisablingAPolicyThatProtectsSignIn_NeedsTheConfirmation(string policyId, string reason)
     {
         // Arrange
         var harness = new SecurityToolHarness();
@@ -341,24 +181,25 @@ public sealed class RateLimitToolsTests
         {
             // The policy that does not protect sign-in is not disabled either: the call is checked as a whole.
             ["policyIds"] = new[] { "policy-contact", policyId },
+            ["enabled"] = false,
         };
 
         // Act
-        var refused = await AgentToolTestContext.InvokeAsync(new DisableRateLimitPolicyTool(), services, arguments);
+        var refused = await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, arguments);
         var enabledAfterRefusal = harness.RateLimits.Policies.Count(policy => policy.IsEnabled);
         var reloadsAfterRefusal = harness.RateLimits.ReleaseRequests;
 
         arguments["confirmRemovesSignInProtection"] = true;
 
-        var confirmed = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new DisableRateLimitPolicyTool(), services, arguments));
+        var confirmed = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, arguments));
 
         // Assert
-        Assert.StartsWith("Nothing was disabled:", refused, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was changed:", refused, StringComparison.Ordinal);
         Assert.Contains(reason, refused, StringComparison.Ordinal);
         Assert.Contains("confirmRemovesSignInProtection", refused, StringComparison.Ordinal);
         Assert.Equal(3, enabledAfterRefusal);
         Assert.Equal(0, reloadsAfterRefusal);
-        Assert.Equal(2, confirmed.GetProperty("disabled").GetArrayLength());
+        Assert.Equal(2, confirmed.GetProperty("changed").GetArrayLength());
         Assert.Contains(reason, Assert.Single(confirmed.GetProperty("signInProtectionRemoved").EnumerateArray()).GetString(), StringComparison.Ordinal);
         Assert.Equal(1, harness.RateLimits.Policies.Count(policy => policy.IsEnabled));
         Assert.Equal(1, harness.RateLimits.ReleaseRequests);
@@ -370,7 +211,7 @@ public sealed class RateLimitToolsTests
     [InlineData("/", true)]
     [InlineData("/Log", false)]
     [InlineData("/api", false)]
-    public async Task DisableRateLimitPolicy_ForAnEndpointPolicy_AsksWhenItsPathCoversASignInEndpoint(string path, bool protects)
+    public async Task SetRateLimitPolicyEnabled_DisablingAnEndpointPolicy_AsksWhenItsPathCoversASignInEndpoint(string path, bool protects)
     {
         // Arrange
         var harness = new SecurityToolHarness();
@@ -380,134 +221,57 @@ public sealed class RateLimitToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DisableRateLimitPolicyTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, new()
         {
             ["policyIds"] = new[] { "policy-contact" },
+            ["enabled"] = false,
         });
 
         // Assert: the rate limiter matches an endpoint policy on whole path segments, so "/Log" does not cover "/Login".
-        Assert.Equal(protects, result.StartsWith("Nothing was disabled:", StringComparison.Ordinal));
+        Assert.Equal(protects, result.StartsWith("Nothing was changed:", StringComparison.Ordinal));
         Assert.Equal(protects, harness.RateLimits.ContactApi.IsEnabled);
     }
 
-    [Fact]
-    public async Task DeleteRateLimitPolicy_ForADisabledPolicy_DeletesItWithoutReloadingTheTenant()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new DeleteRateLimitPolicyTool(), services, new()
-        {
-            ["policyIds"] = new[] { "policy-draft", "policy-missing" },
-        }));
-
-        // Assert
-        var deleted = Assert.Single(result.GetProperty("deleted").EnumerateArray());
-
-        Assert.Equal("policy-draft", deleted.GetProperty("id").GetString());
-        Assert.False(deleted.GetProperty("wasEnabled").GetBoolean());
-        Assert.Equal(["policy-missing"], result.GetProperty("notFound").EnumerateArray().Select(id => id.GetString()));
-        Assert.False(result.TryGetProperty("tenantReloads", out _));
-        Assert.DoesNotContain(harness.RateLimits.Policies, policy => policy.PolicyId == "policy-draft");
-        Assert.Equal(0, harness.RateLimits.ReleaseRequests);
-    }
-
-    [Fact]
-    public async Task DeleteRateLimitPolicy_ForAnEnabledPolicy_ReloadsTheTenant()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new DeleteRateLimitPolicyTool(), services, new()
-        {
-            ["policyIds"] = new[] { "policy-contact" },
-        }));
-
-        // Assert
-        Assert.True(result.GetProperty("tenantReloads").GetBoolean());
-        Assert.DoesNotContain(harness.RateLimits.Policies, policy => policy.PolicyId == "policy-contact");
-        Assert.Equal(1, harness.RateLimits.ReleaseRequests);
-    }
-
-    [Fact]
-    public async Task DeleteRateLimitPolicy_ForAnEnabledPolicyThatProtectsSignIn_NeedsTheConfirmation()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        using var services = harness.Build();
-
-        var arguments = new Dictionary<string, object>
-        {
-            ["policyIds"] = new[] { "policy-login", "policy-draft" },
-        };
-
-        // Act
-        var refused = await AgentToolTestContext.InvokeAsync(new DeleteRateLimitPolicyTool(), services, arguments);
-        var policiesAfterRefusal = harness.RateLimits.Policies.Count;
-
-        arguments["confirmRemovesSignInProtection"] = true;
-
-        var confirmed = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new DeleteRateLimitPolicyTool(), services, arguments));
-
-        // Assert
-        Assert.StartsWith("Nothing was deleted: 'Login throttle' limits the group 'password-authentication' of the sign-in and account endpoints.", refused, StringComparison.Ordinal);
-        Assert.Equal(4, policiesAfterRefusal);
-        Assert.Equal(2, confirmed.GetProperty("deleted").GetArrayLength());
-        Assert.Single(confirmed.GetProperty("signInProtectionRemoved").EnumerateArray());
-        Assert.Equal(2, harness.RateLimits.Policies.Count);
-        Assert.Equal(1, harness.RateLimits.ReleaseRequests);
-    }
-
-    [Fact]
-    public async Task DeleteRateLimitPolicy_ForADisabledPolicyOnTheSignInGroup_DoesNotAsk()
-    {
-        // Arrange
-        var harness = new SecurityToolHarness();
-
-        harness.RateLimits.LoginThrottle.IsEnabled = false;
-
-        using var services = harness.Build();
-
-        // Act
-        var result = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new DeleteRateLimitPolicyTool(), services, new()
-        {
-            ["policyIds"] = new[] { "policy-login" },
-        }));
-
-        // Assert: a disabled policy protects nothing.
-        Assert.Single(result.GetProperty("deleted").EnumerateArray());
-        Assert.Equal(0, harness.RateLimits.ReleaseRequests);
-    }
-
     [Theory]
-    [InlineData(EnableRateLimitPolicyTool.TheName)]
-    [InlineData(DisableRateLimitPolicyTool.TheName)]
-    [InlineData(DeleteRateLimitPolicyTool.TheName)]
-    public async Task ATool_ThatActsOnSeveralPolicies_WithoutIds_ChangesNothing(string toolName)
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SetRateLimitPolicyEnabled_WithoutIds_ChangesNothing(bool enabled)
     {
         // Arrange
         var harness = new SecurityToolHarness();
 
         using var services = harness.Build();
 
-        var (tool, _) = SecurityToolCalls.Create(toolName);
-
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(tool, services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, new()
         {
             ["policyIds"] = Array.Empty<string>(),
+            ["enabled"] = enabled,
         });
 
         // Assert
-        Assert.StartsWith("Nothing was", result, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was changed:", result, StringComparison.Ordinal);
         Assert.Contains("give policyIds", result, StringComparison.Ordinal);
+        harness.VerifyNothingChanged();
+    }
+
+    [Fact]
+    public async Task SetRateLimitPolicyEnabled_WithoutEnabled_ChangesNothing()
+    {
+        // Arrange
+        var harness = new SecurityToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SetRateLimitPolicyEnabledTool(), services, new()
+        {
+            ["policyIds"] = new[] { "policy-draft" },
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was changed: give enabled", result, StringComparison.Ordinal);
+        Assert.False(harness.RateLimits.Draft.IsEnabled);
         harness.VerifyNothingChanged();
     }
 }

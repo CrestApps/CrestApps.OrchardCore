@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
@@ -13,7 +12,6 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using CrestApps.OrchardCore.Calendars;
 
 namespace CrestApps.OrchardCore.Scheduling.Controllers;
 
@@ -109,27 +107,18 @@ public sealed class WaitlistController : Controller
         }
 
         var timeZoneId = await _pageService.GetTimeZoneIdAsync();
+        var entry = await _typeStore.FindByIdAsync(appointmentTypeId ?? string.Empty) is null
+            ? null
+            : WaitlistEntryRules.NewEntry(appointmentTypeId, from, to, customerName, customerEmail, customerPhone, timeZoneId, _clock.UtcNow);
 
-        if (await _typeStore.FindByIdAsync(appointmentTypeId ?? string.Empty) is null ||
-            string.IsNullOrWhiteSpace(customerName) ||
-            !DateTime.TryParseExact(from, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var first) ||
-            !DateTime.TryParseExact(to, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var last) || last < first)
+        if (entry is null)
         {
             await _notifier.ErrorAsync(H["Choose the appointment type, the days and the customer's name."]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        await _waitlistStore.CreateAsync(new WaitlistEntry
-        {
-            AppointmentTypeId = appointmentTypeId,
-            FromUtc = CalendarTime.ToUtc(first, timeZoneId),
-            ToUtc = CalendarTime.ToUtc(last.AddDays(1), timeZoneId),
-            CustomerName = customerName.Trim(),
-            CustomerEmail = customerEmail?.Trim(),
-            CustomerPhone = customerPhone?.Trim(),
-            CreatedUtc = _clock.UtcNow,
-        });
+        await _waitlistStore.CreateAsync(entry);
 
         await _notifier.SuccessAsync(H["The customer has been added to the waitlist."]);
 

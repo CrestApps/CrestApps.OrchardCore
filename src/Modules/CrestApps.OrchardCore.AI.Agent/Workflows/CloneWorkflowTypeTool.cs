@@ -124,7 +124,7 @@ public sealed class CloneWorkflowTypeTool : AIFunction
             activities = copy.Activities.Count,
             designerUrl = WorkflowToolSupport.GetDesignerPath(services, copy),
             note = httpEvents.Count == 0
-                ? "The copy is disabled. Turn it on with enableWorkflowType when the user wants it to run."
+                ? "The copy is disabled. Turn it on with setWorkflowTypeEnabled when the user wants it to run."
                 : "The copy is disabled. Its HTTP Request events have no URL yet: generate them in the designer before the copy is called.",
         });
     }

@@ -15,14 +15,11 @@ public sealed class AIModelToolCallerTests
     public static TheoryData<string, string> Tools => new()
     {
         { ListAIProviderConnectionsTool.TheName, "ManageProviderConnections" },
-        { SaveAIProviderConnectionTool.TheName, "ManageProviderConnections" },
-        { DeleteAIProviderConnectionTool.TheName, "ManageProviderConnections" },
         { ListAIDeploymentsTool.TheName, "ManageAIDeployments" },
         { SaveAIDeploymentTool.TheName, "ManageAIDeployments" },
         { SetAIDeploymentPricingTool.TheName, "ManageAIDeployments" },
         { DeleteAIDeploymentTool.TheName, "ManageAIDeployments" },
         { ListAIVoicesTool.TheName, "ManageAIDeployments" },
-        { CloneAIVoiceTool.TheName, "ManageAIDeployments" },
         { DeleteAIVoiceTool.TheName, "ManageAIDeployments" },
     };
 
@@ -96,14 +93,11 @@ public sealed class AIModelToolCallerTests
         => toolName switch
         {
             ListAIProviderConnectionsTool.TheName => (new ListAIProviderConnectionsTool(), []),
-            SaveAIProviderConnectionTool.TheName => (new SaveAIProviderConnectionTool(), new() { ["connectionId"] = "connection-1", ["title"] = "Changed" }),
-            DeleteAIProviderConnectionTool.TheName => (new DeleteAIProviderConnectionTool(), new() { ["connectionIds"] = new[] { "connection-1" } }),
             ListAIDeploymentsTool.TheName => (new ListAIDeploymentsTool(), []),
             SaveAIDeploymentTool.TheName => (new SaveAIDeploymentTool(), new() { ["deploymentId"] = "deployment-1", ["model"] = "gpt-4.1" }),
             SetAIDeploymentPricingTool.TheName => (new SetAIDeploymentPricingTool(), new() { ["deploymentId"] = "deployment-1", ["prices"] = Array.Empty<object>() }),
             DeleteAIDeploymentTool.TheName => (new DeleteAIDeploymentTool(), new() { ["deploymentIds"] = new[] { "deployment-1" } }),
             ListAIVoicesTool.TheName => (new ListAIVoicesTool(), new() { ["deploymentName"] = "voices" }),
-            CloneAIVoiceTool.TheName => (new CloneAIVoiceTool(), new() { ["deploymentName"] = "voices", ["name"] = "CEO", ["mediaPath"] = "voices/ceo.mp3" }),
             DeleteAIVoiceTool.TheName => (new DeleteAIVoiceTool(), new() { ["deploymentName"] = "voices", ["voiceId"] = "voice-calm" }),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, null),
         };

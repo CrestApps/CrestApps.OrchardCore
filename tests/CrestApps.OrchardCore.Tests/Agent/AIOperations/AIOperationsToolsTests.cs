@@ -5,12 +5,10 @@ using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Agent.ApiKeys;
-using CrestApps.OrchardCore.AI.Agent.ChatInteractions;
 using CrestApps.OrchardCore.AI.Agent.ChatSessions;
 using CrestApps.OrchardCore.AI.Agent.Connections;
 using CrestApps.OrchardCore.AI.Agent.McpServer;
 using CrestApps.OrchardCore.AI.Agent.Memory;
-using CrestApps.OrchardCore.AI.Agent.Usage;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using ModelContextProtocol.Protocol;
@@ -18,7 +16,7 @@ using ModelContextProtocol.Protocol;
 namespace CrestApps.OrchardCore.Tests.Agent.AIOperations;
 
 /// <summary>
-/// The main path and a failure path of each API key, conversation, usage, chat interaction, memory, MCP and A2A tool,
+/// The main path and a failure path of each API key, conversation, memory, MCP and A2A tool,
 /// on in-memory doubles of the services the admin pages use.
 /// </summary>
 public sealed class AIOperationsToolsTests
@@ -87,50 +85,55 @@ public sealed class AIOperationsToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new SaveAIApiKeyTool(), services, new() { ["name"] = "CI pipeline" });
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIApiKeyTool(), services, new() { ["enabled"] = true });
 
         // Assert
-        Assert.StartsWith("Nothing was saved: this tool only changes existing keys", result, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was saved: this tool only enables, disables or changes the expiry of existing keys", result, StringComparison.Ordinal);
         Assert.Empty(harness.ApiKeys);
     }
 
     [Fact]
-    public async Task SaveAIApiKey_WhenABrowserKeyWouldReachAProfileWithUnsafeTools_Refuses()
+    public async Task SaveAIApiKey_WhenEnablingABrowserKeyWhoseProfileRunsUnsafeTools_Refuses()
     {
         // Arrange
         var harness = new AIOperationsToolHarness();
-        harness.AddProfile("profile-1", "support");
         harness.AddProfile("admin-1", "site-admin", profile => profile.Put(new FunctionInvocationMetadata { Names = ["disableSiteFeature"] }));
-        var key = harness.AddApiKey("browser-1", AIApiKeyKind.Browser, k => k.AllowedProfileIds = ["profile-1"]);
+        var key = harness.AddApiKey("browser-1", AIApiKeyKind.Browser, k =>
+        {
+            k.Enabled = false;
+            k.AllowedProfileIds = ["admin-1"];
+        });
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIApiKeyTool(), services, new() { ["apiKeyId"] = "browser-1", ["enabled"] = true });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: a browser key is public", result, StringComparison.Ordinal);
+        Assert.Contains("disableSiteFeature", result, StringComparison.Ordinal);
+        Assert.False(key.Enabled);
+        Assert.Empty(harness.UpdatedApiKeys);
+    }
+
+    [Fact]
+    public async Task SaveAIApiKey_IgnoresRolesAndProfiles_AndChangesNothing()
+    {
+        // Arrange
+        var harness = new AIOperationsToolHarness();
+        var key = harness.AddApiKey("server-1", AIApiKeyKind.Server);
         using var services = harness.Build();
 
         // Act
         var result = await AgentToolTestContext.InvokeAsync(new SaveAIApiKeyTool(), services, new()
         {
-            ["apiKeyId"] = "browser-1",
-            ["allowedProfileIds"] = new[] { "profile-1", "admin-1" },
+            ["apiKeyId"] = "server-1",
+            ["roles"] = new[] { "Administrator" },
+            ["allowedProfileIds"] = new[] { "profile-1" },
         });
 
         // Assert
-        Assert.StartsWith("Nothing was saved: a browser key is public", result, StringComparison.Ordinal);
-        Assert.Contains("disableSiteFeature", result, StringComparison.Ordinal);
-        Assert.Equal(["profile-1"], key.AllowedProfileIds);
-        Assert.Empty(harness.UpdatedApiKeys);
-    }
-
-    [Fact]
-    public async Task SaveAIApiKey_WithTheAnonymousRole_Refuses()
-    {
-        // Arrange
-        var harness = new AIOperationsToolHarness();
-        harness.AddApiKey("server-1", AIApiKeyKind.Server);
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new SaveAIApiKeyTool(), services, new() { ["apiKeyId"] = "server-1", ["roles"] = new[] { "Anonymous" } });
-
-        // Assert
-        Assert.StartsWith("Nothing was saved: 'Anonymous' is not a role", result, StringComparison.Ordinal);
+        Assert.Contains("Only enabled and the expiry can be changed here", result, StringComparison.Ordinal);
+        Assert.Equal(["Editor"], key.Roles);
         Assert.Empty(harness.UpdatedApiKeys);
     }
 
@@ -195,141 +198,6 @@ public sealed class AIOperationsToolsTests
         Assert.StartsWith("Nothing was deleted: this is the conversation you are chatting in now", runningResult, StringComparison.Ordinal);
         Assert.StartsWith("Nothing was deleted: this is not one of your own conversations", otherResult, StringComparison.Ordinal);
         Assert.Empty(harness.DeletedSessions);
-    }
-
-    [Fact]
-    public async Task DeleteAllAIConversations_DeletesTheCallersConversationsWithTheProfile()
-    {
-        // Arrange
-        var harness = new AIOperationsToolHarness();
-        harness.AddProfile("profile-1", "demo");
-        harness.Sessions.Add(new AIChatSession { SessionId = "session-1", ProfileId = "profile-1", UserId = AgentToolTestContext.UserId });
-        harness.Sessions.Add(new AIChatSession { SessionId = "session-2", ProfileId = "profile-1", UserId = AgentToolTestContext.UserId });
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteAllAIConversationsTool(), services, new() { ["profile"] = "demo" });
-
-        // Assert
-        Assert.Equal(2, AgentToolTestContext.ReadJson(result).GetProperty("deleted").GetInt32());
-        Assert.Equal(["profile-1"], harness.DeletedAllProfiles);
-    }
-
-    [Fact]
-    public async Task DeleteAllAIConversations_RefusesTheProfileOfTheRunningChat()
-    {
-        // Arrange
-        var harness = new AIOperationsToolHarness();
-        harness.AddProfile("profile-1", "demo");
-        using var services = harness.Build();
-
-        // Act
-        string result;
-
-        using (AIOperationsToolHarness.BeginTurn(session: new AIChatSession { SessionId = "running", ProfileId = "profile-1" }))
-        {
-            result = await AgentToolTestContext.InvokeAsync(new DeleteAllAIConversationsTool(), services, new() { ["profile"] = "profile-1" });
-        }
-
-        // Assert
-        Assert.StartsWith("Nothing was deleted: you are chatting with the profile", result, StringComparison.Ordinal);
-        Assert.Empty(harness.DeletedAllProfiles);
-    }
-
-    [Fact]
-    public async Task QueryAIUsage_GroupsByModelWithTheDeploymentPrices()
-    {
-        // Arrange
-        var harness = new AIOperationsToolHarness();
-        var deployment = new AIDeployment { ItemId = "d-1", Name = "gpt-4o", ModelName = "gpt-4o" };
-        deployment.Put(new AIDeploymentPricing
-        {
-            Currency = "USD",
-            Prices = [new AIDeploymentPrice { Meter = AIUsageMeters.InputTokens, Amount = 1m, Per = 1_000_000 }],
-        });
-        harness.Deployments.Add(deployment);
-        harness.Usage.Add(new AICompletionUsageRecord { DeploymentName = "gpt-4o", ModelName = "gpt-4o", InputTokenCount = 500_000, OutputTokenCount = 10, TotalTokenCount = 500_010, CreatedUtc = AIOperationsToolHarness.UtcNow });
-        harness.Usage.Add(new AICompletionUsageRecord { DeploymentName = "gpt-4o", ModelName = "gpt-4o", InputTokenCount = 500_000, TotalTokenCount = 500_000, CreatedUtc = AIOperationsToolHarness.UtcNow });
-        harness.Usage.Add(new AICompletionUsageRecord { DeploymentName = "mini", ModelName = "gpt-4o-mini", InputTokenCount = 5, TotalTokenCount = 5, CreatedUtc = AIOperationsToolHarness.UtcNow });
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new QueryAIUsageTool(), services);
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        var first = json.GetProperty("items")[0];
-        Assert.Equal(3, json.GetProperty("totals").GetProperty("requests").GetInt32());
-        Assert.Equal("gpt-4o", first.GetProperty("group").GetString());
-        Assert.Equal(2, first.GetProperty("requests").GetInt32());
-        Assert.Equal("USD", first.GetProperty("currency").GetString());
-        Assert.Equal(1m, first.GetProperty("estimatedCost").GetDecimal());
-        Assert.Equal(2, json.GetProperty("total").GetInt32());
-    }
-
-    [Fact]
-    public async Task QueryAIUsage_WithAnUnknownGrouping_ReturnsNothing()
-    {
-        // Arrange
-        var harness = new AIOperationsToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new QueryAIUsageTool(), services, new() { ["groupBy"] = "planet" });
-
-        // Assert
-        Assert.StartsWith("Nothing was returned: groupBy must be one of", result, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ListChatInteractions_WithoutTheForOthersPermission_ListsOnlyTheCallersOwnAndNoProfileBuilderSessions()
-    {
-        // Arrange
-        var harness = new AIOperationsToolHarness();
-        harness.Authorize = (permission, _) => permission.Name != AIPermissions.ListChatInteractionsForOthers.Name;
-        harness.Interactions.Add(new ChatInteraction { ItemId = "mine", OwnerId = AgentToolTestContext.UserId, Title = "Mine" });
-        harness.Interactions.Add(new ChatInteraction { ItemId = "theirs", OwnerId = AIOperationsToolHarness.OtherUserId, Title = "Theirs" });
-        var builder = new ChatInteraction { ItemId = "builder", OwnerId = AgentToolTestContext.UserId, Title = "Builder" };
-        builder.Properties["ProfileBuilderInteractionMetadata"] = new { };
-        harness.Interactions.Add(builder);
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ListChatInteractionsTool(), services);
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        Assert.Equal(1, json.GetProperty("total").GetInt32());
-        Assert.Equal("mine", json.GetProperty("items")[0].GetProperty("id").GetString());
-        Assert.True(json.GetProperty("onlyYours").GetBoolean());
-    }
-
-    [Fact]
-    public async Task DeleteChatInteractions_ChecksEachInteractionAndSkipsTheRunningOne()
-    {
-        // Arrange
-        var harness = new AIOperationsToolHarness();
-        var running = new ChatInteraction { ItemId = "running", OwnerId = AgentToolTestContext.UserId };
-        var allowed = new ChatInteraction { ItemId = "allowed", OwnerId = AgentToolTestContext.UserId };
-        var denied = new ChatInteraction { ItemId = "denied", OwnerId = AIOperationsToolHarness.OtherUserId };
-        harness.Interactions.AddRange([running, allowed, denied]);
-        harness.Authorize = (permission, resource) => resource is not ChatInteraction interaction || interaction.ItemId != "denied";
-        using var services = harness.Build();
-
-        // Act
-        string result;
-
-        using (AIOperationsToolHarness.BeginTurn(interaction: running))
-        {
-            result = await AgentToolTestContext.InvokeAsync(new DeleteChatInteractionsTool(), services, new() { ["interactionIds"] = new[] { "running", "allowed", "denied" } });
-        }
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        Assert.Equal(1, json.GetProperty("deleted").GetArrayLength());
-        Assert.Equal(2, json.GetProperty("skipped").GetArrayLength());
-        Assert.Equal(["running", "denied"], harness.Interactions.Select(i => i.ItemId));
-        Assert.Contains(harness.ResourceChecks, check => check.Permission == AIPermissions.DeleteChatInteraction.Name && check.Resource == denied);
     }
 
     [Fact]
@@ -636,7 +504,7 @@ public sealed class AIOperationsToolsTests
     }
 
     [Fact]
-    public async Task SaveMcpResource_CreatesAFileResourceWithItsUri()
+    public async Task SaveMcpResource_CreatesAMediaResourceWithItsUri()
     {
         // Arrange
         var harness = new AIOperationsToolHarness();
@@ -645,16 +513,16 @@ public sealed class AIOperationsToolsTests
         // Act
         var result = await AgentToolTestContext.InvokeAsync(new SaveMcpResourceTool(), services, new()
         {
-            ["type"] = "file",
+            ["type"] = "media",
             ["title"] = "Docs",
             ["name"] = "docs",
-            ["path"] = "/{providerName}/{fileName}",
+            ["path"] = "/docs/{fileName}",
             ["mimeType"] = "text/markdown",
         });
 
         // Assert
         var resource = Assert.Single(harness.Resources);
-        Assert.Equal("file://new-resource/{providerName}/{fileName}", resource.Resource.Uri);
+        Assert.Equal("media://new-resource/docs/{fileName}", resource.Resource.Uri);
         Assert.Equal("Docs", resource.Resource.Title);
         Assert.Equal("text/markdown", resource.Resource.MimeType);
         Assert.True(AgentToolTestContext.ReadJson(result).GetProperty("created").GetBoolean());
@@ -673,6 +541,37 @@ public sealed class AIOperationsToolsTests
         // Assert
         Assert.StartsWith("Nothing was saved: an FTP resource needs a host and credentials", result, StringComparison.Ordinal);
         Assert.Empty(harness.Resources);
+    }
+
+    [Fact]
+    public async Task SaveMcpResource_RefusesToCreateAFileResource()
+    {
+        // Arrange
+        var harness = new AIOperationsToolHarness();
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveMcpResourceTool(), services, new() { ["type"] = "file", ["title"] = "Docs", ["name"] = "docs", ["path"] = "/{providerName}/{fileName}" });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: a file resource lets MCP clients read files of the server", result, StringComparison.Ordinal);
+        Assert.Empty(harness.Resources);
+    }
+
+    [Fact]
+    public async Task SaveMcpResource_RefusesToChangeAFileResource()
+    {
+        // Arrange
+        var harness = new AIOperationsToolHarness();
+        harness.Resources.Add(new McpResource { ItemId = "resource-1", Source = "file", DisplayText = "Docs", Resource = new Resource { Uri = "file://resource-1/{fileName}", Name = "docs" } });
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveMcpResourceTool(), services, new() { ["resourceId"] = "resource-1", ["path"] = "/{providerName}/{fileName}" });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: a file resource lets MCP clients read files of the server, so it is not changed from the chat", result, StringComparison.Ordinal);
+        Assert.Equal("file://resource-1/{fileName}", harness.Resources[0].Resource.Uri);
     }
 
     [Fact]
@@ -756,7 +655,6 @@ public sealed class AIOperationsToolsTests
     }
 
     [Theory]
-    [InlineData(ListChatInteractionsTool.TheName)]
     [InlineData(ListMcpConnectionsTool.TheName)]
     [InlineData(ListMcpPromptsTool.TheName)]
     [InlineData(ListMcpResourcesTool.TheName)]
@@ -765,7 +663,6 @@ public sealed class AIOperationsToolsTests
     {
         // Arrange
         var harness = new AIOperationsToolHarness();
-        harness.Interactions.Add(new ChatInteraction { ItemId = "interaction-1", OwnerId = AgentToolTestContext.UserId, Title = "Draft" });
         harness.AddSseConnection("mcp-1", "GitHub");
         harness.Prompts.Add(new McpPrompt { ItemId = "prompt-1", Name = "summarize", Prompt = new Prompt { Name = "summarize", Title = "Summarize" } });
         harness.Resources.Add(new McpResource { ItemId = "resource-1", Source = "file", DisplayText = "Docs", Resource = new Resource { Uri = "file://resource-1", Name = "docs" } });
@@ -774,7 +671,6 @@ public sealed class AIOperationsToolsTests
 
         Microsoft.Extensions.AI.AIFunction tool = toolName switch
         {
-            ListChatInteractionsTool.TheName => new ListChatInteractionsTool(),
             ListMcpConnectionsTool.TheName => new ListMcpConnectionsTool(),
             ListMcpPromptsTool.TheName => new ListMcpPromptsTool(),
             ListMcpResourcesTool.TheName => new ListMcpResourcesTool(),

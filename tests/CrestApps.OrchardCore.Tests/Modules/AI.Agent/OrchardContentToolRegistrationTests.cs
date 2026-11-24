@@ -21,8 +21,10 @@ public sealed class OrchardContentToolRegistrationTests
 {
     public static TheoryData<string, bool> Tools => new()
     {
+        { GetContentItemTool.TheName, false },
         { ListContentItemsTool.TheName, false },
         { ListContentItemVersionsTool.TheName, false },
+        { CompareContentItemVersionsTool.TheName, false },
         { RestoreContentItemVersionTool.TheName, false },
         { DiscardContentItemDraftTool.TheName, true },
         { ChangeContentItemOwnerTool.TheName, true },
@@ -30,10 +32,8 @@ public sealed class OrchardContentToolRegistrationTests
         { RemoveContentTypePartTool.TheName, true },
         { SaveContentPartFieldTool.TheName, false },
         { RemoveContentPartFieldTool.TheName, true },
-        { ReorderContentTypeElementsTool.TheName, false },
-        { ListContentItemLocalizationsTool.TheName, false },
+        { ListShapeAlternatesTool.TheName, false },
         { LocalizeContentItemTool.TheName, false },
-        { ListNestedContentItemsTool.TheName, false },
         { SaveNestedContentItemTool.TheName, false },
         { RemoveNestedContentItemTool.TheName, true },
         { ScheduleContentItemTool.TheName, false },

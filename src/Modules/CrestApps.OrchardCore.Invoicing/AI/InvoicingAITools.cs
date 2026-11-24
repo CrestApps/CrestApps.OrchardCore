@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -25,7 +26,8 @@ namespace CrestApps.OrchardCore.Invoicing.AI;
 
 /// <summary>
 /// Registers the invoicing AI tools, which administrators can pick on AI profiles: find invoices, summarize what
-/// customers owe, draft an invoice and send a reminder. Each acts as the signed-in user, with their permissions.
+/// customers owe, draft an invoice and send a reminder; and read, issue, approve, void, write off and record payments on
+/// an invoice. Each acts as the signed-in user, with their permissions.
 /// </summary>
 [RequireFeatures(AIConstants.Feature.Area)]
 public sealed class InvoicingAIToolsStartup : StartupBase
@@ -44,6 +46,57 @@ public sealed class InvoicingAIToolsStartup : StartupBase
         services.AddCoreAITool<SummarizeReceivablesTool>(SummarizeReceivablesTool.ToolName).WithTitle(S["Summarize receivables"]).WithDescription(S["Sums what customers owe on open invoices, by currency and how late it is, with the customers who owe most."]).WithCategory(S["Invoicing"]).Selectable();
         services.AddCoreAITool<DraftInvoiceTool>(DraftInvoiceTool.ToolName).WithTitle(S["Draft an invoice"]).WithDescription(S["Drafts an invoice for a customer from lines; staff check and issue it."]).WithCategory(S["Invoicing"]).Selectable();
         services.AddCoreAITool<SendInvoiceReminderTool>(SendInvoiceReminderTool.ToolName).WithTitle(S["Send an invoice reminder"]).WithDescription(S["E-mails an open invoice again to its customer with its pay link."]).WithCategory(S["Invoicing"]).Selectable();
+
+        // The invoice's life cycle: read one invoice, issue, approve, and void, write off or record a payment after a
+        // preview whose token the action requires (the owner's review, F23).
+        services.TryAddScoped<InvoicingToolScope>();
+
+        services.AddCoreAITool<GetInvoiceTool>(GetInvoiceTool.TheName)
+            .WithTitle(S["Get an invoice"])
+            .WithDescription(S["Gets one invoice in full: lines, totals, what is paid, credited and due, history, late-fee debit notes, credit notes and what you may do with it now."])
+            .WithCategory(S["Invoicing"])
+            .Selectable();
+
+        services.AddCoreAITool<IssueInvoiceTool>(IssueInvoiceTool.TheName)
+            .WithTitle(S["Issue an invoice"])
+            .WithDescription(S["Issues a draft invoice: numbers it and posts what it totals to the ledger as owed, optionally e-mailing it to the customer, or submits it for approval when its total needs approval."])
+            .WithCategory(S["Invoicing"])
+            .RequireApproval()
+            .Selectable();
+
+        services.AddCoreAITool<DecideInvoiceApprovalTool>(DecideInvoiceApprovalTool.TheName)
+            .WithTitle(S["Approve or reject an invoice"])
+            .WithDescription(S["For invoices waiting for approval only (findInvoices with status pendingApproval): approves one, which issues it, or rejects it with a reason, which makes it a draft again. Other approval requests use decideApprovalRequest."])
+            .WithCategory(S["Invoicing"])
+            .RequireApproval()
+            .Selectable();
+
+        services.AddCoreAITool<PreviewInvoiceActionTool>(PreviewInvoiceActionTool.TheName)
+            .WithTitle(S["Preview an invoice void, write-off or payment"])
+            .WithDescription(S["Shows what voiding, writing off or recording a payment on an invoice would do, without changing anything, and returns the previewToken the action requires."])
+            .WithCategory(S["Invoicing"])
+            .Selectable();
+
+        services.AddCoreAITool<VoidInvoiceTool>(VoidInvoiceTool.TheName)
+            .WithTitle(S["Void an invoice"])
+            .WithDescription(S["Voids an open invoice nothing was paid or credited on, or waives a late fee by voiding its debit note. Needs the previewToken from previewInvoiceAction."])
+            .WithCategory(S["Invoicing"])
+            .RequireApproval()
+            .Selectable();
+
+        services.AddCoreAITool<WriteOffInvoiceTool>(WriteOffInvoiceTool.TheName)
+            .WithTitle(S["Write off an invoice"])
+            .WithDescription(S["Writes off everything still owed on an open invoice as uncollectible, with a reason. Needs the previewToken from previewInvoiceAction."])
+            .WithCategory(S["Invoicing"])
+            .RequireApproval()
+            .Selectable();
+
+        services.AddCoreAITool<RecordInvoicePaymentTool>(RecordInvoicePaymentTool.TheName)
+            .WithTitle(S["Record an invoice payment"])
+            .WithDescription(S["Records money received outside the site against an open invoice, up to what is still owed, and when it was received. Needs the previewToken from previewInvoiceAction and a new idempotency key."])
+            .WithCategory(S["Invoicing"])
+            .RequireApproval()
+            .Selectable();
     }
 }
 

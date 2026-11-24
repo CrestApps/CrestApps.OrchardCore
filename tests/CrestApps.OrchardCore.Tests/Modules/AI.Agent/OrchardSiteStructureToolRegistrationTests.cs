@@ -21,8 +21,7 @@ public sealed class OrchardSiteStructureToolRegistrationTests
 {
     public static TheoryData<string, bool> Tools => new()
     {
-        { FindContentItemByHandleTool.TheName, false },
-        { SetHomepageTool.TheName, false },
+        { SetHomepageTool.TheName, true },
         { GetTaxonomyTermsTool.TheName, false },
         { SaveTaxonomyTermTool.TheName, false },
         { DeleteTaxonomyTermTool.TheName, true },
@@ -33,7 +32,6 @@ public sealed class OrchardSiteStructureToolRegistrationTests
         { ListSitemapsTool.TheName, false },
         { SaveSitemapTool.TheName, false },
         { DeleteSitemapTool.TheName, true },
-        { PurgeSitemapCacheTool.TheName, false },
     };
 
     [Theory]

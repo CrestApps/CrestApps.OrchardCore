@@ -195,7 +195,7 @@ public sealed class SaveUserTool : AIFunction
         }
         else if (changesEmail)
         {
-            note = "Whether the email is confirmed did not change. Use confirmUserEmail only when the new address is known to be verified.";
+            note = "Whether the email is confirmed did not change. Use setUserAccountState with action confirmEmail only when the new address is known to be verified.";
         }
 
         return AgentToolResults.Json(new

@@ -21,9 +21,14 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
     private readonly ISession _session;
 
     /// <summary>
+    /// The unique key identifying this registry.
+    /// </summary>
+    public const string RegistryKey = "local-dnc";
+
+    /// <summary>
     /// Gets the unique key identifying this registry.
     /// </summary>
-    public string Key => "local-dnc";
+    public string Key => RegistryKey;
 
     /// <summary>
     /// Gets the localized display name of this registry.

@@ -21,23 +21,14 @@ public sealed class AIModelAndQualityToolRegistrationTests
     public static TheoryData<string, bool> Tools => new()
     {
         { ListAIProviderConnectionsTool.TheName, false },
-        { SaveAIProviderConnectionTool.TheName, true },
-        { DeleteAIProviderConnectionTool.TheName, true },
         { ListAIDeploymentsTool.TheName, false },
         { SaveAIDeploymentTool.TheName, true },
         { SetAIDeploymentPricingTool.TheName, false },
         { DeleteAIDeploymentTool.TheName, true },
         { ListAIVoicesTool.TheName, false },
-        { CloneAIVoiceTool.TheName, true },
         { DeleteAIVoiceTool.TheName, true },
         { ListAITestRunsTool.TheName, false },
-        { SaveAITestCaseTool.TheName, false },
-        { DeleteAITestCasesTool.TheName, true },
-        { SaveAIAlertRuleTool.TheName, false },
-        { DeleteAIAlertRuleTool.TheName, true },
-        { ListAIQACohortsTool.TheName, false },
-        { SaveAIQACohortTool.TheName, true },
-        { DeleteAIQACohortTool.TheName, true },
+        { CreateAITestCaseFromConversationTool.TheName, false },
     };
 
     [Theory]
@@ -63,9 +54,9 @@ public sealed class AIModelAndQualityToolRegistrationTests
     }
 
     [Theory]
-    [InlineData(typeof(AIProviderConnectionsToolsStartup), 3, AIConstants.Feature.ConnectionManagement)]
-    [InlineData(typeof(AIDeploymentsToolsStartup), 7, AIConstants.Feature.Area)]
-    [InlineData(typeof(AIQualityManagementToolsStartup), 8, AIConstants.Feature.Quality)]
+    [InlineData(typeof(AIProviderConnectionsToolsStartup), 1, AIConstants.Feature.ConnectionManagement)]
+    [InlineData(typeof(AIDeploymentsToolsStartup), 6, AIConstants.Feature.Area)]
+    [InlineData(typeof(AIQualityManagementToolsStartup), 2, AIConstants.Feature.Quality)]
     public void EachFeatureStartup_RegistersItsToolsAndRequiresItsFeature(Type startupType, int expectedCount, string featureId)
     {
         // Act
@@ -77,6 +68,23 @@ public sealed class AIModelAndQualityToolRegistrationTests
         // Assert
         Assert.Equal(expectedCount, tools.Count);
         Assert.Contains(featureId, attribute.RequiredFeatureNames);
+    }
+
+    [Theory]
+    [InlineData("saveAIAlertRule")]
+    [InlineData("deleteAIAlertRule")]
+    [InlineData("listAIQACohorts")]
+    [InlineData("saveAIQACohort")]
+    [InlineData("deleteAIQACohort")]
+    [InlineData("saveAITestCase")]
+    [InlineData("deleteAITestCases")]
+    public void QualitySetupRecords_HaveNoDedicatedTools_TheyAreRecordKinds(string toolName)
+    {
+        // Act
+        var tools = GetTools();
+
+        // Assert
+        Assert.False(tools.ContainsKey(toolName), $"The tool '{toolName}' should be replaced by the generic record tools.");
     }
 
     [Fact]

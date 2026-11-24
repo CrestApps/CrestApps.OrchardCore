@@ -268,7 +268,7 @@ internal static partial class AIActivitiesApiEndpoints
             return NotFound();
         }
 
-        if (!CanCancel(activity.Status))
+        if (!await AIActivityCancellation.CancelAsync(activityManager, clock, activity, httpContext.RequestAborted))
         {
             return TypedResults.Problem(
                 statusCode: StatusCodes.Status409Conflict,
@@ -276,15 +276,11 @@ internal static partial class AIActivitiesApiEndpoints
                 detail: $"The {activity.Kind.ToString().ToLowerInvariant()} is {activity.Status} and can no longer be cancelled.");
         }
 
-        activity.Status = ActivityStatus.Cancelled;
-        activity.CompletedUtc = clock.UtcNow;
-        await activityManager.UpdateAsync(activity, cancellationToken: httpContext.RequestAborted);
-
         return TypedResults.Ok(ApiAIActivity.From(activity));
     }
 
     internal static bool CanCancel(ActivityStatus status)
-        => status is ActivityStatus.NotStated or ActivityStatus.Pending or ActivityStatus.Scheduled;
+        => AIActivityCancellation.CanCancel(status);
 
     internal static bool IsPhoneNumber(string value)
         => !string.IsNullOrWhiteSpace(value) && PhoneNumberPattern().IsMatch(value.Trim());

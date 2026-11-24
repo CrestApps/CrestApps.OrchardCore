@@ -71,8 +71,11 @@ public sealed class AIConfigurationGuardTests
         Assert.Empty(harness.Profiles.Updated);
     }
 
-    [Fact]
-    public async Task DeleteAIProfile_InsideATurn_SkipsTheAdminWidgetProfileAndAlwaysAvailableAgents()
+    [Theory]
+    [InlineData("widget")]
+    [InlineData("helper")]
+    [InlineData("running")]
+    public async Task DeleteAIProfile_InsideATurn_RefusesTheAdminWidgetProfileAlwaysAvailableAgentsAndTheRunningProfile(string profileId)
     {
         // Arrange
         var harness = new AIConfigurationToolHarness
@@ -82,6 +85,24 @@ public sealed class AIConfigurationGuardTests
 
         harness.AddProfile("widget", "widget");
         harness.AddProfile("helper", "helper", AIProfileType.Agent, profile => profile.Put(new AgentMetadata { Availability = AgentAvailability.AlwaysAvailable }));
+        var running = harness.AddProfile("running", "running");
+
+        using var services = harness.Build();
+        using var turn = AIConfigurationToolHarness.BeginTurn(running);
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = profileId });
+
+        // Assert
+        Assert.StartsWith("Refused:", result);
+        Assert.Empty(harness.Profiles.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAIProfile_InsideATurn_DeletesAnUnrelatedProfile()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
         harness.AddProfile("unrelated", "unrelated");
         var running = harness.AddProfile("running", "running");
 
@@ -89,11 +110,10 @@ public sealed class AIConfigurationGuardTests
         using var turn = AIConfigurationToolHarness.BeginTurn(running);
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileIds"] = new[] { "widget", "helper", "unrelated", "running" } });
+        await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = "unrelated" });
 
         // Assert
         Assert.Equal(["unrelated"], harness.Profiles.Deleted.Select(profile => profile.ItemId));
-        Assert.Contains("Refused:", result);
     }
 
     [Fact]
@@ -106,7 +126,7 @@ public sealed class AIConfigurationGuardTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileIds"] = new[] { "locked" } });
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = "locked" });
 
         // Assert
         Assert.Empty(harness.Profiles.Deleted);
@@ -378,7 +398,7 @@ public sealed class AIConfigurationGuardTests
     }
 
     [Fact]
-    public async Task CreateAIProfileFromTemplate_RefusesATemplateWhoseToolsAreUnsafe_WhenVisitorsCanQueryTheNewProfile()
+    public async Task SaveAIProfile_WithATemplate_RefusesATemplateWhoseToolsAreUnsafe_WhenVisitorsCanQueryTheNewProfile()
     {
         // Arrange
         var harness = new AIConfigurationToolHarness
@@ -393,7 +413,7 @@ public sealed class AIConfigurationGuardTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new CreateAIProfileFromTemplateTool(), services, new() { ["templateId"] = "template-1", ["title"] = "Public bot", ["name"] = "public-bot" });
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIProfileTool(), services, new() { ["templateId"] = "template-1", ["title"] = "Public bot", ["name"] = "public-bot" });
 
         // Assert
         Assert.Contains("the tool 'powerfulTool'", result);

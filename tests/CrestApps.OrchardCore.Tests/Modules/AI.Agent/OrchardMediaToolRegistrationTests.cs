@@ -10,7 +10,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Agent;
 
 /// <summary>
-/// The Orchard Core tools of the AI Agent module for the media library, the media cache and the shortcode catalog are
+/// The Orchard Core tools of the AI Agent module for the media library and the shortcode catalog are
 /// registered with a title, a description and a category, can be picked on a profile, and ask for approval exactly
 /// where the tool coverage plan says so.
 /// </summary>
@@ -20,13 +20,9 @@ public sealed class OrchardMediaToolRegistrationTests
     {
         { ListMediaFilesTool.TheName, false },
         { GetMediaFileTool.TheName, false },
-        { GetMediaOptionsTool.TheName, false },
         { ImportMediaFromUrlTool.TheName, true },
-        { SaveMediaTextFileTool.TheName, true },
-        { MoveMediaFileTool.TheName, false },
-        { CopyMediaFileTool.TheName, false },
-        { DeleteMediaFileTool.TheName, true },
-        { PurgeMediaCacheTool.TheName, false },
+        { MoveMediaFilesTool.TheName, false },
+        { DeleteMediaTool.TheName, true },
         { ListShortcodesTool.TheName, false },
     };
 

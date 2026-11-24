@@ -26,12 +26,8 @@ public sealed class OrchardSearchToolRegistrationTests
         { RebuildIndexProfileTool.TheName, true },
         { DeleteIndexProfileTool.TheName, true },
         { SearchIndexTool.TheName, false },
-        { RunSearchQueryTool.TheName, false },
         { ListQueriesTool.TheName, false },
-        { SaveQueryTool.TheName, true },
-        { DeleteQueryTool.TheName, true },
         { RunQueryTool.TheName, false },
-        { RunSqlQueryTool.TheName, true },
     };
 
     [Theory]
@@ -54,24 +50,6 @@ public sealed class OrchardSearchToolRegistrationTests
         Assert.False(string.IsNullOrWhiteSpace(tool.Category));
         Assert.True(tool.IsSelectable());
         Assert.Equal(requiresApproval, tool.RequiresApproval);
-    }
-
-    [Fact]
-    public void RunSearchQuery_IsRegisteredForLuceneAndForElasticsearch_WithTheSameTexts()
-    {
-        // Arrange
-        var lucene = GetTools(typeof(CrestApps.OrchardCore.AI.Agent.LuceneToolsStartup));
-        var elasticsearch = GetTools(typeof(CrestApps.OrchardCore.AI.Agent.ElasticsearchToolsStartup));
-
-        // Act
-        var luceneTool = lucene[RunSearchQueryTool.TheName];
-        var elasticsearchTool = elasticsearch[RunSearchQueryTool.TheName];
-
-        // Assert
-        Assert.Equal(luceneTool.Title, elasticsearchTool.Title);
-        Assert.Equal(luceneTool.Description, elasticsearchTool.Description);
-        Assert.Equal(luceneTool.Category, elasticsearchTool.Category);
-        Assert.Equal(luceneTool.RequiresApproval, elasticsearchTool.RequiresApproval);
     }
 
     private static IReadOnlyDictionary<string, AIToolDefinitionEntry> GetTools(Type startupType = null)

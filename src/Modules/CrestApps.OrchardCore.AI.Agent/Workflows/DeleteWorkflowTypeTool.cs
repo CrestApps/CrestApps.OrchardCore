@@ -47,7 +47,7 @@ public sealed class DeleteWorkflowTypeTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Permanently deletes one or more workflows with their versions, draft, instances and journals. Prefer disableWorkflowType when the user only wants a workflow to stop.";
+    public override string Description => "Permanently deletes one or more workflows with their versions, draft, instances and journals. Prefer setWorkflowTypeEnabled with enabled false when the user only wants a workflow to stop.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

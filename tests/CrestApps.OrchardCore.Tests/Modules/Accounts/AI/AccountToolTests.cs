@@ -50,6 +50,7 @@ public sealed class AccountToolTests : IAsyncLifetime
     public static TheoryData<string> ToolNames => new()
     {
         ListAccountsTool.TheName,
+        GetAccountTool.TheName,
         SetAccountMembersTool.TheName,
         SaveAccountLocationTool.TheName,
         DeleteAccountLocationTool.TheName,
@@ -116,6 +117,9 @@ public sealed class AccountToolTests : IAsyncLifetime
 
     [Theory]
     [InlineData(ListAccountsTool.TheName, "ListContent", false)]
+    [InlineData(GetAccountTool.TheName, "AccessAdminPanel", false)]
+    [InlineData(GetAccountTool.TheName, "ListContent", false)]
+    [InlineData(GetAccountTool.TheName, "ViewContent", true)]
     [InlineData(SetAccountMembersTool.TheName, "ManageAccountMembers", false)]
     [InlineData(SetAccountMembersTool.TheName, "EditContent", true)]
     [InlineData(SaveAccountLocationTool.TheName, "EditContent", true)]
@@ -160,6 +164,69 @@ public sealed class AccountToolTests : IAsyncLifetime
         Assert.Equal("Head office", Assert.Single(account.GetProperty("locations").EnumerateArray()).GetProperty("name").GetString());
         Assert.Equal("Sam Carter", account.GetProperty("ownerName").GetString());
         Assert.Equal(0, hidden.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetAccount_ReturnsTheMembersLocationsAndTeam_AsTheAccountPageShowsThem()
+    {
+        // Act
+        var result = await InvokeAsync(GetAccountTool.TheName, Build(), new() { ["contentItemId"] = AccountId });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        var member = Assert.Single(json.GetProperty("members").EnumerateArray());
+        var location = Assert.Single(json.GetProperty("locations").EnumerateArray());
+        var team = json.GetProperty("team");
+
+        Assert.Equal(AccountId, json.GetProperty("contentItemId").GetString());
+        Assert.Equal("Northwind Traders", json.GetProperty("name").GetString());
+        Assert.Equal("Account", json.GetProperty("type").GetString());
+        Assert.True(json.GetProperty("published").GetBoolean());
+        Assert.False(json.GetProperty("hasUnpublishedChanges").GetBoolean());
+        Assert.Equal("jane@northwind.example", member.GetProperty("user").GetString());
+        Assert.Equal("Member", member.GetProperty("role").GetString());
+        Assert.Equal("contact-1", member.GetProperty("contactContentItemId").GetString());
+        Assert.Equal("hq", location.GetProperty("locationId").GetString());
+        Assert.Equal("Seattle", location.GetProperty("address").GetProperty("city").GetString());
+        Assert.Equal("s-sam", team.GetProperty("owner").GetProperty("staffId").GetString());
+        Assert.Equal("Sam Carter", team.GetProperty("owner").GetProperty("name").GetString());
+        Assert.Empty(team.GetProperty("members").EnumerateArray());
+
+        // The content item is never serialized: no user id, no part names.
+        Assert.DoesNotContain("u-jane", result, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(AccountMembersPart), result, StringComparison.Ordinal);
+        Assert.Empty(_actions);
+    }
+
+    [Fact]
+    public async Task GetAccount_ReturnsTheEmailDomains_AndTheBillingLocation_OfTheAccountsEditor()
+    {
+        // Arrange
+        _latest.Alter<AccountLocationsPart>(part => part.Locations[0].IsBilling = true);
+
+        // Act
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(GetAccountTool.TheName, Build(), new() { ["contentItemId"] = AccountId }));
+
+        // Assert
+        Assert.Equal(["northwind.example", "northwind-traders.example"], json.GetProperty("emailDomains").EnumerateArray().Select(domain => domain.GetString()));
+        Assert.True(Assert.Single(json.GetProperty("locations").EnumerateArray()).GetProperty("isBilling").GetBoolean());
+    }
+
+    [Fact]
+    public async Task GetAccount_SaysWhenItShowsUnpublishedChanges_AndRefusesAnItemThatIsNotAnAccount()
+    {
+        // Arrange
+        _latest = Account("v2", published: false);
+
+        // Act
+        var draft = AgentToolTestContext.ReadJson(await InvokeAsync(GetAccountTool.TheName, Build(), new() { ["contentItemId"] = AccountId }));
+        var lead = await InvokeAsync(GetAccountTool.TheName, Build(), new() { ["contentItemId"] = "lead-1" });
+
+        // Assert
+        Assert.True(draft.GetProperty("published").GetBoolean());
+        Assert.True(draft.GetProperty("hasUnpublishedChanges").GetBoolean());
+        Assert.Contains("unpublished changes", draft.GetProperty("note").GetString(), StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was done: no account has the id 'lead-1'.", lead, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -235,6 +302,47 @@ public sealed class AccountToolTests : IAsyncLifetime
 
         // Assert
         Assert.StartsWith("Nothing was changed: the address does not have its country's form.", result, StringComparison.Ordinal);
+        Assert.Empty(_actions);
+    }
+
+    [Fact]
+    public async Task SaveAccountLocation_KeepsTheBillingLocation_WhenItChanges()
+    {
+        // Arrange
+        _latest.Alter<AccountLocationsPart>(part => part.Locations[0].IsBilling = true);
+
+        // Act
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(SaveAccountLocationTool.TheName, Build(), new()
+        {
+            ["contentItemId"] = AccountId,
+            ["locationId"] = "hq",
+            ["name"] = "Headquarters",
+        }));
+
+        // Assert
+        var location = Assert.Single(_draft.Get<AccountLocationsPart>(nameof(AccountLocationsPart)).Locations);
+
+        Assert.Equal("Headquarters", location.Name);
+        Assert.True(location.IsBilling);
+        Assert.True(json.GetProperty("isBilling").GetBoolean());
+    }
+
+    [Fact]
+    public async Task SaveAccountLocation_RefusesASecondBillingLocation()
+    {
+        // Arrange
+        _latest.Alter<AccountLocationsPart>(part => part.Locations[0].IsBilling = true);
+
+        // Act
+        var result = await InvokeAsync(SaveAccountLocationTool.TheName, Build(), new()
+        {
+            ["contentItemId"] = AccountId,
+            ["address"] = new { addressLine1 = "500 Harbor Blvd", city = "Oakland", region = "CA", postalCode = "94607", country = "US" },
+            ["isBilling"] = true,
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was changed: only one location can be the billing location, and 'Head office'", result, StringComparison.Ordinal);
         Assert.Empty(_actions);
     }
 
@@ -316,6 +424,7 @@ public sealed class AccountToolTests : IAsyncLifetime
     private static Dictionary<string, object> Arguments(string toolName)
         => toolName switch
         {
+            GetAccountTool.TheName => new() { ["contentItemId"] = AccountId },
             SetAccountMembersTool.TheName => new() { ["contentItemId"] = AccountId, ["members"] = new object[] { new { user = "tom" } } },
             SaveAccountLocationTool.TheName => new() { ["contentItemId"] = AccountId, ["name"] = "HQ" },
             DeleteAccountLocationTool.TheName => new() { ["contentItemId"] = AccountId, ["locationId"] = "hq" },
@@ -338,6 +447,7 @@ public sealed class AccountToolTests : IAsyncLifetime
         account.Alter<AccountMembersPart>(part => part.Members = [new AccountMember { UserId = "u-jane", UserName = "jane", Email = "jane@northwind.example", ContactContentItemId = "contact-1" }]);
         account.Alter<AccountLocationsPart>(part => part.Locations = [new AccountLocation { LocationId = "hq", Name = "Head office", Address = new Address { AddressLine1 = "1 Main St", City = "Seattle", Region = "WA", PostalCode = "98101", Country = "US" } }]);
         account.Alter<AccountTeamPart>(part => part.OwnerStaffId = "s-sam");
+        account.Alter<AccountEmailDomainsPart>(part => part.Domains = ["northwind.example", "northwind-traders.example"]);
 
         return account;
     }
@@ -391,7 +501,7 @@ public sealed class AccountToolTests : IAsyncLifetime
         var definition = new ContentTypeDefinition(
             "Account",
             "Account",
-            new[] { "AccountPart", "AccountMembersPart", "AccountLocationsPart", "AccountTeamPart" }
+            new[] { "AccountPart", "AccountMembersPart", "AccountLocationsPart", "AccountTeamPart", "AccountEmailDomainsPart" }
                 .Select(name => new ContentTypePartDefinition(name, new ContentPartDefinition(name, [], new JsonObject()), new JsonObject())),
             new JsonObject());
 
@@ -440,6 +550,7 @@ public sealed class AccountToolTests : IAsyncLifetime
         AIFunction tool = toolName switch
         {
             ListAccountsTool.TheName => new ListAccountsTool(),
+            GetAccountTool.TheName => new GetAccountTool(),
             SetAccountMembersTool.TheName => new SetAccountMembersTool(),
             SaveAccountLocationTool.TheName => new SaveAccountLocationTool(),
             DeleteAccountLocationTool.TheName => new DeleteAccountLocationTool(),

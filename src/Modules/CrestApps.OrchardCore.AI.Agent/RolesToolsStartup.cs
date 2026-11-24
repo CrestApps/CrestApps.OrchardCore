@@ -35,7 +35,7 @@ public sealed class RolesToolsStartup : StartupBase
 
         services.AddCoreAITool<GetRoleDetailsTool>(GetRoleDetailsTool.TheName)
             .WithTitle(S["Get Role"])
-            .WithDescription(S["Gets a role's description and permissions: the ones assigned directly and the effective ones, including those inherited from Anonymous and Authenticated. Use it to answer \"what can this role do\" and before saveRole."])
+            .WithDescription(S["Gets a role's description and permissions: the ones assigned directly and the effective ones, including those inherited from Anonymous and Authenticated. With compareWith, it compares the permissions of two roles. Use it to answer \"what can this role do\" or \"how do these roles differ\" and before saveRole."])
             .WithCategory(S["Roles Management"])
             .Selectable();
 
@@ -47,7 +47,7 @@ public sealed class RolesToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveRoleTool>(SaveRoleTool.TheName)
             .WithTitle(S["Save Role"])
-            .WithDescription(S["Creates a role, or updates a role's description and permissions (add, remove or replace; a new role can copy the permissions of another role). It refuses to change the administrator role's permissions and names every security-critical permission it would grant."])
+            .WithDescription(S["Creates a role, or updates a role's description and permissions (add, remove or replace; a new role can copy the permissions of another role). It refuses to change the administrator role's permissions and names every security-critical permission it would grant. A permission name no enabled feature provides is refused with the closest names that exist."])
             .WithCategory(S["Roles Management"])
             .RequireApproval()
             .Selectable();

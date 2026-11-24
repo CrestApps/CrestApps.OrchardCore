@@ -62,12 +62,6 @@ public sealed class AIToolsStartup : StartupBase
             .WithCategory(S["Inventory"])
             .Selectable();
 
-        services.AddCoreAITool<RebuildStockItemTool>(RebuildStockItemTool.TheName)
-            .WithTitle(S["Rebuild Stock Item"])
-            .WithDescription(S["Recomputes one stock item's units on hand from its movement history. Use it only when the stored count is in doubt."])
-            .WithCategory(S["Inventory"])
-            .Selectable();
-
         services.AddCoreAITool<SyncInventoryTool>(SyncInventoryTool.TheName)
             .WithTitle(S["Sync Inventory"])
             .WithDescription(S["Starts counting products whose type gained the Inventory part and refreshes every stock item's title, SKU and threshold from its product; returns how many products were checked. Use it after adding the Inventory part to a type or when stock items look stale."])

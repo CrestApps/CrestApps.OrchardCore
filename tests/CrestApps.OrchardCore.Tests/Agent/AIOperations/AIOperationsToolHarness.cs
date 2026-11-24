@@ -115,6 +115,7 @@ internal sealed class AIOperationsToolHarness
         {
             options.AddResourceType("file", entry => entry.SupportedVariables = [new McpResourceVariable("fileName")]);
             options.AddResourceType("ftp");
+            options.AddResourceType("media", entry => entry.SupportedVariables = [new McpResourceVariable("fileName")]);
         });
 
         return services.BuildServiceProvider();
@@ -202,7 +203,7 @@ internal sealed class AIOperationsToolHarness
         return connection;
     }
 
-    private IClock CreateClock()
+    private static IClock CreateClock()
     {
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(UtcNow);

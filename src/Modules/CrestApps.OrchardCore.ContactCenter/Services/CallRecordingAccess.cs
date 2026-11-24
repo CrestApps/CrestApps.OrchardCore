@@ -43,6 +43,16 @@ public sealed record CallRecordingAccess(string UserId, bool CanListOwn, bool Ca
     }
 
     /// <summary>
+    /// Gets the agent a search of recorded calls is narrowed to. Someone who may only hear their own calls is only ever
+    /// searched their own, whatever was asked for; someone who may hear everyone's calls searches the agent they asked
+    /// for, or every agent.
+    /// </summary>
+    /// <param name="requestedAgentUserId">The agent asked for, or <see langword="null"/> for every agent.</param>
+    /// <returns>The agent the search is narrowed to.</returns>
+    public string NarrowAgentUserId(string requestedAgentUserId)
+        => CanListEveryone ? requestedAgentUserId : UserId;
+
+    /// <summary>
     /// Determines whether a recording can be played: it landed in the media store and was not erased since.
     /// </summary>
     /// <param name="recording">The recording.</param>

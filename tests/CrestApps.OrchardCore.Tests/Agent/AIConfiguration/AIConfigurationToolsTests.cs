@@ -143,7 +143,7 @@ public sealed class AIConfigurationToolsTests
     }
 
     [Fact]
-    public async Task CreateAIProfileFromTemplate_CreatesTheProfileWithTheTemplatesValues()
+    public async Task SaveAIProfile_WithATemplate_CreatesTheProfileWithTheTemplatesValues()
     {
         // Arrange
         var harness = new AIConfigurationToolHarness();
@@ -154,7 +154,7 @@ public sealed class AIConfigurationToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new CreateAIProfileFromTemplateTool(), services, new() { ["templateId"] = "template-1", ["title"] = "Shop Helper", ["name"] = "shop-helper" });
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIProfileTool(), services, new() { ["templateId"] = "template-1", ["title"] = "Shop Helper", ["name"] = "shop-helper" });
 
         // Assert
         Assert.Contains("\"created\":true", result);
@@ -166,7 +166,7 @@ public sealed class AIConfigurationToolsTests
     }
 
     [Fact]
-    public async Task CreateAIProfileFromTemplate_RefusesASystemPromptTemplate()
+    public async Task SaveAIProfile_WithASystemPromptTemplate_Refuses()
     {
         // Arrange
         var harness = new AIConfigurationToolHarness();
@@ -175,11 +175,204 @@ public sealed class AIConfigurationToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new CreateAIProfileFromTemplateTool(), services, new() { ["templateId"] = "style-1", ["title"] = "X", ["name"] = "x" });
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIProfileTool(), services, new() { ["templateId"] = "style-1", ["title"] = "X", ["name"] = "x" });
 
         // Assert
-        Assert.StartsWith("Nothing was created", result);
+        Assert.StartsWith("Nothing was saved: no profile template has the ID 'style-1'", result);
         Assert.Empty(harness.Profiles.All);
+    }
+
+    [Fact]
+    public async Task SaveAIProfile_WithATemplateAndOtherSettings_RefusesAndNamesThem()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        var template = new AIProfileTemplate { ItemId = "template-1", Name = "starter", Source = "Profile", DisplayText = "Starter" };
+        template.Put(new ProfileTemplateMetadata { ProfileType = AIProfileType.Chat });
+        harness.Templates.Add(template);
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIProfileTool(), services, new()
+        {
+            ["templateId"] = "template-1",
+            ["title"] = "Shop Helper",
+            ["name"] = "shop-helper",
+            ["instructions"] = "Be brief.",
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: a profile made from a template takes only name, title and chatDeploymentName; instructions", result);
+        Assert.Empty(harness.Profiles.All);
+    }
+
+    [Fact]
+    public async Task SaveAIProfile_WithATemplateAndAProfileId_Refuses()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        harness.AddProfile("support", "support");
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIProfileTool(), services, new() { ["templateId"] = "template-1", ["profileId"] = "support" });
+
+        // Assert
+        Assert.Contains("cannot be given with profileId", result);
+        Assert.Empty(harness.Profiles.Updated);
+    }
+
+    [Fact]
+    public async Task DeleteAIProfile_DeletesAnUnusedProfile()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        harness.AddProfile("unused", "unused");
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = "unused" });
+
+        // Assert
+        Assert.Contains("\"deleted\":true", result);
+        Assert.Equal(["unused"], harness.Profiles.Deleted.Select(profile => profile.ItemId));
+    }
+
+    [Fact]
+    public async Task DeleteAIProfile_RefusesAnUnknownProfile()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = "ghost" });
+
+        // Assert
+        Assert.Contains("no AI profile has the ID 'ghost'", result);
+        Assert.Empty(harness.Profiles.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAIProfile_RefusesAnAgentAnotherProfileUses()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        harness.AddProfile("helper", "helper", AIProfileType.Agent);
+        harness.AddProfile("support", "Support", configure: profile => profile.Put(new AgentInvocationMetadata { Names = ["helper"] }));
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = "helper" });
+
+        // Assert
+        Assert.Contains("'Support' uses it as an agent", result);
+        Assert.Empty(harness.Profiles.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAIProfile_RefusesAProfileAPublishedWidgetShows()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        harness.AddProfile("public", "public");
+        harness.PublishedWidgets["public"] = 1;
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = "public" });
+
+        // Assert
+        Assert.Contains("a published content item, such as a chat widget, shows it to visitors", result);
+        Assert.Empty(harness.Profiles.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAIProfile_RefusesTheAdminWidgetProfileOutsideATurn()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness
+        {
+            AdminWidgetProfileId = "widget",
+        };
+
+        harness.AddProfile("widget", "widget");
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIProfileTool(), services, new() { ["profileId"] = "widget" });
+
+        // Assert
+        Assert.Contains("the profile of the admin chat widget", result);
+        Assert.Empty(harness.Profiles.Deleted);
+    }
+
+    [Fact]
+    public async Task DiagnoseAIProfile_ReportsMissingToolsAndAgents()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        harness.AddProfile("support", "support", configure: profile =>
+        {
+            profile.Put(new FunctionInvocationMetadata { Names = [AIConfigurationToolHarness.SafeToolName, "renamedTool"] });
+            profile.Put(new AgentInvocationMetadata { Names = ["ghost-agent"] });
+        });
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DiagnoseAIProfileTool(), services, new() { ["profileId"] = "support" });
+
+        // Assert
+        var root = AgentToolTestContext.ReadJson(result);
+        var checks = root.GetProperty("checks").EnumerateArray().ToDictionary(check => check.GetProperty("check").GetString());
+
+        Assert.False(root.GetProperty("healthy").GetBoolean());
+        Assert.False(checks["tools"].GetProperty("ok").GetBoolean());
+        Assert.Contains("renamedTool", checks["tools"].GetProperty("detail").GetString());
+        Assert.DoesNotContain(AIConfigurationToolHarness.SafeToolName, checks["tools"].GetProperty("detail").GetString());
+        Assert.False(checks["agents"].GetProperty("ok").GetBoolean());
+        Assert.True(checks["chatDeployment"].GetProperty("ok").GetBoolean());
+        Assert.True(checks["toolCalling"].GetProperty("ok").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DiagnoseAIProfile_ReportsAMissingNamedDeployment()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        harness.AddProfile("support", "support", configure: profile => profile.ChatDeploymentName = "deleted-model");
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DiagnoseAIProfileTool(), services, new() { ["profileId"] = "support" });
+
+        // Assert
+        Assert.Contains("The chat deployment 'deleted-model' does not exist.", result);
+        Assert.False(AgentToolTestContext.ReadJson(result).GetProperty("healthy").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DiagnoseAIProfile_RefusesAnUnknownProfile()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DiagnoseAIProfileTool(), services, new() { ["profileId"] = "ghost" });
+
+        // Assert
+        Assert.StartsWith("Nothing was checked: no AI profile has the ID 'ghost'", result);
     }
 
     [Fact]
@@ -321,7 +514,7 @@ public sealed class AIConfigurationToolsTests
     }
 
     [Fact]
-    public async Task GetAIProfileTemplate_ReturnsTheInstructions()
+    public async Task ListAIProfileTemplates_WithAnId_ReturnsTheInstructions()
     {
         // Arrange
         var harness = new AIConfigurationToolHarness();
@@ -332,10 +525,25 @@ public sealed class AIConfigurationToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetAIProfileTemplateTool(), services, new() { ["templateId"] = "style-1" });
+        var result = await AgentToolTestContext.InvokeAsync(new ListAIProfileTemplatesTool(), services, new() { ["id"] = "style-1" });
 
         // Assert
         Assert.Equal("Answer in two sentences.", AgentToolTestContext.ReadJson(result).GetProperty("instructions").GetString());
+    }
+
+    [Fact]
+    public async Task ListAIProfileTemplates_WithAnUnknownId_SaysSo()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new ListAIProfileTemplatesTool(), services, new() { ["id"] = "ghost" });
+
+        // Assert
+        Assert.StartsWith("No AI profile template has the ID 'ghost'", result);
     }
 
     [Fact]

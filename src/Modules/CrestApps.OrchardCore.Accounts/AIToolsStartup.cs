@@ -7,8 +7,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Accounts;
 
 /// <summary>
-/// Registers the account search AI tool whenever the Accounts and AI features are on. It needs <c>ListContent</c>, and
-/// searches only the account types the caller may view, as the account picker's search does.
+/// Registers the account search and account reading AI tools whenever the Accounts and AI features are on. The search
+/// needs <c>ListContent</c> and searches only the account types the caller may view, as the account picker's search does;
+/// reading an account needs <c>ViewContent</c> on it, as the account's page does.
 /// </summary>
 [RequireFeatures(AIFeatureIds.Area)]
 public sealed class AIToolsStartup : StartupBase
@@ -29,7 +30,13 @@ public sealed class AIToolsStartup : StartupBase
     {
         services.AddCoreAITool<ListAccountsTool>(ListAccountsTool.TheName)
             .WithTitle(S["List Accounts"])
-            .WithDescription(S["Finds accounts (businesses and households) by name across every account content type and returns id, name, type, status, member count, locations and owner. Use it to get the account id; use getContentItemById for the full record."])
+            .WithDescription(S["Finds accounts (businesses and households) by name across every account content type and returns id, name, type, status, member count, locations and owner. Use it to get the account id; use getAccount for the account's members, locations and team."])
+            .WithCategory(S["Accounts"])
+            .Selectable();
+
+        services.AddCoreAITool<GetAccountTool>(GetAccountTool.TheName)
+            .WithTitle(S["Get Account"])
+            .WithDescription(S["Returns one account (a business or household) by its id from listAccounts: name, type, whether it is published or has unpublished changes, when it was created and changed, and, when its type has them, its members (the users who sign in for it, with their role), its locations with their addresses (and which one is the billing location), its owner and account team, and the e-mail domains whose people belong to it. Use it to answer questions about an account and before changing its members, locations or team; it reads what the account's page shows, not the raw content item."])
             .WithCategory(S["Accounts"])
             .Selectable();
     }

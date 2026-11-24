@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Subscriptions.Core;
-using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -9,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -17,7 +15,6 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
@@ -172,8 +169,7 @@ public sealed class SubscriptionAgreementsController : Controller
     /// Displays one agreement and its history.
     /// </summary>
     /// <param name="itemId">The subscription identifier.</param>
-    /// <param name="userService">The user service the owner is found with.</param>
-    public async Task<IActionResult> Detail(string itemId, [FromServices] IUserService userService)
+    public async Task<IActionResult> Detail(string itemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
         {
@@ -190,7 +186,7 @@ public sealed class SubscriptionAgreementsController : Controller
         return View(new SubscriptionAgreementViewModel
         {
             Subscription = subscription,
-            OwnerName = await ResolveOwnerNameAsync(subscription.OwnerId, userService),
+            OwnerName = await ResolveOwnerNameAsync(subscription.OwnerId),
         });
     }
 
@@ -302,22 +298,6 @@ public sealed class SubscriptionAgreementsController : Controller
     }
 
     // The owner is stored by user identifier, which means nothing to the operator reading the page.
-    private async Task<string> ResolveOwnerNameAsync(string ownerId, IUserService userService)
-    {
-        if (string.IsNullOrEmpty(ownerId))
-        {
-            return null;
-        }
-
-        var user = await userService.GetUserByUniqueIdAsync(ownerId);
-
-        if (user is null)
-        {
-            return null;
-        }
-
-        return HttpContext.RequestServices.GetService<IDisplayNameProvider>() is { } displayNameProvider
-            ? await displayNameProvider.GetAsync(user)
-            : user.UserName;
-    }
+    private Task<string> ResolveOwnerNameAsync(string ownerId)
+        => SubscriptionOwnerNames.ResolveAsync(HttpContext.RequestServices, ownerId);
 }

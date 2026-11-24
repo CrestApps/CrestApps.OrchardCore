@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -199,21 +198,12 @@ public sealed class RefundsAdminController : Controller
 
         // Only a refund the system could not settle itself may be closed by hand. Allowing it on any refund
         // would let an operator mark a failed gateway refund as done when the customer got nothing.
-        if (refund.Status != RefundStatus.PendingManualReview)
+        if (!await TransactionAdminActions.SettleRefundByHandAsync(HttpContext.RequestServices, _refundStore, refund, reference, _clock.UtcNow, logger, HttpContext.RequestAborted))
         {
             await _notifier.WarningAsync(H["Only a refund awaiting manual review can be resolved by hand."]);
 
             return RedirectToAction(nameof(Index));
         }
-
-        var previousStatus = refund.Status;
-
-        refund.Status = RefundStatus.Succeeded;
-        refund.CompletedUtc = _clock.UtcNow;
-        refund.ProviderRefundReference = string.IsNullOrWhiteSpace(reference) ? refund.ProviderRefundReference : reference.Trim();
-
-        await _refundStore.UpdateAsync(refund);
-        await HttpContext.RequestServices.RefundSucceededAsync(refund, previousStatus, logger, HttpContext.RequestAborted);
 
         await _notifier.SuccessAsync(H["The refund was marked as settled."]);
 

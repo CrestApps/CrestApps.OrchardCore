@@ -21,25 +21,14 @@ internal static class SecurityToolCalls
     [
         ListOpenIdApplicationsTool.TheName,
         GetOpenIdApplicationTool.TheName,
-        SaveOpenIdApplicationTool.TheName,
-        DeleteOpenIdApplicationTool.TheName,
         ListOpenIdScopesTool.TheName,
-        SaveOpenIdScopeTool.TheName,
-        DeleteOpenIdScopeTool.TheName,
         ListRateLimitPoliciesTool.TheName,
-        SaveRateLimitPolicyTool.TheName,
-        EnableRateLimitPolicyTool.TheName,
-        DisableRateLimitPolicyTool.TheName,
-        DeleteRateLimitPolicyTool.TheName,
+        SetRateLimitPolicyEnabledTool.TheName,
         ListSecretsTool.TheName,
-        SaveSecretTool.TheName,
-        DeleteSecretTool.TheName,
-        MoveSecretsTool.TheName,
         ListAuditTrailEventsTool.TheName,
         GetAuditTrailEventTool.TheName,
         ListNotificationsTool.TheName,
         MarkNotificationsTool.TheName,
-        DeleteNotificationsTool.TheName,
         SendTestEmailTool.TheName,
         SendTestSmsTool.TheName,
     ];
@@ -54,26 +43,15 @@ internal static class SecurityToolCalls
         return toolName switch
         {
             ListOpenIdApplicationsTool.TheName or
-            GetOpenIdApplicationTool.TheName or
-            SaveOpenIdApplicationTool.TheName or
-            DeleteOpenIdApplicationTool.TheName => "ManageApplications",
-            ListOpenIdScopesTool.TheName or
-            SaveOpenIdScopeTool.TheName or
-            DeleteOpenIdScopeTool.TheName => "ManageScopes",
+            GetOpenIdApplicationTool.TheName => "ManageApplications",
+            ListOpenIdScopesTool.TheName => "ManageScopes",
             ListRateLimitPoliciesTool.TheName or
-            SaveRateLimitPolicyTool.TheName or
-            EnableRateLimitPolicyTool.TheName or
-            DisableRateLimitPolicyTool.TheName or
-            DeleteRateLimitPolicyTool.TheName => "ManageRateLimits",
+            SetRateLimitPolicyEnabledTool.TheName => "ManageRateLimits",
             ListSecretsTool.TheName => "ViewSecrets",
-            SaveSecretTool.TheName or
-            DeleteSecretTool.TheName or
-            MoveSecretsTool.TheName => "ManageSecrets",
             ListAuditTrailEventsTool.TheName or
             GetAuditTrailEventTool.TheName => "ViewAuditTrail",
             ListNotificationsTool.TheName or
-            MarkNotificationsTool.TheName or
-            DeleteNotificationsTool.TheName => "ManageNotifications",
+            MarkNotificationsTool.TheName => "ManageNotifications",
             SendTestEmailTool.TheName => "ManageEmailSettings",
             SendTestSmsTool.TheName => "ManageSmsSettings",
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, "The tool has no permission in the test."),
@@ -92,31 +70,14 @@ internal static class SecurityToolCalls
         {
             ListOpenIdApplicationsTool.TheName => (new ListOpenIdApplicationsTool(), []),
             GetOpenIdApplicationTool.TheName => (new GetOpenIdApplicationTool(), new() { ["id"] = "app-backend" }),
-            SaveOpenIdApplicationTool.TheName => (new SaveOpenIdApplicationTool(), new() { ["id"] = "app-backend", ["displayName"] = "Backend API" }),
-            DeleteOpenIdApplicationTool.TheName => (new DeleteOpenIdApplicationTool(), new() { ["id"] = "app-backend", ["clientId"] = "backend-service" }),
             ListOpenIdScopesTool.TheName => (new ListOpenIdScopesTool(), []),
-            SaveOpenIdScopeTool.TheName => (new SaveOpenIdScopeTool(), new() { ["id"] = "scope-orders", ["description"] = "Reads orders." }),
-            DeleteOpenIdScopeTool.TheName => (new DeleteOpenIdScopeTool(), new() { ["id"] = "scope-orders", ["name"] = "orders.read" }),
             ListRateLimitPoliciesTool.TheName => (new ListRateLimitPoliciesTool(), []),
-            SaveRateLimitPolicyTool.TheName => (new SaveRateLimitPolicyTool(), new()
-            {
-                ["name"] = "Search API",
-                ["scope"] = "endpoint",
-                ["path"] = "/api/find",
-                ["limiters"] = """[ { "type": "fixedWindow", "permitLimit": 10, "windowSeconds": 60 } ]""",
-            }),
-            EnableRateLimitPolicyTool.TheName => (new EnableRateLimitPolicyTool(), new() { ["policyIds"] = new[] { "policy-draft" } }),
-            DisableRateLimitPolicyTool.TheName => (new DisableRateLimitPolicyTool(), new() { ["policyIds"] = new[] { "policy-contact" } }),
-            DeleteRateLimitPolicyTool.TheName => (new DeleteRateLimitPolicyTool(), new() { ["policyIds"] = new[] { "policy-draft" } }),
+            SetRateLimitPolicyEnabledTool.TheName => (new SetRateLimitPolicyEnabledTool(), new() { ["policyIds"] = new[] { "policy-draft" }, ["enabled"] = true }),
             ListSecretsTool.TheName => (new ListSecretsTool(), []),
-            SaveSecretTool.TheName => (new SaveSecretTool(), new() { ["name"] = "Smtp.Password", ["description"] = "The password of the mail account." }),
-            DeleteSecretTool.TheName => (new DeleteSecretTool(), new() { ["name"] = "Smtp.Password" }),
-            MoveSecretsTool.TheName => (new MoveSecretsTool(), new() { ["sourceStore"] = "Database", ["destinationStore"] = "AzureKeyVault" }),
             ListAuditTrailEventsTool.TheName => (new ListAuditTrailEventsTool(), []),
             GetAuditTrailEventTool.TheName => (new GetAuditTrailEventTool(), new() { ["eventId"] = "event-user-updated" }),
             ListNotificationsTool.TheName => (new ListNotificationsTool(), []),
             MarkNotificationsTool.TheName => (new MarkNotificationsTool(), new() { ["action"] = "read", ["notificationIds"] = new[] { "note-1" } }),
-            DeleteNotificationsTool.TheName => (new DeleteNotificationsTool(), new() { ["notificationIds"] = new[] { "note-1" } }),
             SendTestEmailTool.TheName => (new SendTestEmailTool(), []),
             SendTestSmsTool.TheName => (new SendTestSmsTool(), new() { ["phoneNumber"] = "+15551234567", ["provider"] = "Twilio" }),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, "The tool has no test arguments."),

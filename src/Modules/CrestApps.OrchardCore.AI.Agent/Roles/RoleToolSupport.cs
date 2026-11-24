@@ -128,6 +128,37 @@ internal static class RoleToolSupport
     }
 
     /// <summary>
+    /// Finds the names that are close to a name that does not exist: names that contain it or that it contains, and
+    /// names a few edits away from it, ignoring case.
+    /// </summary>
+    /// <param name="name">The name that was given.</param>
+    /// <param name="candidates">The names that exist.</param>
+    /// <param name="max">The largest number of names to return.</param>
+    /// <returns>The closest names first; empty when none is close.</returns>
+    public static List<string> FindCloseNames(string name, IEnumerable<string> candidates, int max = 3)
+    {
+        if (string.IsNullOrWhiteSpace(name) || candidates is null)
+        {
+            return [];
+        }
+
+        var given = name.Trim();
+
+        // About one edit for every four characters, and at least two.
+        var threshold = Math.Max(2, given.Length / 4);
+
+        return candidates
+            .Where(candidate => !string.IsNullOrEmpty(candidate))
+            .Select(candidate => (Candidate: candidate, Distance: GetDistance(given, candidate)))
+            .Where(match => match.Distance <= threshold)
+            .OrderBy(match => match.Distance)
+            .ThenBy(match => match.Candidate, StringComparer.OrdinalIgnoreCase)
+            .Take(max)
+            .Select(match => match.Candidate)
+            .ToList();
+    }
+
+    /// <summary>
     /// Keeps the names that contain the filter text and caps the list.
     /// </summary>
     /// <param name="names">The permission names.</param>
@@ -149,5 +180,44 @@ internal static class RoleToolSupport
         truncated = true;
 
         return matching.Take(MaxPermissionNames).ToList();
+    }
+
+    // The number of single-character edits between two names, ignoring case; zero when one contains the other and the
+    // shorter one has at least four characters.
+    private static int GetDistance(string given, string candidate)
+    {
+        var shorter = given.Length <= candidate.Length ? given : candidate;
+        var longer = given.Length <= candidate.Length ? candidate : given;
+
+        if (shorter.Length >= 4 && longer.Contains(shorter, StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
+        var previous = new int[candidate.Length + 1];
+        var current = new int[candidate.Length + 1];
+
+        for (var j = 0; j <= candidate.Length; j++)
+        {
+            previous[j] = j;
+        }
+
+        for (var i = 1; i <= given.Length; i++)
+        {
+            current[0] = i;
+
+            for (var j = 1; j <= candidate.Length; j++)
+            {
+                var cost = char.ToUpperInvariant(given[i - 1]) == char.ToUpperInvariant(candidate[j - 1])
+                    ? 0
+                    : 1;
+
+                current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+            }
+
+            (previous, current) = (current, previous);
+        }
+
+        return previous[candidate.Length];
     }
 }

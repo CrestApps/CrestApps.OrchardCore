@@ -97,33 +97,6 @@ public sealed class BusinessDocumentTemplatesController : CatalogAdminController
 
     // Only one template is the default for a kind: a template saved as the default takes over from the others that
     // claim the same kinds, or that claim every kind when it does too.
-    protected override async Task OnSavedAsync(BusinessDocumentTemplate model, bool isNew)
-    {
-        if (!model.IsDefault)
-        {
-            return;
-        }
-
-        foreach (var other in await Manager.GetAllAsync())
-        {
-            if (other.ItemId != model.ItemId && other.IsDefault && ClaimTheSameKinds(model, other))
-            {
-                other.IsDefault = false;
-                await Manager.UpdateAsync(other);
-            }
-        }
-    }
-
-    private static bool ClaimTheSameKinds(BusinessDocumentTemplate first, BusinessDocumentTemplate second)
-    {
-        var firstKinds = first.Kinds ?? [];
-        var secondKinds = second.Kinds ?? [];
-
-        if (firstKinds.Count == 0 || secondKinds.Count == 0)
-        {
-            return firstKinds.Count == 0 && secondKinds.Count == 0;
-        }
-
-        return firstKinds.Intersect(secondKinds, StringComparer.OrdinalIgnoreCase).Any();
-    }
+    protected override Task OnSavedAsync(BusinessDocumentTemplate model, bool isNew)
+        => BusinessDocumentTemplateDefaults.TakeOverDefaultAsync(Manager, model);
 }

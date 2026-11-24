@@ -7,8 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, save, enable, disable and delete rate-limit policies, when the Rate Limits feature
-/// is on.
+/// Registers the tools that list rate-limit policies and enable or disable them, when the Rate Limits feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
 public sealed class RateLimitsToolsStartup : StartupBase
@@ -33,30 +32,9 @@ public sealed class RateLimitsToolsStartup : StartupBase
             .WithCategory(S["Rate Limits"])
             .Selectable();
 
-        services.AddCoreAITool<SaveRateLimitPolicyTool>(SaveRateLimitPolicyTool.TheName)
-            .WithTitle(S["Save Rate-Limit Policy"])
-            .WithDescription(S["Creates or updates a rate-limit policy: name, description, scope (global, endpoint path or group) and its limiters (fixed window, sliding window, concurrency, token bucket). It always saves a new policy as disabled (turn it on with enableRateLimitPolicy), and the target and limiters of an enabled policy cannot be changed until it is disabled."])
-            .WithCategory(S["Rate Limits"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<EnableRateLimitPolicyTool>(EnableRateLimitPolicyTool.TheName)
-            .WithTitle(S["Enable Rate-Limit Policy"])
-            .WithDescription(S["Enables one or more rate-limit policies. Requests over the limit then get 429 responses, and the tenant reloads."])
-            .WithCategory(S["Rate Limits"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<DisableRateLimitPolicyTool>(DisableRateLimitPolicyTool.TheName)
-            .WithTitle(S["Disable Rate-Limit Policy"])
-            .WithDescription(S["Disables one or more rate-limit policies, which removes that protection, and reloads the tenant."])
-            .WithCategory(S["Rate Limits"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<DeleteRateLimitPolicyTool>(DeleteRateLimitPolicyTool.TheName)
-            .WithTitle(S["Delete Rate-Limit Policy"])
-            .WithDescription(S["Deletes one or more rate-limit policies."])
+        services.AddCoreAITool<SetRateLimitPolicyEnabledTool>(SetRateLimitPolicyEnabledTool.TheName)
+            .WithTitle(S["Enable or Disable Rate-Limit Policies"])
+            .WithDescription(S["Enables or disables one or more rate-limit policies, and the tenant reloads. Enabling a global policy with a low limit can lock everyone out, this chat included; disabling removes that protection and needs a confirmation for a policy that protects sign-in."])
             .WithCategory(S["Rate Limits"])
             .RequireApproval()
             .Selectable();

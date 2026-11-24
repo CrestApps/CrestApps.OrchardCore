@@ -41,7 +41,7 @@ public sealed class TaxonomiesToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveTaxonomyTermTool>(SaveTaxonomyTermTool.TheName)
             .WithTitle(S["Save Taxonomy Term"])
-            .WithDescription(S["Adds a term to a taxonomy, updates an existing term, or moves it under another parent or to another position, without touching the other terms. New terms use the taxonomy's term content type."])
+            .WithDescription(S["Adds a term to a taxonomy, updates an existing term, or moves it under another parent or after another term, without touching the other terms. New terms use the taxonomy's term content type."])
             .WithCategory(S["Content Management"])
             .Selectable();
 

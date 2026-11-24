@@ -18,11 +18,6 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
-    <PackageReference Include="CrestApps.Core.AI" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
   </ItemGroup>
 
   <ItemGroup>

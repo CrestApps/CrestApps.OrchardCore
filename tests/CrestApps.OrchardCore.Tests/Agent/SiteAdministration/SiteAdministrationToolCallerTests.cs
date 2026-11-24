@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Agent.Admin;
-using CrestApps.OrchardCore.AI.Agent.AdminDashboard;
 using CrestApps.OrchardCore.AI.Agent.AdminMenus;
 using CrestApps.OrchardCore.AI.Agent.Deployment;
 using CrestApps.OrchardCore.AI.Agent.Settings;
@@ -24,7 +23,6 @@ public sealed class SiteAdministrationToolCallerTests
         { GetSiteSettingsTool.TheName, "ManageResourceSettings", SiteAdministrationToolHarness.GroupId },
         { UpdateSiteSettingsTool.TheName, "ManageResourceSettings", SiteAdministrationToolHarness.GroupId },
         { FindAdminPageTool.TheName, "AccessAdminPanel", null },
-        { ListAdminDashboardWidgetsTool.TheName, "AccessAdminDashboard", null },
         { ListAdminMenusTool.TheName, "ManageAdminMenu", null },
         { SaveAdminMenuTool.TheName, "ManageAdminMenu", null },
         { ListTenantFeatureProfilesTool.TheName, "ManageTenantFeatureProfiles", null },
@@ -102,7 +100,6 @@ public sealed class SiteAdministrationToolCallerTests
                 ["changes"] = JsonNode.Parse("""{ "ISite.TestSettings": { "ShowBanner": true } }"""),
             }),
             FindAdminPageTool.TheName => (new FindAdminPageTool(), new() { ["search"] = "settings" }),
-            ListAdminDashboardWidgetsTool.TheName => (new ListAdminDashboardWidgetsTool(), []),
             ListAdminMenusTool.TheName => (new ListAdminMenusTool(), []),
             SaveAdminMenuTool.TheName => (new SaveAdminMenuTool(), new() { ["name"] = "Reports", ["menuItems"] = new JsonArray() }),
             ListTenantFeatureProfilesTool.TheName => (new ListTenantFeatureProfilesTool(), []),

@@ -45,7 +45,7 @@ internal sealed class SaveSkillTool : SkillsAIToolBase
         },
         "requiredCertificationId": {
           "type": "string",
-          "description": "The id of the certification type, from listCertificationTypes, a person must hold a valid certificate of for the skill to count. An empty text removes the requirement."
+          "description": "The id of the certification type, from listSkills with kind certificationType, a person must hold a valid certificate of for the skill to count. An empty text removes the requirement."
         },
         "enabled": {
           "type": "boolean",
@@ -104,7 +104,7 @@ internal sealed class SaveSkillTool : SkillsAIToolBase
             if (certificationId is not null && certificationId != skill.RequiredCertificationId &&
                 (!certifications.TryGetValue(certificationId, out var certification) || !certification.Enabled))
             {
-                return $"Nothing was saved: there is no enabled certification type with the id '{certificationId}'. Use listCertificationTypes to find it.";
+                return $"Nothing was saved: there is no enabled certification type with the id '{certificationId}'. Use listSkills with kind certificationType to find it.";
             }
 
             skill.RequiredCertificationId = certificationId;

@@ -36,4 +36,13 @@ public interface IAgentCheckoutStore : ICatalog<AgentCheckout>
     /// <param name="platformId">The platform's id.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<int> CountOpenAsync(string platformId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a page of agent checkouts, newest first, with how many match.
+    /// </summary>
+    /// <param name="query">The filters.</param>
+    /// <param name="skip">How many to skip.</param>
+    /// <param name="take">How many at most.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<(int Count, IReadOnlyList<AgentCheckout> Checkouts)> PageAsync(AgentCheckoutQuery query, int skip, int take, CancellationToken cancellationToken = default);
 }

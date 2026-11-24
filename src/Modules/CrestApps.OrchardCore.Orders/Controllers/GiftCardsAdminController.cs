@@ -180,31 +180,11 @@ public sealed class GiftCardsAdminController : Controller
             return Forbid();
         }
 
-        if (model.Value is not > 0m)
-        {
-            ModelState.AddModelError(nameof(model.Value), S["Enter an amount greater than zero."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Currency) || model.Currency.Trim().Length != 3)
-        {
-            ModelState.AddModelError(nameof(model.Currency), S["Enter the three-letter currency code, such as USD."]);
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.Code) && GiftCardCodes.Normalize(model.Code)?.Length is < 8 or > 32)
-        {
-            ModelState.AddModelError(nameof(model.Code), S["A code is 8 to 32 letters and digits. Leave it blank to have one made up."]);
-        }
-
         var expiresUtc = await ToUtcAsync(model.Expires);
 
-        if (expiresUtc.HasValue && expiresUtc.Value <= _clock.UtcNow)
+        foreach (var (field, message) in GiftCardIssueRules.Validate(model.Value, model.Currency, model.Code, expiresUtc, model.SendEmail, model.RecipientEmail, _clock.UtcNow, S))
         {
-            ModelState.AddModelError(nameof(model.Expires), S["The expiry date must be in the future."]);
-        }
-
-        if (model.SendEmail && string.IsNullOrWhiteSpace(model.RecipientEmail))
-        {
-            ModelState.AddModelError(nameof(model.RecipientEmail), S["Enter the email to send the card to, or clear Email the card."]);
+            ModelState.AddModelError(field, message);
         }
 
         if (!ModelState.IsValid)

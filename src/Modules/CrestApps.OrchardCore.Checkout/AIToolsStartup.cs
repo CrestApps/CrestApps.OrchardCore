@@ -39,7 +39,7 @@ public sealed class AIToolsStartup : StartupBase
 
         services.AddCoreAITool<GetCouponTool>(GetCouponTool.TheName)
             .WithTitle(S["Get Coupon"])
-            .WithDescription(S["Returns one coupon by id or code with all its rules, its recent uses with what each paid for, uses currently held by open checkouts, the count of generated codes and how many were used, and its discount link. The generated codes themselves are never returned; the result links to the coupon's page, where they are downloaded."])
+            .WithDescription(S["Returns one coupon by id or code with all its rules, its recent uses with what each paid for, uses currently held by open checkouts, the count of generated codes and how many were used, and its discount link. The generated codes themselves are never returned in the chat; the result gives a link that downloads them as a CSV file."])
             .WithCategory(S["Promotions"])
             .Selectable();
 
@@ -59,7 +59,7 @@ public sealed class AIToolsStartup : StartupBase
 
         services.AddCoreAITool<GenerateCouponCodesTool>(GenerateCouponCodesTool.TheName)
             .WithTitle(S["Generate Coupon Codes"])
-            .WithDescription(S["Generates 1 to 5,000 unique codes that share a coupon's discount and rules, with an optional prefix and a use limit per code. The codes are never returned: the result gives how many were made and the coupon's page, where they are downloaded. Not available for an automatic discount."])
+            .WithDescription(S["Generates 1 to 5,000 unique codes that share a coupon's discount and rules, with an optional prefix and a use limit per code. The codes are never returned in the chat: the result gives how many were made and a link that downloads them as a CSV file. Not available for an automatic discount."])
             .WithCategory(S["Promotions"])
             .RequireApproval()
             .Selectable();

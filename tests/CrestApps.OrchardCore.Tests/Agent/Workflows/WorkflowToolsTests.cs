@@ -50,23 +50,24 @@ public sealed class WorkflowToolsTests
     }
 
     [Fact]
-    public async Task SaveWorkflowType_CreatesADisabledWorkflowWithGeneratedIds()
+    public async Task EditWorkflowDraft_CreatesADisabledWorkflowWithGeneratedIds()
     {
         // Arrange
         var harness = new WorkflowToolHarness();
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new SaveWorkflowTypeTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
         {
             ["name"] = "Blog post published",
-            ["activities"] = JsonNode.Parse("""
+            ["operations"] = JsonNode.Parse("""
                 [
-                  { "alias": "start", "name": "ContentPublishedEvent", "isStart": true },
-                  { "alias": "tell", "name": "NotifyTask", "properties": { "Message": "A post was published." } }
+                  { "op": "addActivity", "alias": "start", "activity": "ContentPublishedEvent", "isStart": true },
+                  { "op": "addActivity", "alias": "tell", "activity": "NotifyTask", "properties": { "Message": "A post was published." } },
+                  { "op": "connect", "source": "start", "outcome": "Done", "destination": "tell" },
+                  { "op": "setSettings", "settings": { "instances": "One" } }
                 ]
                 """),
-            ["transitions"] = JsonNode.Parse("""[ { "source": "start", "outcome": "Done", "destination": "tell" } ]"""),
         });
 
         // Assert
@@ -74,19 +75,25 @@ public sealed class WorkflowToolsTests
         var workflowTypeId = json.GetProperty("workflowTypeId").GetString();
         var saved = harness.Types[workflowTypeId];
         var transition = Assert.Single(saved.Transitions);
+        var checks = json.GetProperty("checks");
 
         Assert.True(json.GetProperty("saved").GetBoolean());
         Assert.False(saved.IsEnabled);
+        Assert.True(saved.IsSingleton);
         Assert.True(saved.RecordActivityData);
         Assert.All(saved.Activities, activity => Assert.StartsWith("generated-activity-", activity.ActivityId));
         Assert.Equal(saved.Activities[0].ActivityId, transition.SourceActivityId);
         Assert.Equal(saved.Activities[1].ActivityId, transition.DestinationActivityId);
         Assert.Equal("Done", transition.SourceOutcomeName);
         Assert.NotNull(saved.VersionId);
+
+        // The checks that live in the Workflows module are said not to have run, never reported as passed.
+        Assert.Equal("notRun", checks.GetProperty("designerValidation").GetString());
+        Assert.Equal("notChecked", checks.GetProperty("expressions").GetString());
     }
 
     [Fact]
-    public async Task SaveWorkflowType_WithPropertiesThatDoNotMatchTheSchema_SavesNothing()
+    public async Task EditWorkflowDraft_WithAMisspelledSettingOrOutcome_SavesNothingAndNamesTheClosestOnes()
     {
         // Arrange
         var harness = new WorkflowToolHarness();
@@ -94,16 +101,16 @@ public sealed class WorkflowToolsTests
         var count = harness.Types.Count;
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new SaveWorkflowTypeTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
         {
             ["name"] = "Broken",
-            ["activities"] = JsonNode.Parse("""
+            ["operations"] = JsonNode.Parse("""
                 [
-                  { "alias": "start", "name": "ContentPublishedEvent", "isStart": true },
-                  { "alias": "tell", "name": "NotifyTask", "properties": { "Text": "wrong" } }
+                  { "op": "addActivity", "alias": "start", "activity": "ContentPublishedEvent", "isStart": true },
+                  { "op": "addActivity", "alias": "tell", "activity": "NotifyTask", "properties": { "message": "wrong case" } },
+                  { "op": "connect", "source": "start", "outcome": "Dne", "destination": "tell" }
                 ]
                 """),
-            ["transitions"] = JsonNode.Parse("""[ { "source": "start", "outcome": "Finished", "destination": "tell" } ]"""),
         });
 
         // Assert
@@ -112,12 +119,97 @@ public sealed class WorkflowToolsTests
 
         Assert.False(json.GetProperty("saved").GetBoolean());
         Assert.Equal(count, harness.Types.Count);
-        Assert.Contains(messages, message => message.StartsWith("The properties do not match the schema of 'NotifyTask'", StringComparison.Ordinal));
-        Assert.Contains(messages, message => message.Contains("has no outcome 'Finished'", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.StartsWith("'message' is not a setting of 'NotifyTask'. Did you mean Message?", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.Contains("has no outcome 'Dne'. Did you mean Done?", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task SaveWorkflowType_WithValidateOnly_ChecksWithoutSaving()
+    public async Task EditWorkflowDraft_WithAnUnknownSettingOrChoice_SavesNothingAndNamesTheValidOnes()
+    {
+        // Arrange
+        var harness = new WorkflowToolHarness();
+        using var services = harness.Build();
+        var count = harness.Types.Count;
+
+        // Act: settings the schema does not declare, or values outside their choices, are refused, never dropped or
+        // replaced by the default.
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
+        {
+            ["name"] = "Bad settings",
+            ["operations"] = JsonNode.Parse("""
+                [
+                  { "op": "addActivity", "alias": "start", "activity": "ContentPublishedEvent", "isStart": true },
+                  { "op": "setSettings", "settings": { "instances": "Single", "branchingMode": "Every", "lockTimout": 100, "lockExpiration": "soon", "deleteFinishedWorkflows": "yes" } }
+                ]
+                """),
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        var messages = json.GetProperty("errors").EnumerateArray().Select(error => error.GetProperty("message").GetString()).ToList();
+
+        Assert.False(json.GetProperty("saved").GetBoolean());
+        Assert.Equal(count, harness.Types.Count);
+        Assert.Contains("The setting 'instances' must be one of: Any, One, OnePerCorrelation.", messages);
+        Assert.Contains("The setting 'branchingMode' must be one of: FirstOnly, All.", messages);
+        Assert.Contains(messages, message => message.StartsWith("The setting 'lockTimout' does not exist. The settings are: instances, lockTimeout,", StringComparison.Ordinal));
+        Assert.Contains("The setting 'lockExpiration' must be a whole number of milliseconds.", messages);
+        Assert.Contains("The setting 'deleteFinishedWorkflows' must be true or false.", messages);
+    }
+
+    [Fact]
+    public async Task EditWorkflowDraft_WithAnUnknownActivity_NamesTheClosestActivity()
+    {
+        // Arrange
+        var harness = new WorkflowToolHarness();
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
+        {
+            ["name"] = "Typo",
+            ["operations"] = JsonNode.Parse("""[ { "op": "addActivity", "alias": "start", "activity": "ContentPublishEvent", "isStart": true } ]"""),
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        var message = Assert.Single(json.GetProperty("errors").EnumerateArray()).GetProperty("message").GetString();
+
+        Assert.StartsWith("There is no activity named 'ContentPublishEvent' on this site. Did you mean ContentPublishedEvent", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EditWorkflowDraft_WithAnOutcomeThatCannotBeChecked_WarnsInsteadOfPassingIt()
+    {
+        // Arrange
+        var harness = new WorkflowToolHarness();
+        using var services = harness.Build();
+
+        // Act: the signal event has no registered outcomes in the fixture.
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
+        {
+            ["name"] = "Signal",
+            ["operations"] = JsonNode.Parse("""
+                [
+                  { "op": "addActivity", "alias": "start", "activity": "SignalEvent", "isStart": true },
+                  { "op": "addActivity", "alias": "tell", "activity": "NotifyTask", "properties": { "Message": "Signalled." } },
+                  { "op": "connect", "source": "start", "outcome": "Done", "destination": "tell" }
+                ]
+                """),
+            ["validateOnly"] = true,
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        var warnings = json.GetProperty("warnings").EnumerateArray().Select(warning => warning.GetProperty("message").GetString()).ToList();
+
+        Assert.True(json.GetProperty("valid").GetBoolean());
+        Assert.Contains(warnings, warning => warning.Contains("the outcome 'Done' was not checked", StringComparison.Ordinal));
+        Assert.Equal("partlyChecked", json.GetProperty("checks").GetProperty("outcomes").GetString());
+    }
+
+    [Fact]
+    public async Task EditWorkflowDraft_WithValidateOnly_ChecksWithoutSaving()
     {
         // Arrange
         var harness = new WorkflowToolHarness();
@@ -125,10 +217,10 @@ public sealed class WorkflowToolsTests
         var count = harness.Types.Count;
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new SaveWorkflowTypeTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
         {
             ["name"] = "Check me",
-            ["activities"] = JsonNode.Parse("""[ { "alias": "start", "name": "ContentPublishedEvent", "isStart": true } ]"""),
+            ["operations"] = JsonNode.Parse("""[ { "op": "addActivity", "alias": "start", "activity": "ContentPublishedEvent", "isStart": true } ]"""),
             ["validateOnly"] = true,
         });
 
@@ -137,6 +229,55 @@ public sealed class WorkflowToolsTests
 
         Assert.True(json.GetProperty("valid").GetBoolean());
         Assert.False(json.GetProperty("saved").GetBoolean());
+        Assert.Equal(count, harness.Types.Count);
+    }
+
+    [Fact]
+    public async Task EditWorkflowDraft_ForAnExistingWorkflow_ChangesNothingAndReturnsTheDesigner()
+    {
+        // Arrange
+        var harness = new WorkflowToolHarness();
+        using var services = harness.Build();
+        var before = harness.Types[WorkflowToolHarness.OrderWorkflowTypeId].Activities.Count;
+        var count = harness.Types.Count;
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
+        {
+            ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId,
+            ["operations"] = JsonNode.Parse("""[ { "op": "addActivity", "alias": "tell", "activity": "NotifyTask", "properties": { "Message": "Hi" } } ]"""),
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.False(json.GetProperty("saved").GetBoolean());
+        Assert.Equal(WorkflowToolHarness.OrderWorkflowTypeId, json.GetProperty("workflowTypeId").GetString());
+        Assert.StartsWith("Nothing was changed", json.GetProperty("note").GetString(), StringComparison.Ordinal);
+        Assert.Equal(before, harness.Types[WorkflowToolHarness.OrderWorkflowTypeId].Activities.Count);
+        Assert.Equal(count, harness.Types.Count);
+    }
+
+    [Fact]
+    public async Task EditWorkflowDraft_WithAnOperationThatIsNotAvailable_SavesNothing()
+    {
+        // Arrange
+        var harness = new WorkflowToolHarness();
+        using var services = harness.Build();
+        var count = harness.Types.Count;
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new EditWorkflowDraftTool(), services, new()
+        {
+            ["name"] = "Remove",
+            ["operations"] = JsonNode.Parse("""[ { "op": "removeActivity", "alias": "start" } ]"""),
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.False(json.GetProperty("saved").GetBoolean());
+        Assert.Contains("'removeActivity', which is not available", Assert.Single(json.GetProperty("errors").EnumerateArray()).GetProperty("message").GetString(), StringComparison.Ordinal);
         Assert.Equal(count, harness.Types.Count);
     }
 
@@ -216,7 +357,7 @@ public sealed class WorkflowToolsTests
     }
 
     [Fact]
-    public async Task DisableAndEnableWorkflowType_ChangeTheLiveTypeWithoutANewVersion()
+    public async Task SetWorkflowTypeEnabled_DisablesAndEnablesTheLiveTypeWithoutANewVersion()
     {
         // Arrange
         var harness = new WorkflowToolHarness();
@@ -224,9 +365,9 @@ public sealed class WorkflowToolsTests
         var versions = harness.Versions.Count;
 
         // Act
-        var disabled = await AgentToolTestContext.InvokeAsync(new DisableWorkflowTypeTool(), services, new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId });
+        var disabled = await AgentToolTestContext.InvokeAsync(new SetWorkflowTypeEnabledTool(), services, new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId, ["enabled"] = false });
         var isDisabled = !harness.Types[WorkflowToolHarness.OrderWorkflowTypeId].IsEnabled;
-        var enabled = await AgentToolTestContext.InvokeAsync(new EnableWorkflowTypeTool(), services, new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId });
+        var enabled = await AgentToolTestContext.InvokeAsync(new SetWorkflowTypeEnabledTool(), services, new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId, ["enabled"] = true });
 
         // Assert
         Assert.True(isDisabled);
@@ -237,17 +378,33 @@ public sealed class WorkflowToolsTests
     }
 
     [Fact]
-    public async Task EnableWorkflowType_WithAnUnknownWorkflow_ChangesNothing()
+    public async Task SetWorkflowTypeEnabled_WithAnUnknownWorkflow_ChangesNothing()
     {
         // Arrange
         var harness = new WorkflowToolHarness();
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new EnableWorkflowTypeTool(), services, new() { ["workflowTypeId"] = "nope" });
+        var result = await AgentToolTestContext.InvokeAsync(new SetWorkflowTypeEnabledTool(), services, new() { ["workflowTypeId"] = "nope", ["enabled"] = true });
 
         // Assert
         Assert.StartsWith("Nothing was changed", result);
+    }
+
+    [Fact]
+    public async Task SetWorkflowTypeEnabled_WithoutEnabled_ChangesNothing()
+    {
+        // Arrange
+        var harness = new WorkflowToolHarness();
+        using var services = harness.Build();
+        var wasEnabled = harness.Types[WorkflowToolHarness.OrderWorkflowTypeId].IsEnabled;
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SetWorkflowTypeEnabledTool(), services, new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId });
+
+        // Assert
+        Assert.StartsWith("Nothing was changed: give enabled", result, StringComparison.Ordinal);
+        Assert.Equal(wasEnabled, harness.Types[WorkflowToolHarness.OrderWorkflowTypeId].IsEnabled);
     }
 
     [Fact]

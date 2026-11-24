@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
@@ -8,8 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
 /// <summary>
-/// Deletes AI profiles, as the Delete action and bulk Delete of the profiles list do. Profiles marked not removable and
-/// the assistant that is running, with its agents, are skipped and reported.
+/// Deletes one AI profile, as the Delete action of the profiles list does. It refuses a profile marked not removable,
+/// the assistant that is running with its agents, a profile people or clients can still reach (a published chat
+/// widget, the admin chat widget, a browser API key, the Anonymous role, or every profile as an always-available
+/// agent), and a profile another profile calls as an agent.
 /// </summary>
 public sealed class DeleteAIProfileTool : AIFunction
 {
@@ -18,22 +21,17 @@ public sealed class DeleteAIProfileTool : AIFunction
     /// </summary>
     public const string TheName = "deleteAIProfile";
 
-    private const int MaxProfiles = 50;
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
       "type": "object",
       "properties": {
-        "profileIds": {
-          "type": "array",
-          "items": { "type": "string" },
-          "minItems": 1,
-          "maxItems": 50,
-          "description": "The IDs of the profiles to delete, from listAIProfiles."
+        "profileId": {
+          "type": "string",
+          "description": "The ID of the one profile to delete, from listAIProfiles."
         }
       },
-      "required": ["profileIds"],
+      "required": ["profileId"],
       "additionalProperties": false
     }
     """);
@@ -42,7 +40,7 @@ public sealed class DeleteAIProfileTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Deletes one or more profiles by id. Profiles marked not removable, the running assistant and its agents are skipped and reported. A deleted profile cannot be restored.";
+    public override string Description => "Deletes one profile by id; a deleted profile cannot be restored. Refused for a profile marked not removable, the running assistant and its agents, a profile people or clients can reach (chat widget, admin chat, API key, visitors) and a profile another profile uses as an agent: remove those uses first.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -66,62 +64,82 @@ public sealed class DeleteAIProfileTool : AIFunction
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
-        if (!AgentToolArguments.TryReadStrings(arguments, "profileIds", out var profileIds) || profileIds is not { Count: > 0 })
+        if (!arguments.TryGetFirstString("profileId", out var profileId) || string.IsNullOrWhiteSpace(profileId))
         {
-            return "Nothing was deleted: give the IDs of the profiles to delete in profileIds.";
-        }
-
-        if (profileIds.Count > MaxProfiles)
-        {
-            return $"Nothing was deleted: at most {MaxProfiles} profiles can be deleted at once.";
+            return "Nothing was deleted: give the ID of the one profile to delete in profileId.";
         }
 
         var profileManager = services.GetRequiredService<IAIProfileManager>();
-        var protectedConfiguration = await AIConfigurationGuard.GetProtectedAsync(services, cancellationToken);
-        var deleted = new List<object>();
-        var skipped = new List<object>();
+        var profile = await profileManager.FindByIdAsync(profileId.Trim(), cancellationToken);
 
-        foreach (var profileId in profileIds)
+        if (profile is null)
         {
-            var profile = await profileManager.FindByIdAsync(profileId, cancellationToken);
+            return $"Nothing was deleted: no AI profile has the ID '{profileId.Trim()}'. Use listAIProfiles to find the ID.";
+        }
 
-            if (profile is null)
-            {
-                skipped.Add(new { id = profileId, reason = "No profile has this ID." });
+        var title = AIConfigurationGuard.GetTitle(profile);
+        var editPath = AIProfileToolSupport.GetProfileEditPath(services, profile.ItemId);
+        var protectedConfiguration = await AIConfigurationGuard.GetProtectedAsync(services, cancellationToken);
 
-                continue;
-            }
+        if (protectedConfiguration.IsProtected(profile))
+        {
+            return AIProfileToolSupport.RunningAssistantRefusal($"the profile '{title}'", editPath);
+        }
 
-            var title = AIConfigurationGuard.GetTitle(profile);
+        if (!profile.GetSettings<AIProfileSettings>().IsRemovable)
+        {
+            return $"Nothing was deleted: the profile '{title}' is marked not removable.";
+        }
 
-            if (protectedConfiguration.IsProtected(profile))
-            {
-                skipped.Add(new { id = profile.ItemId, title, reason = AIProfileToolSupport.RunningAssistantRefusal($"the profile '{title}'", AIProfileToolSupport.GetProfileEditPath(services, profile.ItemId)) });
+        var uses = await GetUsesAsync(services, profileManager, profile, cancellationToken);
 
-                continue;
-            }
+        if (uses.Count > 0)
+        {
+            return $"Nothing was deleted: the profile '{title}' is still in use: {string.Join("; ", uses)}. Remove those uses first, or delete the profile on its admin page if you are sure: {editPath}";
+        }
 
-            if (!profile.GetSettings<AIProfileSettings>().IsRemovable)
-            {
-                skipped.Add(new { id = profile.ItemId, title, reason = "The profile is marked not removable." });
-
-                continue;
-            }
-
-            if (await profileManager.DeleteAsync(profile, cancellationToken))
-            {
-                deleted.Add(new { id = profile.ItemId, name = profile.Name, title });
-            }
-            else
-            {
-                skipped.Add(new { id = profile.ItemId, title, reason = "The profile manager did not delete it." });
-            }
+        if (!await profileManager.DeleteAsync(profile, cancellationToken))
+        {
+            return $"Nothing was deleted: the profile manager did not delete the profile '{title}'.";
         }
 
         return AgentToolResults.Json(new
         {
-            deleted,
-            skipped,
+            deleted = true,
+            id = profile.ItemId,
+            name = profile.Name,
+            title,
         });
+    }
+
+    /// <summary>
+    /// Gets the ways a profile is still reached or used: by people or clients who chat with it, and by other profiles
+    /// that call it as an agent.
+    /// </summary>
+    private static async Task<List<string>> GetUsesAsync(IServiceProvider services, IAIProfileManager profileManager, AIProfile profile, CancellationToken cancellationToken)
+    {
+        var uses = await AIConfigurationGuard.GetUntrustedReachAsync(services, profile, cancellationToken);
+
+        if (string.Equals(await AIConfigurationGuard.GetAdminWidgetProfileIdAsync(services), profile.ItemId, StringComparison.Ordinal))
+        {
+            uses.Add("it is the profile of the admin chat widget");
+        }
+
+        if (!string.IsNullOrEmpty(profile.Name))
+        {
+            var callers = (await profileManager.GetAllAsync(cancellationToken))
+                .Where(other => !string.Equals(other.ItemId, profile.ItemId, StringComparison.Ordinal))
+                .Where(other => AIProfileCapabilities.Read(other).AgentNames.Contains(profile.Name))
+                .Select(AIConfigurationGuard.GetTitle)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (callers.Count > 0)
+            {
+                uses.Add($"{AIConfigurationGuard.Join(callers.Select(caller => $"'{caller}'").ToList())} {(callers.Count == 1 ? "uses" : "use")} it as an agent");
+            }
+        }
+
+        return uses;
     }
 }

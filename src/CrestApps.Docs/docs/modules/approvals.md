@@ -210,6 +210,10 @@ A `DisplayDriver<ApprovalPolicy>` adds fields to the policy editor the same way,
 
 The module that owns a type registers an `ISourceAccess` for it (see [Banking: who sees which disbursements](./banking.md#who-sees-which-disbursements)); approvers need it at the Manage level, and the list, export, data set and workflow tasks use it for people who see requests through the permission. Anyone else gets "not found" for a request, not even that it exists. **Waiting for me** reads the pending requests the person's access allows from the database, a batch at a time (`ApprovalInbox.BatchSize`), and checks each one's current stage, so its count is exact.
 
+## AI tools
+
+With the AI feature on, `listApprovalRequests`, `getApprovalRequest` and `decideApprovalRequest` let an AI profile list the requests waiting for the user, read one, and approve or reject it with the rules above; deciding asks the user for approval first. Approval policies are the read-only `approvalPolicy` record kind. See [Approval tools](../ai/tools.md#approval-tools).
+
 ## Reference
 
 `IApprovalService`:

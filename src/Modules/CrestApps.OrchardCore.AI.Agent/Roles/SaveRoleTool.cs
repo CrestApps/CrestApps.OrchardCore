@@ -88,7 +88,7 @@ public sealed class SaveRoleTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Creates a role, or updates a role's description and permissions (add, remove or replace; a new role can copy the permissions of another role). It refuses to change the administrator role's permissions, to give a security-critical permission to Anonymous or Authenticated, and to add permissions to a role the caller holds. It names every security-critical permission it would grant: list them in securityCriticalPermissions to confirm.";
+    public override string Description => "Creates a role, or updates a role's description and permissions (add, remove or replace; a new role can copy the permissions of another role). It refuses to change the administrator role's permissions, to give a security-critical permission to Anonymous or Authenticated, and to add permissions to a role the caller holds. It names every security-critical permission it would grant: list them in securityCriticalPermissions to confirm. A permission name no enabled feature provides is refused with the closest names that exist.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -261,7 +261,13 @@ public sealed class SaveRoleTool : AIFunction
 
         if (unknown.Count > 0)
         {
-            return $"Nothing was saved: no enabled feature provides the permission {Quote(unknown)}. Use listPermissions to get the exact names.";
+            // Close matches, so a misspelled or invented name is answered with the names that exist.
+            var suggestions = unknown
+                .Select(name => (Name: name, Matches: RoleToolSupport.FindCloseNames(name, installed.Keys)))
+                .Where(suggestion => suggestion.Matches.Count > 0)
+                .Select(suggestion => $" For '{suggestion.Name}', the closest permission names are {Quote(suggestion.Matches)}.");
+
+            return $"Nothing was saved: no enabled feature provides the permission {Quote(unknown)}.{string.Concat(suggestions)} Use listPermissions to get the exact names.";
         }
 
         // The stored name is the name the feature gives the permission.

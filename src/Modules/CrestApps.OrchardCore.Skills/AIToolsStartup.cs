@@ -29,7 +29,7 @@ public sealed class AIToolsStartup : StartupBase
     {
         services.AddCoreAITool<ListSkillsTool>(ListSkillsTool.TheName)
             .WithTitle(S["List Skills"])
-            .WithDescription(S["Lists the skill catalog with category, required certification and whether each skill is enabled; filter by name."])
+            .WithDescription(S["Lists the skill catalog with category, required certification and whether each skill is enabled, or with kind certificationType the certification types people can hold (issuer, validity in months, reminder days, document required); filter by name."])
             .WithCategory(S["Skills"])
             .Selectable();
 
@@ -44,12 +44,6 @@ public sealed class AIToolsStartup : StartupBase
             .WithDescription(S["Deletes a skill from the catalog. Disable it instead when people still hold it."])
             .WithCategory(S["Skills"])
             .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<ListCertificationTypesTool>(ListCertificationTypesTool.TheName)
-            .WithTitle(S["List Certification Types"])
-            .WithDescription(S["Lists the certification types people can hold, with issuer, validity in months, reminder days and whether a document is required."])
-            .WithCategory(S["Skills"])
             .Selectable();
 
         services.AddCoreAITool<SaveCertificationTypeTool>(SaveCertificationTypeTool.TheName)
@@ -73,13 +67,7 @@ public sealed class AIToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveSkillAssignmentTool>(SaveSkillAssignmentTool.TheName)
             .WithTitle(S["Save Skill Assignment"])
-            .WithDescription(S["Gives a user or staff member a skill, or changes its proficiency (1 to 5) and effective dates. A skill that requires a certification does not count until the person holds a valid certificate of it; the result says whether it counts today."])
-            .WithCategory(S["Skills"])
-            .Selectable();
-
-        services.AddCoreAITool<RemoveSkillAssignmentTool>(RemoveSkillAssignmentTool.TheName)
-            .WithTitle(S["Remove Skill Assignment"])
-            .WithDescription(S["Takes a skill away from a user or staff member."])
+            .WithDescription(S["Gives a user or staff member a skill, changes its proficiency (1 to 5) and effective dates, or with remove takes the skill away. A skill that requires a certification does not count until the person holds a valid certificate of it; the result says whether it counts today."])
             .WithCategory(S["Skills"])
             .Selectable();
 

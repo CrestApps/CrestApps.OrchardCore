@@ -12,7 +12,7 @@ using OrchardCore.Shortcodes.Services;
 namespace CrestApps.OrchardCore.Tests.Agent;
 
 /// <summary>
-/// Every tool for the media library, the media cache and the shortcode catalog acts for the person in the chat: it
+/// Every tool for the media library and the shortcode catalog acts for the person in the chat: it
 /// refuses a caller who is not signed in and a caller who does not hold the permission the matching admin action asks
 /// for, and it changes nothing when it refuses. The media file tools also check the folder permission with the path as
 /// the resource, as the Media Library does. Each JSON schema takes no argument it does not declare and describes each
@@ -24,13 +24,9 @@ public sealed class OrchardMediaToolCallerTests
     [
         ListMediaFilesTool.TheName,
         GetMediaFileTool.TheName,
-        GetMediaOptionsTool.TheName,
         ImportMediaFromUrlTool.TheName,
-        SaveMediaTextFileTool.TheName,
-        MoveMediaFileTool.TheName,
-        CopyMediaFileTool.TheName,
-        DeleteMediaFileTool.TheName,
-        PurgeMediaCacheTool.TheName,
+        MoveMediaFilesTool.TheName,
+        DeleteMediaTool.TheName,
         ListShortcodesTool.TheName,
     ];
 
@@ -56,13 +52,9 @@ public sealed class OrchardMediaToolCallerTests
     [Theory]
     [InlineData(ListMediaFilesTool.TheName, "ManageMediaContent")]
     [InlineData(GetMediaFileTool.TheName, "ManageMediaContent")]
-    [InlineData(GetMediaOptionsTool.TheName, "ViewMediaOptions")]
     [InlineData(ImportMediaFromUrlTool.TheName, "ManageMediaContent")]
-    [InlineData(SaveMediaTextFileTool.TheName, "ManageMediaContent")]
-    [InlineData(MoveMediaFileTool.TheName, "ManageMediaContent")]
-    [InlineData(CopyMediaFileTool.TheName, "ManageMediaContent")]
-    [InlineData(DeleteMediaFileTool.TheName, "ManageMediaContent")]
-    [InlineData(PurgeMediaCacheTool.TheName, "ManageAssetCache")]
+    [InlineData(MoveMediaFilesTool.TheName, "ManageMediaContent")]
+    [InlineData(DeleteMediaTool.TheName, "ManageMediaContent")]
     public async Task InvokeAsync_WhenTheCallerLacksThePermissionOfTheAdminAction_RefusesAndChangesNothing(string toolName, string permission)
     {
         // Arrange
@@ -90,10 +82,8 @@ public sealed class OrchardMediaToolCallerTests
     [InlineData(ListMediaFilesTool.TheName, "brand")]
     [InlineData(GetMediaFileTool.TheName, "brand/logo.png")]
     [InlineData(ImportMediaFromUrlTool.TheName, "brand")]
-    [InlineData(SaveMediaTextFileTool.TheName, "brand")]
-    [InlineData(MoveMediaFileTool.TheName, "brand/logo.png")]
-    [InlineData(CopyMediaFileTool.TheName, "brand/logo.png")]
-    [InlineData(DeleteMediaFileTool.TheName, "brand/logo.png")]
+    [InlineData(MoveMediaFilesTool.TheName, "brand/logo.png")]
+    [InlineData(DeleteMediaTool.TheName, "brand/logo.png")]
     public async Task InvokeAsync_WhenTheCallerMayNotManageTheFolder_RefusesAndChangesNothing(string toolName, string resource)
     {
         // Arrange
@@ -179,13 +169,9 @@ public sealed class OrchardMediaToolCallerTests
         {
             ListMediaFilesTool.TheName => (new ListMediaFilesTool(), new() { ["path"] = "brand" }),
             GetMediaFileTool.TheName => (new GetMediaFileTool(), new() { ["path"] = "brand/logo.png", ["includeText"] = true }),
-            GetMediaOptionsTool.TheName => (new GetMediaOptionsTool(), []),
             ImportMediaFromUrlTool.TheName => (new ImportMediaFromUrlTool(), new() { ["url"] = "https://example.com/new.png", ["folder"] = "brand" }),
-            SaveMediaTextFileTool.TheName => (new SaveMediaTextFileTool(), new() { ["path"] = "brand/notes.txt", ["text"] = "notes" }),
-            MoveMediaFileTool.TheName => (new MoveMediaFileTool(), new() { ["files"] = """[{ "path": "brand/logo.png", "newPath": "brand/logo-new.png" }]""" }),
-            CopyMediaFileTool.TheName => (new CopyMediaFileTool(), new() { ["path"] = "brand/logo.png", ["newPath"] = "brand/logo-copy.png" }),
-            DeleteMediaFileTool.TheName => (new DeleteMediaFileTool(), new() { ["paths"] = new[] { "brand/logo.png" } }),
-            PurgeMediaCacheTool.TheName => (new PurgeMediaCacheTool(), []),
+            MoveMediaFilesTool.TheName => (new MoveMediaFilesTool(), new() { ["action"] = "move", ["files"] = """[{ "path": "brand/logo.png", "newPath": "brand/logo-new.png" }]""" }),
+            DeleteMediaTool.TheName => (new DeleteMediaTool(), new() { ["paths"] = new[] { "brand/logo.png" } }),
             ListShortcodesTool.TheName => (new ListShortcodesTool(), []),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, "The tool has no test arguments."),
         };

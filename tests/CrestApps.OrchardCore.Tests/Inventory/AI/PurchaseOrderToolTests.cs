@@ -179,7 +179,7 @@ public sealed class PurchaseOrderToolTests : IAsyncLifetime
         Assert.Contains("no stock item has the id 'nope'", unknownItem, StringComparison.Ordinal);
         Assert.Contains("say who the stock is ordered from", noSupplier, StringComparison.Ordinal);
         Assert.Contains("no stock location with the id 'nowhere'", unknownLocation, StringComparison.Ordinal);
-        Assert.Single((await ListAsync()).Where(order => order.Supplier == "Acme Supplies"));
+        Assert.Single(await ListAsync(), order => order.Supplier == "Acme Supplies");
     }
 
     [Fact]

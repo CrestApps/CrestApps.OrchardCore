@@ -49,7 +49,7 @@ public sealed class ListOpenIdScopesTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Lists the OpenID scopes with id, name, display name, description and resources. Use it to get the id of a scope before saveOpenIdScope or deleteOpenIdScope, and the scope names for saveOpenIdApplication.";
+    public override string Description => "Lists the OpenID scopes with id, name, display name, description and resources. Use it to find the scope names an application can request.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

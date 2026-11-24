@@ -12,9 +12,10 @@ namespace CrestApps.OrchardCore.Tests.Staff.AI;
 
 /// <summary>
 /// The tools of batch 21 (skills and certificates, staff records, badges and capabilities) are registered with a title, a
-/// description and a category, can be picked on a profile, ask for approval as the catalog says (the deletes and the
-/// badge PIN), and are registered by the startup of the feature they belong to, which requires the AI feature.
-/// <c>setStaffPay</c> is deferred and must not be registered.
+/// description and a category, can be picked on a profile, ask for approval as the catalog says (the deletes), and are
+/// registered by the startup of the feature they belong to, which requires the AI feature.
+/// <c>setStaffPay</c> is deferred and must not be registered. <c>terminateStaffMember</c>, added after the review, asks for
+/// approval.
 /// </summary>
 public sealed class Batch21ToolRegistrationTests
 {
@@ -22,7 +23,6 @@ public sealed class Batch21ToolRegistrationTests
     [
         typeof(SkillsAIToolsStartup),
         typeof(StaffManagementAIToolsStartup),
-        typeof(BadgesAIToolsStartup),
     ];
 
     public static TheoryData<string, bool> Tools => new()
@@ -30,12 +30,10 @@ public sealed class Batch21ToolRegistrationTests
         { ListSkillsTool.TheName, false },
         { SaveSkillTool.TheName, false },
         { DeleteSkillTool.TheName, true },
-        { ListCertificationTypesTool.TheName, false },
         { SaveCertificationTypeTool.TheName, false },
         { DeleteCertificationTypeTool.TheName, true },
         { GetSubjectSkillsTool.TheName, false },
         { SaveSkillAssignmentTool.TheName, false },
-        { RemoveSkillAssignmentTool.TheName, false },
         { FindSkillHoldersTool.TheName, false },
         { ListCertificatesTool.TheName, false },
         { SaveCertificateTool.TheName, false },
@@ -43,8 +41,8 @@ public sealed class Batch21ToolRegistrationTests
         { DeleteCertificateTool.TheName, true },
         { GetStaffMemberTool.TheName, false },
         { SaveStaffMemberTool.TheName, false },
+        { TerminateStaffMemberTool.TheName, true },
         { DeleteStaffMemberTool.TheName, true },
-        { SetStaffBadgePinTool.TheName, true },
         { ListStaffCapabilitiesTool.TheName, false },
         { SaveStaffCapabilityTool.TheName, false },
         { DeleteStaffCapabilityTool.TheName, true },
@@ -72,20 +70,19 @@ public sealed class Batch21ToolRegistrationTests
     }
 
     [Fact]
-    public void TheBatch_RegistersTwentyOneTools_AndNoPayTool()
+    public void TheBatch_RegistersNineteenTools_AndNoPayTool()
     {
         // Act
         var tools = GetTools(_startups);
 
         // Assert
-        Assert.Equal(21, tools.Count);
+        Assert.Equal(19, tools.Count);
         Assert.DoesNotContain("setStaffPay", tools.Keys);
     }
 
     [Theory]
-    [InlineData(typeof(SkillsAIToolsStartup), 14, null)]
-    [InlineData(typeof(StaffManagementAIToolsStartup), 6, null)]
-    [InlineData(typeof(BadgesAIToolsStartup), 1, StaffConstants.Features.Badges)]
+    [InlineData(typeof(SkillsAIToolsStartup), 12, null)]
+    [InlineData(typeof(StaffManagementAIToolsStartup), 7, null)]
     public void EachStartup_RegistersItsTools_ForItsFeature_WhenTheAIFeatureIsOn(Type startupType, int expectedCount, string featureId)
     {
         // Act

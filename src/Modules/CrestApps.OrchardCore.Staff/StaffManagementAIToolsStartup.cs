@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Staff;
 /// <summary>
 /// Registers the staff record and capability AI tools whenever the Staff and AI features are on, beside the older
 /// <c>staffFind</c> and <c>staffReportingLine</c>. Each checks the permission or the staff scope of the matching staff
-/// page; the deletes ask for approval.
+/// page; the deletes and <c>terminateStaffMember</c> ask for approval.
 /// </summary>
 [RequireFeatures(AIFeatureIds.Area)]
 public sealed class StaffManagementAIToolsStartup : StartupBase
@@ -39,13 +39,20 @@ public sealed class StaffManagementAIToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveStaffMemberTool>(SaveStaffMemberTool.TheName)
             .WithTitle(S["Save Staff Member"])
-            .WithDescription(S["Creates a staff member or updates one: job title, employment type, status, dates, manager, time zone, locations, contracted hours, capabilities and team memberships; can link a user account once. Setting a termination date or status Terminated starts offboarding in other modules."])
+            .WithDescription(S["Creates a staff member or updates one: job title, employment type, status (Active, OnLeave or Suspended), dates, manager, time zone, locations, contracted hours, capabilities and team memberships; can link a user account once. Ending someone's employment is terminateStaffMember."])
             .WithCategory(S["Staff"])
+            .Selectable();
+
+        services.AddCoreAITool<TerminateStaffMemberTool>(TerminateStaffMemberTool.TheName)
+            .WithTitle(S["Terminate Staff Member"])
+            .WithDescription(S["Ends a staff member's employment, now or after a last working day still to come. Terminating offboards the person in the other modules (shifts, dispatch visits, Contact Center, phone extension), as the staff editor's Terminated status does, and cannot be undone. It needs the staff member's id, or the exact e-mail address or employee number of one person; a name only lists who matches."])
+            .WithCategory(S["Staff"])
+            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<DeleteStaffMemberTool>(DeleteStaffMemberTool.TheName)
             .WithTitle(S["Delete Staff Member"])
-            .WithDescription(S["Deletes a staff record. It is refused while people still report to them; set the status to Terminated instead to keep history."])
+            .WithDescription(S["Deletes a staff record. It is refused while people still report to them; end their employment with terminateStaffMember instead to keep their history."])
             .WithCategory(S["Staff"])
             .RequireApproval()
             .Selectable();

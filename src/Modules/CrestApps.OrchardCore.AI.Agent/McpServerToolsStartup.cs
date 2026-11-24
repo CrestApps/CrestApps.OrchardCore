@@ -55,7 +55,7 @@ public sealed class McpServerToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveMcpResourceTool>(SaveMcpResourceTool.TheName)
             .WithTitle(S["Save MCP Resource"])
-            .WithDescription(S["Creates or updates an MCP server resource of a given type and URI pattern. A resource makes files, media, content or a remote FTP/SFTP folder readable by MCP clients, so confirm what it exposes. Credentials are never taken: FTP and SFTP resources are created on the admin page."])
+            .WithDescription(S["Creates or updates an MCP server resource of a given type and URI pattern. A resource makes files, media, content or a remote FTP/SFTP folder readable by MCP clients, so confirm what it exposes. Credentials are never taken: FTP and SFTP resources, and file resources (which read files of the server), are created and changed on the admin page."])
             .WithCategory(S["MCP Server"])
             .RequireApproval()
             .Selectable();

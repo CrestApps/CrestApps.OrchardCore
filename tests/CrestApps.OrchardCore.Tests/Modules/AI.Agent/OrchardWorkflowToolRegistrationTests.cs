@@ -18,11 +18,10 @@ public sealed class OrchardWorkflowToolRegistrationTests
     private static readonly string[] _toolNames =
     [
         GetWorkflowActivityTool.TheName,
-        SaveWorkflowTypeTool.TheName,
+        EditWorkflowDraftTool.TheName,
         ListWorkflowTypeVersionsTool.TheName,
         CloneWorkflowTypeTool.TheName,
-        EnableWorkflowTypeTool.TheName,
-        DisableWorkflowTypeTool.TheName,
+        SetWorkflowTypeEnabledTool.TheName,
         DeleteWorkflowTypeTool.TheName,
         ListWorkflowInstancesTool.TheName,
         GetWorkflowInstanceTool.TheName,
@@ -37,11 +36,10 @@ public sealed class OrchardWorkflowToolRegistrationTests
     public static TheoryData<string, bool> Tools => new()
     {
         { GetWorkflowActivityTool.TheName, false },
-        { SaveWorkflowTypeTool.TheName, true },
+        { EditWorkflowDraftTool.TheName, false },
         { ListWorkflowTypeVersionsTool.TheName, false },
         { CloneWorkflowTypeTool.TheName, false },
-        { EnableWorkflowTypeTool.TheName, false },
-        { DisableWorkflowTypeTool.TheName, false },
+        { SetWorkflowTypeEnabledTool.TheName, true },
         { DeleteWorkflowTypeTool.TheName, true },
         { ListWorkflowInstancesTool.TheName, false },
         { GetWorkflowInstanceTool.TheName, false },
@@ -76,7 +74,7 @@ public sealed class OrchardWorkflowToolRegistrationTests
     }
 
     [Theory]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.WorkflowsToolsStartup), 13)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.WorkflowsToolsStartup), 12)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.WorkflowsHttpToolsStartup), 1)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.WorkflowUserTasksToolsStartup), 1)]
     public void EachFeatureStartup_RegistersItsTools(Type startupType, int expectedCount)
@@ -90,6 +88,7 @@ public sealed class OrchardWorkflowToolRegistrationTests
     }
 
     [Theory]
+    [InlineData("saveWorkflowType")]
     [InlineData("updateWorkflowDraft")]
     [InlineData("publishWorkflowType")]
     [InlineData("discardWorkflowDraft")]
@@ -109,7 +108,7 @@ public sealed class OrchardWorkflowToolRegistrationTests
     [InlineData("listWorkflowTypes", false)]
     [InlineData("getWorkflowType", false)]
     [InlineData("listWorkflowActivities", false)]
-    [InlineData("createOrUpdateWorkflow", false)]
+    [InlineData("createOrUpdateWorkflow", true)]
     public void AnExistingWorkflowTool_IsStillRegisteredAsBefore(string toolName, bool requiresApproval)
     {
         // Arrange

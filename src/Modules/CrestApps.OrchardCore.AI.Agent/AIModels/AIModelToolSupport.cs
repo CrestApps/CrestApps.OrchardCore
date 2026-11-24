@@ -49,12 +49,6 @@ internal static class AIModelToolSupport
         => AgentToolLinks.GetAdminPath(services, AIConstants.Feature.Area, "ProviderConnections", "Create", new RouteValueDictionary { ["providerName"] = providerName });
 
     /// <summary>
-    /// Gets the address of the provider connections page.
-    /// </summary>
-    public static string GetConnectionsPath(IServiceProvider services)
-        => AgentToolLinks.GetAdminPath(services, AIConstants.Feature.Area, "ProviderConnections", "Index");
-
-    /// <summary>
     /// Gets the address of a deployment's editor.
     /// </summary>
     public static string GetDeploymentEditPath(IServiceProvider services, string deploymentId)

@@ -120,7 +120,7 @@ public sealed class MenuToolsTests
     }
 
     [Fact]
-    public async Task SaveMenuItem_ForANewLink_InsertsItAtThePositionAndSavesADraftOfTheMenu()
+    public async Task SaveMenuItem_ForANewLink_InsertsItAfterTheGivenItemAndSavesADraftOfTheMenu()
     {
         // Arrange
         var harness = new Harness();
@@ -132,7 +132,7 @@ public sealed class MenuToolsTests
             ["contentType"] = "linkmenuitem",
             ["title"] = "Careers",
             ["url"] = "/careers",
-            ["position"] = 2,
+            ["afterId"] = "about-1",
         });
 
         // Assert
@@ -245,7 +245,7 @@ public sealed class MenuToolsTests
             ["menuContentItemId"] = "menu-1",
             ["menuItemId"] = "team-1",
             ["parentMenuItemId"] = "menu-1",
-            ["position"] = 0,
+            ["afterId"] = string.Empty,
         });
 
         // Assert
@@ -261,6 +261,8 @@ public sealed class MenuToolsTests
     [InlineData("contentType", "ContentMenuItem", "url", "/x", "needs linkedContentItemId")]
     [InlineData("contentType", "LinkMenuItem", "parentMenuItemId", "nope", "has no item with the ID 'nope'")]
     [InlineData("menuItemId", "nope", "url", "/x", "has no item with the ID 'nope'")]
+    [InlineData("menuItemId", "home-1", "afterId", "team-1", "'team-1' is not an item directly under the parent")]
+    [InlineData("menuItemId", "home-1", "afterId", "home-1", "cannot be placed after itself")]
     public async Task SaveMenuItem_WhenTheChangeIsNotAllowed_SavesNothing(string name, string value, string otherName, string otherValue, string expected)
     {
         // Arrange

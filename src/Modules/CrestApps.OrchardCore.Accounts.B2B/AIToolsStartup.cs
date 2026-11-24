@@ -8,8 +8,9 @@ namespace CrestApps.OrchardCore.Accounts.B2B;
 
 /// <summary>
 /// Registers the business buying and price list AI tools whenever the Accounts B2B and AI features are on. Every tool
-/// needs <c>ManageB2BAccounts</c>; the tools that change an account also need <c>EditContent</c> on it. Punchout and
-/// deleting a price list ask for approval.
+/// needs <c>ManageB2BAccounts</c>; the tools that change an account also need <c>EditContent</c> on it. Saving an
+/// account's business buying settings (it sets credit limits and net terms, which extends credit), punchout and deleting
+/// a price list ask for approval.
 /// </summary>
 [RequireFeatures(AIFeatureIds.Area)]
 public sealed class AIToolsStartup : StartupBase
@@ -38,6 +39,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Save B2B Account Settings"])
             .WithDescription(S["Turns business buying on or off for an account and sets tax id, billing email, payment terms (net days, deposit percent, credit limit, purchase order required), price list, monthly budget and per-buyer order limits. Buyers must already be members of the account."])
             .WithCategory(S["Accounts"])
+            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<ConfigureB2BPunchoutTool>(ConfigureB2BPunchoutTool.TheName)

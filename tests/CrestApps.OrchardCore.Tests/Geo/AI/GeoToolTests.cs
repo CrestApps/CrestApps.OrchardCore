@@ -19,8 +19,8 @@ namespace CrestApps.OrchardCore.Tests.Geo.AI;
 
 /// <summary>
 /// The territory tools run the territory manager's checks on a real store, merge members by kind as the editor does,
-/// move a deleted territory's children up, and find territories with the resolver; the geocoding tools need
-/// <c>ManageGeoSettings</c>, report the queue and never show a provider key.
+/// move a deleted territory's children up, and find territories with the resolver; finding the territory of a street
+/// address geocodes it, which needs <c>ManageGeoSettings</c> too, and never shows a provider key.
 /// </summary>
 public sealed class GeoToolTests
 {
@@ -33,8 +33,6 @@ public sealed class GeoToolTests
         { SaveServiceTerritoryTool.TheName, "ManageGeoTerritories" },
         { DeleteServiceTerritoryTool.TheName, "ManageGeoTerritories" },
         { FindServiceTerritoryTool.TheName, "ManageGeoTerritories" },
-        { GeocodeAddressTool.TheName, "ManageGeoSettings" },
-        { GetGeocodingStatusTool.TheName, "ManageGeoSettings" },
     };
 
     [Theory]
@@ -191,15 +189,16 @@ public sealed class GeoToolTests
         var half = await harness.RunAsync(services => InvokeAsync(FindServiceTerritoryTool.TheName, services, new() { ["latitude"] = 30.2 }), commit: false);
 
         // Assert
-        Assert.StartsWith("Nothing was searched: give a latitude and longitude, a postal code, or both.", nothing, StringComparison.Ordinal);
+        Assert.Equal("Nothing was searched: give a street address (address or text), a latitude and longitude, or a postal code.", nothing);
         Assert.Equal("Nothing was searched: give both latitude and longitude, or neither.", half);
     }
 
     [Fact]
-    public async Task GeocodeAddress_ReturnsTheProvidersCandidates()
+    public async Task FindServiceTerritory_GeocodesAStreetAddress_AndFindsItsTerritory()
     {
         // Arrange
         await using var harness = await CreateAsync();
+        await CreateTerritoryAsync(harness, "Austin");
         GeocodeQuery asked = null;
 
         _geoService.Setup(service => service.GeocodeAsync(It.IsAny<GeocodeQuery>(), It.IsAny<CancellationToken>()))
@@ -207,87 +206,76 @@ public sealed class GeoToolTests
             .ReturnsAsync(new GeocodeResponse
             {
                 Provider = "AzureMaps",
-                Candidates = [new GeocodeCandidate { Point = new GeoPoint(30.2672, -97.7431), Confidence = 0.912, FormattedAddress = "100 Congress Ave, Austin, TX 78701", PostalCode = "78701", Country = "US" }],
+                Candidates = [new GeocodeCandidate { Point = new GeoPoint(30.2672, -97.7431), Confidence = 0.912, FormattedAddress = "100 Congress Ave, Austin, TX 78706", PostalCode = "78706", Country = "US" }],
             });
 
         // Act
-        var json = await harness.RunAsync(services => InvokeJsonAsync(GeocodeAddressTool.TheName, services, new()
+        var json = await harness.RunAsync(services => InvokeJsonAsync(FindServiceTerritoryTool.TheName, services, new()
         {
             ["address"] = new { addressLine1 = "100 Congress Ave", city = "Austin", region = "TX", country = "us" },
         }), commit: false);
 
         // Assert
-        var candidate = Assert.Single(json.GetProperty("candidates").EnumerateArray());
+        var geocoded = json.GetProperty("geocoded");
 
-        Assert.Equal("AzureMaps", json.GetProperty("provider").GetString());
-        Assert.Equal(30.2672, candidate.GetProperty("latitude").GetDouble());
-        Assert.Equal(0.91, candidate.GetProperty("confidence").GetDouble());
+        Assert.True(json.GetProperty("found").GetBoolean());
+        Assert.Equal("Austin", json.GetProperty("territory").GetProperty("name").GetString());
+        Assert.Equal("AzureMaps", geocoded.GetProperty("provider").GetString());
+        Assert.Equal(30.2672, geocoded.GetProperty("latitude").GetDouble());
+        Assert.Equal(0.91, geocoded.GetProperty("confidence").GetDouble());
         Assert.Equal("US", asked.Address.Country);
         Assert.Equal("US", asked.CountryHint);
     }
 
     [Fact]
-    public async Task GeocodeAddress_SaysWhenNoProviderIsSetUp_AndHidesKeysInProviderErrors()
+    public async Task FindServiceTerritory_ByAddress_NeedsTheGeoSettingsPermission()
     {
         // Arrange
-        await using var harness = await CreateAsync();
-
-        _geoService.Setup(service => service.GeocodeAsync(It.IsAny<GeocodeQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GeocodeResponse());
-        _geoService.Setup(service => service.ReverseGeocodeAsync(It.IsAny<GeoPoint>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new GeoProviderException("Google Maps refused the request (https://maps.example/geocode?latlng=1,2&key=SECRET-KEY-123)."));
+        await using var harness = await CreateAsync(authorize: (asked, _) => asked.Name != "ManageGeoSettings");
 
         // Act
-        var none = await harness.RunAsync(services => InvokeAsync(GeocodeAddressTool.TheName, services, new() { ["text"] = "100 Congress Ave, Austin" }), commit: false);
-        var failed = await harness.RunAsync(services => InvokeAsync(GeocodeAddressTool.TheName, services, new() { ["latitude"] = 1.0, ["longitude"] = 2.0 }), commit: false);
+        var result = await harness.RunAsync(services => InvokeAsync(FindServiceTerritoryTool.TheName, services, new() { ["text"] = "100 Congress Ave, Austin" }), commit: false);
 
         // Assert
-        Assert.StartsWith("No geocoding provider is set up", none, StringComparison.Ordinal);
-        Assert.StartsWith("The maps provider could not answer:", failed, StringComparison.Ordinal);
-        Assert.DoesNotContain("SECRET-KEY-123", failed, StringComparison.Ordinal);
-        Assert.Contains("key=[hidden]", failed, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task GeocodeAddress_RefusesAKeyArgument()
-    {
-        // Arrange
-        await using var harness = await CreateAsync();
-
-        // Act
-        var result = await harness.RunAsync(services => InvokeAsync(GeocodeAddressTool.TheName, services, new() { ["text"] = "Austin", ["apiKey"] = "SECRET" }), commit: false);
-
-        // Assert
-        Assert.StartsWith("Nothing was done: 'apiKey' is not an argument of geocodeAddress.", result, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was searched: finding the territory of a street address geocodes it", result, StringComparison.Ordinal);
         _geoService.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetGeocodingStatus_CountsTheQueue_AndHidesKeysInTheLastError()
+    public async Task FindServiceTerritory_SaysWhenNoProviderIsSetUp_AndHidesKeysInProviderErrors()
     {
         // Arrange
         await using var harness = await CreateAsync();
 
-        _settings.GeocodingProvider = "GoogleMaps";
-
-        await harness.RunAsync(async services =>
-        {
-            var store = services.GetRequiredService<GeocodeRequestStore>();
-
-            await store.CreateAsync(new GeocodeRequest { ItemId = "r1", TargetType = "WorkOrder", TargetId = "w1", Status = GeocodeRequestStatus.Pending, NextAttemptUtc = CalendarTestHarness.Now, LastError = "Google Maps refused the request (key=SECRET-KEY-123)." });
-            await store.CreateAsync(new GeocodeRequest { ItemId = "r2", TargetType = "WorkOrder", TargetId = "w2", Status = GeocodeRequestStatus.Done, NextAttemptUtc = CalendarTestHarness.Now });
-        });
+        _geoService.SetupSequence(service => service.GeocodeAsync(It.IsAny<GeocodeQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GeocodeResponse())
+            .ThrowsAsync(new GeoProviderException("Google Maps refused the request (https://maps.example/geocode?address=Austin&key=SECRET-KEY-123)."));
 
         // Act
-        var json = await harness.RunAsync(services => InvokeJsonAsync(GetGeocodingStatusTool.TheName, services, new()), commit: false);
+        var none = await harness.RunAsync(services => InvokeAsync(FindServiceTerritoryTool.TheName, services, new() { ["text"] = "100 Congress Ave, Austin" }), commit: false);
+        var failed = await harness.RunAsync(services => InvokeAsync(FindServiceTerritoryTool.TheName, services, new() { ["text"] = "100 Congress Ave, Austin" }), commit: false);
+        var both = await harness.RunAsync(services => InvokeAsync(FindServiceTerritoryTool.TheName, services, new() { ["text"] = "Austin", ["latitude"] = 1.0, ["longitude"] = 2.0 }), commit: false);
 
         // Assert
-        Assert.Equal(1, json.GetProperty("waiting").GetInt32());
-        Assert.Equal(1, json.GetProperty("done").GetInt32());
-        Assert.Equal(0, json.GetProperty("failed").GetInt32());
-        Assert.Equal("GoogleMaps", json.GetProperty("geocodingProvider").GetString());
-        Assert.DoesNotContain("SECRET-KEY-123", json.GetProperty("lastError").GetString(), StringComparison.Ordinal);
-        Assert.Contains("is not enabled", json.GetProperty("message").GetString(), StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was searched: no geocoding provider is set up", none, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was searched: the maps provider could not answer:", failed, StringComparison.Ordinal);
+        Assert.DoesNotContain("SECRET-KEY-123", failed, StringComparison.Ordinal);
+        Assert.Contains("key=[hidden]", failed, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was searched: give either an address", both, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FindServiceTerritory_RefusesAKeyArgument()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+
+        // Act
+        var result = await harness.RunAsync(services => InvokeAsync(FindServiceTerritoryTool.TheName, services, new() { ["text"] = "Austin", ["apiKey"] = "SECRET" }), commit: false);
+
+        // Assert
+        Assert.StartsWith("Nothing was done: 'apiKey' is not an argument of findServiceTerritory.", result, StringComparison.Ordinal);
+        _geoService.VerifyNoOtherCalls();
     }
 
     private static Task<string> CreateTerritoryAsync(CalendarTestHarness harness, string name, string parentId = null, Dictionary<string, string[]> members = null)
@@ -351,8 +339,7 @@ public sealed class GeoToolTests
             SaveServiceTerritoryTool.TheName => new SaveServiceTerritoryTool(),
             DeleteServiceTerritoryTool.TheName => new DeleteServiceTerritoryTool(),
             FindServiceTerritoryTool.TheName => new FindServiceTerritoryTool(),
-            GeocodeAddressTool.TheName => new GeocodeAddressTool(),
-            _ => new GetGeocodingStatusTool(),
+            _ => throw new ArgumentOutOfRangeException(nameof(toolName)),
         };
 
         return AgentToolTestContext.InvokeAsync(tool, services, arguments);

@@ -9,7 +9,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, save and remove the content items nested in Flow, Bag and widgets list parts, when the
+/// Registers the tools that save and remove the content items nested in Flow, Bag and widgets list parts, when the
 /// Flows feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Flows)]
@@ -34,15 +34,9 @@ public sealed class FlowsToolsStartup : StartupBase
         services.TryAddScoped<IContentItemPayloadAssistanceService, DefaultContentItemPayloadAssistanceService>();
         services.TryAddScoped<ContentItemPreparationService>();
 
-        services.AddCoreAITool<ListNestedContentItemsTool>(ListNestedContentItemsTool.TheName)
-            .WithTitle(S["List Nested Content Items"])
-            .WithDescription(S["Returns the outline of the items nested in a content item's Flow, Bag and widget-zone parts: for each, its part, zone, position, nested item ID, content type and title, with children indented. Use it to locate a widget or contained item before changing it."])
-            .WithCategory(S["Content Management"])
-            .Selectable();
-
         services.AddCoreAITool<SaveNestedContentItemTool>(SaveNestedContentItemTool.TheName)
             .WithTitle(S["Save Nested Content Item"])
-            .WithDescription(S["Adds, updates or moves a single widget or contained item inside a content item's Flow, Bag or widget-zone part without resending the rest of the page. Takes the parent item, the target part (and zone or parent nested item), an optional position, and the nested item's content."])
+            .WithDescription(S["Adds, updates or moves a single widget or contained item inside a content item's Flow, Bag or widget-zone part without resending the rest of the page. Takes the parent item, the target part (and zone or parent nested item), an optional afterId (the sibling it goes after), and the nested item's content."])
             .WithCategory(S["Content Management"])
             .Selectable();
 

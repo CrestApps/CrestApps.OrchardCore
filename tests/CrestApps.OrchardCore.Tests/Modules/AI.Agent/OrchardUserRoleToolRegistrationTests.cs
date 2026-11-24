@@ -11,8 +11,9 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Agent;
 
 /// <summary>
 /// The Orchard Core tools of the AI Agent module for users and roles are registered with a title, a description and a
-/// category, can be picked on a profile, and ask for approval exactly where the tool coverage plan says so: every
-/// tool that changes who can sign in or what a role may do, and every tool that deletes.
+/// category, can be picked on a profile, and ask for approval where the change is hard to undo: saving a user, a
+/// user's roles or a role, resetting a user's sign-in factors, and every delete. Explaining a user's access only reads. Enabling, disabling and unlocking an
+/// account can be undone and confirming its email is low risk, so they do not ask.
 /// </summary>
 public sealed class OrchardUserRoleToolRegistrationTests
 {
@@ -22,13 +23,10 @@ public sealed class OrchardUserRoleToolRegistrationTests
         { GetUserTool.TheName, false },
         { SaveUserTool.TheName, true },
         { SetUserRolesTool.TheName, true },
-        { EnableUserTool.TheName, true },
-        { DisableUserTool.TheName, true },
-        { UnlockUserTool.TheName, true },
-        { ConfirmUserEmailTool.TheName, true },
+        { ExplainUserAccessTool.TheName, false },
+        { SetUserAccountStateTool.TheName, false },
         { DeleteUserTool.TheName, true },
-        { DisableUserTwoFactorTool.TheName, true },
-        { SaveUserCustomSettingsTool.TheName, false },
+        { ResetUserSignInFactorsTool.TheName, true },
         { ListRolesTool.TheName, false },
         { GetRoleDetailsTool.TheName, false },
         { ListPermissionsTool.TheName, false },
@@ -59,10 +57,10 @@ public sealed class OrchardUserRoleToolRegistrationTests
     }
 
     [Theory]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.UserRolesToolsStartup), SetUserRolesTool.TheName)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.UsersTwoFactorToolsStartup), DisableUserTwoFactorTool.TheName)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.UsersCustomUserSettingsToolsStartup), SaveUserCustomSettingsTool.TheName)]
-    public void Tool_ThatNeedsAnotherFeature_IsRegisteredByTheStartupOfThatFeatureOnly(Type startupType, string toolName)
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.UserRolesToolsStartup), SetUserRolesTool.TheName, 2)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.UserRolesToolsStartup), ExplainUserAccessTool.TheName, 2)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.UsersTwoFactorToolsStartup), ResetUserSignInFactorsTool.TheName, 1)]
+    public void Tool_ThatNeedsAnotherFeature_IsRegisteredByTheStartupOfThatFeatureOnly(Type startupType, string toolName, int featureToolCount)
     {
         // Arrange
         var users = GetTools(typeof(CrestApps.OrchardCore.AI.Agent.UsersToolsStartup));
@@ -75,7 +73,7 @@ public sealed class OrchardUserRoleToolRegistrationTests
         // Assert
         Assert.False(registeredWithUsers);
         Assert.True(registeredWithFeature);
-        Assert.Single(feature);
+        Assert.Equal(featureToolCount, feature.Count);
     }
 
     [Fact]

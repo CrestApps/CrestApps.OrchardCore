@@ -17,11 +17,10 @@ public sealed class WorkflowToolCallerTests
     public static TheoryData<string, string> Tools => new()
     {
         { GetWorkflowActivityTool.TheName, "ManageWorkflows" },
-        { SaveWorkflowTypeTool.TheName, "ManageWorkflows" },
+        { EditWorkflowDraftTool.TheName, "ManageWorkflows" },
         { ListWorkflowTypeVersionsTool.TheName, "ManageWorkflows" },
         { CloneWorkflowTypeTool.TheName, "ManageWorkflows" },
-        { EnableWorkflowTypeTool.TheName, "ManageWorkflows" },
-        { DisableWorkflowTypeTool.TheName, "ManageWorkflows" },
+        { SetWorkflowTypeEnabledTool.TheName, "ManageWorkflows" },
         { DeleteWorkflowTypeTool.TheName, "ManageWorkflows" },
         { ListWorkflowInstancesTool.TheName, "ManageWorkflows" },
         { GetWorkflowInstanceTool.TheName, "ManageWorkflows" },
@@ -145,15 +144,14 @@ public sealed class WorkflowToolCallerTests
         => toolName switch
         {
             GetWorkflowActivityTool.TheName => (new GetWorkflowActivityTool(), new() { ["names"] = new[] { "NotifyTask" } }),
-            SaveWorkflowTypeTool.TheName => (new SaveWorkflowTypeTool(), new()
+            EditWorkflowDraftTool.TheName => (new EditWorkflowDraftTool(), new()
             {
                 ["name"] = "New workflow",
-                ["activities"] = JsonNode.Parse("""[ { "alias": "start", "name": "ContentPublishedEvent", "isStart": true } ]"""),
+                ["operations"] = JsonNode.Parse("""[ { "op": "addActivity", "alias": "start", "activity": "ContentPublishedEvent", "isStart": true } ]"""),
             }),
             ListWorkflowTypeVersionsTool.TheName => (new ListWorkflowTypeVersionsTool(), new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId }),
             CloneWorkflowTypeTool.TheName => (new CloneWorkflowTypeTool(), new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId }),
-            EnableWorkflowTypeTool.TheName => (new EnableWorkflowTypeTool(), new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId }),
-            DisableWorkflowTypeTool.TheName => (new DisableWorkflowTypeTool(), new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId }),
+            SetWorkflowTypeEnabledTool.TheName => (new SetWorkflowTypeEnabledTool(), new() { ["workflowTypeId"] = WorkflowToolHarness.OrderWorkflowTypeId, ["enabled"] = false }),
             DeleteWorkflowTypeTool.TheName => (new DeleteWorkflowTypeTool(), new() { ["workflowTypeIds"] = new[] { WorkflowToolHarness.OrderWorkflowTypeId } }),
             ListWorkflowInstancesTool.TheName => (new ListWorkflowInstancesTool(), []),
             GetWorkflowInstanceTool.TheName => (new GetWorkflowInstanceTool(), new() { ["instanceId"] = "4812" }),

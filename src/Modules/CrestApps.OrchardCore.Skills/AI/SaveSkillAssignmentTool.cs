@@ -11,7 +11,8 @@ namespace CrestApps.OrchardCore.Skills.AI;
 /// <summary>
 /// Gives a person a skill, or changes its proficiency and dates, through <see cref="ISkillAssignmentService.AssignAsync"/>
 /// as the Skills card of the user and staff editors does; the service checks the skill exists, is enabled, and the
-/// proficiency and dates. A skill that requires a certification is given even without a valid certificate, as the
+/// proficiency and dates. With <c>remove</c> it takes the skill away through <see cref="ISkillAssignmentService.RemoveAsync"/>,
+/// as clearing a skill on the Skills card does; a skill held through a linked record (a staff member's user) is not removed. A skill that requires a certification is given even without a valid certificate, as the
 /// service does, but it does not count until one is valid; the result says so. A staff member must be among the people
 /// the caller manages. It needs <see cref="SkillsPermissions.AssignSkills"/>.
 /// </summary>
@@ -30,7 +31,11 @@ internal sealed class SaveSkillAssignmentTool : SkillsAIToolBase
     """ + SubjectProperties + """
         ,"skillId": {
           "type": "string",
-          "description": "The id of the skill, from listSkills."
+          "description": "The id of the skill, from listSkills or getSubjectSkills."
+        },
+        "remove": {
+          "type": "boolean",
+          "description": "True to take the skill away from the person instead of saving it; proficiency and dates are then ignored. Defaults to false."
         },
         "proficiency": {
           "type": "integer",
@@ -56,7 +61,7 @@ internal sealed class SaveSkillAssignmentTool : SkillsAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Gives a user or staff member a skill, or changes its proficiency (1 to 5) and effective dates. A skill that requires a certification does not count until the person holds a valid certificate of it; the result says whether it counts today.";
+    public override string Description => "Gives a user or staff member a skill, changes its proficiency (1 to 5) and effective dates, or with remove takes the skill away. A skill that requires a certification does not count until the person holds a valid certificate of it; the result says whether it counts today.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -72,6 +77,11 @@ internal sealed class SaveSkillAssignmentTool : SkillsAIToolBase
         if (skillId is null)
         {
             return "Nothing was saved: give the skillId, from listSkills.";
+        }
+
+        if (ReadBool(arguments, "remove") == true)
+        {
+            return await RemoveAsync(arguments, services, caller, skillId, cancellationToken);
         }
 
         if (!TryReadDate(arguments, "effectiveFrom", out var from) || !TryReadDate(arguments, "effectiveTo", out var to))
@@ -140,6 +150,31 @@ internal sealed class SaveSkillAssignmentTool : SkillsAIToolBase
             countsToday = counts,
             whyNotCounting = why,
             message = existing is null ? $"{lookup.Name} now holds '{skill?.Name}'." : $"{lookup.Name}'s '{skill?.Name}' has been saved.",
+        });
+    }
+
+    private static async Task<object> RemoveAsync(AIFunctionArguments arguments, IServiceProvider services, ClaimsPrincipal caller, string skillId, CancellationToken cancellationToken)
+    {
+        var lookup = await FindSubjectAsync(arguments, services, caller, forChange: true, cancellationToken);
+
+        if (lookup.Error is not null)
+        {
+            return $"Nothing was removed: {lookup.Error}";
+        }
+
+        var removed = await services.GetRequiredService<ISkillAssignmentService>().RemoveAsync(lookup.Subject, skillId, caller.Identity?.Name, cancellationToken);
+
+        if (!removed)
+        {
+            return $"Nothing was removed: {lookup.Name} was not given the skill '{skillId}' directly. Use getSubjectSkills to see their skills; a skill held through their linked user or staff record is removed there.";
+        }
+
+        return Json(new
+        {
+            subject = new { kind = lookup.Subject.Kind, id = lookup.Subject.Id, name = lookup.Name },
+            skillId,
+            removed,
+            message = $"The skill has been taken away from {lookup.Name}.",
         });
     }
 }

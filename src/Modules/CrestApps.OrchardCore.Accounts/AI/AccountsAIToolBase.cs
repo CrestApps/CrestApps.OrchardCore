@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Accounts.AI;
@@ -226,6 +227,31 @@ internal abstract class AccountsAIToolBase : AIFunction
     protected static TPart GetPart<TPart>(ContentItem account)
         where TPart : ContentPart
         => account is not null && account.TryGet<TPart>(out var part) ? part : null;
+
+    /// <summary>
+    /// Writes a UTC time in the caller's or the site's time zone.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="utc">The UTC time, or <see langword="null"/>.</param>
+    /// <returns>The local time with its offset, or <see langword="null"/>.</returns>
+    protected static async Task<string> LocalTimeAsync(IServiceProvider services, DateTime? utc)
+    {
+        if (utc is null || utc.Value == default)
+        {
+            return null;
+        }
+
+        var localClock = services.GetService<ILocalClock>();
+
+        if (localClock is null)
+        {
+            return null;
+        }
+
+        var local = await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc.Value, DateTimeKind.Utc));
+
+        return local.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+    }
 
     /// <summary>
     /// Writes a result as JSON.

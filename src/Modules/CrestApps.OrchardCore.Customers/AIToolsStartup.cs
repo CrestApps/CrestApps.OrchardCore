@@ -43,7 +43,7 @@ public sealed class AIToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveCustomerTool>(SaveCustomerTool.TheName)
             .WithTitle(S["Save Customer"])
-            .WithDescription(S["Creates a customer or updates one: kind, status (Active or Disabled), names, company, tax id and exemption, phone, marketing consent, and email for guests only. A business needs a company name; an anonymized customer cannot be edited."])
+            .WithDescription(S["Creates a person as a customer or updates one: status (Active or Disabled), names, tax exemption, phone, marketing consent, and email for guests only. Only the fields given change; an anonymized customer cannot be edited. It does not create or change businesses: a business is an Account (use listAccounts and getAccount), and a customer stored as a business is changed on its admin page."])
             .WithCategory(S["Customers"])
             .Selectable();
 
@@ -69,7 +69,7 @@ public sealed class AIToolsStartup : StartupBase
 
         services.AddCoreAITool<EraseCustomerDataTool>(EraseCustomerDataTool.TheName)
             .WithTitle(S["Erase Customer Data"])
-            .WithDescription(S["Erases a customer's personal data and the personal details on their orders for an erasure request. Orders stay without them; this cannot be undone."])
+            .WithDescription(S["Erases a customer's personal data for an erasure request, everywhere the site keeps it: every module that holds personal data about the customer (orders, and any other module's records) erases its part too, orders keep their totals without the personal details, and the customer record is anonymized. This cannot be undone."])
             .WithCategory(S["Customers"])
             .RequireApproval()
             .Selectable();

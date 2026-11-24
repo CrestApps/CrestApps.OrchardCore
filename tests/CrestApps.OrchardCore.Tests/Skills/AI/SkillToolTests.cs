@@ -34,12 +34,10 @@ public sealed class SkillToolTests
         { ListSkillsTool.TheName, SkillsPermissions.ViewSkills.Name },
         { SaveSkillTool.TheName, SkillsPermissions.ManageSkills.Name },
         { DeleteSkillTool.TheName, SkillsPermissions.ManageSkills.Name },
-        { ListCertificationTypesTool.TheName, SkillsPermissions.ViewSkills.Name },
         { SaveCertificationTypeTool.TheName, SkillsPermissions.ManageSkills.Name },
         { DeleteCertificationTypeTool.TheName, SkillsPermissions.ManageSkills.Name },
         { GetSubjectSkillsTool.TheName, SkillsPermissions.ViewSkills.Name },
         { SaveSkillAssignmentTool.TheName, SkillsPermissions.AssignSkills.Name },
-        { RemoveSkillAssignmentTool.TheName, SkillsPermissions.AssignSkills.Name },
         { FindSkillHoldersTool.TheName, SkillsPermissions.ViewSkills.Name },
         { ListCertificatesTool.TheName, SkillsPermissions.ViewSkills.Name },
         { SaveCertificateTool.TheName, SkillsPermissions.AssignSkills.Name },
@@ -202,12 +200,58 @@ public sealed class SkillToolTests
         // Act
         var unknown = await InvokeAsync(harness, new SaveSkillAssignmentTool(), new() { ["subjectKind"] = "User", ["subjectId"] = "ghost", ["skillId"] = skill.ItemId });
         var level = await InvokeAsync(harness, new SaveSkillAssignmentTool(), new() { ["subjectKind"] = "User", ["subjectId"] = LuisId, ["skillId"] = skill.ItemId, ["proficiency"] = 9 });
-        var removedNothing = await InvokeAsync(harness, new RemoveSkillAssignmentTool(), new() { ["subjectKind"] = "User", ["subjectId"] = LuisId, ["skillId"] = skill.ItemId });
+        var removedNothing = await InvokeAsync(harness, new SaveSkillAssignmentTool(), new() { ["subjectKind"] = "User", ["subjectId"] = LuisId, ["skillId"] = skill.ItemId, ["remove"] = true });
 
         // Assert
         Assert.Equal("Nothing was saved: There is no user 'ghost'. Give a user id, user name or email.", unknown);
         Assert.Equal("Nothing was saved: The proficiency of 'Welding' must be from 1 to 5.", level);
         Assert.StartsWith("Nothing was removed: Luis Ortega was not given the skill", removedNothing, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SaveSkillAssignment_WithRemove_TakesTheSkillAway_AndIgnoresTheLevelAndDates()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var skill = await harness.AddSkillAsync("Welding");
+        await InvokeAsync(harness, new SaveSkillAssignmentTool(), new() { ["subjectKind"] = "User", ["subjectId"] = LuisId, ["skillId"] = skill.ItemId, ["proficiency"] = 4 });
+
+        // Act
+        var removed = AgentToolTestContext.ReadJson(await InvokeAsync(harness, new SaveSkillAssignmentTool(), new()
+        {
+            ["subjectKind"] = "User",
+            ["subjectId"] = LuisId,
+            ["skillId"] = skill.ItemId,
+            ["remove"] = true,
+            ["proficiency"] = 9,
+        }));
+        var person = AgentToolTestContext.ReadJson(await InvokeAsync(harness, new GetSubjectSkillsTool(), new() { ["subjectKind"] = "User", ["subjectId"] = LuisId }));
+
+        // Assert
+        Assert.True(removed.GetProperty("removed").GetBoolean());
+        Assert.Equal("The skill has been taken away from Luis Ortega.", removed.GetProperty("message").GetString());
+        Assert.Empty(person.GetProperty("skills").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task ListSkills_WithKindCertificationType_ListsTheCertificationTypes_AndRefusesAnUnknownKind()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        await harness.AddCertificationAsync("OSHA Forklift", certification => certification.ValidityMonths = 36);
+        await harness.AddSkillAsync("Welding");
+
+        // Act
+        var types = AgentToolTestContext.ReadJson(await InvokeAsync(harness, new ListSkillsTool(), new() { ["kind"] = "certificationType" }));
+        var skills = AgentToolTestContext.ReadJson(await InvokeAsync(harness, new ListSkillsTool(), []));
+        var unknown = await InvokeAsync(harness, new ListSkillsTool(), new() { ["kind"] = "badge" });
+
+        // Assert
+        Assert.Equal("certificationType", types.GetProperty("kind").GetString());
+        Assert.Equal("OSHA Forklift", Assert.Single(types.GetProperty("items").EnumerateArray()).GetProperty("name").GetString());
+        Assert.Equal("skill", skills.GetProperty("kind").GetString());
+        Assert.Equal("Welding", Assert.Single(skills.GetProperty("items").EnumerateArray()).GetProperty("name").GetString());
+        Assert.Equal("Nothing was listed: kind must be 'skill' or 'certificationType', not 'badge'.", unknown);
     }
 
     [Fact]
@@ -405,12 +449,10 @@ public sealed class SkillToolTests
             ListSkillsTool.TheName => new ListSkillsTool(),
             SaveSkillTool.TheName => new SaveSkillTool(),
             DeleteSkillTool.TheName => new DeleteSkillTool(),
-            ListCertificationTypesTool.TheName => new ListCertificationTypesTool(),
             SaveCertificationTypeTool.TheName => new SaveCertificationTypeTool(),
             DeleteCertificationTypeTool.TheName => new DeleteCertificationTypeTool(),
             GetSubjectSkillsTool.TheName => new GetSubjectSkillsTool(),
             SaveSkillAssignmentTool.TheName => new SaveSkillAssignmentTool(),
-            RemoveSkillAssignmentTool.TheName => new RemoveSkillAssignmentTool(),
             FindSkillHoldersTool.TheName => new FindSkillHoldersTool(),
             ListCertificatesTool.TheName => new ListCertificatesTool(),
             SaveCertificateTool.TheName => new SaveCertificateTool(),

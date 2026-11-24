@@ -9,66 +9,10 @@ using OrchardCore.Localization;
 namespace CrestApps.OrchardCore.Tests.Agent.ContentLocalization;
 
 /// <summary>
-/// The tools that list the translations of a content item and create a translation.
+/// The tool that creates a translation of a content item. Listing the translations is tested with getContentItem.
 /// </summary>
 public sealed class ContentLocalizationToolsTests
 {
-    [Fact]
-    public async Task ListContentItemLocalizations_ReturnsOneEntryForEachSiteCulture()
-    {
-        // Arrange
-        var english = CreateItem("item-en", "en", published: true);
-        var contentLocalizationManager = new Mock<IContentLocalizationManager>();
-        contentLocalizationManager.Setup(manager => manager.GetItemsForSetAsync("set-1")).ReturnsAsync([english]);
-        var services = CreateServices(english, contentLocalizationManager.Object);
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ListContentItemLocalizationsTool(), services, new()
-        {
-            ["contentItemId"] = "item-en",
-        });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        var items = json.GetProperty("items").EnumerateArray().ToList();
-
-        Assert.Equal("set-1", json.GetProperty("localizationSet").GetString());
-        Assert.Equal("en", json.GetProperty("defaultCulture").GetString());
-        Assert.Equal(2, items.Count);
-
-        var existing = items.Single(item => item.GetProperty("culture").GetString() == "en");
-
-        Assert.True(existing.GetProperty("exists").GetBoolean());
-        Assert.Equal("item-en", existing.GetProperty("contentItemId").GetString());
-        Assert.True(existing.GetProperty("published").GetBoolean());
-
-        var missing = items.Single(item => item.GetProperty("culture").GetString() == "fr");
-
-        Assert.False(missing.GetProperty("exists").GetBoolean());
-        Assert.False(missing.TryGetProperty("contentItemId", out _));
-    }
-
-    [Fact]
-    public async Task ListContentItemLocalizations_WhenTheTypeHasNoLocalizationPart_SaysSo()
-    {
-        // Arrange
-        var contentItem = new ContentItem
-        {
-            ContentItemId = "item-1",
-            ContentType = "Page",
-        };
-        var services = CreateServices(contentItem, new Mock<IContentLocalizationManager>(MockBehavior.Strict).Object);
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ListContentItemLocalizationsTool(), services, new()
-        {
-            ["contentItemId"] = "item-1",
-        });
-
-        // Assert
-        Assert.Contains("has no localization part", result, StringComparison.Ordinal);
-    }
-
     [Fact]
     public async Task LocalizeContentItem_CreatesTheTranslationAndChecksBothPermissionsOfTheLocalizeAction()
     {

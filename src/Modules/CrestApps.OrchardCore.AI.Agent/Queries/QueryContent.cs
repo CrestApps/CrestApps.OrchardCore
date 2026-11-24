@@ -15,11 +15,6 @@ internal static class QueryContent
     public const string SqlSourceName = "Sql";
 
     /// <summary>
-    /// The most queries one call of a tool deletes.
-    /// </summary>
-    public const int MaxQueries = 50;
-
-    /// <summary>
     /// What a tool adds to its result when a SQL query returned no rows. The SQL query source logs a query its parser
     /// refuses and returns no rows, so the two cases look the same to the tool.
     /// </summary>

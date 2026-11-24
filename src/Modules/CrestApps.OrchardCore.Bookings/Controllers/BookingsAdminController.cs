@@ -33,6 +33,7 @@ public sealed class BookingsAdminController : Controller
     private readonly BookingService _service;
     private readonly BookingCapacityService _capacity;
     private readonly BookingBalanceCharger _charger;
+    private readonly BookingDates _dates;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -49,6 +50,7 @@ public sealed class BookingsAdminController : Controller
         BookingService service,
         BookingCapacityService capacity,
         BookingBalanceCharger charger,
+        BookingDates dates,
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         INotifier notifier,
@@ -63,6 +65,7 @@ public sealed class BookingsAdminController : Controller
         _service = service;
         _capacity = capacity;
         _charger = charger;
+        _dates = dates;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _notifier = notifier;
@@ -264,13 +267,7 @@ public sealed class BookingsAdminController : Controller
             return RedirectToAction(nameof(Detail), new { itemId });
         }
 
-        if (balance.Status == BookingBalanceStatus.Failed)
-        {
-            balance.Status = BookingBalanceStatus.Scheduled;
-            balance.Attempts = 0;
-        }
-
-        if (await _charger.ChargeAsync(balance, HttpContext.RequestAborted) is { } failure)
+        if (await _charger.ChargeNowAsync(balance, HttpContext.RequestAborted) is { } failure)
         {
             await _notifier.ErrorAsync(H["The card wasn't charged: {0}", failure]);
         }
@@ -311,47 +308,17 @@ public sealed class BookingsAdminController : Controller
             return NotFound();
         }
 
-        var part = item.TryGet<BookingPart>(out var bookingPart) ? bookingPart : new BookingPart();
-        var key = part.Kind == BookingKind.TimeSlot && !string.IsNullOrWhiteSpace(model.NewTime)
-            ? model.NewDate?.Trim() + "T" + model.NewTime.Trim()
-            : model.NewDate?.Trim();
-        var startsUtc = BookingSchedule.GetStartUtc(key, await _capacity.GetTimeZoneAsync());
-        decimal? price = null;
+        var (slot, errors) = await _dates.AddAsync(item, model.NewDate, model.NewTime, model.NewCapacity, model.NewPrice, HttpContext.RequestAborted);
 
-        if (!string.IsNullOrWhiteSpace(model.NewPrice))
+        foreach (var (field, error) in errors)
         {
-            if (!decimal.TryParse(model.NewPrice.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed < 0m)
-            {
-                ModelState.AddModelError(nameof(model.NewPrice), S["Enter the price as a number, such as 1200, or leave it empty for the product's."]);
-            }
-
-            price = parsed;
+            ModelState.AddModelError(field, error);
         }
 
-        if (startsUtc is null)
-        {
-            ModelState.AddModelError(nameof(model.NewDate), S["Choose the date."]);
-        }
-        else if (await _slots.FindAsync(item.ContentItemId, key) is not null)
-        {
-            ModelState.AddModelError(nameof(model.NewDate), S["That date is there already. Change it below."]);
-        }
-
-        if (!ModelState.IsValid)
+        if (slot is null || !ModelState.IsValid)
         {
             return View(await BuildDatesAsync(item, model));
         }
-
-        await _slots.CreateAsync(new BookingSlot
-        {
-            ItemId = global::OrchardCore.IdGenerator.GenerateId(),
-            ContentItemId = item.ContentItemId,
-            SlotKey = key,
-            StartsUtc = startsUtc.Value,
-            Capacity = Math.Max(0, model.NewCapacity ?? part.Capacity),
-            Price = price,
-            ModifiedUtc = _clock.UtcNow,
-        });
 
         await _notifier.SuccessAsync(H["The date was added."]);
 
@@ -371,20 +338,14 @@ public sealed class BookingsAdminController : Controller
             return NotFound();
         }
 
-        if (!string.IsNullOrWhiteSpace(price) && (!decimal.TryParse(price.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed < 0m))
+        // What's booked already stays booked: the capacity can't go below it.
+        if (await _dates.UpdateAsync(slot, capacity, price, closed, HttpContext.RequestAborted) is { } error)
         {
-            await _notifier.ErrorAsync(H["Enter the price as a number, such as 1200, or leave it empty for the product's."]);
+            await _notifier.ErrorAsync(H["{0}", error]);
 
             return RedirectToAction(nameof(Dates), new { contentItemId = slot.ContentItemId });
         }
 
-        // What's booked already stays booked: the capacity can't go below it.
-        slot.Capacity = Math.Max(slot.Held + slot.Sold, Math.Max(0, capacity));
-        slot.Price = string.IsNullOrWhiteSpace(price) ? null : decimal.Parse(price.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture);
-        slot.Closed = closed;
-        slot.ModifiedUtc = _clock.UtcNow;
-
-        await _slots.UpdateAsync(slot);
         await _notifier.SuccessAsync(H["The date was changed."]);
 
         return RedirectToAction(nameof(Dates), new { contentItemId = slot.ContentItemId });

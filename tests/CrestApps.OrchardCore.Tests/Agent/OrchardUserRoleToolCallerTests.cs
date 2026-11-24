@@ -48,13 +48,10 @@ public sealed class OrchardUserRoleToolCallerTests
     [InlineData(GetUserTool.TheName, "View Users", "jane")]
     [InlineData(SaveUserTool.TheName, "EditUsers", "jane")]
     [InlineData(SetUserRolesTool.TheName, "EditUsers", "jane")]
-    [InlineData(EnableUserTool.TheName, "EditUsers", "blank")]
-    [InlineData(DisableUserTool.TheName, "EditUsers", "blank")]
-    [InlineData(UnlockUserTool.TheName, "EditUsers", "jane")]
-    [InlineData(ConfirmUserEmailTool.TheName, "EditUsers", "jane")]
+    [InlineData(SetUserAccountStateTool.TheName, "EditUsers", "blank")]
     [InlineData(DeleteUserTool.TheName, "DeleteUsers", "jane")]
-    [InlineData(DisableUserTwoFactorTool.TheName, "DisableTwoFactorAuthenticationForUsers", "none")]
-    [InlineData(SaveUserCustomSettingsTool.TheName, "EditUsers", "jane")]
+    [InlineData(ResetUserSignInFactorsTool.TheName, "DisableTwoFactorAuthenticationForUsers", "none")]
+    [InlineData(ExplainUserAccessTool.TheName, "ViewRoles", "none")]
     [InlineData(ListRolesTool.TheName, "ViewRoles", "none")]
     [InlineData(GetRoleDetailsTool.TheName, "ViewRoles", "none")]
     [InlineData(ListPermissionsTool.TheName, "ViewRoles", "none")]
@@ -101,10 +98,7 @@ public sealed class OrchardUserRoleToolCallerTests
     [InlineData(GetUserTool.TheName, "View Users")]
     [InlineData(SaveUserTool.TheName, "EditUsers")]
     [InlineData(SetUserRolesTool.TheName, "EditUsers")]
-    [InlineData(UnlockUserTool.TheName, "EditUsers")]
-    [InlineData(ConfirmUserEmailTool.TheName, "EditUsers")]
     [InlineData(DeleteUserTool.TheName, "DeleteUsers")]
-    [InlineData(SaveUserCustomSettingsTool.TheName, "EditUsers")]
     public async Task InvokeAsync_ForAnIdThatMatchesNoUser_GivesACallerWithoutThePermissionTheSameRefusal(string toolName, string permission)
     {
         // Arrange

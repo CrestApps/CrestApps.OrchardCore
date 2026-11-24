@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that find the content item behind an address and set the home page, when the Autoroute feature
+/// Registers the tool that sets the home page, when the Autoroute feature
 /// is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Autoroute)]
@@ -27,16 +27,12 @@ public sealed class AutorouteToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreAITool<FindContentItemByHandleTool>(FindContentItemByHandleTool.TheName)
-            .WithTitle(S["Find Content Item By Handle"])
-            .WithDescription(S["Finds the content item behind a URL path, an alias or a handle (slug:about-us, alias:main-menu, contentitemid:...), and returns its ID, type, title and state. A path of / returns the current home page. Use it when the user names a page by its address."])
-            .WithCategory(S["Content Management"])
-            .Selectable();
-
+        // The home page is what every visitor sees first: a site-wide change asks first (review of pull request 1334).
         services.AddCoreAITool<SetHomepageTool>(SetHomepageTool.TheName)
             .WithTitle(S["Set Homepage"])
             .WithDescription(S["Makes a published content item the site's home page. The item's type must have an Autoroute part with a path and the route must not be disabled."])
             .WithCategory(S["Content Management"])
+            .RequireApproval()
             .Selectable();
     }
 }

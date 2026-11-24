@@ -16,8 +16,6 @@ public sealed class DataPipelineToolCallerTests
     public static TheoryData<string, string> Tools => new()
     {
         { ListDataPipelineStepTypesTool.TheName, "ViewDataPipelines" },
-        { ListDataSetsTool.TheName, "ManageDataPipelines" },
-        { GetDataSetSchemaTool.TheName, "ManageDataPipelines" },
         { ListSharedLinksTool.TheName, "ManageSharedLinks" },
         { RevokeSharedLinkTool.TheName, "ManageSharedLinks" },
         { DeleteSharedLinkTool.TheName, "ManageSharedLinks" },
@@ -83,8 +81,6 @@ public sealed class DataPipelineToolCallerTests
         return toolName switch
         {
             ListDataPipelineStepTypesTool.TheName => (new ListDataPipelineStepTypesTool(), []),
-            ListDataSetsTool.TheName => (new ListDataSetsTool(), []),
-            GetDataSetSchemaTool.TheName => (new GetDataSetSchemaTool(), new() { ["dataSet"] = "Shop::Orders" }),
             ListSharedLinksTool.TheName => (new ListSharedLinksTool(), []),
             RevokeSharedLinkTool.TheName => (new RevokeSharedLinkTool(), new() { ["linkId"] = "link-finance" }),
             DeleteSharedLinkTool.TheName => (new DeleteSharedLinkTool(), new() { ["linkId"] = "link-finance" }),

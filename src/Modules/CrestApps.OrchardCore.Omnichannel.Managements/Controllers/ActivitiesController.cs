@@ -2106,34 +2106,14 @@ public sealed class ActivitiesController : Controller
         return processedCount;
     }
 
-    private async Task<int> RemoveDialerWorkInFlightAsync(List<OmnichannelActivity> activities)
-    {
-        var dialerContributor = _dialerContributors.FirstOrDefault();
-
-        if (dialerContributor is null || activities.Count == 0)
-        {
-            return 0;
-        }
-
-        // The dialer's own queue says what it is working; the activity's copy of its assignment can lag behind, and
-        // trusting it could keep a record stuck in a stale state out of reach of the very action that clears it.
-        var inFlight = await dialerContributor.GetActivitiesInFlightAsync(
-            activities.Select(activity => activity.ItemId),
-            HttpContext.RequestAborted);
-
-        return inFlight.Count == 0
-            ? 0
-            : activities.RemoveAll(activity => inFlight.Contains(activity.ItemId));
-    }
+    private Task<int> RemoveDialerWorkInFlightAsync(List<OmnichannelActivity> activities)
+        => ActivityBulkRules.RemoveDialerWorkInFlightAsync(_dialerContributors, activities, HttpContext?.RequestAborted ?? default);
 
     private static string NormalizeId(string id)
         => string.IsNullOrWhiteSpace(id) ? null : id.Trim();
 
     private static bool IsBulkManageableActivity(OmnichannelActivity activity)
-    {
-        return activity is not null &&
-            activity.Status is ActivityStatus.NotStated or ActivityStatus.Scheduled or ActivityStatus.Pending or ActivityStatus.AwaitingAgentResponse or ActivityStatus.Failed or ActivityStatus.Cancelled;
-    }
+        => ActivityBulkRules.IsBulkManageable(activity);
 
     private static bool IsContactScheduledActivity(OmnichannelActivity activity, string contactContentItemId)
     {

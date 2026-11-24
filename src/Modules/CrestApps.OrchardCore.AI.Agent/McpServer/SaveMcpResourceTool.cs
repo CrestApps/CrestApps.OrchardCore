@@ -70,7 +70,7 @@ public sealed class SaveMcpResourceTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Creates or updates an MCP server resource of a given type and URI pattern. A resource makes files, media, content or a remote FTP/SFTP folder readable by MCP clients, so confirm what it exposes. Credentials are never taken: FTP and SFTP resources are created on the admin page the result links to.";
+    public override string Description => "Creates or updates an MCP server resource of a given type and URI pattern. A resource makes media, content or a remote FTP/SFTP folder readable by MCP clients, so confirm what it exposes. Credentials are never taken: FTP and SFTP resources, and file resources (which read files of the server), are created and changed on the admin page the result links to.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -147,10 +147,25 @@ public sealed class SaveMcpResourceTool : AIFunction
 
                 return $"Nothing was saved: an {type.ToUpperInvariant()} resource needs a host and credentials, which the assistant never takes. Create it on the admin page{(string.IsNullOrEmpty(createPath) ? "." : $": {createPath}")}";
             }
+
+            // A file resource hands the files of the server's own file providers to every MCP client, so it is never
+            // created from inside an AI turn, as a stdio connection is not (review of pull request 1334, F4).
+            if (string.Equals(type, McpServerToolSupport.FileResourceType, StringComparison.OrdinalIgnoreCase))
+            {
+                var createPath = McpServerToolSupport.GetResourceCreatePath(services, type);
+
+                return $"Nothing was saved: a file resource lets MCP clients read files of the server, so it is not created from the chat. A person creates it on the admin page{(string.IsNullOrEmpty(createPath) ? "." : $": {createPath}")}";
+            }
         }
         else if (hasType && !string.Equals(type, resource.Source, StringComparison.OrdinalIgnoreCase))
         {
             return "Nothing was saved: the type of a resource cannot be changed. Create a new resource of the other type instead.";
+        }
+        else if (string.Equals(resource.Source, McpServerToolSupport.FileResourceType, StringComparison.OrdinalIgnoreCase))
+        {
+            var editPath = McpServerToolSupport.GetResourceEditPath(services, resource.ItemId);
+
+            return $"Nothing was saved: a file resource lets MCP clients read files of the server, so it is not changed from the chat. A person changes it on the admin page{(string.IsNullOrEmpty(editPath) ? "." : $": {editPath}")}";
         }
 
         var hasTitle = arguments.TryGetFirstString("title", out var title);

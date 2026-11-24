@@ -38,7 +38,7 @@ internal sealed class SaveCertificateTool : SkillsAIToolBase
     """ + SubjectProperties + """
         ,"certificationId": {
           "type": "string",
-          "description": "The id of the certification type, from listCertificationTypes. Required for a new certificate."
+          "description": "The id of the certification type, from listSkills with kind certificationType. Required for a new certificate."
         },
         "number": {
           "type": "string",
@@ -102,7 +102,7 @@ internal sealed class SaveCertificateTool : SkillsAIToolBase
 
             if (ReadString(arguments, "certificationId") is null)
             {
-                return "Nothing was saved: give the certificationId of a new certificate, from listCertificationTypes.";
+                return "Nothing was saved: give the certificationId of a new certificate, from listSkills with kind certificationType.";
             }
 
             record = new CertificationRecord
@@ -147,7 +147,7 @@ internal sealed class SaveCertificateTool : SkillsAIToolBase
 
             if (certification is null || !certification.Enabled)
             {
-                return $"Nothing was saved: there is no enabled certification type with the id '{certificationId}'. Use listCertificationTypes to find it.";
+                return $"Nothing was saved: there is no enabled certification type with the id '{certificationId}'. Use listSkills with kind certificationType to find it.";
             }
 
             record.CertificationId = certificationId;

@@ -29,9 +29,8 @@ public sealed class Batch17ToolRegistrationTests
         { SaveWebhookTool.TheName, true },
         { RotateWebhookSecretTool.TheName, true },
         { DeleteWebhookTool.TheName, true },
-        { SendWebhookPingTool.TheName, true },
         { ListWebhookDeliveriesTool.TheName, false },
-        { ResendWebhookDeliveryTool.TheName, true },
+        { SendWebhookDeliveryTool.TheName, true },
     };
 
     [Theory]
@@ -57,7 +56,7 @@ public sealed class Batch17ToolRegistrationTests
 
     [Theory]
     [InlineData(typeof(SubscriptionsAIToolsStartup), 4, ReportsConstants.SubscriptionsFeature)]
-    [InlineData(typeof(WebhooksAIToolsStartup), 8, WebhooksConstants.Feature.Webhooks)]
+    [InlineData(typeof(WebhooksAIToolsStartup), 7, WebhooksConstants.Feature.Webhooks)]
     public void EachStartup_RegistersItsTools_ForItsFeature_WhenTheAIFeatureIsOn(Type startupType, int expectedCount, string featureId)
     {
         // Act

@@ -77,4 +77,15 @@ public static class FulfillmentReasons
 
     /// <summary>The partner kept asking to wait, so sending stopped. Arguments: how many times it was tried.</summary>
     public const string GaveUp = "GaveUp";
+
+    /// <summary>
+    /// Gets whether sending a request again could make the order twice, because the partner may already have it: it
+    /// needs attention after the partner did not answer clearly (<see cref="Unclear"/>) or sending was interrupted
+    /// (<see cref="Interrupted"/>). A person checks in the partner's dashboard before it is sent again.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns><see langword="true"/> when a person should check with the partner first.</returns>
+    public static bool MayAlreadyBeMade(FulfillmentRequest request)
+        => request?.Status == FulfillmentRequestStatus.NeedsAttention
+        && request.Reason is Unclear or Interrupted;
 }

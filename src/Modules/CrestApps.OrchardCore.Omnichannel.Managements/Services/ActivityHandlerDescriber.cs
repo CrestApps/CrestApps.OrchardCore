@@ -165,6 +165,7 @@ public sealed class ActivityHandlerDescriber
             ActivitySources.Inbound => S["Inbound"],
             ActivitySources.Workflow => S["Workflow"],
             ActivitySources.Api => S["API"],
+            AI.StartAIActivityTool.Source => S["AI assistant"],
             _ => source,
         };
     }

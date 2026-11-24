@@ -32,11 +32,12 @@ public sealed class WorkflowsToolsStartup : StartupBase
             .WithCategory(S["Workflow Management"])
             .Selectable();
 
-        services.AddCoreAITool<SaveWorkflowTypeTool>(SaveWorkflowTypeTool.TheName)
-            .WithTitle(S["Save Workflow Type"])
-            .WithDescription(S["Creates a workflow (disabled unless told otherwise) from a full definition: settings, variables, activities and transitions. The result lists the validation issues to fix, and validateOnly checks a definition without saving it."])
+        // A new workflow is saved disabled and changes nothing outside the site, so it does not ask; going live is the one
+        // step that asks, in setWorkflowTypeEnabled.
+        services.AddCoreAITool<EditWorkflowDraftTool>(EditWorkflowDraftTool.TheName)
+            .WithTitle(S["Edit Workflow Draft"])
+            .WithDescription(S["Builds a new workflow from a list of operations (add activities, connect their outcomes, declare variables, set the execution settings) and saves it disabled, so nothing runs until setWorkflowTypeEnabled turns it on. It generates the activity IDs, refuses unknown activities, settings and outcomes with the closest valid names, and says which checks it could not run; validateOnly checks without saving. Changing an existing workflow is not possible yet: it returns the designer link."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<ListWorkflowTypeVersionsTool>(ListWorkflowTypeVersionsTool.TheName)
@@ -51,21 +52,17 @@ public sealed class WorkflowsToolsStartup : StartupBase
             .WithCategory(S["Workflow Management"])
             .Selectable();
 
-        services.AddCoreAITool<EnableWorkflowTypeTool>(EnableWorkflowTypeTool.TheName)
-            .WithTitle(S["Enable Workflow Type"])
-            .WithDescription(S["Enables a workflow so its start events start instances again. Takes effect at once, without publishing."])
+        // Enabling makes a workflow react to events, which can send emails and call other sites: going live asks once.
+        services.AddCoreAITool<SetWorkflowTypeEnabledTool>(SetWorkflowTypeEnabledTool.TheName)
+            .WithTitle(S["Enable or Disable Workflow Type"])
+            .WithDescription(S["Enables or disables a workflow. Enabled, its start events start instances again; disabled, its events no longer start instances and its HTTP URL answers not found, while waiting instances are kept. Takes effect at once, without publishing."])
             .WithCategory(S["Workflow Management"])
-            .Selectable();
-
-        services.AddCoreAITool<DisableWorkflowTypeTool>(DisableWorkflowTypeTool.TheName)
-            .WithTitle(S["Disable Workflow Type"])
-            .WithDescription(S["Disables a workflow: its events no longer start instances and its HTTP URL answers not found. Instances that already wait are kept, not cancelled."])
-            .WithCategory(S["Workflow Management"])
+            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<DeleteWorkflowTypeTool>(DeleteWorkflowTypeTool.TheName)
             .WithTitle(S["Delete Workflow Type"])
-            .WithDescription(S["Permanently deletes one or more workflows with their versions, draft, instances and journals. Prefer disableWorkflowType when the user only wants a workflow to stop."])
+            .WithDescription(S["Permanently deletes one or more workflows with their versions, draft, instances and journals. Prefer setWorkflowTypeEnabled with enabled false when the user only wants a workflow to stop."])
             .WithCategory(S["Workflow Management"])
             .RequireApproval()
             .Selectable();

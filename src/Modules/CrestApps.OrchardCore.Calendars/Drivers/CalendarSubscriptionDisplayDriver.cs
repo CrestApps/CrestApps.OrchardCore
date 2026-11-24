@@ -81,7 +81,6 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var subscription = calendar.GetOrCreate<CalendarSubscription>();
         var providerName = string.IsNullOrWhiteSpace(model.SubscriptionProvider) ? ICalendarUrlProvider.ProviderName : model.SubscriptionProvider;
         var provider = _syncService.FindProvider(providerName);
         var usesAddress = provider?.UsesAddress ?? true;
@@ -92,41 +91,18 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionProvider), S["The provider is not available."]);
         }
 
-        if (model.SubscriptionEnabled && usesAddress && !string.IsNullOrEmpty(url) && !(url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("webcal://", StringComparison.OrdinalIgnoreCase)))
+        if (model.SubscriptionEnabled && usesAddress && !string.IsNullOrEmpty(url) && !CalendarSubscriptionRules.HasAllowedScheme(url))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionUrl), S["The address must start with https://, http:// or webcal://."]);
         }
 
-        if (!string.Equals(subscription.Url, url, StringComparison.Ordinal) || !string.Equals(subscription.Provider, providerName, StringComparison.OrdinalIgnoreCase))
-        {
-            subscription.LastAttemptUtc = null;
-            subscription.Failures = 0;
-            subscription.SyncToken = null;
-            subscription.PendingDeletes.Clear();
-        }
-
-        subscription.Provider = providerName;
-        subscription.Url = string.IsNullOrEmpty(url) ? null : url;
-        subscription.IntervalMinutes = Math.Clamp(model.SubscriptionInterval, 5, 10080);
-        subscription.TwoWay = model.TwoWay && provider is IWritableCalendarProvider;
-        subscription.ConflictPolicy = model.ConflictPolicy;
-        subscription.Enabled = model.SubscriptionEnabled && (provider?.IsConfigured(calendar, subscription) ?? false);
-
-        // Saving the subscription again is how someone says the account was reconnected.
-        if (subscription.NeedsReconnect)
-        {
-            subscription.NeedsReconnect = false;
-            subscription.LastAttemptUtc = null;
-            subscription.Failures = 0;
-        }
-
-        calendar.Put(subscription);
+        CalendarSubscriptionRules.Apply(calendar, providerName, provider, url, model.SubscriptionInterval, model.TwoWay, model.ConflictPolicy, model.SubscriptionEnabled);
 
         return Edit(calendar, context);
     }
 
     private bool Supports(Calendar calendar)
     {
-        return string.IsNullOrEmpty(calendar.Source) && (_typeManager.FindType(calendar.Type)?.Supports(CalendarCapabilities.ExternalSync) ?? false);
+        return CalendarSubscriptionRules.Supports(calendar, _typeManager);
     }
 }

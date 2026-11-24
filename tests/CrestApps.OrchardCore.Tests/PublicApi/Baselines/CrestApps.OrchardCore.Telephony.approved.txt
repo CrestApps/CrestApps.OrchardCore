@@ -22,17 +22,16 @@
     " providers.", Name="Telephony", Version="3.0.0", Website="https://crestapps.com")]
 [assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Telephony", "Module")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
-namespace CrestApps.OrchardCore.Telephony.BackgroundTasks
-{
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Reconciles in-progress soft-phone calls against the current provider state.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Telephony Interaction Reconciliation")]
-    public sealed class TelephonyInteractionReconciliationBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
-    {
-        public TelephonyInteractionReconciliationBackgroundTask() { }
-        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
-    }
-}
 namespace CrestApps.OrchardCore.Telephony
 {
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class AIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public AIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.AIToolsStartup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "OrchardCore.Deployment"})]
@@ -54,6 +53,14 @@ namespace CrestApps.OrchardCore.Telephony
     public sealed class ContentsStartup : OrchardCore.Modules.StartupBase
     {
         public ContentsStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.SoftPhone.Core")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class SoftPhoneAIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public SoftPhoneAIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.SoftPhoneAIToolsStartup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.SoftPhone.Core")]
@@ -96,6 +103,15 @@ namespace CrestApps.OrchardCore.Telephony
         public Startup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.BackgroundTasks
+{
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Reconciles in-progress soft-phone calls against the current provider state.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Telephony Interaction Reconciliation")]
+    public sealed class TelephonyInteractionReconciliationBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public TelephonyInteractionReconciliationBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Controllers

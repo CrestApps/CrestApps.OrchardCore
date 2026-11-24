@@ -119,7 +119,7 @@ public sealed class GetWorkflowActivityTool : AIFunction
                 outcomesDependOnSettings = descriptor?.HasDynamicOutcomes,
                 propertiesSchema = descriptor?.Properties is null ? null : JsonSerializer.SerializeToNode(descriptor.Properties.Build()),
                 propertiesNote = descriptor?.Properties is null
-                    ? "No schema is registered for this activity's Properties, so saveWorkflowType cannot check them. Use the property names of the activity's editor."
+                    ? "No schema is registered for this activity's Properties, so editWorkflowDraft cannot check them. Use the property names of the activity's editor."
                     : null,
                 outputs = (activity as IActivityOutputs)?.GetOutputs()
                     .Select(output => new

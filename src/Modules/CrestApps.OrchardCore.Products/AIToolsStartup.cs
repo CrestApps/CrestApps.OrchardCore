@@ -1,6 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using CrestApps.Core.AI;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Records;
 using CrestApps.OrchardCore.Products.AI;
 using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Models;
+using CrestApps.OrchardCore.Products.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -8,14 +15,20 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Products;
 
 /// <summary>
-/// Registers the product and currency AI tools whenever the Products and AI features are on. Listing products needs
-/// <c>ListContent</c> and changing one needs <c>EditContent</c> on it (and <c>PublishContent</c> to publish), as the
-/// content editor does; the currency tools need <c>ManageCurrencies</c>, and deleting a currency asks for approval.
+/// Registers the product AI tools whenever the Products and AI features are on, and exposes the currencies to the
+/// generic record tools (<c>listRecords</c>, <c>getRecord</c>, <c>saveRecord</c> and <c>deleteRecord</c>) as the
+/// <c>currency</c> kind. Listing products needs <c>ListContent</c> and changing one needs <c>EditContent</c> on it (and
+/// <c>PublishContent</c> to publish), as the content editor does. The currency kind needs <c>ManageCurrencies</c>, as
+/// Commerce › Currencies; its writes replay the Currencies editor, with the page's refusal of a code that already exists
+/// and of deleting a currency products are priced in.
 /// </summary>
 [Feature(ProductConstants.Feature.ModuleId)]
 [RequireFeatures(AIFeatureIds.Area)]
 public sealed class AIToolsStartup : StartupBase
 {
+    // How many products a refused delete names, as the Currencies page names a few.
+    private const int MaxNamedProducts = 10;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -30,7 +43,20 @@ public sealed class AIToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<CurrencyToolScope>();
+        services.AddAIRecordKind<CurrencyEntry>("currency", kind => kind
+            .WithTitle(S["Currency"])
+            .WithDescription(S["a currency the store can price products in: its three-letter ISO 4217 code (Name, such as EUR, set when the currency is created) and its display name; a currency products are priced in is not deleted"])
+            .WithPermission(ProductsConstants.Permissions.ManageCurrencies)
+            .UseCatalogManager<INamedCatalogManager<CurrencyEntry>>()
+            .WithProjection(currency => new
+            {
+                id = currency.ItemId,
+                code = currency.Name,
+                displayName = currency.DisplayName,
+            })
+            .ValidateUsing(ValidateCurrencyAsync)
+            .WithInUseCheck(GetCurrencyUseAsync)
+            .UseEditorReplay());
 
         services.AddCoreAITool<ListProductsTool>(ListProductsTool.TheName)
             .WithTitle(S["List Products"])
@@ -49,25 +75,46 @@ public sealed class AIToolsStartup : StartupBase
             .WithDescription(S["Changes the price fields of one product, or of one of its variants: price, compare-at price, sale price and the sale's start and end in the site's time zone, with the same checks as the product editor. Use it for price changes and scheduled sales; use the content tools for everything else on a product."])
             .WithCategory(S["Products"])
             .Selectable();
+    }
 
-        services.AddCoreAITool<ListCurrenciesTool>(ListCurrenciesTool.TheName)
-            .WithTitle(S["List Currencies"])
-            .WithDescription(S["Lists the currencies the store can price products in, with ISO code and display name, optionally filtered by text."])
-            .WithCategory(S["Products"])
-            .Selectable();
+    // The handler's rules (a three-letter ISO 4217 code and a display name), then the check the Currencies page makes
+    // after it binds the editor and before it saves: no other currency has the same code.
+    private static async ValueTask<ValidationResultDetails> ValidateCurrencyAsync(IServiceProvider services, CurrencyEntry currency, CancellationToken cancellationToken)
+    {
+        var manager = services.GetRequiredService<INamedCatalogManager<CurrencyEntry>>();
+        var result = await manager.ValidateAsync(currency, cancellationToken);
 
-        services.AddCoreAITool<SaveCurrencyTool>(SaveCurrencyTool.TheName)
-            .WithTitle(S["Save Currency"])
-            .WithDescription(S["Adds a currency by three-letter ISO 4217 code and display name, or renames an existing one."])
-            .WithCategory(S["Products"])
-            .Selectable();
+        if (string.IsNullOrWhiteSpace(currency.Name))
+        {
+            return result;
+        }
 
-        services.AddCoreAITool<DeleteCurrencyTool>(DeleteCurrencyTool.TheName)
-            .WithTitle(S["Delete Currency"])
-            .WithDescription(S["Deletes a currency. It is refused while any product is priced in it; the products are named so their prices can be changed first."])
-            .WithCategory(S["Products"])
-            .RequireApproval()
-            .Selectable();
+        var existing = await manager.FindByNameAsync(currency.Name, cancellationToken);
+
+        if (existing is not null && !string.Equals(existing.ItemId, currency.ItemId, StringComparison.OrdinalIgnoreCase))
+        {
+            result.Fail(new ValidationResult("A currency with the same code already exists.", [nameof(CurrencyEntry.Name)]));
+        }
+
+        return result;
+    }
+
+    // As the Currencies page does before it deletes a currency: one that products are priced in is kept, and the
+    // products are named so their prices can be changed first.
+    private static async ValueTask<string> GetCurrencyUseAsync(IServiceProvider services, CurrencyEntry currency, CancellationToken cancellationToken)
+    {
+        var products = await services.GetRequiredService<CurrencyUsageService>().GetProductsUsingAsync(currency.Name);
+
+        if (products.Count == 0)
+        {
+            return null;
+        }
+
+        var named = string.Join(", ", products.Take(MaxNamedProducts));
+
+        return products.Count > MaxNamedProducts
+            ? string.Create(CultureInfo.InvariantCulture, $"Products are priced in {currency.Name}: {named} and {products.Count - MaxNamedProducts} more. Change their prices to another currency first.")
+            : $"Products are priced in {currency.Name}: {named}. Change their prices to another currency first.";
     }
 }
 

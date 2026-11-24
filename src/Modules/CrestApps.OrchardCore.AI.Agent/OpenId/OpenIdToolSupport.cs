@@ -286,29 +286,6 @@ internal static class OpenIdToolSupport
     }
 
     /// <summary>
-    /// Gets the address of the Applications admin page, where a person creates a confidential client and types its
-    /// secret.
-    /// </summary>
-    /// <param name="services">The services of the tool invocation.</param>
-    /// <returns>The address, or <see langword="null"/> when the request cannot build one.</returns>
-    public static string GetApplicationsUrl(IServiceProvider services)
-        => AgentToolLinks.GetAdminPath(services, OpenIdConstants.Features.Core, "Application", "Index");
-
-    /// <summary>
-    /// Gets the address of the Edit page of a scope.
-    /// </summary>
-    /// <param name="services">The services of the tool invocation.</param>
-    /// <param name="id">The ID the admin page uses for the scope.</param>
-    /// <returns>The address, or <see langword="null"/> when the request cannot build one.</returns>
-    public static string GetScopeUrl(IServiceProvider services, string id)
-    {
-        return AgentToolLinks.GetAdminPath(services, OpenIdConstants.Features.Core, "Scope", "Edit", new RouteValueDictionary
-        {
-            { "id", id },
-        });
-    }
-
-    /// <summary>
     /// Writes names for a sentence: each in quotes, separated by commas.
     /// </summary>
     /// <param name="names">The names.</param>

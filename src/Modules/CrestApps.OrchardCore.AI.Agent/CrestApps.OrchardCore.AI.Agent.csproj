@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.Autoroute.Core" />
     <PackageReference Include="OrchardCore.ContentLocalization.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentManagement.Display" />
     <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DataPipelines.Abstractions" />

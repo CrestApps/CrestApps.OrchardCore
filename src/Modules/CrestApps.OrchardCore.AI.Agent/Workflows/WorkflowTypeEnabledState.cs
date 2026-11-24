@@ -14,12 +14,11 @@ namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 internal static class WorkflowTypeEnabledState
 {
     /// <summary>
-    /// Enables or disables a workflow for the tool invocation.
+    /// Enables or disables a workflow for the tool invocation, as its <c>enabled</c> argument says.
     /// </summary>
     /// <param name="arguments">The arguments of the tool invocation.</param>
-    /// <param name="enable">Whether to enable the workflow.</param>
     /// <returns>The result of the tool.</returns>
-    public static async Task<object> ChangeAsync(AIFunctionArguments arguments, bool enable)
+    public static async Task<object> ChangeAsync(AIFunctionArguments arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -31,6 +30,12 @@ internal static class WorkflowTypeEnabledState
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
+        if (!arguments.TryGetValue("enabled", out var enabledValue) || enabledValue is null)
+        {
+            return "Nothing was changed: give enabled, true to enable the workflow or false to disable it.";
+        }
+
+        var enable = arguments.GetFirstValueOrDefault("enabled", false);
         var store = services.GetRequiredService<IWorkflowTypeStore>();
         var reference = arguments.GetFirstValueOrDefault<string>("workflowTypeId");
         var workflowType = await WorkflowToolSupport.FindWorkflowTypeAsync(store, reference);

@@ -47,7 +47,7 @@ public sealed class DeleteUserTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Permanently deletes a user account; this cannot be undone. It refuses for the calling user's own account, the site super user and the only enabled administrator; suggest disableUser when the admin only wants to block access.";
+    public override string Description => "Permanently deletes a user account; this cannot be undone. It refuses for the calling user's own account, the site super user and the only enabled administrator; suggest setUserAccountState with action disable when the admin only wants to block access.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

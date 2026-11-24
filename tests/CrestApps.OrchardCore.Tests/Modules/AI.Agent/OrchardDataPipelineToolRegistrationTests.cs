@@ -21,8 +21,6 @@ public sealed class OrchardDataPipelineToolRegistrationTests
     private static readonly string[] _toolNames =
     [
         ListDataPipelineStepTypesTool.TheName,
-        ListDataSetsTool.TheName,
-        GetDataSetSchemaTool.TheName,
         ListSharedLinksTool.TheName,
         RevokeSharedLinkTool.TheName,
         DeleteSharedLinkTool.TheName,
@@ -31,8 +29,6 @@ public sealed class OrchardDataPipelineToolRegistrationTests
     public static TheoryData<string, bool> Tools => new()
     {
         { ListDataPipelineStepTypesTool.TheName, false },
-        { ListDataSetsTool.TheName, false },
-        { GetDataSetSchemaTool.TheName, false },
         { ListSharedLinksTool.TheName, false },
         { RevokeSharedLinkTool.TheName, true },
         { DeleteSharedLinkTool.TheName, true },
@@ -61,7 +57,7 @@ public sealed class OrchardDataPipelineToolRegistrationTests
     }
 
     [Theory]
-    [InlineData(typeof(DataPipelinesToolsStartup), 3)]
+    [InlineData(typeof(DataPipelinesToolsStartup), 1)]
     [InlineData(typeof(DataPipelinesCoreToolsStartup), 3)]
     public void EachFeatureStartup_RegistersItsTools(Type startupType, int expectedCount)
     {
@@ -103,6 +99,8 @@ public sealed class OrchardDataPipelineToolRegistrationTests
     [InlineData("listDataPipelineRuns")]
     [InlineData("getDataPipelineRun")]
     [InlineData("cancelDataPipelineRun")]
+    [InlineData("listDataSets")]
+    [InlineData("getDataSetSchema")]
     public void ADeferredTool_IsNotRegistered(string toolName)
     {
         // Arrange

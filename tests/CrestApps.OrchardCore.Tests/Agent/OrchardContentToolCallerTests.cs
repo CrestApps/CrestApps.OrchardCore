@@ -26,8 +26,10 @@ public sealed class OrchardContentToolCallerTests
 {
     public static TheoryData<string> ToolNames =>
     [
+        GetContentItemTool.TheName,
         ListContentItemsTool.TheName,
         ListContentItemVersionsTool.TheName,
+        CompareContentItemVersionsTool.TheName,
         RestoreContentItemVersionTool.TheName,
         DiscardContentItemDraftTool.TheName,
         ChangeContentItemOwnerTool.TheName,
@@ -35,10 +37,8 @@ public sealed class OrchardContentToolCallerTests
         RemoveContentTypePartTool.TheName,
         SaveContentPartFieldTool.TheName,
         RemoveContentPartFieldTool.TheName,
-        ReorderContentTypeElementsTool.TheName,
-        ListContentItemLocalizationsTool.TheName,
+        ListShapeAlternatesTool.TheName,
         LocalizeContentItemTool.TheName,
-        ListNestedContentItemsTool.TheName,
         SaveNestedContentItemTool.TheName,
         RemoveNestedContentItemTool.TheName,
         ScheduleContentItemTool.TheName,
@@ -107,8 +107,10 @@ public sealed class OrchardContentToolCallerTests
 
         return toolName switch
         {
+            GetContentItemTool.TheName => (new GetContentItemTool(), new() { ["contentItemId"] = "item-1", ["include"] = new[] { "localizations", "nested" } }),
             ListContentItemsTool.TheName => (new ListContentItemsTool(), []),
             ListContentItemVersionsTool.TheName => (new ListContentItemVersionsTool(), item),
+            CompareContentItemVersionsTool.TheName => (new CompareContentItemVersionsTool(), item),
             RestoreContentItemVersionTool.TheName => (new RestoreContentItemVersionTool(), new() { ["contentItemVersionId"] = "version-1" }),
             DiscardContentItemDraftTool.TheName => (new DiscardContentItemDraftTool(), item),
             ChangeContentItemOwnerTool.TheName => (new ChangeContentItemOwnerTool(), new() { ["contentItemId"] = "item-1", ["userName"] = "jane" }),
@@ -116,11 +118,9 @@ public sealed class OrchardContentToolCallerTests
             RemoveContentTypePartTool.TheName => (new RemoveContentTypePartTool(), new() { ["contentType"] = "Page", ["name"] = "TitlePart" }),
             SaveContentPartFieldTool.TheName => (new SaveContentPartFieldTool(), new() { ["part"] = "Page", ["displayName"] = "Subtitle", ["fieldType"] = "TextField" }),
             RemoveContentPartFieldTool.TheName => (new RemoveContentPartFieldTool(), new() { ["part"] = "Page", ["name"] = "Subtitle" }),
-            ReorderContentTypeElementsTool.TheName => (new ReorderContentTypeElementsTool(), new() { ["contentType"] = "Page", ["names"] = new[] { "TitlePart" } }),
-            ListContentItemLocalizationsTool.TheName => (new ListContentItemLocalizationsTool(), item),
+            ListShapeAlternatesTool.TheName => (new ListShapeAlternatesTool(), new() { ["contentType"] = "Page" }),
             LocalizeContentItemTool.TheName => (new LocalizeContentItemTool(), new() { ["contentItemId"] = "item-1", ["targetCulture"] = "fr" }),
-            ListNestedContentItemsTool.TheName => (new ListNestedContentItemsTool(), item),
-            SaveNestedContentItemTool.TheName => (new SaveNestedContentItemTool(), new() { ["contentItemId"] = "item-1", ["nestedContentItemId"] = "nested-1", ["position"] = 0 }),
+            SaveNestedContentItemTool.TheName => (new SaveNestedContentItemTool(), new() { ["contentItemId"] = "item-1", ["nestedContentItemId"] = "nested-1", ["afterId"] = string.Empty }),
             RemoveNestedContentItemTool.TheName => (new RemoveNestedContentItemTool(), new() { ["contentItemId"] = "item-1", ["nestedContentItemId"] = "nested-1" }),
             ScheduleContentItemTool.TheName => (new ScheduleContentItemTool(), new() { ["contentItemId"] = "item-1", ["action"] = "publish", ["when"] = "2999-01-01T08:00" }),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, "The tool has no test arguments."),

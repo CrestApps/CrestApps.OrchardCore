@@ -43,11 +43,9 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         ShareReportDesignTool.TheName,
         RestoreReportDesignVersionTool.TheName,
         DeleteReportDesignTool.TheName,
-        CreateReportShareLinkTool.TheName,
-        RevokeReportShareLinkTool.TheName,
+        SetReportShareLinkTool.TheName,
         ListReportViewsTool.TheName,
         SaveReportViewTool.TheName,
-        RefreshReportViewTool.TheName,
         DeleteReportViewTool.TheName,
         ListReportGroupsTool.TheName,
         SaveReportGroupTool.TheName,
@@ -95,7 +93,7 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         var id = toolName switch
         {
             ListReportsTool.TheName or GetReportTool.TheName or RunReportTool.TheName or ExportReportTool.TheName => SalesTestReport.Name,
-            ListReportViewsTool.TheName or SaveReportViewTool.TheName or RefreshReportViewTool.TheName or DeleteReportViewTool.TheName => "v1",
+            ListReportViewsTool.TheName or SaveReportViewTool.TheName or DeleteReportViewTool.TheName => "v1",
             ListReportGroupsTool.TheName or SaveReportGroupTool.TheName or DeleteReportGroupTool.TheName => "g1",
             _ => "r1",
         };
@@ -184,6 +182,26 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         Assert.Equal(10, table.GetProperty("rowCount").GetInt32());
         Assert.Equal(3, table.GetProperty("rows").GetArrayLength());
         Assert.True(json.GetProperty("truncated").GetBoolean());
+        Assert.Equal("2026-03-01", json.GetProperty("appliedFilters").GetProperty("period").GetProperty("requestedFrom").GetString());
+        Assert.Contains("only the period", json.GetProperty("filtersNote").GetString());
+    }
+
+    [Fact]
+    public async Task RunReport_SaysWhenTheDesignedReportCouldNotApplyThePeriod()
+    {
+        // Arrange: the report has no date filter its viewers can change.
+        var report = ReportToolHarness.Report();
+        report.SharedRoles = ["Authenticated"];
+        await _harness.Designs.UpdateAsync(report, TestContext.Current.CancellationToken);
+        var services = _harness.Build();
+
+        // Act
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(RunReportTool.TheName, services, new() { ["id"] = "r1", ["from"] = "2026-01-01", ["to"] = "2026-01-31" }));
+
+        // Assert
+        Assert.False(json.GetProperty("appliedFilters").TryGetProperty("period", out _));
+        Assert.Equal(0, json.GetProperty("appliedFilters").GetProperty("filters").GetArrayLength());
+        Assert.Contains("period was not applied", json.GetProperty("notApplied")[0].GetString());
     }
 
     [Fact]
@@ -363,7 +381,39 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         Assert.Equal(4, json.GetProperty("rowCount").GetInt32());
         Assert.Equal("c2", json.GetProperty("rows")[0][0].GetString());
         Assert.Equal(300m, json.GetProperty("rows")[0][1].GetDecimal());
+        Assert.Equal("o", json.GetProperty("query").GetProperty("dataSets")[0].GetProperty("alias").GetString());
+        Assert.False(json.GetProperty("truncated").GetBoolean());
+        Assert.True(json.GetProperty("totalsAvailable").GetBoolean());
         Assert.Contains("reads no data set", invalid);
+    }
+
+    [Fact]
+    public async Task QueryReportData_WhenTheRowsAreCut_SaysTheResultIsTruncated_AndThatTotalsCannotBeGiven()
+    {
+        // Arrange
+        var services = _harness.Build(true, _design);
+        var query = JsonSerializer.SerializeToElement(new
+        {
+            dataSets = new[] { new { alias = "o", source = "Memory", dataSet = "Order" } },
+            columns = new object[]
+            {
+                new { field = "o.CustomerId" },
+                new { field = "o.Total", aggregate = "Sum" },
+            },
+        });
+
+        // Act
+        var result = await InvokeAsync(QueryReportDataTool.TheName, services, new() { ["query"] = query, ["maxRows"] = 2 });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        Assert.True(json.GetProperty("truncated").GetBoolean());
+        Assert.False(json.GetProperty("totalsAvailable").GetBoolean());
+        Assert.Equal(2, json.GetProperty("rows").GetArrayLength());
+        Assert.Contains("Do not state totals", json.GetProperty("note").GetString());
+
+        // The ids the model left out are filled in and echoed, so the answer can say exactly what ran.
+        Assert.Equal("c1", json.GetProperty("query").GetProperty("columns")[0].GetProperty("id").GetString());
     }
 
     [Fact]
@@ -511,19 +561,20 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CreateReportShareLink_EmailsTheLink_AndNeverReturnsItsAddress()
+    public async Task SetReportShareLink_Create_EmailsTheLink_AndNeverReturnsItsAddress()
     {
         // Arrange
         await _harness.Designs.UpdateAsync(ReportToolHarness.Report(ownerId: ReportToolHarness.CallerId), TestContext.Current.CancellationToken);
         var services = _harness.Build(true, _design, _sharePublicly);
 
         // Act
-        var result = await InvokeAsync(CreateReportShareLinkTool.TheName, services, new() { ["id"] = "r1", ["recipients"] = new[] { "Jane" }, ["expiresAfterDays"] = 3 });
-        var noRecipient = await InvokeAsync(CreateReportShareLinkTool.TheName, services, new() { ["id"] = "r1", ["recipients"] = Array.Empty<string>() });
+        var result = await InvokeAsync(SetReportShareLinkTool.TheName, services, new() { ["action"] = "create", ["id"] = "r1", ["recipients"] = new[] { "Jane" }, ["expiresAfterDays"] = 3 });
+        var noRecipient = await InvokeAsync(SetReportShareLinkTool.TheName, services, new() { ["action"] = "create", ["id"] = "r1", ["recipients"] = Array.Empty<string>() });
 
         // Assert
         var json = AgentToolTestContext.ReadJson(result);
         var link = Assert.Single(_harness.SharedLinks.Links);
+        Assert.Equal("create", json.GetProperty("action").GetString());
         Assert.Equal(link.LinkId, json.GetProperty("linkId").GetString());
         Assert.DoesNotContain("token", result, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("/SharedLinks/", result, StringComparison.Ordinal);
@@ -531,7 +582,7 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RevokeReportShareLink_RevokesTheReportsLink_AndSaysWhenTheLinkIsUnknown()
+    public async Task SetReportShareLink_Revoke_RevokesTheReportsLink_AndSaysWhenTheLinkIsUnknown()
     {
         // Arrange
         await _harness.Designs.UpdateAsync(ReportToolHarness.Report(ownerId: ReportToolHarness.CallerId), TestContext.Current.CancellationToken);
@@ -539,13 +590,30 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         var services = _harness.Build(true, _design, _sharePublicly);
 
         // Act
-        var json = AgentToolTestContext.ReadJson(await InvokeAsync(RevokeReportShareLinkTool.TheName, services, new() { ["id"] = "r1", ["linkId"] = created.Link.LinkId }));
-        var unknown = await InvokeAsync(RevokeReportShareLinkTool.TheName, services, new() { ["id"] = "r1", ["linkId"] = "nope" });
+        var json = AgentToolTestContext.ReadJson(await InvokeAsync(SetReportShareLinkTool.TheName, services, new() { ["action"] = "revoke", ["id"] = "r1", ["linkId"] = created.Link.LinkId }));
+        var unknown = await InvokeAsync(SetReportShareLinkTool.TheName, services, new() { ["action"] = "revoke", ["id"] = "r1", ["linkId"] = "nope" });
+        var noLink = await InvokeAsync(SetReportShareLinkTool.TheName, services, new() { ["action"] = "revoke", ["id"] = "r1" });
 
         // Assert
         Assert.True(json.GetProperty("revoked").GetBoolean());
         Assert.NotNull(created.Link.RevokedUtc);
         Assert.Contains("no share link 'nope'", unknown);
+        Assert.Contains("give the link's id in linkId", noLink);
+    }
+
+    [Fact]
+    public async Task SetReportShareLink_WithAnUnknownAction_ChangesNothing()
+    {
+        // Arrange
+        await _harness.Designs.UpdateAsync(ReportToolHarness.Report(ownerId: ReportToolHarness.CallerId), TestContext.Current.CancellationToken);
+        var services = _harness.Build(true, _design, _sharePublicly);
+
+        // Act
+        var result = await InvokeAsync(SetReportShareLinkTool.TheName, services, new() { ["action"] = "extend", ["id"] = "r1", ["recipients"] = new[] { "Jane" } });
+
+        // Assert
+        Assert.Contains("give action as create or revoke", result);
+        Assert.Empty(_harness.SharedLinks.Links);
     }
 
     [Fact]
@@ -588,22 +656,6 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RefreshReportView_SaysALiveViewKeepsNoStoredRows()
-    {
-        // Arrange
-        var view = await _harness.Views.FindByIdAsync("v1", TestContext.Current.CancellationToken);
-        view.OwnerId = ReportToolHarness.CallerId;
-        await _harness.Views.UpdateAsync(view, TestContext.Current.CancellationToken);
-        var services = _harness.Build(true, _design);
-
-        // Act
-        var result = await InvokeAsync(RefreshReportViewTool.TheName, services, new() { ["id"] = "v1" });
-
-        // Assert
-        Assert.Contains("runs live", result);
-    }
-
-    [Fact]
     public async Task ReportGroups_AreCreatedListedAndKept_WhileTheyHoldReports()
     {
         // Arrange
@@ -637,7 +689,7 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         await InvokeAsync(SaveReportDesignTool.TheName, services, new() { ["id"] = "r1", ["title"] = "Renamed" });
 
         // Act
-        var result = await InvokeAsync(CreateReportShareLinkTool.TheName, services, new() { ["id"] = "r1", ["recipients"] = new[] { "Jane" } });
+        var result = await InvokeAsync(SetReportShareLinkTool.TheName, services, new() { ["action"] = "create", ["id"] = "r1", ["recipients"] = new[] { "Jane" } });
 
         // Assert
         Assert.Contains("was changed earlier in this message", result);
@@ -652,6 +704,7 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         => new()
         {
             ["id"] = id,
+            ["action"] = "create",
             ["source"] = "Memory",
             ["dataSet"] = "Order",
             ["query"] = JsonSerializer.SerializeToElement(ReportToolHarness.Report().Query, CrestApps.OrchardCore.Reports.Designer.ViewModels.ReportDesignerJson.Options),
@@ -677,11 +730,9 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
             ShareReportDesignTool.TheName => new ShareReportDesignTool(),
             RestoreReportDesignVersionTool.TheName => new RestoreReportDesignVersionTool(),
             DeleteReportDesignTool.TheName => new DeleteReportDesignTool(),
-            CreateReportShareLinkTool.TheName => new CreateReportShareLinkTool(),
-            RevokeReportShareLinkTool.TheName => new RevokeReportShareLinkTool(),
+            SetReportShareLinkTool.TheName => new SetReportShareLinkTool(),
             ListReportViewsTool.TheName => new ListReportViewsTool(),
             SaveReportViewTool.TheName => new SaveReportViewTool(),
-            RefreshReportViewTool.TheName => new RefreshReportViewTool(),
             DeleteReportViewTool.TheName => new DeleteReportViewTool(),
             ListReportGroupsTool.TheName => new ListReportGroupsTool(),
             SaveReportGroupTool.TheName => new SaveReportGroupTool(),

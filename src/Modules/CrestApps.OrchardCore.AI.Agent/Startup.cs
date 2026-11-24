@@ -97,10 +97,13 @@ public sealed class RecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Recipe import gate (review of PR 1334, F1 and F5): the recipe can hold any step, so it asks for approval as
+        // importOrchardCoreRecipe does.
         services.AddCoreAITool<ApplySystemSettingsTool>(ApplySystemSettingsTool.TheName)
             .WithTitle(S["Apply Site Configuration"])
             .WithDescription(S["Applies predefined system configurations and settings using AI assistance."])
             .WithCategory(S["Recipes"])
+            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName)
@@ -665,10 +668,13 @@ public sealed class WorkflowsRecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Recipe import gate (review of PR 1334, F1 and F5): the recipe can hold any step and can bring in an enabled
+        // workflow, so it asks for approval as importOrchardCoreRecipe does.
         services.AddCoreAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName)
             .WithTitle(S["Create Workflows"])
             .WithDescription(S["Create or update information a workflow."])
             .WithCategory(S["Workflow Management"])
+            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName)

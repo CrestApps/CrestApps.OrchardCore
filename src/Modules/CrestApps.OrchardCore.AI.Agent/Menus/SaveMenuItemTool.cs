@@ -79,10 +79,9 @@ public sealed class SaveMenuItemTool : AIFunction
           "type": "string",
           "description": "The ID of the menu item that takes this item under it. Give the menu's own content item ID for the top level. Leave it out to add at the top level, or to keep an existing item where it is."
         },
-        "position": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "The position among the items of the same parent, starting at 0. Leave it out to add at the end, or to keep the position of an existing item."
+        "afterId": {
+          "type": "string",
+          "description": "The ID of the menu item, under the same parent, that this item goes right after, from getMenuTree. An empty text puts it first. Leave it out to add at the end of the parent's items, or to keep an existing item where it is."
         },
         "publish": {
           "type": "boolean",
@@ -100,7 +99,7 @@ public sealed class SaveMenuItemTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Adds an item to a menu, updates an existing item, or moves it under another parent or to another position, leaving the other items untouched. Supports link, content and HTML menu items; the change is saved as a draft of the menu unless publish is true.";
+    public override string Description => "Adds an item to a menu, updates an existing item, or moves it under another parent or after another item, leaving the other items untouched. Supports link, content and HTML menu items; the change is saved as a draft of the menu unless publish is true.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -129,12 +128,7 @@ public sealed class SaveMenuItemTool : AIFunction
             return "The menuContentItemId argument is required.";
         }
 
-        var hasPosition = arguments.TryGetFirst<int>("position", out var position);
-
-        if (hasPosition && position < 0)
-        {
-            return "Nothing was saved: position must be 0 or more.";
-        }
+        var hasAfter = arguments.TryGetFirstString("afterId", true, out var afterId);
 
         var publish = arguments.GetFirstValueOrDefault("publish", false);
         var contentManager = services.GetRequiredService<IContentManager>();
@@ -224,11 +218,11 @@ public sealed class SaveMenuItemTool : AIFunction
             return $"Nothing was saved: {error}";
         }
 
-        var moves = entry is null || hasParent || hasPosition;
+        var moves = entry is null || hasParent || hasAfter;
 
         if (!updates && !moves)
         {
-            return "Nothing was saved: give a field to change (title, url, target, html, linkedContentItemId, checkContentPermissions or permissionNames), or parentMenuItemId or position to move the item.";
+            return "Nothing was saved: give a field to change (title, url, target, html, linkedContentItemId, checkContentPermissions or permissionNames), or parentMenuItemId or afterId to move the item.";
         }
 
         var target = entry?.Container;
@@ -251,7 +245,22 @@ public sealed class SaveMenuItemTool : AIFunction
                 return "Nothing was saved: a menu item cannot be moved under itself or under one of its own items.";
             }
 
-            newPosition = ContentItemListTree.Place(entry, item, target, hasPosition ? position : null);
+            var first = hasAfter && string.IsNullOrWhiteSpace(afterId);
+            var sibling = hasAfter && !first
+                ? ContentItemListTree.FindSibling(target, afterId.Trim())
+                : null;
+
+            if (hasAfter && !first && sibling is null)
+            {
+                return $"Nothing was saved: '{afterId}' is not an item directly under the parent the item goes to. Use getMenuTree to get the IDs, or leave afterId out to add at the end.";
+            }
+
+            if (ReferenceEquals(sibling, item))
+            {
+                return "Nothing was saved: a menu item cannot be placed after itself.";
+            }
+
+            newPosition = ContentItemListTree.PlaceAfter(entry, item, target, first, sibling);
         }
 
         var (saved, saveError) = await tree.SaveAsync(services, menu, menuDefinition, root, publish);

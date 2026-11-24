@@ -131,14 +131,22 @@ internal sealed class GetStaffMemberTool : StaffManagementAIToolBase
         {
             pay = new
             {
-                rates = rates.Rates.OrderBy(rate => rate.EffectiveFrom).Select(rate => new
+                payBasis = rates.PayBasis.ToString(),
+                currency = rates.Currency,
+                rates = (rates.Rates ?? []).Where(rate => rate is not null).OrderBy(rate => rate.EffectiveFrom).Select(rate => new
                 {
                     effectiveFrom = Date(rate.EffectiveFrom),
                     hourlyRate = rate.HourlyRate,
                     activityCodeId = rate.ActivityCodeId,
                 }),
+                salaries = (rates.Salaries ?? []).Where(salary => salary is not null).OrderBy(salary => salary.EffectiveFrom).Select(salary => new
+                {
+                    effectiveFrom = Date(salary.EffectiveFrom),
+                    annualAmount = salary.AnnualAmount,
+                }),
                 annualSalary = rates.AnnualSalary,
                 hourlyCost = rates.HourlyCost,
+                commissionRate = rates.CommissionRate,
             };
         }
 

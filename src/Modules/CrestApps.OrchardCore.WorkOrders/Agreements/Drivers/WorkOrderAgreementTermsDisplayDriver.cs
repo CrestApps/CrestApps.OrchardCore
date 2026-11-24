@@ -1,5 +1,4 @@
 using CrestApps.Core;
-using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Agreements.Models;
 using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -112,46 +111,16 @@ internal sealed class WorkOrderAgreementTermsDisplayDriver : DisplayDriver<Agree
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var current = agreement.TryGet<WorkOrderAgreementTerms>(out var kept) && kept is not null ? kept : null;
-        var address = Clean(model.AddressLine1) is null && Clean(model.City) is null && Clean(model.PostalCode) is null
-            ? null
-            : new Address { AddressLine1 = Clean(model.AddressLine1), City = Clean(model.City), Region = Clean(model.Region), PostalCode = Clean(model.PostalCode), Country = Clean(model.Country) };
-        var terms = new WorkOrderAgreementTerms
-        {
-            CustomerId = Clean(model.CustomerId),
-            Contact = new WorkOrderContact { Name = Clean(model.ContactName), Phone = Clean(model.ContactPhone), Email = Clean(model.ContactEmail) },
-            ServiceAddress = address,
-            AccessNotes = Clean(model.AccessNotes),
-            AssetIds = [.. (model.AssetIds ?? []).Where(assetId => !string.IsNullOrEmpty(assetId)).Distinct(StringComparer.Ordinal)],
-            Pricing = model.Pricing,
-            PricePerVisit = model.Pricing == AgreementPricing.PerVisit ? model.PricePerVisit : 0,
-            Schedules = [.. (model.Schedules ?? []).Where(row => !string.IsNullOrEmpty(row.TypeId) || !string.IsNullOrWhiteSpace(row.Name)).Select(row => new AgreementSchedule
-            {
-                Id = string.IsNullOrEmpty(row.Id) ? CrestApps.Core.UniqueId.GenerateId() : row.Id,
-                Name = Clean(row.Name),
-                TypeId = row.TypeId,
-                Rule = string.IsNullOrEmpty(row.Rule) ? Clean(row.CustomRule) : row.Rule,
-                LeadDays = row.LeadDays,
-                AssetIds = [.. (row.AssetIds ?? []).Where(assetId => !string.IsNullOrEmpty(assetId)).Distinct(StringComparer.Ordinal)],
-            })],
-        };
+        // The terms' rules, which the service agreement AI tools apply too. The account's location fills an address that
+        // isn't typed when the customers can be read.
+        var httpContext = _httpContextAccessor.HttpContext;
 
-        // With visits and no address typed, the visits are at the account's location.
-        if (terms.Schedules.Count > 0 && terms.ServiceAddress is null
-            && _httpContextAccessor.HttpContext?.RequestServices.GetService<Integrations.WorkOrderCustomers>() is { } customers)
-        {
-            terms.ServiceAddress = await customers.AccountAddressAsync(agreement.AccountId, _httpContextAccessor.HttpContext.RequestAborted);
-        }
-
-        // An agreement without field-service terms (a support contract, say) keeps none.
-        if (terms.HasAny || current is not null)
-        {
-            agreement.Put(terms);
-        }
+        await WorkOrderAgreementTermsRules.ApplyAsync(
+            agreement,
+            model,
+            httpContext?.RequestServices.GetService<Integrations.WorkOrderCustomers>(),
+            httpContext?.RequestAborted ?? default);
 
         return Edit(agreement, context);
     }
-
-    private static string Clean(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

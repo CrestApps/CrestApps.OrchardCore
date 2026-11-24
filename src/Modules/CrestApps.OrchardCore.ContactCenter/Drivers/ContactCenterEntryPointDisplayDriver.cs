@@ -155,9 +155,6 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var isAgentTarget = model.TargetType == EntryPointTargetType.Agent;
-        var isQueueTarget = model.TargetType == EntryPointTargetType.Queue;
-
         entryPoint.Name = model.Name?.Trim();
         entryPoint.Description = model.Description?.Trim();
         entryPoint.Channel = entryPoint.GetChannel();
@@ -170,22 +167,13 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             .Distinct(StringComparer.Ordinal)
             .ToList();
         entryPoint.TargetType = model.TargetType;
+        entryPoint.TargetAgentId = model.TargetAgentId;
+        entryPoint.TargetQueueId = model.TargetQueueId;
 
-        // An entry point routes to a specific agent or a queue, never both: a specific-agent target rings that
-        // agent directly and keeps no fallback queue, so the queue selection is cleared for an agent target and
-        // the agent selection is cleared for a queue target.
-        entryPoint.TargetAgentId = isAgentTarget && !string.IsNullOrWhiteSpace(model.TargetAgentId)
-            ? model.TargetAgentId.Trim()
-            : null;
-        entryPoint.TargetQueueId = isQueueTarget && !string.IsNullOrWhiteSpace(model.TargetQueueId)
-            ? model.TargetQueueId.Trim()
-            : null;
-
-        // The AI profile is picked on the AI voice agent's own card, which the provider's AI voice feature adds.
-        if (model.TargetType != EntryPointTargetType.AIAgent)
-        {
-            entryPoint.TargetAIProfileId = null;
-        }
+        // An entry point routes to a specific agent or a queue, never both, so only the selected kind's target is kept.
+        // The AI profile is picked on the AI voice agent's own card, which the provider's AI voice feature adds, and is
+        // cleared for any other kind of routing.
+        ContactCenterEntryPointEditorRules.ApplyTarget(entryPoint);
 
         // The rule that a routed-to target is required for the selected routing kind is enforced by
         // ContactCenterEntryPointHandler, so a recipe import and this editor reject the same entries. What happens to a

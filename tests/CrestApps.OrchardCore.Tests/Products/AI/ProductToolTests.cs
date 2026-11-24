@@ -1,8 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.Core.Models;
-using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Products;
 using CrestApps.OrchardCore.Products.AI;
 using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.OrchardCore.Products.Core.Indexes;
@@ -10,7 +7,6 @@ using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Feeds;
 using CrestApps.OrchardCore.Products.Indexes;
-using CrestApps.OrchardCore.Products.Models;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Tests.Agent;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -35,9 +31,9 @@ using StoreFactory = YesSql.StoreFactory;
 namespace CrestApps.OrchardCore.Tests.Products.AI;
 
 /// <summary>
-/// The product, currency and feed tools check the permissions of the pages they stand for, list products as the
-/// Products list does, change prices and variants with the product editor's rules and every amount at its currency's
-/// scale, keep a currency in use, and never show the feed's access key.
+/// The product and feed tools check the permissions of the pages they stand for, list products as the Products list
+/// does, change prices and variants with the product editor's rules and every amount at its currency's scale, and never
+/// show the feed's access key. Currencies are a record kind of the generic record tools (see CurrencyRecordKindTests).
 /// </summary>
 public sealed class ProductToolTests : IAsyncLifetime
 {
@@ -48,7 +44,6 @@ public sealed class ProductToolTests : IAsyncLifetime
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"crestapps-product-tools-{Guid.NewGuid():N}.db");
     private readonly Dictionary<string, ContentItem> _items = new(StringComparer.Ordinal);
     private readonly List<string> _actions = [];
-    private readonly List<CurrencyEntry> _currencies = [new() { ItemId = "usd", Name = "USD", DisplayName = "US dollar" }];
     private readonly ProductFeedSettings _feedSettings = new() { Key = FeedKey };
     private IStore _store;
 
@@ -57,9 +52,6 @@ public sealed class ProductToolTests : IAsyncLifetime
         { ListProductsTool.TheName, CommonPermissions.ListContent.Name },
         { UpdateProductPricingTool.TheName, CommonPermissions.EditContent.Name },
         { SaveProductVariantsTool.TheName, CommonPermissions.EditContent.Name },
-        { ListCurrenciesTool.TheName, ProductsConstants.Permissions.ManageCurrencies.Name },
-        { SaveCurrencyTool.TheName, ProductsConstants.Permissions.ManageCurrencies.Name },
-        { DeleteCurrencyTool.TheName, ProductsConstants.Permissions.ManageCurrencies.Name },
         { GetProductFeedStatusTool.TheName, ProductFeedPermissions.ManageProductFeeds.Name },
         { RegenerateProductFeedKeyTool.TheName, ProductFeedPermissions.ManageProductFeeds.Name },
     };
@@ -159,7 +151,6 @@ public sealed class ProductToolTests : IAsyncLifetime
         Assert.Equal(ProductsAIToolBase.NotAllowedMessage, result);
         Assert.Equal(permission, services.GetRequiredService<FakeAuthorizationService>().Checks.Last().Permission);
         Assert.Empty(_actions);
-        Assert.Single(_currencies);
         Assert.Equal(FeedKey, _feedSettings.Key);
     }
 
@@ -335,42 +326,6 @@ public sealed class ProductToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Currencies_AreAdded_Renamed_AndListedWithTheChangesOfTheMessage()
-    {
-        // Arrange
-        var services = Build();
-
-        // Act
-        var added = AgentToolTestContext.ReadJson(await InvokeAsync(SaveCurrencyTool.TheName, services, new() { ["code"] = "eur", ["displayName"] = "Euro" }));
-        var renamed = AgentToolTestContext.ReadJson(await InvokeAsync(SaveCurrencyTool.TheName, services, new() { ["code"] = "USD", ["displayName"] = "Dollar" }));
-        var again = await InvokeAsync(SaveCurrencyTool.TheName, services, new() { ["code"] = "EUR", ["displayName"] = "Euro zone" });
-        var invalid = await InvokeAsync(SaveCurrencyTool.TheName, services, new() { ["code"] = "EURO", ["displayName"] = "Euro" });
-        var list = AgentToolTestContext.ReadJson(await InvokeAsync(ListCurrenciesTool.TheName, services, []));
-
-        // Assert
-        Assert.True(added.GetProperty("created").GetBoolean());
-        Assert.False(renamed.GetProperty("created").GetBoolean());
-        Assert.StartsWith("Nothing was saved: EUR was already changed in this message", again, StringComparison.Ordinal);
-        Assert.StartsWith("Nothing was saved: the currency code must be", invalid, StringComparison.Ordinal);
-        Assert.Equal(["EUR", "USD"], list.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("code").GetString()));
-        Assert.Equal("Dollar", list.GetProperty("items")[1].GetProperty("displayName").GetString());
-        Assert.Equal("Dollar", _currencies.Single(entry => entry.Name == "USD").DisplayName);
-    }
-
-    [Fact]
-    public async Task DeleteCurrency_DeletesACurrencyNoProductUses_AndRefusesAnUnknownOne()
-    {
-        // Act
-        var unknown = await InvokeAsync(DeleteCurrencyTool.TheName, Build(), new() { ["code"] = "GBP" });
-        var deleted = AgentToolTestContext.ReadJson(await InvokeAsync(DeleteCurrencyTool.TheName, Build(productTypes: false), new() { ["code"] = "USD" }));
-
-        // Assert
-        Assert.StartsWith("Nothing was deleted: there is no currency 'GBP'", unknown, StringComparison.Ordinal);
-        Assert.True(deleted.GetProperty("deleted").GetBoolean());
-        Assert.Empty(_currencies);
-    }
-
-    [Fact]
     public async Task GetProductFeedStatus_ReportsTheFeed_WithoutItsKey()
     {
         // Act
@@ -422,19 +377,17 @@ public sealed class ProductToolTests : IAsyncLifetime
         {
             UpdateProductPricingTool.TheName => new() { ["contentItemId"] = "mug", ["price"] = 11m },
             SaveProductVariantsTool.TheName => new() { ["contentItemId"] = "shirt", ["options"] = JsonElement("""{ "Size": ["S"] }""") },
-            SaveCurrencyTool.TheName => new() { ["code"] = "EUR", ["displayName"] = "Euro" },
-            DeleteCurrencyTool.TheName => new() { ["code"] = "USD" },
             RegenerateProductFeedKeyTool.TheName => new() { ["action"] = "new" },
             _ => [],
         };
 
-    private ServiceProvider Build(bool signedIn = true, Func<Permission, object, bool> authorize = null, bool productTypes = true)
+    private ServiceProvider Build(bool signedIn = true, Func<Permission, object, bool> authorize = null)
     {
         var services = AgentToolTestContext.CreateServices(signedIn, authorize);
         var types = new[] { TypeDefinition("Product", "USD", variants: false), TypeDefinition("Shirt", "EUR", variants: true) };
 
         var definitions = new Mock<IContentDefinitionManager>();
-        definitions.Setup(manager => manager.ListTypeDefinitionsAsync()).ReturnsAsync(productTypes ? types : []);
+        definitions.Setup(manager => manager.ListTypeDefinitionsAsync()).ReturnsAsync(types);
         definitions.Setup(manager => manager.GetTypeDefinitionAsync(It.IsAny<string>())).ReturnsAsync((string name) => types.FirstOrDefault(type => type.Name == name));
         services.AddSingleton(definitions.Object);
         services.AddSingleton<ProductContentTypes>();
@@ -453,35 +406,6 @@ public sealed class ProductToolTests : IAsyncLifetime
         services.AddSingleton(clock.Object);
         services.AddSingleton<IProductAvailabilityProvider>(new MugStock());
         services.AddSingleton<ISession>(_ => _store.CreateSession());
-
-        var catalog = new Mock<INamedCatalog<CurrencyEntry>>();
-        catalog.Setup(value => value.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => _currencies.Select(entry => entry.Clone()).ToArray());
-        services.AddSingleton(catalog.Object);
-
-        var manager = new Mock<INamedCatalogManager<CurrencyEntry>>();
-        manager.Setup(value => value.FindByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string name, CancellationToken _) => ValueTask.FromResult(_currencies.FirstOrDefault(entry => entry.Name == name)?.Clone()));
-        manager.Setup(value => value.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).Returns((JsonNode _, CancellationToken _) => ValueTask.FromResult(new CurrencyEntry { ItemId = "new" }));
-        manager.Setup(value => value.ValidateAsync(It.IsAny<CurrencyEntry>(), It.IsAny<CancellationToken>())).Returns((CurrencyEntry _, CancellationToken _) => ValueTask.FromResult(new ValidationResultDetails()));
-        manager.Setup(value => value.CreateAsync(It.IsAny<CurrencyEntry>(), It.IsAny<CancellationToken>()))
-            .Returns((CurrencyEntry entry, CancellationToken _) =>
-            {
-                _currencies.Add(entry);
-
-                return ValueTask.CompletedTask;
-            });
-        manager.Setup(value => value.UpdateAsync(It.IsAny<CurrencyEntry>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
-            .Returns((CurrencyEntry entry, JsonNode _, CancellationToken _) =>
-            {
-                _currencies[_currencies.FindIndex(existing => existing.ItemId == entry.ItemId)] = entry;
-
-                return ValueTask.CompletedTask;
-            });
-        manager.Setup(value => value.DeleteAsync(It.IsAny<CurrencyEntry>(), It.IsAny<CancellationToken>()))
-            .Returns((CurrencyEntry entry, CancellationToken _) => ValueTask.FromResult(_currencies.RemoveAll(existing => existing.ItemId == entry.ItemId) > 0));
-        services.AddSingleton(manager.Object);
-        services.AddSingleton(provider => new CurrencyUsageService(provider.GetRequiredService<IContentDefinitionManager>(), Mock.Of<ISession>()));
-        services.AddScoped<CurrencyToolScope>();
 
         var site = new Mock<ISite>();
         site.Setup(value => value.BaseUrl).Returns("https://shop.example");
@@ -564,9 +488,6 @@ public sealed class ProductToolTests : IAsyncLifetime
             ListProductsTool.TheName => new ListProductsTool(),
             UpdateProductPricingTool.TheName => new UpdateProductPricingTool(),
             SaveProductVariantsTool.TheName => new SaveProductVariantsTool(),
-            ListCurrenciesTool.TheName => new ListCurrenciesTool(),
-            SaveCurrencyTool.TheName => new SaveCurrencyTool(),
-            DeleteCurrencyTool.TheName => new DeleteCurrencyTool(),
             GetProductFeedStatusTool.TheName => new GetProductFeedStatusTool(),
             _ => new RegenerateProductFeedKeyTool(),
         };

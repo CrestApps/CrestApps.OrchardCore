@@ -8,7 +8,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, read, import, write, move, copy and delete the files of the media library, when the
+/// Registers the tools that list, read, import, move, copy and delete the files of the media library, when the
 /// Media feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Media)]
@@ -47,12 +47,6 @@ public sealed class MediaToolsStartup : StartupBase
             .WithCategory(S["Media Management"])
             .Selectable();
 
-        services.AddCoreAITool<GetMediaOptionsTool>(GetMediaOptionsTool.TheName)
-            .WithTitle(S["Get Media Options"])
-            .WithDescription(S["Returns the media configuration: allowed and restricted file extensions, maximum upload size, supported image sizes, CDN base URL, which storage and media features are enabled and the remaining permitted storage. Call it before importing a file to know whether its extension and size will be accepted."])
-            .WithCategory(S["Media Management"])
-            .Selectable();
-
         services.AddCoreAITool<ImportMediaFromUrlTool>(ImportMediaFromUrlTool.TheName)
             .WithTitle(S["Import Media From URL"])
             .WithDescription(S["Downloads a file from a public http(s) URL and stores it in a media folder, returning its media path and public URL. Use it when the user gives a link to an image or document; the extension must be allowed, the size within the upload limit, and an existing file is only replaced when `overwrite` is set."])
@@ -60,28 +54,15 @@ public sealed class MediaToolsStartup : StartupBase
             .RequireApproval()
             .Selectable();
 
-        services.AddCoreAITool<SaveMediaTextFileTool>(SaveMediaTextFileTool.TheName)
-            .WithTitle(S["Save Media Text File"])
-            .WithDescription(S["Creates a text-based media file (for example .csv, .svg, .css or .js) from the supplied text and returns its path and public URL; replaces an existing file only when `overwrite` is set. The extension must be allowed for the user, and the file is served publicly from the site, so never put secrets or unreviewed script in it."])
-            .WithCategory(S["Media Management"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<MoveMediaFileTool>(MoveMediaFileTool.TheName)
-            .WithTitle(S["Move Media File"])
-            .WithDescription(S["Moves or renames media files: give each file's current path and its new path (same folder with a new name to rename). Content that references the old path is not updated, so report the references that need fixing; fails when the target exists or the new extension is not allowed."])
+        services.AddCoreAITool<MoveMediaFilesTool>(MoveMediaFilesTool.TheName)
+            .WithTitle(S["Move Media Files"])
+            .WithDescription(S["Moves, renames or copies media files: give the action (move or copy) and each file's current path and new path (same folder with a new name to rename). A move does not update content that references the old path, so report the references that need fixing. Fails when a target exists, its folder does not exist or the new extension is not allowed."])
             .WithCategory(S["Media Management"])
             .Selectable();
 
-        services.AddCoreAITool<CopyMediaFileTool>(CopyMediaFileTool.TheName)
-            .WithTitle(S["Copy Media File"])
-            .WithDescription(S["Copies a media file to a new path and returns the copy's path and public URL. Fails when the target exists or its extension is not allowed."])
-            .WithCategory(S["Media Management"])
-            .Selectable();
-
-        services.AddCoreAITool<DeleteMediaFileTool>(DeleteMediaFileTool.TheName)
-            .WithTitle(S["Delete Media File"])
-            .WithDescription(S["Permanently deletes one or more media files by path. There is no recycle bin and content that references the files will show broken media, so confirm the exact paths first."])
+        services.AddCoreAITool<DeleteMediaTool>(DeleteMediaTool.TheName)
+            .WithTitle(S["Delete Media"])
+            .WithDescription(S["Permanently deletes one or more media files by path. There is no recycle bin and content that references the files will show broken media, so confirm the exact paths first. Folders cannot be deleted with this tool; delete them in the Media Library."])
             .WithCategory(S["Media Management"])
             .RequireApproval()
             .Selectable();

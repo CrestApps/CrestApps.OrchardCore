@@ -42,7 +42,7 @@ internal sealed class EraseCustomerDataTool : CustomersAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Erases a customer's personal data and the personal details on their orders for an erasure request. Orders stay without them; this cannot be undone.";
+    public override string Description => "Erases a customer's personal data for an erasure request, everywhere the site keeps it: every module that holds personal data about the customer (orders, and any other module's records) erases its part too, orders keep their totals without the personal details, and the customer record is anonymized. This cannot be undone.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

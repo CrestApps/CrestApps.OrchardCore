@@ -42,7 +42,7 @@ public sealed class GetOpenIdApplicationTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Gets one OpenID application by id or client id: type, consent type, redirect URIs, allowed flows and endpoints, PKCE and PAR requirements, roles and scopes. It never returns the client secret. Call it before saveOpenIdApplication.";
+    public override string Description => "Gets one OpenID application by id or client id: type, consent type, redirect URIs, allowed flows and endpoints, PKCE and PAR requirements, roles and scopes. It never returns the client secret.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

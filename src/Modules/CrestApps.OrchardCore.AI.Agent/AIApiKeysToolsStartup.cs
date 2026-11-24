@@ -36,7 +36,7 @@ public sealed class AIApiKeysToolsStartup : StartupBase
 
         services.AddCoreAITool<SaveAIApiKeyTool>(SaveAIApiKeyTool.TheName)
             .WithTitle(S["Save AI API Key"])
-            .WithDescription(S["Updates an existing API key: enable or disable it, or change its scopes, roles, origins, allowed profiles or expiry. It cannot create a key, because a new key's value is shown once and must not pass through the assistant; send the user to the API keys page for that."])
+            .WithDescription(S["Enables or disables an existing API key, or sets or removes its expiry. It cannot create a key or change its name, scopes, roles, web sites or allowed profiles; send the user to the API keys page for those. A browser key whose profiles run tools not safe for visitors is not enabled again."])
             .WithCategory(S["AI API Keys"])
             .RequireApproval()
             .Selectable();

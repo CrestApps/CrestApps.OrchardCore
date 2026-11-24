@@ -8,8 +8,11 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
@@ -33,6 +36,10 @@ public sealed class SaveAIProfileTool : AIFunction
         "profileId": {
           "type": "string",
           "description": "The ID of the profile to change, from listAIProfiles. Leave it out to create a profile."
+        },
+        "templateId": {
+          "type": "string",
+          "description": "Creates the profile from this profile template (source Profile, from listAIProfileTemplates), as the New Profile wizard does: give it with name, title and optionally chatDeploymentName only. Not allowed with profileId. Change other settings in a second call with the new profile's ID."
         },
         "name": {
           "type": "string",
@@ -131,7 +138,7 @@ public sealed class SaveAIProfileTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Creates a profile or agent, or updates one by id: title, description, type, instructions, welcome message, deployments, model parameters, persona and prompt templates. It does not change tools, agents or connections (use setAIProfileCapabilities) and cannot change the assistant that is running or its agents.";
+    public override string Description => "Creates a profile or agent (from scratch, or from a profile template with templateId), or updates one by id: title, description, type, instructions, welcome message, deployments, model parameters, persona and prompt templates. It does not change tools, agents or connections (use setAIProfileCapabilities) and cannot change the assistant that is running or its agents.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -157,12 +164,41 @@ public sealed class SaveAIProfileTool : AIFunction
 
         var profileManager = services.GetRequiredService<IAIProfileManager>();
         arguments.TryGetFirstString("profileId", out var profileId);
+        arguments.TryGetFirstString("templateId", out var templateId);
 
         var (changes, changedFields, error) = ReadChanges(arguments);
 
         if (error is not null)
         {
             return $"Nothing was saved: {error}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(templateId))
+        {
+            if (!string.IsNullOrWhiteSpace(profileId))
+            {
+                return "Nothing was saved: templateId creates a new profile, so it cannot be given with profileId.";
+            }
+
+            var extra = changedFields
+                .Where(field => field is not "title" and not "chatDeploymentName")
+                .ToList();
+
+            if (arguments.TryGetFirst("promptTemplateIds", out _))
+            {
+                extra.Add("promptTemplateIds");
+            }
+
+            if (extra.Count > 0)
+            {
+                return $"Nothing was saved: a profile made from a template takes only name, title and chatDeploymentName; {string.Join(", ", extra)} come from the template. Create the profile first, then change them with the new profile's ID.";
+            }
+
+            arguments.TryGetFirstString("name", out var name);
+            arguments.TryGetFirstString("title", out var title);
+            arguments.TryGetFirstString("chatDeploymentName", out var chatDeploymentName);
+
+            return await CreateFromTemplateAsync(services, profileManager, templateId.Trim(), name, title, chatDeploymentName, cancellationToken);
         }
 
         if (!AgentToolArguments.TryReadStrings(arguments, "promptTemplateIds", out var promptTemplateIds))
@@ -260,6 +296,108 @@ public sealed class SaveAIProfileTool : AIFunction
             type = profile.Type.ToString(),
             editPath = AIProfileToolSupport.GetProfileEditPath(services, profile.ItemId),
             note = "The profile has no tools yet. Use setAIProfileCapabilities to give it tools, tool instances or agents.",
+        });
+    }
+
+    private static async Task<string> CreateFromTemplateAsync(
+        IServiceProvider services,
+        IAIProfileManager profileManager,
+        string templateId,
+        string name,
+        string title,
+        string chatDeploymentName,
+        CancellationToken cancellationToken)
+    {
+        var templateManager = services.GetRequiredService<IAIProfileTemplateManager>();
+        var template = await templateManager.FindByIdAsync(templateId, cancellationToken);
+
+        if (template is null || !string.Equals(template.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Nothing was saved: no profile template has the ID '{templateId}'. Use listAIProfileTemplates with source Profile to find it.";
+        }
+
+        var shellFeaturesManager = services.GetService<IShellFeaturesManager>();
+
+        if (shellFeaturesManager is not null)
+        {
+            var features = await ProfileScenarioFeatureLookup.CreateAsync(shellFeaturesManager);
+            var missing = features.GetMissingFeatureNames(template.GetOrCreate<ProfileScenarioMetadata>());
+
+            if (missing.Count > 0)
+            {
+                return $"Nothing was saved: the template '{template.DisplayText ?? template.Name}' needs features that are not enabled: {string.Join(", ", missing)}. Enable them first.";
+            }
+        }
+
+        var factory = services.GetService<AIProfileTemplateProfileFactory>();
+        var profile = factory is null ? null : await factory.NewFromTemplateAsync(template);
+
+        if (profile is null)
+        {
+            return "Nothing was saved: a new profile could not be made from the template.";
+        }
+
+        profile.Name = name?.Trim();
+        profile.DisplayText = title?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(chatDeploymentName))
+        {
+            profile.ChatDeploymentName = chatDeploymentName.Trim();
+        }
+
+        // The wizard asks for both; the profile manager does not.
+        if (string.IsNullOrEmpty(profile.Name))
+        {
+            return "Nothing was saved: a new profile needs a technical name.";
+        }
+
+        if (string.IsNullOrEmpty(profile.DisplayText))
+        {
+            return "Nothing was saved: a new profile needs a title.";
+        }
+
+        if (await profileManager.FindByNameAsync(profile.Name, cancellationToken) is not null)
+        {
+            return $"Nothing was saved: another profile is named '{profile.Name}'. Pick another technical name.";
+        }
+
+        var validation = await profileManager.ValidateAsync(profile, cancellationToken);
+
+        if (!validation.Succeeded)
+        {
+            return $"Nothing was saved: {string.Join(" ", validation.Errors.Select(e => e.ErrorMessage))}";
+        }
+
+        // A template can carry tools, tool instances, agents and connections.
+        var refusal = await AIConfigurationGuard.CheckCapabilityChangeAsync(services, before: null, profile, cancellationToken);
+
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
+        var caller = AgentToolAuthorization.GetCaller(services);
+
+        profile.OwnerId ??= caller?.FindFirstValue(ClaimTypes.NameIdentifier);
+        profile.Author ??= caller?.Identity?.Name;
+
+        AIProfileToolSupport.SetVersionNote(services, profile, $"Created from the template '{template.Name}'");
+
+        await factory.CreateAsync(profile, template);
+
+        var capabilities = AIProfileCapabilities.Read(profile);
+
+        return AgentToolResults.Json(new
+        {
+            created = true,
+            id = profile.ItemId,
+            name = profile.Name,
+            title = profile.DisplayText,
+            type = profile.Type.ToString(),
+            templateId = template.ItemId,
+            toolNames = capabilities.ToolNames.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            agentNames = capabilities.AgentNames.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            editPath = AIProfileToolSupport.GetProfileEditPath(services, profile.ItemId),
         });
     }
 

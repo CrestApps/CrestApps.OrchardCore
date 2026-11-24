@@ -145,6 +145,76 @@ public sealed class RoleToolsTests
     }
 
     [Fact]
+    public async Task GetRole_WithCompareWith_ListsThePermissionsOnlyInEachRoleAndInBoth()
+    {
+        // Arrange
+        var harness = new UserRoleToolHarness();
+
+        harness.GetRole("Moderator").RoleClaims.Add(RoleClaim.Create("EditContent"));
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new GetRoleDetailsTool(), services, new()
+        {
+            ["roleName"] = "Editor",
+            ["compareWith"] = "moderator",
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        var assigned = json.GetProperty("assignedPermissions");
+
+        Assert.Equal("Editor", json.GetProperty("role").GetString());
+        Assert.Equal("Moderator", json.GetProperty("comparedWith").GetString());
+        Assert.Equal(new[] { "RetiredPermission" }, assigned.GetProperty("onlyInRole").EnumerateArray().Select(name => name.GetString()).ToArray());
+        Assert.Equal(new[] { "ManageUsers" }, assigned.GetProperty("onlyInComparedRole").EnumerateArray().Select(name => name.GetString()).ToArray());
+        Assert.Equal(new[] { "EditContent" }, assigned.GetProperty("inBoth").EnumerateArray().Select(name => name.GetString()).ToArray());
+        Assert.Equal(JsonValueKind.Object, json.GetProperty("effectivePermissions").ValueKind);
+    }
+
+    [Fact]
+    public async Task GetRole_WithCompareWithTheAdministratorRole_SaysItHoldsEveryPermission()
+    {
+        // Arrange
+        var harness = new UserRoleToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new GetRoleDetailsTool(), services, new()
+        {
+            ["roleName"] = "Editor",
+            ["compareWith"] = "Administrator",
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.Equal("Administrator", json.GetProperty("holdsEveryPermission").GetString());
+        Assert.False(json.TryGetProperty("assignedPermissions", out _));
+    }
+
+    [Fact]
+    public async Task GetRole_WithCompareWithARoleThatDoesNotExist_SaysSo()
+    {
+        // Arrange
+        var harness = new UserRoleToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new GetRoleDetailsTool(), services, new()
+        {
+            ["roleName"] = "Editor",
+            ["compareWith"] = "Publisher",
+        });
+
+        // Assert
+        Assert.Equal("There is no role named 'Publisher' to compare with. Use listRoles to get the role names.", result);
+    }
+
+    [Fact]
     public async Task ListPermissions_ReturnsThePermissionsOfTheEnabledFeaturesWithTheirGroupAndRisk()
     {
         // Arrange
@@ -431,6 +501,28 @@ public sealed class RoleToolsTests
 
         // Assert
         Assert.Equal("Nothing was saved: no enabled feature provides the permission 'DoAnything'. Use listPermissions to get the exact names.", result);
+        Assert.Empty(harness.GetPermissions("Author"));
+        harness.VerifyNothingChanged();
+    }
+
+    [Fact]
+    public async Task SaveRole_ForAMisspelledPermission_RefusesAndNamesTheClosestPermissions()
+    {
+        // Arrange
+        var harness = new UserRoleToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveRoleTool(), services, new()
+        {
+            ["roleName"] = "Author",
+            ["permissions"] = new[] { "EditContnet" },
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: no enabled feature provides the permission 'EditContnet'. For 'EditContnet', the closest permission names are 'EditContent'", result, StringComparison.Ordinal);
+        Assert.EndsWith("Use listPermissions to get the exact names.", result, StringComparison.Ordinal);
         Assert.Empty(harness.GetPermissions("Author"));
         harness.VerifyNothingChanged();
     }

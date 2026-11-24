@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -50,7 +51,7 @@ internal static class SupervisorInterventionEndpoints
     private static Task<IResult> HandleStopAsync(
         [FromForm] InteractionRequest request,
         IContactCenterMonitoringService monitoring,
-        ICallSessionManager sessions,
+        SupervisorCallAccess callAccess,
         CallScope scope,
         HttpContext httpContext)
         => scope.RunAsync(httpContext, request.InteractionId, async supervisorId =>
@@ -60,13 +61,11 @@ internal static class SupervisorInterventionEndpoints
                 return await scope.PhoneCalls.StopAsync(request.InteractionId, supervisorId, httpContext.User, httpContext.RequestAborted);
             }
 
-            var session = await sessions.FindByInteractionIdAsync(request.InteractionId, httpContext.RequestAborted);
-            var engagement = session?.ActiveMonitorSessions.FirstOrDefault(monitorSession =>
-                string.Equals(monitorSession.SupervisorUserId, supervisorId, StringComparison.Ordinal));
+            var mode = await callAccess.FindEngagementModeAsync(request.InteractionId, supervisorId, httpContext.RequestAborted);
 
-            return engagement is null
+            return mode is null
                 ? SupervisorEngagementResult.Success()
-                : await monitoring.StopEngagementAsync(request.InteractionId, supervisorId, httpContext.User, engagement.Mode, httpContext.RequestAborted);
+                : await monitoring.StopEngagementAsync(request.InteractionId, supervisorId, httpContext.User, mode.Value, httpContext.RequestAborted);
         });
 
     private static Task<IResult> HandleSwitchAsync(
@@ -158,20 +157,17 @@ internal static class SupervisorInterventionEndpoints
     {
         private readonly IAuthorizationService _authorizationService;
         private readonly IAntiforgery _antiforgery;
-        private readonly IInteractionManager _interactionManager;
-        private readonly ISupervisorQueueAuthorizationService _supervisorQueueAuthorizationService;
+        private readonly SupervisorCallAccess _callAccess;
 
         public CallScope(
             IAuthorizationService authorizationService,
             IAntiforgery antiforgery,
-            IInteractionManager interactionManager,
-            ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
+            SupervisorCallAccess callAccess,
             IContactCenterPhoneCallSupervisionService phoneCalls)
         {
             _authorizationService = authorizationService;
             _antiforgery = antiforgery;
-            _interactionManager = interactionManager;
-            _supervisorQueueAuthorizationService = supervisorQueueAuthorizationService;
+            _callAccess = callAccess;
             PhoneCalls = phoneCalls;
         }
 
@@ -192,23 +188,10 @@ internal static class SupervisorInterventionEndpoints
                 return TypedResults.BadRequest();
             }
 
-            // A phone call has no interaction: the supervisor may act on it when they oversee a queue its agent works.
-            if (PhoneCallKey.IsPhoneCall(interactionId))
-            {
-                return await PhoneCalls.IsAuthorizedAsync(httpContext.User, supervisorId, interactionId, httpContext.RequestAborted)
-                    ? ToResult(await action(supervisorId))
-                    : TypedResults.NotFound();
-            }
-
-            var interaction = await _interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);
-
-            if (interaction is null ||
-                !await _supervisorQueueAuthorizationService.IsAuthorizedAsync(httpContext.User, supervisorId, interaction.QueueId, httpContext.RequestAborted))
-            {
-                return TypedResults.NotFound();
-            }
-
-            return ToResult(await action(supervisorId));
+            // A call outside the supervisor's queues is reported as one that is not there.
+            return await _callAccess.IsInScopeAsync(httpContext.User, supervisorId, interactionId, httpContext.RequestAborted)
+                ? ToResult(await action(supervisorId))
+                : TypedResults.NotFound();
         }
 
         public async Task<IResult> RunForAgentAsync(HttpContext httpContext, Func<string, Task<SupervisorEngagementResult>> action)

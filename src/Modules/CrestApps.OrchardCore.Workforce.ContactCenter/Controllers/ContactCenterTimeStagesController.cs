@@ -89,8 +89,8 @@ public sealed class ContactCenterTimeStagesController : Controller
         var site = await _siteService.LoadSiteSettingsAsync();
         var settings = site.GetOrCreate<ContactCenterTimeStages>();
 
-        Apply(settings.States, model.States, stageIds);
-        Apply(settings.Reasons, model.Reasons, stageIds);
+        ContactCenterTimeStageMapping.Apply(settings.States, Rows(model.States), stageIds);
+        ContactCenterTimeStageMapping.Apply(settings.Reasons, Rows(model.Reasons), stageIds);
         site.Put(settings);
         await _siteService.UpdateSiteSettingsAsync(site);
         await _notifier.SuccessAsync(H["The stages of agents' states have been saved."]);
@@ -98,25 +98,8 @@ public sealed class ContactCenterTimeStagesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private static void Apply(Dictionary<string, string> target, IEnumerable<ContactCenterTimeStageRow> rows, HashSet<string> stageIds)
-    {
-        foreach (var row in rows ?? [])
-        {
-            if (string.IsNullOrEmpty(row.Key))
-            {
-                continue;
-            }
-
-            if (!string.IsNullOrEmpty(row.StageId) && stageIds.Contains(row.StageId))
-            {
-                target[row.Key] = row.StageId;
-            }
-            else
-            {
-                target.Remove(row.Key);
-            }
-        }
-    }
+    private static IEnumerable<(string Key, string StageId)> Rows(IEnumerable<ContactCenterTimeStageRow> rows)
+        => rows?.Select(row => (row.Key, row.StageId));
 
     private async Task<ContactCenterTimeStagesViewModel> BuildAsync(ContactCenterTimeStages settings)
     {

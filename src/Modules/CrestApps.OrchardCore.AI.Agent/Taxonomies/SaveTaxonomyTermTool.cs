@@ -67,10 +67,9 @@ public sealed class SaveTaxonomyTermTool : AIFunction
           "type": "string",
           "description": "The ID of the term that takes this term under it. Give the taxonomy's own content item ID for the top level. Leave it out to add at the top level, or to keep an existing term where it is."
         },
-        "position": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "The position among the terms of the same parent, starting at 0. Leave it out to add at the end, or to keep the position of an existing term."
+        "afterId": {
+          "type": "string",
+          "description": "The ID of the term, under the same parent, that this term goes right after, from getTaxonomyTerms. An empty text puts it first. Leave it out to add at the end of the parent's terms, or to keep an existing term where it is."
         },
         "publish": {
           "type": "boolean",
@@ -88,7 +87,7 @@ public sealed class SaveTaxonomyTermTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Adds a term to a taxonomy, updates an existing term, or moves it under another parent or to another position, without touching the other terms. New terms use the taxonomy's term content type. The change is saved as a draft of the taxonomy unless publish is true.";
+    public override string Description => "Adds a term to a taxonomy, updates an existing term, or moves it under another parent or after another term, without touching the other terms. New terms use the taxonomy's term content type. The change is saved as a draft of the taxonomy unless publish is true.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -122,12 +121,7 @@ public sealed class SaveTaxonomyTermTool : AIFunction
             return "Nothing was saved: content must be a JSON object.";
         }
 
-        var hasPosition = arguments.TryGetFirst<int>("position", out var position);
-
-        if (hasPosition && position < 0)
-        {
-            return "Nothing was saved: position must be 0 or more.";
-        }
+        var hasAfter = arguments.TryGetFirstString("afterId", true, out var afterId);
 
         var publish = arguments.GetFirstValueOrDefault("publish", false);
         var contentManager = services.GetRequiredService<IContentManager>();
@@ -232,7 +226,7 @@ public sealed class SaveTaxonomyTermTool : AIFunction
         }
 
         var updates = entry is not null && (hasTitle || content is not null);
-        var moves = entry is null || hasParent || hasPosition;
+        var moves = entry is null || hasParent || hasAfter;
 
         if (updates)
         {
@@ -245,7 +239,7 @@ public sealed class SaveTaxonomyTermTool : AIFunction
 
         if (!updates && !moves)
         {
-            return "Nothing was saved: give title or content to change the term, or parentTermId or position to move it.";
+            return "Nothing was saved: give title or content to change the term, or parentTermId or afterId to move it.";
         }
 
         var target = entry?.Container;
@@ -268,7 +262,22 @@ public sealed class SaveTaxonomyTermTool : AIFunction
                 return "Nothing was saved: a term cannot be moved under itself or under one of its own terms.";
             }
 
-            newPosition = ContentItemListTree.Place(entry, term, target, hasPosition ? position : null);
+            var first = hasAfter && string.IsNullOrWhiteSpace(afterId);
+            var sibling = hasAfter && !first
+                ? ContentItemListTree.FindSibling(target, afterId.Trim())
+                : null;
+
+            if (hasAfter && !first && sibling is null)
+            {
+                return $"Nothing was saved: '{afterId}' is not a term directly under the parent the term goes to. Use getTaxonomyTerms to get the IDs, or leave afterId out to add at the end.";
+            }
+
+            if (ReferenceEquals(sibling, term))
+            {
+                return "Nothing was saved: a term cannot be placed after itself.";
+            }
+
+            newPosition = ContentItemListTree.PlaceAfter(entry, term, target, first, sibling);
         }
 
         var taxonomyDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(taxonomy.ContentType);

@@ -30,7 +30,6 @@ public sealed class StoreSetupToolTests
     {
         GetStoreSetupGuideTool.TheName,
         RunStoreSetupStepTool.TheName,
-        SkipStoreSetupStepTool.TheName,
     };
 
     [Theory]
@@ -141,22 +140,6 @@ public sealed class StoreSetupToolTests
         Assert.Empty(_progress.Completed);
     }
 
-    [Fact]
-    public async Task SkipStoreSetupStep_SkipsAStep_AndUndoesTheSkip()
-    {
-        // Arrange
-        var services = Build();
-
-        // Act
-        await InvokeAsync(SkipStoreSetupStepTool.TheName, services, new() { ["step"] = "tax" });
-        var skipped = _progress.Skipped.ToArray();
-        await InvokeAsync(SkipStoreSetupStepTool.TheName, services, new() { ["step"] = "tax", ["undo"] = true });
-
-        // Assert
-        Assert.Equal(["tax"], skipped);
-        Assert.Empty(_progress.Skipped);
-    }
-
     private static Dictionary<string, object> Arguments(string toolName)
         => toolName == GetStoreSetupGuideTool.TheName ? [] : new() { ["step"] = "staff-roles" };
 
@@ -186,8 +169,7 @@ public sealed class StoreSetupToolTests
         AIFunction tool = toolName switch
         {
             GetStoreSetupGuideTool.TheName => new GetStoreSetupGuideTool(),
-            RunStoreSetupStepTool.TheName => new RunStoreSetupStepTool(),
-            _ => new SkipStoreSetupStepTool(),
+            _ => new RunStoreSetupStepTool(),
         };
 
         return AgentToolTestContext.InvokeAsync(tool, services, arguments);

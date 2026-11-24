@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Webhooks;
 
 /// <summary>
 /// Registers the outbound webhook AI tools whenever the AI feature is on. Every tool needs <c>ManageCommerceWebhooks</c>.
-/// Saving, rotating, pinging, resending and deleting ask for approval, because a webhook sends site data to another
+/// Saving, rotating, sending (a ping or a delivery again) and deleting ask for approval, because a webhook sends site data to another
 /// system; no tool takes or returns a signing secret.
 /// </summary>
 [Feature(WebhooksConstants.Feature.Webhooks)]
@@ -62,22 +62,15 @@ public sealed class AIToolsStartup : StartupBase
             .RequireApproval()
             .Selectable();
 
-        services.AddCoreAITool<SendWebhookPingTool>(SendWebhookPingTool.TheName)
-            .WithTitle(S["Send Webhook Ping"])
-            .WithDescription(S["Sends a test ping event to a webhook now and returns the receiver's status code or the error. Use it to check that a receiver is reachable and accepts the signature."])
-            .WithCategory(S["Webhooks"])
-            .RequireApproval()
-            .Selectable();
-
         services.AddCoreAITool<ListWebhookDeliveriesTool>(ListWebhookDeliveriesTool.TheName)
             .WithTitle(S["List Webhook Deliveries"])
             .WithDescription(S["Lists the deliveries of one webhook with event, status, attempts, last status code, last error and times, filtered by status, with paging. Use it to find out why a receiver is not getting events."])
             .WithCategory(S["Webhooks"])
             .Selectable();
 
-        services.AddCoreAITool<ResendWebhookDeliveryTool>(ResendWebhookDeliveryTool.TheName)
-            .WithTitle(S["Resend Webhook Delivery"])
-            .WithDescription(S["Sends one logged delivery to its webhook again and returns the receiver's status code or the error."])
+        services.AddCoreAITool<SendWebhookDeliveryTool>(SendWebhookDeliveryTool.TheName)
+            .WithTitle(S["Send Webhook Delivery"])
+            .WithDescription(S["Sends to a webhook now and returns the receiver's status code or the error: with ping true, a test ping event, to check that a receiver is reachable and accepts the signature; with a deliveryId from listWebhookDeliveries, that logged delivery again."])
             .WithCategory(S["Webhooks"])
             .RequireApproval()
             .Selectable();

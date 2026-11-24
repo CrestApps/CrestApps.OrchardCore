@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
-using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.ServiceLevels.Services;
-using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -12,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -20,7 +19,6 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Settings;
-using YesSql;
 
 namespace CrestApps.OrchardCore.WorkOrders.Controllers;
 
@@ -33,17 +31,17 @@ public sealed class WorkOrderSettingsController : Controller
     /// <summary>
     /// The types list.
     /// </summary>
-    public const string Types = "types";
+    public const string Types = WorkOrderSettingKinds.Types;
 
     /// <summary>
     /// The checklists list.
     /// </summary>
-    public const string Checklists = "checklists";
+    public const string Checklists = WorkOrderSettingKinds.Checklists;
 
     /// <summary>
     /// The sub-statuses list.
     /// </summary>
-    public const string SubStatuses = "sub-statuses";
+    public const string SubStatuses = WorkOrderSettingKinds.SubStatuses;
 
     private const int BlankLines = 2;
     private const int BlankQuestions = 3;
@@ -55,7 +53,6 @@ public sealed class WorkOrderSettingsController : Controller
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
     private readonly WorkOrderLookups _lookups;
     private readonly WorkOrderStore _workOrderStore;
-    private readonly ISession _session;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -71,7 +68,6 @@ public sealed class WorkOrderSettingsController : Controller
     /// <param name="subStatuses">The sub-statuses.</param>
     /// <param name="lookups">The lookups.</param>
     /// <param name="workOrderStore">The work order store.</param>
-    /// <param name="session">The session.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -83,7 +79,6 @@ public sealed class WorkOrderSettingsController : Controller
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
         WorkOrderLookups lookups,
         WorkOrderStore workOrderStore,
-        ISession session,
         INotifier notifier,
         IHtmlLocalizer<WorkOrderSettingsController> htmlLocalizer,
         IStringLocalizer<WorkOrderSettingsController> stringLocalizer)
@@ -95,7 +90,6 @@ public sealed class WorkOrderSettingsController : Controller
         _subStatuses = subStatuses;
         _lookups = lookups;
         _workOrderStore = workOrderStore;
-        _session = session;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -179,26 +173,7 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
-        var model = new WorkOrderTypeEditViewModel
-        {
-            Id = id,
-            Name = item.Name,
-            Color = item.Color,
-            DefaultDurationMinutes = item.DefaultDurationMinutes,
-            CrewSize = item.CrewSize,
-            DefaultPriority = item.DefaultPriority,
-            ServiceLevelPolicyId = item.ServiceLevelPolicyId,
-            BillingMode = item.BillingMode,
-            Currency = item.Currency,
-            FixedPrice = item.FixedPrice,
-            RequiresSignature = item.RequiresSignature,
-            RequiredPhotos = item.RequiredPhotos,
-            ChecklistTemplateIds = [.. item.ChecklistTemplateIds],
-            RequiredSkills = [.. item.RequiredSkills.Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
-            RequiredCertificationIds = [.. item.RequiredCertificationIds],
-            AppointmentTypeIds = [.. item.AppointmentTypeIds],
-            Lines = [.. item.DefaultLines.Select(ToEditModel)],
-        };
+        var model = WorkOrderSettingsEditorRules.FillType(item, id);
 
         await PopulateAsync(model);
 
@@ -228,28 +203,7 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
-        item.Name = form.Name?.Trim();
-        item.Color = string.IsNullOrWhiteSpace(form.Color) ? null : form.Color.Trim();
-        item.DefaultDurationMinutes = form.DefaultDurationMinutes;
-        item.CrewSize = form.CrewSize;
-        item.DefaultPriority = form.DefaultPriority;
-        item.ServiceLevelPolicyId = string.IsNullOrEmpty(form.ServiceLevelPolicyId) ? null : form.ServiceLevelPolicyId;
-        item.BillingMode = form.BillingMode;
-        item.Currency = string.IsNullOrWhiteSpace(form.Currency) ? "USD" : form.Currency.Trim().ToUpperInvariant();
-        item.FixedPrice = form.BillingMode == WorkOrderBillingMode.FixedPrice ? form.FixedPrice : null;
-        item.RequiresSignature = form.RequiresSignature;
-        item.RequiredPhotos = Math.Max(0, form.RequiredPhotos);
-        item.ChecklistTemplateIds = [.. (form.ChecklistTemplateIds ?? []).Where(templateId => !string.IsNullOrEmpty(templateId)).Distinct(StringComparer.Ordinal)];
-        item.DefaultLines = [.. (form.Lines ?? []).Where(line => !string.IsNullOrWhiteSpace(line.Description)).Select(line => ToLine(line, null))];
-        item.RequiredSkills = [.. (form.RequiredSkills ?? []).Where(skill => !string.IsNullOrEmpty(skill.SkillId)).DistinctBy(skill => skill.SkillId).Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = Math.Clamp(skill.MinProficiency, 1, 5) })];
-        item.RequiredCertificationIds = [.. (form.RequiredCertificationIds ?? []).Where(certificationId => !string.IsNullOrEmpty(certificationId)).Distinct(StringComparer.Ordinal)];
-        item.AppointmentTypeIds = [.. (form.AppointmentTypeIds ?? []).Where(typeId => !string.IsNullOrEmpty(typeId)).Distinct(StringComparer.Ordinal)];
-
-        if (form.BillingMode == WorkOrderBillingMode.FixedPrice && form.FixedPrice is not > 0)
-        {
-            ModelState.AddModelError(nameof(form.FixedPrice), S["Enter the fixed price."]);
-        }
-
+        AddErrors(WorkOrderSettingsEditorRules.ApplyType(item, form, S));
         await ValidateAsync(_types, item);
 
         if (!ModelState.IsValid)
@@ -285,26 +239,7 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
-        var model = new ChecklistTemplateEditViewModel
-        {
-            Id = id,
-            Name = item.Name,
-            Questions = [.. item.Questions.Select(question => new QuestionEditModel
-            {
-                Id = question.Id,
-                Section = question.Section,
-                Text = question.Text,
-                Kind = question.Kind,
-                Required = question.Required,
-                Choices = string.Join('\n', question.Choices),
-                Min = question.Min,
-                Max = question.Max,
-                Unit = question.Unit ?? question.Meter,
-                Help = question.Help,
-                ShowWhenQuestionId = question.GetRule()?.Conditions.FirstOrDefault()?.Source,
-                ShowWhenEquals = question.GetRule()?.Conditions.FirstOrDefault()?.Values.FirstOrDefault(),
-            })],
-        };
+        var model = WorkOrderSettingsEditorRules.FillChecklist(item, id);
 
         AddBlankQuestions(model);
 
@@ -334,36 +269,7 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
-        var previous = item.Questions.ToDictionary(question => question.Id ?? string.Empty, StringComparer.Ordinal);
-
-        item.Name = form.Name?.Trim();
-        item.Questions = [.. (form.Questions ?? []).Where(row => !string.IsNullOrWhiteSpace(row.Text)).Select(row => new ChecklistQuestion
-        {
-            Id = string.IsNullOrEmpty(row.Id) ? CrestApps.Core.UniqueId.GenerateId() : row.Id,
-            Section = string.IsNullOrWhiteSpace(row.Section) ? null : row.Section.Trim(),
-            Text = row.Text.Trim(),
-            Kind = row.Kind,
-            Required = row.Required,
-            Choices = row.Kind is ChecklistQuestionKind.Choice or ChecklistQuestionKind.MultiChoice ? [.. (row.Choices ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase)] : [],
-            Min = row.Kind is ChecklistQuestionKind.Number or ChecklistQuestionKind.MeterReading ? row.Min : null,
-            Max = row.Kind is ChecklistQuestionKind.Number or ChecklistQuestionKind.MeterReading ? row.Max : null,
-            Unit = row.Kind == ChecklistQuestionKind.Number && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
-            Meter = row.Kind == ChecklistQuestionKind.MeterReading && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
-            Help = string.IsNullOrWhiteSpace(row.Help) ? null : row.Help.Trim(),
-            Rule = ShowWhen(row, previous),
-        })];
-
-        // A question shows only after the one it depends on, so it can't depend on itself or on one asked later.
-        var positions = item.Questions.Select((question, index) => (question.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index, StringComparer.Ordinal);
-
-        foreach (var question in item.Questions.Where(question => question.Rule is not null))
-        {
-            if (ConditionalVisibility.Sources(question.Rule).Any(source => !positions.TryGetValue(source, out var at) || at >= positions[question.Id]))
-            {
-                ModelState.AddModelError(string.Empty, S["\"{0}\" can only depend on a question asked before it.", question.Text]);
-            }
-        }
-
+        AddErrors(WorkOrderSettingsEditorRules.ApplyChecklist(item, form, S));
         await ValidateAsync(_checklists, item);
 
         if (!ModelState.IsValid)
@@ -399,14 +305,7 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
-        return View(new WorkOrderSubStatusEditViewModel
-        {
-            Id = id,
-            Name = item.Name,
-            ParentStatus = string.IsNullOrEmpty(id) ? WorkOrderStatus.OnHold : item.ParentStatus,
-            Color = item.Color,
-            PausesSla = item.PausesSla,
-        });
+        return View(WorkOrderSettingsEditorRules.FillSubStatus(item, id));
     }
 
     /// <summary>
@@ -432,11 +331,7 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
-        item.Name = form.Name?.Trim();
-        item.ParentStatus = form.ParentStatus;
-        item.Color = string.IsNullOrWhiteSpace(form.Color) ? null : form.Color.Trim();
-        item.PausesSla = form.PausesSla;
-
+        WorkOrderSettingsEditorRules.ApplySubStatus(item, form);
         await ValidateAsync(_subStatuses, item);
 
         if (!ModelState.IsValid)
@@ -465,22 +360,18 @@ public sealed class WorkOrderSettingsController : Controller
             return Forbid();
         }
 
-        var refused = kind switch
-        {
-            Types => await DeleteTypeAsync(id),
-            Checklists => await DeleteUnusedAsync(_checklists, id, type => type.ChecklistTemplateIds.Contains(id)),
-            SubStatuses => await DeleteUnusedAsync(_subStatuses, id, _ => false),
-            _ => null,
-        };
+        var result = await HttpContext.RequestServices.GetRequiredService<WorkOrderSettingDeletion>().DeleteAsync(kind, id, HttpContext.RequestAborted);
 
-        if (refused is null)
+        if (result is null || result.Outcome == WorkOrderSettingDeleteOutcome.NotFound)
         {
             return NotFound();
         }
 
-        if (refused.Length > 0)
+        if (result.Outcome == WorkOrderSettingDeleteOutcome.InUse)
         {
-            await _notifier.WarningAsync(H["{0} can't be deleted: work order types use it.", refused]);
+            await _notifier.WarningAsync(kind == Types
+                ? H["{0} can't be deleted: work orders use it.", result.Name]
+                : H["{0} can't be deleted: work order types use it.", result.Name]);
         }
         else
         {
@@ -488,47 +379,6 @@ public sealed class WorkOrderSettingsController : Controller
         }
 
         return RedirectToAction(nameof(Index), new { kind });
-    }
-
-    private async Task<string> DeleteTypeAsync(string id)
-    {
-        var item = await _types.FindByIdAsync(id);
-
-        if (item is null)
-        {
-            return null;
-        }
-
-        if (await _session.QueryIndex<WorkOrderIndex>(index => index.TypeId == id, collection: WorkOrdersConstants.CollectionName).FirstOrDefaultAsync(HttpContext.RequestAborted) is not null)
-        {
-            await _notifier.WarningAsync(H["{0} can't be deleted: work orders use it.", item.Name]);
-
-            return string.Empty;
-        }
-
-        await _types.DeleteAsync(item);
-
-        return string.Empty;
-    }
-
-    private async Task<string> DeleteUnusedAsync<T>(WorkOrderSettingManager<T> manager, string id, Func<WorkOrderType, bool> uses)
-        where T : CrestApps.Core.Models.CatalogItem, new()
-    {
-        var item = await manager.FindByIdAsync(id);
-
-        if (item is null)
-        {
-            return null;
-        }
-
-        if ((await _types.GetAllAsync()).Any(uses))
-        {
-            return NameOf(item);
-        }
-
-        await manager.DeleteAsync(item);
-
-        return string.Empty;
     }
 
     private async Task<List<WorkOrderSettingRow>> TypeRowsAsync()
@@ -642,30 +492,13 @@ public sealed class WorkOrderSettingsController : Controller
         }
     }
 
-    internal static LineEditModel ToEditModel(WorkOrderLine line) => new()
+    private void AddErrors(IEnumerable<(string Field, string Message)> errors)
     {
-        Id = line.Id,
-        Kind = line.Kind,
-        Description = line.Description,
-        StockItemId = line.StockItemId,
-        Quantity = line.QuantityEstimated,
-        UnitPrice = line.UnitPrice,
-        Billable = line.Billable,
-    };
-
-    internal static WorkOrderLine ToLine(LineEditModel row, WorkOrderLine previous) => new()
-    {
-        Id = previous?.Id ?? (string.IsNullOrEmpty(row.Id) ? null : row.Id),
-        Kind = row.Kind,
-        Description = row.Description.Trim(),
-        StockItemId = row.Kind == WorkOrderLineKind.Product && !string.IsNullOrEmpty(row.StockItemId) ? row.StockItemId : null,
-        ProductId = previous?.ProductId,
-        QuantityEstimated = Math.Max(0, row.Quantity),
-        QuantityUsed = previous?.QuantityUsed ?? 0,
-        LocationId = previous?.LocationId,
-        UnitPrice = Math.Max(0, row.UnitPrice),
-        Billable = row.Billable,
-    };
+        foreach (var (field, message) in errors)
+        {
+            ModelState.AddModelError(field, message);
+        }
+    }
 
     internal static string EditActionOf(string kind) => kind switch
     {
@@ -674,22 +507,5 @@ public sealed class WorkOrderSettingsController : Controller
         _ => nameof(EditSubStatus),
     };
 
-    private static string NameOf(object item) => item switch
-    {
-        WorkOrderType type => type.Name,
-        ChecklistTemplate checklist => checklist.Name,
-        WorkOrderSubStatus subStatus => subStatus.Name,
-        _ => string.Empty,
-    };
-
     private static List<string> Present(params LocalizedString[] badges) => [.. badges.Where(badge => badge is not null).Select(badge => badge.Value)];
-
-    // The condition a question row asks for: a saved question and the answer that shows it, or none.
-    private static ConditionRule ShowWhen(QuestionEditModel row, Dictionary<string, ChecklistQuestion> previous)
-        => string.IsNullOrWhiteSpace(row.ShowWhenQuestionId) || row.ShowWhenQuestionId == row.Id || !previous.ContainsKey(row.ShowWhenQuestionId) || string.IsNullOrWhiteSpace(row.ShowWhenEquals)
-            ? null
-            : new ConditionRule
-            {
-                Conditions = [new Condition { Source = row.ShowWhenQuestionId, Operator = ConditionOperator.Is, Values = [row.ShowWhenEquals.Trim()] }],
-            };
 }

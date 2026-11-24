@@ -1,12 +1,10 @@
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Agent.ApiKeys;
-using CrestApps.OrchardCore.AI.Agent.ChatInteractions;
 using CrestApps.OrchardCore.AI.Agent.ChatSessions;
 using CrestApps.OrchardCore.AI.Agent.Connections;
 using CrestApps.OrchardCore.AI.Agent.McpServer;
 using CrestApps.OrchardCore.AI.Agent.Memory;
-using CrestApps.OrchardCore.AI.Agent.Usage;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using Microsoft.Extensions.AI;
@@ -15,7 +13,7 @@ using ModelContextProtocol.Protocol;
 namespace CrestApps.OrchardCore.Tests.Agent.AIOperations;
 
 /// <summary>
-/// Every API key, conversation, usage, chat interaction, memory, MCP and A2A tool acts for the person in the chat: it
+/// Every API key, conversation, memory, MCP and A2A tool acts for the person in the chat: it
 /// refuses a caller who is not signed in and a caller who lacks the permission the matching admin page asks for, and
 /// changes nothing then.
 /// </summary>
@@ -27,10 +25,6 @@ public sealed class AIOperationsToolCallerTests
         { SaveAIApiKeyTool.TheName, "ManageAIApiKeys" },
         { DeleteAIApiKeyTool.TheName, "ManageAIApiKeys" },
         { DeleteAIConversationTool.TheName, "DeleteChatSession" },
-        { DeleteAllAIConversationsTool.TheName, "DeleteAllChatSessions" },
-        { QueryAIUsageTool.TheName, "ViewChatAnalytics" },
-        { ListChatInteractionsTool.TheName, "ListChatInteractions" },
-        { DeleteChatInteractionsTool.TheName, "DeleteOwnChatInteraction" },
         { ListMcpConnectionsTool.TheName, "ManageMcpConnections" },
         { SaveMcpConnectionTool.TheName, "ManageMcpConnections" },
         { DeleteMcpConnectionTool.TheName, "ManageMcpConnections" },
@@ -123,10 +117,6 @@ public sealed class AIOperationsToolCallerTests
             SaveAIApiKeyTool.TheName => (new SaveAIApiKeyTool(), new() { ["apiKeyId"] = "key-1", ["enabled"] = false }),
             DeleteAIApiKeyTool.TheName => (new DeleteAIApiKeyTool(), new() { ["apiKeyIds"] = new[] { "key-1" } }),
             DeleteAIConversationTool.TheName => (new DeleteAIConversationTool(), new() { ["sessionId"] = "session-1" }),
-            DeleteAllAIConversationsTool.TheName => (new DeleteAllAIConversationsTool(), new() { ["profile"] = "profile-1" }),
-            QueryAIUsageTool.TheName => (new QueryAIUsageTool(), []),
-            ListChatInteractionsTool.TheName => (new ListChatInteractionsTool(), []),
-            DeleteChatInteractionsTool.TheName => (new DeleteChatInteractionsTool(), new() { ["interactionIds"] = new[] { "interaction-1" } }),
             ListMcpConnectionsTool.TheName => (new ListMcpConnectionsTool(), []),
             SaveMcpConnectionTool.TheName => (new SaveMcpConnectionTool(), new() { ["connectionId"] = "mcp-1", ["title"] = "Changed" }),
             DeleteMcpConnectionTool.TheName => (new DeleteMcpConnectionTool(), new() { ["connectionIds"] = new[] { "mcp-1" } }),

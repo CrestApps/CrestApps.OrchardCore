@@ -45,7 +45,7 @@ public sealed class SaveNestedContentItemTool : AIFunction
         },
         "nestedContentItemId": {
           "type": "string",
-          "description": "The ID of the nested item to update or move, from listNestedContentItems. Leave it out to add a new nested item."
+          "description": "The ID of the nested item to update or move, from getContentItem with include nested. Leave it out to add a new nested item."
         },
         "contentItem": {
           "type": "object",
@@ -63,10 +63,9 @@ public sealed class SaveNestedContentItemTool : AIFunction
           "type": "string",
           "description": "The ID of the nested item that holds the target part, when the nested item goes inside another nested item. Leave it out when the target part is on the parent content item itself."
         },
-        "position": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "The position in the target list, starting at 0. Leave it out to add at the end, or to keep the position of an updated item."
+        "afterId": {
+          "type": "string",
+          "description": "The ID of the nested item, in the target list, that this item goes right after, from getContentItem with include nested. An empty text puts it first. Leave it out to add at the end, or to keep an existing item where it is."
         },
         "isDraft": {
           "type": "boolean",
@@ -84,7 +83,7 @@ public sealed class SaveNestedContentItemTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Adds, updates or moves a single widget or contained item inside a content item's Flow, Bag or widget-zone part without resending the rest of the page. Takes the parent item, the target part (and zone or parent nested item), an optional position, and the nested item's content. The parent is saved as a draft unless isDraft is false.";
+    public override string Description => "Adds, updates or moves a single widget or contained item inside a content item's Flow, Bag or widget-zone part without resending the rest of the page. Takes the parent item, the target part (and zone or parent nested item), an optional afterId, and the nested item's content. The parent is saved as a draft unless isDraft is false.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -118,12 +117,7 @@ public sealed class SaveNestedContentItemTool : AIFunction
             return "Nothing was saved: contentItem must be a JSON object.";
         }
 
-        var hasPosition = arguments.TryGetFirst<int>("position", out var position);
-
-        if (hasPosition && position < 0)
-        {
-            return "Nothing was saved: position must be 0 or more.";
-        }
+        var hasAfter = arguments.TryGetFirstString("afterId", true, out var afterId);
 
         var isDraft = arguments.GetFirstValueOrDefault("isDraft", true);
         var contentItem = await services.GetRequiredService<IContentManager>().GetAsync(contentItemId, VersionOptions.Latest);
@@ -161,7 +155,7 @@ public sealed class SaveNestedContentItemTool : AIFunction
 
             if (entry is null)
             {
-                return $"Nothing was saved: content item '{contentItemId}' has no nested item with the ID '{nestedContentItemId}'. Use listNestedContentItems to get the IDs.";
+                return $"Nothing was saved: content item '{contentItemId}' has no nested item with the ID '{nestedContentItemId}'. Use getContentItem with include nested to get the IDs.";
             }
 
             nestedNode = entry.Item;
@@ -208,7 +202,7 @@ public sealed class SaveNestedContentItemTool : AIFunction
             target = entry.Container;
             newPosition = entry.Position;
 
-            var moves = hasPart || hasZone || hasParent || hasPosition;
+            var moves = hasPart || hasZone || hasParent || hasAfter;
 
             if (moves)
             {
@@ -237,23 +231,20 @@ public sealed class SaveNestedContentItemTool : AIFunction
                     }
                 }
 
-                var sameList = ReferenceEquals(target.Items, entry.Container.Items);
+                var (first, sibling, siblingError) = FindSibling(target, nestedNode, hasAfter, afterId);
 
-                entry.Container.Items.RemoveAt(entry.Position);
+                if (siblingError is not null)
+                {
+                    return siblingError;
+                }
 
-                newPosition = hasPosition
-                    ? Math.Min(position, target.Items.Count)
-                    : sameList
-                        ? Math.Min(entry.Position, target.Items.Count)
-                        : target.Items.Count;
-
-                target.Items.Insert(newPosition, nestedNode);
+                newPosition = ContentItemListTree.PlaceAfter(entry, nestedNode, target, first, sibling);
                 changedParts.Add(entry.Container.TopLevelPartName);
             }
 
             if (!updates && !moves)
             {
-                return "Nothing was saved: give contentItem to change the nested item, or position, part, zone or parentNestedContentItemId to move it.";
+                return "Nothing was saved: give contentItem to change the nested item, or afterId, part, zone or parentNestedContentItemId to move it.";
             }
 
             changedParts.Add(target.TopLevelPartName);
@@ -320,13 +311,17 @@ public sealed class SaveNestedContentItemTool : AIFunction
             }
 
             nestedNode = NestedContentItemTree.ToJson(services, nestedItem);
+
+            var (first, sibling, siblingError) = FindSibling(target, nestedNode, hasAfter, afterId);
+
+            if (siblingError is not null)
+            {
+                return siblingError;
+            }
+
             AddMetadata(target, nestedNode);
 
-            newPosition = hasPosition
-                ? Math.Min(position, target.Items.Count)
-                : target.Items.Count;
-
-            target.Items.Insert(newPosition, nestedNode);
+            newPosition = ContentItemListTree.PlaceAfter(null, nestedNode, target, first, sibling);
             changedParts.Add(target.TopLevelPartName);
             action = "added";
         }
@@ -357,6 +352,37 @@ public sealed class SaveNestedContentItemTool : AIFunction
     }
 
     /// <summary>
+    /// Reads where in the target list the item goes: first (an empty afterId), right after a sibling, or, with no
+    /// afterId, at the end or where it is.
+    /// </summary>
+    private static (bool First, JsonObject Sibling, string Error) FindSibling(NestedContentItemContainer target, JsonObject item, bool hasAfter, string afterId)
+    {
+        if (!hasAfter)
+        {
+            return (false, null, null);
+        }
+
+        if (string.IsNullOrWhiteSpace(afterId))
+        {
+            return (true, null, null);
+        }
+
+        var sibling = ContentItemListTree.FindSibling(target, afterId.Trim());
+
+        if (sibling is null)
+        {
+            return (false, null, $"Nothing was saved: '{afterId}' is not a nested item of the target list. Use getContentItem with include nested to get the IDs, or leave afterId out to add at the end.");
+        }
+
+        if (ReferenceEquals(sibling, item))
+        {
+            return (false, null, "Nothing was saved: a nested item cannot be placed after itself.");
+        }
+
+        return (false, sibling, null);
+    }
+
+    /// <summary>
     /// Finds the one list the arguments name: on the parent content item, or on a nested item when one is given.
     /// </summary>
     private static async Task<(NestedContentItemContainer Container, string Error)> ResolveTargetAsync(
@@ -378,7 +404,7 @@ public sealed class SaveNestedContentItemTool : AIFunction
 
             if (parent is null)
             {
-                return (null, $"Nothing was saved: there is no nested item with the ID '{parentNestedContentItemId}'. Use listNestedContentItems to get the IDs.");
+                return (null, $"Nothing was saved: there is no nested item with the ID '{parentNestedContentItemId}'. Use getContentItem with include nested to get the IDs.");
             }
 
             owner = parent.Item;

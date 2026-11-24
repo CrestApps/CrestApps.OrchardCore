@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Agreements.Core.Services;
 using CrestApps.OrchardCore.Agreements.Models;
 using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Agreements.ViewModels;
@@ -41,12 +42,8 @@ internal sealed class AgreementHoursDisplayDriver : DisplayDriver<Agreement>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        agreement.Hours = new AgreementHours
-        {
-            Kind = model.Kind,
-            Hours = model.Kind == AgreementHoursKind.None ? 0 : model.Hours,
-            RoundingMinutes = model.RoundingMinutes,
-        };
+        // The editor's rules, which the tools that change agreements without the editor apply too.
+        AgreementEditorRules.ApplyHours(agreement, model.Kind, model.Hours, model.RoundingMinutes);
 
         return Edit(agreement, context);
     }

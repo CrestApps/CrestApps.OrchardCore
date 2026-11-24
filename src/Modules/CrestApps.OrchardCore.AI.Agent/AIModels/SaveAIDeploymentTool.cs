@@ -249,7 +249,7 @@ public sealed class SaveAIDeploymentTool : AIFunction
     {
         if (arguments.ContainsKey("endpoint") || arguments.ContainsKey("authenticationType") || arguments.ContainsKey("identityId"))
         {
-            return $"{deployment.ClientName} deployments talk through a provider connection, so endpoint, authenticationType and identityId belong on the connection. Use saveAIProviderConnection.";
+            return $"{deployment.ClientName} deployments talk through a provider connection, so endpoint, authenticationType and identityId belong on the connection, which is changed on the AI provider connections admin page.";
         }
 
         arguments.TryGetFirstString("connection", out var connectionName);
@@ -265,7 +265,7 @@ public sealed class SaveAIDeploymentTool : AIFunction
 
         if (connections.Count == 0)
         {
-            return $"there is no provider connection for {deployment.ClientName} yet. Create one first with saveAIProviderConnection.";
+            return $"there is no provider connection for {deployment.ClientName} yet. Create one first on the AI provider connections admin page.";
         }
 
         AIProviderConnection connection;

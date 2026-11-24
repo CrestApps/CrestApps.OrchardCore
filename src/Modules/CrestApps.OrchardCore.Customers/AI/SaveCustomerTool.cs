@@ -13,12 +13,18 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Customers.AI;
 
 /// <summary>
-/// Creates a customer or changes one with the customer form's rules (<see cref="CustomerEditorRules"/>): a business needs a
-/// company name, a customer needs a name, a company or an email to be found again, a guest's email must be valid, and a
-/// customer is anonymized only by erasing them. Only the fields given change. Stricter than the form: an anonymized
-/// customer is refused with a sentence, and an email given for a customer with an account is refused instead of ignored,
-/// since it comes from their user account. It needs <see cref="CustomerPermissions.ManageCustomers"/>.
+/// Creates a customer or changes one with the customer form's rules (<see cref="CustomerEditorRules"/>): a customer needs
+/// a name or an email to be found again, a guest's email must be valid, and a customer is anonymized only by erasing them.
+/// Only the fields given change. Stricter than the form: an anonymized customer is refused with a sentence, and an email
+/// given for a customer with an account is refused instead of ignored, since it comes from their user account. It needs
+/// <see cref="CustomerPermissions.ManageCustomers"/>.
 /// </summary>
+/// <remarks>
+/// It keeps people only. A business is an organization, and organizations are owned by Accounts (see the duplicate
+/// organization finding in <c>docs/engineering/building-blocks.md</c>), so the tool takes no kind, company name or tax id,
+/// creates every customer as a person, and refuses to change a customer stored as a business; such a customer is changed
+/// on its admin page. The stored company name and tax id of a customer are still returned.
+/// </remarks>
 internal sealed class SaveCustomerTool : CustomersAIToolBase
 {
     /// <summary>
@@ -28,8 +34,14 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
 
     private static readonly string[] _fieldNames =
     [
-        "kind", "status", "displayName", "firstName", "lastName", "companyName", "taxId", "isTaxExempt", "taxExemptionReason", "email", "phone", "acceptsMarketing",
+        "status", "displayName", "firstName", "lastName", "isTaxExempt", "taxExemptionReason", "email", "phone", "acceptsMarketing",
     ];
+
+    // The business fields the tool no longer takes: businesses are Accounts.
+    private static readonly HashSet<string> _businessFieldNames = new(StringComparer.Ordinal)
+    {
+        "kind", "companyName", "taxId",
+    };
 
     private static readonly JsonElement _jsonSchema = Schema(
     """
@@ -39,11 +51,6 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
         "customerId": {
           "type": "string",
           "description": "The id of the customer to change, from listCustomers. Leave it out to create a customer."
-        },
-        "kind": {
-          "type": "string",
-          "enum": ["Person", "Business"],
-          "description": "Whether the customer is a person or a business. A business needs a company name."
         },
         "status": {
           "type": "string",
@@ -61,14 +68,6 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
         "lastName": {
           "type": "string",
           "description": "The last name. An empty text removes it."
-        },
-        "companyName": {
-          "type": "string",
-          "description": "The company of a business customer. An empty text removes it."
-        },
-        "taxId": {
-          "type": "string",
-          "description": "The tax id of a business customer, such as a VAT number. An empty text removes it."
         },
         "isTaxExempt": {
           "type": "boolean",
@@ -100,7 +99,7 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Creates a customer or updates one: kind, status (Active or Disabled), names, company, tax id and exemption, phone, marketing consent, and email for guests only. A business needs a company name; an anonymized customer cannot be edited. Only the fields given change.";
+    public override string Description => "Creates a person as a customer or updates one: status (Active or Disabled), names, tax exemption, phone, marketing consent, and email for guests only. Only the fields given change; an anonymized customer cannot be edited. It does not create or change businesses: a business is an Account (use listAccounts and getAccount), and a customer stored as a business is changed on its admin page.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -138,6 +137,15 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
                 return "Nothing was changed: the customer's personal data was erased, so there is nothing personal to edit.";
             }
 
+            if (customer.Kind == CustomerKind.Business)
+            {
+                var page = GetAdminPath(services, "CustomersEdit", new { customerId = customer.ItemId });
+
+                return page is null
+                    ? $"Nothing was changed: {customer.GetName()} is stored as a business customer, and saveCustomer changes people only. A business is an Account: find it with listAccounts. Change this customer on its page under Customers."
+                    : $"Nothing was changed: {customer.GetName()} is stored as a business customer, and saveCustomer changes people only. A business is an Account: find it with listAccounts. Change this customer on its page: {page}";
+            }
+
             if (!_fieldNames.Any(name => Has(arguments, name)))
             {
                 return "Nothing was changed: give at least one field to change.";
@@ -151,18 +159,6 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
 
         var model = created ? new CustomerEditViewModel() : CustomerEditorRules.ToViewModel(customer);
         var problems = new List<string>();
-
-        if (Has(arguments, "kind"))
-        {
-            if (TryReadEnum(arguments, "kind", [CustomerKind.Person, CustomerKind.Business], out CustomerKind kind))
-            {
-                model.Kind = kind;
-            }
-            else
-            {
-                problems.Add("kind must be Person or Business.");
-            }
-        }
 
         if (Has(arguments, "status"))
         {
@@ -179,8 +175,6 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
         model.DisplayName = Has(arguments, "displayName") ? ReadString(arguments, "displayName") : model.DisplayName;
         model.FirstName = Has(arguments, "firstName") ? ReadString(arguments, "firstName") : model.FirstName;
         model.LastName = Has(arguments, "lastName") ? ReadString(arguments, "lastName") : model.LastName;
-        model.CompanyName = Has(arguments, "companyName") ? ReadString(arguments, "companyName") : model.CompanyName;
-        model.TaxId = Has(arguments, "taxId") ? ReadString(arguments, "taxId") : model.TaxId;
         model.IsTaxExempt = Has(arguments, "isTaxExempt") ? ReadBool(arguments, "isTaxExempt") ?? model.IsTaxExempt : model.IsTaxExempt;
         model.TaxExemptionReason = Has(arguments, "taxExemptionReason") ? ReadString(arguments, "taxExemptionReason") : model.TaxExemptionReason;
         model.Email = Has(arguments, "email") ? ReadString(arguments, "email") : model.Email;
@@ -193,7 +187,7 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
             {
                 CustomerEditProblem.InvalidEmail => "Enter a valid email address.",
                 CustomerEditProblem.CompanyNameRequired => "A business needs a company name.",
-                CustomerEditProblem.NameRequired => "Enter a name, a company or an email, so the customer can be found again.",
+                CustomerEditProblem.NameRequired => "Give a first, last or display name, or an email, so the customer can be found again.",
                 _ => "A customer is anonymized by erasing them, not by changing their status.",
             });
         }
@@ -231,4 +225,10 @@ internal sealed class SaveCustomerTool : CustomersAIToolBase
             message = created ? $"The customer {customer.GetName()} was added." : $"The customer {customer.GetName()} was saved.",
         });
     }
+
+    /// <inheritdoc/>
+    protected override string DescribeUnknownArgument(string name)
+        => _businessFieldNames.Contains(name)
+            ? $"Nothing was saved: saveCustomer keeps people only and takes no '{name}'. A business, with its company name and tax id, is an Account: find it with listAccounts and read it with getAccount."
+            : base.DescribeUnknownArgument(name);
 }

@@ -16,8 +16,8 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Agent;
 /// <summary>
 /// The Orchard Core tools of the AI Agent module for OpenID Connect, rate limits, secrets, the audit trail,
 /// notifications and the test email and SMS are registered with a title, a description and a category, can be picked
-/// on a profile, and ask for approval exactly where the tool coverage plan says so: every tool that changes security,
-/// deletes, or sends something outside the site.
+/// on a profile, and ask for approval exactly where the tool coverage plan says so: every tool that changes security
+/// or sends something outside the site.
 /// </summary>
 public sealed class OrchardSecurityToolRegistrationTests
 {
@@ -25,25 +25,14 @@ public sealed class OrchardSecurityToolRegistrationTests
     [
         ListOpenIdApplicationsTool.TheName,
         GetOpenIdApplicationTool.TheName,
-        SaveOpenIdApplicationTool.TheName,
-        DeleteOpenIdApplicationTool.TheName,
         ListOpenIdScopesTool.TheName,
-        SaveOpenIdScopeTool.TheName,
-        DeleteOpenIdScopeTool.TheName,
         ListRateLimitPoliciesTool.TheName,
-        SaveRateLimitPolicyTool.TheName,
-        EnableRateLimitPolicyTool.TheName,
-        DisableRateLimitPolicyTool.TheName,
-        DeleteRateLimitPolicyTool.TheName,
+        SetRateLimitPolicyEnabledTool.TheName,
         ListSecretsTool.TheName,
-        SaveSecretTool.TheName,
-        DeleteSecretTool.TheName,
-        MoveSecretsTool.TheName,
         ListAuditTrailEventsTool.TheName,
         GetAuditTrailEventTool.TheName,
         ListNotificationsTool.TheName,
         MarkNotificationsTool.TheName,
-        DeleteNotificationsTool.TheName,
         SendTestEmailTool.TheName,
         SendTestSmsTool.TheName,
     ];
@@ -52,25 +41,14 @@ public sealed class OrchardSecurityToolRegistrationTests
     {
         { ListOpenIdApplicationsTool.TheName, false },
         { GetOpenIdApplicationTool.TheName, false },
-        { SaveOpenIdApplicationTool.TheName, true },
-        { DeleteOpenIdApplicationTool.TheName, true },
         { ListOpenIdScopesTool.TheName, false },
-        { SaveOpenIdScopeTool.TheName, true },
-        { DeleteOpenIdScopeTool.TheName, true },
         { ListRateLimitPoliciesTool.TheName, false },
-        { SaveRateLimitPolicyTool.TheName, true },
-        { EnableRateLimitPolicyTool.TheName, true },
-        { DisableRateLimitPolicyTool.TheName, true },
-        { DeleteRateLimitPolicyTool.TheName, true },
+        { SetRateLimitPolicyEnabledTool.TheName, true },
         { ListSecretsTool.TheName, false },
-        { SaveSecretTool.TheName, true },
-        { DeleteSecretTool.TheName, true },
-        { MoveSecretsTool.TheName, true },
         { ListAuditTrailEventsTool.TheName, false },
         { GetAuditTrailEventTool.TheName, false },
         { ListNotificationsTool.TheName, false },
         { MarkNotificationsTool.TheName, false },
-        { DeleteNotificationsTool.TheName, true },
         { SendTestEmailTool.TheName, true },
         { SendTestSmsTool.TheName, true },
     };
@@ -98,12 +76,11 @@ public sealed class OrchardSecurityToolRegistrationTests
     }
 
     [Theory]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.OpenIdToolsStartup), 6)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.OpenIdServerToolsStartup), 1)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.RateLimitsToolsStartup), 5)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.SecretsToolsStartup), 4)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.OpenIdToolsStartup), 3)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.RateLimitsToolsStartup), 2)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.SecretsToolsStartup), 1)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.AuditTrailToolsStartup), 2)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.NotificationsToolsStartup), 3)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.NotificationsToolsStartup), 2)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.EmailToolsStartup), 1)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.SmsToolsStartup), 1)]
     public void EachFeatureStartup_RegistersItsTools(Type startupType, int expectedCount)
@@ -114,22 +91,6 @@ public sealed class OrchardSecurityToolRegistrationTests
         // Assert
         Assert.Equal(expectedCount, tools.Count);
         Assert.All(tools.Keys, name => Assert.Contains(name, _toolNames));
-    }
-
-    [Fact]
-    public void SaveOpenIdApplication_IsRegisteredOnlyWhenTheAuthorizationServerFeatureIsOn()
-    {
-        // Arrange: the tool saves through the application recipe step, which that feature registers.
-        var management = GetTools(typeof(CrestApps.OrchardCore.AI.Agent.OpenIdToolsStartup));
-        var server = GetTools(typeof(CrestApps.OrchardCore.AI.Agent.OpenIdServerToolsStartup));
-
-        // Act
-        var registeredWithManagement = management.ContainsKey(SaveOpenIdApplicationTool.TheName);
-        var registeredWithServer = server.ContainsKey(SaveOpenIdApplicationTool.TheName);
-
-        // Assert
-        Assert.False(registeredWithManagement);
-        Assert.True(registeredWithServer);
     }
 
     [Fact]

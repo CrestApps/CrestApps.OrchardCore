@@ -11,8 +11,7 @@ using OrchardCore.Media.Indexing;
 namespace CrestApps.OrchardCore.Tests.Agent.Media;
 
 /// <summary>
-/// The tools that list, read, move, copy and delete the files of the media library, return the media options and
-/// purge the media cache. They go through the media store the Media Library uses, check the folder permission on
+/// The tools that list, read, move, copy and delete the files of the media library. They go through the media store the Media Library uses, check the folder permission on
 /// every path, and a refused call changes nothing.
 /// </summary>
 public sealed class MediaLibraryToolsTests
@@ -380,59 +379,7 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task GetMediaOptions_ReturnsTheOptionsTheEnabledMediaFeaturesAndTheRemainingStorage()
-    {
-        // Arrange
-        var harness = new MediaToolHarness();
-
-        harness.Store.PermittedStorage = 5_000_000;
-
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetMediaOptionsTool(), services);
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.Equal(new[] { ".csv", ".jpg", ".pdf", ".png", ".txt" }, json.GetProperty("allowedFileExtensions").EnumerateArray().Select(value => value.GetString()));
-        Assert.Equal(new[] { ".css", ".js", ".svg" }, json.GetProperty("restrictedFileExtensions").EnumerateArray().Select(value => value.GetString()));
-        Assert.True(json.GetProperty("canUploadRestrictedMedia").GetBoolean());
-        Assert.Equal(1000, json.GetProperty("maxFileSizeBytes").GetInt64());
-        Assert.Equal(new[] { 16, 32, 64 }, json.GetProperty("supportedSizes").EnumerateArray().Select(value => value.GetInt32()));
-        Assert.Equal("https://cdn.example.com", json.GetProperty("cdnBaseUrl").GetString());
-        Assert.Equal("/media", json.GetProperty("assetsRequestPath").GetString());
-        Assert.Equal("_Users", json.GetProperty("assetsUsersFolder").GetString());
-        Assert.Equal("Memory", json.GetProperty("storage").GetProperty("name").GetString());
-        Assert.Equal(new[] { "OrchardCore.Media", "OrchardCore.Media.Cache" }, json.GetProperty("enabledMediaFeatures").EnumerateArray().Select(value => value.GetString()));
-        Assert.Equal(5_000_000, json.GetProperty("permittedStorageBytes").GetInt64());
-        Assert.Equal("ViewMediaOptions", services.GetRequiredService<FakeAuthorizationService>().Checks[0].Permission);
-    }
-
-    [Fact]
-    public async Task GetMediaOptions_ForACallerWhoMayNotManageMedia_LeavesOutTheRemainingStorage()
-    {
-        // Arrange
-        var harness = new MediaToolHarness();
-
-        harness.Store.PermittedStorage = 5_000_000;
-        harness.Authorize = (permission, _) => permission.Name == MediaPermissions.ViewMediaOptions.Name;
-
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new GetMediaOptionsTool(), services);
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-
-        Assert.False(json.TryGetProperty("permittedStorageBytes", out _));
-        Assert.False(json.GetProperty("canUploadRestrictedMedia").GetBoolean());
-        Assert.Contains("who may manage the media library", json.GetProperty("permittedStorageNote").GetString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task MoveMediaFile_MovesAndRenamesTheFilesAndSaysThatReferencesAreNotUpdated()
+    public async Task MoveMediaFiles_MovesAndRenamesTheFilesAndSaysThatReferencesAreNotUpdated()
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -445,8 +392,9 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
+            ["action"] = "move",
             ["files"] = new JsonArray(
                 new JsonObject { ["path"] = "brand/logo-old.png", ["newPath"] = "brand/logo-2025.png" },
                 new JsonObject { ["path"] = "tmp/photo.jpg", ["newPath"] = "archive/photo.jpg" }),
@@ -454,9 +402,10 @@ public sealed class MediaLibraryToolsTests
 
         // Assert
         var json = AgentToolTestContext.ReadJson(result);
-        var moved = json.GetProperty("moved").EnumerateArray().ToList();
+        var moved = json.GetProperty("files").EnumerateArray().ToList();
 
-        Assert.Equal(2, json.GetProperty("movedCount").GetInt32());
+        Assert.Equal("move", json.GetProperty("action").GetString());
+        Assert.Equal(2, json.GetProperty("count").GetInt32());
         Assert.Equal("brand/logo-old.png", moved[0].GetProperty("from").GetString());
         Assert.Equal("brand/logo-2025.png", moved[0].GetProperty("to").GetString());
         Assert.Equal("/media/archive/photo.jpg", moved[1].GetProperty("url").GetString());
@@ -473,7 +422,7 @@ public sealed class MediaLibraryToolsTests
     [InlineData("brand/logo.png", "nowhere/logo.png", "There is no media folder 'nowhere'.")]
     [InlineData("brand/logo.png", "brand/logo.exe", "the extension '.exe' is not allowed on this site")]
     [InlineData("brand/logo.png", "brand/logo.png", "has the same old and new path")]
-    public async Task MoveMediaFile_WhenOneFileCannotBeMoved_MovesNothing(string path, string newPath, string expected)
+    public async Task MoveMediaFiles_WhenOneFileCannotBeMoved_MovesNothing(string path, string newPath, string expected)
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -486,7 +435,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
             ["files"] = $$"""[{ "path": "brand/other.png", "newPath": "brand/fine.png" }, { "path": "{{path}}", "newPath": "{{newPath}}" }]""",
         });
@@ -498,7 +447,7 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task MoveMediaFile_ToARestrictedExtension_NeedsThePermissionToUploadRestrictedMedia()
+    public async Task MoveMediaFiles_ToARestrictedExtension_NeedsThePermissionToUploadRestrictedMedia()
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -509,7 +458,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
             ["files"] = """[{ "path": "brand/logo.png", "newPath": "brand/logo.svg" }]""",
         });
@@ -520,7 +469,7 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task MoveMediaFile_ChecksTheFolderPermissionOnTheOldAndTheNewPath()
+    public async Task MoveMediaFiles_ChecksTheFolderPermissionOnTheOldAndTheNewPath()
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -534,7 +483,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
             ["files"] = """[{ "path": "brand/logo.png", "newPath": "mediafields/BlogPost/logo.png" }]""",
         });
@@ -549,7 +498,7 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task MoveMediaFile_WhenTheStoreFails_ReportsTheFileThatWasNotMoved()
+    public async Task MoveMediaFiles_WhenTheStoreFails_ReportsTheFileThatWasNotMoved()
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -560,7 +509,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
             ["files"] = """[{ "path": "brand/logo.png", "newPath": "brand/logo-new.png" }]""",
         });
@@ -569,47 +518,52 @@ public sealed class MediaLibraryToolsTests
         var json = AgentToolTestContext.ReadJson(result);
         var failed = Assert.Single(json.GetProperty("failed").EnumerateArray());
 
-        Assert.Equal(0, json.GetProperty("movedCount").GetInt32());
+        Assert.Equal(0, json.GetProperty("count").GetInt32());
         Assert.Equal("brand/logo.png", failed.GetProperty("from").GetString());
         Assert.Equal("The storage account is read-only.", failed.GetProperty("error").GetString());
         Assert.False(json.TryGetProperty("note", out _));
     }
 
     [Fact]
-    public async Task CopyMediaFile_CopiesTheFileAndReturnsTheCopy()
+    public async Task MoveMediaFiles_ToCopy_CopiesTheFilesAndKeepsTheOriginals()
     {
         // Arrange
         var harness = new MediaToolHarness();
 
-        harness.Store.AddFile("brand/logo.png", "logo");
+        harness.Store
+            .AddFile("brand/logo.png", "logo")
+            .AddFile("brand/icon.png", "icon");
 
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new CopyMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
-            ["path"] = "brand/logo.png",
-            ["newPath"] = "brand/logo-copy.png",
+            ["action"] = "copy",
+            ["files"] = """[{ "path": "brand/logo.png", "newPath": "brand/logo-copy.png" }, { "path": "brand/icon.png", "newPath": "brand/icon-copy.png" }]""",
         });
 
         // Assert
         var json = AgentToolTestContext.ReadJson(result);
+        var copied = json.GetProperty("files").EnumerateArray().ToList();
 
-        Assert.True(json.GetProperty("copied").GetBoolean());
-        Assert.Equal("brand/logo.png", json.GetProperty("from").GetString());
-        Assert.Equal("brand/logo-copy.png", json.GetProperty("file").GetProperty("path").GetString());
-        Assert.Equal("/media/brand/logo-copy.png", json.GetProperty("file").GetProperty("url").GetString());
-        Assert.Equal(new[] { "copy:brand/logo.png>brand/logo-copy.png" }, harness.Store.Changes);
+        Assert.Equal("copy", json.GetProperty("action").GetString());
+        Assert.Equal(2, json.GetProperty("count").GetInt32());
+        Assert.Equal("brand/logo.png", copied[0].GetProperty("from").GetString());
+        Assert.Equal("brand/logo-copy.png", copied[0].GetProperty("to").GetString());
+        Assert.Equal("/media/brand/logo-copy.png", copied[0].GetProperty("url").GetString());
+        Assert.False(json.TryGetProperty("note", out _));
+        Assert.Equal(new[] { "copy:brand/logo.png>brand/logo-copy.png", "copy:brand/icon.png>brand/icon-copy.png" }, harness.Store.Changes);
         Assert.Equal("logo", harness.Store.ReadText("brand/logo.png"));
         Assert.Equal("logo", harness.Store.ReadText("brand/logo-copy.png"));
     }
 
     [Theory]
-    [InlineData("brand/missing.png", "brand/copy.png", "there is no media file 'brand/missing.png'")]
+    [InlineData("brand/missing.png", "brand/copy.png", "There is no media file 'brand/missing.png'.")]
     [InlineData("brand/logo.png", "brand/taken.png", "A media file already exists at 'brand/taken.png'.")]
     [InlineData("brand/logo.png", "brand/logo.exe", "the extension '.exe' is not allowed on this site")]
     [InlineData("brand/logo.png", "nowhere/logo.png", "There is no media folder 'nowhere'.")]
-    public async Task CopyMediaFile_WhenTheCopyCannotBeMade_CopiesNothing(string path, string newPath, string expected)
+    public async Task MoveMediaFiles_WhenACopyCannotBeMade_CopiesNothing(string path, string newPath, string expected)
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -621,10 +575,10 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new CopyMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
-            ["path"] = path,
-            ["newPath"] = newPath,
+            ["action"] = "copy",
+            ["files"] = $$"""[{ "path": "{{path}}", "newPath": "{{newPath}}" }]""",
         });
 
         // Assert
@@ -634,7 +588,29 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task DeleteMediaFile_DeletesTheFilesAndSaysTheyCannotBeRestored()
+    public async Task MoveMediaFiles_ForAnUnknownAction_ChangesNothing()
+    {
+        // Arrange
+        var harness = new MediaToolHarness();
+
+        harness.Store.AddFile("brand/logo.png");
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
+        {
+            ["action"] = "link",
+            ["files"] = """[{ "path": "brand/logo.png", "newPath": "brand/logo-new.png" }]""",
+        });
+
+        // Assert
+        Assert.Equal("Nothing was changed: 'link' is not an action. Use move or copy.", result);
+        Assert.Empty(harness.Store.Changes);
+    }
+
+    [Fact]
+    public async Task DeleteMedia_DeletesTheFilesAndSaysTheyCannotBeRestored()
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -647,7 +623,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteMediaTool(), services, new()
         {
             ["paths"] = new[] { "tmp/a.png", "/tmp/b.png", "tmp/a.png" },
         });
@@ -663,7 +639,7 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task DeleteMediaFile_WhenAPathIsNotAFile_DeletesNothing()
+    public async Task DeleteMedia_WhenAPathIsNotAFile_DeletesNothing()
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -675,7 +651,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteMediaTool(), services, new()
         {
             ["paths"] = new[] { "tmp/a.png", "tmp/missing.png", "tmp/old" },
         });
@@ -688,7 +664,7 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task DeleteMediaFile_WhenOnePathIsInAFolderTheCallerMayNotManage_DeletesNothing()
+    public async Task DeleteMedia_WhenOnePathIsInAFolderTheCallerMayNotManage_DeletesNothing()
     {
         // Arrange
         var harness = new MediaToolHarness();
@@ -702,7 +678,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteMediaFileTool(), services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteMediaTool(), services, new()
         {
             ["paths"] = new[] { "tmp/a.png", "_Users/other/photo.png" },
         });
@@ -714,57 +690,7 @@ public sealed class MediaLibraryToolsTests
     }
 
     [Fact]
-    public async Task PurgeMediaCache_WithoutARemoteMediaStore_SaysThereIsNoCache()
-    {
-        // Arrange
-        var harness = new MediaToolHarness();
-
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new PurgeMediaCacheTool(), services);
-
-        // Assert
-        Assert.StartsWith("Nothing was purged:", result, StringComparison.Ordinal);
-        Assert.Contains("no remote media store", result, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task PurgeMediaCache_PurgesTheCacheAndReportsErrors(bool hasErrors)
-    {
-        // Arrange
-        var cache = new Mock<IMediaFileStoreCache>();
-
-        cache.Setup(mediaCache => mediaCache.PurgeAsync()).ReturnsAsync(hasErrors);
-
-        var harness = new MediaToolHarness
-        {
-            Configure = collection => collection.AddSingleton(cache.Object),
-        };
-
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new PurgeMediaCacheTool(), services);
-
-        // Assert
-        cache.Verify(mediaCache => mediaCache.PurgeAsync(), Times.Once);
-        Assert.Equal("ManageAssetCache", Assert.Single(services.GetRequiredService<FakeAuthorizationService>().Checks).Permission);
-
-        if (hasErrors)
-        {
-            Assert.Contains("some files could not be removed", result, StringComparison.Ordinal);
-        }
-        else
-        {
-            Assert.True(AgentToolTestContext.ReadJson(result).GetProperty("purged").GetBoolean());
-        }
-    }
-
-    [Fact]
-    public async Task MoveMediaFile_OnARemoteStore_CopiesTheMovedFileToTheLocalCache()
+    public async Task MoveMediaFiles_OnARemoteStore_CopiesTheMovedFileToTheLocalCache()
     {
         // Arrange
         var cache = new Mock<IMediaFileStoreCache>();
@@ -778,7 +704,7 @@ public sealed class MediaLibraryToolsTests
         using var services = harness.Build();
 
         // Act
-        await AgentToolTestContext.InvokeAsync(new MoveMediaFileTool(), services, new()
+        await AgentToolTestContext.InvokeAsync(new MoveMediaFilesTool(), services, new()
         {
             ["files"] = """[{ "path": "brand/logo.png", "newPath": "brand/logo-new.png" }]""",
         });

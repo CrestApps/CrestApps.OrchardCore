@@ -28,11 +28,9 @@ public sealed class ReportToolRegistrationTests
         { ShareReportDesignTool.TheName, true },
         { RestoreReportDesignVersionTool.TheName, false },
         { DeleteReportDesignTool.TheName, true },
-        { CreateReportShareLinkTool.TheName, true },
-        { RevokeReportShareLinkTool.TheName, true },
+        { SetReportShareLinkTool.TheName, true },
         { ListReportViewsTool.TheName, false },
         { SaveReportViewTool.TheName, false },
-        { RefreshReportViewTool.TheName, false },
         { DeleteReportViewTool.TheName, true },
         { ListReportGroupsTool.TheName, false },
         { SaveReportGroupTool.TheName, false },
@@ -62,7 +60,7 @@ public sealed class ReportToolRegistrationTests
 
     [Theory]
     [InlineData(typeof(AIToolsStartup), 4, ReportsConstants.Feature)]
-    [InlineData(typeof(BuilderAIToolsStartup), 16, ReportsConstants.BuilderFeature)]
+    [InlineData(typeof(BuilderAIToolsStartup), 14, ReportsConstants.BuilderFeature)]
     public void EachStartup_RegistersItsTools_ForItsFeature_WhenTheAIFeatureIsOn(Type startupType, int expectedCount, string featureId)
     {
         // Act

@@ -60,13 +60,6 @@ public sealed class AIDeploymentsToolsStartup : StartupBase
             .WithCategory(S["AI Models"])
             .Selectable();
 
-        services.AddCoreAITool<CloneAIVoiceTool>(CloneAIVoiceTool.TheName)
-            .WithTitle(S["Clone AI Voice"])
-            .WithDescription(S["Creates a cloned voice at the provider from an audio file in the media library (up to 10 MB) and returns its id. Only for providers that support cloning; the provider may charge for it."])
-            .WithCategory(S["AI Models"])
-            .RequireApproval()
-            .Selectable();
-
         services.AddCoreAITool<DeleteAIVoiceTool>(DeleteAIVoiceTool.TheName)
             .WithTitle(S["Delete AI Voice"])
             .WithDescription(S["Deletes a voice at the provider. It cannot be undone, and profiles or personas that use the voice lose it."])

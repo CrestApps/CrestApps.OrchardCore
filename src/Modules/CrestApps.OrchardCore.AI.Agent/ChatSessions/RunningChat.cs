@@ -17,25 +17,6 @@ internal static class RunningChat
         => AIInvocationScope.Current?.ChatSession?.SessionId;
 
     /// <summary>
-    /// Gets the profile of the chat session the current AI turn runs in.
-    /// </summary>
-    /// <returns>The profile ID, or <see langword="null"/> outside a chat session.</returns>
-    public static string GetSessionProfileId()
-        => AIInvocationScope.Current?.ChatSession?.ProfileId;
-
-    /// <summary>
-    /// Gets the ID of the chat interaction the current AI turn runs in.
-    /// </summary>
-    /// <returns>The interaction ID, or <see langword="null"/> outside a chat interaction.</returns>
-    public static string GetInteractionId()
-    {
-        var invocation = AIInvocationScope.Current;
-
-        return invocation?.ChatInteraction?.ItemId
-            ?? (invocation?.ToolExecutionContext?.Resource as ChatInteraction)?.ItemId;
-    }
-
-    /// <summary>
     /// Gets the user ID of the signed-in caller.
     /// </summary>
     /// <param name="services">The services of the tool invocation.</param>

@@ -51,6 +51,11 @@ internal sealed class AIQualityToolHarness
 
     public int Writes { get; private set; }
 
+    /// <summary>
+    /// Gets or sets a last change to the services, made before the provider is built.
+    /// </summary>
+    public Action<IServiceCollection> Configure { get; set; }
+
     public ServiceProvider Build()
     {
         var services = AgentToolTestContext.CreateServices(SignedIn);
@@ -88,6 +93,8 @@ internal sealed class AIQualityToolHarness
             .ReturnsAsync((string sessionId) => Prompts.Where(prompt => prompt.SessionId == sessionId).ToList());
         services.AddSingleton(promptStore.Object);
 
+        Configure?.Invoke(services);
+
         return services.BuildServiceProvider();
     }
 
@@ -112,6 +119,20 @@ internal sealed class AIQualityToolHarness
             .Returns((string id, CancellationToken _) => ValueTask.FromResult(entries.FirstOrDefault(entry => entry.ItemId == id)));
         store.Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult<IReadOnlyCollection<TEntry>>(entries.ToList()));
+        store.Setup(s => s.PageAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<QueryContext>(), It.IsAny<CancellationToken>()))
+            .Returns((int page, int pageSize, QueryContext context, CancellationToken _) =>
+            {
+                var matches = entries
+                    .Where(entry => string.IsNullOrEmpty(context?.Name) ||
+                        (entry is INameAwareModel named && (named.Name?.Contains(context.Name, StringComparison.OrdinalIgnoreCase) ?? false)))
+                    .ToList();
+
+                return ValueTask.FromResult(new PageResult<TEntry>
+                {
+                    Count = matches.Count,
+                    Entries = matches.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+                });
+            });
         store.Setup(s => s.CreateAsync(It.IsAny<TEntry>(), It.IsAny<CancellationToken>()))
             .Returns((TEntry entry, CancellationToken _) =>
             {

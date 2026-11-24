@@ -31,6 +31,10 @@ public sealed class ListAIProfileTemplatesTool : AIFunction
     {
       "type": "object",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "The ID of one template, from an earlier list. With it the tool returns that template's full content (instructions, profile settings, tool and agent names) instead of a list, and the other arguments are ignored."
+        },
         "source": {
           "type": "string",
           "enum": ["Profile", "SystemPrompt"],
@@ -64,7 +68,7 @@ public sealed class ListAIProfileTemplatesTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Lists templates with source (Profile or SystemPrompt), category, title, whether they are shipped with a module (read-only) and whether their scenario is available. Filter by source, category (for example speaking styles or guardrail topics) or name.";
+    public override string Description => "Lists templates with source (Profile or SystemPrompt), category, title, whether they are shipped with a module (read-only) and whether their scenario is available. Filter by source, category (for example speaking styles or guardrail topics) or name. With id it returns one template's full content: instructions, profile settings, tool and agent names.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -88,12 +92,18 @@ public sealed class ListAIProfileTemplatesTool : AIFunction
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
+        var templateManager = services.GetRequiredService<IAIProfileTemplateManager>();
+
+        if (arguments.TryGetFirstString("id", out var templateId) && !string.IsNullOrWhiteSpace(templateId))
+        {
+            return await GetOneAsync(services, templateManager, templateId.Trim(), cancellationToken);
+        }
+
         arguments.TryGetFirstString("source", out var source);
         arguments.TryGetFirstString("category", out var category);
         arguments.TryGetFirstString("search", out var search);
         var (page, pageSize) = AgentToolResults.ReadPaging(arguments);
 
-        var templateManager = services.GetRequiredService<IAIProfileTemplateManager>();
         var storedIds = await ProfileTemplateToolSupport.GetStoredIdsAsync(services, cancellationToken);
         var shellFeaturesManager = services.GetService<IShellFeaturesManager>();
         var features = shellFeaturesManager is null ? null : await ProfileScenarioFeatureLookup.CreateAsync(shellFeaturesManager);
@@ -144,6 +154,70 @@ public sealed class ListAIProfileTemplatesTool : AIFunction
             page,
             pageSize,
             truncated = (page * pageSize) < templates.Count,
+        });
+    }
+
+    private static async Task<string> GetOneAsync(IServiceProvider services, IAIProfileTemplateManager templateManager, string templateId, CancellationToken cancellationToken)
+    {
+        var template = await templateManager.FindByIdAsync(templateId, cancellationToken);
+
+        if (template is null)
+        {
+            return $"No AI profile template has the ID '{templateId}'. Use listAIProfileTemplates without an id to find it.";
+        }
+
+        var isShipped = await ProfileTemplateToolSupport.FindStoredAsync(services, template.ItemId, cancellationToken) is null;
+        var isProfile = string.Equals(template.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase);
+        object profile = null;
+        string instructions;
+
+        if (isProfile)
+        {
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
+            instructions = metadata.SystemMessage;
+
+            profile = new
+            {
+                type = metadata.ProfileType?.ToString(),
+                description = metadata.Description,
+                welcomeMessage = metadata.WelcomeMessage,
+                promptTemplate = metadata.PromptTemplate,
+                promptSubject = metadata.PromptSubject,
+                chatDeploymentName = metadata.ChatDeploymentName,
+                utilityDeploymentName = metadata.UtilityDeploymentName,
+                temperature = metadata.Temperature,
+                topP = metadata.TopP,
+                frequencyPenalty = metadata.FrequencyPenalty,
+                presencePenalty = metadata.PresencePenalty,
+                maxOutputTokens = metadata.MaxOutputTokens,
+                pastMessagesCount = metadata.PastMessagesCount,
+                toolNames = metadata.ToolNames ?? [],
+                agentNames = metadata.AgentNames ?? [],
+                a2aConnectionCount = metadata.A2AConnectionIds?.Length ?? 0,
+                agentAvailability = metadata.AgentAvailability?.ToString(),
+                allowToolInvocation = metadata.AllowToolInvocation,
+                personaName = template.TryGet<AIPersonaMetadata>(out var persona) ? persona.PersonaId : null,
+                requiresFeatures = template.GetOrCreate<ProfileScenarioMetadata>().RequiresFeatures ?? [],
+            };
+        }
+        else
+        {
+            instructions = template.TryGet<SystemPromptTemplateMetadata>(out var systemPrompt) ? systemPrompt.SystemMessage : null;
+        }
+
+        return AgentToolResults.Json(new
+        {
+            id = template.ItemId,
+            name = template.Name,
+            title = template.DisplayText,
+            description = template.Description,
+            source = template.Source,
+            category = template.Category,
+            isListable = template.IsListable,
+            isShipped,
+            instructions,
+            profile,
+            editPath = isShipped ? null : AIProfileToolSupport.GetTemplateEditPath(services, template.ItemId),
         });
     }
 }

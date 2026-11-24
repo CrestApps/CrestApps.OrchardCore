@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Agent.Editors;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -22,6 +23,26 @@ public sealed class UpdateSiteSettingsTool : AIFunction
     /// The name of the tool.
     /// </summary>
     public const string TheName = "updateSiteSettings";
+
+    // The settings pages a chat never changes: user registration, user login (the Login page of the Users settings,
+    // LoginSettingsDisplayDriver.GroupId), HTTPS and the reverse proxy.
+    private static readonly HashSet<string> _deniedGroups = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "userRegistration",
+        "userLogin",
+        "Https",
+        "ReverseProxy",
+    };
+
+    // The settings sections a chat never changes on any page: the admin chat widget, the MCP server, WebMCP, and the AI
+    // profile that replies to and triages tickets on every desk that names none (Settings › Service Desk).
+    private static readonly HashSet<string> _deniedSections = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "AIChatAdminWidgetSettings",
+        "McpServerSettings",
+        "WebMcpSettings",
+        "TicketAISettings",
+    };
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
@@ -86,6 +107,13 @@ public sealed class UpdateSiteSettingsTool : AIFunction
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
+        // One wrong value on these pages locks people out or hands the site to someone else, so a chat never changes them
+        // (review of pull request 1334, F4).
+        if (_deniedGroups.Contains(groupId))
+        {
+            return $"Nothing was saved: the '{groupId}' settings decide who can sign up and how the site is reached, and one wrong value can lock everyone out, so they are not changed from the chat. A person changes them on the settings page.";
+        }
+
         if (!AgentToolArguments.TryReadJsonObject(arguments, "changes", out var changes) || changes is null || changes.Count == 0)
         {
             return "Nothing was saved: changes must be an object keyed by section name and then by field name, as getSiteSettings returns them.";
@@ -117,6 +145,15 @@ public sealed class UpdateSiteSettingsTool : AIFunction
         if (problems.Count > 0)
         {
             return $"Nothing was saved: {string.Join(" ", problems)}";
+        }
+
+        // The settings that decide which assistant the admin widget runs and what outside clients reach through MCP and
+        // WebMCP: changing them from the chat would let the assistant rewire itself (review of pull request 1334, F4).
+        var denied = normalized.Keys.Where(IsDeniedSection).ToList();
+
+        if (denied.Count > 0)
+        {
+            return $"Nothing was saved: the settings {string.Join(", ", denied)} decide which assistant runs and what outside clients can reach, so they are not changed from the chat. A person changes them on the settings page.";
         }
 
         var formValues = SiteSettingsEditor.BuildFormValues(before, normalized);
@@ -184,6 +221,15 @@ public sealed class UpdateSiteSettingsTool : AIFunction
                 ? "The settings are saved and the site reloads when this request ends; the chat may reconnect."
                 : "The settings are saved. Some settings pages (external sign-in providers, for example) also reload the site after a save without saying so; the chat may then reconnect.",
         });
+    }
+
+    // A section is named after its form prefix, such as ISite.McpServerSettings.
+    private static bool IsDeniedSection(string sectionName)
+    {
+        var separator = sectionName.LastIndexOf('.');
+        var name = separator < 0 ? sectionName : sectionName[(separator + 1)..];
+
+        return _deniedSections.Contains(name);
     }
 
     // The values a settings page never changes; a save that changes one of them is refused.

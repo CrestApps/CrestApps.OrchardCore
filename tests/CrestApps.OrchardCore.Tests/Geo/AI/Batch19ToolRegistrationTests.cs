@@ -1,9 +1,7 @@
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Accounts.AI;
-using CrestApps.OrchardCore.Addresses.AI;
 using CrestApps.OrchardCore.Geo.AI;
-using CrestApps.OrchardCore.PhoneNumbers.AI;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.AI;
 using CrestApps.OrchardCore.Tests.Agent.AIModels;
 using CrestApps.OrchardCore.TimeZones.AI;
@@ -11,9 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using AccountsAIToolsStartup = CrestApps.OrchardCore.Accounts.AIToolsStartup;
-using AddressesAIToolsStartup = CrestApps.OrchardCore.Addresses.AIToolsStartup;
 using GeoAIToolsStartup = CrestApps.OrchardCore.Geo.AIToolsStartup;
-using PhoneNumbersAIToolsStartup = CrestApps.OrchardCore.PhoneNumbers.AIToolsStartup;
 using TimeZonesAIToolsStartup = CrestApps.OrchardCore.TimeZones.AIToolsStartup;
 using VerificationsAIToolsStartup = CrestApps.OrchardCore.PhoneNumbers.Verifications.AIToolsStartup;
 
@@ -30,8 +26,6 @@ public sealed class Batch19ToolRegistrationTests
     private static readonly Type[] _startups =
     [
         typeof(TimeZonesAIToolsStartup),
-        typeof(AddressesAIToolsStartup),
-        typeof(PhoneNumbersAIToolsStartup),
         typeof(VerificationsAIToolsStartup),
         typeof(GeoAIToolsStartup),
         typeof(AccountsAIToolsStartup),
@@ -43,19 +37,14 @@ public sealed class Batch19ToolRegistrationTests
     public static TheoryData<string, bool> Tools => new()
     {
         { ListTimeZoneMapsTool.TheName, false },
-        { SaveTimeZoneMapTool.TheName, false },
-        { DeleteTimeZoneMapTool.TheName, true },
-        { ValidateAddressTool.TheName, false },
-        { NormalizePhoneNumberTool.TheName, false },
         { ListPhoneNumberVerificationsTool.TheName, false },
         { RetryPhoneNumberVerificationsTool.TheName, true },
         { ListServiceTerritoriesTool.TheName, false },
         { SaveServiceTerritoryTool.TheName, false },
         { DeleteServiceTerritoryTool.TheName, true },
-        { FindServiceTerritoryTool.TheName, false },
-        { GeocodeAddressTool.TheName, true },
-        { GetGeocodingStatusTool.TheName, false },
+        { FindServiceTerritoryTool.TheName, true },
         { ListAccountsTool.TheName, false },
+        { GetAccountTool.TheName, false },
         { SetAccountMembersTool.TheName, true },
         { SaveAccountLocationTool.TheName, false },
         { DeleteAccountLocationTool.TheName, true },
@@ -84,22 +73,20 @@ public sealed class Batch19ToolRegistrationTests
     }
 
     [Fact]
-    public void TheBatch_RegistersEighteenTools()
+    public void TheBatch_RegistersThirteenTools()
     {
         // Act
         var tools = GetTools(_startups);
 
         // Assert
-        Assert.Equal(18, tools.Count);
+        Assert.Equal(13, tools.Count);
     }
 
     [Theory]
-    [InlineData(typeof(TimeZonesAIToolsStartup), 3, null)]
-    [InlineData(typeof(AddressesAIToolsStartup), 1, null)]
-    [InlineData(typeof(PhoneNumbersAIToolsStartup), 1, null)]
+    [InlineData(typeof(TimeZonesAIToolsStartup), 1, null)]
     [InlineData(typeof(VerificationsAIToolsStartup), 2, null)]
-    [InlineData(typeof(GeoAIToolsStartup), 6, null)]
-    [InlineData(typeof(AccountsAIToolsStartup), 1, null)]
+    [InlineData(typeof(GeoAIToolsStartup), 4, null)]
+    [InlineData(typeof(AccountsAIToolsStartup), 2, null)]
     [InlineData(typeof(MembersAIToolsStartup), 1, AccountsConstants.MembersFeature)]
     [InlineData(typeof(LocationsAIToolsStartup), 2, AccountsConstants.LocationsFeature)]
     [InlineData(typeof(TeamAIToolsStartup), 1, AccountsConstants.TeamFeature)]

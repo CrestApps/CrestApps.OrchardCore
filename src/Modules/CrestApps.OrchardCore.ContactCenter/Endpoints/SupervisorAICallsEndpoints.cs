@@ -5,8 +5,8 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
-using YesSql;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
@@ -64,28 +63,14 @@ internal static class SupervisorAICallsEndpoints
             return TypedResults.Forbid();
         }
 
-        var activities = await session
-            .Query<OmnichannelActivity, OmnichannelActivityIndex>(
-                index => index.InteractionType == ActivityInteractionType.Automated &&
-                    index.Status == ActivityStatus.InProgress &&
-                    index.Channel == OmnichannelConstants.Channels.Phone &&
-                    !index.AiEscalated,
-                collection: OmnichannelConstants.CollectionName)
-            .OrderByDescending(index => index.ScheduledUtc)
-            .Take(MaxLiveCalls)
-            .ListAsync(httpContext.RequestAborted);
+        var liveCalls = await LiveAIVoiceCalls.ListAsync(session, MaxLiveCalls, httpContext.RequestAborted);
 
         var now = clock.UtcNow;
         var profileNames = new Dictionary<string, string>(StringComparer.Ordinal);
         var calls = new List<object>();
 
-        foreach (var activity in activities)
+        foreach (var (activity, liveCall) in liveCalls)
         {
-            if (!activity.TryGet<AILiveCall>(out var liveCall))
-            {
-                continue;
-            }
-
             var profileName = await ResolveProfileNameAsync(profileManager, profileNames, activity.AIProfileId);
             var contact = string.IsNullOrEmpty(activity.ContactContentItemId)
                 ? null

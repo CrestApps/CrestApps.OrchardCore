@@ -47,7 +47,7 @@ internal sealed class GetCouponTool : CouponAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Returns one coupon by id or code with all its rules, its recent uses with what each paid for, uses currently held by open checkouts, the count of generated codes and how many were used, and its discount link. The generated codes themselves are never returned; the result links to the coupon's page, where they are downloaded.";
+    public override string Description => "Returns one coupon by id or code with all its rules, its recent uses with what each paid for, uses currently held by open checkouts, the count of generated codes and how many were used, and its discount link. The generated codes themselves are never returned in the chat; the result gives a link that downloads them as a CSV file.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -116,7 +116,8 @@ internal sealed class GetCouponTool : CouponAIToolBase
             {
                 total = generated,
                 used = usedGenerated,
-                note = generated > 0 ? "The codes are not shown here. Download them with their use counts from the coupon's page." : null,
+                file = generated > 0 ? GetAdminPath(services, "CouponsExportCodes", new { itemId = coupon.ItemId }) : null,
+                note = generated > 0 ? "The codes are not shown here. file downloads them as a CSV file with their use counts (the Export action of the coupon's page)." : null,
             },
             discountLink = coupon.CanBeTyped && request is not null
                 ? $"{request.Scheme}://{request.Host}{request.PathBase}/discount/{Uri.EscapeDataString(coupon.Code)}"

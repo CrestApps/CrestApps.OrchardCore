@@ -32,10 +32,12 @@ public sealed class BackgroundTasksToolsStartup : StartupBase
             .WithCategory(S["Background Tasks"])
             .Selectable();
 
+        // A task can send mass messages, place calls or purge data: running one outside its schedule asks first.
         services.AddCoreAITool<RunBackgroundTaskTool>(RunBackgroundTaskTool.TheName)
             .WithTitle(S["Run Background Task"])
             .WithDescription(S["Queues one or more background tasks to run now, outside their schedule. It returns once the run is requested; use listBackgroundTasks afterwards to see the result."])
             .WithCategory(S["Background Tasks"])
+            .RequireApproval()
             .Selectable();
     }
 }

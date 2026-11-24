@@ -3,22 +3,20 @@ using CrestApps.OrchardCore.Accounts.B2B.AI;
 using CrestApps.OrchardCore.Customers;
 using CrestApps.OrchardCore.Customers.AI;
 using CrestApps.OrchardCore.Customers.Core;
-using CrestApps.OrchardCore.Teams.AI;
 using CrestApps.OrchardCore.Tests.Agent.AIModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using B2BAIToolsStartup = CrestApps.OrchardCore.Accounts.B2B.AIToolsStartup;
 using CustomersAIToolsStartup = CrestApps.OrchardCore.Customers.AIToolsStartup;
-using TeamsAIToolsStartup = CrestApps.OrchardCore.Teams.AIToolsStartup;
 
 namespace CrestApps.OrchardCore.Tests.Customers.AI;
 
 /// <summary>
-/// The tools of batch 20 (business buying and price lists, customers, store credit, loyalty points, teams) are registered
-/// with a title, a description and a category, can be picked on a profile, ask for approval as the catalog says (punchout,
+/// The tools of batch 20 (business buying and price lists, customers, store credit, loyalty points) are registered with a
+/// title, a description and a category, can be picked on a profile, ask for approval as the catalog says (punchout,
 /// deletes, data requests, store credit and points), and are registered by the startup of the feature they belong to,
-/// which requires the AI feature.
+/// which requires the AI feature. The teams became a record kind; the Teams tests check its registration.
 /// </summary>
 public sealed class Batch20ToolRegistrationTests
 {
@@ -28,13 +26,12 @@ public sealed class Batch20ToolRegistrationTests
         typeof(CustomersAIToolsStartup),
         typeof(StoreCreditAIToolsStartup),
         typeof(LoyaltyAIToolsStartup),
-        typeof(TeamsAIToolsStartup),
     ];
 
     public static TheoryData<string, bool> Tools => new()
     {
         { GetB2BAccountSummaryTool.TheName, false },
-        { SaveB2BAccountSettingsTool.TheName, false },
+        { SaveB2BAccountSettingsTool.TheName, true },
         { ConfigureB2BPunchoutTool.TheName, true },
         { ListPriceListsTool.TheName, false },
         { SavePriceListTool.TheName, false },
@@ -48,9 +45,6 @@ public sealed class Batch20ToolRegistrationTests
         { EraseCustomerDataTool.TheName, true },
         { AdjustCustomerStoreCreditTool.TheName, true },
         { AdjustCustomerLoyaltyPointsTool.TheName, true },
-        { ListTeamsTool.TheName, false },
-        { SaveTeamTool.TheName, false },
-        { DeleteTeamTool.TheName, true },
     };
 
     [Theory]
@@ -75,13 +69,13 @@ public sealed class Batch20ToolRegistrationTests
     }
 
     [Fact]
-    public void TheBatch_RegistersEighteenTools()
+    public void TheBatch_RegistersFifteenTools()
     {
         // Act
         var tools = GetTools(_startups);
 
         // Assert
-        Assert.Equal(18, tools.Count);
+        Assert.Equal(15, tools.Count);
     }
 
     [Theory]
@@ -89,7 +83,6 @@ public sealed class Batch20ToolRegistrationTests
     [InlineData(typeof(CustomersAIToolsStartup), 7, null)]
     [InlineData(typeof(StoreCreditAIToolsStartup), 1, CustomersConstants.Features.StoreCredit)]
     [InlineData(typeof(LoyaltyAIToolsStartup), 1, CustomersConstants.Features.Loyalty)]
-    [InlineData(typeof(TeamsAIToolsStartup), 3, null)]
     public void EachStartup_RegistersItsTools_ForItsFeature_WhenTheAIFeatureIsOn(Type startupType, int expectedCount, string featureId)
     {
         // Act

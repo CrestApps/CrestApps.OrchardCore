@@ -42,6 +42,7 @@
     <PackageReference Include="OrchardCore.ReCaptcha.Core" />
     <PackageReference Include="OrchardCore.RateLimits.Core" />
     <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="CrestApps.Core.AI" />
   </ItemGroup>
 
   <ItemGroup>

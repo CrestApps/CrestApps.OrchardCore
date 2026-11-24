@@ -7,8 +7,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, read and delete OpenID Connect client applications and that list, save and delete
-/// OpenID Connect scopes, when the OpenID Connect Management feature is on.
+/// Registers the tools that list and read OpenID Connect client applications and that list OpenID Connect scopes, when
+/// the OpenID Connect Management feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.OpenIdManagement)]
 public sealed class OpenIdToolsStartup : StartupBase
@@ -39,31 +39,10 @@ public sealed class OpenIdToolsStartup : StartupBase
             .WithCategory(S["OpenID Connect"])
             .Selectable();
 
-        services.AddCoreAITool<DeleteOpenIdApplicationTool>(DeleteOpenIdApplicationTool.TheName)
-            .WithTitle(S["Delete OpenID Application"])
-            .WithDescription(S["Deletes an OpenID application; every client that uses its client id stops working."])
-            .WithCategory(S["OpenID Connect"])
-            .RequireApproval()
-            .Selectable();
-
         services.AddCoreAITool<ListOpenIdScopesTool>(ListOpenIdScopesTool.TheName)
             .WithTitle(S["List OpenID Scopes"])
             .WithDescription(S["Lists the OpenID scopes with name, display name, description and resources."])
             .WithCategory(S["OpenID Connect"])
-            .Selectable();
-
-        services.AddCoreAITool<SaveOpenIdScopeTool>(SaveOpenIdScopeTool.TheName)
-            .WithTitle(S["Save OpenID Scope"])
-            .WithDescription(S["Creates or updates an OpenID scope: name, display name, description and the resources (audiences) it grants."])
-            .WithCategory(S["OpenID Connect"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<DeleteOpenIdScopeTool>(DeleteOpenIdScopeTool.TheName)
-            .WithTitle(S["Delete OpenID Scope"])
-            .WithDescription(S["Deletes an OpenID scope; applications that request it will be refused."])
-            .WithCategory(S["OpenID Connect"])
-            .RequireApproval()
             .Selectable();
     }
 }

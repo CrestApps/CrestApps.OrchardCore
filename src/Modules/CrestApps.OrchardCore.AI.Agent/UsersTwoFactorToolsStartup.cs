@@ -7,8 +7,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tool that switches off the two-factor authentication of a user, when the Two-Factor Authentication
-/// feature of Users is on.
+/// Registers the tool that resets the second sign-in factors of a user (two-factor authentication and the authenticator
+/// app key), when the Two-Factor Authentication feature of Users is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Users2FA)]
 public sealed class UsersTwoFactorToolsStartup : StartupBase
@@ -27,9 +27,10 @@ public sealed class UsersTwoFactorToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreAITool<DisableUserTwoFactorTool>(DisableUserTwoFactorTool.TheName)
-            .WithTitle(S["Disable User Two-Factor Authentication"])
-            .WithDescription(S["Switches off two-factor authentication for a user who lost their second factor, so they can sign in with their password and set it up again. It refuses for the calling user's own account."])
+        // A new authenticator key cannot be undone, and both factors weaken the sign-in of another person.
+        services.AddCoreAITool<ResetUserSignInFactorsTool>(ResetUserSignInFactorsTool.TheName)
+            .WithTitle(S["Reset User Sign-In Factors"])
+            .WithDescription(S["Resets the second sign-in factors of a user who lost them: switches off two-factor authentication, and can also forget their authenticator app key so a lost device's codes stop working. The user's other sessions are signed out. It refuses for the calling user's own account and never returns a key or a recovery code. Passkeys cannot be removed here: the Orchard Core version this site runs has no passkeys."])
             .WithCategory(S["Users Management"])
             .RequireApproval()
             .Selectable();

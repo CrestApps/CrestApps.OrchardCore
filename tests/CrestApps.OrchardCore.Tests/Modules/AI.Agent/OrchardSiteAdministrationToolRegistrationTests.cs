@@ -1,7 +1,6 @@
 using System.Globalization;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Agent.Admin;
-using CrestApps.OrchardCore.AI.Agent.AdminDashboard;
 using CrestApps.OrchardCore.AI.Agent.AdminMenus;
 using CrestApps.OrchardCore.AI.Agent.Deployment;
 using CrestApps.OrchardCore.AI.Agent.Settings;
@@ -14,7 +13,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Agent;
 
 /// <summary>
-/// The Orchard Core site administration tools of the AI Agent module (settings, admin pages, dashboard, admin menus,
+/// The Orchard Core site administration tools of the AI Agent module (settings, admin pages, admin menus,
 /// tenant feature profiles and deployment plans) are registered with a title, a description and a category, can be
 /// picked on a profile, and ask for approval exactly where the tool coverage plan says so. The tools this batch
 /// deferred are not registered.
@@ -27,7 +26,6 @@ public sealed class OrchardSiteAdministrationToolRegistrationTests
         GetSiteSettingsTool.TheName,
         UpdateSiteSettingsTool.TheName,
         FindAdminPageTool.TheName,
-        ListAdminDashboardWidgetsTool.TheName,
         ListAdminMenusTool.TheName,
         SaveAdminMenuTool.TheName,
         ListTenantFeatureProfilesTool.TheName,
@@ -43,7 +41,6 @@ public sealed class OrchardSiteAdministrationToolRegistrationTests
         { GetSiteSettingsTool.TheName, false },
         { UpdateSiteSettingsTool.TheName, true },
         { FindAdminPageTool.TheName, false },
-        { ListAdminDashboardWidgetsTool.TheName, false },
         { ListAdminMenusTool.TheName, false },
         { SaveAdminMenuTool.TheName, false },
         { ListTenantFeatureProfilesTool.TheName, false },
@@ -78,7 +75,6 @@ public sealed class OrchardSiteAdministrationToolRegistrationTests
     [Theory]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.SettingsToolsStartup), 3)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.AdminToolsStartup), 1)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.AdminDashboardToolsStartup), 1)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.AdminMenuToolsStartup), 2)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.TenantFeatureProfilesToolsStartup), 2)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.DeploymentToolsStartup), 3)]

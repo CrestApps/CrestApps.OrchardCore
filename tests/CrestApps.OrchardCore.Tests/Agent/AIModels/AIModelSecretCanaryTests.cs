@@ -33,12 +33,6 @@ public sealed class AIModelSecretCanaryTests
     public static TheoryData<string, Dictionary<string, object>> Calls => new()
     {
         { ListAIProviderConnectionsTool.TheName, new() { ["includeProviders"] = true } },
-        { SaveAIProviderConnectionTool.TheName, new() { ["connectionId"] = "openai-1", ["title"] = "OpenAI" } },
-        { SaveAIProviderConnectionTool.TheName, new() { ["connectionId"] = "azure-1", ["endpoint"] = "https://contoso.openai.azure.com/" } },
-        { SaveAIProviderConnectionTool.TheName, new() { ["connectionId"] = "openai-1", ["apiKey"] = "CANARY-ARGUMENT-KEY" } },
-        { SaveAIProviderConnectionTool.TheName, new() { ["provider"] = "OpenAI", ["name"] = "openai-2", ["apiKey"] = "CANARY-ARGUMENT-KEY" } },
-        { SaveAIProviderConnectionTool.TheName, new() { ["connectionId"] = "config-1", ["title"] = "Config" } },
-        { DeleteAIProviderConnectionTool.TheName, new() { ["connectionIds"] = new[] { "legacy-1", "config-1" } } },
         { ListAIDeploymentsTool.TheName, new() { ["includeOptions"] = true } },
         { SaveAIDeploymentTool.TheName, new() { ["deploymentId"] = "speech-1", ["endpoint"] = "https://api.elevenlabs.io/" } },
         { SaveAIDeploymentTool.TheName, new() { ["deploymentId"] = "speech-1", ["apiKey"] = "CANARY-ARGUMENT-KEY" } },
@@ -151,8 +145,6 @@ public sealed class AIModelSecretCanaryTests
         => toolName switch
         {
             ListAIProviderConnectionsTool.TheName => new ListAIProviderConnectionsTool(),
-            SaveAIProviderConnectionTool.TheName => new SaveAIProviderConnectionTool(),
-            DeleteAIProviderConnectionTool.TheName => new DeleteAIProviderConnectionTool(),
             ListAIDeploymentsTool.TheName => new ListAIDeploymentsTool(),
             SaveAIDeploymentTool.TheName => new SaveAIDeploymentTool(),
             SetAIDeploymentPricingTool.TheName => new SetAIDeploymentPricingTool(),

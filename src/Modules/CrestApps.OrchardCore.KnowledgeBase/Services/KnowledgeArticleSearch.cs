@@ -53,9 +53,25 @@ public sealed class KnowledgeArticleSearch
     /// <param name="take">How many to return.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The articles.</returns>
-    public async Task<IReadOnlyList<KnowledgeArticleIndex>> FindAsync(ClaimsPrincipal user, string terms, IReadOnlyCollection<string> categoryIds, int take, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<KnowledgeArticleIndex>> FindAsync(ClaimsPrincipal user, string terms, IReadOnlyCollection<string> categoryIds, int take, CancellationToken cancellationToken = default)
+        => FindAsync(user, terms, categoryIds, take, readerRoles: null, cancellationToken);
+
+    /// <summary>
+    /// Finds articles among those the user may read and, when <paramref name="readerRoles"/> is given, that reader may
+    /// read too, as <see cref="SuggestAsync(ClaimsPrincipal, string, int, IReadOnlyCollection{string}, CancellationToken)"/>
+    /// does: each word of <paramref name="terms"/> must be in the title or the summary; the most helpful come first.
+    /// </summary>
+    /// <param name="user">The reader.</param>
+    /// <param name="terms">The words, or none for every article.</param>
+    /// <param name="categoryIds">The categories (a category and those under it), or none for every category.</param>
+    /// <param name="take">How many to return.</param>
+    /// <param name="readerRoles">The roles of who will open the links (<see cref="VisitorReader"/>, <see cref="SignedInReader"/>),
+    /// or <see langword="null"/> for the user's own.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The articles.</returns>
+    internal async Task<IReadOnlyList<KnowledgeArticleIndex>> FindAsync(ClaimsPrincipal user, string terms, IReadOnlyCollection<string> categoryIds, int take, IReadOnlyCollection<string> readerRoles, CancellationToken cancellationToken)
     {
-        var query = Readable(user, readerRoles: null);
+        var query = Readable(user, readerRoles);
 
         if (categoryIds is { Count: > 0 })
         {

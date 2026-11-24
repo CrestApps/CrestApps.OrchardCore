@@ -7,9 +7,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Geo;
 
 /// <summary>
-/// Registers the service territory and geocoding AI tools whenever the Geo and AI features are on. The territory tools
-/// need <c>ManageGeoTerritories</c> and the geocoding tools <c>ManageGeoSettings</c>, as their admin pages do. Deleting a
-/// territory asks for approval, and so does a geocoding lookup, which the site pays its provider for.
+/// Registers the service territory AI tools whenever the Geo and AI features are on. They need
+/// <c>ManageGeoTerritories</c>, as the Territories page does; finding the territory of a street address geocodes it,
+/// which also needs <c>ManageGeoSettings</c>. Deleting a territory asks for approval.
 /// </summary>
 [RequireFeatures(AIFeatureIds.Area)]
 public sealed class AIToolsStartup : StartupBase
@@ -49,21 +49,9 @@ public sealed class AIToolsStartup : StartupBase
 
         services.AddCoreAITool<FindServiceTerritoryTool>(FindServiceTerritoryTool.TheName)
             .WithTitle(S["Find Service Territory"])
-            .WithDescription(S["Finds which service territory covers a latitude/longitude or a postal code. Use geocodeAddress first when you only have a street address."])
-            .WithCategory(S["Geo"])
-            .Selectable();
-
-        services.AddCoreAITool<GeocodeAddressTool>(GeocodeAddressTool.TheName)
-            .WithTitle(S["Geocode Address"])
-            .WithDescription(S["Looks up the coordinates of an address, or the address of coordinates, with the configured maps provider. It is a billable provider call and fails when no geocoding provider is set."])
+            .WithDescription(S["Finds which service territory covers a street address, a latitude/longitude or a postal code. A street address is geocoded first with the configured maps provider (a billable call that needs the Manage Geo settings permission), and the result returns the point it found."])
             .WithCategory(S["Geo"])
             .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<GetGeocodingStatusTool>(GetGeocodingStatusTool.TheName)
-            .WithTitle(S["Get Geocoding Status"])
-            .WithDescription(S["Reports the background geocoding queue: how many addresses are waiting, done and failed, the last error, and which providers are selected. Use it when addresses have no coordinates."])
-            .WithCategory(S["Geo"])
             .Selectable();
     }
 }

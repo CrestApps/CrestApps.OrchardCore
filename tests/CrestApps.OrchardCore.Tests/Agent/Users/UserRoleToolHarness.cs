@@ -22,6 +22,7 @@ using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Json;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Security.Services;
@@ -271,6 +272,13 @@ internal sealed class UserRoleToolHarness
         services.AddSingleton<ITwoFactorAuthenticationHandler>(new SiteTwoFactorHandler(this));
         services.AddSingleton<IPermissionGrantingService>(new NamePermissionGrantingService());
         services.AddSingleton<IPermissionProvider>(new FixedPermissionProvider(Permissions));
+
+        // The principal of a user as sign-in builds it, and the time explainUserAccess compares a lockout with.
+        services.AddSingleton<IUserClaimsPrincipalFactory<IUser>>(new UserClaimsPrincipalFactory<IUser, IRole>(userManager, roleManager, Options.Create(identityOptions)));
+
+        var clock = new Mock<IClock>();
+        clock.Setup(c => c.UtcNow).Returns(new DateTime(2026, 11, 19, 12, 0, 0, DateTimeKind.Utc));
+        services.AddSingleton(clock.Object);
         services.AddSingleton(_session.Object);
         services.AddSingleton(_documentStore.Object);
 

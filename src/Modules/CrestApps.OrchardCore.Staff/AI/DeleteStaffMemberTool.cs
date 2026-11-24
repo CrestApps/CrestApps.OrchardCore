@@ -37,7 +37,7 @@ internal sealed class DeleteStaffMemberTool : StaffManagementAIToolBase
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Deletes a staff record. It is refused while people still report to them; set the status to Terminated instead to keep history.";
+    public override string Description => "Deletes a staff record. It is refused while people still report to them; to keep their history, end their employment with terminateStaffMember instead.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;

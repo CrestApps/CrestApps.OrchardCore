@@ -19,25 +19,26 @@ using YSession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Tests.Agent.Flows;
 
 /// <summary>
-/// The tools that list, add, update, move and remove the content items nested in a page's Flow and Bag parts. They
+/// The tools that list (getContentItem with include nested), add, update, move and remove the content items nested in a page's Flow and Bag parts. They
 /// change one nested item and leave the rest of the page as it was.
 /// </summary>
 public sealed class NestedContentItemToolsTests
 {
     [Fact]
-    public async Task ListNestedContentItems_ReturnsTheOutlineWithChildrenAfterTheirParent()
+    public async Task GetContentItem_WithNested_ReturnsTheOutlineWithChildrenAfterTheirParent()
     {
         // Arrange
         var harness = new Harness();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ListNestedContentItemsTool(), harness.Services, new()
+        var result = await AgentToolTestContext.InvokeAsync(new GetContentItemTool(), harness.Services, new()
         {
             ["contentItemId"] = "page-1",
+            ["include"] = new[] { "nested" },
         });
 
         // Assert
-        var json = AgentToolTestContext.ReadJson(result);
+        var json = AgentToolTestContext.ReadJson(result).GetProperty("nested");
         var items = json.GetProperty("items").EnumerateArray().ToList();
 
         Assert.Equal(3, json.GetProperty("total").GetInt32());
@@ -54,7 +55,7 @@ public sealed class NestedContentItemToolsTests
     }
 
     [Fact]
-    public async Task SaveNestedContentItem_ForANewWidget_InsertsItAtThePositionAndLeavesTheRestOfThePage()
+    public async Task SaveNestedContentItem_ForANewWidget_InsertsItAfterTheGivenSiblingAndLeavesTheRestOfThePage()
     {
         // Arrange
         var harness = new Harness();
@@ -63,7 +64,7 @@ public sealed class NestedContentItemToolsTests
         var result = await AgentToolTestContext.InvokeAsync(new SaveNestedContentItemTool(), harness.Services, new()
         {
             ["contentItemId"] = "page-1",
-            ["position"] = 1,
+            ["afterId"] = "widget-1",
             ["contentItem"] = new JsonObject
             {
                 ["ContentType"] = "Quote",
@@ -142,7 +143,7 @@ public sealed class NestedContentItemToolsTests
     }
 
     [Fact]
-    public async Task SaveNestedContentItem_WithOnlyAPosition_MovesTheNestedItemInItsList()
+    public async Task SaveNestedContentItem_WithAnEmptyAfterId_MovesTheNestedItemFirstInItsList()
     {
         // Arrange
         var harness = new Harness();
@@ -152,13 +153,59 @@ public sealed class NestedContentItemToolsTests
         {
             ["contentItemId"] = "page-1",
             ["nestedContentItemId"] = "section-1",
-            ["position"] = 0,
+            ["afterId"] = string.Empty,
         });
 
         // Assert
-        Assert.Equal("moved", AgentToolTestContext.ReadJson(result).GetProperty("action").GetString());
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.Equal("moved", json.GetProperty("action").GetString());
+        Assert.Equal(0, json.GetProperty("position").GetInt32());
         Assert.Equal(new[] { "section-1", "widget-1" }, harness.Widgets.Select(widget => widget["ContentItemId"].GetValue<string>()));
         Assert.Equal("column-1", harness.Widgets[0]["Columns"]["ContentItems"][0]["ContentItemId"].GetValue<string>());
+    }
+
+    [Fact]
+    public async Task SaveNestedContentItem_WithAnAfterId_MovesTheNestedItemRightAfterThatSibling()
+    {
+        // Arrange
+        var harness = new Harness();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveNestedContentItemTool(), harness.Services, new()
+        {
+            ["contentItemId"] = "page-1",
+            ["nestedContentItemId"] = "widget-1",
+            ["afterId"] = "section-1",
+        });
+
+        // Assert
+        Assert.Equal(1, AgentToolTestContext.ReadJson(result).GetProperty("position").GetInt32());
+        Assert.Equal(new[] { "section-1", "widget-1" }, harness.Widgets.Select(widget => widget["ContentItemId"].GetValue<string>()));
+    }
+
+    [Theory]
+    [InlineData("column-1", "is not a nested item of the target list")]
+    [InlineData("nope", "is not a nested item of the target list")]
+    [InlineData("section-1", "cannot be placed after itself")]
+    public async Task SaveNestedContentItem_WhenTheAfterIdIsNotASiblingInTheList_SavesNothing(string afterId, string expected)
+    {
+        // Arrange
+        var harness = new Harness();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveNestedContentItemTool(), harness.Services, new()
+        {
+            ["contentItemId"] = "page-1",
+            ["nestedContentItemId"] = "section-1",
+            ["afterId"] = afterId,
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved", result, StringComparison.Ordinal);
+        Assert.Contains(expected, result, StringComparison.Ordinal);
+        Assert.Equal(new[] { "widget-1", "section-1" }, harness.Widgets.Select(widget => widget["ContentItemId"].GetValue<string>()));
+        harness.VerifyNothingSaved();
     }
 
     [Theory]

@@ -7,8 +7,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tool that gives roles to a user and takes roles from a user, when the Users and Roles features are
-/// on. Orchard Core adds the role editor of a user, and the permission to assign a role, under the same condition.
+/// Registers the tool that gives roles to a user and takes roles from a user, and the tool that explains why a user can
+/// or cannot do something, when the Users and Roles features are on. Orchard Core adds the role editor of a user, the
+/// permission to assign a role and the role permissions of a signed-in user under the same condition.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Users, OrchardCoreFeatureIds.Roles)]
 public sealed class UserRolesToolsStartup : StartupBase
@@ -32,6 +33,12 @@ public sealed class UserRolesToolsStartup : StartupBase
             .WithDescription(S["Adds roles to a user or removes roles from a user. It refuses to change the calling user's own roles, to remove the administrator role from the only enabled administrator, and to touch a role the caller may not assign."])
             .WithCategory(S["Users Management"])
             .RequireApproval()
+            .Selectable();
+
+        services.AddCoreAITool<ExplainUserAccessTool>(ExplainUserAccessTool.TheName)
+            .WithTitle(S["Explain User Access"])
+            .WithDescription(S["Explains why a user can or cannot do something, for questions like \"why can't Jane edit this page?\": it asks the site's own authorization for the user and a permission, optionally on a content item, and returns the answer, the user's roles that hold the permission, the roles of the site that would grant it, and whether the account is disabled or locked out. Use listPermissions for permission names."])
+            .WithCategory(S["Users Management"])
             .Selectable();
     }
 }
