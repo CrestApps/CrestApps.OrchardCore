@@ -92,11 +92,30 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
 
         if (query.CourseIds is null && _serviceProvider.GetService<SurveyResultsQueries>() is null)
         {
-            // Without the Surveys results queries the surveys with waiting attempts can't be listed up front: every
-            // survey's attempts are read, oldest first, and each attempt's survey is looked up below.
-            var (allCount, all) = await ReadOldestAsync([], grader, take, cancellationToken);
+            // Without the Surveys results queries the surveys with waiting attempts can't be listed up front, and the
+            // small-group rule of anonymous surveys (SurveyAnonymousGroups counts through those queries) can't be applied:
+            // every survey's waiting attempts are read, oldest first, and the attempts of anonymous surveys are left out.
+            // No anonymous attempt is listed here, rather than one the hidden-survey and hidden-group rules would leave
+            // out; the count is of the listed attempts only. An attempt whose survey isn't found is listed as before,
+            // without a name, number or time (PageAsync).
+            var (_, all) = await ReadOldestAsync([], grader, int.MaxValue, cancellationToken);
+            var named = new List<SurveyResponse>();
 
-            return await PageAsync(allCount, all, known, titles, timeZone, [], cancellationToken);
+            foreach (var response in all)
+            {
+                if (!known.TryGetValue(response.SurveyId, out var owner))
+                {
+                    owner = await _surveyManager.FindByIdAsync(response.SurveyId, cancellationToken);
+                    known[response.SurveyId] = owner;
+                }
+
+                if (owner is null || !SurveyAnonymity.IsAnonymous(owner))
+                {
+                    named.Add(response);
+                }
+            }
+
+            return await PageAsync(named.Count, [.. named.Take(take)], known, titles, timeZone, [], cancellationToken);
         }
 
         if (query.CourseIds is null)

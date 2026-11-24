@@ -428,11 +428,20 @@ public sealed class SurveysController : Controller
             return Forbid();
         }
 
+        var wasAnonymous = SurveyAnonymity.IsAnonymous(survey);
         var editor = await _displayManager.UpdateEditorAsync(survey, _updateModelAccessor.ModelUpdater, false, SurveyDetailsDisplayDriver.GroupId);
 
         if (!ModelState.IsValid)
         {
             return View(new SurveyEditorPageViewModel { Survey = survey, Editor = editor });
+        }
+
+        // A survey that becomes anonymous has only test responses (the editor refuses the change otherwise), and they
+        // lose their site-wide numbers, which an anonymous survey never shows next to a named response's number. Only
+        // once every editor has validated, so a refused save changes no response.
+        if (!wasAnonymous && SurveyAnonymity.IsAnonymous(survey))
+        {
+            await SurveyAnonymousNumbers.ClearAsync(HttpContext.RequestServices.GetRequiredService<SurveyResponseStore>(), survey.ItemId, HttpContext.RequestAborted);
         }
 
         await _manager.UpdateAsync(survey, null, HttpContext.RequestAborted);

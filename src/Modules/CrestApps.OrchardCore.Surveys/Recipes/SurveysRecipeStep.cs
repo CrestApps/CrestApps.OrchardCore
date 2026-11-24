@@ -110,7 +110,7 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
                 // anonymous survey never shows next to a named response's number.
                 if (!wasAnonymous && SurveyAnonymity.IsAnonymous(survey))
                 {
-                    await SurveyAnonymousNumbers.ClearAsync(_session, survey.ItemId);
+                    await SurveyAnonymousNumbers.ClearAsync(new SurveyResponseStore(_session), survey.ItemId);
                 }
             }
 

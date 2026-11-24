@@ -28,6 +28,7 @@ public sealed class SurveyTagIndexProvider : IndexProvider<Survey>
             .Map(item => (item.Tags ?? [])
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Select(Normalize)
+                .Where(tag => tag.Length > 0)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(tag => new SurveyTagIndex
                 {
@@ -37,13 +38,21 @@ public sealed class SurveyTagIndexProvider : IndexProvider<Survey>
                 }));
 
     /// <summary>
-    /// Gets a tag as the index holds it: trimmed and cut to <see cref="MaxTagLength"/> characters.
+    /// Gets a tag as the index holds it: control characters (a line break, a tab) turned into spaces, trimmed, and cut
+    /// to <see cref="MaxTagLength"/> characters. A tag is one line of text, so it never carries a line break into a list,
+    /// a filter or a log line.
     /// </summary>
     /// <param name="tag">The tag.</param>
     /// <returns>The tag as indexed.</returns>
     public static string Normalize(string tag)
     {
-        var trimmed = tag?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(tag))
+        {
+            return string.Empty;
+        }
+
+        var text = tag.Any(char.IsControl) ? string.Concat(tag.Select(character => char.IsControl(character) ? ' ' : character)) : tag;
+        var trimmed = text.Trim();
 
         return trimmed.Length > MaxTagLength ? trimmed.Substring(0, MaxTagLength) : trimmed;
     }

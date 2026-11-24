@@ -97,7 +97,17 @@
                     }
                     @if (visit.LeftUtc is { } left)
                     {
-                        <text>&ndash; @((left - visit.EnteredUtc).ToString(@"m\:ss"))</text>
+                        // In whole minutes on an anonymous survey (SurveyAnonymity.ShownDuration), so the seconds spent on a
+                        // page can't line it up with a time recorded elsewhere.
+                        var spent = CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.ShownDuration(left - visit.EnteredUtc, anonymous);
+                        if (anonymous)
+                        {
+                            <text>&ndash; @T["{0} min", (long)spent.TotalMinutes]</text>
+                        }
+                        else
+                        {
+                            <text>&ndash; @spent.ToString(@"m\:ss")</text>
+                        }
                     }
                 </span>
             </li>

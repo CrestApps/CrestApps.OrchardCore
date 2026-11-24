@@ -42,7 +42,8 @@ internal static class SurveyWebhookPayloads
             ["userId"] = anonymous ? null : response.UserId,
             ["respondent"] = anonymous ? null : response.Respondent?.ToString(),
             ["collectorId"] = attributes.ShowsCollector ? response.CollectorId : null,
-            ["context"] = attributes.ShowsContextKind ? response.Context?.ToString() : null,
+            // An anonymous response carries its context kind only, never the id, as the data sets and the API.
+            ["context"] = !attributes.ShowsContextKind ? null : anonymous ? response.Context?.Kind : response.Context?.ToString(),
             // An anonymous response carries no attempt number (it ties a person's responses together) and its times by
             // the day only, in the site's time zone. The delivery itself follows the response, so a receiver must not log
             // when it arrived.

@@ -195,6 +195,38 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SurveyPageVisits_OfAnAnonymousSurvey_AreInWholeMinutes()
+    {
+        // Arrange: R8-Mi17, five anonymous responses (the minimum) whose page visit lasted 2 minutes 41 seconds, and the
+        // identified response, whose visit lasted the same.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddAnonymousResponsesAsync(4);
+
+        await using (var write = _store.OpenSession())
+        {
+            foreach (var response in await write.Query<SurveyResponse, CrestApps.OrchardCore.Surveys.Core.Indexes.SurveyResponseIndex>(collection: SurveysConstants.ResponsesCollectionName).ListAsync(cancellationToken))
+            {
+                response.PageVisits = [new SurveyPageVisit { PageId = "p1", EnteredUtc = _day.AddMinutes(-10), LeftUtc = _day.AddMinutes(-10).AddSeconds(161) }];
+                await write.SaveAsync(response, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyPageVisits", TestSecurity.User("kim"), "ResponseId");
+
+        // Assert: the anonymous visits round to 3 minutes, so the seconds can't line one up with a time recorded
+        // elsewhere; the identified visit keeps its 161 seconds.
+        Assert.Equal(161L, rows["r1"]["Seconds"]);
+        Assert.Equal(180L, rows["a0"]["Seconds"]);
+        Assert.Equal(180L, rows["r2"]["Seconds"]);
+    }
+
+    [Fact]
     public async Task SurveyResponses_AnAnonymousSurveyPaddedWithInProgressAndTestResponses_StillShowsNoRow()
     {
         // Arrange: one completed response more, then in-progress, abandoned and test responses well past the minimum of 5.
@@ -703,6 +735,7 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         [
             new SurveyResponsesDataSet(session, authorization, access, [], names, versions, new SurveyCollectorStore(session), RecipeRoundTrip.Localizer<SurveyResponsesDataSet>()),
             new SurveyAnswersDataSet(session, authorization, access, new ResultsVersionCache(versions), registry, RecipeRoundTrip.Localizer<SurveyAnswersDataSet>()),
+            new SurveyPageVisitsDataSet(session, authorization, access, new ResultsVersionCache(versions), RecipeRoundTrip.Localizer<SurveyPageVisitsDataSet>()),
         ];
 
         return new SurveysDataSource(sets, new SurveyWideDataSetFactory(session, authorization, access, new SurveyStore(session), versions, registry, names, RecipeRoundTrip.Localizer<SurveyWideDataSet>()));

@@ -119,12 +119,9 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
         else
         {
             // A survey can only become anonymous with no real responses, but its test responses keep their site-wide
-            // numbers, which an anonymous survey never shows next to a named response's number.
-            if (access.Anonymity != AnonymityMode.Anonymous && model.Anonymity == AnonymityMode.Anonymous && _serviceProvider.GetService<ISession>() is { } session)
-            {
-                await SurveyAnonymousNumbers.ClearAsync(session, survey.ItemId);
-            }
-
+            // numbers, which an anonymous survey never shows next to a named response's number. The page clears them
+            // once every editor of the page has validated (SurveysController.AccessPost, SurveyAnonymousNumbers), so a
+            // refused save changes no response.
             access.Anonymity = model.Anonymity;
         }
 
