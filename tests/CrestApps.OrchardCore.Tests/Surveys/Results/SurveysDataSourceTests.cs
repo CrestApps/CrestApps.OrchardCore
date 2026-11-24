@@ -154,7 +154,8 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         // Assert
         Assert.Equal(6, rows.Count);
         Assert.Null(rows["r2"]["UserName"]);
-        Assert.Equal("LearningEnrollment", rows["a0"]["ContextKind"]);
+        // 4 enrollment responses and 1 without a context: each group is below 5, together they reach it (R6-M3).
+        Assert.Equal("Other", rows["a0"]["ContextKind"]);
         Assert.Null(rows["a0"]["ContextId"]);
         Assert.Equal(_day.Date, Assert.IsType<DateTime>(rows["r2"]["CompletedUtc"]));
         Assert.Equal(_day, Assert.IsType<DateTime>(rows["r1"]["CompletedUtc"]));
@@ -211,8 +212,9 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         var all = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
         var filtered = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"), conditions: [blue]);
 
-        // Assert: the filter narrows the survey to one person, so the minimum applies after it.
-        Assert.Equal(6, all.Count);
+        // Assert: the filter narrows the survey to one person, so the minimum applies after it. (r2, the one response
+        // without a context next to five enrollments, is left out of both: R6-M3.)
+        Assert.Equal(5, all.Count);
         Assert.Empty(filtered);
     }
 
@@ -238,12 +240,13 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         var filtered = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"), conditions: [abandoned]);
         var wide = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
 
-        // Assert: the lone abandoned response is left out, read with every status or filtered to.
+        // Assert: the lone abandoned response is left out, read with every status or filtered to. (So is r2, the one
+        // completed response without a context next to five enrollments: R6-M3.)
         Assert.DoesNotContain("gave-up", rows.Keys);
-        Assert.Equal(7, rows.Count);
+        Assert.Equal(6, rows.Count);
         Assert.DoesNotContain("gave-up", filtered.Keys);
         Assert.DoesNotContain("gave-up", wide.Keys);
-        Assert.Equal(6, wide.Count);
+        Assert.Equal(5, wide.Count);
     }
 
     [Fact]
@@ -260,8 +263,9 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
 
         // Assert
         Assert.Equal("R-r1", rows["r1"]["Number"]);
-        Assert.Equal("r2", rows["r2"]["Number"]);
-        Assert.Equal("a0", wide["a0"]["Number"]);
+        Assert.NotEqual("R-r2", rows["r2"]["Number"]);
+        Assert.False(((string)rows["r2"]["Number"] ?? string.Empty).StartsWith("r2", StringComparison.Ordinal));
+        Assert.False(((string)wide["a0"]["Number"] ?? string.Empty).StartsWith("a0", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -310,6 +314,158 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         Assert.Equal("BLUE", rows["r2"]["ChoiceText"]);
     }
 
+    [Fact]
+    public async Task SurveyResponses_AnAnonymousSurvey_ADateFilterWithATimeOfDay_SelectsWholeDays()
+    {
+        // Arrange: R6-M2, six completed anonymous responses on one day, one of them at 12:07.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddAnonymousResponsesAsync(4);
+
+        await using (var write = _store.OpenSession())
+        {
+            await write.SaveAsync(ResultsSqliteStore.Response("late", Version("v2", "survey2"), SurveyResponseStatus.Completed, _day.AddMinutes(7), ("q1", new SurveyAnswer { Values = ["red"] })), false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+        var anonymousIds = new[] { "a0", "a1", "a2", "a3", "late", "r2" };
+
+        // Act: step the start of the range past most of the day's responses.
+        var from1205 = await ReadIdsAsync(source, "SurveyResponses", new DataCondition { Field = "ModifiedUtc", Operator = DataFilterOperator.GreaterThanOrEqual, Values = [_day.AddMinutes(5)] });
+        var from1208 = await ReadIdsAsync(source, "SurveyResponses", new DataCondition { Field = "ModifiedUtc", Operator = DataFilterOperator.GreaterThanOrEqual, Values = [_day.AddMinutes(8)] });
+
+        // Assert: the range reaches the index as whole days, so either filter gives the whole day's group, never the one
+        // response of 12:07 on its own (which, below the minimum, would show nothing and give its time away).
+        Assert.Equal(anonymousIds, from1205.Where(anonymousIds.Contains).Order(StringComparer.Ordinal));
+        Assert.Equal(anonymousIds, from1208.Where(anonymousIds.Contains).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AnIncrementalReadPastAnIdentifiedRowOfTheSameDay_KeepsTheAnonymousRows()
+    {
+        // Arrange: R6-L15, an identified response at 18:00 is the largest change time a pipeline read; the anonymous
+        // responses changed earlier that day.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddAnonymousResponsesAsync(4);
+
+        await using (var write = _store.OpenSession())
+        {
+            await write.SaveAsync(ResultsSqliteStore.Response("evening", Version("v1", "survey1"), SurveyResponseStatus.Completed, _day.AddHours(6), ("q1", new SurveyAnswer { Values = ["red"] })), false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+        var first = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+        var watermark = first.Values.Max(row => Assert.IsType<DateTime>(row["ModifiedUtc"]));
+
+        // Act: the next run keeps the rows changed after the largest change time an earlier run read (18:00, had the
+        // anonymous rows been read by their exact times); the pipeline filters each row again on that condition.
+        var after = _day.AddHours(6);
+        var next = (await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"), conditions: [new DataCondition { Field = "ModifiedUtc", Operator = DataFilterOperator.GreaterThan, Values = [after] }]))
+            .Where(row => Assert.IsType<DateTime>(row.Value["ModifiedUtc"]) > after)
+            .Select(row => row.Key)
+            .ToList();
+
+        // Assert: an anonymous row's change time is the end of its day (when it was released), so it is the largest one
+        // read, and a read past the identified 18:00 row still finds the anonymous rows of that day.
+        Assert.Equal(_day.Date.AddDays(1), watermark);
+        Assert.Equal(_day.Date.AddDays(1), Assert.IsType<DateTime>(first["a0"]["ModifiedUtc"]));
+        Assert.Contains("a0", next);
+        Assert.Contains("r2", next);
+        Assert.DoesNotContain("evening", next);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_TodaysAnonymousResponses_WaitUntilTheDayEnds()
+    {
+        // Arrange: five anonymous responses completed now, besides five older ones.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddAnonymousResponsesAsync(5);
+
+        await using (var write = _store.OpenSession())
+        {
+            for (var index = 0; index < 5; index++)
+            {
+                var now = ResultsSqliteStore.Response($"now{index}", Version("v2", "survey2"), SurveyResponseStatus.Completed, DateTime.UtcNow, ("q1", new SurveyAnswer { Values = ["red"] }));
+                now.Context = new CrestApps.OrchardCore.Records.RecordRef("LearningEnrollment", "n" + index);
+                await write.SaveAsync(now, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var ids = await ReadIdsAsync(source, "SurveyResponses");
+
+        // Assert
+        Assert.Contains("a0", ids);
+        Assert.DoesNotContain(ids, id => id.StartsWith("now", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AnonymousRows_ComeAfterTheReadInIdOrder_NotInTimeOrder()
+    {
+        // Arrange: R6-M4, anonymous responses whose ids run against their change times.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var anonymous = Version("v2", "survey2");
+
+        await using (var write = _store.OpenSession())
+        {
+            foreach (var (id, minutes) in new[] { ("z1", -40), ("b2", -10), ("m3", -30), ("c4", -20) })
+            {
+                await write.SaveAsync(ResultsSqliteStore.Response(id, anonymous, SurveyResponseStatus.Completed, _day.AddMinutes(minutes), ("q1", new SurveyAnswer { Values = ["red"] })), false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            }
+
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var ids = await ReadIdsAsync(source, "SurveyResponses");
+
+        // Assert: the identified row first, then the anonymous survey's rows by id.
+        Assert.Equal(["r1", "b2", "c4", "m3", "r2", "z1"], ids);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_ALinkSentToOnePerson_DoesNotShowTheirRow_NorAnAttemptNumber()
+    {
+        // Arrange: R6-M3, five responses on the shared link (r2, a0..a3, a4) and one on a link "for Bob".
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddAnonymousResponsesAsync(5);
+
+        await using (var write = _store.OpenSession())
+        {
+            var bob = ResultsSqliteStore.Response("bob", Version("v2", "survey2"), SurveyResponseStatus.Completed, _day, ("q1", new SurveyAnswer { Values = ["blue"] }));
+            bob.CollectorId = "for-bob";
+            bob.AttemptNumber = 3;
+            await write.SaveAsync(bob, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"));
+        var wide = await ReadAsync(source, "SurveyResponses_pulse", TestSecurity.User("kim"));
+
+        // Assert: "Other" would be Bob alone, so his row isn't listed anywhere (nor is r2, the one response without a
+        // context next to five enrollments); the others carry no attempt number.
+        Assert.DoesNotContain("bob", rows.Keys);
+        Assert.DoesNotContain("bob", wide.Keys);
+        Assert.Equal(["a0", "a1", "a2", "a3", "a4"], wide.Keys.Order(StringComparer.Ordinal));
+        Assert.Null(rows["a0"]["Attempt"]);
+        Assert.Equal(1L, rows["a0"]["VersionNumber"]);
+    }
+
     private static SurveysDataSource Source(ISession session, params Permission[] grants)
     {
         var authorization = TestSecurity.Granting(grants);
@@ -352,6 +508,26 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
             row => (string)row[keyIndex],
             row => (IReadOnlyDictionary<string, object>)fields.Select((name, index) => (name, value: row[index])).ToDictionary(pair => pair.name, pair => pair.value, StringComparer.Ordinal),
             StringComparer.Ordinal);
+    }
+
+    private static async Task<List<string>> ReadIdsAsync(SurveysDataSource source, string dataSet, params DataCondition[] conditions)
+    {
+        var query = new DataSourceQuery
+        {
+            DataSet = dataSet,
+            MaxRows = 100,
+            Context = new DataSourceContext { User = TestSecurity.User("kim") },
+        };
+
+        foreach (var condition in conditions)
+        {
+            query.Conditions.Add(condition);
+        }
+
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
+        var index = table.Fields.Select(field => field.Name).ToList().IndexOf("Id");
+
+        return [.. table.Rows.Select(row => (string)row[index])];
     }
 
     private static SurveyControlRegistry Registry()

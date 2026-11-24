@@ -17,12 +17,13 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 /// Lists the quiz attempts of learners that wait for a grader, for the Learning grading page; each opens on the Surveys
 /// grading page. The courses are turned into the surveys their course items own (the latest version of every item the
 /// courses contain, so attempts of unpublished courses and items stay listed), so the query itself keeps only those
-/// courses' attempts, oldest first, and the count is the count of all of them. The grader's own attempts are left out
-/// (nobody grades their own work, <see cref="SurveyOwnWork"/>). An anonymous survey follows the shared small-group rule
+/// courses' attempts, and the count is the count of all of them. The grader's own attempts are left out (nobody grades
+/// their own work, <see cref="SurveyOwnWork"/>). An anonymous survey follows the shared small-group rule
 /// (<see cref="SurveyAnonymousGroups"/>): nothing of it is listed while its completed responses are below the minimum
-/// group size, and its attempts are listed with no learner, labeled by <see cref="SurveyAnonymity.ResponseLabel"/>
-/// rather than the site-wide response number, and dated by the day only. A list that holds an anonymous survey's
-/// attempts is in random-id order rather than oldest first, as on the Surveys grading queue.
+/// group size, and then its attempts (which belong to the course, not to an enrollment) are listed with no learner,
+/// labeled by <see cref="SurveyRespondentNames.GetLabelAsync(SurveyResponse, CancellationToken)"/> rather than the
+/// site-wide response number, and dated by the day only. Identified attempts are listed oldest first; anonymous ones by
+/// their day, then their id, so none sits between two named attempts by its exact time.
 /// </summary>
 public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
 {
@@ -34,9 +35,9 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
 
     /// <summary>
     /// The most survey ids in one query's <c>IN</c> list, well under SQL Server's limit of 2,100 parameters; more are
-    /// read in several queries and merged.
+    /// read in several queries and merged in the same order.
     /// </summary>
-    public const int SurveysPerQuery = 1000;
+    public const int SurveysPerQuery = SurveyIdChunks.Size;
 
     private readonly ISurveyResponseQueries _responseQueries;
     private readonly ISurveyManager _surveyManager;
@@ -80,63 +81,74 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
         var known = new Dictionary<string, Survey>(StringComparer.Ordinal);
         var take = Math.Clamp(query.Take, 1, MaxTake);
         var grader = string.IsNullOrEmpty(query.GraderUserId) ? null : query.GraderUserId;
-        int count;
-        List<SurveyResponse> responses;
+        var timeZone = CalendarTimeZone(await SiteTimeZoneAsync());
+        IReadOnlyList<Survey> candidates;
+
+        if (query.CourseIds is null && _serviceProvider.GetService<SurveyResultsQueries>() is null)
+        {
+            // Without the Surveys results queries the surveys with waiting attempts can't be listed up front: every
+            // survey's attempts are read, oldest first, and each attempt's survey is looked up below.
+            var (allCount, all) = await ReadOldestAsync([], grader, take, cancellationToken);
+
+            return await PageAsync(allCount, all, known, titles, timeZone, [], cancellationToken);
+        }
 
         if (query.CourseIds is null)
         {
-            var pending = await PendingSurveysAsync(known, cancellationToken);
-            var hidden = await HiddenAnonymousSurveysAsync(pending, cancellationToken);
-            var byId = ListsAnonymous(pending, hidden);
-
-            (count, responses) = await ReadOldestAsync([], hidden, grader, take, byId, cancellationToken);
+            candidates = await PendingSurveysAsync(known, cancellationToken);
         }
         else
         {
-            var surveys = await GetCourseSurveysAsync(query.CourseIds, cancellationToken);
+            candidates = await GetCourseSurveysAsync(query.CourseIds, cancellationToken);
 
-            foreach (var survey in surveys)
+            foreach (var survey in candidates)
             {
                 known[survey.ItemId] = survey;
-            }
-
-            var hidden = await HiddenAnonymousSurveysAsync(surveys, cancellationToken);
-
-            surveys = [.. surveys.Where(survey => !hidden.Contains(survey.ItemId))];
-
-            if (surveys.Count == 0)
-            {
-                return new GradingQueuePage();
-            }
-
-            foreach (var survey in surveys)
-            {
                 titles[survey.ItemId] = survey.Title;
             }
-
-            // Each read names at most SurveysPerQuery surveys. The first `take` attempts of all of them are among the first
-            // `take` of each read, so those are merged and cut again.
-            var byId = ListsAnonymous(surveys, []);
-
-            count = 0;
-            responses = [];
-
-            foreach (var chunk in surveys.Select(survey => survey.ItemId).Distinct(StringComparer.Ordinal).Chunk(SurveysPerQuery))
-            {
-                var (total, page) = await ReadOldestAsync([.. chunk], [], grader, take, byId, cancellationToken);
-
-                count += total;
-                responses.AddRange(page);
-            }
-
-            responses = byId
-                ? [.. responses.OrderBy(response => response.ItemId, StringComparer.Ordinal).Take(take)]
-                : [.. responses
-                    .OrderBy(response => response.CompletedUtc)
-                    .ThenBy(response => response.StartedUtc)
-                    .ThenBy(response => response.ItemId, StringComparer.Ordinal)
-                    .Take(take)];
         }
+
+        var hidden = await HiddenAnonymousSurveysAsync(candidates, cancellationToken);
+        var visible = candidates.Where(survey => survey is not null && !hidden.Contains(survey.ItemId)).ToList();
+
+        if (visible.Count == 0)
+        {
+            return new GradingQueuePage();
+        }
+
+        // Identified attempts come oldest first by their completion time. An anonymous attempt is dated by its day only,
+        // so anonymous surveys are read apart and ordered by that day, then by id: the list never places an anonymous
+        // attempt between two named ones by its exact time. Both reads give their first `take` items in the order the
+        // grading list merges every source by (date, then id), so its pages never repeat or skip an attempt.
+        var identified = visible.Where(survey => !SurveyAnonymity.IsAnonymous(survey)).Select(survey => survey.ItemId).Distinct(StringComparer.Ordinal).ToList();
+        var anonymous = visible.Where(SurveyAnonymity.IsAnonymous).Select(survey => survey.ItemId).Distinct(StringComparer.Ordinal).ToList();
+        var (identifiedCount, identifiedResponses) = identified.Count == 0 ? (0, new List<SurveyResponse>()) : await ReadOldestAsync(identified, grader, take, cancellationToken);
+        var (anonymousCount, anonymousResponses) = anonymous.Count == 0 ? (0, new List<SurveyResponse>()) : await ReadAnonymousAsync(anonymous, grader, take, timeZone, cancellationToken);
+        var anonymousIds = anonymous.ToHashSet(StringComparer.Ordinal);
+        var count = identifiedCount + anonymousCount;
+
+        DateTime SubmittedOf(SurveyResponse response)
+            => anonymousIds.Contains(response.SurveyId)
+                ? SurveyAnonymity.StartOfDayUtc(response.CompletedUtc ?? response.StartedUtc, timeZone)
+                : DateTime.SpecifyKind(response.CompletedUtc ?? response.StartedUtc, DateTimeKind.Utc);
+
+        var responses = identifiedResponses
+            .Concat(anonymousResponses)
+            .OrderBy(SubmittedOf)
+            .ThenBy(response => response.ItemId, StringComparer.Ordinal)
+            .Take(take)
+            .ToList();
+
+        return await PageAsync(count, responses, known, titles, timeZone, anonymousIds, cancellationToken);
+    }
+
+    // Turns the attempts read into the page: titles, labels, and dates (by the day only for anonymous surveys).
+    private async Task<GradingQueuePage> PageAsync(int count, List<SurveyResponse> responses, Dictionary<string, Survey> known, Dictionary<string, string> titles, TimeZoneInfo timeZone, HashSet<string> anonymousIds, CancellationToken cancellationToken)
+    {
+        DateTime SubmittedOf(SurveyResponse response)
+            => anonymousIds.Contains(response.SurveyId)
+                ? SurveyAnonymity.StartOfDayUtc(response.CompletedUtc ?? response.StartedUtc, timeZone)
+                : DateTime.SpecifyKind(response.CompletedUtc ?? response.StartedUtc, DateTimeKind.Utc);
 
         var itemIds = responses
             .Select(response => SurveyResponseProperties.ReadString(response, LearningSurveyContexts.CourseItemIdProperty))
@@ -151,7 +163,7 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
                 .ToDictionary(group => group.Key, group => group.First().DisplayText, StringComparer.Ordinal);
 
         var items = new List<GradingQueueItem>(responses.Count);
-        var timeZoneId = await SiteTimeZoneAsync();
+        var names = _serviceProvider.GetService<SurveyRespondentNames>();
 
         foreach (var response in responses)
         {
@@ -161,8 +173,7 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
                 known[response.SurveyId] = owner;
             }
 
-            var anonymous = owner is null || SurveyAnonymity.IsAnonymous(owner);
-            var submittedUtc = response.CompletedUtc ?? response.StartedUtc;
+            var isAnonymous = owner is null || SurveyAnonymity.IsAnonymous(owner);
 
             var courseId = SurveyResponseProperties.ReadString(response, LearningSurveyContexts.CourseIdProperty);
             var itemId = SurveyResponseProperties.ReadString(response, LearningSurveyContexts.CourseItemIdProperty);
@@ -178,13 +189,13 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
             {
                 Kind = AssessmentsConstants.QuizResponseGradingQueueKind,
                 Id = response.ItemId,
-                UserId = anonymous ? null : response.UserId,
+                UserId = isAnonymous ? null : response.UserId,
                 CourseId = courseId,
                 ItemId = itemId,
                 ItemTitle = title,
-                Reference = SurveyAnonymity.ResponseLabel(owner, response),
+                Reference = names is null ? (isAnonymous ? string.Empty : response.Number) : await names.GetLabelAsync(owner, response, cancellationToken),
                 Icon = "fa-solid fa-circle-question",
-                SubmittedUtc = anonymous ? SurveyAnonymity.StartOfDayUtc(submittedUtc, CalendarTimeZone(timeZoneId)) : submittedUtc,
+                SubmittedUtc = isAnonymous ? SurveyAnonymity.StartOfDayUtc(response.CompletedUtc ?? response.StartedUtc, timeZone) : SubmittedOf(response),
                 Area = SurveysConstants.Features.Surveys,
                 Controller = "SurveyGrading",
                 Action = "Grade",
@@ -202,16 +213,61 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
         };
     }
 
-    // Whether the list holds the attempts of an anonymous survey it doesn't hide. It is then read in random-id order, as
-    // the Surveys grading queue is: by completion time, an anonymous attempt listed between two named ones would show
-    // when it was handed in, which its day-only date hides.
-    internal static bool ListsAnonymous(IEnumerable<Survey> surveys, ICollection<string> hidden)
-        => surveys.Any(survey => survey is not null && SurveyAnonymity.IsAnonymous(survey) && !hidden.Contains(survey.ItemId));
+    // Reads the first `take` waiting attempts of some surveys, oldest first by completion time (ties by id), a page at a
+    // time, and the count of all of them. Both an enrollment's attempts and an anonymous course quiz's attempts (which belong to the course only) are
+    // read; the course item's grading list is where either is graded.
+    private async Task<(int Count, List<SurveyResponse> Responses)> ReadOldestAsync(List<string> surveyIds, string grader, int take, CancellationToken cancellationToken)
+        => await ReadAsync(surveyIds, grader, take, byId: false, null, null, cancellationToken);
 
-    // Reads the first `take` waiting attempts of some surveys (all surveys when none are named), oldest first or in
-    // random-id order, a read at a time, and the count of all of them.
-    private async Task<(int Count, List<SurveyResponse> Responses)> ReadOldestAsync(List<string> surveyIds, List<string> excludedSurveyIds, string grader, int take, bool byId, CancellationToken cancellationToken)
+    // Reads the first `take` waiting attempts of anonymous surveys in the order of their day (in the site's time zone),
+    // then their id. The first `take` attempts by completion time end on some day D; every attempt of an earlier day is
+    // among them, so the rest of the page is the first attempts of day D by id.
+    private async Task<(int Count, List<SurveyResponse> Responses)> ReadAnonymousAsync(List<string> surveyIds, string grader, int take, TimeZoneInfo timeZone, CancellationToken cancellationToken)
     {
+        var (count, first) = await ReadOldestAsync(surveyIds, grader, take, cancellationToken);
+
+        DateTime DayOf(SurveyResponse response)
+            => SurveyAnonymity.StartOfDayUtc(response.CompletedUtc ?? response.StartedUtc, timeZone);
+
+        if (first.Count < take || first.Count >= count)
+        {
+            return (count, [.. first.OrderBy(DayOf).ThenBy(response => response.ItemId, StringComparer.Ordinal)]);
+        }
+
+        var lastDay = DayOf(first[^1]);
+        var before = first.Where(response => DayOf(response) < lastDay).OrderBy(DayOf).ThenBy(response => response.ItemId, StringComparer.Ordinal).ToList();
+        var (_, sameDay) = await ReadAsync(surveyIds, grader, take - before.Count, byId: true, lastDay, SurveyAnonymity.EndOfDayUtc(lastDay, timeZone), cancellationToken);
+
+        return (count, [.. before, .. sameDay]);
+    }
+
+    private async Task<(int Count, List<SurveyResponse> Responses)> ReadAsync(List<string> surveyIds, string grader, int take, bool byId, DateTime? completedFromUtc, DateTime? completedToUtc, CancellationToken cancellationToken)
+    {
+        if (surveyIds.Count > SurveysPerQuery)
+        {
+            // Each read names at most SurveysPerQuery surveys. The first `take` attempts of all of them are among the first
+            // `take` of each read, so those are merged in the same order (ties by id) and cut again.
+            var total = 0;
+            var merged = new List<SurveyResponse>();
+
+            foreach (var chunk in surveyIds.Chunk(SurveysPerQuery))
+            {
+                var (chunkCount, chunkResponses) = await ReadAsync([.. chunk], grader, take, byId, completedFromUtc, completedToUtc, cancellationToken);
+
+                total += chunkCount;
+                merged.AddRange(chunkResponses);
+            }
+
+            IEnumerable<SurveyResponse> ordered = byId
+                ? merged.OrderBy(response => response.ItemId, StringComparer.Ordinal)
+                : merged
+                    .OrderBy(response => response.CompletedUtc ?? DateTime.MinValue)
+                    .ThenBy(response => response.StartedUtc)
+                    .ThenBy(response => response.ItemId, StringComparer.Ordinal);
+
+            return (total, [.. ordered.Take(take)]);
+        }
+
         var count = 0;
         var responses = new List<SurveyResponse>();
 
@@ -222,11 +278,12 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
                 SurveyIds = surveyIds,
                 Statuses = [SurveyResponseStatus.Completed],
                 Grading = GradingStatus.Pending,
-                ContextKinds = [LearningSurveyContexts.EnrollmentKind],
-                ExcludedSurveyIds = excludedSurveyIds,
+                ContextKinds = [LearningSurveyContexts.EnrollmentKind, LearningSurveyContexts.CourseKind],
                 ExcludedUserId = grader,
                 OldestFirst = !byId,
                 OrderById = byId,
+                CompletedFromUtc = completedFromUtc,
+                CompletedToUtc = completedToUtc,
                 Skip = responses.Count,
                 Take = Math.Min(take - responses.Count, SurveysConstants.PageSize),
             }, cancellationToken);
@@ -245,9 +302,9 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
 
     // The anonymous surveys whose completed responses are below the minimum group size: none of their attempts is
     // listed until there is a crowd to hide in, as on the Surveys grading queue.
-    private async Task<List<string>> HiddenAnonymousSurveysAsync(IEnumerable<Survey> surveys, CancellationToken cancellationToken)
+    private async Task<HashSet<string>> HiddenAnonymousSurveysAsync(IEnumerable<Survey> surveys, CancellationToken cancellationToken)
     {
-        var hidden = new List<string>();
+        var hidden = new HashSet<string>(StringComparer.Ordinal);
         var groups = _serviceProvider.GetService<SurveyAnonymousGroups>();
 
         foreach (var survey in surveys.Where(candidate => candidate is not null && SurveyAnonymity.IsAnonymous(candidate)))

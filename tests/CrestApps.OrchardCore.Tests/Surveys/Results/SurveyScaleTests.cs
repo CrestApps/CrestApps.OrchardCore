@@ -197,6 +197,56 @@ public sealed class SurveyScaleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task R6L16_ExcludedSurveys_AreLeftOutOfNamedSurveys_AndTooManyOfEverySurveyAreRefused()
+    {
+        // Arrange: more excluded surveys than one NOT IN list holds.
+        await using var session = _store.OpenSession();
+        var queries = new SurveyResponseQueries(session);
+        var ids = Enumerable.Range(0, OwnedSurveys).Select(SurveyId).ToList();
+        var excluded = ids.Take(OwnedSurveys - 1).ToList();
+
+        // Act
+        var (count, items) = await queries.ListAsync(new SurveyResponseQuery { SurveyIds = ids, ExcludedSurveyIds = excluded, Take = 10 }, TestContext.Current.CancellationToken);
+        var none = await queries.ListAsync(new SurveyResponseQuery { SurveyIds = excluded, ExcludedSurveyIds = excluded, Take = 10 }, TestContext.Current.CancellationToken);
+
+        // Assert: named surveys simply aren't named; every survey but more than 1,000 is refused, never sent to SQL.
+        Assert.Equal(1, count);
+        Assert.Equal("r-last", Assert.Single(items).ItemId);
+        Assert.Equal(0, none.Count);
+        await Assert.ThrowsAsync<ArgumentException>(() => queries.ListAsync(new SurveyResponseQuery { ExcludedSurveyIds = excluded, Take = 10 }, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task R6L16_ResponsesStartedAtTheSameTimeInDifferentChunks_PageWithoutRepeatOrGap()
+    {
+        // Arrange: two responses with the same start time, one in the first chunk of surveys and one in the last.
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using (var write = _store.OpenSession())
+        {
+            var a = ResultsSqliteStore.Response("tie-a", Version("v-last", SurveyId(OwnedSurveys - 1)), SurveyResponseStatus.Completed, _day.AddDays(1));
+            var b = ResultsSqliteStore.Response("tie-b", Version("v-first", SurveyId(0)), SurveyResponseStatus.Completed, _day.AddDays(1));
+            await write.SaveAsync(a, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveAsync(b, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var queries = new SurveyResponseQueries(session);
+        var ids = Enumerable.Range(0, OwnedSurveys).Select(SurveyId).ToList();
+
+        // Act
+        var first = await queries.ListAsync(new SurveyResponseQuery { SurveyIds = ids, Take = 1 }, cancellationToken);
+        var second = await queries.ListAsync(new SurveyResponseQuery { SurveyIds = ids, Skip = 1, Take = 1 }, cancellationToken);
+        var single = await queries.ListAsync(new SurveyResponseQuery { SurveyIds = [SurveyId(0), SurveyId(OwnedSurveys - 1)], Take = 2 }, cancellationToken);
+
+        // Assert: the merge of chunks breaks the tie as one query does (newest first, then by id).
+        Assert.Equal("tie-b", Assert.Single(first.Items).ItemId);
+        Assert.Equal("tie-a", Assert.Single(second.Items).ItemId);
+        Assert.Equal(["tie-b", "tie-a"], single.Items.Select(item => item.ItemId));
+    }
+
+    [Fact]
     public async Task AccessScopes_ProviderGrantsByOwner_AreReadFromTheIndex()
     {
         // Arrange

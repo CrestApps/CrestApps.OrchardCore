@@ -60,8 +60,16 @@ public abstract class SurveyResponseChildDataSet : SurveysDataSetBase<SurveyResp
         {
             var version = await _versions.GetAsync(seed.Response.SurveyVersionId, cancellationToken);
 
+            var shows = AttributesOf(seed.Response);
+
             foreach (var values in Expand(seed.Response, version?.Definition))
             {
+                // An anonymous survey's version shows only when enough completed responses share it.
+                if (!shows.ShowsVersion && values.ContainsKey("VersionNumber"))
+                {
+                    values["VersionNumber"] = null;
+                }
+
                 yield return new SurveyResponseChildRow
                 {
                     Response = seed.Response,

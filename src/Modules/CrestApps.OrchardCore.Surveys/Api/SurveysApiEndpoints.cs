@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
@@ -112,8 +113,16 @@ internal static class SurveysApiEndpoints
             var staleOwned = (await reader.ListNotReindexedAsync(httpContext.RequestAborted))
                 .Where(survey => string.Equals(survey.OwnerId, userId, StringComparison.Ordinal))
                 .Select(survey => survey.ItemId)
-                .Take(SurveyIdChunks.Size)
                 .ToArray();
+
+            if (!SurveyIdChunks.FitsOneList(staleOwned.Length))
+            {
+                // One IN list holds at most SurveyIdChunks.Size ids; the rest are listed once the reindex step reaches
+                // them. Said in the log rather than cut silently.
+                httpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("CrestApps.OrchardCore.Surveys.Api")
+                    .LogWarning("{Count} surveys of the user '{UserId}' wait for the reindex step; the first {Size} are listed until the reindex step reaches the rest.", staleOwned.Length, userId, SurveyIdChunks.Size);
+                staleOwned = staleOwned[..SurveyIdChunks.Size];
+            }
 
             query = staleOwned.Length == 0
                 ? query.Where(index => index.OwnerId == userId)
@@ -321,26 +330,45 @@ internal static class SurveysApiEndpoints
         DateTime? Shown(DateTime? utc)
             => utc is not { } value ? null : anonymous ? SurveyAnonymity.StartOfDayUtc(value, timeZone) : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
-        return Results.Ok(new
+        // The version and context kind of an anonymous response are groups of their own (SurveyAnonymousAttributes): a
+        // value too few completed responses share is left out, and a response whose small groups can't hide it is not
+        // listed, so a link or a version only one person answered can't point to their row.
+        var attributes = await services.GetRequiredService<SurveyAnonymousGroups>().AttributesAsync(survey, httpContext.RequestAborted);
+        var names = services.GetRequiredService<SurveyRespondentNames>();
+        var rows = new List<object>(items.Count);
+
+        foreach (var response in items)
         {
-            count,
-            items = items.Select(response => new
+            var shows = attributes.Of(response);
+
+            if (shows.Hidden)
+            {
+                continue;
+            }
+
+            rows.Add(new
             {
                 id = response.ItemId,
-                number = SurveyAnonymity.ResponseLabel(survey, response),
-                version = response.VersionNumber,
+                number = await names.GetLabelAsync(survey, response, httpContext.RequestAborted),
+                version = shows.ShowsVersion ? response.VersionNumber : (int?)null,
                 status = response.Status.ToString(),
                 grading = response.Grading.ToString(),
                 userId = withIdentity ? response.UserId : null,
                 respondent = withIdentity ? response.Respondent?.ToString() : null,
-                context = anonymous ? response.Context?.Kind : response.Context?.ToString(),
+                context = anonymous ? (shows.ShowsContextKind ? response.Context?.Kind : null) : response.Context?.ToString(),
                 startedUtc = Shown(response.StartedUtc),
                 completedUtc = Shown(response.CompletedUtc),
                 score = response.Score,
                 maxScore = response.MaxScore,
                 percent = response.Percent,
                 passed = response.Passed,
-            }),
+            });
+        }
+
+        return Results.Ok(new
+        {
+            count,
+            items = rows,
         });
     }
 

@@ -34,4 +34,29 @@ public sealed class SurveyWebhookPayloadsTests
         Assert.DoesNotContain("10.0.0.1", json, StringComparison.Ordinal);
         Assert.DoesNotContain("never-sent", json, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void AnAnonymousResponsePayload_CarriesDayOnlyTimesAndNoAttemptNumber()
+    {
+        // Arrange: R6-L12.
+        var survey = new Survey { ItemId = "s1", Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous } };
+        var response = new SurveyResponse
+        {
+            ItemId = "r1",
+            SurveyId = "s1",
+            AttemptNumber = 2,
+            StartedUtc = new DateTime(2026, 11, 10, 10, 31, 2, DateTimeKind.Utc),
+            CompletedUtc = new DateTime(2026, 11, 10, 10, 41, 9, DateTimeKind.Utc),
+        };
+
+        // Act
+        var payload = SurveyWebhookPayloads.Response(survey, response);
+        var input = CrestApps.OrchardCore.Surveys.Workflows.SurveyWorkflowInputBuilder.DayOf(response.CompletedUtc);
+
+        // Assert
+        Assert.Null(payload["attemptNumber"]);
+        Assert.Equal(new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc), payload["startedUtc"]);
+        Assert.Equal(new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc), payload["completedUtc"]);
+        Assert.Equal(new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc), input);
+    }
 }

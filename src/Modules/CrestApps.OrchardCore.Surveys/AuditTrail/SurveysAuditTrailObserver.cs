@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 
@@ -13,14 +14,16 @@ namespace CrestApps.OrchardCore.Surveys.AuditTrail;
 internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurveyObserver
 {
     private readonly ISurveyAuditTrail _auditTrail;
+    private readonly SurveyRespondentNames _names;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveysAuditTrailObserver"/> class.
     /// </summary>
     /// <param name="auditTrail">The audit trail.</param>
-    public SurveysAuditTrailObserver(ISurveyAuditTrail auditTrail)
+    public SurveysAuditTrailObserver(ISurveyAuditTrail auditTrail, SurveyRespondentNames names)
     {
         _auditTrail = auditTrail;
+        _names = names;
     }
 
     /// <inheritdoc />
@@ -88,13 +91,13 @@ internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurv
             SurveyName = survey?.Name,
         };
 
-    private Task Response(string eventName, SurveyResponseEventContext context, bool causedByRespondent)
+    private async Task Response(string eventName, SurveyResponseEventContext context, bool causedByRespondent)
     {
         var response = context?.Response;
 
         if (response is null || response.IsTest)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         // On an anonymous survey, an event the respondent caused (a reopen with no actor and no workflow) is not recorded:
@@ -102,17 +105,17 @@ internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurv
         // An event with no actor the system caused, such as a retention delete, is recorded: it names no one.
         if (causedByRespondent && SurveyAnonymity.IsAnonymous(context.Survey) && string.IsNullOrEmpty(context.ActorId) && !context.CausedByWorkflow)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        return _auditTrail.RecordAsync(eventName, new SurveyAuditEntry
+        await _auditTrail.RecordAsync(eventName, new SurveyAuditEntry
         {
             ActorId = context.CausedByWorkflow ? "Workflow" : context.ActorId,
             SurveyId = response.SurveyId,
             SurveyName = context.Survey?.Name,
             ResponseId = response.ItemId,
             // No site-wide response number on an anonymous survey (see SurveyAnonymity.ResponseLabel).
-            ResponseNumber = SurveyAnonymity.ResponseLabel(context.Survey, response),
+            ResponseNumber = await _names.GetLabelAsync(context.Survey, response),
             VersionNumber = response.VersionNumber,
             From = context.ScoreChange?.From,
             To = context.ScoreChange?.To ?? response.Score,

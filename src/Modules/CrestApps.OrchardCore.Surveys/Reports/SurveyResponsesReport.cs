@@ -159,11 +159,23 @@ internal sealed class SurveyResponsesReport : IReport
         var no = S["No"].Value;
         var rows = new List<ReportRow>();
 
+        // The version of an anonymous response shows only when enough completed responses share it, and a response
+        // whose small groups can't hide it isn't listed (SurveyAnonymousAttributes): a version, or a link, only one
+        // person answered can't point to their row.
+        var attributes = scope.IsAnonymous ? await _groups.AttributesAsync(scope.Survey, cancellationToken) : SurveyAnonymousAttributes.Open;
+
         await foreach (var response in _queries.ReadAsync(scope.ResultsScope, skip, take, cancellationToken))
         {
+            var shows = attributes.Of(response);
+
+            if (shows.Hidden)
+            {
+                continue;
+            }
+
             var cells = new List<string>
             {
-                SurveyAnonymity.ResponseLabel(scope.Survey, response),
+                await _names.GetLabelAsync(scope.Survey, response, cancellationToken),
                 Status(response.Status),
             };
 
@@ -172,7 +184,7 @@ internal sealed class SurveyResponsesReport : IReport
                 cells.Add(await _names.GetAsync(response, scope.Survey, cancellationToken));
             }
 
-            cells.Add(response.VersionNumber.ToString(CultureInfo.CurrentCulture));
+            cells.Add(shows.ShowsVersion ? response.VersionNumber.ToString(CultureInfo.CurrentCulture) : string.Empty);
             cells.Add(scope.IsAnonymous ? await _data.LocalDayAsync(response.StartedUtc) : await _data.LocalAsync(response.StartedUtc));
             cells.Add(scope.IsAnonymous ? await _data.LocalDayAsync(response.CompletedUtc) : await _data.LocalAsync(response.CompletedUtc));
             cells.Add(response.CompletedUtc is { } completed && completed >= response.StartedUtc ? ReportFormat.Duration((completed - response.StartedUtc).TotalSeconds) : string.Empty);

@@ -111,6 +111,9 @@ public sealed class QuizResponseGradingQueueSourceTests
         Assert.Equal(["older", "newer"], page.Items.Select(item => item.Id));
         Assert.True(queries.Count >= 2);
         Assert.All(queries, query => Assert.InRange(query.SurveyIds.Count, 1, QuizResponseGradingQueueSource.SurveysPerQuery));
+
+        // R6-L16: an anonymous course quiz's attempts belong to the course, not an enrollment, and are read too.
+        Assert.All(queries, query => Assert.Contains(LearningSurveyContexts.CourseKind, query.ContextKinds));
         surveyManager.Verify(manager => manager.ListByOwnersAsync(It.IsAny<IReadOnlyCollection<RecordRef>>(), It.IsAny<CancellationToken>()), Times.Once());
         surveyManager.Verify(manager => manager.ListByOwnerAsync(It.IsAny<RecordRef>(), It.IsAny<CancellationToken>()), Times.Never());
     }
@@ -202,26 +205,13 @@ public sealed class QuizResponseGradingQueueSourceTests
 
         Assert.Null(item.UserId);
         Assert.NotEqual("R0000042", item.Reference);
-        Assert.Equal("01anonymou", item.Reference);
+        Assert.False(item.Reference?.StartsWith("01anonymou", StringComparison.Ordinal) == true);
         // The start of the day in the site's time zone: a whole hour before the real time, less than a day before.
         var submitted = new DateTime(2026, 1, 10, 14, 37, 12, DateTimeKind.Utc);
 
         Assert.Equal(0, item.SubmittedUtc.Minute);
         Assert.Equal(0, item.SubmittedUtc.Second);
         Assert.InRange(submitted - item.SubmittedUtc, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
-    }
-
-    [Fact]
-    public void VM5_AListThatShowsAnAnonymousSurveysAttempts_IsReadInRandomIdOrder()
-    {
-        // Arrange
-        var named = new Survey { ItemId = "named", Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Identified } };
-        var anonymous = new Survey { ItemId = "anonymous", Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous } };
-
-        // Act + Assert: only named surveys, or an anonymous one hidden by the small-group rule, keep oldest first.
-        Assert.False(QuizResponseGradingQueueSource.ListsAnonymous([named], []));
-        Assert.False(QuizResponseGradingQueueSource.ListsAnonymous([named, anonymous], ["anonymous"]));
-        Assert.True(QuizResponseGradingQueueSource.ListsAnonymous([named, anonymous], []));
     }
 
     [Fact]

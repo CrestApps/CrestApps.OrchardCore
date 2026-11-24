@@ -174,6 +174,15 @@ internal sealed class SurveyReportData
         var contextKind = context.Filter.GetOrDefault<string>(SurveyReportKeys.ContextKind);
         var numbers = scope == SurveyReportKeys.AllVersions ? new List<int>() : selected.Select(version => version.Number).ToList();
         var to = range.ToUtc is { } end && end.Ticks < DateTime.MaxValue.Ticks ? end.AddTicks(1) : (DateTime?)null;
+        var from = range.FromUtc;
+        var anonymous = SurveyAnonymity.IsAnonymous(survey);
+
+        if (anonymous)
+        {
+            // The times of an anonymous survey's responses show by the day only, so its date filter selects whole days in
+            // the site's time zone: stepping the filter's time of day can't tell, minute by minute, when a response came in.
+            (from, to) = SurveyAnonymity.WholeDays(from, to, await SiteTimeZoneAsync());
+        }
 
         return new SurveyReportScope
         {
@@ -181,14 +190,14 @@ internal sealed class SurveyReportData
             Versions = selected,
             AllVersions = versions.ToDictionary(version => version.ItemId, StringComparer.Ordinal),
             Definition = (selected.Count > 0 ? selected[0].Definition : null),
-            IsAnonymous = SurveyAnonymity.IsAnonymous(survey),
+            IsAnonymous = anonymous,
             MinimumGroupSize = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync()),
             CanSeeIdentity = await CanSeeIdentityAsync(context.User, survey),
             AnswerFilter = new SurveyAnswerFilter
             {
                 SurveyId = survey.ItemId,
                 VersionNumbers = numbers,
-                CompletedFromUtc = range.FromUtc,
+                CompletedFromUtc = from,
                 CompletedToUtc = to,
                 CollectorId = collectorId,
                 ContextKind = contextKind,
@@ -197,7 +206,7 @@ internal sealed class SurveyReportData
             {
                 SurveyId = survey.ItemId,
                 VersionNumbers = numbers,
-                FromUtc = range.FromUtc,
+                FromUtc = from,
                 ToUtc = to,
                 CollectorId = collectorId,
                 ContextKind = contextKind,
@@ -280,6 +289,17 @@ internal sealed class SurveyReportData
     /// <returns>The local date and time.</returns>
     public async Task<DateTime> ToLocalAsync(DateTime utc)
         => (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)))).DateTime;
+
+    /// <summary>
+    /// Gets the site's time zone, which the days of anonymous responses are read in.
+    /// </summary>
+    /// <returns>The time zone; UTC when the site has none.</returns>
+    public async Task<TimeZoneInfo> SiteTimeZoneAsync()
+    {
+        var timeZoneId = _serviceProvider.GetService<ISiteService>() is { } siteService ? (await siteService.GetSiteSettingsAsync())?.TimeZoneId : null;
+
+        return !string.IsNullOrEmpty(timeZoneId) && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var zone) ? zone : TimeZoneInfo.Utc;
+    }
 
     private async Task<SurveySettings> SettingsAsync()
         => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;

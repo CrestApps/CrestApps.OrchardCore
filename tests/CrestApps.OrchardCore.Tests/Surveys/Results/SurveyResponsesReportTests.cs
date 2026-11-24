@@ -10,7 +10,9 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Reports;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OrchardCore.DataSources;
 using YesSql;
@@ -24,6 +26,9 @@ namespace CrestApps.OrchardCore.Tests.Surveys.Results;
 public sealed class SurveyResponsesReportTests : IAsyncLifetime
 {
     private static readonly DateTime _day = new(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc);
+
+    // A secret stored in plain text, as before secrets were protected, so the labels can be worked out here.
+    private const string Secret = "plain-test-secret";
 
     private ResultsSqliteStore _store;
 
@@ -139,7 +144,11 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
 
         // Assert
         Assert.All(anonymous.Rows, row => Assert.DoesNotContain("R-", row.Cells[0], StringComparison.Ordinal));
-        Assert.Equal(["anon-r0", "anon-r1", "anon-r2", "anon-r3", "anon-r4"], anonymous.Rows.Select(row => row.Cells[0]).Order(StringComparer.Ordinal));
+        // R6-L14: a keyed hash of the id under the survey's anonymity secret, not the id itself.
+        Assert.Equal(
+            Enumerable.Range(0, 5).Select(index => SurveyAnonymity.AnonymousLabel(Secret, $"anon-r{index}")).Order(StringComparer.Ordinal),
+            anonymous.Rows.Select(row => row.Cells[0]).Order(StringComparer.Ordinal));
+        Assert.All(anonymous.Rows, row => Assert.DoesNotContain("anon-r", row.Cells[0], StringComparison.Ordinal));
         Assert.Equal("R-open-r0", Assert.Single(identified.Rows).Cells[0]);
     }
 
@@ -234,10 +243,41 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
         Assert.Equal(string.Empty, text);
     }
 
+    [Fact]
+    public async Task RunAsync_AnAnonymousSurvey_ADateFilterWithATimeOfDay_SelectsWholeDays()
+    {
+        // Arrange: R6-M2, five responses at 12:00 and one at 12:07 on the same day; the minimum is 5.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await SaveSurveyAsync("anon", AnonymityMode.Anonymous, completed: 5);
+
+        await using (var write = _store.OpenSession())
+        {
+            var late = ResultsSqliteStore.Response("anon-late", ResultsSqliteStore.Version("anon-v1", "anon", 1, ResultsSqliteStore.ChoiceQuestion("q1", "color", "red", "blue")), SurveyResponseStatus.Completed, _day.AddMinutes(7), ("q1", new SurveyAnswer { Values = ["red"] }));
+            await write.SaveAsync(late, false, SurveysConstants.ResponsesCollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var context = Context("anon");
+        context.Filter.SetDateRange(new ReportDateRange { FromUtc = _day.AddMinutes(5), ToUtc = _day.AddMinutes(10) });
+
+        // Act
+        var section = Assert.Single((await Report(session).RunAsync(context, cancellationToken)).Sections);
+
+        // Assert: the range from 12:05 to 12:10 selects the whole day, so the six responses show together; the one at
+        // 12:07 is never on its own (which would hide the report and tell when it came in).
+        Assert.Equal(6, section.Rows.Count);
+    }
+
     private static SurveyResponsesReport Report(ISession session)
     {
         var authorization = TestSecurity.Granting(SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
-        var services = new ServiceCollection().AddSingleton(authorization).BuildServiceProvider();
+        var store = new SurveyStore(session);
+        var services = new ServiceCollection()
+            .AddSingleton(authorization)
+            .AddSingleton(store)
+            .AddSingleton(new SurveyAnonymitySecrets(new EphemeralDataProtectionProvider(), store, NullLogger<SurveyAnonymitySecrets>.Instance))
+            .BuildServiceProvider();
         var names = new SurveyRespondentNames(services, RecipeRoundTrip.Localizer<SurveyRespondentNames>());
 
         // The clock is ten hours behind UTC, so a time shifted as if it were UTC would land on another day.
@@ -286,6 +326,7 @@ public sealed class SurveyResponsesReportTests : IAsyncLifetime
             PublishedVersionId = version.ItemId,
             PublishedVersionNumber = 1,
             Access = new SurveyAccessSettings { Anonymity = anonymity, MinimumGroupSize = minimumGroupSize },
+            AnonymitySecret = Secret,
         }, false, SurveysConstants.CollectionName, cancellationToken);
         await session.SaveAsync(version, false, SurveysConstants.CollectionName, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);

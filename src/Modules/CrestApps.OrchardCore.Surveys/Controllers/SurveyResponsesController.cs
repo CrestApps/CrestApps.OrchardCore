@@ -166,10 +166,13 @@ public sealed class SurveyResponsesController : Controller
         }
 
         var anonymous = SurveyAnonymity.IsAnonymous(survey);
+        IReadOnlyList<string> labelMatches = anonymous && !string.IsNullOrWhiteSpace(options.Search)
+            ? await _serviceProvider.GetRequiredService<SurveyRespondentNames>().FindByLabelAsync(survey, options.Search, HttpContext.RequestAborted)
+            : [];
 
         if (!string.IsNullOrWhiteSpace(options.Search))
         {
-            query = Search(query, options.Search, anonymous);
+            query = Search(query, options.Search, anonymous, labelMatches);
         }
 
         if (options.UpkeepStopped)
@@ -185,7 +188,7 @@ public sealed class SurveyResponsesController : Controller
         // group size, and a status too few real responses share is left out (all of the list when it is the status
         // filtered to), so filtering to Abandoned can't single out the one person who gave up.
         var filtersStatus = Enum.TryParse<SurveyResponseStatus>(options.Status, out var shown);
-        var decision = await SurveyGroupGate.DecideAsync(survey, await SettingsAsync(), filtersStatus ? [shown] : [], async other => await CountRealAsync(surveyId, versionNumber, options, other, anonymous));
+        var decision = await SurveyGroupGate.DecideAsync(survey, await SettingsAsync(), filtersStatus ? [shown] : [], async other => await CountRealAsync(surveyId, versionNumber, options, other, anonymous, labelMatches));
 
         if (decision.HidesAll)
         {
@@ -371,13 +374,27 @@ public sealed class SurveyResponsesController : Controller
         // One response of an anonymous survey opens under the list's rule (SurveyGroupGate): only once the survey's
         // completed responses reach its minimum group size, and only when enough responses share its status, so the one
         // abandoned response can't be read by its id.
+        var attributes = SurveyRowAttributes.All;
+
         if (!response.IsTest && SurveyAnonymity.IsAnonymous(survey))
         {
-            var decision = await _serviceProvider.GetRequiredService<SurveyAnonymousGroups>().DecideAsync(survey, null, [response.Status], HttpContext.RequestAborted);
+            var groups = _serviceProvider.GetRequiredService<SurveyAnonymousGroups>();
+            var decision = await groups.DecideAsync(survey, null, [response.Status], HttpContext.RequestAborted);
 
             if (!decision.Shows(response.Status, response.IsTest))
             {
                 await _notifier.WarningAsync(H["This survey is anonymous, and too few of its responses are completed or share this response's status. It is hidden so no one can be recognized (the minimum is {0}).", decision.MinimumGroupSize]);
+
+                return RedirectToAction(nameof(Index), new { id = survey.ItemId });
+            }
+
+            // Its collector, version and context kind are groups too (SurveyAnonymousAttributes): a response given
+            // through a link sent to one person, or to a version one person answered, doesn't open on its own.
+            attributes = (await groups.AttributesAsync(survey, HttpContext.RequestAborted)).Of(response);
+
+            if (attributes.Hidden)
+            {
+                await _notifier.WarningAsync(H["This survey is anonymous, and too few of its completed responses share this response's collector, version or context. It is hidden so no one can be recognized (the minimum is {0}).", decision.MinimumGroupSize]);
 
                 return RedirectToAction(nameof(Index), new { id = survey.ItemId });
             }
@@ -395,6 +412,8 @@ public sealed class SurveyResponsesController : Controller
             Survey = survey,
             Version = version,
             Response = response,
+            Label = await _serviceProvider.GetRequiredService<SurveyRespondentNames>().GetLabelAsync(survey, response, HttpContext.RequestAborted),
+            ShowsVersion = attributes.ShowsVersion,
             Questions = await _shapes.BuildReviewAsync(survey, version, response, ReviewShows.All),
             Extensions = await _displayManager.BuildDisplayAsync(response, _updateModelAccessor.ModelUpdater, "DetailAdmin"),
             CanDelete = await AuthorizeAsync(survey, SurveyOperation.DeleteResponses),
@@ -658,7 +677,7 @@ public sealed class SurveyResponsesController : Controller
     private async Task<SurveySettings> SettingsAsync()
         => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
 
-    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options, SurveyResponseStatus status, bool anonymous)
+    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options, SurveyResponseStatus status, bool anonymous, IReadOnlyList<string> labelMatches)
     {
         var statusName = status.ToString();
         var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == statusName && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
@@ -676,7 +695,7 @@ public sealed class SurveyResponsesController : Controller
 
         if (!string.IsNullOrWhiteSpace(options.Search))
         {
-            query = Search(query, options.Search, anonymous);
+            query = Search(query, options.Search, anonymous, labelMatches);
         }
 
         if (options.UpkeepStopped)
@@ -688,15 +707,18 @@ public sealed class SurveyResponsesController : Controller
     }
 
     // An anonymous survey shows no response number (see SurveyAnonymity.ResponseLabel), so it can't be searched by one
-    // either: searching another survey's number would tell whether that person's next response is here. It searches
-    // the label it shows, the start of the random id.
-    private static IQuery<SurveyResponse, SurveyResponseIndex> Search(IQuery<SurveyResponse, SurveyResponseIndex> query, string text, bool anonymous)
+    // either: searching another survey's number would tell whether that person's next response is here. It searches the
+    // label it shows, a keyed hash of the id, matched whole within the survey (labelMatches, from
+    // SurveyRespondentNames.FindByLabelAsync).
+    private static IQuery<SurveyResponse, SurveyResponseIndex> Search(IQuery<SurveyResponse, SurveyResponseIndex> query, string text, bool anonymous, IReadOnlyList<string> labelMatches)
     {
         var search = text.Trim();
 
         if (anonymous)
         {
-            return query.Where(index => index.ItemId.StartsWith(search));
+            var ids = labelMatches is { Count: > 0 } ? labelMatches.ToArray() : [string.Empty];
+
+            return query.Where(index => index.ItemId.IsIn(ids));
         }
 
         return query.Where(index => index.Number.Contains(search));

@@ -41,11 +41,28 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
 
         var take = Math.Clamp(query.Take, 1, SurveysConstants.PageSize);
         var skip = Math.Max(0, query.Skip);
-        var chunks = SurveyIdChunks.Of(query.SurveyIds).ToArray();
+        var named = query.SurveyIds.Count > 0;
 
-        if (query.SurveyIds.Count == 0 || chunks.Length <= 1)
+        // Surveys left out of named surveys are simply not named, so no NOT IN list is needed. Left out of every survey,
+        // they go in one NOT IN list, which must fit under SQL Server's parameter limit like an IN list: a caller with more
+        // names the surveys it reads instead.
+        var excluded = new HashSet<string>(query.ExcludedSurveyIds.Where(id => !string.IsNullOrEmpty(id)), StringComparer.Ordinal);
+
+        if (!named && !SurveyIdChunks.FitsOneList(excluded.Count))
         {
-            var q = Filter(query, query.SurveyIds.Count == 0 ? null : chunks.FirstOrDefault() ?? []);
+            throw new ArgumentException($"At most {SurveyIdChunks.Size} surveys can be left out of every survey; name the surveys to read instead.", nameof(query));
+        }
+
+        var chunks = SurveyIdChunks.Of(query.SurveyIds.Where(id => !excluded.Contains(id))).ToArray();
+
+        if (named && chunks.Length == 0)
+        {
+            return (0, []);
+        }
+
+        if (!named || chunks.Length <= 1)
+        {
+            var q = Filter(query, named ? chunks[0] : null, named ? [] : [.. excluded]);
             var count = await q.CountAsync(cancellationToken);
             var items = await Order(q, query).Skip(skip).Take(take).ListAsync(cancellationToken);
 
@@ -53,13 +70,14 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
         }
 
         // More surveys than one IN list holds (SQL Server refuses more than 2,100 parameters): each chunk is counted and
-        // its first skip + take responses read in the page's order; the page is cut from those, merged.
+        // its first skip + take responses read in the page's order; the page is cut from those, merged in the same order
+        // the database uses, ties included (Order), so a page never repeats or skips a response.
         var total = 0;
         var merged = new List<SurveyResponse>();
 
         foreach (var chunk in chunks)
         {
-            var q = Filter(query, chunk);
+            var q = Filter(query, chunk, []);
             total += await q.CountAsync(cancellationToken);
             merged.AddRange(await Order(q, query).Take(skip + take).ListAsync(cancellationToken));
         }
@@ -85,15 +103,17 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
             .CountAsync(cancellationToken);
     }
 
+    // Ties are broken by the response id, which the merge of several chunks can compare too (the index row id is not on
+    // the response, and a save gives a response a new one).
     private static IQuery<SurveyResponse, SurveyResponseIndex> Order(IQuery<SurveyResponse, SurveyResponseIndex> query, SurveyResponseQuery options)
         => options.OrderById
             ? query.OrderBy(index => index.ItemId)
             : options.OldestFirst
-            ? query.OrderBy(index => index.CompletedUtc).ThenBy(index => index.StartedUtc).ThenBy(index => index.Id)
-            : query.OrderByDescending(index => index.StartedUtc).ThenByDescending(index => index.Id);
+            ? query.OrderBy(index => index.CompletedUtc).ThenBy(index => index.StartedUtc).ThenBy(index => index.ItemId)
+            : query.OrderByDescending(index => index.StartedUtc).ThenByDescending(index => index.ItemId);
 
-    // Applies the query's filters; surveyIds is one chunk of its surveys, or null for every survey.
-    private IQuery<SurveyResponse, SurveyResponseIndex> Filter(SurveyResponseQuery query, string[] surveyIds)
+    // Applies the query's filters; surveyIds is one chunk of its surveys, or null for every survey but the excluded ones.
+    private IQuery<SurveyResponse, SurveyResponseIndex> Filter(SurveyResponseQuery query, string[] surveyIds, string[] excludedSurveys)
     {
         var q = _session.Query<SurveyResponse, SurveyResponseIndex>(collection: SurveysConstants.ResponsesCollectionName);
 
@@ -138,9 +158,8 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
             q = q.Where(index => index.Status.IsNotIn(excludedStatuses));
         }
 
-        if (query.ExcludedSurveyIds.Count > 0)
+        if (excludedSurveys.Length > 0)
         {
-            var excludedSurveys = query.ExcludedSurveyIds.ToArray();
             q = q.Where(index => index.SurveyId.IsNotIn(excludedSurveys));
         }
 
@@ -179,6 +198,16 @@ public sealed class SurveyResponseQueries : ISurveyResponseQueries
         if (query.StartedToUtc is { } to)
         {
             q = q.Where(index => index.StartedUtc < to);
+        }
+
+        if (query.CompletedFromUtc is { } completedFrom)
+        {
+            q = q.Where(index => index.CompletedUtc >= completedFrom);
+        }
+
+        if (query.CompletedToUtc is { } completedTo)
+        {
+            q = q.Where(index => index.CompletedUtc < completedTo);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))

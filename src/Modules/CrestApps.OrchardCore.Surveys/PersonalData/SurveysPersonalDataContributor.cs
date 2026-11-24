@@ -267,7 +267,25 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
             surveys[id] = survey;
         }
 
-        foreach (var invitation in allInvitations)
+        // An invitation that isn't the person's own, reached only through a response they started from it (a forwarded
+        // link), may have been used by someone else too: its participation row counts every use of the link, so it is
+        // the person's only when no one else's response was started from it. A shared row stays; erasing it would give
+        // the link's uses back to everyone who has it.
+        var shared = new HashSet<string>(StringComparer.Ordinal);
+        var own = responses.Select(response => response.ItemId).ToHashSet(StringComparer.Ordinal);
+
+        foreach (var batch in allInvitations.Where(invitation => !known.Contains(invitation.ItemId)).Select(invitation => invitation.ItemId).Chunk(200))
+        {
+            foreach (var row in await _session.QueryIndex<SurveyResponseIndex>(index => index.InvitationId.IsIn(batch), collection: SurveysConstants.ResponsesCollectionName).ListAsync(cancellationToken))
+            {
+                if (!own.Contains(row.ItemId))
+                {
+                    shared.Add(row.InvitationId);
+                }
+            }
+        }
+
+        foreach (var invitation in allInvitations.Where(invitation => !shared.Contains(invitation.ItemId)))
         {
             // A participation counted by invitation (a guest who opened the personal link, a signed-in invitee on a survey
             // whose Uniqueness is Invitation: the i: key, or its HMAC on an anonymous survey) is the person's too.

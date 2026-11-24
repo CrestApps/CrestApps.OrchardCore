@@ -43,7 +43,8 @@ public sealed class SurveyResponseQuery
     public List<SurveyResponseStatus> ExcludedStatuses { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the surveys left out, such as anonymous surveys below their minimum group size.
+    /// Gets or sets the surveys to leave out. Left out of named surveys, they are simply not read; left out of every
+    /// survey (no <see cref="SurveyIds"/>), at most 1,000 can be, so a caller with more names the surveys it reads.
     /// </summary>
     public List<string> ExcludedSurveyIds { get; set; } = [];
 
@@ -93,6 +94,16 @@ public sealed class SurveyResponseQuery
     /// start. Work queues use it so the oldest waiting response comes first.
     /// </summary>
     public bool OldestFirst { get; set; }
+
+    /// <summary>
+    /// Gets or sets the earliest completion time to read, in UTC, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? CompletedFromUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the completion time to read before (excluded), in UTC, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? CompletedToUtc { get; set; }
 
     /// <summary>
     /// Gets or sets whether the page is read in the order of the responses' random ids, which orders nothing: lists of

@@ -51,6 +51,21 @@ public static class SurveyAuditEvents
     public const string ResponsesExported = "SurveyResponsesExported";
 
     /// <summary>
+    /// Invitations (personal links and their recipients) were exported.
+    /// </summary>
+    public const string InvitationsExported = "SurveyInvitationsExported";
+
+    /// <summary>
+    /// Accommodations were exported.
+    /// </summary>
+    public const string OverridesExported = "SurveyOverridesExported";
+
+    /// <summary>
+    /// An export of responses, invitations or accommodations was refused: the user may not export survey responses.
+    /// </summary>
+    public const string ExportRefused = "SurveyExportRefused";
+
+    /// <summary>
     /// A response was voided.
     /// </summary>
     public const string ResponseVoided = "SurveyResponseVoided";
