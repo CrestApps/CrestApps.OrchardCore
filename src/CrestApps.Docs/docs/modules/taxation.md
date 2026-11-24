@@ -204,8 +204,10 @@ A content editor can then leave the defaults or override the classification per 
 | `DefaultTaxCategoryCode` | The category applied when the item does not specify one. Selected from the categories catalog. |
 | `DefaultTaxClassificationCode` | The classification applied when the item does not specify one. Selected from the categories catalog. |
 | `AllowClassificationOverride` | Whether editors may override the classification per content item. |
+| `ShowClassification` | Whether editors see **Tax classification** when they may override it (default `true`). Turn it off for a type that only needs a tax category; the item keeps the classification it has. |
+| `ShowExternalTaxCode` | Whether editors see **External tax code** (default `true`). Turn it off for a type taxed only by the site's own rules; the item keeps the code it has. |
 
-In the content-type editor, **Default tax category** and **Default tax classification** are dropdowns populated from the tax categories you created under **Commerce** → **Taxation** → **Categories**, so create your categories first. When `AllowClassificationOverride` is disabled, editors do not see the category/classification fields and the defaults configured here are always used.
+In the content-type editor, **Default tax category** and **Default tax classification** are dropdowns populated from the tax categories you created under **Commerce** → **Taxation** → **Categories**, so create your categories first. When `AllowClassificationOverride` is disabled, editors do not see the category/classification fields and the defaults configured here are always used. **Show the tax classification** and **Show the external tax code** hide those two fields, so a type such as a sales category can offer **Taxable** and **Tax category** alone. The editor posts a hidden `Rendered` field; when a type places the part's editor elsewhere or removes it, the driver leaves the part as it is instead of clearing **Taxable** and the codes.
 
 ## Domain model
 
