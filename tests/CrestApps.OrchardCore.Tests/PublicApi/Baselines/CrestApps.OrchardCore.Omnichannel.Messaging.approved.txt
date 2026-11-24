@@ -8,6 +8,10 @@
         "CrestApps.OrchardCore.Outreach"}, Description=@"Adds the human messaging workspace: a customer-centric inbox where each customer's conversations on every enabled channel sit side by side, routing to agents and queues through inbound entry points, templates, broadcasts, and its own SignalR hub for real-time messaging. It carries no channel of its own — enable a channel feature such as SMS Messaging Channel to send and receive. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature) and the inbound entry points, which say where each number's messages go.", Id="CrestApps.OrchardCore.Omnichannel.Messaging", Name="Omnichannel Messaging Workspace")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
         "CrestApps.OrchardCore.Omnichannel.Messaging",
+        "CrestApps.OrchardCore.ContactCenter.Queues",
+        "CrestApps.OrchardCore.Teams"}, Description=@"Assigns conversations nobody owns to agents by rules you define: when a contact starts a conversation or replies to one a workflow or broadcast started, or after the contact has waited, a rule gives it to an agent signed in to a queue, a member of a queue or of teams, a user in a role or a named user, by round robin or by the fewest open conversations.", Id="CrestApps.OrchardCore.Omnichannel.Messaging.RoutingRules", Name="Omnichannel Messaging Routing Rules")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Omnichannel.Messaging",
         "CrestApps.OrchardCore.ContactCenter.Queues"}, Description="Push-assigns new department conversations, on every messaging channel, to the lea" +
     "st-loaded available agent using Contact Center work distribution, and re-pools t" +
     "hreads nobody picks up.", Id="CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution", Name="Omnichannel Messaging Routed Distribution")]
@@ -41,6 +45,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks
     public sealed class MessagingRoutedReassignmentBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
     {
         public MessagingRoutedReassignmentBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Assigns waiting messaging conversations nobody owns to agents through the routing" +
+        " rules.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Routing Rules")]
+    public sealed class MessagingRoutingRulesBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public MessagingRoutingRulesBackgroundTask() { }
         public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
 }
@@ -80,6 +91,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging
     public sealed class RoutedDistributionStartup : OrchardCore.Modules.StartupBase
     {
         public RoutedDistributionStartup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging.RoutingRules")]
+    public sealed class RoutingRulesStartup : OrchardCore.Modules.StartupBase
+    {
+        public RoutingRulesStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     public sealed class Startup : OrchardCore.Modules.StartupBase
@@ -188,6 +205,36 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Set(string id, bool favorite, string name) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging.RoutingRules")]
+    public sealed class RoutingRulesController : CrestApps.OrchardCore.Core.Controllers.CatalogAdminController<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule>
+    {
+        public RoutingRulesController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.RoutingRulesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.RoutingRulesController> stringLocalizer) { }
+        protected override Microsoft.Extensions.Localization.LocalizedString CreateDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString CreatedNotification { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DeletedNotification { get; }
+        protected override OrchardCore.Security.Permissions.Permission ManagePermission { get; }
+        protected override Microsoft.Extensions.Localization.LocalizedString NewDisplayName { get; }
+        protected override Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString UpdatedNotification { get; }
+        [OrchardCore.Admin.Admin("messaging/routing-rules/create", "MessagingRoutingRulesCreate")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Create")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("messaging/routing-rules/create", "MessagingRoutingRulesCreate")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreatePost() { }
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("messaging/routing-rules/delete/{id}", "MessagingRoutingRulesDelete")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Delete(string id) { }
+        [OrchardCore.Admin.Admin("messaging/routing-rules/edit/{id}", "MessagingRoutingRulesEdit")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Edit(string id) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("messaging/routing-rules/edit/{id}", "MessagingRoutingRulesEdit")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> EditPost(string id) { }
+        [OrchardCore.Admin.Admin("messaging/routing-rules", "MessagingRoutingRulesIndex")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index() { }
+        protected override System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule> OrderAll(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingRoutingRule> entries) { }
+    }
+    [OrchardCore.Admin.Admin(null, null)]
     public sealed class TemplatesController : Microsoft.AspNetCore.Mvc.Controller
     {
         public TemplatesController(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessageTemplateManager manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.TemplatesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.TemplatesController> stringLocalizer) { }
@@ -225,6 +272,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments
     public static class MessagingDeploymentSteps
     {
         public const string MessageTemplate = "OmnichannelMessageTemplate";
+        public const string RoutingRules = "MessagingRoutingRules";
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Steps
@@ -232,6 +280,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Deployments.Steps
     public sealed class MessagingBroadcastsDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public MessagingBroadcastsDeploymentStep() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Category { get; }
+        public override string Name { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override OrchardCore.Localization.LocalizationSource Title { get; }
+    }
+    public sealed class MessagingRoutingRulesDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public MessagingRoutingRulesDeploymentStep() { }
         [System.Text.Json.Serialization.JsonIgnore]
         public override OrchardCore.Localization.LocalizationSource Category { get; }
         public override string Name { get; }
@@ -493,6 +550,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
     }
     public static class ThreadTimeline
     {
+        public static Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString Describe(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversationEvent entry, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer T) { }
         public static Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString DescribeTransfer(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversationEvent entry, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer T) { }
         public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversationEvent> ForPage(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversationEvent> history, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage> messages, System.DateTime? beforeUtc, bool hasEarlierMessages) { }
         public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Services.ThreadTimelineItem> Merge(System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage> messages, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversationEvent> events) { }
@@ -668,6 +726,47 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string ServedCapabilities { get; set; }
         public string[] TextingUserIds { get; set; }
+    }
+    public class MessagingRoutingRuleViewModel
+    {
+        public MessagingRoutingRuleViewModel() { }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableCampaigns { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableCandidateSources { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableChannels { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableQueues { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableRoles { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableServiceAddresses { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableStrategies { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableTeams { get; set; }
+        public string[] CampaignIds { get; set; }
+        public string CandidateQueueId { get; set; }
+        public string CandidateSource { get; set; }
+        public string[] Channels { get; set; }
+        public string Description { get; set; }
+        public string DisplayText { get; set; }
+        public bool Enabled { get; set; }
+        public bool OnContactReplied { get; set; }
+        public bool OnNewConversation { get; set; }
+        public bool OnStartedWithoutAgent { get; set; }
+        public bool OnWaiting { get; set; }
+        public bool OnlyAvailableAgents { get; set; }
+        public int Order { get; set; }
+        public string[] QueueIds { get; set; }
+        public bool RespectMaxConcurrent { get; set; }
+        public string[] RoleNames { get; set; }
+        public string[] ServiceAddresses { get; set; }
+        public string Strategy { get; set; }
+        public string[] TeamIds { get; set; }
+        public string[] UserIds { get; set; }
+        public int WaitingMinutes { get; set; }
     }
     public class ThreadContact
     {

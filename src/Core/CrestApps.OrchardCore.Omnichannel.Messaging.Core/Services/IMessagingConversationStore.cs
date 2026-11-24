@@ -111,6 +111,16 @@ public interface IMessagingConversationStore : ICatalog<MessagingConversation>
     Task<IReadOnlyCollection<MessagingConversation>> GetRoutedAwaitingPickupAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists open conversations nobody owns (unassigned, or waiting in a queue's shared pool) whose contact wrote last
+    /// and has waited since before a time, oldest first. Used by the routing rules sweep.
+    /// </summary>
+    /// <param name="lastMessageBeforeUtc">The latest time the contact's unanswered message may have arrived.</param>
+    /// <param name="take">The most conversations to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The waiting conversations.</returns>
+    Task<IReadOnlyList<MessagingConversation>> GetUnownedAwaitingReplyAsync(DateTime lastMessageBeforeUtc, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists open conversations whose first-response deadline has passed.
     /// </summary>
     /// <param name="nowUtc">The instant to compare deadlines against.</param>
