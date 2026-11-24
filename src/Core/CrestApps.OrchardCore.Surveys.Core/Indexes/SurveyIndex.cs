@@ -76,4 +76,10 @@ public sealed class SurveyIndex : CatalogItemIndex
     /// are kept.
     /// </summary>
     public int? TotalLimit { get; set; }
+
+    /// <summary>
+    /// Gets or sets when staff started deleting the survey, in UTC, or null (see <c>Survey.DeletingUtc</c>), so a start
+    /// reads the mark by the index, without loading the survey.
+    /// </summary>
+    public DateTime? DeletingUtc { get; set; }
 }

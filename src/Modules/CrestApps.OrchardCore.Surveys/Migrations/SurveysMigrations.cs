@@ -48,7 +48,7 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.CreateAsync(SchemaBuilder);
         await _recipeMigrator.ExecuteAsync($"survey-templates{RecipesConstants.RecipeExtension}", this);
 
-        return 12;
+        return 13;
     }
 
     /// <summary>
@@ -193,5 +193,17 @@ internal sealed class SurveysMigrations : DataMigration
         await SurveysIndexSchema.AddInvitationRecipientIndexesAsync(SchemaBuilder);
 
         return 12;
+    }
+
+    /// <summary>
+    /// Adds the delete mark column of the survey index, so a start reads the mark by the index instead of loading the
+    /// survey (schema only: surveys are marked only for the few minutes a delete runs, and every save writes the column).
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom12Async()
+    {
+        await SurveysIndexSchema.AddSurveyDeletingColumnAsync(SchemaBuilder);
+
+        return 13;
     }
 }

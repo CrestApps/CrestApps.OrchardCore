@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data.Documents;
 using OrchardCore.Documents;
+using OrchardCore.Environment.Shell.Scope;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.YesSql.Core.Upgrades;
 
@@ -115,9 +117,65 @@ public sealed class ResumableSteps
     /// <param name="logger">The logger.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>How many steps ran.</returns>
-    public async Task<int> RunPendingAsync(IEnumerable<IResumableStep> steps, ILogger logger, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// The steps run in the caller's scope and share its session, which the caller saves. A step whose writes fail when
+    /// that session is saved takes the other steps' writes with it; the background task runs each step in a scope of its
+    /// own instead (<see cref="RunPendingInScopesAsync"/>).
+    /// </remarks>
+    public Task<int> RunPendingAsync(IEnumerable<IResumableStep> steps, ILogger logger, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(steps);
+
+        var byName = new Dictionary<string, IResumableStep>(StringComparer.Ordinal);
+
+        foreach (var step in steps)
+        {
+            byName.TryAdd(step.Name, step);
+        }
+
+        return RunPendingAsync(byName.Keys, (name, context, token) => byName[name].RunAsync(context, token), logger, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs one batch of each pending step, each in a child shell scope of its own whose session is saved right after the
+    /// step, inside the step's own error handling (R8-Mi7): a step whose writes fail is the one logged, nothing of it is
+    /// written (Orchard Core cancels a failed scope's session), and the other steps run and commit on sessions of their
+    /// own, so one record that keeps failing never stops the other steps. Keeps the cursors of the steps that ran and
+    /// drops the steps that are done.
+    /// </summary>
+    /// <param name="names">The names of the registered steps; each is resolved again in its own scope.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many steps ran.</returns>
+    public Task<int> RunPendingInScopesAsync(IEnumerable<string> names, ILogger logger, CancellationToken cancellationToken = default)
+        => RunPendingAsync(names, RunInChildScopeAsync, logger, cancellationToken);
+
+    private static async Task<bool> RunInChildScopeAsync(string name, ResumableStepContext context, CancellationToken cancellationToken)
+    {
+        var done = false;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            var services = scope.ServiceProvider;
+            var step = services.GetServices<IResumableStep>().FirstOrDefault(step => string.Equals(step.Name, name, StringComparison.Ordinal))
+                ?? throw new InvalidOperationException($"The resumable step '{name}' is not registered.");
+
+            done = await step.RunAsync(context, cancellationToken);
+
+            await services.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+        });
+
+        return done;
+    }
+
+    private async Task<int> RunPendingAsync(
+        IEnumerable<string> names,
+        Func<string, ResumableStepContext, CancellationToken, Task<bool>> run,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(names);
+        ArgumentNullException.ThrowIfNull(logger);
 
         var pending = (await _documents.GetOrCreateImmutableAsync()).Pending;
 
@@ -131,30 +189,30 @@ public sealed class ResumableSteps
         var progress = new Dictionary<string, ResumableStepContext>(StringComparer.Ordinal);
         var seen = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
 
-        foreach (var step in steps.Where(step => pending.ContainsKey(step.Name)))
+        foreach (var name in names.Distinct(StringComparer.Ordinal).Where(pending.ContainsKey))
         {
             var context = new ResumableStepContext
             {
-                Cursor = pending[step.Name].Cursor,
-                Data = new Dictionary<string, string>(pending[step.Name].Data, StringComparer.Ordinal),
+                Cursor = pending[name].Cursor,
+                Data = new Dictionary<string, string>(pending[name].Data, StringComparer.Ordinal),
             };
 
-            seen[step.Name] = [.. pending[step.Name].Data.Keys];
+            seen[name] = [.. pending[name].Data.Keys];
 
             try
             {
-                if (await step.RunAsync(context, cancellationToken))
+                if (await run(name, context, cancellationToken))
                 {
-                    done.Add(step.Name);
+                    done.Add(name);
                 }
 
-                progress[step.Name] = context;
+                progress[name] = context;
                 ran++;
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 // The step runs again on the next pass, from the cursor it last kept.
-                logger.LogError(exception, "The resumable step '{Step}' failed; it runs again on the next pass.", step.Name);
+                logger.LogError(exception, "The resumable step '{Step}' failed; it runs again on the next pass.", name);
             }
         }
 
@@ -207,8 +265,8 @@ public sealed class ResumableStepsBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         => this.RunAsync(async run => run.AddItems(
-            await serviceProvider.GetRequiredService<ResumableSteps>().RunPendingAsync(
-                serviceProvider.GetServices<IResumableStep>(),
+            await serviceProvider.GetRequiredService<ResumableSteps>().RunPendingInScopesAsync(
+                serviceProvider.GetServices<IResumableStep>().Select(step => step.Name),
                 serviceProvider.GetRequiredService<ILogger<ResumableStepsBackgroundTask>>(),
                 cancellationToken),
             "steps"));

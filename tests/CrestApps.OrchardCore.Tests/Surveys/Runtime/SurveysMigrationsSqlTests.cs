@@ -171,6 +171,22 @@ public sealed class SurveysMigrationsSqlTests
     }
 
     [Fact]
+    public async Task UpdateFrom12_OnSqlite_AddsTheDeleteMarkColumn_ExistingRowsReadNoMark()
+    {
+        await using var database = SqliteDatabase.Create();
+
+        await AssertUpdateFrom12Async(database.Store);
+    }
+
+    [Fact(Skip = LocalDbMissing, SkipUnless = nameof(IsLocalDbAvailable))]
+    public async Task UpdateFrom12_OnSqlServerWithATablePrefixAndASchema_AddsTheDeleteMarkColumn_ExistingRowsReadNoMark()
+    {
+        await using var database = await LocalDbDatabase.CreateAsync(TablePrefix, Schema);
+
+        await AssertUpdateFrom12Async(database.Store);
+    }
+
+    [Fact]
     public async Task CreateAsync_OnSqlite_MakesTheSameSchemaAsTheUpdatesFromVersion1()
     {
         // Arrange: one site made with version 1 and upgraded step by step, one made now.
@@ -417,6 +433,30 @@ public sealed class SurveysMigrationsSqlTests
         {
             Assert.True(await IndexExistsAsync(store, name), name);
         }
+    }
+
+    private static async Task AssertUpdateFrom12Async(IStore store)
+    {
+        // Arrange: the survey index as version 12 made it (the columns it reads here), with a row in it.
+        await InitializeAsync(store);
+        await InTransactionAsync(store, builder => builder.CreateMapIndexTableAsync<SurveyIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<int>("PublishedVersionNumber"),
+            collection: SurveysConstants.CollectionName));
+        await InsertRowAsync(store, typeof(SurveyIndex), ("ItemId", "s1"), ("PublishedVersionNumber", 0));
+
+        // Act
+        var version = 0;
+
+        await InTransactionAsync(store, async builder => version = await Migration(store, builder).UpdateFrom12Async());
+
+        // Assert: the existing row reads no mark; a marked row can be written.
+        Assert.Equal(13, version);
+        Assert.Null((await ReadRowAsync(store, typeof(SurveyIndex), "DeletingUtc"))["DeletingUtc"]);
+
+        await InsertRowAsync(store, typeof(SurveyIndex), ("ItemId", "s2"), ("PublishedVersionNumber", 0), ("DeletingUtc", new DateTime(2026, 11, 24, 9, 0, 0, DateTimeKind.Utc)));
+
+        Assert.Equal(2, await CountRowsAsync(store, typeof(SurveyIndex)));
     }
 
     private static SurveysMigrations Migration(IStore store, ISchemaBuilder builder, ResumableStepsDocument pending = null)

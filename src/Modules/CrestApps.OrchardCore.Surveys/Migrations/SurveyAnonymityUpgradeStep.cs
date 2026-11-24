@@ -12,9 +12,11 @@ namespace CrestApps.OrchardCore.Surveys.Migrations;
 /// anonymous surveys, which keep the day only. <see cref="SurveyAnonymityMigrations"/> asks for it. Secrets not reached
 /// yet are still read. The survey and participation stores make the same change on every save, and both walks are
 /// idempotent, so they have no upper bound: they also reach the records saved while they run, such as the surveys the
-/// sanitizing step saves in the same pass. Both save with YesSql's concurrency check: a completion that counts on a
-/// participation record (or an edit of a survey) while a run holds its page is never overwritten with the copy the run
-/// loaded; the run's commit fails, and the next run reads the page again.
+/// sanitizing step saves in the same pass. A record is saved only when nobody saved or deleted it after the run read its
+/// index row (<see cref="SurveyUpgradePages.SaveUnchangedAsync"/>): an edit of a survey while a run holds its page is never overwritten
+/// with the copy the run loaded, and the run reaches the survey's new row later. Participation records are never
+/// updated once written (every count adds a record), so there the check only keeps a record pruned while the run holds
+/// it from being written back.
 /// </summary>
 internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
 {
@@ -56,7 +58,7 @@ internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
     public Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
         => SurveyUpgradePages.RunAsync(
             context,
-            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _secrets.EnsureProtected, idempotent: true, save: _surveyStore.SaveUnchangedAsync, cancellationToken: cancellationToken),
+            cursor => SurveyUpgradePages.VisitPageAsync(_session, _surveyStore, SurveysConstants.CollectionName, cursor, _secrets.EnsureProtected, idempotent: true, cancellationToken: cancellationToken),
             cursor => SurveyUpgradePages.VisitPageAsync(
                 _session,
                 _participationStore,
@@ -75,6 +77,5 @@ internal sealed class SurveyAnonymityUpgradeStep : IResumableStep
                 },
                 index => index.RespondentKey.StartsWith(AnonymousKeyPrefix),
                 idempotent: true,
-                save: _participationStore.SaveUnchangedAsync,
                 cancellationToken: cancellationToken));
 }
