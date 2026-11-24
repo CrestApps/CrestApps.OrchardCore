@@ -551,6 +551,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
     public class ChannelViewModel
     {
         public ChannelViewModel() { }
+        public string AccentColor { get; set; }
         public string DisplayName { get; set; }
         public string IconCssClass { get; set; }
         public string Name { get; set; }

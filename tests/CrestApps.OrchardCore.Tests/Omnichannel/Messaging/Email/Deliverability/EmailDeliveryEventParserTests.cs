@@ -184,7 +184,7 @@ public sealed class EmailDeliveryEventParserTests
     }
 
     private static JsonElement Json(string payload)
-        => JsonDocument.Parse(payload).RootElement.Clone();
+        => JsonElement.Parse(payload);
 
     private static HttpRequest Request(string body)
     {

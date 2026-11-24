@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Migrations;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
@@ -105,6 +106,7 @@ public sealed class Startup : StartupBase
         services.AddEmailDeliveryEventParser<JsonDeliveryEventParser>();
         services.AddSingleton<IBackgroundTask, EmailDeliveryLogPruningBackgroundTask>();
         services.AddNavigationProvider<EmailSuppressionsAdminMenu>();
+        services.AddDisplayDriver<EmailSuppression, EmailSuppressionDisplayDriver>();
 
         // The mailbox reader, for the mail hosts that cannot call a webhook.
         services.AddScoped<IEmailMailboxReader, ImapEmailMailboxReader>();

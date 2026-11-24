@@ -162,7 +162,7 @@
                     }
                     else
                     {
-                        <a class="nav-link @(tab.IsActive ? "active" : string.Empty)" href="@tab.Url" title="@tab.Tooltip" role="tab" aria-selected="@(tab.IsActive ? "true" : "false")" data-channel-tab="@tab.Name">
+                        <a class="nav-link @(tab.IsActive ? "active" : string.Empty)" href="@tab.Url" title="@tab.Tooltip" role="tab" aria-selected="@(tab.IsActive ? "true" : "false")" data-channel-tab="@tab.Name" style="@(string.IsNullOrEmpty(tab.AccentColor) ? null : "--messaging-channel-color: " + tab.AccentColor)">
                             <i class="@tab.IconCssClass" aria-hidden="true"></i>
                             <span class="visually-hidden">@tab.DisplayName</span>
                             <span class="badge rounded-pill text-bg-danger messaging-tab-badge @(tab.UnreadCount > 0 ? string.Empty : "d-none")" data-channel-tab-badge>@tab.UnreadCount</span>

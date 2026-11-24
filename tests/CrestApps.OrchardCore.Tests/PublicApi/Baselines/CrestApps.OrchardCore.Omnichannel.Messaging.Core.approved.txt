@@ -53,6 +53,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
 {
     public interface IMessagingChannel
     {
+        string AccentColor { get; }
         CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingChannelCapabilities Capabilities { get; }
         Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         string IconCssClass { get; }

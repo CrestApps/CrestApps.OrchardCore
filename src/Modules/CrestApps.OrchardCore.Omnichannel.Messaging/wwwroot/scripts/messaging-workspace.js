@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js
 	function maxTicks(values) {
 		var max = 0n;
 		(values || []).forEach(function(raw) {
@@ -125,8 +125,7 @@
 	function notificationKey(kind, notification) {
 		return String(kind) + ":" + (notification && notification.conversationId || "");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js
 	var settleDelayMs = 1500;
 	var periodicRefreshMs = 6e4;
 	function flagMenuGroups(root) {
@@ -208,8 +207,7 @@
 			schedule
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attachments.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attachments.js
 	function extensionOf(name) {
 		var match = /\.[^.\\/]+$/.exec(String(name || ""));
 		return match ? match[0].toLowerCase() : "";
@@ -292,8 +290,7 @@
 			return sum + (file && file.size || 0);
 		}, 0);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-workspace.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-workspace.js
 	(function(root) {
 		"use strict";
 		var workspace = document.querySelector("[data-messaging-workspace]");
@@ -897,5 +894,4 @@
 			connection.start().then(startHeartbeat).catch(function() {});
 		} catch (e) {}
 	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
 })();

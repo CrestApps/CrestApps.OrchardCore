@@ -1,14 +1,15 @@
 # The `IMessagingChannel` contract
 
 Namespace `CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels`
-(project `src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core`). Every member is required; there are no
-optional interfaces. The reference is `SmsMessagingChannel`.
+(project `src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core`). Every member is required except `AccentColor`,
+which has a default; there are no optional interfaces. The reference is `SmsMessagingChannel`.
 
 | Member | What the workspace uses it for | SMS reference | Notes for a new channel |
 | --- | --- | --- | --- |
 | `string Name` | Stored on every conversation, message and endpoint; matched against `OmnichannelMessage.Channel` and `OmnichannelChannelEndpoint.Channel`. | `OmnichannelConstants.Channels.Sms` (`"SMS"`) | Permanent. Reuse `OmnichannelConstants.Channels.Email` for email. |
 | `LocalizedString DisplayName` | Tab tooltip, composer labels, validation messages, broadcasts list. | `S["SMS"]` | Localize through `IStringLocalizer<TChannel>`. |
 | `string IconCssClass` | The channel tab icon, the list row icon, the composer badge. | `fa-solid fa-comment-sms` | Font Awesome classes; brand icons are `fa-brands fa-whatsapp`, `fa-brands fa-facebook-messenger`, etc. Email: `fa-solid fa-envelope`. |
+| `string AccentColor` | The color of the channel's active tab, so channels differ by color as well as by icon. | `var(--bs-success)` (green) | Optional: a CSS color, usually a Bootstrap variable. Email uses `var(--bs-primary)` (blue). `null` uses the workspace's neutral color. Pick one no other channel uses. |
 | `int Order` | Tab order (lowest first). | `0` | Pick a gap (10, 20…) so channels can be slotted in. |
 | `MessagingChannelCapabilities Capabilities` | Composer adaptation and service rules. | Delivery receipts, broadcast, quiet hours. | See the table below. Return a static instance. |
 | `string NormalizeAddress(string)` | The conversation key; applied to inbound addresses, composer recipients, endpoint values (through the workspace's `IChannelEndpointAddressPolicy`) and delivery receipts. | Strips whitespace (endpoints are also canonicalized to E.164 by the phone service). | Must be idempotent and return `null` for empty input. Email: trim + lower-case + strip `mailto:`. WhatsApp: E.164 without `whatsapp:` prefix. Messenger: the page-scoped user id as-is. |

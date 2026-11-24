@@ -1,0 +1,23 @@
+@model ShapeViewModel<EmailSuppression>
+
+@{
+    var suppression = Model.Value;
+    var (icon, reason) = suppression.Reason switch
+    {
+        EmailSuppressionReason.HardBounce => ("fa-solid fa-circle-xmark text-danger", T["Bounced"].Value),
+        EmailSuppressionReason.RepeatedSoftBounces => ("fa-solid fa-rotate text-warning", T["Kept bouncing"].Value),
+        EmailSuppressionReason.Complaint => ("fa-solid fa-flag text-danger", T["Spam complaint"].Value),
+        _ => ("fa-solid fa-hand text-secondary", T["Added by hand"].Value),
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Reason"]">
+    <i class="@icon me-1" aria-hidden="true"></i>@reason
+</span>
+
+@if (!string.IsNullOrEmpty(suppression.CreatedBy))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Added by"]">
+        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@suppression.CreatedBy
+    </span>
+}

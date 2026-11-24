@@ -49,6 +49,11 @@ public class ChannelViewModel
     /// Gets or sets the CSS classes of the channel's icon.
     /// </summary>
     public string IconCssClass { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CSS color that marks the channel, or <see langword="null"/> for the workspace's default.
+    /// </summary>
+    public string AccentColor { get; set; }
 }
 
 /// <summary>

@@ -1,0 +1,12 @@
+@using System.Globalization
+
+@model ShapeViewModel<EmailSuppression>
+
+@{
+    var since = DateTime.SpecifyKind(Model.Value.CreatedUtc, DateTimeKind.Utc);
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Suppressed since"]">
+    <i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>
+    <time datetime="@since.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: since, Format: "g"))</time>
+</span>

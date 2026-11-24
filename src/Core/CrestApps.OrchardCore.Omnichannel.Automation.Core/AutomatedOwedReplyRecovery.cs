@@ -105,7 +105,7 @@ public sealed class AutomatedOwedReplyRecovery
                 .Take(BatchSize)
                 .ListAsync(cancellationToken);
 
-            if (!activities.Any())
+            if (activities.Count == 0)
             {
                 break;
             }

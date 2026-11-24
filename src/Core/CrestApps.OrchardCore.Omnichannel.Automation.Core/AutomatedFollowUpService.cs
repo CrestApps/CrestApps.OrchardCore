@@ -157,7 +157,7 @@ public sealed class AutomatedFollowUpService
                 .Take(BatchSize)
                 .ListAsync(cancellationToken);
 
-            if (!activities.Any())
+            if (activities.Count == 0)
             {
                 break;
             }

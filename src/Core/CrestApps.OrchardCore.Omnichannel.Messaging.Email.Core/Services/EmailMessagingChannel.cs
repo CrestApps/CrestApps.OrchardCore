@@ -89,6 +89,10 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     public string IconCssClass => "fa-solid fa-envelope";
 
     /// <inheritdoc/>
+    /// <remarks>Blue, so an email tab is never mistaken for the green SMS one.</remarks>
+    public string AccentColor => "var(--bs-primary)";
+
+    /// <inheritdoc/>
     public int Order => 10;
 
     /// <inheritdoc/>
