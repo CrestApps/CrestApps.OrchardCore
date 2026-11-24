@@ -907,6 +907,88 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.Equal("bea", saved.AssignedToUsername);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_ManualFollowUpOfAnActivityTheDialerCompleted_GoesToTheAgentTheDialerCalledFor()
+    {
+        // Arrange: "The user who completed the activity", but the dialer completed it (nobody answered), and the
+        // follow-up is a manual activity an agent works by hand. It must not be left with no owner.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        action.Put(new FollowUpRoutingMetadata { Target = FollowUpRoutingTarget.Agent });
+
+        var session = CreateSessionWithUser(new User { UserId = "agent-user-id", UserName = "agent" });
+        OmnichannelActivity saved = null;
+        SetupSave(session, value => saved = value);
+
+        var resolver = new Mock<IActivityCallAgentResolver>();
+        resolver.Setup(x => x.FindAgentUserIdAsync("activity-id", It.IsAny<CancellationToken>())).ReturnsAsync("agent-user-id");
+
+        var executor = CreateExecutor(action, session, callAgentResolver: resolver.Object);
+        var context = CreateContext();
+        context.Activity.Source = ActivitySources.PowerDial;
+        context.Activity.CompletedById = null;
+        context.Activity.CompletedByUsername = null;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(saved);
+        Assert.Equal(ActivitySources.Manual, saved.Source);
+        Assert.Equal("agent-user-id", saved.AssignedToId);
+        Assert.Equal(ActivityAssignmentStatus.Assigned, saved.AssignmentStatus);
+        Assert.Equal(ActivityStatus.NotStated, saved.Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DialerFollowUpOfAnActivityTheDialerCompleted_StaysWithoutAnOwner()
+    {
+        // The dialer offers its record to whichever agent is free, so a "Same as before" dialer retry gets no owner.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity saved = null;
+        SetupSave(session, value => saved = value);
+
+        var resolver = new Mock<IActivityCallAgentResolver>();
+        resolver.Setup(x => x.FindAgentUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("agent-user-id");
+
+        var executor = CreateExecutor(action, session, callAgentResolver: resolver.Object);
+        var context = CreateContext();
+        context.Activity.Source = ActivitySources.PowerDial;
+        context.Activity.CompletedById = null;
+        context.Activity.CompletedByUsername = null;
+
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(saved);
+        Assert.Equal(ActivitySources.PowerDial, saved.Source);
+        Assert.Null(saved.AssignedToId);
+        resolver.Verify(x => x.FindAgentUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AutomatedFollowUp_IsNotGivenAnOwner()
+    {
+        // An automated (AI) retry runs on its own.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity saved = null;
+        SetupSave(session, value => saved = value);
+
+        var resolver = new Mock<IActivityCallAgentResolver>();
+        var executor = CreateExecutor(action, session, callAgentResolver: resolver.Object);
+        var context = CreateContext();
+        context.Activity.Source = ActivitySources.Automatic;
+        context.Activity.InteractionType = ActivityInteractionType.Automated;
+        context.Activity.CompletedById = null;
+        context.Activity.CompletedByUsername = null;
+
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(saved);
+        Assert.Null(saved.AssignedToId);
+        resolver.Verify(x => x.FindAgentUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static INamedCatalog<LeadStatus> CreateLeadStatuses()
     {
         var statuses = new Mock<INamedCatalog<LeadStatus>>();

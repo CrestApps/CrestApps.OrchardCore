@@ -316,6 +316,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         var route = await ApplyRoutingAsync(action, nextAttempt);
+        await FillMissingOwnerAsync(nextAttempt, action, metadata.AssignmentType, metadata.NormalizedUserName, activity, now);
 
         // Whatever carried the first attempt takes the next one in too -- a dialer campaign queues it again -- or
         // refuses it when no attempt is left. A follow-up the action gave to an agent stays off the dialer, and one it
@@ -429,7 +430,10 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
         // A new activity the action sends to the dialer is queued on its campaign by the same handlers that queue a
         // dialer retry, so it is dialed under the profile the action names.
-        if (await ApplyRoutingAsync(action, newActivity) == FollowUpRoutingTarget.Dialer)
+        var newActivityRoute = await ApplyRoutingAsync(action, newActivity);
+        await FillMissingOwnerAsync(newActivity, action, metadata.AssignmentType, metadata.NormalizedUserName, activity, now);
+
+        if (newActivityRoute == FollowUpRoutingTarget.Dialer)
         {
             var followUp = new FollowUpActivityContext
             {
@@ -755,6 +759,58 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         AssignOwner(followUpActivity, owner.UserId, owner.UserName, assignedToUtc);
 
         return true;
+    }
+
+    /// <summary>
+    /// Gives a manual follow-up that would otherwise have no owner to the agent the call was placed or connected for.
+    /// </summary>
+    /// <remarks>
+    /// "The user who completed the activity" names nobody when the dialer completed it, as it does when nobody answers
+    /// or a machine does, and the follow-up an agent was to work by hand was left with no owner. The agent the dialer
+    /// held or connected for the call is the one who calls back. Work the dialer queues is offered to whoever is free, so
+    /// it is left without an owner.
+    /// </remarks>
+    private async Task FillMissingOwnerAsync(
+        OmnichannelActivity followUpActivity,
+        SubjectAction action,
+        SubjectActionOwnerAssignmentType assignmentType,
+        string normalizedUserName,
+        OmnichannelActivity completedActivity,
+        DateTime assignedToUtc)
+    {
+        // An automated (AI) follow-up runs on its own and needs no owner.
+        if (!string.IsNullOrEmpty(followUpActivity.AssignedToId) ||
+            followUpActivity.InteractionType != ActivityInteractionType.Manual ||
+            ActivitySources.IsDialer(followUpActivity.Source) ||
+            SubjectActionOwnerAssignmentTypeResolver.Resolve(assignmentType, normalizedUserName) != SubjectActionOwnerAssignmentType.SameOwner)
+        {
+            return;
+        }
+
+        var userId = _callAgentResolver is null
+            ? null
+            : await _callAgentResolver.FindAgentUserIdAsync(completedActivity.ItemId);
+
+        var agent = string.IsNullOrEmpty(userId)
+            ? null
+            : await _session.Query<User, UserIndex>(x => x.UserId == userId).FirstOrDefaultAsync();
+
+        if (agent is null)
+        {
+            _logger.LogWarning(
+                "Nobody completed activity {ActivityId} and no agent was on its call, so the follow-up of subject action {SubjectActionId} has no owner; any agent can take it.",
+                completedActivity.ItemId,
+                action.ItemId);
+
+            return;
+        }
+
+        AssignOwner(followUpActivity, agent.UserId, agent.UserName, assignedToUtc);
+
+        if (followUpActivity.Status is ActivityStatus.Scheduled or ActivityStatus.NotStated)
+        {
+            followUpActivity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(followUpActivity.InteractionType, hasAssignedUser: true);
+        }
     }
 
     /// <summary>

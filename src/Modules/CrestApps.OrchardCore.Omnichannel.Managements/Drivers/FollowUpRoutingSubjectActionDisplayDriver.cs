@@ -10,7 +10,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Security.Services;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -136,38 +135,12 @@ internal sealed class FollowUpRoutingSubjectActionDisplayDriver : DisplayDriver<
         var dialWith = model.DialWith?.Trim() ?? string.Empty;
         var dialedByProfile = dialWith.Length > 0 && dialWith != FollowUpRoutingSubjectActionViewModel.DialWithNone;
 
-        if (dialedByProfile && !await _formOptions.DialerProfileExistsAsync(dialWith))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialWith), S["The selected dialer profile no longer exists."]);
-        }
-
         // A dialer profile offers the follow-up to whichever agent is free, so it keeps no owner of its own.
         var assignTo = dialedByProfile ? SubjectActionOwnerAssignmentType.SameOwner : model.AssignTo;
         var normalizedUserName = assignTo == SubjectActionOwnerAssignmentType.SpecificOwner ? model.NormalizedUserName?.Trim() : null;
 
-        if (assignTo == SubjectActionOwnerAssignmentType.SpecificOwner && string.IsNullOrEmpty(normalizedUserName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.NormalizedUserName), S["Choose the user who owns the follow-up."]);
-        }
-
-        if (assignTo == SubjectActionOwnerAssignmentType.Pool)
-        {
-            switch (model.PoolSource)
-            {
-                case FollowUpOwnerPoolSource.Team when string.IsNullOrWhiteSpace(model.PoolTeamId):
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.PoolTeamId), S["Choose the team whose members get the follow-up."]);
-                    break;
-
-                case FollowUpOwnerPoolSource.Roles when Clean(model.PoolRoleNames).Length == 0:
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.PoolRoleNames), S["Choose at least one role."]);
-                    break;
-
-                case FollowUpOwnerPoolSource.Users when Clean(model.PoolUserIds).Length == 0:
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.PoolUserIds), S["Choose at least one user."]);
-                    break;
-            }
-        }
-
+        // The rules (a dialer profile that exists, a user or a pool to pick from) live on the action's handler, so the
+        // editor, a recipe and a deployment plan all enforce them.
         action.Put(new FollowUpRoutingMetadata
         {
             Target = dialWith.Length == 0
