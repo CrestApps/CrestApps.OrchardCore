@@ -52,14 +52,17 @@ public static class MimeInboundEmailParser
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        // A reply goes where the sender asked replies to go. A web form or a notification service sends from its own
-        // address and names the customer in Reply-To; the customer is who the conversation is with.
-        var sender = message.ReplyTo.Mailboxes.FirstOrDefault() ?? message.From.Mailboxes.FirstOrDefault() ?? message.Sender;
-        var fromName = message.From.Mailboxes.FirstOrDefault()?.Name;
+        // The customer is who sent the email. Anybody can write any Reply-To, so it is only carried along: the receiver
+        // lets it name the customer when the business itself sent the email (a form on its own site).
+        var sender = message.From.Mailboxes.FirstOrDefault() ?? message.Sender;
+        var replyTo = message.ReplyTo.Mailboxes.FirstOrDefault();
 
         var email = new InboundEmail
         {
-            From = sender is null ? null : new InboundEmailAddress(sender.Address, string.IsNullOrWhiteSpace(sender.Name) ? fromName : sender.Name),
+            From = sender is null ? null : new InboundEmailAddress(sender.Address, sender.Name),
+            ReplyTo = replyTo is null || string.Equals(replyTo.Address, sender?.Address, StringComparison.OrdinalIgnoreCase)
+                ? null
+                : new InboundEmailAddress(replyTo.Address, replyTo.Name),
             To = message.To.Mailboxes.Select(ToAddress).Where(address => address.Address is not null).ToList(),
             Cc = message.Cc.Mailboxes.Select(ToAddress).Where(address => address.Address is not null).ToList(),
             Subject = message.Subject,

@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.Attachments.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -42,6 +43,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
     private readonly IEnumerable<IProviderWebhookInbox> _inboxes;
     private readonly IEnumerable<IProviderWebhookInboxHandler> _inboxHandlers;
     private readonly IEmailDeliveryEventProcessor _deliveryEvents;
+    private readonly IEmailSentMessageFinder _sentMessages;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -61,6 +63,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
         IEnumerable<IProviderWebhookInbox> inboxes,
         IEnumerable<IProviderWebhookInboxHandler> inboxHandlers,
         IEmailDeliveryEventProcessor deliveryEvents,
+        IEmailSentMessageFinder sentMessages,
         IClock clock,
         ILogger<EmailInboundReceiver> logger)
     {
@@ -69,6 +72,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
         _inboxes = inboxes;
         _inboxHandlers = inboxHandlers;
         _deliveryEvents = deliveryEvents;
+        _sentMessages = sentMessages;
         _clock = clock;
         _logger = logger;
     }
@@ -94,6 +98,8 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
 
             return EmailInboundResult.Of(EmailInboundStatus.Ignored, "The email is a delivery report (bounce).");
         }
+
+        await ResolveCustomerAsync(email, cancellationToken);
 
         var from = email.From?.Address;
 
@@ -246,6 +252,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             InReplyTo = email.InReplyTo,
             References = email.References.Where(reference => !string.IsNullOrWhiteSpace(reference)).ToList(),
             FromName = email.From.Name,
+            ReplyTo = email.ReplyTo?.Address,
             Cc = email.To
                 .Concat(email.Cc)
                 .Select(address => address.Address)
@@ -317,10 +324,41 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
     // A bounce report that comes back to the mailbox is a delivery event like any a provider posts: a permanent failure
     // suppresses the address and marks the email failed, a delay or a temporary failure counts toward the address's
     // soft bounces and the receiving domain's deferrals.
+    // The customer is who sent the email. A Reply-To that names somebody else takes over only when one of the
+    // business's own addresses sent the email, as a form on the business's own site relays a visitor's message;
+    // from anybody else it proves nothing about who wrote, so it is kept on the message for the record.
+    private async Task ResolveCustomerAsync(InboundEmail email, CancellationToken cancellationToken)
+    {
+        if (email.ReplyTo is null || !OmnichannelEmailAddress.IsValid(email.ReplyTo.Address) || email.From is null)
+        {
+            return;
+        }
+
+        if (await _endpointManager.GetByServiceAddressAsync(OmnichannelConstants.Channels.Email, email.From.Address, cancellationToken) is not null)
+        {
+            email.From = string.IsNullOrWhiteSpace(email.ReplyTo.Name) ? new InboundEmailAddress(email.ReplyTo.Address, email.From.Name) : email.ReplyTo;
+            email.ReplyTo = null;
+        }
+    }
+
     private async Task ApplyBounceAsync(InboundEmailDeliveryReport report, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(report.OriginalMessageId) && string.IsNullOrEmpty(report.Recipient))
+        if (string.IsNullOrEmpty(report.OriginalMessageId) || string.IsNullOrEmpty(report.Recipient))
         {
+            _logger.LogWarning("A delivery report that names no original Message-ID or no recipient was ignored.");
+
+            return;
+        }
+
+        // Anybody can email a delivery report. One is believed only when it is about an email this site sent, to the
+        // address the report names: otherwise a forged report could suppress any address or pause the sender.
+        var original = await _sentMessages.FindAsync(MimeInboundEmailParser.TrimMessageId(report.OriginalMessageId), cancellationToken);
+
+        if (original is null ||
+            !string.Equals(OmnichannelEmailAddress.Normalize(original.CustomerAddress), OmnichannelEmailAddress.Normalize(report.Recipient), StringComparison.Ordinal))
+        {
+            _logger.LogWarning("A delivery report about an email this site did not send to that recipient was ignored.");
+
             return;
         }
 

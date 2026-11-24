@@ -53,6 +53,7 @@ public sealed class AutomatedFollowUpService
     private readonly ILocalLock _localLock;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly AutomatedActivityScanCursors _cursors;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -78,6 +79,7 @@ public sealed class AutomatedFollowUpService
     /// <param name="localLock">The lock that serializes a conversation's messages.</param>
     /// <param name="session">The session the activities are read from.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="cursors">Where the previous pass stopped reading the conversations awaiting an answer.</param>
     /// <param name="logger">The logger.</param>
     public AutomatedFollowUpService(
         IEnumerable<IAutomatedMessagingChannel> channels,
@@ -100,6 +102,7 @@ public sealed class AutomatedFollowUpService
         ILocalLock localLock,
         ISession session,
         IClock clock,
+        AutomatedActivityScanCursors cursors,
         ILogger<AutomatedFollowUpService> logger)
     {
         _channels = channels;
@@ -122,6 +125,7 @@ public sealed class AutomatedFollowUpService
         _localLock = localLock;
         _session = session;
         _clock = clock;
+        _cursors = cursors;
         _logger = logger;
     }
 
@@ -141,7 +145,8 @@ public sealed class AutomatedFollowUpService
         }
 
         var channelNames = channels.Keys.ToArray();
-        var documentId = 0L;
+        var documentId = _cursors.FollowUp;
+        var wrapped = documentId == 0;
         var examined = 0;
         var sent = 0;
 
@@ -159,13 +164,27 @@ public sealed class AutomatedFollowUpService
 
             if (activities.Count == 0)
             {
-                break;
+                // The end of the list: the next pass starts again from the first conversation, and this one goes
+                // round once to reach the conversations before where it started.
+                if (wrapped)
+                {
+                    documentId = 0;
+
+                    break;
+                }
+
+                wrapped = true;
+                documentId = 0;
+
+                continue;
             }
 
             foreach (var activity in activities)
             {
                 if (_clock.UtcNow >= deadlineUtc)
                 {
+                    _cursors.FollowUp = documentId;
+
                     return sent;
                 }
 
@@ -186,6 +205,8 @@ public sealed class AutomatedFollowUpService
                 }
             }
         }
+
+        _cursors.FollowUp = documentId;
 
         return sent;
     }

@@ -28,6 +28,12 @@ public sealed class EmailMessageMetadata
     public string FromName { get; set; }
 
     /// <summary>
+    /// Gets or sets the <c>Reply-To</c> the sender set when it named somebody else. It is kept for the record only: it
+    /// never decided whose conversation the email joined.
+    /// </summary>
+    public string ReplyTo { get; set; }
+
+    /// <summary>
     /// Gets or sets the other addresses the email was sent to or copied to.
     /// </summary>
     public IList<string> Cc { get; set; } = [];

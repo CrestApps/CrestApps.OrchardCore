@@ -36,6 +36,7 @@ public sealed class AutomatedOwedReplyRecovery
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly AutomatedActivityScanCursors _cursors;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -49,6 +50,7 @@ public sealed class AutomatedOwedReplyRecovery
     /// <param name="endpointManager">The manager of the business's addresses.</param>
     /// <param name="session">The session the activities are read from.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="cursors">Where the previous pass stopped reading the conversations awaiting an answer.</param>
     /// <param name="logger">The logger.</param>
     public AutomatedOwedReplyRecovery(
         IEnumerable<IAutomatedMessagingChannel> channels,
@@ -59,6 +61,7 @@ public sealed class AutomatedOwedReplyRecovery
         IOmnichannelChannelEndpointManager endpointManager,
         ISession session,
         IClock clock,
+        AutomatedActivityScanCursors cursors,
         ILogger<AutomatedOwedReplyRecovery> logger)
     {
         _channels = channels;
@@ -69,6 +72,7 @@ public sealed class AutomatedOwedReplyRecovery
         _endpointManager = endpointManager;
         _session = session;
         _clock = clock;
+        _cursors = cursors;
         _logger = logger;
     }
 
@@ -89,7 +93,8 @@ public sealed class AutomatedOwedReplyRecovery
 
         var channelNames = channels.Keys.ToArray();
         var cutoff = _clock.UtcNow.Subtract(MaxOwedReplyAge);
-        var documentId = 0L;
+        var documentId = _cursors.OwedReply;
+        var wrapped = documentId == 0;
         var examined = 0;
         var recovered = 0;
 
@@ -107,13 +112,27 @@ public sealed class AutomatedOwedReplyRecovery
 
             if (activities.Count == 0)
             {
-                break;
+                // The end of the list: the next pass starts again from the first conversation, and this one goes
+                // round once to reach the conversations before where it started.
+                if (wrapped)
+                {
+                    documentId = 0;
+
+                    break;
+                }
+
+                wrapped = true;
+                documentId = 0;
+
+                continue;
             }
 
             foreach (var activity in activities)
             {
                 if (_clock.UtcNow >= deadlineUtc)
                 {
+                    _cursors.OwedReply = documentId;
+
                     return recovered;
                 }
 
@@ -134,6 +153,8 @@ public sealed class AutomatedOwedReplyRecovery
                 }
             }
         }
+
+        _cursors.OwedReply = documentId;
 
         return recovered;
     }

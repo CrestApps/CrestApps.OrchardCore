@@ -41,6 +41,7 @@ public static class AutomatedMessagingServiceCollectionExtensions
 
         services.TryAddScoped<AutomatedOwedReplyRecovery>();
         services.TryAddScoped<AutomatedFollowUpService>();
+        services.TryAddSingleton<AutomatedActivityScanCursors>();
 
         return services;
     }

@@ -121,7 +121,7 @@ The **Email Mailbox Reader** background task reads each mailbox every minute, re
 6. An automatic email (`Auto-Submitted`, `Precedence: bulk`, out-of-office headers) is flagged, so the entry point's auto-reply and the AI leave it unanswered.
 7. The email is committed to the durable inbox under its `Message-ID` and handed to the workspace and, when an automated conversation owns the customer, to the AI.
 
-When the sender set a `Reply-To` (a web form or a notification service), the conversation is with that address.
+The conversation is with the address the email came from. A `Reply-To` naming somebody else decides the conversation only when one of the business's own addresses sent the email, as a form on the business's own site relays a visitor's message; from anyone else it is kept on the message for the record, because anybody can write any `Reply-To`.
 
 ## Answer email in the workspace
 
@@ -149,7 +149,7 @@ Mailbox providers (Gmail, Outlook, Yahoo) judge a sender by its sending history:
 
 ### What the channel does
 
-- **Sending limits.** Each email address has a limit per hour, per day and per receiving domain, and a minimum gap between bulk emails, on the address's **Email** card. Broadcasts, campaign opening emails and follow-ups over a limit wait for their turn instead of failing: they are spread out at the address's pace (two hundred an hour is one every 18 seconds), so a campaign of ten thousand drains over hours rather than bursting. Replies to customers count against the limits but are never held back.
+- **Sending limits.** Each email address has a limit per hour, per day and per receiving domain, and a minimum gap between bulk emails, on the address's **Email** card. Broadcasts, campaign opening emails and follow-ups over a limit wait for their turn instead of failing: they go out as fast as the minimum gap allows until a limit is reached, then wait for their turns, spread out at the address's pace (two hundred an hour is one every 18 seconds), so a campaign of ten thousand drains over hours rather than bursting. Replies to customers count against the limits but are never held back.
 - **Warm-up.** **Warm up this address** starts a new address at a small daily limit (50 by default) and doubles it every day until it reaches the daily limit, spreading each day's allowance over twelve hours.
 - **Reacting to the server.** A failed send is read by its SMTP code and enhanced status code:
 

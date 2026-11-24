@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
@@ -218,6 +219,104 @@ public sealed class EmailInboundReceiverTests
         Assert.Equal(inbox.Accepted[0].DeliveryId, inbox.Accepted[1].DeliveryId);
     }
 
+    [Fact]
+    public async Task ReceiveAsync_ADeliveryReportAboutAnEmailThisSiteNeverSent_IsIgnored()
+    {
+        // Arrange
+        var events = new Mock<IEmailDeliveryEventProcessor>();
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: events.Object);
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "forged@evil.example", Recipient = "victim@example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert: nobody can suppress an address by mailing a report about an email the site did not send.
+        events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ADeliveryReportNamingAnotherRecipientThanTheEmailWentTo_IsIgnored()
+    {
+        // Arrange
+        var events = new Mock<IEmailDeliveryEventProcessor>();
+        var sent = new Mock<IEmailSentMessageFinder>();
+        sent.Setup(finder => finder.FindAsync("sent-1@contoso.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelMessage { CustomerAddress = "ann@example.com" });
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: events.Object, sentMessages: sent.Object);
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<sent-1@contoso.com>", Recipient = "victim@example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ADeliveryReportAboutAnEmailThisSiteSentToThatRecipient_IsApplied()
+    {
+        // Arrange
+        var events = new Mock<IEmailDeliveryEventProcessor>();
+        var sent = new Mock<IEmailSentMessageFinder>();
+        sent.Setup(finder => finder.FindAsync("sent-1@contoso.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelMessage { CustomerAddress = "ann@example.com" });
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: events.Object, sentMessages: sent.Object);
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<sent-1@contoso.com>", Recipient = "Ann@Example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_AReplyToNamingSomebodyElse_NeverDecidesWhoTheCustomerIs()
+    {
+        // Arrange
+        var inbox = new RecordingInbox();
+        var receiver = CreateReceiver(inbox);
+
+        var email = Email();
+        email.From = new InboundEmailAddress("attacker@evil.example", "Mallory");
+        email.ReplyTo = new InboundEmailAddress("ann@example.com", "Ann Lee");
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert: the conversation is with the sender; the Reply-To is only kept for the record.
+        var message = JsonSerializer.Deserialize<OmnichannelMessage>(Assert.Single(inbox.Accepted).Payload);
+        Assert.Equal("attacker@evil.example", message.CustomerAddress);
+        Assert.Equal("ann@example.com", message.GetEmailMetadata().ReplyTo);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_AFormOnTheBusinessOwnSite_IsWithTheVisitorNamedInReplyTo()
+    {
+        // Arrange
+        var inbox = new RecordingInbox();
+        var receiver = CreateReceiver(inbox, ownAddresses: ["forms@contoso.com"]);
+
+        var email = Email();
+        email.From = new InboundEmailAddress("forms@contoso.com", "Website");
+        email.ReplyTo = new InboundEmailAddress("Ann@Example.com", "Ann Lee");
+
+        // Act
+        var result = await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(EmailInboundStatus.Accepted, result.Status);
+        var message = JsonSerializer.Deserialize<OmnichannelMessage>(Assert.Single(inbox.Accepted).Payload);
+        Assert.Equal("ann@example.com", message.CustomerAddress);
+        Assert.Null(message.GetEmailMetadata().ReplyTo);
+    }
+
     private static InboundEmail Email()
         => new()
         {
@@ -233,7 +332,8 @@ public sealed class EmailInboundReceiverTests
         RecordingInbox inbox,
         IReadOnlyCollection<string> ownAddresses = null,
         IMessagingAttachmentStore attachmentStore = null,
-        IEmailDeliveryEventProcessor deliveryEvents = null)
+        IEmailDeliveryEventProcessor deliveryEvents = null,
+        IEmailSentMessageFinder sentMessages = null)
     {
         var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
         endpointManager
@@ -254,6 +354,7 @@ public sealed class EmailInboundReceiverTests
             [inbox],
             [],
             deliveryEvents ?? Mock.Of<IEmailDeliveryEventProcessor>(),
+            sentMessages ?? Mock.Of<IEmailSentMessageFinder>(),
             clock.Object,
             NullLogger<EmailInboundReceiver>.Instance);
     }

@@ -12,6 +12,13 @@ public sealed class InboundEmail
     public InboundEmailAddress From { get; set; }
 
     /// <summary>
+    /// Gets or sets the <c>Reply-To</c> when it names someone other than the sender. It decides whose conversation the
+    /// email joins only when one of the business's own addresses sent the email (a form on the business's own site);
+    /// otherwise it is kept on the message and never decides who the customer is.
+    /// </summary>
+    public InboundEmailAddress ReplyTo { get; set; }
+
+    /// <summary>
     /// Gets or sets the addresses in the <c>To</c> header.
     /// </summary>
     public IList<InboundEmailAddress> To { get; set; } = [];

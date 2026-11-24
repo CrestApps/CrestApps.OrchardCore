@@ -43,10 +43,11 @@ public sealed class MimeInboundEmailParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_WhenTheEmailNamesAReplyToAddress_TheConversationIsWithThatAddress()
+    public async Task ParseAsync_WhenTheEmailNamesAReplyToAddress_TheSenderStaysTheSenderAndTheReplyToIsCarried()
     {
         // Arrange
-        // A web form or a notification service sends from its own address and names the customer in Reply-To.
+        // Anybody can write any Reply-To, so the parser keeps the sender as the sender and carries the Reply-To; the
+        // receiver lets it name the customer only when the business's own address sent the email.
         var raw = """
             From: Website Forms <no-reply@forms.example.net>
             Reply-To: Ann Lee <ann@example.com>
@@ -61,8 +62,9 @@ public sealed class MimeInboundEmailParserTests
         var email = await ParseAsync(raw);
 
         // Assert
-        Assert.Equal("ann@example.com", email.From.Address);
-        Assert.Equal("Ann Lee", email.From.Name);
+        Assert.Equal("no-reply@forms.example.net", email.From.Address);
+        Assert.Equal("ann@example.com", email.ReplyTo.Address);
+        Assert.Equal("Ann Lee", email.ReplyTo.Name);
     }
 
     [Fact]

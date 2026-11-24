@@ -100,6 +100,21 @@ public sealed class EmailSendingGovernorTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_WhenSending_WaitsOutTheMinimumGapInsteadOfGoingToTheBackOfTheLine()
+    {
+        // Arrange
+        var governor = DeliverabilityTestFactory.CreateGovernor(out var log, out _, out var states, out var clock);
+        log.AddSent(AddressId, clock.UtcNow.AddMilliseconds(-1500));
+
+        // Act
+        var decision = await governor.EvaluateAsync(_address, Settings(gapSeconds: 2), "bob@example.com", isBulk: true, reserveTurn: true, TestContext.Current.CancellationToken);
+
+        // Assert: the email goes once the gap has passed, and takes no turn at the back of the queue.
+        Assert.True(decision.IsAllowed);
+        Assert.Equal(0, states.Saves);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_ReservingTurns_SpreadsHeldBackMailAtTheAddressesPace()
     {
         // Arrange

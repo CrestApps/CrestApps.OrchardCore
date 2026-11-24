@@ -108,6 +108,9 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
     private static readonly TimeSpan _firstBlockPause = TimeSpan.FromHours(1);
     private static readonly TimeSpan _longestBlockPause = TimeSpan.FromHours(24);
 
+    // The longest minimum gap between two bulk emails that is waited out in place rather than deferred.
+    private static readonly TimeSpan _longestInlineGap = TimeSpan.FromSeconds(30);
+
     // A poor-health pause lasts until someone resumes; held-back work asks again after this long.
     private static readonly TimeSpan _poorHealthRecheck = TimeSpan.FromHours(1);
 
@@ -172,10 +175,23 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
             return EmailSendDecision.Defer(domainUntil, S["{0} asked this address to slow down; mail to it waits.", domain]);
         }
 
-        var earliest = await GetEarliestSendTimeAsync(address.ItemId, limits, domain, now, cancellationToken);
+        var gapOpening = await GetGapOpeningAsync(address.ItemId, limits, now, cancellationToken);
+        var windowOpening = await GetWindowsOpeningAsync(address.ItemId, limits, domain, now, cancellationToken);
+        var earliest = Later(gapOpening, windowOpening);
 
         if (earliest <= now)
         {
+            return EmailSendDecision.Allow();
+        }
+
+        // Only the minimum gap between two bulk emails holds this one back, and the gap is a few seconds: the sender
+        // waits it out and sends. Deferring would hand the email back to a queue that looks again only a minute later,
+        // where it would meet the next due email inside the same gap and go to the back of the line again, so an
+        // address would send about one email a minute whatever its limits.
+        if (reserveTurn && windowOpening <= now && gapOpening - now <= _longestInlineGap)
+        {
+            await Task.Delay(gapOpening - now, cancellationToken);
+
             return EmailSendDecision.Allow();
         }
 
@@ -421,19 +437,21 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
 
     // The earliest the address's limits let one more bulk email leave: the gap after the last one, and the moment an
     // email leaves each rolling window that is full.
-    private async Task<DateTime> GetEarliestSendTimeAsync(string addressId, EmailSendingLimits limits, string domain, DateTime now, CancellationToken cancellationToken)
+    private async Task<DateTime> GetGapOpeningAsync(string addressId, EmailSendingLimits limits, DateTime now, CancellationToken cancellationToken)
+    {
+        if (limits.MinimumSecondsBetweenSends <= 0)
+        {
+            return now;
+        }
+
+        var lastSent = await _log.GetLastBulkSentUtcAsync(addressId, cancellationToken);
+
+        return lastSent is null ? now : Later(now, lastSent.Value.AddSeconds(limits.MinimumSecondsBetweenSends));
+    }
+
+    private async Task<DateTime> GetWindowsOpeningAsync(string addressId, EmailSendingLimits limits, string domain, DateTime now, CancellationToken cancellationToken)
     {
         var earliest = now;
-
-        if (limits.MinimumSecondsBetweenSends > 0)
-        {
-            var lastSent = await _log.GetLastBulkSentUtcAsync(addressId, cancellationToken);
-
-            if (lastSent is not null)
-            {
-                earliest = Later(earliest, lastSent.Value.AddSeconds(limits.MinimumSecondsBetweenSends));
-            }
-        }
 
         earliest = Later(earliest, await GetWindowOpeningAsync(addressId, limits.MaxPerHour, TimeSpan.FromHours(1), domain: null, now, cancellationToken));
         earliest = Later(earliest, await GetWindowOpeningAsync(addressId, EmailHealthPolicy.GetDailyLimit(limits, now), TimeSpan.FromDays(1), domain: null, now, cancellationToken));
