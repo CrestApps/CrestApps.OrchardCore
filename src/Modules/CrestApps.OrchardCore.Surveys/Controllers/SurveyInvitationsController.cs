@@ -393,6 +393,19 @@ public sealed class SurveyInvitationsController : Controller
 
         await _notifier.SuccessAsync(H["{0} people were invited.", results.Count(result => result.Succeeded)]);
 
+        // Another send was going out (R8-Mi11): people already on the list were left as they were, so their invitations
+        // aren't written over with copies older than that send's.
+        var leftAsTheyWere = results
+            .Where(result => result.Error == SurveyErrorCode.Busy && result.Invitation is not null)
+            .Select(result => result.Invitation.ItemId)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+
+        if (leftAsTheyWere > 0)
+        {
+            await _notifier.WarningAsync(H["{0} people were already on the list and were left as they were, because another send of invitations was going out. Invite them again in a few minutes.", leftAsTheyWere]);
+        }
+
         if (model.SendNow)
         {
             var waiting = results

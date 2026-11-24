@@ -1386,6 +1386,112 @@ public sealed class SurveyInvitationDeliveryTests
         Assert.Equal(1, reminded.Count(count => count == 0));
     }
 
+    [Fact]
+    public async Task AReissuedToken_IsSavedOnTheCurrentCopy_SoACompletionDuringTheSendIsKept()
+    {
+        // Arrange: an invitation sent three days ago whose stored token hash no longer matches (as after a secret reset),
+        // due a reminder (R8-Mi9).
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening.AddDays(-3);
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var invited = await InviteAsync(harness, survey, "renewed@example.com");
+        var expectedHash = invited.Invitation.TokenHash;
+        var collectorId = invited.Invitation.CollectorId;
+        await SetRemindersAsync(harness, collectorId, count: 1, everyDays: 1);
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+            var invitation = await store.FindByIdAsync(invited.Invitation.ItemId);
+            invitation.TokenHash = "stale";
+            await store.UpdateAsync(invitation);
+
+            return true;
+        });
+
+        // The respondent completes, in a scope of their own, while the reminder is with the mail server.
+        sender.OnAttemptAsync = invitation => WriteElsewhereAsync(harness, invitation.ItemId, current => current.Status = SurveyInvitationStatus.Completed);
+
+        // Act
+        harness.Clock.UtcNow = _evening;
+        var sent = await RemindAsync(harness, collectorId);
+        var now = await FindAsync(harness, invited.Invitation.ItemId);
+
+        // Assert: the completion is kept, with the reminder and the re-issued hash recorded on it.
+        Assert.Equal(1, sent);
+        Assert.Equal(SurveyInvitationStatus.Completed, now.Status);
+        Assert.Equal(1, now.RemindersSent);
+        Assert.Equal(expectedHash, now.TokenHash);
+    }
+
+    [Fact]
+    public async Task AHold_IsWrittenOnTheCurrentCopy_SoAnInvitationOpenedMeanwhileIsNotWrittenBackAsPending()
+    {
+        // Arrange: one e-mail a day and three invitations created but not sent (R8-Mi10).
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 1);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var ids = new List<string>();
+
+        for (var i = 0; i < 3; i++)
+        {
+            ids.Add((await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().CreateAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = $"guest{i}@example.com" }))).Invitation.ItemId);
+        }
+
+        var collectorId = (await FindAsync(harness, ids[0])).CollectorId;
+
+        // While the first goes out, the third is opened through its link (shared by hand), in a scope of its own.
+        sender.OnAttemptAsync = invitation => invitation.ItemId == ids[0]
+            ? WriteElsewhereAsync(harness, ids[2], current => current.Status = SurveyInvitationStatus.Opened)
+            : Task.CompletedTask;
+
+        // Act: Send; the limit stops it after the first, so the others are held.
+        var sent = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().SendPendingAsync(collectorId));
+        var secondNow = await FindAsync(harness, ids[1]);
+        var thirdNow = await FindAsync(harness, ids[2]);
+
+        // Assert
+        Assert.Equal(1, sent);
+        Assert.True(secondNow.TryGet<SurveyInvitationHold>(out var hold) && hold is not null);
+        Assert.Equal(SurveyInvitationStatus.Opened, thirdNow.Status);
+        Assert.False(thirdNow.TryGet<SurveyInvitationHold>(out var openedHold) && openedHold is not null);
+    }
+
+    [Fact]
+    public async Task AnInvite_WhileAnotherSendHoldsTheLock_CreatesTheNewInvitations_AndLeavesExistingOnesAsTheyAre()
+    {
+        // Arrange: an invitation that bounced, then another sender holds the e-mail lock (R8-Mi11).
+        var sender = new RecordingSender { Outcome = _ => SurveyInvitationDelivery.Undeliverable };
+        var locks = new InvitationEmailLockDouble(TimeSpan.FromMilliseconds(100));
+        await using var harness = await CreateAsync(sender, SiteService(emailsPerDay: 100), configure: services => services.AddSingleton<IDistributedLock>(locks));
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var bounced = await InviteAsync(harness, survey, "bounced@example.com");
+        sender.Outcome = null;
+        var otherSender = await locks.AcquireLockAsync(DayLockKey);
+
+        // Act: the Invite page's Send now, with the bounced address and a new one; then a single invite (a workflow).
+        var (results, busy) = await harness.RunAsync(async services =>
+        {
+            var invitations = services.GetRequiredService<SurveyInvitationService>();
+            var invited = await invitations.InviteManyAsync(survey.ItemId, null, [new SurveyInvitationRequest { Email = "bounced@example.com" }, new SurveyInvitationRequest { Email = "new@example.com" }], send: true);
+
+            return (invited, invitations.AnotherSendIsGoingOut);
+        });
+        var single = await InviteAsync(harness, survey, "bounced@example.com");
+        await otherSender.DisposeAsync();
+
+        // Assert: the existing invitation was left as it was and says Busy; the new one was created and held.
+        Assert.True(busy);
+        Assert.Equal(SurveyErrorCode.Busy, results[0].Error);
+        Assert.Equal(SurveyErrorCode.Busy, single.Error);
+        Assert.Equal(SurveyInvitationStatus.Bounced, (await FindAsync(harness, bounced.Invitation.ItemId)).Status);
+        Assert.True(results[1].Succeeded);
+        Assert.True((await FindAsync(harness, results[1].Invitation.ItemId)).TryGet<SurveyInvitationHold>(out var hold) && hold is not null);
+        Assert.Empty(sender.Sent);
+    }
+
     // Creates first sends held back on a list (after a mail server failure when failedBefore is set); returns their ids.
     private static async Task<IReadOnlyList<string>> CreateHeldAsync(RuntimeTestHarness harness, Survey survey, string collectorId, string[] emails, bool failedBefore)
     {

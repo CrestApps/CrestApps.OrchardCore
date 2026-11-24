@@ -148,11 +148,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (IsEmail(request))
-        {
-            await EnterEmailSendAsync(cancellationToken);
-        }
-
+        // Another send holds the e-mail lock (R8-Mi11): the invitation is still created (and held), but an existing one is
+        // left as it is, since this copy may be older than that send's marks.
+        var busy = IsEmail(request) && await IsAnotherSendGoingOutAsync(cancellationToken);
         var survey = await FindLiveSurveyAsync(request.SurveyId, cancellationToken);
         var collector = survey is null ? null : await FindCollectorAsync(survey, request.CollectorId, cancellationToken);
 
@@ -161,7 +159,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
         }
 
-        var result = await CreateCoreAsync(survey, collector, request, requireRecipient: true, cancellationToken);
+        var result = await CreateCoreAsync(survey, collector, request, requireRecipient: true, mayChangeExisting: !busy, cancellationToken);
 
         if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
         {
@@ -188,11 +186,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(requests);
 
-        if (send && requests.Any(request => request is not null && IsEmail(request)))
-        {
-            await EnterEmailSendAsync(cancellationToken);
-        }
-
+        // Another send holds the e-mail lock (R8-Mi11): new invitations are still created (and held), but existing ones
+        // are left as they are, since these copies may be older than that send's marks; their results say Busy.
+        var busy = send && requests.Any(request => request is not null && IsEmail(request)) && await IsAnotherSendGoingOutAsync(cancellationToken);
         var survey = await FindLiveSurveyAsync(surveyId, cancellationToken);
         var collector = survey is null ? null : await FindCollectorAsync(survey, collectorId, cancellationToken);
         var results = new List<SurveyInvitationResult>(requests.Count);
@@ -206,7 +202,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
             results.Add(collector is null
                 ? new SurveyInvitationResult { Error = SurveyErrorCode.NotFound }
-                : await CreateCoreAsync(survey, collector, request, requireRecipient: true, cancellationToken));
+                : await CreateCoreAsync(survey, collector, request, requireRecipient: true, mayChangeExisting: !busy, cancellationToken));
         }
 
         if (!send || collector is null)
@@ -268,7 +264,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
         }
 
-        return await CreateCoreAsync(survey, collector, request, requireRecipient, cancellationToken);
+        return await CreateCoreAsync(survey, collector, request, requireRecipient, mayChangeExisting: true, cancellationToken);
     }
 
     // The survey, or null when it doesn't exist or is being deleted: a survey being deleted invites and reminds nobody, so
@@ -291,7 +287,9 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         return collector is null || collector.SurveyId != survey.ItemId || collector.Kind != SurveyCollectorKinds.Invitation ? null : collector;
     }
 
-    private async Task<SurveyInvitationResult> CreateCoreAsync(Survey survey, SurveyCollector collector, SurveyInvitationRequest request, bool requireRecipient, CancellationToken cancellationToken)
+    // mayChangeExisting: false while another send holds the e-mail lock; an existing invitation is then returned unchanged
+    // with SurveyErrorCode.Busy, and only new ones are created.
+    private async Task<SurveyInvitationResult> CreateCoreAsync(Survey survey, SurveyCollector collector, SurveyInvitationRequest request, bool requireRecipient, bool mayChangeExisting, CancellationToken cancellationToken)
     {
         var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
 
@@ -314,6 +312,11 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         if (existing is not null && existing.Status == SurveyInvitationStatus.Completed)
         {
             return new SurveyInvitationResult { Error = SurveyErrorCode.InvitationUsed, Invitation = existing };
+        }
+
+        if (existing is not null && !mayChangeExisting)
+        {
+            return new SurveyInvitationResult { Error = SurveyErrorCode.Busy, Invitation = existing };
         }
 
         var now = _clock.UtcNow;
@@ -1161,6 +1164,11 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         return null;
     }
+
+    // Whether another send holds the tenant's invitation e-mail lock past its wait (asked when this scope e-mails at
+    // all): this scope then holds its e-mails and leaves existing invitations unchanged (R8-Mi11).
+    private async Task<bool> IsAnotherSendGoingOutAsync(CancellationToken cancellationToken)
+        => !await EnterEmailSendAsync(cancellationToken) && _emailLimit.LockUnavailable;
 
     // Whether an invitation goes to an e-mail address rather than a user.
     private static bool IsEmailInvitation(SurveyInvitation invitation)
