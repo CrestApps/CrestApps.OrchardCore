@@ -25,7 +25,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Automation;
 /// <remarks>
 /// A conversation is not started, and the message is left to people, when the entry point is closed, a person already
 /// has an open conversation with the customer, the customer's last AI conversation ended less than an hour ago, the
-/// profile is missing, or the message was written by a machine.
+/// profile is missing, the message was written by a machine, or another delivery held the start lock for the whole wait.
 /// </remarks>
 public sealed class AutomatedEntryPointConversationStarter : IMessagingAIConversationStarter
 {
@@ -147,8 +147,11 @@ public sealed class AutomatedEntryPointConversationStarter : IMessagingAIConvers
 
         if (!locked)
         {
-            // Failing lets the delivery be retried rather than handing the message to people by accident.
-            throw new InvalidOperationException("The AI conversation for the inbound message could not be started because its lock was not acquired. The delivery will be retried.");
+            // Nothing would retry the delivery: the inbound pipeline logs a handler's exception and moves on. So the message
+            // goes to people, who see it, rather than being dropped behind a failure nobody acts on.
+            _logger.LogWarning("The AI conversation for a {Channel} message to address '{AddressId}' could not be started because another delivery held the start lock for the whole wait; the message is left to people.", channel.Channel, address.ItemId.SanitizeLogValue());
+
+            return false;
         }
 
         await using (locker)

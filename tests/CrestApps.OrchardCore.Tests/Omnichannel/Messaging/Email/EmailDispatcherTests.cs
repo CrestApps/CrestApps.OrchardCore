@@ -249,7 +249,7 @@ public sealed class EmailDispatcherTests
     {
         var governor = new Mock<IEmailSendingGovernor>();
         governor
-            .Setup(value => value.EvaluateAsync(It.IsAny<OmnichannelChannelEndpoint>(), It.IsAny<EmailAddressSettings>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Setup(value => value.EvaluateAsync(It.IsAny<OmnichannelChannelEndpoint>(), It.IsAny<EmailAddressSettings>(), It.IsAny<string>(), It.IsAny<EmailSendKind>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendDecision.Allow());
 
         return governor.Object;

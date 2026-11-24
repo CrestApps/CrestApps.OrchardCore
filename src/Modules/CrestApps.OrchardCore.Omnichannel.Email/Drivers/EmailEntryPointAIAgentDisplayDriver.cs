@@ -14,6 +14,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Email.Drivers;
 /// Adds the AI agent picker to an email entry point's routing card: when the entry point routes to an AI agent, the
 /// chosen chat profile answers the customer's first email and holds the conversation.
 /// </summary>
+/// <remarks>
+/// Every chat profile is offered. What makes one safe to put on an address anyone can write to is enforced where the
+/// email is answered, not by narrowing this list: the profile's own tools are never offered to an automated email reply
+/// (only the transfer to a person, when the inbound subject allows a handoff), the sender's subject reaches the model as
+/// part of the customer's message rather than as an instruction, and the replies per conversation are capped.
+/// </remarks>
 internal sealed class EmailEntryPointAIAgentDisplayDriver : DisplayDriver<ContactCenterEntryPoint>
 {
     private readonly IAIProfileManager _profileManager;

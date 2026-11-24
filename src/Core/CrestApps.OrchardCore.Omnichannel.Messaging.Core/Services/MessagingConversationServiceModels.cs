@@ -53,7 +53,9 @@ public sealed class MessagingSendRequest
 
 /// <summary>
 /// A request to send a message to a contact address, in the contact's existing conversation on the channel or in a
-/// new one.
+/// new one. Bulk mail (a <see cref="MessagingOutboundPurpose.Broadcast"/> or an
+/// <see cref="MessagingOutboundPurpose.Outreach"/> message) opens no conversation: it joins one the contact already has,
+/// and is otherwise kept against the contact's address until they reply.
 /// </summary>
 public sealed class MessagingDirectSendRequest
 {
@@ -91,6 +93,12 @@ public sealed class MessagingDirectSendRequest
     /// Gets or sets why the message is being sent.
     /// </summary>
     public MessagingOutboundPurpose Purpose { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the broadcast the message is sent for, when it is one of a broadcast's. The message
+    /// carries it, so a message the channel holds back is counted on the broadcast when it is sent, or fails, later.
+    /// </summary>
+    public string BroadcastId { get; set; }
 }
 
 /// <summary>

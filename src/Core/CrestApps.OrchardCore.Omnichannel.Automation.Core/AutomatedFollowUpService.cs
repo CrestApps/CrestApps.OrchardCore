@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -28,6 +29,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Automation;
 /// cadence step waits its delay after the last message, then sends its own words or an AI-written nudge, within the
 /// campaign's business hours and never to a contact who opted out. The number of steps caps the follow-ups.
 /// </summary>
+/// <remarks>
+/// Each follow-up is committed on its own while the conversation lock is held, so a conflicting change to one activity
+/// loses that one write instead of rolling back, and later re-sending, every follow-up of the pass. A failed read or
+/// write cancels the YesSql session for the rest of the scope, so the pass stops there and the next pass goes on after
+/// that conversation.
+/// </remarks>
 public sealed class AutomatedFollowUpService
 {
     private const int BatchSize = 100;
@@ -199,9 +206,25 @@ public sealed class AutomatedFollowUpService
                         sent++;
                     }
                 }
+                catch (ConcurrencyException ex)
+                {
+                    // A write of this follow-up conflicted with a change made meanwhile: most often the activity, whose
+                    // attempt count is then lost while the transcript, committed first, still holds the message; or a record
+                    // the send itself wrote. YesSql has cancelled the session, so nothing later in this pass could be saved:
+                    // the pass stops here.
+                    _logger.LogWarning(ex, "A write of the follow-up of automated Activity {ActivityId} conflicted with a change made meanwhile; the pass stops and the next one goes on after it.", activity.ItemId.SanitizeLogValue());
+                    _cursors.FollowUp = documentId;
+
+                    return sent;
+                }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    _logger.LogError(ex, "Following up automated Activity {ActivityId} failed.", activity.ItemId.SanitizeLogValue());
+                    // Any failed read or write cancels the YesSql session, and a follow-up sent after it would never be
+                    // recorded and would go out again on the next pass. The pass stops here; the next one goes on after it.
+                    _logger.LogError(ex, "Following up automated Activity {ActivityId} failed; the pass stops and the next one goes on after it.", activity.ItemId.SanitizeLogValue());
+                    _cursors.FollowUp = documentId;
+
+                    return sent;
                 }
             }
         }
@@ -232,9 +255,10 @@ public sealed class AutomatedFollowUpService
         var step = cadence.Steps[activity.ReEngagementAttempts];
         var chatSession = await _chatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
 
-        if (chatSession is null || await GetLastRoleAsync(chatSession) != ChatRole.Assistant)
+        if (chatSession is null || !AutomatedConversationTranscript.IsAwaitingCustomer(await GetConversationAsync(chatSession)))
         {
-            // Only when we are the ones waiting on the customer; when the last message is theirs, a reply is owed instead.
+            // Only when we are the ones waiting on the customer: the agent spoke last, or handled the customer's last
+            // message without replying. When a customer message is still owed a reply, the recovery answers it instead.
             return false;
         }
 
@@ -283,7 +307,7 @@ public sealed class AutomatedFollowUpService
         }
 
         // Serialized with the live reply path; if a reply is being sent this pass skips, and the next one retries.
-        var (locker, locked) = await _localLock.TryAcquireLockAsync(AutomatedConversationHandler.GetLockKey(chatSession.SessionId), TimeSpan.Zero, TimeSpan.FromMinutes(2));
+        var (locker, locked) = await _localLock.TryAcquireLockAsync(AutomatedConversationHandler.GetLockKey(chatSession.SessionId), TimeSpan.Zero, AutomatedConversationHandler.LockExpiration);
 
         if (!locked)
         {
@@ -292,19 +316,27 @@ public sealed class AutomatedFollowUpService
 
         await using (locker)
         {
-            // Read again under the lock: a live reply may have just answered, or another pass already followed up.
+            // Read again under the lock, fresh from the database: the batch query left its copy in the session, and YesSql
+            // would hand that back. A live reply may have just answered, the conclusion closed the conversation, or another
+            // pass already followed up, which changes the step to send.
+            var attempts = activity.ReEngagementAttempts;
+
+            _session.Detach(activity, OmnichannelConstants.CollectionName);
+
             var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
+            var conversation = await GetConversationAsync(chatSession);
 
             if (current is null ||
                 current.Status != ActivityStatus.AwaitingCustomerAnswer ||
-                current.ReEngagementAttempts >= cadence.Steps.Count ||
-                await GetLastRoleAsync(chatSession) != ChatRole.Assistant)
+                current.ReEngagementAttempts != attempts ||
+                !AutomatedConversationTranscript.IsAwaitingCustomer(conversation) ||
+                conversation[conversation.Count - 1].CreatedUtc > now.AddMinutes(-step.DelayMinutes))
             {
                 return false;
             }
 
             var message = step.IsAiGenerated
-                ? await ComposeAsync(channel, profile, chatSession, step.Message, cancellationToken)
+                ? await ComposeAsync(channel, profile, chatSession, conversation, step.Message, cancellationToken)
                 : step.Message?.Trim();
 
             if (string.IsNullOrWhiteSpace(message))
@@ -345,6 +377,11 @@ public sealed class AutomatedFollowUpService
             chatSession.LastActivityUtc = now;
             await _chatSessionManager.SaveAsync(chatSession, cancellationToken);
 
+            // The message went out, so the transcript records it now, with whatever the send itself wrote, before the
+            // activity write below: a conflicting change to the activity then cannot erase the record of what the customer
+            // was sent, and the next follow-up still waits its step's delay.
+            await _session.SaveChangesAsync(cancellationToken);
+
             current.ReEngagementAttempts++;
             current.LastReEngagementUtc = now;
 
@@ -359,6 +396,9 @@ public sealed class AutomatedFollowUpService
             }
 
             await _activityStore.UpdateAsync(current, cancellationToken);
+
+            // Committed while the lock is held, one follow-up at a time.
+            await _session.SaveChangesAsync(cancellationToken);
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
@@ -404,10 +444,25 @@ public sealed class AutomatedFollowUpService
         return await _businessHoursGate.IsOpenAsync(activity.BusinessHoursCalendarId, now, timeZoneId, cancellationToken);
     }
 
-    private async Task<string> ComposeAsync(IAutomatedMessagingChannel channel, AIProfile profile, AIChatSession chatSession, string guidance, CancellationToken cancellationToken)
+    // A failed model call skips this follow-up and the pass goes on. A database failure is not swallowed: it cancels the
+    // session, and the pass must stop rather than send follow-ups it can no longer record.
+    private async Task<string> ComposeAsync(IAutomatedMessagingChannel channel, AIProfile profile, AIChatSession chatSession, IReadOnlyList<AIChatSessionPrompt> conversation, string guidance, CancellationToken cancellationToken)
     {
-        var transcript = (await _promptStore.GetPromptsAsync(chatSession.SessionId))
-            .Where(prompt => !prompt.IsGeneratedPrompt)
+        try
+        {
+            return await ComposeCoreAsync(channel, profile, chatSession, conversation, guidance, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException and not DbException)
+        {
+            _logger.LogWarning(ex, "Composing the AI follow-up for session {SessionId} failed.", chatSession.SessionId.SanitizeLogValue());
+
+            return null;
+        }
+    }
+
+    private async Task<string> ComposeCoreAsync(IAutomatedMessagingChannel channel, AIProfile profile, AIChatSession chatSession, IReadOnlyList<AIChatSessionPrompt> conversation, string guidance, CancellationToken cancellationToken)
+    {
+        var transcript = conversation
             .Select(prompt => new ChatMessage(prompt.Role, prompt.Content))
             .ToList();
 
@@ -438,8 +493,8 @@ public sealed class AutomatedFollowUpService
         return completion?.Messages?.FirstOrDefault()?.Text?.Trim();
     }
 
-    private async Task<ChatRole?> GetLastRoleAsync(AIChatSession chatSession)
+    private async Task<IReadOnlyList<AIChatSessionPrompt>> GetConversationAsync(AIChatSession chatSession)
         => (await _promptStore.GetPromptsAsync(chatSession.SessionId))
             .Where(prompt => !prompt.IsGeneratedPrompt)
-            .LastOrDefault()?.Role;
+            .ToList();
 }

@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Records;
 using YesSql;
 using YesSql.Services;
 
@@ -19,9 +18,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 /// The email channel of the messaging workspace. Addresses are email addresses in their canonical lower-case form, a
 /// message leaves through the transport of the address it is sent from, and a contact is reached at the email addresses
 /// on their record and opted out when the consent service says so (the Omnichannel contact's <c>Do not email</c> flag).
+/// A contact is found by any of its addresses, through <see cref="OmnichannelContactEmailAddressIndex"/>.
 /// </summary>
 public sealed class EmailMessagingChannel : IMessagingChannel
 {
+    // A search reads a few more address rows than it returns records, because a record with two matching addresses
+    // has a row for each.
+    private const int SearchRowsPerRecord = 4;
+
     private static readonly MessagingChannelCapabilities _capabilities = new()
     {
         SupportsSubject = true,
@@ -161,8 +165,10 @@ public sealed class EmailMessagingChannel : IMessagingChannel
             return [];
         }
 
-        var matches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.Published && index.NormalizedPrimaryEmailAddress == normalized)
+        // Every address of a record has a row, so mail from (or an unsubscribe of) a contact's second address finds
+        // the contact as surely as its first.
+        var matches = await _session.QueryIndex<OmnichannelContactEmailAddressIndex>(
+                index => index.NormalizedEmailAddress == normalized && index.Published)
             .ListAsync(cancellationToken);
 
         // Contacts come before leads and converted leads are left out, so a sender who is both a contact and a lead is
@@ -188,14 +194,20 @@ public sealed class EmailMessagingChannel : IMessagingChannel
         }
 
         var types = contactTypes.ToArray();
+        var limit = Math.Max(1, take);
 
-        var items = await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(types))
-            .With<OmnichannelContactIndex>(index => index.NormalizedPrimaryEmailAddress.Contains(normalized))
-            .Take(Math.Max(1, take))
+        // The address index carries the version and the content type, so the search reads it alone, across every
+        // address of each record rather than only the first.
+        var rows = await _session.QueryIndex<OmnichannelContactEmailAddressIndex>(
+                index => index.Latest && index.ContentType.IsIn(types) && index.NormalizedEmailAddress.Contains(normalized))
+            .Take(limit * SearchRowsPerRecord)
             .ListAsync(cancellationToken);
 
-        return items
-            .Select(item => item.ContentItemId)
+        return rows
+            .Select(row => row.ContentItemId)
+            .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
+            .Distinct(StringComparer.Ordinal)
+            .Take(limit)
             .ToArray();
     }
 }

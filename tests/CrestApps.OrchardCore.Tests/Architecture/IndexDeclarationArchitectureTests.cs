@@ -41,6 +41,7 @@ public sealed partial class IndexDeclarationArchitectureTests
         "DialerDecisionAgentIndex",
         "EnrollmentGrantIndex",
         "LeadImportIndex",
+        "OmnichannelContactEmailAddressIndex",
         "OmnichannelContactPhoneNumberIndex",
         "PayrollPayStatementLineIndex",
         "ProductAttributeIndex",

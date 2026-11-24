@@ -35,6 +35,11 @@ public interface IEmailDeliveryEventProcessor
 /// <summary>
 /// The default <see cref="IEmailDeliveryEventProcessor"/>.
 /// </summary>
+/// <remarks>
+/// The event-id check and the record that follows it are not atomic, so the same event delivered at the same moment to
+/// two app instances can be acted on twice. Every action is safe to repeat (a suppression or an opt-out that exists is
+/// kept, a pause already running is not lengthened, an email's retries count once), so the cost is a second log line.
+/// </remarks>
 public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
 {
     private readonly IEmailDeliveryLog _log;
@@ -108,7 +113,7 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
             return false;
         }
 
-        var kind = Reclassify(deliveryEvent);
+        var (kind, isRejectedEmail) = Reclassify(deliveryEvent);
         var detail = Describe(deliveryEvent);
         var addressId = await _log.FindSendingAddressIdAsync(messageId, recipient, cancellationToken);
         var domain = EmailSendingGovernor.GetDomain(recipient);
@@ -135,10 +140,18 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
                 await CheckHealthAsync(addressId, cancellationToken);
                 break;
 
-            case EmailDeliveryEventKind.SoftBounce:
-                var softBounces = await _log.CountForRecipientAsync(recipient, EmailDeliveryEventKind.SoftBounce, _clock.UtcNow.Subtract(EmailHealthPolicy.SoftBounceWindow), cancellationToken);
+            case EmailDeliveryEventKind.Rejected:
+                // The receiving system refused this one email for what it is (its size, its content). The email failed,
+                // but neither the recipient nor the receiving domain did anything that should hold other mail back.
+                await MarkMessageFailedAsync(messageId, detail, cancellationToken);
+                break;
 
-                if (softBounces >= EmailHealthPolicy.SoftBouncesBeforeSuppression)
+            case EmailDeliveryEventKind.SoftBounce:
+                // Counted by email, not by report: a provider reports each retry of one email, and one email bouncing
+                // three times says less about the address than three emails bouncing.
+                var bouncedEmails = await _log.CountMessagesForRecipientAsync(recipient, EmailDeliveryEventKind.SoftBounce, _clock.UtcNow.Subtract(EmailHealthPolicy.SoftBounceWindow), cancellationToken);
+
+                if (bouncedEmails >= EmailHealthPolicy.SoftBouncesBeforeSuppression)
                 {
                     await _suppressions.SuppressAsync(recipient, EmailSuppressionReason.RepeatedSoftBounces, detail, cancellationToken: cancellationToken);
                 }
@@ -182,23 +195,49 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
         return true;
     }
 
-    // A provider that reports every refusal as a bounce still says why in the status code: a 5.7.x refusal is about
-    // the sender, and suppressing the recipient for it would lose a good address.
-    private static EmailDeliveryEventKind Reclassify(EmailDeliveryEvent deliveryEvent)
+    // What a bounce report really is, read from its status code with the provider's words around it. Providers label
+    // bounces by their own rules: a refusal of the sender (5.7.x) reported as a bounce is a block, and suppressing the
+    // recipient for it would lose a good address; a temporary failure (4.x.x) the provider is still trying is a deferral,
+    // and one it gave up on is a bounce of that one email, never a dead address; a full mailbox (5.2.2) may empty; and a
+    // refusal of the one email (its size, its content) says nothing about the recipient or the sender. That last one is
+    // logged as a soft bounce, the nearest kind, and flagged so it neither counts toward suppression nor slows the domain.
+    internal static (EmailDeliveryEventKind Kind, bool IsRejectedEmail) Reclassify(EmailDeliveryEvent deliveryEvent)
     {
         if (deliveryEvent.Kind is not (EmailDeliveryEventKind.HardBounce or EmailDeliveryEventKind.SoftBounce))
         {
-            return deliveryEvent.Kind;
+            return (deliveryEvent.Kind, false);
         }
 
-        var byStatus = EmailFailureClassifier.ClassifyStatus(deliveryEvent.Status);
+        var text = string.Join(" ", new[] { deliveryEvent.Status, deliveryEvent.Reason }.Where(part => !string.IsNullOrWhiteSpace(part)).Select(part => part.Trim()));
 
-        if (byStatus is null && !string.IsNullOrWhiteSpace(deliveryEvent.Reason) && deliveryEvent.Kind == EmailDeliveryEventKind.HardBounce)
+        if (EmailFailureClassifier.IsTemporaryStatus(deliveryEvent.Status, text))
         {
-            byStatus = EmailFailureClassifier.Classify(OmnichannelConstants.MessagingErrorCodes.RecipientRejected, deliveryEvent.Reason);
+            return (deliveryEvent.Kind == EmailDeliveryEventKind.HardBounce ? EmailDeliveryEventKind.SoftBounce : EmailDeliveryEventKind.Deferred, false);
         }
 
-        return byStatus == EmailFailureKind.Blocked ? EmailDeliveryEventKind.Blocked : deliveryEvent.Kind;
+        var failure = EmailFailureClassifier.ClassifyStatus(deliveryEvent.Status, text);
+
+        // A report without an enhanced status code is read from its words; a hard bounce's words are a permanent answer.
+        if (failure is null && !string.IsNullOrWhiteSpace(text))
+        {
+            failure = EmailFailureClassifier.Classify(
+                deliveryEvent.Kind == EmailDeliveryEventKind.HardBounce ? OmnichannelConstants.MessagingErrorCodes.RecipientRejected : null,
+                text);
+        }
+
+        return failure switch
+        {
+            EmailFailureKind.Blocked => (EmailDeliveryEventKind.Blocked, false),
+            EmailFailureKind.Rejected => (EmailDeliveryEventKind.Rejected, true),
+
+            // A permanent answer that may pass, such as a full mailbox, counts toward the recipient's repeated soft
+            // bounces instead of suppressing it at once.
+            EmailFailureKind.Temporary => (EmailDeliveryEventKind.SoftBounce, false),
+
+            // A receiving system that asked the sender to slow down put the email off; it is noted against its domain.
+            EmailFailureKind.Throttled => (EmailDeliveryEventKind.Deferred, false),
+            _ => (deliveryEvent.Kind, false),
+        };
     }
 
     private async Task CheckHealthAsync(string addressId, CancellationToken cancellationToken)

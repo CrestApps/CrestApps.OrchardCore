@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
@@ -53,7 +54,10 @@ public sealed class AdminController : Controller
     /// <param name="port">The server port; zero for the default.</param>
     /// <param name="security">How the connection is secured.</param>
     /// <param name="userName">The user name.</param>
-    /// <param name="password">The password as typed; empty to use the stored one.</param>
+    /// <param name="password">
+    /// The password as typed; empty to use the stored one, which is only done while the host, port, security and user
+    /// name are the ones it was saved with.
+    /// </param>
     /// <param name="folder">The mailbox folder, for an IMAP test.</param>
     /// <returns>Whether the test succeeded, and a message to show.</returns>
     [HttpPost]
@@ -82,10 +86,37 @@ public sealed class AdminController : Controller
             Port = Math.Clamp(port, 0, 65535),
             Security = security,
             UserName = userName?.Trim(),
-            Password = string.IsNullOrEmpty(password)
-                ? await GetStoredPasswordAsync(addressId, isImap)
-                : _secretProtector.Protect(password),
         };
+
+        if (!string.IsNullOrEmpty(password))
+        {
+            server.Password = _secretProtector.Protect(password);
+        }
+        else if (server.IsConfigured && !string.IsNullOrWhiteSpace(server.UserName))
+        {
+            var stored = await GetStoredServerAsync(addressId, isImap);
+
+            if (!string.IsNullOrEmpty(stored?.Password))
+            {
+                // The host, port and security come from the request, so the stored password is only sent to the account
+                // it was saved for. Otherwise the test would send it to any server typed into the form, in clear text
+                // with the security set to none.
+                var isSameAccount = isImap
+                    ? EmailServerConnection.IsSameAccount(stored, server, EmailServerConnection.ImapPort, EmailServerConnection.ImapImplicitTlsPort)
+                    : EmailServerConnection.IsSameAccount(stored, server, EmailServerConnection.SmtpSubmissionPort, EmailServerConnection.SmtpImplicitTlsPort);
+
+                if (!isSameAccount)
+                {
+                    return Json(new
+                    {
+                        succeeded = false,
+                        message = S["Type the password to test these settings. The stored password is only used with the server, port, security and user name it was saved with."].Value,
+                    });
+                }
+
+                server.Password = stored.Password;
+            }
+        }
 
         var error = isImap
             ? await _connectionTester.TestImapAsync(new EmailMailboxSettings { Server = server, Folder = folder }, HttpContext.RequestAborted)
@@ -98,7 +129,7 @@ public sealed class AdminController : Controller
         });
     }
 
-    private async Task<string> GetStoredPasswordAsync(string addressId, bool isImap)
+    private async Task<EmailServerSettings> GetStoredServerAsync(string addressId, bool isImap)
     {
         if (string.IsNullOrEmpty(addressId))
         {
@@ -113,7 +144,7 @@ public sealed class AdminController : Controller
         }
 
         return isImap
-            ? settings.Mailbox?.Server?.Password
-            : settings.Smtp?.Password;
+            ? settings.Mailbox?.Server
+            : settings.Smtp;
     }
 }

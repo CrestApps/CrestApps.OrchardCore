@@ -37,6 +37,16 @@ public static class EmailServerConnection
     public const int TimeoutMilliseconds = 30_000;
 
     /// <summary>
+    /// The words shown when a mail server refused the sign-in.
+    /// </summary>
+    internal const string RefusedSignInMessage = "The mail server refused the sign-in. Check the user name and password (or app password).";
+
+    /// <summary>
+    /// The words shown for any other failure to connect to a mail server or sign in.
+    /// </summary>
+    internal const string UnreachableMessage = "The mail server could not be reached, or it did not answer as a mail server. Check the host, port and security; the details are in the site's log.";
+
+    /// <summary>
     /// Maps the configured security onto MailKit's options.
     /// </summary>
     /// <param name="security">The configured security.</param>
@@ -70,6 +80,49 @@ public static class EmailServerConnection
             ? implicitTlsPort
             : defaultPort;
     }
+
+    /// <summary>
+    /// Determines whether connection settings name the same account on the same server as the stored ones: the same host,
+    /// port, security and user name.
+    /// </summary>
+    /// <remarks>
+    /// A stored password is only ever sent to the account it was saved for. Otherwise anybody who may edit an address
+    /// could point it at a server of their own, or turn its security off, and have the site send them the password.
+    /// Ports are compared once resolved, so a port left at 0 and the default port typed out are the same port.
+    /// </remarks>
+    /// <param name="stored">The stored settings.</param>
+    /// <param name="candidate">The settings as typed.</param>
+    /// <param name="defaultPort">The protocol's default port.</param>
+    /// <param name="implicitTlsPort">The protocol's implicit-TLS port.</param>
+    /// <returns><see langword="true"/> when the stored password may be used with <paramref name="candidate"/>.</returns>
+    public static bool IsSameAccount(EmailServerSettings stored, EmailServerSettings candidate, int defaultPort, int implicitTlsPort)
+    {
+        if (stored is null || candidate is null || !stored.IsConfigured || !candidate.IsConfigured)
+        {
+            return false;
+        }
+
+        return string.Equals(stored.Host.Trim(), candidate.Host.Trim(), StringComparison.OrdinalIgnoreCase) &&
+            ResolvePort(stored, defaultPort, implicitTlsPort) == ResolvePort(candidate, defaultPort, implicitTlsPort) &&
+            stored.Security == candidate.Security &&
+            string.Equals(stored.UserName?.Trim() ?? string.Empty, candidate.UserName?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Describes why connecting or signing in to a mail server failed, in words that are safe to show to whoever typed
+    /// the settings.
+    /// </summary>
+    /// <remarks>
+    /// Only a refused sign-in is told apart. Every other failure gets the same words, because the exception's own message
+    /// (connection refused, no such host, an unexpected greeting) would tell whether a host and port answer, which would
+    /// turn the connection test into a probe of the site's own network. The exception belongs in the log.
+    /// </remarks>
+    /// <param name="exception">The failure.</param>
+    /// <returns>The words to show.</returns>
+    public static string DescribeFailure(Exception exception)
+        => exception is AuthenticationException
+            ? RefusedSignInMessage
+            : UnreachableMessage;
 
     /// <summary>
     /// Connects a client and signs it in when the server settings name a user.

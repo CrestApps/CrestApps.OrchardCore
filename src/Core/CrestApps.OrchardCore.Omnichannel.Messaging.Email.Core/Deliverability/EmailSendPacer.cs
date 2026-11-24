@@ -26,7 +26,7 @@ public sealed class EmailSendPacer : IOmnichannelSendPacer
         ArgumentNullException.ThrowIfNull(address);
 
         var settings = address.TryGet<EmailAddressSettings>(out var stored) ? stored : new EmailAddressSettings();
-        var decision = await _governor.EvaluateAsync(address, settings, recipient: null, isBulk: true, reserveTurn, cancellationToken);
+        var decision = await _governor.EvaluateAsync(address, settings, recipient: null, EmailSendKind.Bulk, reserveTurn, cancellationToken);
 
         return decision.IsAllowed ? null : decision.RetryAfterUtc;
     }

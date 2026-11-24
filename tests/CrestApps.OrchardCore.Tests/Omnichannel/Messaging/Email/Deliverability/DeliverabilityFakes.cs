@@ -53,8 +53,14 @@ internal sealed class InMemoryEmailDeliveryLog : IEmailDeliveryLog
             entry.OccurredUtc >= sinceUtc &&
             (recipientDomain is null || entry.RecipientDomain == recipientDomain)));
 
-    public Task<int> CountForRecipientAsync(string recipient, EmailDeliveryEventKind kind, DateTime sinceUtc, CancellationToken cancellationToken = default)
-        => Task.FromResult(Entries.Count(entry => entry.Recipient == recipient && entry.Kind == kind && entry.OccurredUtc >= sinceUtc));
+    public Task<int> CountMessagesForRecipientAsync(string recipient, EmailDeliveryEventKind kind, DateTime sinceUtc, CancellationToken cancellationToken = default)
+    {
+        var entries = Entries.Where(entry => entry.Recipient == recipient && entry.Kind == kind && entry.OccurredUtc >= sinceUtc).ToArray();
+
+        return Task.FromResult(
+            entries.Where(entry => !string.IsNullOrEmpty(entry.MessageId)).Select(entry => entry.MessageId).Distinct(StringComparer.Ordinal).Count() +
+            entries.Count(entry => string.IsNullOrEmpty(entry.MessageId)));
+    }
 
     public Task<DateTime?> GetSentTimeAsync(string addressId, DateTime sinceUtc, int position, string recipientDomain = null, CancellationToken cancellationToken = default)
     {
@@ -117,12 +123,33 @@ internal sealed class InMemoryEmailSuppressionList : IEmailSuppressionList
 
 internal sealed class InMemoryEmailSendingStateStore : IEmailSendingStateStore
 {
+    /// <summary>
+    /// Gets the records as the database holds them.
+    /// </summary>
     public Dictionary<string, EmailSendingState> States { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the records as this scope read them before another process changed them in the database. A read to decide
+    /// returns this copy; a read to change returns the database's.
+    /// </summary>
+    public Dictionary<string, EmailSendingState> ScopeCopies { get; } = new(StringComparer.Ordinal);
 
     public int Saves { get; private set; }
 
     public Task<EmailSendingState> FindAsync(string addressId, CancellationToken cancellationToken = default)
-        => Task.FromResult(addressId is null ? null : States.GetValueOrDefault(addressId));
+        => Task.FromResult(addressId is null ? null : ScopeCopies.GetValueOrDefault(addressId) ?? States.GetValueOrDefault(addressId));
+
+    public Task<EmailSendingState> FindFreshAsync(string addressId, CancellationToken cancellationToken = default)
+    {
+        if (addressId is null)
+        {
+            return Task.FromResult<EmailSendingState>(null);
+        }
+
+        ScopeCopies.Remove(addressId);
+
+        return Task.FromResult(States.GetValueOrDefault(addressId));
+    }
 
     public Task SaveAsync(EmailSendingState state, CancellationToken cancellationToken = default)
     {

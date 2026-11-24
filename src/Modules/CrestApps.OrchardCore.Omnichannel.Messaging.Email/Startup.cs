@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -12,13 +13,16 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.PersonalData;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -99,6 +103,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<IProviderWebhookInboxHandler, EmailDeliveryEventsInboxHandler>();
         services.AddScoped<IOmnichannelSendPacer, EmailSendPacer>();
         services.AddScoped<IAutomatedActivityScreener, EmailSuppressionScreener>();
+
+        // The suppression list answers consent questions too, so every send path that asks whether an address takes
+        // email (not only this channel's) leaves out the addresses that bounced or complained. It joins the sources the
+        // consent service asks once that service is enabled.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IConsentSource, EmailSuppressionConsentSource>());
         services.AddEmailDeliveryEventParser<SendGridDeliveryEventParser>();
         services.AddEmailDeliveryEventParser<MailgunDeliveryEventParser>();
         services.AddEmailDeliveryEventParser<PostmarkDeliveryEventParser>();
@@ -106,6 +115,9 @@ public sealed class Startup : StartupBase
         services.AddEmailDeliveryEventParser<JsonDeliveryEventParser>();
         services.AddSingleton<IBackgroundTask, EmailDeliveryLogPruningBackgroundTask>();
         services.AddNavigationProvider<EmailSuppressionsAdminMenu>();
+
+        // A person's emails, delivery log entries and suppression note are exported and erased with the rest of their data.
+        services.AddPersonalDataContributor<EmailPersonalDataContributor>();
         services.AddDisplayDriver<EmailSuppression, EmailSuppressionDisplayDriver>();
 
         // The mailbox reader, for the mail hosts that cannot call a webhook.

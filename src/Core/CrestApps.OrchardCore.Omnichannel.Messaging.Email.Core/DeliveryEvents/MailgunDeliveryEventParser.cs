@@ -9,8 +9,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 
 /// <summary>
 /// Reads Mailgun's webhooks: a JSON object with <c>signature</c> and <c>event-data</c>. A <c>failed</c> event is a hard
-/// bounce when its severity is permanent and a soft bounce otherwise; an ESP block is a block. When the tenant has the
-/// Mailgun signing key, the signature is checked.
+/// bounce when its severity is permanent and a deferral otherwise, since Mailgun reports each temporary failure of an
+/// email it is still trying (a greylisting server, say) and only the permanent one ends it; an ESP block is a block.
+/// When the tenant has the Mailgun signing key, the signature is checked.
 /// </summary>
 public sealed class MailgunDeliveryEventParser : IEmailDeliveryEventParser
 {
@@ -86,7 +87,7 @@ public sealed class MailgunDeliveryEventParser : IEmailDeliveryEventParser
         {
             "failed" when reason == "espblock" => EmailDeliveryEventKind.Blocked,
             "failed" when string.Equals(DeliveryEventJson.GetString(data, "severity"), "permanent", StringComparison.OrdinalIgnoreCase) => EmailDeliveryEventKind.HardBounce,
-            "failed" => EmailDeliveryEventKind.SoftBounce,
+            "failed" => EmailDeliveryEventKind.Deferred,
             "complained" => EmailDeliveryEventKind.Complaint,
             "unsubscribed" => EmailDeliveryEventKind.Unsubscribed,
             "delivered" => EmailDeliveryEventKind.Delivered,

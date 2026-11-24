@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
@@ -27,7 +28,10 @@ public sealed partial class AutomatedConversationHandler
         clearly ended. When you are unsure, prefer to respond. Always include a short Reason.
         """;
 
-    private async Task<bool> ShouldRespondAsync(AutomatedConversationTurn turn, List<ChatMessage> transcript, CancellationToken cancellationToken)
+    // Returns true to reply, false when no reply is warranted, and null when the judgement could not be made: no chat
+    // deployment, a failed call, or an answer that could not be read. The caller fails closed on null and sends nothing,
+    // so a broken judgement never lets the agent answer every message, including an automated mailbox's.
+    private async Task<bool?> ShouldRespondAsync(AutomatedConversationTurn turn, List<ChatMessage> transcript, CancellationToken cancellationToken)
     {
         var prompt = BuildShouldRespondPrompt(turn.Channel.ConversationNoun);
 
@@ -43,7 +47,9 @@ public sealed partial class AutomatedConversationHandler
 
             if (deployment is null)
             {
-                return true;
+                _logger.LogWarning("No chat deployment is available to judge whether to reply in Activity {ActivityId}.", turn.Activity.ItemId.SanitizeLogValue());
+
+                return null;
             }
 
             var client = await _aiClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience().UseUsageLabels(contextType: turn.Channel.UsageCategory, purpose: AIUsageFeaturePurposes.ReplyDecision));
@@ -53,7 +59,14 @@ public sealed partial class AutomatedConversationHandler
 
             var decision = await client.GetResponseAsync<ShouldRespondResult>(messages, _jsonSerializerOptions.SerializerOptions, cancellationToken: cancellationToken);
 
-            if (decision.Result is { ShouldRespond: false })
+            if (decision.Result is null)
+            {
+                _logger.LogWarning("The should-respond evaluation for Activity {ActivityId} returned no decision.", turn.Activity.ItemId.SanitizeLogValue());
+
+                return null;
+            }
+
+            if (!decision.Result.ShouldRespond)
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
@@ -65,12 +78,13 @@ public sealed partial class AutomatedConversationHandler
 
             return true;
         }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is not DbException)
         {
-            // Fail open: when the decision cannot be made, reply as normal rather than go silent on the customer.
-            _logger.LogWarning(ex, "The should-respond evaluation failed for Activity {ActivityId}; replying by default.", turn.Activity.ItemId.SanitizeLogValue());
+            // Fail closed: without a decision the agent does not reply blindly. A database failure is not swallowed, since
+            // it cancels the session and a recovery pass must stop rather than send replies it can no longer record.
+            _logger.LogWarning(ex, "The should-respond evaluation failed for Activity {ActivityId}; no reply is sent.", turn.Activity.ItemId.SanitizeLogValue());
 
-            return true;
+            return null;
         }
     }
 

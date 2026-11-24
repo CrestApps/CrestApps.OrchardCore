@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -49,8 +50,8 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
     // conclude the activity.
     private const string HangupMarker = "[[HANGUP]]";
 
+    // How long a turn waits for the conversation's lock. The lock's own expiry is LockExpiration.
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(90);
-    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
 
     private readonly IEnumerable<IAutomatedMessagingChannel> _channels;
     private readonly IMessagingChannelResolver _channelResolver;
@@ -271,7 +272,13 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
             ["Channel"] = automatedChannel.Channel,
         });
 
-        await RecordCustomerMessageAsync(chatSession, message, cancellationToken);
+        // A replayed or redelivered message is already in the transcript: it was answered, or its reply is being composed
+        // or will be recovered. It starts no turn, which would cancel the reply in progress and thread a new one to the
+        // old message.
+        if (!await RecordCustomerMessageAsync(chatSession, message, cancellationToken))
+        {
+            return;
+        }
 
         var turn = new AutomatedConversationTurn
         {
@@ -324,13 +331,24 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
         return (profile, chatSession);
     }
 
-    // Stores the customer's message unless it is already the trailing turn, which makes the handler idempotent: a
-    // redelivery, or the owed-reply recovery re-driving a reply lost to a restart, must not add the same turn twice.
-    private async Task RecordCustomerMessageAsync(AIChatSession chatSession, OmnichannelMessage message, CancellationToken cancellationToken)
+    // Stores the customer's message unless it is already in the transcript, which makes the handler idempotent. Returns
+    // false for a provider's replay of a message stored under the same identifier, which must start no turn. The owed-reply
+    // recovery re-drives a reply lost to a restart with no identifier; it matches the trailing turn by its text and goes on.
+    private async Task<bool> RecordCustomerMessageAsync(AIChatSession chatSession, OmnichannelMessage message, CancellationToken cancellationToken)
     {
         var existing = (await _promptStore.GetPromptsAsync(chatSession.SessionId))
             .Where(prompt => !prompt.IsGeneratedPrompt)
             .ToList();
+
+        if (AutomatedConversationTranscript.HasProviderMessage(existing, message.ProviderMessageId))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("A {Channel} message already in the transcript of session {SessionId} was delivered again; it is not answered twice.", message.Channel.SanitizeLogValue(), chatSession.SessionId.SanitizeLogValue());
+            }
+
+            return false;
+        }
 
         var last = existing.LastOrDefault();
 
@@ -341,12 +359,17 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
         if (!alreadyStored)
         {
             await _promptStore.CreateAsync(AutomatedConversationTranscript.CreateCustomerPrompt(chatSession.SessionId, message, _clock.UtcNow), cancellationToken);
+
+            // Committed before the reading pause: a restart during the pause still leaves the message for the owed-reply
+            // recovery to answer, the pause holds no transaction open, and the reads after it see what others committed.
+            await _session.SaveChangesAsync(cancellationToken);
         }
+
+        return true;
     }
 
     private async Task RunTurnAsync(AutomatedConversationTurn turn, CancellationToken cancellationToken)
     {
-        var activity = turn.Activity;
         var chatSession = turn.ChatSession;
 
         // One reply per conversation at a time. This turn becomes the active generation, cancelling a reply still being
@@ -359,17 +382,26 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
 
         try
         {
-            var (locker, locked) = await _localLock.TryAcquireLockAsync(GetLockKey(chatSession.SessionId), _lockTimeout, _lockExpiration);
+            var (locker, locked) = await _localLock.TryAcquireLockAsync(GetLockKey(chatSession.SessionId), _lockTimeout, LockExpiration);
 
             if (!locked)
             {
-                _logger.LogWarning("Timed out waiting for the conversation lock of Activity {ActivityId}.", activity.ItemId.SanitizeLogValue());
+                _logger.LogWarning("Timed out waiting for the conversation lock of Activity {ActivityId}.", turn.Activity.ItemId.SanitizeLogValue());
 
                 return;
             }
 
             await using (locker)
             {
+                // Read again under the lock, fresh from the database: while this turn waited, an earlier turn's conclusion,
+                // the no-response timeout or a person may have closed the conversation.
+                turn.Activity = await ReloadActivityAsync(turn.Activity, cancellationToken);
+
+                if (turn.Activity is null || turn.Activity.Status.IsTerminal())
+                {
+                    return;
+                }
+
                 var outcome = await ReplyAsync(turn, handoffAvailable, generationToken, cancellationToken);
 
                 if (outcome.Handled && outcome.HandoffRequested)
@@ -378,20 +410,17 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
                 }
                 else if (outcome.Handled)
                 {
-                    activity.Status = ActivityStatus.AwaitingCustomerAnswer;
-
-                    if (OmnichannelAutomationHelper.HasNoResponseTimeout(turn.FlowSettings))
-                    {
-                        activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(turn.FlowSettings, _clock.UtcNow);
-                    }
-
-                    await _activityStore.UpdateAsync(activity, cancellationToken);
-
-                    ScheduleConclusion(turn, outcome.HangupRequested);
+                    await AwaitCustomerAsync(turn, outcome, cancellationToken);
                 }
-            }
 
-            await _session.SaveAsync(chatSession, cancellationToken: cancellationToken);
+                // Saved through the session manager, which stores the session in its own collection.
+                await _chatSessionManager.SaveAsync(chatSession, cancellationToken);
+
+                // Committed while the lock is still held, so whatever takes the lock next (the next turn, the deferred
+                // conclusion, a follow-up) reads this turn's outcome, and a recovery pass that drives several turns in one
+                // scope commits each turn on its own.
+                await _session.SaveChangesAsync(cancellationToken);
+            }
         }
         catch (OperationCanceledException) when (generationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
@@ -406,19 +435,25 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
     private async Task<AutomatedTurnOutcome> ReplyAsync(AutomatedConversationTurn turn, bool handoffAvailable, CancellationToken generationToken, CancellationToken cancellationToken)
     {
         var outcome = new AutomatedTurnOutcome();
-        var activity = turn.Activity;
         var chatSession = turn.ChatSession;
 
         // The reply delay chosen when the activities were loaded, else the subject flow's own for the channel. It is the
         // floor of the reading pause below.
-        var configuredDelay = OmnichannelAutomationHelper.ResolveResponseDelay(activity.ResponseDelayMode, activity.ResponseDelaySeconds, activity.ResponseDelayJitterSeconds)
+        var configuredDelay = OmnichannelAutomationHelper.ResolveResponseDelay(turn.Activity.ResponseDelayMode, turn.Activity.ResponseDelaySeconds, turn.Activity.ResponseDelayJitterSeconds)
             ?? turn.Channel.GetDefaultResponseDelay(turn.FlowSettings);
 
         // Only the customer messages since the last reply are owed an answer. When an earlier pass already answered them,
         // nothing is pending and nothing is sent, which is what keeps concurrent handlers from replying twice.
-        var pending = AutomatedConversationTranscript.GetTrailingUserMessages(await GetTranscriptAsync(chatSession));
+        var conversation = await GetTranscriptAsync(chatSession);
+        var pending = AutomatedConversationTranscript.GetTrailingUserMessages(conversation);
 
         if (pending.Count == 0)
+        {
+            return outcome;
+        }
+
+        // Checked before the reading pause, so a conversation at its limit costs no model call.
+        if (await TryApplyReplyLimitAsync(turn, conversation, pending, handoffAvailable, outcome, cancellationToken))
         {
             return outcome;
         }
@@ -428,26 +463,59 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
             _logger.LogInformation("Composing an automated {Channel} reply; {PendingCount} customer message(s) owed a response.", turn.Channel.Channel, pending.Count);
         }
 
-        var readingDelay = turn.Channel.GetReadingDelay(configuredDelay, pending.Sum(prompt => prompt.Content?.Length ?? 0));
+        var readingDelay = Cap(turn.Channel.GetReadingDelay(configuredDelay, pending.Sum(prompt => prompt.Content?.Length ?? 0)), MaxReadingDelay);
 
         if (readingDelay > TimeSpan.Zero)
         {
             await Task.Delay(readingDelay, generationToken);
         }
 
-        // Re-read after the pause, so messages that arrived meanwhile are answered by this one reply.
-        var transcript = (await GetTranscriptAsync(chatSession))
+        // Re-read after the pause: messages that arrived meanwhile are answered by this one reply, and a conversation
+        // closed meanwhile (the no-response timeout, a person) is not answered at all.
+        turn.Activity = await ReloadActivityAsync(turn.Activity, cancellationToken);
+
+        if (turn.Activity is null || turn.Activity.Status.IsTerminal())
+        {
+            return outcome;
+        }
+
+        var activity = turn.Activity;
+        var prompts = await GetTranscriptAsync(chatSession);
+        var owed = AutomatedConversationTranscript.GetTrailingUserMessages(prompts);
+
+        if (owed.Count == 0)
+        {
+            return outcome;
+        }
+
+        var transcript = prompts
             .Select(prompt => new ChatMessage(prompt.Role, prompt.Content))
             .ToList();
 
-        if (!await ShouldRespondAsync(turn, transcript, generationToken))
+        var decision = await ShouldRespondAsync(turn, transcript, generationToken);
+
+        if (decision is null)
+        {
+            // Without a judgement the agent does not reply blindly: it leaves the message to a person, handed off when one
+            // is available. Otherwise the message stays owed, so the recovery may try again while it is recent.
+            _logger.LogWarning("The automated agent could not decide whether to reply in Activity {ActivityId}, so it sends nothing and leaves the message to a person.", activity.ItemId.SanitizeLogValue());
+
+            LeaveToPerson(outcome, handoffAvailable, "The automated assistant could not decide whether to reply.");
+
+            return outcome;
+        }
+
+        if (decision is false)
         {
             // The agent chose not to reply. The turn is still handled, so the activity advances and the conclusion check
-            // runs, which closes a conversation that has naturally ended.
+            // runs, which closes a conversation that has naturally ended. The message is marked handled, so the recovery
+            // does not raise it again and the follow-ups see the agent waiting on the customer.
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation("The automated agent chose not to reply to the current {Channel} turn.", turn.Channel.Channel);
             }
+
+            await MarkUnansweredAsync(turn, owed[^1], NotWarrantedReason, cancellationToken);
 
             outcome.Handled = true;
 
@@ -461,7 +529,7 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
             return outcome;
         }
 
-        var typingDelay = turn.Channel.GetTypingDelay(reply.Length);
+        var typingDelay = Cap(turn.Channel.GetTypingDelay(reply.Length), MaxTypingDelay);
 
         if (typingDelay > TimeSpan.Zero)
         {
@@ -484,11 +552,20 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
                 Body = reply,
             }, cancellationToken);
 
-            result = new MessageDispatchResultView(dispatch.Succeeded, dispatch.GetErrorText());
+            result = new MessageDispatchResultView(dispatch.Succeeded, dispatch.GetErrorText(), dispatch.IsDeferred ? dispatch.RetryAfterUtc : null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Sending the automated {Channel} reply for Activity {ActivityId} failed.", turn.Channel.Channel, activity.ItemId.SanitizeLogValue());
+
+            return outcome;
+        }
+
+        if (result.HeldUntilUtc is not null)
+        {
+            // The address is at its sending limits or paused. Nothing is recorded as sent, so the owed-reply recovery
+            // answers the customer again once the address can send (within its window).
+            _logger.LogWarning("The automated {Channel} reply for Activity {ActivityId} was held back until {RetryAfterUtc} by the address's sending limits.", turn.Channel.Channel, activity.ItemId.SanitizeLogValue(), result.HeldUntilUtc);
 
             return outcome;
         }
@@ -539,16 +616,15 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
 
         try
         {
-            var context = await _completionContextBuilder.BuildAsync(turn.Profile, cancellationToken: generationToken);
+            // Anyone can write to the address, so the customer's message is untrusted input and the profile's own tools are
+            // never offered to an automated reply (nothing attaches them on this path). Function calling stays on only for
+            // the transfer tool attached below, when a person is available; it can do no more than hand the customer over.
+            var context = await _completionContextBuilder.BuildAsync(turn.Profile, builder => builder.DisableTools = !handoffAvailable, generationToken);
             context.AdditionalProperties["Session"] = turn.ChatSession;
 
-            // The subject the customer wrote under says what the conversation is about, on a channel that has one.
-            var subject = turn.ReplyTo?.GetSubject();
-
-            if (!string.IsNullOrWhiteSpace(subject))
-            {
-                transcript.Insert(0, new ChatMessage(ChatRole.System, $"The subject of the customer's latest {turn.Channel.ConversationNoun} message: {subject}"));
-            }
+            // The subject the customer wrote under says what the conversation is about, on a channel that has one. It is the
+            // customer's own words, so it goes in their turn, never in an instruction to the model.
+            AutomatedConversationTranscript.PrefixSubject(transcript, turn.ReplyTo?.GetSubject());
 
             // When a person is available, the transfer tool is offered for this turn, with guidance on when to use it. The
             // guidance is a leading system message, so it never reaches the should-respond judgement.
@@ -582,8 +658,10 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
             // exception, so the token decides, not the exception type.
             throw new OperationCanceledException("The automated reply was superseded by a newer message.", ex, generationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not DbException)
         {
+            // A database failure is not swallowed: it cancels the session, and a recovery pass driving more turns in this
+            // scope must stop rather than send replies it can no longer record.
             _logger.LogError(ex, "The AI completion failed for Activity {ActivityId} with AI profile {ProfileId}.", turn.Activity.ItemId.SanitizeLogValue(), turn.Profile.ItemId.SanitizeLogValue());
 
             return null;
@@ -708,5 +786,5 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
             ? null
             : await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
-    private sealed record MessageDispatchResultView(bool Succeeded, string Error);
+    private sealed record MessageDispatchResultView(bool Succeeded, string Error, DateTime? HeldUntilUtc = null);
 }

@@ -22,7 +22,9 @@ internal sealed class EmailAutomatedMessagingChannel : IAutomatedMessagingChanne
     internal static readonly TimeSpan MinimumSettle = TimeSpan.FromSeconds(15);
 
     /// <summary>
-    /// The longest settle, whatever the configured reply delay says, so a reply always comes within minutes.
+    /// The longest settle, whatever the configured reply delay says, so a reply always comes within minutes. The
+    /// automated conversation handler holds the conversation lock through the settle and caps any channel's pause at
+    /// <see cref="AutomatedConversationHandler.MaxReadingDelay"/>, so this stays within it.
     /// </summary>
     internal static readonly TimeSpan MaximumSettle = TimeSpan.FromMinutes(5);
 

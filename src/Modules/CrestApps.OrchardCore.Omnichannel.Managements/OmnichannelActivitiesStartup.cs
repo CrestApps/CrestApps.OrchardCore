@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -259,7 +260,12 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddContactMethods()
             .AddIndexProvider<OmnichannelContactIndexProvider>()
             .AddIndexProvider<OmnichannelContactPhoneNumberIndexProvider>()
+            .AddIndexProvider<OmnichannelContactEmailAddressIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
+
+        // Indexes every email address of the contacts saved before the email address index existed; the contacts
+        // migration asks for it, and it needs the resumable steps service that migration is given.
+        services.AddResumableStep<ContactEmailAddressIndexStep>();
 
         // Privacy requests export and anonymize a person's contacts, leads and activities.
         services.AddScoped<CrmPersonalDataContacts>();

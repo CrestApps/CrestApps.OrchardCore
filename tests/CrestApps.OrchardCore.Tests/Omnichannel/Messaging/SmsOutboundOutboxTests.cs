@@ -88,6 +88,7 @@ public sealed class SmsOutboundOutboxTests
             Mock.Of<IMessagingRealTimeNotifier>(),
             Mock.Of<IMessagingConversationStore>(),
             new FakeAttachmentUrlProvider(),
+            Mock.Of<IMessagingBroadcastStore>(),
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
             Mock.Of<ISession>(),
             Mock.Of<IClock>(),

@@ -40,7 +40,7 @@ public sealed class EmailDeliveryEventParserTests
 
     [Theory]
     [InlineData("failed", "permanent", "bounce", EmailDeliveryEventKind.HardBounce)]
-    [InlineData("failed", "temporary", "generic", EmailDeliveryEventKind.SoftBounce)]
+    [InlineData("failed", "temporary", "generic", EmailDeliveryEventKind.Deferred)]
     [InlineData("failed", "permanent", "espblock", EmailDeliveryEventKind.Blocked)]
     [InlineData("complained", null, null, EmailDeliveryEventKind.Complaint)]
     [InlineData("unsubscribed", null, null, EmailDeliveryEventKind.Unsubscribed)]

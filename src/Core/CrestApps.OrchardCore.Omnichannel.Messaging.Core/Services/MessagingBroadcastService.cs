@@ -13,9 +13,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
 /// <summary>
 /// The default <see cref="IMessagingBroadcastService"/>: hands a queued broadcast to the outreach engine, which sends it
-/// to each recipient in their own 1:1 thread (no cross-visibility), a page at a time, skipping recipients who opted out
-/// and holding the sends in the channel's quiet hours. The broadcast keeps its recipient list and shows the run's
-/// progress.
+/// to each recipient on their own (no cross-visibility), a page at a time, skipping recipients who opted out and holding
+/// the sends in the channel's quiet hours. The messages open no conversation; a conversation opens when a recipient
+/// replies. The broadcast keeps its recipient list and shows the run's progress, with the messages the channel held
+/// back counted as queued until the outbox sends them.
 /// </summary>
 public sealed class MessagingBroadcastService : IMessagingBroadcastService
 {

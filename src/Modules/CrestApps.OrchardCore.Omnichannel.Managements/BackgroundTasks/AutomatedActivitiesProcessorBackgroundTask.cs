@@ -419,7 +419,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
                 if (string.IsNullOrWhiteSpace(activity.Notes))
                 {
-                    activity.Notes = "The automated SMS activity failed because the contact stopped responding.";
+                    activity.Notes = BuildNoResponseNote(activity.Channel);
                 }
 
                 if (logger.IsEnabled(LogLevel.Information))
@@ -432,6 +432,27 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         }
 
         return processedCount;
+    }
+
+    /// <summary>
+    /// Builds the note left on an automated activity the no-response timeout failed. The timeout fails automated
+    /// conversations on every channel, so the note names the activity's own channel rather than always saying SMS.
+    /// </summary>
+    /// <param name="channel">The activity's channel.</param>
+    /// <returns>The note.</returns>
+    internal static string BuildNoResponseNote(string channel)
+    {
+        if (string.IsNullOrWhiteSpace(channel))
+        {
+            return "The automated activity failed because the contact stopped responding.";
+        }
+
+        // SMS is an abbreviation and stays in capitals; other channel names read as ordinary words in the sentence.
+        var name = string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase)
+            ? OmnichannelConstants.Channels.Sms
+            : channel.Trim().ToLowerInvariant();
+
+        return $"The automated {name} activity failed because the contact stopped responding.";
     }
 
     /// <summary>

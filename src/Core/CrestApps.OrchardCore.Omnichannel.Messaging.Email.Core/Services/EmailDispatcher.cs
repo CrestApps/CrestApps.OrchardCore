@@ -101,9 +101,18 @@ public sealed class EmailDispatcher : IEmailDispatcher
         var senderName = string.IsNullOrWhiteSpace(settings.SenderName) ? endpoint.DisplayText : settings.SenderName.Trim();
         var isBulk = message.Purpose is MessagingOutboundPurpose.Broadcast or MessagingOutboundPurpose.Outreach;
 
-        // Nothing goes to a suppressed address; bulk mail also waits while the address is at its limits or paused. A
-        // held-back email is a deferral the caller reschedules, not a failure.
-        var decision = await _governor.EvaluateAsync(endpoint, settings, contactAddress, isBulk, reserveTurn: true, cancellationToken);
+        // An automated reply (an AI agent or a workflow) stays a reply, threaded and without an unsubscribe link, but it
+        // runs at machine speed, so it waits for the address's pauses and its hourly and daily limits like bulk mail does.
+        // A person's own reply is never held back.
+        var sendKind = isBulk
+            ? EmailSendKind.Bulk
+            : message.Purpose == MessagingOutboundPurpose.Automation
+                ? EmailSendKind.Automated
+                : EmailSendKind.Reply;
+
+        // Nothing goes to a suppressed address; bulk and automated mail also wait while the address is at its limits or
+        // paused. A held-back email is a deferral the caller reschedules, not a failure.
+        var decision = await _governor.EvaluateAsync(endpoint, settings, contactAddress, sendKind, reserveTurn: true, cancellationToken);
 
         if (decision.IsRefused)
         {
@@ -160,7 +169,7 @@ public sealed class EmailDispatcher : IEmailDispatcher
         }
         else
         {
-            result = await RecordFailureAsync(endpoint, settings, contactAddress, isBulk, result, cancellationToken);
+            result = await RecordFailureAsync(endpoint, settings, contactAddress, isBulk, sendKind, result, cancellationToken);
         }
 
         if (result.Succeeded && _logger.IsEnabled(LogLevel.Information))
@@ -177,13 +186,14 @@ public sealed class EmailDispatcher : IEmailDispatcher
     }
 
     // Reads what the server's refusal means and acts on it: a dead address is suppressed and never retried, a block or
-    // a throttle pauses the address's bulk mail, and a throttled bulk email waits for the pause instead of spending a
-    // retry.
+    // a throttle pauses the address's bulk mail, and a throttled bulk or automated email, which the pause holds anyway,
+    // waits for it instead of spending a retry. A refusal of the one email (its size, its content) changes nothing else.
     private async Task<MessageDispatchResult> RecordFailureAsync(
         OmnichannelChannelEndpoint endpoint,
         EmailAddressSettings settings,
         string contactAddress,
         bool isBulk,
+        EmailSendKind sendKind,
         MessageDispatchResult result,
         CancellationToken cancellationToken)
     {
@@ -201,7 +211,7 @@ public sealed class EmailDispatcher : IEmailDispatcher
                 result.ErrorCode = OmnichannelConstants.MessagingErrorCodes.SenderBlocked;
                 break;
 
-            case EmailFailureKind.Throttled when isBulk && pausedUntil is not null:
+            case EmailFailureKind.Throttled when sendKind != EmailSendKind.Reply && pausedUntil is not null:
                 return new MessageDispatchResult
                 {
                     Succeeded = false,

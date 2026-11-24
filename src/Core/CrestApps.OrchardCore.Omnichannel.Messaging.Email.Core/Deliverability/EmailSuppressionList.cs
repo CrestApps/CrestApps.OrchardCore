@@ -119,16 +119,27 @@ public sealed class EmailSuppressionList : IEmailSuppressionList
 
     public async Task<bool> RemoveAsync(string address, CancellationToken cancellationToken = default)
     {
-        var suppression = await FindAsync(address, cancellationToken);
+        var key = ToKey(address);
 
-        if (suppression is null)
+        if (key is null)
         {
             return false;
         }
 
-        _session.Delete(suppression, Collection);
+        // Every record of the address goes: two reports suppressing it at the same moment can each add one, and taking
+        // the address off the list must not leave the other behind still refusing it.
+        var suppressions = await _session.Query<EmailSuppression, EmailSuppressionIndex>(index => index.Address == key, collection: Collection)
+            .ListAsync(cancellationToken);
 
-        return true;
+        var removed = false;
+
+        foreach (var suppression in suppressions)
+        {
+            _session.Delete(suppression, Collection);
+            removed = true;
+        }
+
+        return removed;
     }
 
     public async Task<(IReadOnlyList<EmailSuppression> Items, int Total)> PageAsync(string search, int page, int pageSize, CancellationToken cancellationToken = default)

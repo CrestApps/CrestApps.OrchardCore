@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
@@ -18,6 +17,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Automation;
 /// never answered because the reply being composed was lost (a restart, a crash). Only a recent message is answered: a
 /// thread the customer wrote to long ago is not woken with a late reply.
 /// </summary>
+/// <remarks>
+/// Each re-driven turn commits under its conversation lock. A failed read or write cancels the YesSql session for the rest
+/// of the scope, so the pass stops there: a turn driven after it could send a reply it can no longer record.
+/// </remarks>
 public sealed class AutomatedOwedReplyRecovery
 {
     /// <summary>
@@ -149,7 +152,12 @@ public sealed class AutomatedOwedReplyRecovery
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    _logger.LogError(ex, "Recovering the owed automated reply of Activity {ActivityId} failed.", activity.ItemId.SanitizeLogValue());
+                    // The session may be cancelled now, and a reply sent after this would never be recorded and would be
+                    // sent again by the next pass. The pass stops here; the next one goes on after this conversation.
+                    _logger.LogError(ex, "Recovering the owed automated reply of Activity {ActivityId} failed; the pass stops and the next one goes on after it.", activity.ItemId.SanitizeLogValue());
+                    _cursors.OwedReply = documentId;
+
+                    return recovered;
                 }
             }
         }
@@ -177,12 +185,15 @@ public sealed class AutomatedOwedReplyRecovery
             return false;
         }
 
-        var last = (await _promptStore.GetPromptsAsync(chatSession.SessionId))
+        var conversation = (await _promptStore.GetPromptsAsync(chatSession.SessionId))
             .Where(prompt => !prompt.IsGeneratedPrompt)
-            .LastOrDefault();
+            .ToList();
 
-        // A reply is owed only when the last thing said was the customer's, and recently.
-        if (last is null || last.Role != ChatRole.User || string.IsNullOrWhiteSpace(last.Content) || last.CreatedUtc < cutoff)
+        // A reply is owed only when the last thing said was the customer's, recently, and the agent did not already handle
+        // it on purpose without replying (no reply warranted, or the reply limit reached).
+        var last = AutomatedConversationTranscript.GetTrailingUserMessages(conversation).LastOrDefault();
+
+        if (last is null || !ReferenceEquals(last, conversation[^1]) || string.IsNullOrWhiteSpace(last.Content) || last.CreatedUtc < cutoff)
         {
             return false;
         }

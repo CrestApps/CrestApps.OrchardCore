@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -56,7 +57,17 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         ("IDX_OCPhone_NumberDocument", ["NormalizedPhoneNumber", "DocumentId"]),
     ];
 
+    private static readonly (string Name, string[] Columns)[] _emailAddressIndexIndexes =
+    [
+        ("IDX_OCEmail_DocumentId", ["DocumentId"]),
+
+        // An inbound email, an unsubscribe and a privacy request look a record up by one of its addresses.
+        ("IDX_OCEmail_Address", ["NormalizedEmailAddress", "Published", "Latest"]),
+        ("IDX_OCEmail_ContentItem", ["ContentItemId", "Published", "Latest"]),
+    ];
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ResumableSteps _steps;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactsMigrations"/> class.
@@ -65,14 +76,17 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     /// <param name="store">The YesSql store.</param>
     /// <param name="dbConnectionAccessor">The database connection accessor.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="steps">Asks for the work too large for a migration, such as indexing the contacts already saved.</param>
     public OmnichannelContactsMigrations(
         IContentDefinitionManager contentDefinitionManager,
         IStore store,
         IDbConnectionAccessor dbConnectionAccessor,
-        ILogger<OmnichannelContactsMigrations> logger)
+        ILogger<OmnichannelContactsMigrations> logger,
+        ResumableSteps steps)
         : base(store, dbConnectionAccessor, logger)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _steps = steps;
     }
 
     /// <summary>
@@ -104,9 +118,18 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
             table.CreateIndex(PrimaryAddressIndexName, _emailIndexColumns));
+
+        await CreateEmailAddressIndexTableAsync(SchemaBuilder);
+
+        foreach (var (name, columns) in _emailAddressIndexIndexes)
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactEmailAddressIndex>(table =>
+                table.CreateIndex(name, columns));
+        }
+
         ScheduleContactDefinitionRepair();
 
-        return 15;
+        return 16;
     }
 
     /// <summary>
@@ -313,9 +336,11 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     }
 
     /// <summary>
-    /// Adds the canonical (lower-case) primary email column, so an inbound email finds its contact however the sender
-    /// typed their address, and fills it from the email already indexed. No content item is saved again: the value is
-    /// copied in SQL, and an address stored with a display name is corrected the next time its contact is saved.
+    /// Adds the canonical (lower-case) primary email column. It is not filled here: SQL cannot strip a display name or a
+    /// <c>mailto:</c> prefix the way <see cref="OmnichannelEmailAddress.Normalize"/> does, and one update of every row
+    /// would hold up the tenant's activation on a large list. <see cref="UpdateFrom15Async"/> asks
+    /// <see cref="ContactEmailAddressIndexStep"/> to save each contact with an email again, a batch at a time, which
+    /// writes the column from the contact's own address.
     /// </summary>
     public async Task<int> UpdateFrom14Async()
     {
@@ -327,37 +352,43 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelContactIndex>(SchemaBuilder, PrimaryAddressIndexName, collection: null, _emailIndexColumns);
 
-        var failure = await TryApplyIsolatedAsync(BackfillNormalizedEmailAddressesAsync);
-
-        if (failure is not null)
-        {
-            // A row left without the canonical email is filled the next time its contact is saved; until then an
-            // inbound email from that contact starts as an unknown sender.
-            Logger.LogWarning(failure, "The canonical primary email of the existing contact index rows could not be filled in.");
-        }
-
         return 15;
     }
 
-    private async Task BackfillNormalizedEmailAddressesAsync(ISchemaBuilder builder)
+    /// <summary>
+    /// Adds the email address index, which holds one row for every email address of a contact or lead, so an inbound
+    /// email, an unsubscribe or a privacy request finds the record by any of its addresses. The table starts empty: the
+    /// records already saved are indexed again by <see cref="ContactEmailAddressIndexStep"/>, outside activation, which
+    /// also fills their canonical primary email.
+    /// </summary>
+    public async Task<int> UpdateFrom15Async()
     {
-        var dialect = Store.Configuration.SqlDialect;
-        var contactTable = dialect.QuoteForTableName(
-            $"{Store.Configuration.TablePrefix}{Store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex))}",
-            Store.Configuration.Schema);
-        var primary = dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.PrimaryEmailAddress));
-        var normalized = dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.NormalizedPrimaryEmailAddress));
+        // Another instance activating the tenant at the same time may have created the table and its indexes
+        // already, so each change checks for, or tolerates, what is there.
+        await ApplyIsolatedSchemaChangeAsync(
+            CreateEmailAddressIndexTableAsync,
+            "create the email address index table");
 
-        // LOWER, LTRIM and RTRIM are spelled the same by every supported database.
-        var updated = await builder.Connection.ExecuteAsync(
-            $"UPDATE {contactTable} SET {normalized} = LOWER(LTRIM(RTRIM({primary}))) WHERE {primary} IS NOT NULL AND {normalized} IS NULL",
-            transaction: builder.Transaction);
-
-        if (Logger.IsEnabled(LogLevel.Information))
+        foreach (var (name, columns) in _emailAddressIndexIndexes)
         {
-            Logger.LogInformation("Filled in the canonical primary email of {RowCount} contact index row(s).", updated);
+            await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelContactEmailAddressIndex>(SchemaBuilder, name, collection: null, columns);
         }
+
+        // Asked for in the migration's own transaction, so the request commits with the table.
+        await _steps.RequestAsync(ContactEmailAddressIndexStep.StepName);
+
+        return 16;
     }
+
+    internal static Task CreateEmailAddressIndexTableAsync(ISchemaBuilder schemaBuilder)
+        => schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactEmailAddressIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("IsConverted", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Published", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
+            .Column<string>("NormalizedEmailAddress", column => column.WithLength(OmnichannelContactEmailAddressIndex.EmailAddressLength))
+        );
 
     internal static Task CreatePhoneNumberIndexTableAsync(ISchemaBuilder schemaBuilder)
         => schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactPhoneNumberIndex>(table => table

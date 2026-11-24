@@ -121,6 +121,15 @@ public static class MimeInboundEmailParser
             }
         }
 
+        // Every report (a bounce, a read receipt, a spam complaint) is a machine writing about an email we sent, never a
+        // customer, so it is kept out of the conversations whatever its type. Its type is kept too, because only a
+        // delivery status report says anything about the delivery.
+        if (message.Body is MultipartReport report)
+        {
+            email.DeliveryReport ??= new InboundEmailDeliveryReport();
+            email.DeliveryReport.ReportType = string.IsNullOrWhiteSpace(report.ReportType) ? null : report.ReportType.Trim();
+        }
+
         return email;
     }
 

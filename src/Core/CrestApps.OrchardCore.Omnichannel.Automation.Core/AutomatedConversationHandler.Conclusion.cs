@@ -21,6 +21,7 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Automation;
 
@@ -41,7 +42,7 @@ public sealed partial class AutomatedConversationHandler
             var services = scope.ServiceProvider;
             var localLock = services.GetRequiredService<ILocalLock>();
 
-            var (locker, locked) = await localLock.TryAcquireLockAsync(GetLockKey(sessionId), _lockTimeout, _lockExpiration);
+            var (locker, locked) = await localLock.TryAcquireLockAsync(GetLockKey(sessionId), _lockTimeout, LockExpiration);
 
             if (!locked)
             {
@@ -53,6 +54,10 @@ public sealed partial class AutomatedConversationHandler
             try
             {
                 await ConcludeAsync(services, channel, activityId, sessionId, profile, flowSettings, hangupRequested);
+
+                // Committed before the lock is released, so the next turn, which takes the lock next, reads the conclusion
+                // rather than the state before it. The deferred scope would otherwise commit only after the lock is gone.
+                await services.GetRequiredService<ISession>().SaveChangesAsync();
             }
             catch (Exception ex)
             {

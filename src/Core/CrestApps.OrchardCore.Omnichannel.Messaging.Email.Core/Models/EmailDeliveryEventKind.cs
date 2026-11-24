@@ -49,4 +49,10 @@ public enum EmailDeliveryEventKind
     /// The recipient unsubscribed through the provider.
     /// </summary>
     Unsubscribed = 8,
+
+    /// <summary>
+    /// The receiving system refused this one email for what it is (its size, its content). The email failed; the
+    /// recipient and the receiving domain did nothing that should hold other mail back.
+    /// </summary>
+    Rejected = 9,
 }

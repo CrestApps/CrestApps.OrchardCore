@@ -226,6 +226,10 @@ public sealed class MessagingConversationService : IMessagingConversationService
         var serviceAddress = messagingChannel.NormalizeAddress(request.ServiceAddress);
         var contactAddress = messagingChannel.NormalizeAddress(request.ContactAddress);
 
+        // Bulk mail goes to many people at once and most of them never answer, so it opens no conversation: the message
+        // is kept against the contact's address, and the conversation opens when the contact replies.
+        var isBulk = IsBulk(request.Purpose);
+
         // Enforce a single conversation per contact address on the channel: reuse any existing thread for this
         // contact (on any of our endpoints) rather than creating a duplicate; only create when none exists.
         var conversation = await _conversationStore.FindByContactAsync(messagingChannel.Name, contactAddress, cancellationToken);
@@ -233,6 +237,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         if (isNew)
         {
+            // Stored only once the message has gone out, and never for bulk mail. Until then it carries what the opt-out
+            // check and the message read.
             conversation = new MessagingConversation
             {
                 ItemId = UniqueId.GenerateId(),
@@ -258,6 +264,19 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         var message = CreateOutboundMessage(conversation, subject, body, actingAgentId);
 
+        if (isNew && isBulk)
+        {
+            message.ConversationId = null;
+        }
+
+        if (!string.IsNullOrEmpty(request.BroadcastId))
+        {
+            message.Put(new MessagingBroadcastLink
+            {
+                BroadcastId = request.BroadcastId,
+            });
+        }
+
         var dispatch = await messagingChannel.SendAsync(new MessagingOutboundMessage
         {
             ServiceAddress = conversation.ServiceAddress,
@@ -268,27 +287,52 @@ public sealed class MessagingConversationService : IMessagingConversationService
             Body = body,
         }, cancellationToken);
 
-        ApplyDispatchOutcome(message, dispatch, conversation.ItemId, request.Purpose);
+        ApplyDispatchOutcome(message, dispatch, message.ConversationId, request.Purpose);
+
+        // A message the channel refused for good (a suppressed or opted-out address) to someone who has no conversation
+        // is not kept: it would open a conversation holding nothing but a failed message. The caller shows the error.
+        if (isNew && IsRefused(message))
+        {
+            return MessagingSendResult.Failed(message.ErrorCode ?? $"{messagingChannel.DisplayName.Value} refused the message.");
+        }
 
         await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
 
-        conversation.LastMessageUtc = message.CreatedUtc;
-        conversation.LastMessagePreview = MessagingConversationRollup.BuildPreview(body);
-        conversation.IsRead = true;
-        conversation.ModifiedUtc = _clock.UtcNow;
-
-        // A thread the agent opens is answered by its own first message; only a thread the contact started waits.
-        if (!isNew)
+        var result = new MessagingSendResult
         {
-            MessagingTelemetry.RecordFirstResponse(conversation, message.CreatedUtc);
+            Succeeded = dispatch.Succeeded,
+            Message = message,
+            Error = dispatch.Succeeded ? null : message.ErrorCode,
+        };
+
+        if (isNew && isBulk)
+        {
+            return result;
         }
 
-        _slaService.MarkResponded(conversation);
+        conversation.LastMessageUtc = message.CreatedUtc;
+        conversation.LastMessagePreview = MessagingConversationRollup.BuildPreview(body);
+        conversation.ModifiedUtc = _clock.UtcNow;
 
-        // Reopen a closed/snoozed thread when the agent messages the contact again.
-        if (!isNew && conversation.Status is ConversationStatus.Closed or ConversationStatus.Snoozed)
+        // Bulk mail is not an answer: a contact waiting for one stays unread and waiting, and the conversation keeps its
+        // status and its owner.
+        if (!isBulk)
         {
-            conversation.Status = ConversationStatus.Open;
+            conversation.IsRead = true;
+
+            // A thread the agent opens is answered by its own first message; only a thread the contact started waits.
+            if (!isNew)
+            {
+                MessagingTelemetry.RecordFirstResponse(conversation, message.CreatedUtc);
+            }
+
+            _slaService.MarkResponded(conversation);
+
+            // Reopen a closed/snoozed thread when the agent messages the contact again.
+            if (!isNew && conversation.Status is ConversationStatus.Closed or ConversationStatus.Snoozed)
+            {
+                conversation.Status = ConversationStatus.Open;
+            }
         }
 
         if (isNew)
@@ -300,12 +344,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             await _conversationStore.UpdateAsync(conversation, cancellationToken);
         }
 
-        return new MessagingSendResult
-        {
-            Succeeded = dispatch.Succeeded,
-            Message = message,
-            Error = dispatch.Succeeded ? null : message.ErrorCode,
-        };
+        return result;
     }
 
     /// <inheritdoc/>
@@ -332,22 +371,9 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return false;
         }
 
-        var conversation = await _conversationStore.FindByAddressesAsync(channel.Name, serviceAddress, contactAddress, cancellationToken);
-
-        if (conversation is null)
-        {
-            MessagingTelemetry.RecordDelivery(channel.Name, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.DeliveryReceiptUnmatched(channel.Name, receipt.ProviderMessageId.SanitizeLogValue(), receipt.Status.ToString(), "conversation");
-            }
-
-            return false;
-        }
-
         // The provider message id is indexed, so a receipt that carries one finds its message in a single seek
-        // rather than by loading a thread's whole outbound history and matching in memory.
+        // rather than by loading a thread's whole outbound history and matching in memory. The message is looked up
+        // before the conversation, because bulk mail sent to someone who has not replied belongs to none.
         var channelName = channel.Name;
 
         var message = !string.IsNullOrEmpty(receipt.ProviderMessageId)
@@ -358,8 +384,24 @@ public sealed class MessagingConversationService : IMessagingConversationService
                 .FirstOrDefaultAsync(cancellationToken)
             : null;
 
+        MessagingConversation conversation = null;
+
         if (message is null)
         {
+            conversation = await _conversationStore.FindByAddressesAsync(channel.Name, serviceAddress, contactAddress, cancellationToken);
+
+            if (conversation is null)
+            {
+                MessagingTelemetry.RecordDelivery(channel.Name, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.DeliveryReceiptUnmatched(channel.Name, receipt.ProviderMessageId.SanitizeLogValue(), receipt.Status.ToString(), "conversation");
+                }
+
+                return false;
+            }
+
             // A provider that reports a receipt before the send recorded its id (or one that reports none at all)
             // still has to land somewhere, so fall back to the newest outbound message with no id yet.
             message = await FindNewestOutboundAsync(
@@ -367,18 +409,22 @@ public sealed class MessagingConversationService : IMessagingConversationService
                 conversation.ItemId,
                 withoutProviderMessageId: !string.IsNullOrEmpty(receipt.ProviderMessageId),
                 cancellationToken);
-        }
 
-        if (message is null)
-        {
-            MessagingTelemetry.RecordDelivery(channel.Name, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
-
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (message is null)
             {
-                _logger.DeliveryReceiptUnmatched(channel.Name, receipt.ProviderMessageId.SanitizeLogValue(), receipt.Status.ToString(), "sent message");
-            }
+                MessagingTelemetry.RecordDelivery(channel.Name, receipt.Status, MessagingTelemetry.DeliveryResults.Unmatched);
 
-            return false;
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.DeliveryReceiptUnmatched(channel.Name, receipt.ProviderMessageId.SanitizeLogValue(), receipt.Status.ToString(), "sent message");
+                }
+
+                return false;
+            }
+        }
+        else if (!string.IsNullOrEmpty(message.ConversationId))
+        {
+            conversation = await _conversationStore.FindByIdAsync(message.ConversationId, cancellationToken);
         }
 
         // The latency is measured once, on the receipt that settles the message; a provider that repeats a receipt
@@ -403,15 +449,19 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
 
-        await _notifier.MessageDeliveryUpdatedAsync(new MessagingDeliveryNotification
+        // A message on no conversation (bulk mail to someone who has not replied) is on no thread anyone has open.
+        if (conversation is not null)
         {
-            ConversationId = conversation.ItemId,
-            MessageId = message.Id,
-            Status = receipt.Status,
-            ErrorCode = receipt.ErrorCode,
-            AssignedAgentId = conversation.AssignedAgentId,
-            OwnerQueueId = conversation.OwnerType == ConversationOwnerType.Queue ? conversation.OwnerId : null,
-        }, cancellationToken);
+            await _notifier.MessageDeliveryUpdatedAsync(new MessagingDeliveryNotification
+            {
+                ConversationId = conversation.ItemId,
+                MessageId = message.Id,
+                Status = receipt.Status,
+                ErrorCode = receipt.ErrorCode,
+                AssignedAgentId = conversation.AssignedAgentId,
+                OwnerQueueId = conversation.OwnerType == ConversationOwnerType.Queue ? conversation.OwnerId : null,
+            }, cancellationToken);
+        }
 
         return true;
     }
@@ -656,6 +706,55 @@ public sealed class MessagingConversationService : IMessagingConversationService
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Links the outbound messages sent to a contact before they had a conversation (bulk mail opens none) to the
+    /// conversation that now exists for the same address pair, so the thread shows what the contact is answering. Call it
+    /// when a conversation is created, in the same unit of work.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="conversation">The conversation just created.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal static async Task AdoptUnthreadedMessagesAsync(
+        ISession session,
+        MessagingConversation conversation,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(conversation);
+
+        var channel = conversation.Channel;
+        var serviceAddress = conversation.ServiceAddress;
+        var contactAddress = conversation.ContactAddress;
+
+        var messages = await session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.Channel == channel &&
+                    index.ServiceAddress == serviceAddress &&
+                    index.CustomerAddress == contactAddress &&
+                    index.ConversationId == null &&
+                    !index.IsInbound,
+                collection: OmnichannelConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        foreach (var message in messages)
+        {
+            message.ConversationId = conversation.ItemId;
+
+            await session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+        }
+    }
+
+    // Bulk mail: a broadcast, or automation reaching out before the contact wrote.
+    private static bool IsBulk(MessagingOutboundPurpose purpose)
+    {
+        return purpose is MessagingOutboundPurpose.Broadcast or MessagingOutboundPurpose.Outreach;
+    }
+
+    // Refused for good: a retry could not succeed, so the message was not queued for one.
+    private static bool IsRefused(OmnichannelMessage message)
+    {
+        return string.Equals(message.DeliveryStatus, MessageDeliveryStatus.Failed.ToString(), StringComparison.Ordinal);
+    }
+
     // Records what the provider said about one attempt. An accepted message stores the provider's own id so a
     // later receipt matches it exactly; a refused one is left Queued with a scheduled retry until the backoff
     // schedule is exhausted, at which point it becomes a visible failure on the bubble.
@@ -716,7 +815,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             "Outbound {Channel} dispatch attempt {Attempt} failed for conversation {ConversationId}: {Error}",
             message.Channel,
             state.Attempts,
-            conversationId.SanitizeLogValue(),
+            conversationId?.SanitizeLogValue() ?? "(none)",
             state.LastError);
     }
 }

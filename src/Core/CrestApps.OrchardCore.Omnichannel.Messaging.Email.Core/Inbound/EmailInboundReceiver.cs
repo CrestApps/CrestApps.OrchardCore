@@ -90,13 +90,13 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             ["EmailSource"] = source.SanitizeLogValue(),
         });
 
-        // A bounce is about an email we sent, not a message from a customer. It marks that email as failed, and nothing
-        // else: it never opens a conversation and is never answered.
+        // A report (a bounce, a read receipt) is about an email we sent, not a message from a customer. A bounce marks
+        // that email as failed, and nothing else: a report never opens a conversation and is never answered.
         if (email.DeliveryReport is not null)
         {
             await ApplyBounceAsync(email.DeliveryReport, cancellationToken);
 
-            return EmailInboundResult.Of(EmailInboundStatus.Ignored, "The email is a delivery report (bounce).");
+            return EmailInboundResult.Of(EmailInboundStatus.Ignored, "The email is a report about an email sent, such as a bounce or a read receipt.");
         }
 
         await ResolveCustomerAsync(email, cancellationToken);
@@ -294,7 +294,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
 
             var attachment = new MessagingAttachment
             {
-                Id = CreateAttachmentId(message.ProviderMessageId, index++),
+                Id = CreateAttachmentId(message.ProviderMessageId, index++, file.Content),
                 ContentType = format.ContentType,
                 FileName = string.IsNullOrWhiteSpace(file.FileName) ? null : Path.GetFileName(file.FileName),
                 Length = file.Content.Length,
@@ -321,9 +321,6 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             !string.IsNullOrEmpty(html) &&
             html.Contains($"cid:{file.ContentId}", StringComparison.OrdinalIgnoreCase);
 
-    // A bounce report that comes back to the mailbox is a delivery event like any a provider posts: a permanent failure
-    // suppresses the address and marks the email failed, a delay or a temporary failure counts toward the address's
-    // soft bounces and the receiving domain's deferrals.
     // The customer is who sent the email. A Reply-To that names somebody else takes over only when one of the
     // business's own addresses sent the email, as a form on the business's own site relays a visitor's message;
     // from anybody else it proves nothing about who wrote, so it is kept on the message for the record.
@@ -341,8 +338,26 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
         }
     }
 
+    // A bounce report that comes back to the mailbox is a delivery event like any a provider posts: a permanent failure
+    // suppresses the address and marks the email failed, a delay or a temporary failure counts toward the address's
+    // soft bounces and the receiving domain's deferrals.
     private async Task ApplyBounceAsync(InboundEmailDeliveryReport report, CancellationToken cancellationToken)
     {
+        var kind = ToDeliveryEventKind(report);
+
+        if (kind is null)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "A report of type '{ReportType}' with the action '{Action}' is not about a failed or delayed delivery and was ignored.",
+                    (report.ReportType ?? "none").SanitizeLogValue(),
+                    (report.Action ?? "none").SanitizeLogValue());
+            }
+
+            return;
+        }
+
         if (string.IsNullOrEmpty(report.OriginalMessageId) || string.IsNullOrEmpty(report.Recipient))
         {
             _logger.LogWarning("A delivery report that names no original Message-ID or no recipient was ignored.");
@@ -362,17 +377,11 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             return;
         }
 
-        var kind = report.IsPermanentFailure
-            ? EmailDeliveryEventKind.HardBounce
-            : string.Equals(report.Action, "delayed", StringComparison.OrdinalIgnoreCase)
-                ? EmailDeliveryEventKind.Deferred
-                : EmailDeliveryEventKind.SoftBounce;
-
         await _deliveryEvents.ProcessAsync(
             [
                 new EmailDeliveryEvent
                 {
-                    Kind = kind,
+                    Kind = kind.Value,
                     Recipient = report.Recipient,
                     MessageId = report.OriginalMessageId,
                     EventId = $"{report.OriginalMessageId}:{report.Recipient}:{report.Action}",
@@ -385,6 +394,34 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             cancellationToken);
 
         _logger.LogWarning("An email the business sent bounced ({Status}).", (report.Status ?? report.Action).SanitizeLogValue());
+    }
+
+    // Only a failure or a delay is a problem with the delivery. A report that the email was delivered, relayed or
+    // expanded (one the sender asked for, or a relay's notice on passing the email on) is good news and counts for
+    // nothing, and a read receipt or another kind of report is not about delivery at all. Counting them as soft bounces
+    // would pause a sender whose mail arrives perfectly well.
+    private static EmailDeliveryEventKind? ToDeliveryEventKind(InboundEmailDeliveryReport report)
+    {
+        if (!report.IsDeliveryStatus)
+        {
+            return null;
+        }
+
+        if (string.Equals(report.Action, "delayed", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmailDeliveryEventKind.Deferred;
+        }
+
+        if (!string.Equals(report.Action, "failed", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        // A failure with a temporary (4.x.x) status is the sending server giving up on a problem that may pass, such as a
+        // full mailbox: a soft bounce, not a reason to stop writing to the address for good.
+        return report.IsPermanentFailure
+            ? EmailDeliveryEventKind.HardBounce
+            : EmailDeliveryEventKind.SoftBounce;
     }
 
     private async Task DispatchInlineAsync(string payload, CancellationToken cancellationToken)
@@ -415,9 +452,14 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             ? messageId
             : $"sha256:{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(messageId)))}";
 
-    private static string CreateAttachmentId(string providerMessageId, int index)
+    // The file's own content is part of its identifier. The files are stored before the inbox tells a redelivery from a
+    // new email, and the store replaces whatever is kept under an identifier: built from the Message-ID alone, another
+    // email reusing that Message-ID (a resend, or a forgery) would replace the files of the email received first. A true
+    // redelivery carries the same files, so it still gets the same identifiers and only writes the same bytes again.
+    private static string CreateAttachmentId(string providerMessageId, int index, byte[] content)
     {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{OmnichannelConstants.Channels.Email}|{providerMessageId}|{index}"));
+        var contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{OmnichannelConstants.Channels.Email}|{providerMessageId}|{index}|{contentHash}"));
 
         return $"in-{Convert.ToHexStringLower(hash).Substring(0, 40)}";
     }

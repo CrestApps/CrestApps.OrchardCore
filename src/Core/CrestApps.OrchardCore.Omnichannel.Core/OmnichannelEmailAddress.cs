@@ -60,6 +60,22 @@ public static class OmnichannelEmailAddress
     }
 
     /// <summary>
+    /// Returns each address as it was given, trimmed, and in its canonical form: the values to look for where an address
+    /// may be stored as it was typed (a contact's primary email) or in its canonical form (a destination, a message, the
+    /// delivery log). The values are kept apart by exact spelling, because PostgreSQL and SQLite compare text by case,
+    /// so a canonical form that differs from the given one only in case is a value of its own.
+    /// </summary>
+    /// <param name="addresses">The addresses, in any form <see cref="Normalize"/> accepts.</param>
+    /// <returns>The distinct spellings; empty when no address was given.</returns>
+    public static string[] WithCanonicalForms(IEnumerable<string> addresses)
+        => (addresses ?? [])
+            .Where(address => !string.IsNullOrWhiteSpace(address))
+            .SelectMany(address => new[] { address.Trim(), Normalize(address) })
+            .Where(value => !string.IsNullOrEmpty(value))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+    /// <summary>
     /// Determines whether a value is shaped like an email address: one <c>@</c> with a local part before it and a
     /// dotted domain after it, and no whitespace. The provider is the authority on whether the mailbox exists.
     /// </summary>

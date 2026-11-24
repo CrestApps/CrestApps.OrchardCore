@@ -337,8 +337,8 @@ public sealed class AdminController : Controller
 
         var agent = await _workspaceBuilder.GetCurrentAgentAsync(User);
 
-        // A single recipient starts a 1:1 conversation; multiple recipients fan out as a broadcast (each gets their
-        // own private 1:1 thread).
+        // A single recipient starts a 1:1 conversation; multiple recipients fan out as a broadcast (each gets the
+        // message on their own, and a conversation opens when one replies).
         var subject = channel.Capabilities.SupportsSubject ? MessagingSubjects.Clean(model.Subject) : null;
 
         if (recipients.Count == 1)
@@ -377,7 +377,7 @@ public sealed class AdminController : Controller
         broadcast.Status = MessagingBroadcastStatus.Queued;
 
         await _broadcastManager.CreateAsync(broadcast);
-        await _notifier.SuccessAsync(H["Queued a group message to {0} recipients as individual 1:1 threads.", recipients.Count]);
+        await _notifier.SuccessAsync(H["Queued a group message to {0} recipients. Each gets it on their own; a conversation opens when one replies.", recipients.Count]);
 
         return RedirectToAction(nameof(Index));
     }

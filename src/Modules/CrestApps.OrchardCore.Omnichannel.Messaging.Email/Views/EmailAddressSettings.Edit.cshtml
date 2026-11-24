@@ -6,7 +6,7 @@
     var testUrl = Url.RouteUrl("EmailAddressTestConnection");
 }
 
-<div data-address-capability="Email" data-email-address-settings data-test-url="@testUrl" data-address-id="@Model.AddressId">
+<div data-address-capability="Email" data-email-address-settings data-test-url="@testUrl" data-address-id="@Model.AddressId" data-test-running="@T["Testing…"]" data-test-failed="@T["The test could not be run."]">
     <h6 class="mt-1 mb-3">@T["Sending"]</h6>
 
     <div class="ocat-wrapper">
@@ -33,6 +33,14 @@
                     <option value="">@T["Use the site's default email provider"]</option>
                 </select>
                 <span class="hint">@T["The Orchard Core email provider this address sends through. The provider must be allowed to send from this address."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-warning small mb-0">
+                    @T["Orchard Core's email service cannot add the one-click unsubscribe header (List-Unsubscribe), so bulk email from this address goes out without it, and Gmail and Yahoo require it of bulk senders. Choose \"The address's own SMTP server\" for an address that sends broadcasts or campaigns."]
+                </div>
             </div>
         </div>
     </div>
@@ -70,6 +78,7 @@
                     <input asp-for="SmtpPassword" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasSmtpPassword ? T["Stored; leave empty to keep it"] : string.Empty)" data-email-smtp-password data-1p-ignore data-lpignore="true" data-bwignore="true" />
                     <button type="button" class="btn btn-outline-secondary" data-email-test="smtp">@T["Test connection"]</button>
                 </div>
+                <span asp-validation-for="SmtpPassword" class="text-danger"></span>
                 <span class="hint">@T["For Microsoft 365 or Google, use an app password, or a mailbox your administrator allows SMTP sign-in for."]</span>
                 <div class="small mt-1" data-email-test-result="smtp"></div>
             </div>
@@ -97,7 +106,7 @@
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" asp-for="IncludeUnsubscribeLink" />
                 <label class="form-check-label" asp-for="IncludeUnsubscribeLink">@T["Add an unsubscribe link to bulk and campaign email"]</label>
-                <span class="hint dashed">@T["Broadcasts, campaign opening emails and follow-ups carry an unsubscribe link and the one-click unsubscribe header the large mailbox providers require of bulk senders. Replies in a conversation never do."]</span>
+                <span class="hint dashed">@T["Broadcasts, campaign opening emails and follow-ups carry an unsubscribe link and, when the address sends through its own SMTP server, the one-click unsubscribe header the large mailbox providers require of bulk senders. Replies in a conversation never do."]</span>
             </div>
         </div>
     </div>
@@ -143,9 +152,15 @@
                         @if (health.IsPaused && health.State is { } state)
                         {
                             <div class="alert alert-danger small mt-2 mb-2">
-                                @(state.PausedUntilUtc is { } until
-                                    ? T["Bulk sending is paused until {0}: {1}", until.ToLocalTime().ToString("g"), state.PauseReason]
-                                    : T["Bulk sending is paused until someone resumes it: {0}", state.PauseReason])
+                                @if (state.PausedUntilUtc is { } until)
+                                {
+                                    Microsoft.AspNetCore.Html.IHtmlContent pausedUntil = await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(until, DateTimeKind.Utc), Format: "g"));
+                                    @T["Bulk sending is paused until {0}: {1}", pausedUntil, state.PauseReason]
+                                }
+                                else
+                                {
+                                    @T["Bulk sending is paused until someone resumes it: {0}", state.PauseReason]
+                                }
                             </div>
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input" asp-for="ResumeBulkSending" />
@@ -206,7 +221,8 @@
             <span asp-validation-for="WarmUpFirstDayLimit" class="text-danger"></span>
             @if (Model.WarmUpStartedUtc is { } warmUpStarted)
             {
-                <span class="hint">@T["Warming up since {0}.", warmUpStarted.ToLocalTime().ToString("d")]</span>
+                Microsoft.AspNetCore.Html.IHtmlContent warmUpSince = await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(warmUpStarted, DateTimeKind.Utc), Format: "d"));
+                <span class="hint">@T["Warming up since {0}.", warmUpSince]</span>
             }
         </div>
     </div>
@@ -270,11 +286,12 @@
                 </div>
             </div>
         }
-        else if (Model.MailboxLastSucceededUtc.HasValue)
+        else if (Model.MailboxLastSucceededUtc is { } lastRead)
         {
+            Microsoft.AspNetCore.Html.IHtmlContent lastReadAt = await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(lastRead, DateTimeKind.Utc), Format: "g"));
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
-                    <span class="text-success small"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Last read {0}.", Model.MailboxLastSucceededUtc.Value.ToLocalTime().ToString("g")]</span>
+                    <span class="text-success small"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Last read {0}.", lastReadAt]</span>
                 </div>
             </div>
         }
@@ -311,6 +328,7 @@
                     <input asp-for="ImapPassword" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasImapPassword ? T["Stored; leave empty to keep it"] : string.Empty)" data-email-imap-password data-1p-ignore data-lpignore="true" data-bwignore="true" />
                     <button type="button" class="btn btn-outline-secondary" data-email-test="imap">@T["Test connection"]</button>
                 </div>
+                <span asp-validation-for="ImapPassword" class="text-danger"></span>
                 <div class="small mt-1" data-email-test-result="imap"></div>
             </div>
         </div>
@@ -420,7 +438,7 @@
                 body.append('folder', value('[data-email-imap-folder]'));
 
                 result.className = 'small mt-1 text-muted';
-                result.textContent = '@T["Testing…"]';
+                result.textContent = root.getAttribute('data-test-running');
                 button.disabled = true;
 
                 fetch(root.getAttribute('data-test-url'), {
@@ -432,14 +450,14 @@
                     },
                     body: body.toString()
                 })
-                    .then(function (response) { return response.ok ? response.json() : { succeeded: false, message: '@T["The test could not be run."]' }; })
+                    .then(function (response) { return response.ok ? response.json() : { succeeded: false, message: root.getAttribute('data-test-failed') }; })
                     .then(function (outcome) {
                         result.className = 'small mt-1 ' + (outcome.succeeded ? 'text-success' : 'text-danger');
                         result.textContent = outcome.message;
                     })
                     .catch(function () {
                         result.className = 'small mt-1 text-danger';
-                        result.textContent = '@T["The test could not be run."]';
+                        result.textContent = root.getAttribute('data-test-failed');
                     })
                     .finally(function () {
                         button.disabled = false;

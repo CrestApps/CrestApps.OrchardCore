@@ -21,6 +21,16 @@ public sealed class EmailFailureClassifierTests
     [InlineData(null, "Status: 429 TooManyRequests", EmailFailureKind.Throttled)]
     [InlineData(null, "452 4.2.2 The recipient's mailbox is full", EmailFailureKind.Temporary)]
     [InlineData(null, "552 5.2.2 The recipient's mailbox is full", EmailFailureKind.Temporary)]
+    [InlineData(null, "550 5.4.4 Host or domain name not found", EmailFailureKind.HardBounce)]
+    [InlineData(null, "550 5.0.0 Unrouteable address", EmailFailureKind.HardBounce)]
+    [InlineData(null, "550 5.0.0 Rejected: listed on a block list", EmailFailureKind.Blocked)]
+    [InlineData(null, "550 5.5.0 Requested action not taken: mailbox unavailable", EmailFailureKind.HardBounce)]
+    [InlineData(null, "552 5.3.4 Message size exceeds fixed maximum message size", EmailFailureKind.Rejected)]
+    [InlineData(null, "554 5.6.0 Message content rejected", EmailFailureKind.Rejected)]
+    [InlineData(null, "550 5.4.5 Daily user sending quota exceeded.", EmailFailureKind.Throttled)]
+    [InlineData(null, "452 4.2.2 The email account that you tried to reach is over quota.", EmailFailureKind.Temporary)]
+    [InlineData(null, "452 Mailbox full, quota exceeded", EmailFailureKind.Temporary)]
+    [InlineData(null, "Daily message quota exceeded", EmailFailureKind.Throttled)]
     [InlineData(null, "No connection could be made because the target machine actively refused it.", EmailFailureKind.Temporary)]
     [InlineData(null, null, EmailFailureKind.Temporary)]
     public void Classify_ReadsTheServersCodesAndWords(string errorCode, string text, EmailFailureKind expected)
@@ -33,9 +43,26 @@ public sealed class EmailFailureClassifierTests
     [InlineData("5.7.1", EmailFailureKind.Blocked)]
     [InlineData("4.7.0", EmailFailureKind.Throttled)]
     [InlineData("4.4.7", EmailFailureKind.Temporary)]
+    [InlineData("5.4.4", EmailFailureKind.HardBounce)]
+    [InlineData("5.0.0", EmailFailureKind.HardBounce)]
+    [InlineData("5.5.0", EmailFailureKind.Rejected)]
+    [InlineData("5.3.4", EmailFailureKind.Rejected)]
+    [InlineData("5.6.0", EmailFailureKind.Rejected)]
+    [InlineData("4.2.2", EmailFailureKind.Temporary)]
     public void ClassifyStatus_ReadsAnEnhancedStatusCode(string status, EmailFailureKind expected)
     {
         Assert.Equal(expected, EmailFailureClassifier.ClassifyStatus(status));
+    }
+
+    // A full mailbox is about the one recipient; the words "quota" and "exceeded" around it never make it a throttle,
+    // which would pause all the address's bulk mail.
+    [Theory]
+    [InlineData("4.2.2", "452 4.2.2 Mailbox quota exceeded", EmailFailureKind.Temporary)]
+    [InlineData("5.5.0", "550 5.5.0 No such user here", EmailFailureKind.HardBounce)]
+    [InlineData("5.4.1", "550 5.4.1 Relay access denied", EmailFailureKind.Blocked)]
+    public void ClassifyStatus_ReadsTheWordsThatCameWithTheCode(string status, string text, EmailFailureKind expected)
+    {
+        Assert.Equal(expected, EmailFailureClassifier.ClassifyStatus(status, text));
     }
 
     [Theory]

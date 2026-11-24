@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Consent;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Outreach;
@@ -176,6 +177,51 @@ public sealed class MessagingBroadcastOutreachTests
     }
 
     [Fact]
+    public async Task AHeldBackSend_IsCountedAsQueued_NotSent_UntilTheOutboxSendsIt()
+    {
+        // Arrange
+        var broadcast = NewBroadcast(["+15551110001", "+15551110002", "+15551110003"]);
+        var sentTo = new List<string>();
+        await using var harness = await CreateAsync(broadcast, sentTo, hold: "+15551110002");
+
+        // Act
+        await StartAsync(harness, broadcast);
+        await harness.ProcessDueAsync();
+
+        // Assert: the run accepted all three, but one waits in the outbox, so it is shown as queued and the broadcast as
+        // still sending.
+        Assert.Equal((3, 1, 2, 0), (broadcast.SentCount, broadcast.QueuedCount, broadcast.GetSentCount(), broadcast.GetFailedCount()));
+        Assert.Equal(MessagingBroadcastStatus.Running, broadcast.GetDisplayStatus());
+
+        // Act: the outbox sends the held message.
+        broadcast.RecordQueuedOutcome(sent: 1, failed: 0);
+
+        // Assert
+        Assert.Equal((0, 3, MessagingBroadcastStatus.Completed), (broadcast.QueuedCount, broadcast.GetSentCount(), broadcast.GetDisplayStatus()));
+    }
+
+    [Fact]
+    public void AQueuedMessageTheOutboxGivesUpOn_IsCountedAsFailed_NotSent()
+    {
+        // Arrange
+        var broadcast = new MessagingBroadcast
+        {
+            Status = MessagingBroadcastStatus.Completed,
+            SentCount = 3,
+            FailedCount = 1,
+            QueuedCount = 2,
+        };
+
+        // Act
+        broadcast.RecordQueuedOutcome(sent: 1, failed: 1);
+
+        // Assert
+        Assert.Equal(
+            (0, 1, 2, 2, MessagingBroadcastStatus.Completed),
+            (broadcast.QueuedCount, broadcast.QueuedFailedCount, broadcast.GetSentCount(), broadcast.GetFailedCount(), broadcast.GetDisplayStatus()));
+    }
+
+    [Fact]
     public async Task ABroadcastWithoutABody_Fails_WithoutARun()
     {
         // Arrange
@@ -216,7 +262,7 @@ public sealed class MessagingBroadcastOutreachTests
         var resolver = new Mock<IMessagingChannelResolver>();
         resolver.Setup(value => value.Get("SMS")).Returns(sms);
         resolver.Setup(value => value.Get("Chat")).Returns(chat);
-        var sender = new MessagingOutreachChannelSender(Mock.Of<IMessagingConversationService>(), resolver.Object);
+        var sender = new MessagingOutreachChannelSender(Mock.Of<IMessagingConversationService>(), resolver.Object, Mock.Of<IMessagingBroadcastStore>());
 
         // Act / Assert
         Assert.True(sender.ObservesQuietHours(new OutreachRun { Channel = "SMS" }));
@@ -255,7 +301,7 @@ public sealed class MessagingBroadcastOutreachTests
         Assert.False(string.IsNullOrEmpty(broadcast.OutreachRunId));
     }
 
-    private static Task<OutreachTestHarness> CreateAsync(MessagingBroadcast broadcast, List<string> sentTo, IConsentService consent = null, string refuse = null)
+    private static Task<OutreachTestHarness> CreateAsync(MessagingBroadcast broadcast, List<string> sentTo, IConsentService consent = null, string refuse = null, string hold = null)
     {
         var store = new Mock<IMessagingBroadcastStore>();
         store.Setup(value => value.FindByIdAsync(broadcast.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(broadcast);
@@ -264,6 +310,7 @@ public sealed class MessagingBroadcastOutreachTests
             .ReturnsAsync((MessagingBroadcastStatus status, CancellationToken _) => broadcast.Status == status ? new[] { broadcast } : Array.Empty<MessagingBroadcast>());
         store.Setup(value => value.UpdateAsync(It.IsAny<MessagingBroadcast>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
 
+        // Each message carries its broadcast, so one the channel holds back is counted on the broadcast when it leaves.
         var conversations = new Mock<IMessagingConversationService>();
         conversations
             .Setup(value => value.SendDirectAsync(
@@ -272,7 +319,8 @@ public sealed class MessagingBroadcastOutreachTests
                     request.ServiceAddress == "+15553334444" &&
                     request.Body == "We are closed on Friday." &&
                     request.ActingAgentId == "agent-1" &&
-                    request.Purpose == MessagingOutboundPurpose.Broadcast),
+                    request.Purpose == MessagingOutboundPurpose.Broadcast &&
+                    request.BroadcastId == broadcast.ItemId),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((MessagingDirectSendRequest request, CancellationToken _) =>
             {
@@ -281,6 +329,17 @@ public sealed class MessagingBroadcastOutreachTests
                 if (to == refuse)
                 {
                     return MessagingSendResult.Failed("blocked");
+                }
+
+                // Held back by the sending address's limits: kept queued for the outbox, not sent.
+                if (to == hold)
+                {
+                    return new MessagingSendResult
+                    {
+                        Succeeded = false,
+                        Message = new OmnichannelMessage { DeliveryStatus = MessageDeliveryStatus.Queued.ToString() },
+                        Error = "The address is at its sending limit.",
+                    };
                 }
 
                 sentTo.Add(to);

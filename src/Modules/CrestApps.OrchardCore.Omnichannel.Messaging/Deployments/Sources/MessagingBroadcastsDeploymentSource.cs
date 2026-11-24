@@ -22,6 +22,8 @@ internal sealed class MessagingBroadcastsDeploymentSource : CatalogDeploymentSou
         nameof(MessagingBroadcast.SkippedCount),
         nameof(MessagingBroadcast.OutreachRunId),
         nameof(MessagingBroadcast.CompletedUtc),
+        nameof(MessagingBroadcast.QueuedCount),
+        nameof(MessagingBroadcast.QueuedFailedCount),
     ];
 
     public MessagingBroadcastsDeploymentSource(IMessagingBroadcastManager manager)

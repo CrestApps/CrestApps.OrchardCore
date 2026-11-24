@@ -11,6 +11,6 @@
             <option value="">@T["No AI agent"]</option>
         </select>
         <span asp-validation-for="TargetAIProfileId" class="text-danger"></span>
-        <span class="hint">@T["The AI chat profile that answers email sent to these addresses, such as one made from the \"Customer care by email\" template. It replies to the customer's first email in the same thread and holds the conversation. While the entry point is closed, email goes to people with the closed auto-reply."]</span>
+        <span class="hint">@T["The AI chat profile that answers email sent to these addresses, such as one made from the \"Customer care by email\" template. It replies to the customer's first email in the same thread and holds the conversation. Anyone can write to these addresses, so the profile's own tools are not used for email: the AI only replies and, when the inbound subject allows it, hands the customer to a person. While the entry point is closed, email goes to people with the closed auto-reply."]</span>
     </div>
 </div>

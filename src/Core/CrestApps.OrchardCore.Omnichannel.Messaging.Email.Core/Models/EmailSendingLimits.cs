@@ -1,8 +1,9 @@
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 
 /// <summary>
-/// How fast an email address may send bulk mail: broadcasts, campaign opening emails and their follow-ups. Replies in a
-/// conversation the customer started are counted against these limits but never held back by them.
+/// How fast an email address may send bulk mail: broadcasts, campaign opening emails and their follow-ups. Automated
+/// replies (an AI agent or a workflow answering in a conversation) wait for room under the hourly and daily limits and
+/// for the address's pauses. A person's own replies are counted against these limits but never held back by them.
 /// </summary>
 /// <remarks>
 /// The defaults sit inside what the common mailbox hosts allow one mailbox (Microsoft 365 takes about 30 messages a

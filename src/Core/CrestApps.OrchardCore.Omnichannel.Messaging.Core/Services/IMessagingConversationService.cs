@@ -20,8 +20,9 @@ public interface IMessagingConversationService
 
     /// <summary>
     /// Sends an outbound message on the conversation for an address pair on a channel, creating a personal conversation owned
-    /// by the acting agent when none exists (used to start new threads and to fan out a broadcast). Enforces the
-    /// contact's opt-out of the channel and sends through it.
+    /// by the acting agent when none exists (used to start new threads). Enforces the contact's opt-out of the channel and
+    /// sends through it. A message the channel refuses for good to a contact with no conversation is not kept and opens
+    /// none.
     /// </summary>
     /// <param name="channel">The channel to send on.</param>
     /// <param name="serviceAddress">Our address to send from (an endpoint of the channel).</param>
@@ -35,7 +36,10 @@ public interface IMessagingConversationService
     /// <summary>
     /// Sends an outbound message on the conversation for a contact address on a channel, creating a personal
     /// conversation owned by the acting agent when none exists, with a subject on a channel that supports one and the
-    /// reason it is sent. Enforces the contact's opt-out of the channel and sends through it.
+    /// reason it is sent. Enforces the contact's opt-out of the channel and sends through it. Bulk mail (a broadcast or
+    /// outreach) opens no conversation: it joins one the contact already has without reopening it, marking it read or
+    /// changing its owner, and is otherwise kept against the contact's address until they reply. A message the channel
+    /// refuses for good to a contact with no conversation is not kept and opens none.
     /// </summary>
     /// <param name="request">The send request.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

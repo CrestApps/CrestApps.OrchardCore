@@ -148,6 +148,99 @@ public sealed class EmailDispatcherDeliverabilityTests
         Assert.Equal(EmailSendingPauseKind.Throttled, harness.States.States[Harness.AddressId].PauseKind);
     }
 
+    // Live: an AI agent answering a flood of inbound email sent past the address's hourly limit, and the mailbox host
+    // blocked the address for a day, agents' replies included.
+    [Fact]
+    public async Task SendAsync_AnAutomatedReplyPastTheHourlyLimit_IsHeldBackWhileAPersonsReplyGoes()
+    {
+        // Arrange
+        var harness = new Harness(limits => limits.MaxPerHour = 1);
+        harness.Log.AddSent(Harness.AddressId, harness.Clock.UtcNow.AddMinutes(-10));
+
+        // Act
+        var automated = await harness.Dispatcher.SendAsync(Message("ann@example.com", MessagingOutboundPurpose.Automation), TestContext.Current.CancellationToken);
+        var reply = await harness.Dispatcher.SendAsync(Message("ann@example.com", MessagingOutboundPurpose.Reply), TestContext.Current.CancellationToken);
+
+        // Assert: the automated reply waits for room and takes no turn behind bulk mail; the person's reply goes.
+        Assert.True(automated.IsDeferred);
+        Assert.Equal(harness.Clock.UtcNow.AddMinutes(50), automated.RetryAfterUtc);
+        Assert.True(reply.Succeeded);
+        Assert.Single(harness.Transport.Sent);
+        Assert.False(harness.States.States.ContainsKey(Harness.AddressId));
+    }
+
+    [Fact]
+    public async Task SendAsync_AnAutomatedReplyWhileTheAddressIsPaused_WaitsForThePause()
+    {
+        // Arrange
+        var harness = new Harness();
+        var pausedUntil = harness.Clock.UtcNow.AddMinutes(15);
+        harness.States.States[Harness.AddressId] = new EmailSendingState
+        {
+            ItemId = "state-1",
+            AddressId = Harness.AddressId,
+            PauseKind = EmailSendingPauseKind.Throttled,
+            PausedUntilUtc = pausedUntil,
+            PausedUtc = harness.Clock.UtcNow,
+            PauseReason = "421 4.7.0",
+            ConsecutiveThrottles = 1,
+        };
+
+        // Act
+        var result = await harness.Dispatcher.SendAsync(Message("ann@example.com", MessagingOutboundPurpose.Automation), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsDeferred);
+        Assert.Equal(pausedUntil, result.RetryAfterUtc);
+        Assert.Empty(harness.Transport.Sent);
+    }
+
+    [Fact]
+    public async Task SendAsync_AThrottledAutomatedReply_WaitsForThePauseInsteadOfSpendingARetry()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Transport.NextResult = MessageDispatchResult.Failed("The mail server did not accept the email (421): 4.7.0 Too many messages, slow down");
+
+        // Act
+        var result = await harness.Dispatcher.SendAsync(Message("ann@example.com", MessagingOutboundPurpose.Automation), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsDeferred);
+        Assert.Equal(harness.Clock.UtcNow.AddMinutes(15), result.RetryAfterUtc);
+    }
+
+    [Fact]
+    public async Task SendAsync_AnAutomatedReplyThatGoes_IsLoggedAsAReplyNotBulkMail()
+    {
+        // Arrange
+        var harness = new Harness();
+
+        // Act
+        var result = await harness.Dispatcher.SendAsync(Message("ann@example.com", MessagingOutboundPurpose.Automation), TestContext.Current.CancellationToken);
+
+        // Assert: it does not move the bulk mail's minimum gap, and carries no unsubscribe link.
+        Assert.True(result.Succeeded);
+        Assert.False(Assert.Single(harness.Log.Entries).IsBulk);
+        Assert.False(Assert.Single(harness.Transport.Sent).Headers.ContainsKey("List-Unsubscribe"));
+    }
+
+    [Fact]
+    public async Task SendAsync_AnEmailTooLarge_NeitherSuppressesTheRecipientNorPausesTheAddress()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Transport.NextResult = MessageDispatchResult.Failed("The mail server did not accept the email (552): 5.3.4 Message size exceeds fixed maximum message size");
+
+        // Act
+        var result = await harness.Dispatcher.SendAsync(Message("ann@example.com", MessagingOutboundPurpose.Broadcast), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Empty(harness.Suppressions.Items);
+        Assert.False(harness.States.States.ContainsKey(Harness.AddressId));
+    }
+
     private static MessagingOutboundMessage Message(string recipient, MessagingOutboundPurpose purpose)
         => new()
         {

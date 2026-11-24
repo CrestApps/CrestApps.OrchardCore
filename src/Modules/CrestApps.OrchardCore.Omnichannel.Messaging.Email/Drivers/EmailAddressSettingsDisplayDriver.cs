@@ -8,11 +8,13 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Email.Services;
 using OrchardCore.Modules;
+using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Drivers;
 
@@ -31,6 +33,8 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
     private readonly IEmailSendingGovernor _governor;
     private readonly IClock _clock;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailAddressSettingsDisplayDriver"/> class.
     /// </summary>
@@ -39,6 +43,9 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
     /// <param name="secretProtector">The protector passwords are stored with.</param>
     /// <param name="webhookUrls">The builder of the inbound webhook URLs.</param>
     /// <param name="syncStates">The mailbox read states, shown on the card.</param>
+    /// <param name="governor">The sending governor, which reports the address's sending health.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public EmailAddressSettingsDisplayDriver(
         IEnumerable<IEmailTransport> transports,
         IOptionsMonitor<EmailProviderOptions> providerOptions,
@@ -46,7 +53,8 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         IEmailWebhookUrls webhookUrls,
         ICatalog<EmailMailboxSyncState> syncStates,
         IEmailSendingGovernor governor,
-        IClock clock)
+        IClock clock,
+        IStringLocalizer<EmailAddressSettingsDisplayDriver> stringLocalizer)
     {
         _transports = transports;
         _providerOptions = providerOptions;
@@ -55,6 +63,7 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         _syncStates = syncStates;
         _governor = governor;
         _clock = clock;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -152,10 +161,40 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         settings.IncludeUnsubscribeLink = model.IncludeUnsubscribeLink;
         settings.InboundMode = model.InboundMode;
 
-        settings.Smtp = Update(settings.Smtp, model.SmtpHost, model.SmtpPort, model.SmtpSecurity, model.SmtpUserName, model.SmtpPassword);
+        settings.Smtp = Update(
+            settings.Smtp,
+            model.SmtpHost,
+            model.SmtpPort,
+            model.SmtpSecurity,
+            model.SmtpUserName,
+            model.SmtpPassword,
+            EmailServerConnection.SmtpSubmissionPort,
+            EmailServerConnection.SmtpImplicitTlsPort,
+            out var smtpPasswordDropped);
+
+        // A dropped password is asked for again only where the address uses it, so the person knows to type it; a
+        // server the address does not use simply loses it.
+        if (smtpPasswordDropped && string.Equals(settings.TransportName, EmailChannelConstants.Transports.Smtp, StringComparison.OrdinalIgnoreCase))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SmtpPassword), S["Type the SMTP password again. A stored password is only kept for the server, port, security and user name it was saved with."]);
+        }
 
         settings.Mailbox ??= new EmailMailboxSettings();
-        settings.Mailbox.Server = Update(settings.Mailbox.Server, model.ImapHost, model.ImapPort, model.ImapSecurity, model.ImapUserName, model.ImapPassword);
+        settings.Mailbox.Server = Update(
+            settings.Mailbox.Server,
+            model.ImapHost,
+            model.ImapPort,
+            model.ImapSecurity,
+            model.ImapUserName,
+            model.ImapPassword,
+            EmailServerConnection.ImapPort,
+            EmailServerConnection.ImapImplicitTlsPort,
+            out var imapPasswordDropped);
+
+        if (imapPasswordDropped && settings.InboundMode == EmailInboundMode.Mailbox)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ImapPassword), S["Type the IMAP password again. A stored password is only kept for the server, port, security and user name it was saved with."]);
+        }
         settings.Mailbox.Folder = string.IsNullOrWhiteSpace(model.MailboxFolder) ? EmailMailboxSettings.DefaultFolder : model.MailboxFolder.Trim();
         settings.Mailbox.AfterProcessing = model.AfterProcessing;
         settings.Mailbox.ProcessedFolder = model.ProcessedFolder?.Trim();
@@ -192,10 +231,30 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         return Edit(endpoint, context);
     }
 
-    // A password left empty keeps the one stored, so the form never has to show it back.
-    private EmailServerSettings Update(EmailServerSettings server, string host, int port, EmailConnectionSecurity security, string userName, string password)
+    // A password left empty keeps the one stored, so the form never has to show it back, but only while the server,
+    // port, security and user name stay the ones it was saved with. Otherwise anybody who may edit the address could
+    // point it at a server of their own and have the site send them the password the next time it connects.
+    private EmailServerSettings Update(
+        EmailServerSettings server,
+        string host,
+        int port,
+        EmailConnectionSecurity security,
+        string userName,
+        string password,
+        int defaultPort,
+        int implicitTlsPort,
+        out bool passwordDropped)
     {
         server ??= new EmailServerSettings();
+        passwordDropped = false;
+
+        var saved = new EmailServerSettings
+        {
+            Host = server.Host,
+            Port = server.Port,
+            Security = server.Security,
+            UserName = server.UserName,
+        };
 
         server.Host = host?.Trim();
         server.Port = Math.Clamp(port, 0, 65535);
@@ -205,6 +264,11 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         if (!string.IsNullOrEmpty(password))
         {
             server.Password = _secretProtector.Protect(password);
+        }
+        else if (!string.IsNullOrEmpty(server.Password) && !EmailServerConnection.IsSameAccount(saved, server, defaultPort, implicitTlsPort))
+        {
+            server.Password = null;
+            passwordDropped = !string.IsNullOrEmpty(server.UserName);
         }
 
         if (string.IsNullOrEmpty(server.UserName))

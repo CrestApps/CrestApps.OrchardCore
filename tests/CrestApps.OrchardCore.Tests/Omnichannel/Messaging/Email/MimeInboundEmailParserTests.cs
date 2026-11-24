@@ -162,7 +162,57 @@ public sealed class MimeInboundEmailParserTests
         Assert.Equal("nobody@example.com", email.DeliveryReport.Recipient);
         Assert.Equal("failed", email.DeliveryReport.Action);
         Assert.Equal("5.1.1", email.DeliveryReport.Status);
+        Assert.Equal("delivery-status", email.DeliveryReport.ReportType);
+        Assert.True(email.DeliveryReport.IsDeliveryStatus);
         Assert.True(email.DeliveryReport.IsPermanentFailure);
+    }
+
+    [Fact]
+    public async Task ParseAsync_AReadReceipt_IsKeptAsAReportButNotAsADeliveryStatus()
+    {
+        // Arrange
+        var raw = """
+            From: Ann Lee <ann@example.com>
+            To: support@contoso.com
+            Subject: Read: Your order
+            MIME-Version: 1.0
+            Content-Type: multipart/report; report-type=disposition-notification; boundary="b1"
+
+            --b1
+            Content-Type: text/plain
+
+            Your message was displayed.
+            --b1
+            Content-Type: message/disposition-notification
+
+            Final-Recipient: rfc822; ann@example.com
+            Original-Message-ID: <sent-1@contoso.com>
+            Disposition: manual-action/MDN-sent-manually; displayed
+
+            --b1--
+            """;
+
+        // Act
+        var email = await ParseAsync(raw);
+
+        // Assert: it never becomes a message from the customer, and never counts as a bounce.
+        Assert.NotNull(email.DeliveryReport);
+        Assert.Equal("disposition-notification", email.DeliveryReport.ReportType);
+        Assert.False(email.DeliveryReport.IsDeliveryStatus);
+        Assert.Null(email.DeliveryReport.Action);
+    }
+
+    [Theory]
+    [InlineData("failed", "5.1.1", true)]
+    [InlineData("failed", null, true)]
+    [InlineData("failed", "4.2.2", false)]
+    [InlineData("delayed", "4.4.1", false)]
+    [InlineData("delivered", "2.0.0", false)]
+    [InlineData("relayed", "5.0.0", false)]
+    public void IsPermanentFailure_IsOnlyAFailedActionWithoutATemporaryStatus(string action, string status, bool expected)
+    {
+        // Act & Assert
+        Assert.Equal(expected, new InboundEmailDeliveryReport { Action = action, Status = status }.IsPermanentFailure);
     }
 
     [Theory]

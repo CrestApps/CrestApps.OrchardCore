@@ -13,7 +13,11 @@ internal sealed class AutomatedConversationTurn
 
     public IMessagingChannel MessagingChannel { get; init; }
 
-    public OmnichannelActivity Activity { get; init; }
+    /// <summary>
+    /// Gets or sets the conversation's activity. It is replaced by a fresh read under the conversation lock and after the
+    /// reading pause, so every write uses the latest copy.
+    /// </summary>
+    public OmnichannelActivity Activity { get; set; }
 
     public OmnichannelChannelEndpoint Endpoint { get; init; }
 

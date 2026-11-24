@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -19,7 +20,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 /// Reads an address's mailbox over IMAP. Each read takes the mail whose UID is above the last one received, in order,
 /// hands it to the inbound receiver, then marks it read (and moves it, when the address says so). The position is kept per
 /// address with the folder's <c>UIDVALIDITY</c>, so a renumbered folder starts again from the newest mail rather than
-/// receiving everything twice, and a redelivered email is absorbed by the inbox's <c>Message-ID</c> check.
+/// receiving everything twice, and a redelivered email is absorbed by the inbox's <c>Message-ID</c> check. An email that
+/// is too large, or that cannot be read or received, is passed over and left unread in the mailbox, so one bad email
+/// never holds up the rest.
 /// </summary>
 public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 {
@@ -108,25 +111,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
                 ? await client.GetFolderAsync(mailbox.ProcessedFolder.Trim(), cancellationToken)
                 : null;
 
-            foreach (var uid in uids.Take(MaxMessagesPerRead))
-            {
-                if (!await ReceiveAsync(folder, uid, address, result, cancellationToken))
-                {
-                    // The receiver could not take the email right now; the rest wait for the next pass, in order.
-                    break;
-                }
-
-                await folder.AddFlagsAsync(uid, MessageFlags.Seen, silent: true, cancellationToken);
-
-                if (destination is not null)
-                {
-                    await folder.MoveToAsync(uid, destination, cancellationToken);
-                }
-
-                // Only ever forward: the unread mail of a first read's look-back lies below the position it started at.
-                state.LastUid = Math.Max(state.LastUid, uid.Id);
-                result.Received++;
-            }
+            await ReceiveBatchAsync(folder, uids.Take(MaxMessagesPerRead).ToList(), destination, state, address, result, cancellationToken);
 
             await client.DisconnectAsync(quit: true, cancellationToken);
 
@@ -139,9 +124,12 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
         {
             state.LastFailedUtc = _clock.UtcNow;
             state.ConsecutiveFailures++;
+
+            // Shown on the address, so it never carries the exception's own words, which would tell whether a host and
+            // port answer on the site's network; those are in the log below.
             state.LastError = ex is AuthenticationException
                 ? "The mail server refused the sign-in. Check the user name and password (or app password) on the address."
-                : ex.Message;
+                : DescribeFailure(ex);
 
             result.Error = state.LastError;
 
@@ -208,15 +196,133 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 
             return null;
         }
-        catch (AuthenticationException)
-        {
-            return "The mail server refused the sign-in. Check the user name and password (or app password).";
-        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return ex.Message;
+            // The person sees only whether the sign-in was refused or a folder is missing; what went wrong exactly is
+            // for the log, so the test cannot be used to find out which hosts and ports answer on the site's network.
+            _logger.LogWarning(ex, "Testing the IMAP server '{Host}' failed.", server.Host.SanitizeLogValue());
+
+            return DescribeFailure(ex);
         }
     }
+
+    /// <summary>
+    /// Receives one read's mail, in order, and moves the read position past each email it is done with.
+    /// </summary>
+    /// <remarks>
+    /// An email above <see cref="EmailChannelConstants.MaxInboundEmailBytes"/> is never downloaded, and one that cannot
+    /// be read or received is passed over: both are left unread where they are, for a person to open in their mail
+    /// client, and the position moves past them so the mailbox does not try them again on every read. A failure of the
+    /// connection itself ends the read instead, since it is no fault of the email and would fail every email after it;
+    /// the next read starts again from the same email.
+    /// </remarks>
+    /// <param name="folder">The open folder.</param>
+    /// <param name="batch">The UIDs to receive, oldest first.</param>
+    /// <param name="destination">The folder received mail is moved to, or <see langword="null"/> to leave it in place.</param>
+    /// <param name="state">The read position, moved forward as the mail is received.</param>
+    /// <param name="address">The address whose mailbox is read.</param>
+    /// <param name="result">The result the received emails are counted in.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the batch is received or a busy email stops it.</returns>
+    internal async Task ReceiveBatchAsync(
+        IMailFolder folder,
+        IList<UniqueId> batch,
+        IMailFolder destination,
+        EmailMailboxSyncState state,
+        OmnichannelChannelEndpoint address,
+        EmailMailboxReadResult result,
+        CancellationToken cancellationToken)
+    {
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        var sizes = await GetSizesAsync(folder, batch, cancellationToken);
+
+        foreach (var uid in batch)
+        {
+            MessageOutcome outcome;
+
+            if (sizes.TryGetValue(uid.Id, out var size) && size > EmailChannelConstants.MaxInboundEmailBytes)
+            {
+                _logger.LogWarning(
+                    "Message {Uid} in the mailbox of email address '{AddressId}' is {Size} bytes, above the {Limit} bytes an inbound email may be, and was passed over. It is left unread in the mailbox.",
+                    uid.Id,
+                    address.ItemId.SanitizeLogValue(),
+                    size,
+                    EmailChannelConstants.MaxInboundEmailBytes);
+
+                outcome = MessageOutcome.PassedOver;
+            }
+            else
+            {
+                outcome = await ReceiveAsync(folder, uid, address, result, cancellationToken);
+            }
+
+            if (outcome == MessageOutcome.Busy)
+            {
+                // The receiver could not take the email right now; the rest wait for the next pass, in order.
+                break;
+            }
+
+            if (outcome == MessageOutcome.Received)
+            {
+                await folder.AddFlagsAsync(uid, MessageFlags.Seen, silent: true, cancellationToken);
+
+                if (destination is not null)
+                {
+                    await folder.MoveToAsync(uid, destination, cancellationToken);
+                }
+
+                result.Received++;
+            }
+
+            // Only ever forward: the unread mail of a first read's look-back lies below the position it started at.
+            state.LastUid = Math.Max(state.LastUid, uid.Id);
+        }
+    }
+
+    // The sizes the server reports, asked for the whole batch at once, so an email too large to receive is passed over
+    // without being downloaded. An email the server gives no size for is received as usual.
+    private static async Task<Dictionary<uint, uint>> GetSizesAsync(IMailFolder folder, IList<UniqueId> batch, CancellationToken cancellationToken)
+    {
+        var sizes = new Dictionary<uint, uint>();
+        var summaries = await folder.FetchAsync(batch, new FetchRequest(MessageSummaryItems.UniqueId | MessageSummaryItems.Size), cancellationToken);
+
+        if (summaries is null)
+        {
+            return sizes;
+        }
+
+        foreach (var summary in summaries)
+        {
+            if (summary?.Size is { } size)
+            {
+                sizes[summary.UniqueId.Id] = size;
+            }
+        }
+
+        return sizes;
+    }
+
+    private static string DescribeFailure(Exception exception)
+        => exception is FolderNotFoundException notFound
+            ? $"The mailbox has no folder named '{notFound.FolderName}'."
+            : EmailServerConnection.DescribeFailure(exception);
+
+    // A failure of the connection (it dropped, or the server stopped answering as it should) says nothing about the
+    // email being received and would fail every email after it too, so it ends the read rather than passing the email
+    // over. Anything else (an email that cannot be parsed, one the server refuses to hand over, one the receiver cannot
+    // take) is that email's own problem.
+    private static bool IsEmailFailure(Exception exception)
+        => exception is not (OperationCanceledException
+            or IOException
+            or SocketException
+            or ProtocolException
+            or ServiceNotConnectedException
+            or ServiceNotAuthenticatedException
+            or FolderNotOpenException);
 
     // The mail to receive, oldest first. The first read of a mailbox, or of a renumbered folder, receives only what
     // arrives from now on (plus, when asked, the unread mail of the last few days), so connecting a busy mailbox does
@@ -252,7 +358,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             .ToList();
     }
 
-    private async Task<bool> ReceiveAsync(IMailFolder folder, UniqueId uid, OmnichannelChannelEndpoint address, EmailMailboxReadResult readResult, CancellationToken cancellationToken)
+    private async Task<MessageOutcome> ReceiveAsync(IMailFolder folder, UniqueId uid, OmnichannelChannelEndpoint address, EmailMailboxReadResult readResult, CancellationToken cancellationToken)
     {
         InboundEmail email;
 
@@ -262,12 +368,16 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 
             email = MimeInboundEmailParser.Parse(message);
         }
-        catch (FormatException ex)
+        catch (Exception ex) when (IsEmailFailure(ex))
         {
-            // A message that cannot be parsed never will be; it is passed over rather than holding up the mailbox.
-            _logger.LogWarning(ex, "A message in the mailbox of email address '{AddressId}' could not be parsed and was passed over.", address.ItemId.SanitizeLogValue());
+            // A message that cannot be read or parsed never will be; it is passed over rather than holding up the mailbox.
+            _logger.LogError(
+                ex,
+                "Message {Uid} in the mailbox of email address '{AddressId}' could not be read and was passed over. It is left unread in the mailbox.",
+                uid.Id,
+                address.ItemId.SanitizeLogValue());
 
-            return true;
+            return MessageOutcome.PassedOver;
         }
 
         // The mailbox belongs to the address, so mail in it was sent to the address even when it arrived through an
@@ -279,15 +389,46 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             email.DeliveredTo.Add(own);
         }
 
-        // The email is committed to the inbox now and processed after the read, so one conversation's AI reply does not
-        // hold up the rest of the mailbox.
-        var result = await _receiver.ReceiveAsync(email, EmailChannelConstants.Providers.Imap, dispatch: false, cancellationToken);
+        EmailInboundResult result;
+
+        try
+        {
+            // The email is committed to the inbox now and processed after the read, so one conversation's AI reply does
+            // not hold up the rest of the mailbox.
+            result = await _receiver.ReceiveAsync(email, EmailChannelConstants.Providers.Imap, dispatch: false, cancellationToken);
+        }
+        catch (Exception ex) when (IsEmailFailure(ex))
+        {
+            // Retrying an email the receiver fails on would stop every email behind it for good.
+            _logger.LogError(
+                ex,
+                "Message {Uid} in the mailbox of email address '{AddressId}' could not be received and was passed over. It is left unread in the mailbox.",
+                uid.Id,
+                address.ItemId.SanitizeLogValue());
+
+            return MessageOutcome.PassedOver;
+        }
 
         if (!string.IsNullOrEmpty(result.InboxMessageId))
         {
             readResult.InboxMessageIds.Add(result.InboxMessageId);
         }
 
-        return result.Status != EmailInboundStatus.Busy;
+        return result.Status == EmailInboundStatus.Busy
+            ? MessageOutcome.Busy
+            : MessageOutcome.Received;
+    }
+
+    // What became of one email of a read.
+    private enum MessageOutcome
+    {
+        // Handed to the receiver; it is marked read (and moved) and counted.
+        Received,
+
+        // Too large, unreadable or refused by the receiver; it is left as it is and the read moves past it.
+        PassedOver,
+
+        // The receiver could not take it right now; the read stops here and the next one starts again from it.
+        Busy,
     }
 }

@@ -16,20 +16,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 public interface IEmailSendingGovernor
 {
     /// <summary>
-    /// Decides whether one email may leave <paramref name="address"/>. Replies are only checked against the suppression
-    /// list; bulk mail is also held to the address's limits and pauses.
+    /// Decides whether one email may leave <paramref name="address"/>. A person's reply is only checked against the
+    /// suppression list; an automated reply also waits for the address's pauses and for room under its hourly and daily
+    /// limits; bulk mail is held to every limit and pause.
     /// </summary>
     /// <param name="address">The sending address.</param>
     /// <param name="settings">The address's email settings.</param>
     /// <param name="recipient">The recipient, normalized, or <see langword="null"/> when asking about the address alone.</param>
-    /// <param name="isBulk">Whether the email is bulk mail.</param>
-    /// <param name="reserveTurn">Whether a held-back caller will wait for the time returned, so the next one gets a later turn.</param>
+    /// <param name="kind">What the email is.</param>
+    /// <param name="reserveTurn">Whether a held-back caller will wait for the time returned, so the next one gets a later turn. Only bulk mail takes turns.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The decision.</returns>
-    Task<EmailSendDecision> EvaluateAsync(OmnichannelChannelEndpoint address, EmailAddressSettings settings, string recipient, bool isBulk, bool reserveTurn, CancellationToken cancellationToken = default);
+    Task<EmailSendDecision> EvaluateAsync(OmnichannelChannelEndpoint address, EmailAddressSettings settings, string recipient, EmailSendKind kind, bool reserveTurn, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Records an email the sending server accepted.
+    /// Records an email the sending server accepted. Bulk mail getting through also ends a run of throttles or blocks.
     /// </summary>
     /// <param name="address">The sending address.</param>
     /// <param name="recipient">The recipient, normalized.</param>
@@ -53,13 +54,14 @@ public interface IEmailSendingGovernor
     Task<DateTime?> RecordFailureAsync(OmnichannelChannelEndpoint address, EmailAddressSettings settings, string recipient, EmailFailureKind kind, string detail, bool isBulk, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Pauses an address's bulk mail.
+    /// Pauses an address's bulk mail. The same push-back reported again while its pause runs belongs to that pause, and
+    /// a pause never cuts a longer one short.
     /// </summary>
     /// <param name="addressId">The address.</param>
-    /// <param name="kind">Why. A throttle or a block pauses for longer each time it repeats.</param>
+    /// <param name="kind">Why. A throttle or a block pauses for longer each time it repeats after its pause ended.</param>
     /// <param name="reason">What happened, for the address's editor.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>When the pause ends, or <see langword="null"/> for one that lasts until resumed.</returns>
+    /// <returns>When the pause holding the address ends, or <see langword="null"/> for one that lasts until resumed.</returns>
     Task<DateTime?> PauseAsync(string addressId, EmailSendingPauseKind kind, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -90,7 +92,8 @@ public interface IEmailSendingGovernor
     Task<EmailAddressHealth> GetHealthAsync(OmnichannelChannelEndpoint address, EmailAddressSettings settings, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Ends a pause and forgets the run of throttles and blocks that led to it.
+    /// Ends a pause and forgets the run of throttles and blocks that led to it. Resuming a poor-health pause also
+    /// measures sending health from now on, since whoever resumes it has cleaned the list of what caused it.
     /// </summary>
     /// <param name="addressId">The address.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -137,7 +140,7 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         S = stringLocalizer;
     }
 
-    public async Task<EmailSendDecision> EvaluateAsync(OmnichannelChannelEndpoint address, EmailAddressSettings settings, string recipient, bool isBulk, bool reserveTurn, CancellationToken cancellationToken = default)
+    public async Task<EmailSendDecision> EvaluateAsync(OmnichannelChannelEndpoint address, EmailAddressSettings settings, string recipient, EmailSendKind kind, bool reserveTurn, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(address);
 
@@ -151,7 +154,7 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
             }
         }
 
-        if (!isBulk)
+        if (kind == EmailSendKind.Reply)
         {
             return EmailSendDecision.Allow();
         }
@@ -160,12 +163,23 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         var limits = settings?.Limits ?? new EmailSendingLimits();
         var state = await FindStateAsync(address.ItemId, cancellationToken);
 
-        // A pause holds bulk mail back whatever the limits say, and gives out no turns: everything waits for it to end.
+        // A pause holds bulk and automated mail back whatever the limits say, and gives out no turns: everything waits for
+        // it to end.
         if (state is not null && state.IsPaused(now))
         {
-            var until = state.PausedUntilUtc ?? now.Add(_poorHealthRecheck);
+            return Paused(state, now);
+        }
 
-            return EmailSendDecision.Defer(until, S["Bulk sending from this address is paused: {0}", state.PauseReason ?? state.PauseKind.ToString()]);
+        // An automated reply waits only for room under the address's hourly and daily limits. The gap between bulk emails,
+        // the per-domain limit and the receiving domains' waits pace bulk mail, and the reply takes no turn, so a customer
+        // waiting for an answer is never queued behind a broadcast's backlog.
+        if (kind == EmailSendKind.Automated)
+        {
+            var opening = await GetAddressWindowsOpeningAsync(address.ItemId, limits, now, cancellationToken);
+
+            return opening <= now
+                ? EmailSendDecision.Allow()
+                : EmailSendDecision.Defer(opening, S["The address is at its sending limit; this automated reply waits for room."]);
         }
 
         var domain = GetDomain(recipient);
@@ -176,7 +190,13 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         }
 
         var gapOpening = await GetGapOpeningAsync(address.ItemId, limits, now, cancellationToken);
-        var windowOpening = await GetWindowsOpeningAsync(address.ItemId, limits, domain, now, cancellationToken);
+        var windowOpening = await GetAddressWindowsOpeningAsync(address.ItemId, limits, now, cancellationToken);
+
+        if (domain is not null)
+        {
+            windowOpening = Later(windowOpening, await GetWindowOpeningAsync(address.ItemId, limits.MaxPerHourPerDomain, TimeSpan.FromHours(1), domain, now, cancellationToken));
+        }
+
         var earliest = Later(gapOpening, windowOpening);
 
         if (earliest <= now)
@@ -199,15 +219,34 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
 
         if (reserveTurn)
         {
-            state ??= await GetOrCreateStateAsync(address.ItemId, cancellationToken);
+            var turnInterval = EmailHealthPolicy.GetTurnInterval(limits, now);
+            EmailSendingState pausedState = null;
 
-            if (state.NextBulkSlotUtc > slot)
+            // The turn is taken on the record as the database holds it now: a turn another process gave out since this one
+            // looked is built on rather than overwritten, and a pause a provider's report started since holds the email.
+            await UpdateStateAsync(address.ItemId, create: true, fresh =>
             {
-                slot = state.NextBulkSlotUtc.Value;
-            }
+                if (fresh.IsPaused(now))
+                {
+                    pausedState = fresh;
 
-            state.NextBulkSlotUtc = slot.Add(EmailHealthPolicy.GetTurnInterval(limits, now));
-            await SaveStateAsync(state, cancellationToken);
+                    return false;
+                }
+
+                if (fresh.NextBulkSlotUtc > slot)
+                {
+                    slot = fresh.NextBulkSlotUtc.Value;
+                }
+
+                fresh.NextBulkSlotUtc = slot.Add(turnInterval);
+
+                return true;
+            }, cancellationToken);
+
+            if (pausedState is not null)
+            {
+                return Paused(pausedState, now);
+            }
         }
 
         return EmailSendDecision.Defer(slot, S["The address is at its sending limit; this email waits for its turn."]);
@@ -219,21 +258,42 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
 
         await _log.RecordAsync(CreateEntry(address.ItemId, EmailDeliveryEventKind.Sent, recipient, messageId, isBulk, detail: null), cancellationToken);
 
+        // Only bulk mail getting through shows the servers take the address's bulk mail again. Replies keep going out
+        // while bulk mail is paused, so one of them getting through would end every run of throttles and blocks, and the
+        // backoff would never grow.
+        if (!isBulk)
+        {
+            return;
+        }
+
         var state = await FindStateAsync(address.ItemId, cancellationToken);
 
-        // A send that went through ends a run of throttles or blocks, so the next one starts the backoff again.
-        if (state is not null && (state.ConsecutiveThrottles > 0 || state.ConsecutiveBlocks > 0))
+        if (state is null || (state.ConsecutiveThrottles == 0 && state.ConsecutiveBlocks == 0))
         {
-            state.ConsecutiveThrottles = 0;
-            state.ConsecutiveBlocks = 0;
+            return;
+        }
 
-            if (state.PauseKind is EmailSendingPauseKind.Throttled or EmailSendingPauseKind.Blocked && !state.IsPaused(_clock.UtcNow))
+        var now = _clock.UtcNow;
+
+        await UpdateStateAsync(address.ItemId, create: false, fresh =>
+        {
+            // A pause running now was started after this email was let go, by mail that failed since: it and its run stay.
+            if (fresh.IsPaused(now) || (fresh.ConsecutiveThrottles == 0 && fresh.ConsecutiveBlocks == 0))
             {
-                ClearPause(state);
+                return false;
             }
 
-            await SaveStateAsync(state, cancellationToken);
-        }
+            // A bulk email that went through ends a run of throttles or blocks, so the next one starts the backoff again.
+            fresh.ConsecutiveThrottles = 0;
+            fresh.ConsecutiveBlocks = 0;
+
+            if (fresh.PauseKind is EmailSendingPauseKind.Throttled or EmailSendingPauseKind.Blocked)
+            {
+                ClearPause(fresh);
+            }
+
+            return true;
+        }, cancellationToken);
     }
 
     public async Task<DateTime?> RecordFailureAsync(OmnichannelChannelEndpoint address, EmailAddressSettings settings, string recipient, EmailFailureKind kind, string detail, bool isBulk, CancellationToken cancellationToken = default)
@@ -269,27 +329,68 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         ArgumentException.ThrowIfNullOrEmpty(addressId);
 
         var now = _clock.UtcNow;
-        var state = await GetOrCreateStateAsync(addressId, cancellationToken);
+        DateTime? until = null;
+        var started = false;
 
-        // A pause that lasts until someone resumes outranks one that ends by itself.
-        if (state.PauseKind == EmailSendingPauseKind.PoorHealth && kind != EmailSendingPauseKind.PoorHealth && state.IsPaused(now))
+        await UpdateStateAsync(addressId, create: true, state =>
         {
-            return null;
+            var running = state.IsPaused(now) ? state.PauseKind : EmailSendingPauseKind.None;
+
+            // A pause that lasts until someone resumes outranks every other, and is not started twice.
+            if (running == EmailSendingPauseKind.PoorHealth)
+            {
+                return false;
+            }
+
+            // The same push-back reported again while its pause runs belongs to that pause: one batch of bounce reports,
+            // or mail that was already on its way when the pause began. It neither moves the end nor counts as another
+            // time in a row; only push-back after the pause ended does.
+            if (running == kind)
+            {
+                until = state.PausedUntilUtc;
+
+                return false;
+            }
+
+            DateTime? next = kind switch
+            {
+                EmailSendingPauseKind.Throttled => now.Add(Backoff(_firstThrottlePause, _longestThrottlePause, state.ConsecutiveThrottles + 1)),
+                EmailSendingPauseKind.Blocked => now.Add(Backoff(_firstBlockPause, _longestBlockPause, state.ConsecutiveBlocks + 1)),
+                _ => null,
+            };
+
+            // A pause that ends by itself never cuts a longer one short: a throttle during a day-long block leaves the
+            // block in place.
+            if (next is not null && running != EmailSendingPauseKind.None && state.PausedUntilUtc >= next)
+            {
+                until = state.PausedUntilUtc;
+
+                return false;
+            }
+
+            if (kind == EmailSendingPauseKind.Throttled)
+            {
+                state.ConsecutiveThrottles++;
+            }
+            else if (kind == EmailSendingPauseKind.Blocked)
+            {
+                state.ConsecutiveBlocks++;
+            }
+
+            state.PauseKind = kind;
+            state.PausedUntilUtc = next;
+            state.PausedUtc = now;
+            state.PauseReason = reason;
+            until = next;
+            started = true;
+
+            return true;
+        }, cancellationToken);
+
+        if (!started)
+        {
+            return until;
         }
-
-        DateTime? until = kind switch
-        {
-            EmailSendingPauseKind.Throttled => now.Add(Backoff(_firstThrottlePause, _longestThrottlePause, ++state.ConsecutiveThrottles)),
-            EmailSendingPauseKind.Blocked => now.Add(Backoff(_firstBlockPause, _longestBlockPause, ++state.ConsecutiveBlocks)),
-            _ => null,
-        };
-
-        state.PauseKind = kind;
-        state.PausedUntilUtc = until;
-        state.PausedUtc = now;
-        state.PauseReason = reason;
-
-        await SaveStateAsync(state, cancellationToken);
 
         _logger.LogWarning(
             "Bulk email from address '{AddressId}' is paused ({PauseKind}) until {PausedUntil}: {Reason}",
@@ -319,19 +420,22 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
             return;
         }
 
-        var state = await GetOrCreateStateAsync(addressId, cancellationToken);
+        var until = now.Add(EmailHealthPolicy.DomainBackoff);
 
-        state.DomainBackoffs ??= new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-
-        // Forget the waits that are over, so the record stays small.
-        foreach (var expired in state.DomainBackoffs.Where(entry => entry.Value <= now).Select(entry => entry.Key).ToArray())
+        await UpdateStateAsync(addressId, create: true, state =>
         {
-            state.DomainBackoffs.Remove(expired);
-        }
+            state.DomainBackoffs ??= new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
-        state.DomainBackoffs[recipientDomain] = now.Add(EmailHealthPolicy.DomainBackoff);
+            // Forget the waits that are over, so the record stays small.
+            foreach (var expired in state.DomainBackoffs.Where(entry => entry.Value <= now).Select(entry => entry.Key).ToArray())
+            {
+                state.DomainBackoffs.Remove(expired);
+            }
 
-        await SaveStateAsync(state, cancellationToken);
+            state.DomainBackoffs[recipientDomain] = until;
+
+            return true;
+        }, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -339,7 +443,7 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
                 "Bulk email from address '{AddressId}' to {Domain} waits until {Until}: the domain deferred at least {Count} emails in the last {Minutes} minutes.",
                 addressId.SanitizeLogValue(),
                 recipientDomain.SanitizeLogValue(),
-                state.DomainBackoffs[recipientDomain],
+                until,
                 EmailHealthPolicy.DomainDeferralsBeforeBackoff,
                 (int)EmailHealthPolicy.DomainDeferralWindow.TotalMinutes);
         }
@@ -354,7 +458,20 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
             return;
         }
 
-        var since = _clock.UtcNow.Subtract(EmailHealthPolicy.Window);
+        var now = _clock.UtcNow;
+        var state = await FindStateAsync(address.ItemId, cancellationToken);
+
+        if (state?.PauseKind == EmailSendingPauseKind.PoorHealth && state.IsPaused(now))
+        {
+            return;
+        }
+
+        // Health is measured from the last time someone resumed a poor-health pause, when that falls inside the window:
+        // the bounces and complaints before it are what the list was cleaned of, and counting them again would pause the
+        // address the moment it is resumed.
+        var windowStart = now.Subtract(EmailHealthPolicy.Window);
+        var sinceResume = state?.ResumedUtc > windowStart;
+        var since = sinceResume ? state.ResumedUtc.Value : windowStart;
         var sent = await _log.CountAsync(address.ItemId, EmailDeliveryEventKind.Sent, since, cancellationToken: cancellationToken);
         var hardBounces = await _log.CountAsync(address.ItemId, EmailDeliveryEventKind.HardBounce, since, cancellationToken: cancellationToken);
         var complaints = await _log.CountAsync(address.ItemId, EmailDeliveryEventKind.Complaint, since, cancellationToken: cancellationToken);
@@ -364,18 +481,17 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
             return;
         }
 
-        var state = await FindStateAsync(address.ItemId, cancellationToken);
-
-        if (state?.PauseKind == EmailSendingPauseKind.PoorHealth && state.IsPaused(_clock.UtcNow))
-        {
-            return;
-        }
-
-        var reason = S[
-            "{0:P1} of the last 7 days' {1} emails bounced and {2:P2} were reported as spam. Clean the list, then resume sending.",
-            EmailHealthPolicy.Rate(hardBounces, sent),
-            sent,
-            EmailHealthPolicy.Rate(complaints, sent)].Value;
+        var reason = sinceResume
+            ? S[
+                "{0:P1} of the {1} emails sent since sending was resumed bounced and {2:P2} were reported as spam. Clean the list, then resume sending.",
+                EmailHealthPolicy.Rate(hardBounces, sent),
+                sent,
+                EmailHealthPolicy.Rate(complaints, sent)].Value
+            : S[
+                "{0:P1} of the last 7 days' {1} emails bounced and {2:P2} were reported as spam. Clean the list, then resume sending.",
+                EmailHealthPolicy.Rate(hardBounces, sent),
+                sent,
+                EmailHealthPolicy.Rate(complaints, sent)].Value;
 
         await PauseAsync(address.ItemId, EmailSendingPauseKind.PoorHealth, reason, cancellationToken);
     }
@@ -411,21 +527,32 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
 
     public async Task<bool> ResumeAsync(string addressId, CancellationToken cancellationToken = default)
     {
-        var state = await FindStateAsync(addressId, cancellationToken);
-
-        if (state is null)
+        if (string.IsNullOrEmpty(addressId))
         {
             return false;
         }
 
-        var wasPaused = state.IsPaused(_clock.UtcNow);
+        var now = _clock.UtcNow;
+        var wasPaused = false;
 
-        ClearPause(state);
-        state.ConsecutiveThrottles = 0;
-        state.ConsecutiveBlocks = 0;
-        state.DomainBackoffs?.Clear();
+        await UpdateStateAsync(addressId, create: false, state =>
+        {
+            wasPaused = state.IsPaused(now);
 
-        await SaveStateAsync(state, cancellationToken);
+            // Whoever resumes a poor-health pause has cleaned the list of what caused it, so health is measured from now.
+            // Resuming any other pause leaves the measure alone: it never forgives bounces nobody looked at.
+            if (wasPaused && state.PauseKind == EmailSendingPauseKind.PoorHealth)
+            {
+                state.ResumedUtc = now;
+            }
+
+            ClearPause(state);
+            state.ConsecutiveThrottles = 0;
+            state.ConsecutiveBlocks = 0;
+            state.DomainBackoffs?.Clear();
+
+            return true;
+        }, cancellationToken);
 
         if (wasPaused && _logger.IsEnabled(LogLevel.Information))
         {
@@ -449,19 +576,13 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         return lastSent is null ? now : Later(now, lastSent.Value.AddSeconds(limits.MinimumSecondsBetweenSends));
     }
 
-    private async Task<DateTime> GetWindowsOpeningAsync(string addressId, EmailSendingLimits limits, string domain, DateTime now, CancellationToken cancellationToken)
+    // The earliest the address's hourly and daily limits, warm-up included, have room for one more email.
+    private async Task<DateTime> GetAddressWindowsOpeningAsync(string addressId, EmailSendingLimits limits, DateTime now, CancellationToken cancellationToken)
     {
-        var earliest = now;
+        var hourly = await GetWindowOpeningAsync(addressId, limits.MaxPerHour, TimeSpan.FromHours(1), domain: null, now, cancellationToken);
+        var daily = await GetWindowOpeningAsync(addressId, EmailHealthPolicy.GetDailyLimit(limits, now), TimeSpan.FromDays(1), domain: null, now, cancellationToken);
 
-        earliest = Later(earliest, await GetWindowOpeningAsync(addressId, limits.MaxPerHour, TimeSpan.FromHours(1), domain: null, now, cancellationToken));
-        earliest = Later(earliest, await GetWindowOpeningAsync(addressId, EmailHealthPolicy.GetDailyLimit(limits, now), TimeSpan.FromDays(1), domain: null, now, cancellationToken));
-
-        if (domain is not null)
-        {
-            earliest = Later(earliest, await GetWindowOpeningAsync(addressId, limits.MaxPerHourPerDomain, TimeSpan.FromHours(1), domain, now, cancellationToken));
-        }
-
-        return earliest;
+        return Later(hourly, daily);
     }
 
     private async Task<DateTime> GetWindowOpeningAsync(string addressId, int limit, TimeSpan window, string domain, DateTime now, CancellationToken cancellationToken)
@@ -488,12 +609,20 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
     private Task<EmailSendingState> FindStateAsync(string addressId, CancellationToken cancellationToken)
         => _stateStore.FindAsync(addressId, cancellationToken);
 
-    private async Task<EmailSendingState> GetOrCreateStateAsync(string addressId, CancellationToken cancellationToken)
+    // Changes the address's sending state as the database holds it now, and saves it when the change says it changed
+    // something. Every change goes through here, never through a record read to decide: that one may be older than a
+    // pause or a turn another process wrote since, and saving it would overwrite them.
+    private async Task UpdateStateAsync(string addressId, bool create, Func<EmailSendingState, bool> change, CancellationToken cancellationToken)
     {
-        var state = await FindStateAsync(addressId, cancellationToken);
+        var state = await _stateStore.FindFreshAsync(addressId, cancellationToken);
 
         if (state is null)
         {
+            if (!create)
+            {
+                return;
+            }
+
             state = new EmailSendingState
             {
                 ItemId = UniqueId.GenerateId(),
@@ -501,15 +630,20 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
             };
         }
 
-        return state;
-    }
+        if (!change(state))
+        {
+            return;
+        }
 
-    private async Task SaveStateAsync(EmailSendingState state, CancellationToken cancellationToken)
-    {
         state.ModifiedUtc = _clock.UtcNow;
 
         await _stateStore.SaveAsync(state, cancellationToken);
     }
+
+    private EmailSendDecision Paused(EmailSendingState state, DateTime now)
+        => EmailSendDecision.Defer(
+            state.PausedUntilUtc ?? now.Add(_poorHealthRecheck),
+            S["Bulk sending from this address is paused: {0}", state.PauseReason ?? state.PauseKind.ToString()]);
 
     private EmailDeliveryLogEntry CreateEntry(string addressId, EmailDeliveryEventKind kind, string recipient, string messageId, bool isBulk, string detail)
         => new()

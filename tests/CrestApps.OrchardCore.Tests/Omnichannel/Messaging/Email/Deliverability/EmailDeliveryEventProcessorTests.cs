@@ -97,7 +97,7 @@ public sealed class EmailDeliveryEventProcessorTests
     }
 
     [Fact]
-    public async Task ProcessAsync_ThirdSoftBounce_SuppressesTheAddressAndNotesTheDomainDeferral()
+    public async Task ProcessAsync_ThirdEmailToSoftBounce_SuppressesTheAddressAndNotesTheDomainDeferral()
     {
         // Arrange
         var harness = new Harness();
@@ -107,7 +107,7 @@ public sealed class EmailDeliveryEventProcessorTests
         for (var i = 0; i < 3; i++)
         {
             await harness.Processor.ProcessAsync(
-                [new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.SoftBounce, Recipient = "full@example.com", Status = "4.2.2", EventId = $"soft-{i}", Provider = "mailgun" }],
+                [new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.SoftBounce, Recipient = "full@example.com", MessageId = $"m-{i}@contoso.com", Status = "5.2.2", Reason = "Mailbox full", EventId = $"soft-{i}", Provider = "ses" }],
                 TestContext.Current.CancellationToken);
 
             if (i < 2)
@@ -119,6 +119,107 @@ public sealed class EmailDeliveryEventProcessorTests
         // Assert
         Assert.Equal(EmailSuppressionReason.RepeatedSoftBounces, harness.Suppressions.Items["full@example.com"].Reason);
         harness.Governor.Verify(governor => governor.NoteDomainDeferralAsync(AddressId, "example.com", It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    // Live: a greylisting server deferred one email three times, the three reports counted as three soft bounces, and a
+    // good address was suppressed.
+    [Fact]
+    public async Task ProcessAsync_OneEmailSoftBouncingThreeTimes_DoesNotSuppressTheAddress()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Log.AddSent(AddressId, harness.Clock.UtcNow.AddHours(-3), "ann@example.com");
+
+        // Act
+        for (var i = 0; i < 3; i++)
+        {
+            await harness.Processor.ProcessAsync(
+                [new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.SoftBounce, Recipient = "ann@example.com", MessageId = "m-1@contoso.com", Status = "5.2.2", EventId = $"soft-{i}", Provider = "postmark" }],
+                TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.Empty(harness.Suppressions.Items);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_ATemporaryFailureReportedAsASoftBounce_IsADeferral()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Log.AddSent(AddressId, harness.Clock.UtcNow.AddHours(-3), "ann@example.com");
+
+        // Act
+        for (var i = 0; i < 3; i++)
+        {
+            await harness.Processor.ProcessAsync(
+                [new EmailDeliveryEvent { Kind = EmailDeliveryEventKind.SoftBounce, Recipient = "ann@example.com", MessageId = $"m-{i}@contoso.com", Status = "4.7.1", Reason = "Greylisted, try again later", EventId = $"grey-{i}", Provider = "postmark" }],
+                TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.Empty(harness.Suppressions.Items);
+        Assert.Equal(3, harness.Log.Entries.Count(entry => entry.Kind == EmailDeliveryEventKind.Deferred));
+        harness.Governor.Verify(governor => governor.NoteDomainDeferralAsync(AddressId, "example.com", It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task ProcessAsync_ADomainThatDoesNotExist_SuppressesTheAddressWithoutPausingTheSender()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Log.AddSent(AddressId, harness.Clock.UtcNow.AddMinutes(-5), "ann@nowhere-example.com");
+
+        // Act
+        await harness.Processor.ProcessAsync([Bounce("ann@nowhere-example.com", null, "5.4.4")], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(EmailSuppressionReason.HardBounce, harness.Suppressions.Items["ann@nowhere-example.com"].Reason);
+        harness.Governor.Verify(governor => governor.PauseAsync(It.IsAny<string>(), It.IsAny<EmailSendingPauseKind>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_AnEmailTooLarge_FailsTheEmailWithoutSuppressingOrPausing()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Log.AddSent(AddressId, harness.Clock.UtcNow.AddMinutes(-5), "ann@example.com", messageId: "m-2@contoso.com");
+        harness.SentMessages["m-2@contoso.com"] = new OmnichannelMessage { ServiceAddress = "news@contoso.com", CustomerAddress = "ann@example.com" };
+
+        // Act
+        await harness.Processor.ProcessAsync([Bounce("ann@example.com", "m-2@contoso.com", "5.3.4")], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(harness.Suppressions.Items);
+        harness.Governor.Verify(governor => governor.PauseAsync(It.IsAny<string>(), It.IsAny<EmailSendingPauseKind>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.Governor.Verify(governor => governor.NoteDomainDeferralAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.ConversationService.Verify(service => service.ApplyDeliveryReceiptAsync(
+            It.Is<MessageDeliveryReceipt>(receipt => receipt.ProviderMessageId == "m-2@contoso.com" && receipt.Status == MessageDeliveryStatus.Failed),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.4.4", "Host or domain name not found", EmailDeliveryEventKind.HardBounce, false)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.0.0", null, EmailDeliveryEventKind.HardBounce, false)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.5.0", "Requested action not taken: mailbox unavailable", EmailDeliveryEventKind.HardBounce, false)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.5.0", "Requested action not taken", EmailDeliveryEventKind.SoftBounce, true)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.3.4", "Message size exceeds fixed limit", EmailDeliveryEventKind.SoftBounce, true)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.6.0", "Content rejected", EmailDeliveryEventKind.SoftBounce, true)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.7.1", "Blocked by policy", EmailDeliveryEventKind.Blocked, false)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "5.2.2", "Mailbox full", EmailDeliveryEventKind.SoftBounce, false)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, "4.4.7", "Message expired", EmailDeliveryEventKind.SoftBounce, false)]
+    [InlineData(EmailDeliveryEventKind.SoftBounce, "4.2.2", "The email account is over quota", EmailDeliveryEventKind.Deferred, false)]
+    [InlineData(EmailDeliveryEventKind.SoftBounce, null, "smtp; 421 4.7.0 Try again later", EmailDeliveryEventKind.Deferred, false)]
+    [InlineData(EmailDeliveryEventKind.SoftBounce, null, "Mailbox full", EmailDeliveryEventKind.SoftBounce, false)]
+    [InlineData(EmailDeliveryEventKind.HardBounce, null, "Unknown user", EmailDeliveryEventKind.HardBounce, false)]
+    public void Reclassify_ReadsTheStatusCodeAndTheProvidersWords(EmailDeliveryEventKind reported, string status, string reason, EmailDeliveryEventKind expected, bool isRejectedEmail)
+    {
+        // Act
+        var result = EmailDeliveryEventProcessor.Reclassify(new EmailDeliveryEvent { Kind = reported, Status = status, Reason = reason, Provider = "sendgrid" });
+
+        // Assert
+        Assert.Equal(expected, result.Kind);
+        Assert.Equal(isRejectedEmail, result.IsRejectedEmail);
     }
 
     [Fact]

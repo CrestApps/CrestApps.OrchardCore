@@ -17,8 +17,8 @@ using OrchardCore.DisplayManagement.Notify;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers;
 
 /// <summary>
-/// Composes and lists broadcasts (one composer → many recipients as individual 1:1 threads) on any messaging
-/// channel that supports them.
+/// Composes and lists broadcasts (one composer, many recipients, each getting the message on their own) on any
+/// messaging channel that supports them. A broadcast opens no conversation; one opens when a recipient replies.
 /// </summary>
 [Admin]
 public sealed class BroadcastsController : Controller
@@ -164,7 +164,7 @@ public sealed class BroadcastsController : Controller
             ModelState.AddModelError(nameof(model.RecipientsText), S["At least one recipient is required."]);
         }
 
-        // Each recipient is written to in their own conversation, and one that already exists may belong to a
+        // A recipient who already has a conversation gets the message in it, and that conversation may belong to a
         // colleague or another queue. The broadcast is sent later with nobody signed in to check, so it is checked now.
         if (channel is not null && recipients.Count > 0)
         {

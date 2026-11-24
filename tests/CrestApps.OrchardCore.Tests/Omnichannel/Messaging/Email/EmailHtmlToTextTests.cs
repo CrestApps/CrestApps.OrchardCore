@@ -5,6 +5,54 @@ namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging.Email;
 public sealed class EmailHtmlToTextTests
 {
     [Fact]
+    public void Convert_MarkupBuiltToMakeThePatternsBacktrack_StillGivesTheText()
+    {
+        // Arrange: every unclosed script makes the pattern for invisible elements search the rest of the body again.
+        var html = "<p>Hello</p>" + string.Concat(Enumerable.Repeat("<script>", 100_000));
+
+        // Act
+        var text = EmailHtmlToText.Convert(html);
+
+        // Assert: the conversion gives up on the patterns after their time limit instead of running for hours.
+        Assert.Equal("Hello", text);
+    }
+
+    [Fact]
+    public void Convert_OnlyConvertsTheStartOfAHugeBody()
+    {
+        // Arrange
+        var html = "<p>Start</p><p>" + new string('x', EmailHtmlToText.MaxHtmlLength) + "</p><p>The end</p>";
+
+        // Act
+        var text = EmailHtmlToText.Convert(html);
+
+        // Assert
+        Assert.StartsWith("Start", text);
+        Assert.DoesNotContain("The end", text);
+        Assert.True(text.Length <= EmailHtmlToText.MaxHtmlLength);
+    }
+
+    [Fact]
+    public void StripTags_DropsTheMarkupScriptsAndCommentsAndKeepsTheBlocksApart()
+    {
+        // Act
+        var text = EmailHtmlToText.StripTags("<html><head><title>x</title><style>p{color:red}</style></head><body><!-- note --><p>Fish &amp; <b>chips</b></p><div>Line&nbsp;two</div><script>alert(1)</script></body></html>");
+
+        // Assert
+        Assert.Equal("Fish & chips\n\nLine two", text);
+    }
+
+    [Fact]
+    public void StripTags_AnUnclosedScriptHidesTheRest()
+    {
+        // Act
+        var text = EmailHtmlToText.StripTags("<p>Visible</p><script>" + string.Concat(Enumerable.Repeat("<script>", 1_000)));
+
+        // Assert
+        Assert.Equal("Visible", text);
+    }
+
+    [Fact]
     public void Convert_KeepsParagraphsAndLineBreaks()
     {
         // Act

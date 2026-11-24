@@ -1,7 +1,9 @@
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Services
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
 @model ThreadViewModel
 @inject OrchardCore.Modules.ILocalClock LocalClock
+@inject IMessagingChannelResolver ChannelResolver
 
 @{
     var conversation = Model.Conversation;
@@ -13,6 +15,8 @@
     var supportsMedia = attachments.IsSupported;
     var imagesOnly = attachments.ImagesOnly;
     var channelName = Model.Channel?.DisplayName ?? conversation.Channel;
+    // A text message channel's addresses are phone numbers; any other channel's (an email address) are not.
+    var addressesArePhoneNumbers = ChannelResolver.Get(conversation.Channel)?.Capabilities.AddressesArePhoneNumbers == true;
     var formatNames = string.Join(", ", attachments.Formats.Select(format => format.Name));
     var acceptTypes = string.Join(",", attachments.Formats.SelectMany(format => format.Extensions.Prepend(format.ContentType)).Distinct());
     var formatsJson = System.Text.Json.JsonSerializer.Serialize(attachments.Formats.Select(format => new
@@ -61,10 +65,10 @@
                         <i class="fa-solid @(linkedRecord.IsLead ? "fa-user-tag" : "fa-user") me-1" aria-hidden="true"></i>@(linkedRecord.IsLead ? T["Lead"] : T["Contact"])
                     </span>
                 }
-                @* The customer's own number. Our number, the one the conversation runs on, is under the header. *@
+                @* The customer's own address. Ours, the one the conversation runs on, is under the header. *@
                 @if (!string.Equals(contactLabel, Model.ContactAddressDisplay, StringComparison.Ordinal))
                 {
-                    <span class="text-nowrap flex-shrink-0 user-select-all" title="@T["The customer's number"]" data-customer-address>
+                    <span class="text-nowrap flex-shrink-0 user-select-all" title="@(addressesArePhoneNumbers ? T["The customer's number"] : T["The customer's address"])" data-customer-address>
                         @if (Model.Channel is not null)
                         {
                             <i class="@Model.Channel.IconCssClass text-muted me-1" aria-hidden="true"></i>
@@ -172,7 +176,7 @@
             }
             <li class="nav-item ms-auto d-flex align-items-center small text-muted pe-2">
                 <span title="@T["The address this conversation runs on"]">
-                    @T["Our number {0}", Model.ServiceAddressDisplay] &middot; @conversation.Status.ToString()
+                    @(addressesArePhoneNumbers ? T["Our number {0}", Model.ServiceAddressDisplay] : T["Our address {0}", Model.ServiceAddressDisplay]) &middot; @conversation.Status.ToString()
                 </span>
             </li>
         </ul>

@@ -276,6 +276,99 @@ public sealed class EmailInboundReceiverTests
         events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData("failed", "5.1.1", EmailDeliveryEventKind.HardBounce)]
+    [InlineData("failed", "4.2.2", EmailDeliveryEventKind.SoftBounce)]
+    [InlineData("delayed", "4.4.1", EmailDeliveryEventKind.Deferred)]
+    public async Task ReceiveAsync_AFailedOrDelayedDeliveryReport_CountsAsTheEventItsActionAndStatusSay(string action, string status, EmailDeliveryEventKind expected)
+    {
+        // Arrange
+        var events = new List<EmailDeliveryEvent>();
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: RecordingProcessor(events), sentMessages: SentToAnn());
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { ReportType = "delivery-status", OriginalMessageId = "sent-1@contoso.com", Recipient = "ann@example.com", Action = action, Status = status };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, Assert.Single(events).Kind);
+    }
+
+    [Theory]
+    [InlineData("delivery-status", "delivered", "2.0.0")]
+    [InlineData("delivery-status", "relayed", "2.0.0")]
+    [InlineData("delivery-status", "expanded", "2.0.0")]
+    [InlineData("delivery-status", null, "5.1.1")]
+    [InlineData("disposition-notification", "failed", "5.1.1")]
+    public async Task ReceiveAsync_AReportThatIsNotAFailedOrDelayedDelivery_CountsForNothingAndIsNotReceived(string reportType, string action, string status)
+    {
+        // Arrange
+        var inbox = new RecordingInbox();
+        var events = new List<EmailDeliveryEvent>();
+        var receiver = CreateReceiver(inbox, deliveryEvents: RecordingProcessor(events), sentMessages: SentToAnn());
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { ReportType = reportType, OriginalMessageId = "sent-1@contoso.com", Recipient = "ann@example.com", Action = action, Status = status };
+
+        // Act
+        var result = await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert: a success notice or a read receipt is neither a bounce nor a message from the customer.
+        Assert.Equal(EmailInboundStatus.Ignored, result.Status);
+        Assert.Empty(events);
+        Assert.Empty(inbox.Accepted);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_AnotherEmailReusingAMessageId_NeverStoresItsFilesOverTheFirstEmailsFiles()
+    {
+        // Arrange
+        var inbox = new RecordingInbox();
+        var store = new Mock<IMessagingAttachmentStore>();
+        var receiver = CreateReceiver(inbox, attachmentStore: store.Object);
+
+        var first = Email();
+        first.Attachments = [new InboundEmailAttachment { FileName = "invoice.pdf", ContentType = "application/pdf", Content = Encoding.ASCII.GetBytes("%PDF-1.4 original") }];
+        var second = Email();
+        second.Attachments = [new InboundEmailAttachment { FileName = "invoice.pdf", ContentType = "application/pdf", Content = Encoding.ASCII.GetBytes("%PDF-1.4 replaced") }];
+
+        // Act
+        await receiver.ReceiveAsync(first, "imap", dispatch: false, TestContext.Current.CancellationToken);
+        await receiver.ReceiveAsync(second, "imap", dispatch: false, TestContext.Current.CancellationToken);
+
+        // Assert: the files are stored before the inbox tells the second email is a duplicate, so they must not share
+        // an identifier, or the second would replace the first's file.
+        var firstId = Assert.Single(JsonSerializer.Deserialize<OmnichannelMessage>(inbox.Accepted[0].Payload).GetAttachments()).Id;
+        var secondId = Assert.Single(JsonSerializer.Deserialize<OmnichannelMessage>(inbox.Accepted[1].Payload).GetAttachments()).Id;
+
+        Assert.NotEqual(firstId, secondId);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ARedeliveryOfTheSameEmail_KeepsTheSameFileIdentifiers()
+    {
+        // Arrange
+        var inbox = new RecordingInbox();
+        var receiver = CreateReceiver(inbox, attachmentStore: Mock.Of<IMessagingAttachmentStore>());
+
+        var first = Email();
+        first.Attachments = [new InboundEmailAttachment { FileName = "invoice.pdf", ContentType = "application/pdf", Content = Encoding.ASCII.GetBytes("%PDF-1.4 test") }];
+        var second = Email();
+        second.Attachments = [new InboundEmailAttachment { FileName = "invoice.pdf", ContentType = "application/pdf", Content = Encoding.ASCII.GetBytes("%PDF-1.4 test") }];
+
+        // Act
+        await receiver.ReceiveAsync(first, "imap", dispatch: false, TestContext.Current.CancellationToken);
+        await receiver.ReceiveAsync(second, "imap", dispatch: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        var firstId = Assert.Single(JsonSerializer.Deserialize<OmnichannelMessage>(inbox.Accepted[0].Payload).GetAttachments()).Id;
+        var secondId = Assert.Single(JsonSerializer.Deserialize<OmnichannelMessage>(inbox.Accepted[1].Payload).GetAttachments()).Id;
+
+        Assert.Equal(firstId, secondId);
+    }
+
     [Fact]
     public async Task ReceiveAsync_AReplyToNamingSomebodyElse_NeverDecidesWhoTheCustomerIs()
     {
@@ -315,6 +408,26 @@ public sealed class EmailInboundReceiverTests
         var message = JsonSerializer.Deserialize<OmnichannelMessage>(Assert.Single(inbox.Accepted).Payload);
         Assert.Equal("ann@example.com", message.CustomerAddress);
         Assert.Null(message.GetEmailMetadata().ReplyTo);
+    }
+
+    private static IEmailDeliveryEventProcessor RecordingProcessor(List<EmailDeliveryEvent> events)
+    {
+        var processor = new Mock<IEmailDeliveryEventProcessor>();
+        processor
+            .Setup(value => value.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()))
+            .Callback((IEnumerable<EmailDeliveryEvent> batch, CancellationToken _) => events.AddRange(batch))
+            .ReturnsAsync(1);
+
+        return processor.Object;
+    }
+
+    private static IEmailSentMessageFinder SentToAnn()
+    {
+        var sent = new Mock<IEmailSentMessageFinder>();
+        sent.Setup(finder => finder.FindAsync("sent-1@contoso.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelMessage { CustomerAddress = "ann@example.com" });
+
+        return sent.Object;
     }
 
     private static InboundEmail Email()

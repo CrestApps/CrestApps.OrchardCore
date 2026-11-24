@@ -59,6 +59,13 @@ public sealed class EmailSendingState
     public Dictionary<string, DateTime> DomainBackoffs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Gets or sets when someone last resumed bulk sending after a poor-health pause. Sending health is measured from
+    /// then, so the bounces and complaints that caused the pause, which the list was cleaned of, do not pause the
+    /// address again the moment it is resumed.
+    /// </summary>
+    public DateTime? ResumedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets when the record last changed.
     /// </summary>
     public DateTime ModifiedUtc { get; set; }

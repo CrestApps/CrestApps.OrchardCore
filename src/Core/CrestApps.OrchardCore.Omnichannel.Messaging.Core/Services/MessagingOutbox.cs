@@ -21,7 +21,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// <summary>
 /// The default <see cref="IMessagingOutbox"/>. It re-attempts queued outbound messages whose retry time has
 /// arrived, respecting a per-endpoint send budget so a backlog of retries cannot burst past what a carrier
-/// permits one number to send, and marks a message failed only once its backoff schedule is exhausted.
+/// permits one number to send, and marks a message failed only once its backoff schedule is exhausted. A broadcast's
+/// message that is sent, or fails for good, here is counted on the broadcast, which showed it as queued until then.
 /// </summary>
 public sealed class MessagingOutbox : IMessagingOutbox
 {
@@ -29,6 +30,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
     private readonly IMessagingRealTimeNotifier _notifier;
     private readonly IMessagingConversationStore _conversationStore;
     private readonly IMessagingAttachmentUrlProvider _attachmentUrlProvider;
+    private readonly IMessagingBroadcastStore _broadcastStore;
     private readonly MessagingWorkspaceOptions _options;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -41,6 +43,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
     /// <param name="notifier">The real-time notifier that moves the bubble's state in the open thread.</param>
     /// <param name="conversationStore">The conversation store used to address the notification.</param>
     /// <param name="attachmentUrlProvider">The provider of the links a picture message is re-sent with.</param>
+    /// <param name="broadcastStore">The store of the broadcasts whose queued messages are counted when they leave.</param>
     /// <param name="options">The workspace options carrying the batch size and per-endpoint budget.</param>
     /// <param name="session">The session the messages are read from and saved to.</param>
     /// <param name="clock">The clock.</param>
@@ -50,6 +53,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         IMessagingRealTimeNotifier notifier,
         IMessagingConversationStore conversationStore,
         IMessagingAttachmentUrlProvider attachmentUrlProvider,
+        IMessagingBroadcastStore broadcastStore,
         IOptions<MessagingWorkspaceOptions> options,
         ISession session,
         IClock clock,
@@ -59,6 +63,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         _notifier = notifier;
         _conversationStore = conversationStore;
         _attachmentUrlProvider = attachmentUrlProvider;
+        _broadcastStore = broadcastStore;
         _options = options.Value;
         _session = session;
         _clock = clock;
@@ -105,6 +110,9 @@ public sealed class MessagingOutbox : IMessagingOutbox
         var maxPerEndpoint = Math.Max(1, _options.MaxMessagesPerPassPerEndpoint);
         var accepted = 0;
         var attempted = 0;
+
+        // The broadcasts whose queued messages this pass settled, with how many were sent and how many failed for good.
+        var broadcastOutcomes = new Dictionary<string, (int Sent, int Failed)>(StringComparer.Ordinal);
 
         foreach (var (message, state) in due)
         {
@@ -166,6 +174,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
                 message.ErrorCode = null;
                 accepted++;
 
+                CountBroadcastOutcome(broadcastOutcomes, message, sent: true);
                 MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Sent);
             }
             else
@@ -189,6 +198,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
                     state.NextAttemptUtc = null;
                     message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
 
+                    CountBroadcastOutcome(broadcastOutcomes, message, sent: false);
                     MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Failed);
                     _logger.OutboxMessageFailed(channel.Name, message.Id.SanitizeLogValue(), state.Attempts, MessagingTelemetry.GetOutboxFailureReason(state.Attempts));
                 }
@@ -203,6 +213,8 @@ public sealed class MessagingOutbox : IMessagingOutbox
             await NotifyAsync(message, cancellationToken);
         }
 
+        await ApplyBroadcastOutcomesAsync(broadcastOutcomes, cancellationToken);
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -212,6 +224,40 @@ public sealed class MessagingOutbox : IMessagingOutbox
         }
 
         return accepted;
+    }
+
+    private static void CountBroadcastOutcome(Dictionary<string, (int Sent, int Failed)> outcomes, OmnichannelMessage message, bool sent)
+    {
+        if (!message.TryGet<MessagingBroadcastLink>(out var link) || string.IsNullOrEmpty(link?.BroadcastId))
+        {
+            return;
+        }
+
+        outcomes.TryGetValue(link.BroadcastId, out var outcome);
+
+        outcomes[link.BroadcastId] = sent
+            ? (outcome.Sent + 1, outcome.Failed)
+            : (outcome.Sent, outcome.Failed + 1);
+    }
+
+    // Applied once, after the sends, and each broadcast is read just before it is saved, so another writer (a batch of
+    // the broadcast's own run) has as small a window as possible to save it in between.
+    private async Task ApplyBroadcastOutcomesAsync(Dictionary<string, (int Sent, int Failed)> outcomes, CancellationToken cancellationToken)
+    {
+        foreach (var (broadcastId, outcome) in outcomes)
+        {
+            var broadcast = await _broadcastStore.FindByIdAsync(broadcastId, cancellationToken);
+
+            if (broadcast is null)
+            {
+                continue;
+            }
+
+            broadcast.RecordQueuedOutcome(outcome.Sent, outcome.Failed);
+            broadcast.ModifiedUtc = _clock.UtcNow;
+
+            await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
+        }
     }
 
     private async Task<IList<string>> BuildMediaUrlsAsync(IMessagingChannel channel, OmnichannelMessage message, CancellationToken cancellationToken)

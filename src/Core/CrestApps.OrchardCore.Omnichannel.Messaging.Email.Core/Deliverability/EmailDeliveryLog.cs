@@ -1,3 +1,5 @@
+using System.Data.Common;
+using System.Globalization;
 using CrestApps.Core;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Indexes;
@@ -39,14 +41,16 @@ public interface IEmailDeliveryLog
     Task<int> CountAsync(string addressId, EmailDeliveryEventKind kind, DateTime sinceUtc, string recipientDomain = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Counts the entries of one kind for a recipient since a time, across every address.
+    /// Counts the emails to a recipient that had an entry of one kind since a time, across every address. Entries of one
+    /// email count once, so a provider reporting each retry of an email counts as that one email; an entry that names no
+    /// email counts on its own.
     /// </summary>
     /// <param name="recipient">The recipient, normalized.</param>
     /// <param name="kind">The kind.</param>
     /// <param name="sinceUtc">The start of the window.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The count.</returns>
-    Task<int> CountForRecipientAsync(string recipient, EmailDeliveryEventKind kind, DateTime sinceUtc, CancellationToken cancellationToken = default);
+    Task<int> CountMessagesForRecipientAsync(string recipient, EmailDeliveryEventKind kind, DateTime sinceUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the time of the <paramref name="position"/>-th oldest sent email (zero-based) of an address since a time:
@@ -79,7 +83,8 @@ public interface IEmailDeliveryLog
     Task<string> FindSendingAddressIdAsync(string messageId, string recipient, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes entries older than a time, at most <paramref name="maxEntries"/> of them.
+    /// Deletes entries older than a time, oldest first, at most <paramref name="maxEntries"/> of them (and never more than
+    /// 500 at once). The deletes run in the caller's unit of work, which commits them.
     /// </summary>
     /// <param name="beforeUtc">The cut-off.</param>
     /// <param name="maxEntries">The most entries to delete.</param>
@@ -94,6 +99,10 @@ public interface IEmailDeliveryLog
 public sealed class EmailDeliveryLog : IEmailDeliveryLog
 {
     private const string Collection = EmailChannelConstants.DeliverabilityCollectionName;
+
+    // The most entries one prune deletes: each takes one placeholder in a statement, and this many stays under the
+    // parameter limit of every database YesSql supports.
+    private const int MaxPruneBatch = 500;
 
     private static readonly int _sent = (int)EmailDeliveryEventKind.Sent;
 
@@ -138,13 +147,17 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
                 .CountAsync(cancellationToken);
     }
 
-    public Task<int> CountForRecipientAsync(string recipient, EmailDeliveryEventKind kind, DateTime sinceUtc, CancellationToken cancellationToken = default)
+    public async Task<int> CountMessagesForRecipientAsync(string recipient, EmailDeliveryEventKind kind, DateTime sinceUtc, CancellationToken cancellationToken = default)
     {
         var value = (int)kind;
         var key = EmailDeliveryLogIndexProvider.Truncate(recipient, EmailDeliveryLogIndex.RecipientLength);
 
-        return _session.QueryIndex<EmailDeliveryLogIndex>(index => index.Recipient == key && index.Kind == value && index.OccurredUtc >= sinceUtc, collection: Collection)
-            .CountAsync(cancellationToken);
+        // A recipient has a handful of such entries in a window, so the rows are read and told apart here.
+        var rows = (await _session.QueryIndex<EmailDeliveryLogIndex>(index => index.Recipient == key && index.Kind == value && index.OccurredUtc >= sinceUtc, collection: Collection)
+            .ListAsync(cancellationToken)).ToArray();
+
+        return rows.Where(row => !string.IsNullOrEmpty(row.MessageId)).Select(row => row.MessageId).Distinct(StringComparer.Ordinal).Count() +
+            rows.Count(row => string.IsNullOrEmpty(row.MessageId));
     }
 
     public async Task<DateTime?> GetSentTimeAsync(string addressId, DateTime sinceUtc, int position, string recipientDomain = null, CancellationToken cancellationToken = default)
@@ -205,19 +218,82 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
 
     public async Task<int> PruneAsync(DateTime beforeUtc, int maxEntries, CancellationToken cancellationToken = default)
     {
-        var entries = await _session.Query<EmailDeliveryLogEntry, EmailDeliveryLogIndex>(index => index.OccurredUtc < beforeUtc, collection: Collection)
+        // Only the index rows of the oldest entries are read, through the retention index, and the rows and their
+        // documents are deleted by set-based statements. Loading every entry's document and deleting it through the
+        // session one by one is what kept the prune behind a busy address's log.
+        var rowIds = (await _session.QueryIndex<EmailDeliveryLogIndex>(index => index.OccurredUtc < beforeUtc, collection: Collection)
             .OrderBy(index => index.OccurredUtc)
-            .Take(Math.Max(1, maxEntries))
-            .ListAsync(cancellationToken);
+            .Take(Math.Clamp(maxEntries, 1, MaxPruneBatch))
+            .ListAsync(cancellationToken))
+            .Select(row => row.Id)
+            .ToArray();
 
-        var count = 0;
-
-        foreach (var entry in entries)
+        if (rowIds.Length == 0)
         {
-            _session.Delete(entry, Collection);
-            count++;
+            return 0;
         }
 
-        return count;
+        var configuration = _session.Store.Configuration;
+        var dialect = configuration.SqlDialect;
+        var indexTable = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetIndexTable(typeof(EmailDeliveryLogIndex), Collection), configuration.Schema);
+        var documentTable = dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetDocumentTable(Collection), configuration.Schema);
+        var idColumn = dialect.QuoteForColumnName("Id");
+        var documentIdColumn = dialect.QuoteForColumnName("DocumentId");
+
+        // The statements run on the session's own transaction, after its pending writes, so they commit or roll back
+        // with the caller's unit of work.
+        await _session.FlushAsync(cancellationToken);
+        var transaction = await _session.BeginTransactionAsync(cancellationToken);
+
+        var documentIds = new List<long>(rowIds.Length);
+
+        await using (var select = CreateCommand(transaction, $"SELECT {documentIdColumn} FROM {indexTable} WHERE {idColumn} IN ({Placeholders("r", rowIds.Length)})", "r", rowIds))
+        {
+            await using var reader = await select.ExecuteReaderAsync(cancellationToken);
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                documentIds.Add(Convert.ToInt64(reader.GetValue(0), CultureInfo.InvariantCulture));
+            }
+        }
+
+        // The index rows go first: on SQL Server each one has a foreign key to its document.
+        await using (var deleteRows = CreateCommand(transaction, $"DELETE FROM {indexTable} WHERE {idColumn} IN ({Placeholders("r", rowIds.Length)})", "r", rowIds))
+        {
+            await deleteRows.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        if (documentIds.Count > 0)
+        {
+            await using var deleteDocuments = CreateCommand(transaction, $"DELETE FROM {documentTable} WHERE {idColumn} IN ({Placeholders("d", documentIds.Count)})", "d", documentIds);
+
+            await deleteDocuments.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        return rowIds.Length;
     }
+
+    // A command on the transaction with one parameter per identifier, so the statement has the same shape on every
+    // supported database.
+    private static DbCommand CreateCommand(DbTransaction transaction, string sql, string prefix, IReadOnlyList<long> ids)
+    {
+        var command = transaction.Connection.CreateCommand();
+
+        command.Transaction = transaction;
+        command.CommandText = sql;
+
+        for (var i = 0; i < ids.Count; i++)
+        {
+            var parameter = command.CreateParameter();
+
+            parameter.ParameterName = "@" + prefix + i.ToString(CultureInfo.InvariantCulture);
+            parameter.Value = ids[i];
+            command.Parameters.Add(parameter);
+        }
+
+        return command;
+    }
+
+    private static string Placeholders(string prefix, int count)
+        => string.Join(", ", Enumerable.Range(0, count).Select(index => "@" + prefix + index.ToString(CultureInfo.InvariantCulture)));
 }
