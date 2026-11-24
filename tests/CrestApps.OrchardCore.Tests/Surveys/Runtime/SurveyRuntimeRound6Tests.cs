@@ -245,7 +245,7 @@ public sealed class SurveyRuntimeRound6Tests
         // Assert
         Assert.Null((await harness.FindAsync(hidden.Response.ItemId)).Number);
         Assert.False(string.IsNullOrEmpty(named.Response.Number));
-        Assert.Equal(hidden.Response.ItemId[..CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.AnonymousLabelLength], CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.ResponseLabel(anonymous, hidden.Response));
+        Assert.False(string.IsNullOrEmpty(CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.ResponseLabel(anonymous, hidden.Response, "secret")));
     }
 
     [Fact]
