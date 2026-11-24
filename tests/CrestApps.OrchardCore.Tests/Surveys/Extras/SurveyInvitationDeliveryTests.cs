@@ -499,8 +499,9 @@ public sealed class SurveyInvitationDeliveryTests
         using var secondAsking = new SemaphoreSlim(0);
         Task<(int CountedFirst, IReadOnlyList<SurveyInvitationResult> Results)> second = null;
 
-        // Act: the first sender sends two e-mails in a shell scope, as a request does, and ends without saving itself.
-        // While it still holds the lock, a second sender in its own shell scope asks for the lock, then invites two more.
+        // Act: the first sender sends two e-mails in a shell scope, as a request does; since R8-M3 the send commits what it
+        // sent and only then lets go of the lock itself. A second sender in its own shell scope asks for the lock, then
+        // invites two more.
         await harness.RunInShellScopeAsync(async services =>
         {
             await services.GetRequiredService<SurveyInvitationService>().InviteManyAsync(survey.ItemId, null,
@@ -534,15 +535,12 @@ public sealed class SurveyInvitationDeliveryTests
             await secondAsking.WaitAsync(TestContext.Current.CancellationToken);
             await Task.Delay(100, TestContext.Current.CancellationToken);
 
-            Assert.False(second.IsCompleted);
-            Assert.True(await locks.IsLockAcquiredAsync(DayLockKey));
-
             return true;
         });
 
         var (countedFirst, secondResults) = await second;
 
-        // Assert: the second sender got the lock only after the first scope's save, counted its two e-mails, sent one
+        // Assert: the second sender got the lock only after the first send's commit, counted its two e-mails, sent one
         // more and held the other, so the day's e-mails are exactly the limit.
         var emailed = await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationStore>().CountEmailedSinceAsync(SurveyInvitationService.DayStartUtc(_evening, "America/New_York")));
 
@@ -1134,6 +1132,305 @@ public sealed class SurveyInvitationDeliveryTests
         Assert.True(mayStillSend);
     }
 
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task SeveralRefusedHeldAddresses_WithDueReminders_TheRemindersGoOut_AndTheAddressesBounceAfterTheirAttempts(int refusedCount)
+    {
+        // Arrange: two invitations sent three days ago and due their one reminder, and first sends held after the mail
+        // server refused their addresses on an earlier run. It refuses those addresses every time and takes the others
+        // (R8-M2: with two or more, each run's two failures in a row were taken for an outage and never counted).
+        var sender = new RecordingSender { Outcome = invitation => invitation.Email.StartsWith("refused", StringComparison.Ordinal) ? SurveyInvitationDelivery.RetryLater : SurveyInvitationDelivery.Delivered };
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening.AddDays(-3);
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var first = await InviteAsync(harness, survey, "due1@example.com");
+        var second = await InviteAsync(harness, survey, "due2@example.com");
+        var collectorId = first.Invitation.CollectorId;
+        await SetRemindersAsync(harness, collectorId, count: 1, everyDays: 1);
+        var refusedIds = await CreateHeldAsync(harness, survey, collectorId, Enumerable.Range(1, refusedCount).Select(i => $"refused{i}@example.com").ToArray(), failedBefore: true);
+
+        // Act: a run whose service the test reads (as Send reminders now does); then a run every six hours for twelve
+        // days. Once the reminders are out, nothing else goes out, so each address counts a try at most once a day.
+        harness.Clock.UtcNow = _evening;
+        var (sent, mailServerFailed, refused) = await harness.RunAsync(async services =>
+        {
+            var invitations = services.GetRequiredService<SurveyInvitationService>();
+            var count = await invitations.RemindAsync(collectorId, force: false);
+
+            return (count, invitations.MailServerFailed, invitations.RefusedEmails);
+        });
+        var afterTheFirstRun = new List<SurveyInvitation>();
+
+        foreach (var id in refusedIds)
+        {
+            afterTheFirstRun.Add(await FindAsync(harness, id));
+        }
+
+        for (var run = 1; run <= 48; run++)
+        {
+            harness.Clock.UtcNow = _evening.AddHours(6 * run);
+            await RunReminderTaskAsync(harness);
+        }
+
+        // Assert: the reminders went out, the run doesn't say the mail server failed, the two refused addresses it tried
+        // (two failures in a row stop a run) each used up an attempt, and in the end every refused address bounced.
+        Assert.Equal(2, sent);
+        Assert.False(mailServerFailed);
+        Assert.Equal(2, refused);
+        Assert.Equal(1, (await FindAsync(harness, first.Invitation.ItemId)).RemindersSent);
+        Assert.Equal(1, (await FindAsync(harness, second.Invitation.ItemId)).RemindersSent);
+        Assert.Equal(2, afterTheFirstRun.Count(invitation => invitation.TryGet<SurveyInvitationHold>(out var hold) && hold?.FailedAttempts == 1));
+
+        foreach (var id in refusedIds)
+        {
+            Assert.Equal(SurveyInvitationStatus.Bounced, (await FindAsync(harness, id)).Status);
+        }
+    }
+
+    [Fact]
+    public async Task AFirstInvite_WithTwoRefusedAddressesNextToEachOther_HoldsTheRest_SendsThemNextRun_AndTheAddressesBounce()
+    {
+        // Arrange: a bulk invite whose first two addresses the mail server refuses every time (R8-M2).
+        var sender = new RecordingSender { Outcome = invitation => invitation.Email.StartsWith("bad", StringComparison.Ordinal) ? SurveyInvitationDelivery.RetryLater : SurveyInvitationDelivery.Delivered };
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var requests = new[] { "bad1@example.com", "bad2@example.com", "good1@example.com", "good2@example.com" }
+            .Select(email => new SurveyInvitationRequest { Email = email })
+            .ToList();
+
+        // Act: the invite; the next hourly run; then a run a day.
+        var (results, mailServerFailed) = await harness.RunAsync(async services =>
+        {
+            var invitations = services.GetRequiredService<SurveyInvitationService>();
+            var invited = await invitations.InviteManyAsync(survey.ItemId, null, requests, send: true);
+
+            return (invited, invitations.MailServerFailed);
+        });
+        var attemptsAtInvite = sender.Attempts;
+        var collectorId = results[0].Invitation.CollectorId;
+        var badAfterInvite = await FindAsync(harness, results[0].Invitation.ItemId);
+
+        harness.Clock.UtcNow = _evening.AddHours(1);
+        var nextRun = await RemindAsync(harness, collectorId);
+        var badAfterNextRun = await FindAsync(harness, results[1].Invitation.ItemId);
+
+        for (var day = 1; day <= SurveyInvitationHold.MaxSendAttempts; day++)
+        {
+            harness.Clock.UtcNow = _evening.AddDays(day).AddHours(1);
+            await RemindAsync(harness, collectorId);
+        }
+
+        // Assert: the invite stopped after the two failures in a row and held the good addresses, each refused address
+        // used up one (lone) attempt; the next run sent the good ones and counted the failures; the bad ones bounced.
+        Assert.Equal(2, attemptsAtInvite);
+        Assert.True(mailServerFailed);
+        Assert.True(results[2].Invitation.TryGet<SurveyInvitationHold>(out var heldGood) && heldGood is not null);
+        Assert.True(badAfterInvite.TryGet<SurveyInvitationHold>(out var firstHold) && firstHold is not null);
+        Assert.Equal(1, firstHold.FailedAttempts);
+        Assert.Equal(2, nextRun);
+        Assert.True(badAfterNextRun.TryGet<SurveyInvitationHold>(out var nextHold) && nextHold is not null);
+        Assert.Equal(2, nextHold.FailedAttempts);
+        Assert.Equal(SurveyInvitationStatus.Sent, (await FindAsync(harness, results[2].Invitation.ItemId)).Status);
+        Assert.Equal(SurveyInvitationStatus.Sent, (await FindAsync(harness, results[3].Invitation.ItemId)).Status);
+        Assert.Equal(SurveyInvitationStatus.Bounced, (await FindAsync(harness, results[0].Invitation.ItemId)).Status);
+        Assert.Equal(SurveyInvitationStatus.Bounced, (await FindAsync(harness, results[1].Invitation.ItemId)).Status);
+    }
+
+    [Fact]
+    public async Task ARespondentWriteFromAnotherScope_DuringARun_IsNotBlocked_AndNeitherWriteOverwritesTheOther()
+    {
+        // Arrange: three invitations sent three days ago, due their one reminder (R8-M3).
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening.AddDays(-3);
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var ids = new List<string>();
+
+        foreach (var email in new[] { "one@example.com", "two@example.com", "three@example.com" })
+        {
+            ids.Add((await InviteAsync(harness, survey, email)).Invitation.ItemId);
+        }
+
+        var collectorId = (await FindAsync(harness, ids[0])).CollectorId;
+        await SetRemindersAsync(harness, collectorId, count: 1, everyDays: 1);
+        var attempted = new List<string>();
+        var otherWrites = new List<TimeSpan>();
+
+        // While each reminder after the first is with the mail server, the respondent of the invitation reminded just
+        // before opens it, and the respondent of this one completes it, each in a scope of its own (its own connection).
+        sender.OnAttemptAsync = async invitation =>
+        {
+            attempted.Add(invitation.ItemId);
+
+            if (attempted.Count < 2)
+            {
+                return;
+            }
+
+            var stopwatch = Stopwatch.StartNew();
+
+            await WriteElsewhereAsync(harness, attempted[^2], current => current.Status = current.Status == SurveyInvitationStatus.Sent ? SurveyInvitationStatus.Opened : current.Status);
+            await WriteElsewhereAsync(harness, invitation.ItemId, current => current.Status = SurveyInvitationStatus.Completed);
+            otherWrites.Add(stopwatch.Elapsed);
+        };
+
+        // Act
+        harness.Clock.UtcNow = _evening;
+        var sent = await RemindAsync(harness, collectorId);
+
+        // Assert: the other scopes' writes went through at once during the run; the reminders of the invitations opened
+        // after their reminder are kept, and the completions are kept with the reminder recorded on them.
+        Assert.Equal(3, sent);
+        Assert.Equal(2, otherWrites.Count);
+        Assert.All(otherWrites, elapsed => Assert.True(elapsed < TimeSpan.FromSeconds(10), $"A respondent's write took {elapsed}."));
+
+        var firstNow = await FindAsync(harness, attempted[0]);
+        var secondNow = await FindAsync(harness, attempted[1]);
+        var thirdNow = await FindAsync(harness, attempted[2]);
+
+        Assert.Equal((SurveyInvitationStatus.Opened, 1), (firstNow.Status, firstNow.RemindersSent));
+        Assert.Equal((SurveyInvitationStatus.Completed, 1), (secondNow.Status, secondNow.RemindersSent));
+        Assert.Equal((SurveyInvitationStatus.Completed, 1), (thirdNow.Status, thirdNow.RemindersSent));
+    }
+
+    [Fact]
+    public async Task ARunCancelledMidway_StopsBetweenCommits_AndKeepsTheSentMarks_EvenWhenItsScopeFails()
+    {
+        // Arrange: four invitations sent three days ago, due their one reminder (R8-M3).
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening.AddDays(-3);
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var ids = new List<string>();
+
+        for (var i = 0; i < 4; i++)
+        {
+            ids.Add((await InviteAsync(harness, survey, $"guest{i}@example.com")).Invitation.ItemId);
+        }
+
+        var collectorId = (await FindAsync(harness, ids[0])).CollectorId;
+        await SetRemindersAsync(harness, collectorId, count: 1, everyDays: 1);
+        using var cancellation = new CancellationTokenSource();
+        var attempts = 0;
+        sender.OnAttempt = _ =>
+        {
+            if (++attempts == 2)
+            {
+                cancellation.Cancel();
+            }
+        };
+
+        // Act: the run is cancelled while its second reminder is with the mail server (a closed tab, a proxy timeout);
+        // then its scope fails and its session is cancelled, as Orchard Core does on an exception.
+        harness.Clock.UtcNow = _evening;
+        var (sent, lockHeldAfter) = await harness.RunAsync(async services =>
+        {
+            var count = await services.GetRequiredService<SurveyInvitationService>().RemindAsync(collectorId, force: false, cancellation.Token);
+            var held = await services.GetRequiredService<IDistributedLock>().IsLockAcquiredAsync(SurveyInvitationEmailLimit.LockKey);
+
+            await services.GetRequiredService<ISession>().CancelAsync();
+
+            return (count, held);
+        });
+
+        var reminded = new List<int>();
+
+        foreach (var id in ids)
+        {
+            reminded.Add((await FindAsync(harness, id)).RemindersSent);
+        }
+
+        // Assert: the reminder already out finished and both sent marks stayed; nothing more was sent; the lock is free.
+        Assert.Equal(2, sent);
+        Assert.Equal(2, attempts);
+        Assert.Equal(2, reminded.Sum());
+        Assert.False(lockHeldAfter);
+    }
+
+    [Fact]
+    public async Task AFailureLaterInARun_KeepsTheMarksOfTheEmailsSentBeforeIt()
+    {
+        // Arrange: three invitations due their reminder; the mail service throws on the third (R8-M3). The session is
+        // registered as Orchard Core does: cancelled when the scope fails.
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, SiteService(emailsPerDay: 100), configure: services => RuntimeTestHarness.UseOrchardSession(services));
+        harness.Clock.UtcNow = _evening.AddDays(-3);
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var ids = new List<string>();
+
+        for (var i = 0; i < 3; i++)
+        {
+            ids.Add((await InviteAsync(harness, survey, $"guest{i}@example.com")).Invitation.ItemId);
+        }
+
+        var collectorId = (await FindAsync(harness, ids[0])).CollectorId;
+        await SetRemindersAsync(harness, collectorId, count: 1, everyDays: 1);
+        var attempts = 0;
+        sender.OnAttemptAsync = _ => ++attempts == 3 ? throw new InvalidOperationException("The mail service failed.") : Task.CompletedTask;
+
+        // Act
+        harness.Clock.UtcNow = _evening;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => harness.RunInShellScopeAsync(services => services.GetRequiredService<SurveyInvitationService>().RemindAsync(collectorId, force: false)));
+
+        var reminded = new List<int>();
+
+        foreach (var id in ids)
+        {
+            reminded.Add((await FindAsync(harness, id)).RemindersSent);
+        }
+
+        // Assert: the two reminders sent before the failure are recorded; the third is still due.
+        Assert.Equal(2, reminded.Sum());
+        Assert.Equal(1, reminded.Count(count => count == 0));
+    }
+
+    // Creates first sends held back on a list (after a mail server failure when failedBefore is set); returns their ids.
+    private static async Task<IReadOnlyList<string>> CreateHeldAsync(RuntimeTestHarness harness, Survey survey, string collectorId, string[] emails, bool failedBefore)
+    {
+        var ids = emails.Select(_ => IdGenerator.GenerateId()).ToArray();
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+
+            for (var i = 0; i < emails.Length; i++)
+            {
+                var invitation = new SurveyInvitation
+                {
+                    ItemId = ids[i],
+                    SurveyId = survey.ItemId,
+                    CollectorId = collectorId,
+                    Email = emails[i],
+                    Status = SurveyInvitationStatus.Pending,
+                    CreatedUtc = _evening.AddHours(-2),
+                };
+
+                invitation.Put(new SurveyInvitationHold { HeldUtc = _evening.AddHours(-2), LastFailedUtc = failedBefore ? _evening.AddHours(-1) : null });
+                await store.CreateAsync(invitation);
+            }
+
+            return true;
+        });
+
+        return ids;
+    }
+
+    // Writes an invitation as another request does, in a scope (and on a connection) of its own, from a copy it loads now;
+    // it fails the test instead of waiting when the send blocks it.
+    private static Task<bool> WriteElsewhereAsync(RuntimeTestHarness harness, string invitationId, Action<SurveyInvitation> change)
+        => harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+            var invitation = await store.FindByIdAsync(invitationId);
+
+            change(invitation);
+            await store.UpdateAsync(invitation);
+
+            return true;
+        }).WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
+
     // Creates a survey's personal links list, with an invitation to each user sent three days ago; returns the list.
     private static async Task<string> CreateUserInvitationsAsync(RuntimeTestHarness harness, Survey survey, params string[] userIds)
     {
@@ -1266,7 +1563,7 @@ public sealed class SurveyInvitationDeliveryTests
     }
 
     [Fact]
-    public async Task AMailOutage_TriesOneEmailARun_HoldsTheRest_UsesUpNoAttempts_AndEverythingGoesOutOnceItEnds()
+    public async Task AMailOutage_TriesTwoEmailsARun_HoldsTheRest_UsesUpAtMostOneAttemptADay_AndEverythingGoesOutOnceItEnds()
     {
         // Arrange: the mail server is down (R6-L8).
         var sender = new RecordingSender { Outcome = _ => SurveyInvitationDelivery.RetryLater };
@@ -1293,8 +1590,9 @@ public sealed class SurveyInvitationDeliveryTests
         harness.Clock.UtcNow = _evening.AddHours(SurveyInvitationHold.MaxSendAttempts + 2);
         var sentOnceBack = await RemindAsync(harness, collectorId);
 
-        // Assert: two tries per send (the second tells an outage from a refused address, R7-M6), no invitation bounced
-        // or used up an attempt, and all three go out once it's back.
+        // Assert: two tries per send (two failures in a row stop it, R8-M2), no invitation bounced, and as nothing went
+        // out each failure is a lone one, so within a few hours each invitation used up one attempt at most (the
+        // 23-hour rule); all three go out once it's back.
         Assert.Equal(2, attemptsAtInvite);
         Assert.Equal(2 + (2 * (SurveyInvitationHold.MaxSendAttempts + 1)), attemptsDuringOutage);
         Assert.Equal(3, duringOutage.Count);
@@ -1302,7 +1600,7 @@ public sealed class SurveyInvitationDeliveryTests
         {
             Assert.Equal(SurveyInvitationStatus.Pending, invitation.Status);
             Assert.True(invitation.TryGet<SurveyInvitationHold>(out var hold) && hold is not null);
-            Assert.Equal(0, hold.FailedAttempts);
+            Assert.Equal(1, hold.FailedAttempts);
         });
         Assert.Equal(3, sentOnceBack);
         Assert.Equal(3, sender.Sent.Count);
@@ -1433,8 +1731,9 @@ public sealed class SurveyInvitationDeliveryTests
 
         Task<(int Sent, bool LockUnavailable)> second = null;
 
-        // Act: the first Send e-mails all three in a shell scope and ends without saving itself. While it still holds the
-        // lock, a second Send of the list (a double click, or another admin) starts in its own shell scope.
+        // Act: the first Send e-mails all three in a shell scope (since R8-M3 it commits as it goes, and lets go of the lock
+        // once everything is committed). Before its scope ends, a second Send of the list (a double click, or another
+        // admin) starts in its own shell scope.
         var first = await harness.RunInShellScopeAsync(async services =>
         {
             var sent = await services.GetRequiredService<SurveyInvitationService>().SendPendingAsync(collectorId);
@@ -1450,7 +1749,6 @@ public sealed class SurveyInvitationDeliveryTests
             }
 
             await Task.Delay(200, TestContext.Current.CancellationToken);
-            Assert.False(second.IsCompleted);
 
             return sent;
         });

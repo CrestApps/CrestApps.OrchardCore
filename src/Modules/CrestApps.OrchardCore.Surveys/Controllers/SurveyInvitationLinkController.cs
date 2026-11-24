@@ -86,8 +86,19 @@ public sealed class SurveyInvitationLinkController : Controller
 
         if (invitation.Status is SurveyInvitationStatus.Pending or SurveyInvitationStatus.Sent)
         {
-            invitation.Status = SurveyInvitationStatus.Opened;
-            await _invitationStore.UpdateAsync(invitation);
+            // Applied to the copy the database has now (R8-M3): a send that is e-mailing this invitation commits its marks
+            // (sent, reminded) right after the e-mail, and the open keeps them instead of writing back this older copy.
+            invitation = await _invitationStore.UpdateCurrentAsync(invitation, current =>
+            {
+                if (current.Status is not (SurveyInvitationStatus.Pending or SurveyInvitationStatus.Sent))
+                {
+                    return false;
+                }
+
+                current.Status = SurveyInvitationStatus.Opened;
+
+                return true;
+            }, cancellationToken: HttpContext.RequestAborted);
         }
 
         if (invitation.ExpiresUtc is { } expires && _clock.UtcNow >= expires)

@@ -57,8 +57,10 @@ public sealed class SurveyInvitationReminderBackgroundTask : IBackgroundTask
 
                     try
                     {
+                        // The list's send commits as it goes and, once cancelled, stops cleanly between commits (R8-M3);
+                        // whatever it left is saved without the token, and the next list isn't started.
                         await scope.ServiceProvider.GetRequiredService<SurveyInvitationService>().RemindAsync(row.ItemId, force: false, cancellationToken);
-                        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+                        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(CancellationToken.None);
                     }
                     finally
                     {

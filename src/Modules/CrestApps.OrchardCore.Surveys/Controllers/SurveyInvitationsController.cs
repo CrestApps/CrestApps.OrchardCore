@@ -487,12 +487,17 @@ public sealed class SurveyInvitationsController : Controller
     }
 
     // The mail server failing e-mails as in an outage holds the send's other e-mails; the administrator is told why fewer
-    // went out than expected.
+    // went out than expected. When e-mails of the send went out, the mail server works and only refused some addresses
+    // (R8-M2), so that is what the administrator is told instead.
     private async Task NotifyMailServerFailedAsync()
     {
         if (_invitations.MailServerFailed)
         {
             await _notifier.WarningAsync(H["The mail server didn't take the e-mails, so the rest wait. They are tried again with the hourly reminder run."]);
+        }
+        else if (_invitations.RefusedEmails > 0)
+        {
+            await _notifier.WarningAsync(H["The mail server refused {0} of the e-mails. They are tried again with the hourly reminder run, and an address it refuses five times is shown as Bounced.", _invitations.RefusedEmails]);
         }
     }
 
