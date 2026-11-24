@@ -294,20 +294,81 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
             return;
         }
 
+        await VisitWhereAsync(DueForReminder(collectorId, statuses, lastContactBefore, maxReminders), emails, visit, stop, pageSize, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads the index row of an invitation as the database has it now, after this session's own pending changes are
+    /// written: what other requests committed (a completion, an open, another send) shows here even when the
+    /// invitation was loaded earlier. Saving an invitation writes its row again under a new id, so the row's id tells
+    /// whether anyone saved it since.
+    /// </summary>
+    /// <param name="itemId">The invitation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The row, or <see langword="null"/> when the invitation no longer exists.</returns>
+    public async Task<SurveyInvitationIndex> FindRowAsync(string itemId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(itemId))
+        {
+            return null;
+        }
+
+        await Session.FlushAsync(cancellationToken);
+
+        return await Session.QueryIndex<SurveyInvitationIndex>(index => index.ItemId == itemId, collection: CollectionName)
+            .OrderByDescending(index => index.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Loads an invitation again from the database, in place of the copy this session holds: the copy is let go of
+    /// (after this session's pending changes are written), so the invitation returned carries what other requests
+    /// committed since the copy was loaded. Save the invitation returned, never the old copy.
+    /// </summary>
+    /// <param name="itemId">The invitation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The invitation, or <see langword="null"/> when it no longer exists.</returns>
+    public async Task<SurveyInvitation> ReloadAsync(string itemId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(itemId))
+        {
+            return null;
+        }
+
+        await Session.FlushAsync(cancellationToken);
+
+        var held = await FindByIdAsync(itemId, cancellationToken);
+
+        if (held is null)
+        {
+            return null;
+        }
+
+        Session.Detach(held, CollectionName);
+
+        return await FindByIdAsync(itemId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Writes this session's pending changes now, inside its transaction, so a send's marks reach the database right
+    /// after the e-mail went out rather than at the end of a page.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public Task FlushAsync(CancellationToken cancellationToken = default)
+        => Session.FlushAsync(cancellationToken);
+
+    // The index filter of the invitations of a collector due a reminder.
+    private static Expression<Func<SurveyInvitationIndex, bool>> DueForReminder(string collectorId, IReadOnlyCollection<SurveyInvitationStatus> statuses, DateTime lastContactBefore, int maxReminders)
+    {
         var names = statuses.Select(status => status.ToString()).ToArray();
 
-        await VisitWhereAsync(
-            index => index.CollectorId == collectorId
-                && index.Status.IsIn(names)
-                && index.RemindersStopped == false
-                && index.RemindersSent < maxReminders
-                && ((index.LastReminderUtc != null && index.LastReminderUtc <= lastContactBefore)
-                    || (index.LastReminderUtc == null && index.SentUtc != null && index.SentUtc <= lastContactBefore)),
-            emails,
-            visit,
-            stop,
-            pageSize,
-            cancellationToken);
+        return index => index.CollectorId == collectorId
+            && index.Status.IsIn(names)
+            && index.RemindersStopped == false
+            && index.RemindersSent < maxReminders
+            && ((index.LastReminderUtc != null && index.LastReminderUtc <= lastContactBefore)
+                || (index.LastReminderUtc == null && index.SentUtc != null && index.SentUtc <= lastContactBefore));
     }
 
     /// <summary>

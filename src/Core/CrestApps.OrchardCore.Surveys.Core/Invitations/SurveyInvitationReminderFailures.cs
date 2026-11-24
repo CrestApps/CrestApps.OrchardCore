@@ -13,10 +13,15 @@ namespace CrestApps.OrchardCore.Surveys.Core.Invitations;
 public sealed class SurveyInvitationReminderFailures
 {
     /// <summary>
-    /// Gets or sets how many times sending the next reminder failed at the mail server. A failure counts only when the
-    /// mail server took another e-mail of the same send, so an outage, which fails every e-mail, uses up no attempts.
+    /// Gets or sets how many times sending the next reminder failed at the mail server, counted as
+    /// <see cref="SurveyInvitationHold.FailedAttempts"/> is: an outage, which fails every e-mail, uses up no attempts.
     /// </summary>
     public int FailedAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a failure last used up an attempt, in UTC, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? LastCountedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets when sending the next reminder last failed at the mail server, in UTC, or <see langword="null"/>.
