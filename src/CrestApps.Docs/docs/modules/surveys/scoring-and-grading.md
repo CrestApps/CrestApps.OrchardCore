@@ -52,11 +52,13 @@ A response whose deadline and grace passed is submitted with what was saved in t
 | --- | --- |
 | `GradeAsync` | Scores questions by hand with comments and overall feedback |
 | `RecordScoringHelpAsync` | Marks that a grader used AI help on a question |
-| `RegradeAsync` | Scores a response again with its version's key; grader scores are kept |
+| `RegradeAsync` | Scores a response again with its key (its version's, or the one **Regrade versions** last used); grader scores are kept |
 | `RegradeVersionsAsync` | Scores responses of older versions with another version's key, only for questions whose type did not change; a question whose key names choices or rows its version lacks keeps its scores and is listed in `SurveyRegradeResult.SkippedQuestions` |
 | `ChangeScoreAsync` | Sets the total score; a reason is required |
 
 Every change adds an entry to the response's score history (who, when, from, to, why) and raises `GradedAsync` or `ScoreChangedAsync`.
+
+**Regrade versions** records the key it used on each response (`SurveyResponse.ScoredWithVersionId`; null when that is the response's own version). Every later scoring of the response scores with that key too (`SurveyScoringKeys.ScoringDefinitionAsync`): grading an attempt that still waits for a grader, **Score again**, and finishing a reopened response. So grading a pending essay after a key fix keeps the fixed scores of the other questions, and they stay automatic. The Grade page shows that key's grader guidance. To go back to a version's own key, run **Regrade versions** with that version as the key. A question that kept its own key in the regrade (its key named choices or rows its version lacks) is scored with its own key later too.
 
 Changing a score that is given (**Change score**, **Score again**, saving grades of a graded response, points that differ from a question's automatic or earlier manual score on a response still waiting for a grader, and **Regrade versions**) also asks every `ISurveyScoreChangeCheck` (registered with `services.AddSurveyScoreChangeCheck<T>()`), on top of being allowed to grade the survey; all must allow it (`SurveyScoreChangeChecks.GradingChangesGivenScores`). So a grader who is refused gives points only to the questions that need grading (an answer with no score yet; a score posted unchanged is fine): the other questions' points boxes are read-only for them, and a post that changes one is refused. A grader who is refused sees a graded response without the save button and without the change score card. Learning Assessments adds one that requires **Override grades** on the surveys course items own. The **Regrade Survey Response** workflow task (`RegradeSurveyResponseTask`) runs no score change check: whoever may edit workflows configures it, so give that right only to people who may change grades.
 

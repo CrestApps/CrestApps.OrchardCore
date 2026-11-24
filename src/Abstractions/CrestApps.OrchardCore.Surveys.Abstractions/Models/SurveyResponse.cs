@@ -202,6 +202,13 @@ public sealed class SurveyResponse : CatalogItem
     public List<ScoreChange> ScoreHistory { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the id of the version whose answer key <b>Regrade versions</b> last scored the response with, or
+    /// <see langword="null"/> while it is scored with its own version's key. Grading, Score again and finishing the
+    /// response again score with that key too, so they don't undo the regrade.
+    /// </summary>
+    public string ScoredWithVersionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the IP address, only for identified responses when the survey collects it.
     /// </summary>
     public string IpAddress { get; set; }

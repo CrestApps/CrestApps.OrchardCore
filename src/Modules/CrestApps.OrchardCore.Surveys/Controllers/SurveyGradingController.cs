@@ -486,7 +486,10 @@ public sealed class SurveyGradingController : Controller
         var survey = await _surveys.FindByIdAsync(response.SurveyId, HttpContext.RequestAborted);
         var version = await _versionCache.GetAsync(response.SurveyVersionId, HttpContext.RequestAborted);
 
-        return (response, survey, version?.Definition ?? survey?.Draft);
+        // A response Regrade versions scored with another version's key shows that key's guidance.
+        var definition = await SurveyScoringKeys.ScoringDefinitionAsync(_versionCache, response, version, version?.Definition ?? survey?.Draft, HttpContext.RequestAborted);
+
+        return (response, survey, definition);
     }
 
     // Every grading path of one response: nobody grades, rescores or regrades their own work, and a real response of an
