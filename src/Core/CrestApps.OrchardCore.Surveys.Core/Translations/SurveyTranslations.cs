@@ -193,6 +193,31 @@ public static class SurveyTranslations
     }
 
     /// <summary>
+    /// Imports the entries of a translation file into a definition. An entry whose original in the file differs from the
+    /// survey's now (translated before an author reworded the item) is left out and counted. The others are written; only
+    /// a translation the file changes records the current original. A translation the file gives back unchanged is not
+    /// confirmed, even next to the current original: the export writes the current original next to every translation,
+    /// out of date ones included, so a translator who only adds new texts would otherwise mark every stale one current.
+    /// </summary>
+    /// <param name="definition">The definition to change.</param>
+    /// <param name="culture">The culture.</param>
+    /// <param name="entries">The entries of the file.</param>
+    /// <param name="sanitizeHtml">Cleans the translation of a rich text, or <see langword="null"/> to keep it as it is.</param>
+    /// <returns>How many texts were written, and how many were left out because their original changed.</returns>
+    public static (int Written, int Changed) Import(SurveyDefinition definition, string culture, IEnumerable<SurveyTranslationFileEntry> entries, Func<string, string> sanitizeHtml = null)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+
+        var html = SurveyTextCatalog.Describe(definition).Where(entry => entry.IsHtml).Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
+        var (current, changed) = SplitByOriginal(definition, entries);
+        var written = Merge(definition, culture, current
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Translation))
+            .Select(entry => new KeyValuePair<string, string>(entry.Key, html.Contains(entry.Key) && sanitizeHtml is not null ? sanitizeHtml(entry.Translation) : entry.Translation)), overwrite: true);
+
+        return (written, changed);
+    }
+
+    /// <summary>
     /// Writes texts of a culture into a definition. Keys of items that do not exist are left out; an empty text removes
     /// the translation of its key. A culture left without texts is removed. A changed text records the original it was
     /// made from; a text posted again unchanged (line breaks normalized) changes nothing, unless its key is confirmed:

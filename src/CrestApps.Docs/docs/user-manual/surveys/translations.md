@@ -25,7 +25,7 @@ Translate a survey so each respondent reads it in their language.
 
 ## Use a translation file
 
-Under **Translation file**, select **Export** to download every original text, translate the file, and select **Import** to load it. If someone reworded a text after you exported the file, its translation is left out, and a message says how many: export the file again and translate those texts.
+Under **Translation file**, select **Export** to download every original text, translate the file, and select **Import** to load it. If someone reworded a text after you exported the file, its translation is left out, and a message says how many: export the file again and translate those texts. A translation you leave as it is in the file keeps its **Out of date** or **Check** label: change it, or mark it current on the page.
 
 When someone changes a text after it was translated, its translation shows **Out of date** and no longer counts as translated. Change the translation, or tick **Mark current** under it when it still fits the new text, and select **Save**. Respondents see the old translation until you do. Saving the page changes only the translations you changed or marked: the others keep their **Out of date** or **Check** label.
 

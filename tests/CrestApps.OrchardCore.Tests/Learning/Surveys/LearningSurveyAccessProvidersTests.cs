@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Scoring;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -40,7 +41,7 @@ public sealed class LearningSurveyAccessProvidersTests
         structure.Setup(service => service.GetCourseId(item)).Returns("course1");
         structure.Setup(service => service.IsCourseStaffAsync(UserId, "course1", It.IsAny<string[]>())).ReturnsAsync(true);
 
-        var provider = new LearningSurveyAccessProvider(learningSurveys.Object, structure.Object, Authorization(LearningPermissions.ManageOwnCourses), [], Mock.Of<IServiceProvider>());
+        var provider = new LearningSurveyAccessProvider(learningSurveys.Object, structure.Object, Authorization(LearningPermissions.ManageOwnCourses));
 
         // Act
         var granted = await provider.GrantsAsync(User(), OwnedSurvey(), operation, TestContext.Current.CancellationToken);
@@ -49,42 +50,46 @@ public sealed class LearningSurveyAccessProvidersTests
         Assert.Equal(expected, granted);
     }
 
-    [Theory]
-    // A quiz: voiding or deleting an attempt changes the grade, so an instructor needs Override grades.
-    [InlineData(SurveyKinds.Quiz, false, false, false)]
-    [InlineData(SurveyKinds.Quiz, false, true, true)]
-    // A course survey that gives no score stays with the instructors and assistants.
-    [InlineData(SurveyKinds.Survey, false, false, true)]
-    // A course survey that gives a score is graded like a quiz.
-    [InlineData(SurveyKinds.Survey, true, false, false)]
-    public async Task R6M7_AnInstructor_VoidsOrDeletesTheResponsesOfAGradedSurvey_OnlyWithOverrideGrades(string kind, bool scored, bool canOverride, bool expected)
+    [Fact]
+    public async Task R7Mi22_AnInstructor_GetsVoidDeleteAndRetryUpkeepOnTheSurvey_TheGradeCheckIsPerResponse()
     {
-        // Arrange: instructor1 teaches the course of the item that owns the survey.
+        // Arrange: instructor1 teaches the course of the quiz, without Override grades.
         var item = new ContentItem { ContentItemId = "quiz1" };
         var learningSurveys = Owned(true);
         learningSurveys.Setup(service => service.FindOwnerItemAsync(It.IsAny<Survey>())).ReturnsAsync(item);
+        learningSurveys.Setup(service => service.ListCourseItemOwnersAsync(It.IsAny<CancellationToken>())).ReturnsAsync([LearningSurveyContexts.Owner("quiz1")]);
 
         var structure = new Mock<ICourseStructureService>();
         structure.Setup(service => service.GetCourseId(item)).Returns("course1");
         structure.Setup(service => service.IsCourseStaffAsync(UserId, "course1", It.IsAny<string[]>())).ReturnsAsync(true);
+        structure.Setup(service => service.GetStaffCourseIdsAsync(UserId, It.IsAny<string[]>())).ReturnsAsync(["course1"]);
+        structure.Setup(service => service.GetContainedItemsAsync(It.IsAny<IReadOnlyCollection<string>>())).ReturnsAsync([item]);
 
-        var authorization = canOverride
-            ? Authorization(LearningPermissions.ManageOwnCourses, AssessmentPermissions.OverrideGrades)
-            : Authorization(LearningPermissions.ManageOwnCourses);
-        var provider = new LearningSurveyAccessProvider(learningSurveys.Object, structure.Object, authorization, [new AssessmentsScoreChangeCheck(learningSurveys.Object, authorization)], Mock.Of<IServiceProvider>());
+        var authorization = Authorization(LearningPermissions.ManageOwnCourses);
+        var provider = new LearningSurveyAccessProvider(learningSurveys.Object, structure.Object, authorization);
+        var check = new AssessmentsScoreChangeCheck(learningSurveys.Object, authorization);
         var survey = OwnedSurvey();
-        survey.Kind = kind;
-        survey.Draft.Scoring.Enabled = scored;
+        survey.Kind = SurveyKinds.Quiz;
 
         // Act
         var delete = await provider.GrantsAsync(User(), survey, SurveyOperation.DeleteResponses, TestContext.Current.CancellationToken);
-        var manage = await provider.GrantsAsync(User(), survey, SurveyOperation.Manage, TestContext.Current.CancellationToken);
+        var retry = await provider.GrantsAsync(User(), survey, SurveyOperation.RetryUpkeep, TestContext.Current.CancellationToken);
         var listed = await provider.ListGrantsAsync(User(), SurveyOperation.DeleteResponses, TestContext.Current.CancellationToken);
+        var gradeChange = await check.AllowsAsync(User(), survey, new SurveyResponse { Status = SurveyResponseStatus.Completed, Grading = GradingStatus.Graded }, TestContext.Current.CancellationToken);
 
-        // Assert: the survey itself stays theirs to manage; the delete scope asks about each survey.
-        Assert.Equal(expected, delete);
-        Assert.True(manage);
-        Assert.Null(listed);
+        // Assert: the survey-level grant holds; voiding a graded attempt still needs Override grades (asked by Surveys for
+        // completed, scored responses only), while an attempt in progress, abandoned or unscored is not a grade change.
+        Assert.True(delete);
+        Assert.True(retry);
+        Assert.NotNull(listed);
+        Assert.Single(listed.Owners);
+        Assert.False(gradeChange);
+        Assert.True(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Completed, Grading = GradingStatus.Graded }));
+        Assert.True(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Completed, Grading = GradingStatus.Pending }));
+        Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.InProgress, Grading = GradingStatus.Pending }));
+        Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Abandoned }));
+        Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Completed, Grading = GradingStatus.NotScored }));
+        Assert.False(SurveyScoreChangeChecks.RemovingChangesGivenScore(new SurveyResponse { Status = SurveyResponseStatus.Voided, Grading = GradingStatus.Graded }));
     }
 
     [Theory]

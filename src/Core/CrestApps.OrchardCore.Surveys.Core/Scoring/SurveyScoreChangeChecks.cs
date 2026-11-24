@@ -50,6 +50,17 @@ public sealed class SurveyScoreChangeChecks
     }
 
     /// <summary>
+    /// Gets whether voiding or deleting a response changes a grade that is given, so it needs the score change checks: a
+    /// completed response of a scored survey, graded or waiting for a grader (the grade of an attempt, or the attempt
+    /// given back). A response in progress, abandoned, screened out, voided or of a survey that isn't scored carries no
+    /// grade, so voiding or deleting it needs only the right to delete responses.
+    /// </summary>
+    /// <param name="response">The response, as stored.</param>
+    /// <returns><see langword="true"/> when the void or delete needs the score change checks.</returns>
+    public static bool RemovingChangesGivenScore(SurveyResponse response)
+        => response is { Status: SurveyResponseStatus.Completed, Grading: GradingStatus.Pending or GradingStatus.Graded };
+
+    /// <summary>
     /// Gets whether grading a response changes a score that is given, so it needs the score change checks: the response is
     /// graded (new grades replace given ones), or a posted score differs from a question's given score, automatic or
     /// manual (such as full points for a wrong or blank choice question, or a second grader replacing the first one's

@@ -120,8 +120,9 @@ public sealed class LearningSurveyService : ILearningSurveyService
         var owner = LearningSurveyContexts.Owner(item.ContentItemId);
 
         // A copy made while the item was created (with a blank survey) is replaced: nobody responded to it yet. One this
-        // scope created has nothing hanging off it and may not be committed, so it is removed on this scope's session; a
-        // survey's delete would commit its steps in child scopes, which wait on the uncommitted row.
+        // scope created has nothing hanging off it and may not be committed, so it is removed on this scope's session
+        // through the manager (its handlers and observers, so the audit trail records the delete); a survey's full delete
+        // would commit its steps in child scopes, which wait on the uncommitted row.
         foreach (var existing in await _surveyManager.ListByOwnerAsync(owner, cancellationToken))
         {
             if (string.Equals(existing.ItemId, sourceSurveyId, StringComparison.Ordinal))
@@ -131,7 +132,7 @@ public sealed class LearningSurveyService : ILearningSurveyService
 
             if (_createdInScope.Remove(existing.ItemId))
             {
-                await _serviceProvider.GetRequiredService<ICatalog<Survey>>().DeleteAsync(existing, cancellationToken);
+                await _surveyManager.DeleteNewSurveyAsync(existing, cancellationToken);
             }
             else
             {

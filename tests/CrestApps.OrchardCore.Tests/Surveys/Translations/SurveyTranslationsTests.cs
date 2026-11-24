@@ -207,4 +207,48 @@ public sealed class SurveyTranslationsTests
         Assert.DoesNotContain(current, entry => entry.Key == SurveyTextKeys.QuestionTitle("q1"));
         Assert.Contains(current, entry => entry.Key == SurveyTextKeys.PageTitle("p1"));
     }
+
+    [Fact]
+    public void R7Mi24_Import_AnExportedFileWithAnOutdatedEntry_LeavesItOutOfDate_AndWritesTheNewText()
+    {
+        // Arrange: q1 is translated, then reworded, so its translation is out of date.
+        var definition = TranslationsDefinitions.Create();
+        var q1 = SurveyTextKeys.QuestionTitle("q1");
+        var p1 = SurveyTextKeys.PageTitle("p1");
+        SurveyTranslations.Merge(definition, "fr", [new(q1, "Êtes-vous satisfait ?")]);
+        definition.Pages[0].Questions[0].Title = "Are you unhappy?";
+        Assert.Equal([q1], SurveyTranslations.OutdatedKeys(definition, "fr"));
+
+        // The translator exports the file (the current original next to the stale translation) and only adds p1.
+        var file = SurveyTranslations.Export("customer", definition, "fr");
+        file.Texts.Single(entry => entry.Key == p1).Translation = "À propos de vous";
+
+        // Act
+        var (written, changed) = SurveyTranslations.Import(definition, "fr", file.Texts);
+
+        // Assert: p1 is written; q1, given back unchanged, stays out of date.
+        Assert.Equal(1, written);
+        Assert.Equal(0, changed);
+        Assert.Equal("À propos de vous", SurveyTranslations.Texts(definition, "fr")[p1]);
+        Assert.Equal([q1], SurveyTranslations.OutdatedKeys(definition, "fr"));
+    }
+
+    [Fact]
+    public void R7Mi24_Import_AnOutdatedEntryTranslatedAgain_IsCurrent()
+    {
+        // Arrange
+        var definition = TranslationsDefinitions.Create();
+        var q1 = SurveyTextKeys.QuestionTitle("q1");
+        SurveyTranslations.Merge(definition, "fr", [new(q1, "Êtes-vous satisfait ?")]);
+        definition.Pages[0].Questions[0].Title = "Are you unhappy?";
+        var file = SurveyTranslations.Export("customer", definition, "fr");
+        file.Texts.Single(entry => entry.Key == q1).Translation = "Êtes-vous mécontent ?";
+
+        // Act
+        var (written, _) = SurveyTranslations.Import(definition, "fr", file.Texts);
+
+        // Assert
+        Assert.Equal(1, written);
+        Assert.Empty(SurveyTranslations.OutdatedKeys(definition, "fr"));
+    }
 }

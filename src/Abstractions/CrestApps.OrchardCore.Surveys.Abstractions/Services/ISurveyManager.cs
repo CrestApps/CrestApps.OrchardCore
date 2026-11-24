@@ -55,6 +55,18 @@ public interface ISurveyManager : INamedCatalogManager<Survey>
     Task<SurveyErrorCode> DeleteSurveyAsync(string surveyId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes a survey created in this scope that nothing hangs off yet, such as the blank survey of a copied course item
+    /// that takes a copy of the original's survey instead. Unlike <see cref="DeleteSurveyAsync"/>, it commits nothing in a
+    /// child scope (which would wait on the uncommitted row): its versions, collectors and the survey are removed on this
+    /// scope's session. The handlers and observers hear about it as about any delete, so the audit trail's "Survey
+    /// created" has its matching "Survey deleted". Refused when it has responses.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The error, or <see cref="SurveyErrorCode.None"/>.</returns>
+    Task<SurveyErrorCode> DeleteNewSurveyAsync(Survey survey, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the surveys a record owns, such as a course item.
     /// </summary>
     /// <param name="owner">The owner.</param>

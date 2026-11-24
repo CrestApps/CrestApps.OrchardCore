@@ -74,7 +74,7 @@ public sealed class SurveyAuthorizationService : ISurveyAuthorizationService
             SurveyOperation.Publish => (SurveysPermissions.PublishSurveys, SurveysPermissions.PublishOwnSurveys),
             SurveyOperation.ViewResponses => (SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses),
             SurveyOperation.ExportResponses => (SurveysPermissions.ExportSurveyResponses, null),
-            SurveyOperation.DeleteResponses => (SurveysPermissions.DeleteSurveyResponses, SurveysPermissions.DeleteOwnSurveyResponses),
+            SurveyOperation.DeleteResponses or SurveyOperation.RetryUpkeep => (SurveysPermissions.DeleteSurveyResponses, SurveysPermissions.DeleteOwnSurveyResponses),
             SurveyOperation.Grade => (SurveysPermissions.GradeSurveyResponses, SurveysPermissions.GradeOwnSurveyResponses),
             SurveyOperation.ManageOverrides => (SurveysPermissions.ManageSurveyOverrides, SurveysPermissions.ManageOwnSurveyOverrides),
             SurveyOperation.ManageInvitations => (SurveysPermissions.ManageSurveyInvitations, SurveysPermissions.ManageOwnSurveyInvitations),

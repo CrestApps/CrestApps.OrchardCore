@@ -58,7 +58,9 @@ public sealed class LearningSurveyServiceCopyTests
 
         // Assert
         Assert.Same(copied, result);
-        catalog.Verify(store => store.DeleteAsync(blank, It.IsAny<CancellationToken>()), Times.Once);
+        // R7-Mi27: through the manager (handlers and observers, so the audit trail records the delete), on this session.
+        manager.Verify(service => service.DeleteNewSurveyAsync(blank, It.IsAny<CancellationToken>()), Times.Once);
+        catalog.Verify(store => store.DeleteAsync(It.IsAny<Survey>(), It.IsAny<CancellationToken>()), Times.Never);
         manager.Verify(service => service.DeleteSurveyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         manager.Verify(service => service.CreateSurveyAsync(It.Is<SurveyCreateRequest>(request => request.Definition == source.Draft && request.Owner == LearningSurveyContexts.Owner(copy.ContentItemId)), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -96,6 +98,7 @@ public sealed class LearningSurveyServiceCopyTests
         // Assert
         Assert.Same(created, result);
         manager.Verify(service => service.DeleteSurveyAsync("earlier", It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(service => service.DeleteNewSurveyAsync(It.IsAny<Survey>(), It.IsAny<CancellationToken>()), Times.Never);
         catalog.Verify(store => store.DeleteAsync(It.IsAny<Survey>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
