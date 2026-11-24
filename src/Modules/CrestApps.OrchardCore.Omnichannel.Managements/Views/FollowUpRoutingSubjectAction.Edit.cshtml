@@ -4,6 +4,9 @@
 
 @model FollowUpRoutingSubjectActionViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 @{
     var sectionId = Html.IdFor(m => m.DialWith) + "_Section";
 }
@@ -21,8 +24,8 @@
         <label asp-for="DialWith" class="ocat-label">@T["Dial with"]</label>
         <div class="ocat-end">
             <select asp-for="DialWith" class="form-select" data-follow-up-dial-with>
-                <option value="@FollowUpRoutingSubjectActionViewModel.DialWithInherited">@T["Its dialer profile, if it had one"]</option>
-                <option value="@FollowUpRoutingSubjectActionViewModel.DialWithNone">@T["No dialer (an agent works it)"]</option>
+                <option value="@FollowUpRoutingSubjectActionViewModel.DialWithInherited">@T["Same as before"]</option>
+                <option value="@FollowUpRoutingSubjectActionViewModel.DialWithNone">@T["Manual: an agent works it"]</option>
                 @if (Model.DialerProfiles.Count > 0)
                 {
                     <optgroup label="@T["Dialer profiles"]">
@@ -34,7 +37,7 @@
                 }
             </select>
             <span asp-validation-for="DialWith" class="text-danger"></span>
-            <span class="hint">@T["Its dialer profile: a dialer activity goes back to the dialer under the same profile, and other work stays manual. No dialer: the follow-up is a manual activity the dialer never calls. A dialer profile: the dialer calls it under that profile and offers it to whichever agent signed in to the campaign is free."]</span>
+            <span class="hint">@T["Same as before: a dialer activity goes back to the dialer under the same profile, and other work stays manual. Manual: an agent works and completes the follow-up by hand, and the dialer never calls it. A dialer profile: the dialer calls it under that profile and offers it to whichever agent signed in to the campaign is free."]</span>
         </div>
     </div>
 
@@ -111,7 +114,7 @@
                 <div class="ocat-wrapper" asp-validation-class-for="PoolRoleNames" data-follow-up-pool-source-value="@nameof(FollowUpOwnerPoolSource.Roles)">
                     <label asp-for="PoolRoleNames" class="ocat-label ocat-label-required">@T["Roles"]</label>
                     <div class="ocat-end">
-                        <select asp-for="PoolRoleNames" asp-items="Model.Roles" class="form-select" multiple size="5"></select>
+                        <select asp-for="PoolRoleNames" asp-items="Model.Roles" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Select roles"]"></select>
                         <span asp-validation-for="PoolRoleNames" class="text-danger"></span>
                     </div>
                 </div>
