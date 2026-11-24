@@ -1,7 +1,10 @@
 using System.Data.Common;
+using System.Globalization;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
@@ -15,8 +18,9 @@ namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
 /// <summary>
 /// The results queries and the answer aggregates, which build their SQL by hand, on a real SQL Server (LocalDB): every
 /// column alias is quoted for the dialect (<c>Percent</c> is a reserved word there), the counts by status and by joint key
-/// read back, and the hidden-groups filter applies. The tests are skipped where LocalDB isn't available (Linux CI), as
-/// <see cref="SurveysMigrationsSqlTests"/> are.
+/// read back, the hidden-groups filter applies, and the worst-case statement (a full IN list of ids plus the most hidden
+/// groups) stays under SQL Server's limit of 2,100 parameters. The tests are skipped where LocalDB isn't available (Linux
+/// CI), as <see cref="SurveysMigrationsSqlTests"/> are.
 /// </summary>
 public sealed class SurveyResultsQueriesSqlServerTests
 {
@@ -123,6 +127,48 @@ public sealed class SurveyResultsQueriesSqlServerTests
         Assert.NotNull(samples);
         Assert.Equal([2m, 4m, 9m], values.Select(value => value.Value).Order());
         Assert.NotNull(scores);
+    }
+
+    [Fact(Skip = LocalDbMissing, SkipUnless = nameof(IsLocalDbAvailable))]
+    public async Task ResponseList_WithAFullInListOfSurveysAndTheMostHiddenGroups_OnSqlServer_StaysUnderTheParameterLimit()
+    {
+        // Arrange: R8-Mi15, the grading queue's worst case: a full chunk of survey ids, the most hidden groups one query
+        // leaves out (each with a collector and a context kind, so each takes its four parameters), and every other filter.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var store = await CreateStoreAsync();
+        await SeedAsync(store);
+        await using var session = store.OpenSession();
+        var surveyIds = Enumerable.Range(0, SurveyIdChunks.Size - 1).Select(index => "s" + index.ToString(CultureInfo.InvariantCulture)).Prepend("survey1").ToList();
+        var hiddenGroups = Enumerable.Range(0, SurveyResponseGroupFilter.MaxGroups)
+            .Select(index => SurveyResponseGroup.Create(surveyIds[index], "hidden-collector-" + index.ToString(CultureInfo.InvariantCulture), index + 2, "Kind" + index.ToString(CultureInfo.InvariantCulture)))
+            .ToList();
+
+        // Act
+        var (count, items) = await new SurveyResponseQueries(session).ListAsync(new SurveyResponseQuery
+        {
+            SurveyIds = surveyIds,
+            Statuses = [SurveyResponseStatus.Completed],
+            Grading = GradingStatus.Pending,
+            ContextKinds = [Enrollment, "LearningCourse"],
+            ExcludedUserId = "grader",
+            HiddenGroups = hiddenGroups,
+            OldestFirst = true,
+            CompletedFromUtc = _day.AddDays(-1),
+            CompletedToUtc = _day.AddDays(1),
+            Skip = 0,
+            Take = 50,
+        }, cancellationToken);
+        var byStatus = await new SurveyResultsQueries(session).CountByStatusAsync(new SurveyResultsScope
+        {
+            SurveyId = "survey1",
+            Statuses = [SurveyResponseStatus.Completed, SurveyResponseStatus.InProgress],
+            HiddenGroups = [.. hiddenGroups.Select(group => group with { SurveyId = "survey1" })],
+        }, cancellationToken);
+
+        // Assert: both statements run, and the one pending enrollment response is found.
+        Assert.Equal(1, count);
+        Assert.Equal("r2", Assert.Single(items).ItemId);
+        Assert.Equal(3, byStatus[SurveyResponseStatus.Completed]);
     }
 
     // Three completed responses (r2 on collector A within an enrollment, waiting for a grader), one in progress and one

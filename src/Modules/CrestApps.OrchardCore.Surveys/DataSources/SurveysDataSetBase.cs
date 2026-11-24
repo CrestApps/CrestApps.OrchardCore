@@ -48,7 +48,10 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     private readonly Dictionary<string, SurveyAnonymousAttributes> _attributes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IReadOnlyDictionary<SurveyResponseGroup, long>> _groupCounts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Release> _releases = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, string> _labels = new(StringComparer.Ordinal);
+
+    // The label of each anonymous response read, kept with the response object itself: it goes when the rows that carry
+    // the response go, so a large read never holds one label per response for the whole scope.
+    private readonly ConditionalWeakTable<SurveyResponse, string> _labels = new();
     private string[] _anonymousSurveyIds = [];
     private bool _prepared;
     private bool _readableAll;
@@ -456,9 +459,9 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
         {
             // A condition on the change time is on the time shown, a row's release moment, never before the end of the day
             // it changed on. Past the latest moment anything of the survey was released at, the time shown is the end of
-            // the row's own day, so the raw range read starts a day before the condition's. Before it, a row released
-            // late shows a time later than the day it changed on, so the read starts at the beginning. The engine filters
-            // every row again on the time shown.
+            // the row's own day, so the raw range read starts a day before the condition's, counted in days of the site's
+            // time zone (a day can last 23 or 25 hours). Before it, a row released late shows a time later than the day
+            // it changed on, so the read starts at the beginning. The engine filters every row again on the time shown.
             DateTime? fromUtc = null;
             DateTime? toUtc = null;
 
@@ -473,7 +476,7 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
 
                 if (from is { } start && start > DateTime.MinValue.AddDays(2) && start > release.Latest)
                 {
-                    fromUtc = SurveyAnonymity.StartOfDayUtc(start, TimeZone).AddDays(-1);
+                    fromUtc = SurveyAnonymity.StartOfDayUtc(SurveyAnonymity.Day(start, TimeZone).AddDays(-1), TimeZone);
                 }
 
                 if (to is { } last && last < DateTime.MaxValue.AddDays(-2))
@@ -546,9 +549,9 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
                 {
                     response ??= ResponseOf(seed);
 
-                    if (response is not null && !_labels.ContainsKey(response.ItemId ?? string.Empty))
+                    if (response is not null && !_labels.TryGetValue(response, out _))
                     {
-                        _labels[response.ItemId ?? string.Empty] = await _access.LabelAsync(survey, response, cancellationToken);
+                        _labels.AddOrUpdate(response, await _access.LabelAsync(survey, response, cancellationToken));
                     }
 
                     await foreach (var row in CompleteAsync(seed, cancellationToken))
@@ -729,7 +732,7 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
         ArgumentNullException.ThrowIfNull(response);
 
         return IsAnonymous(response.SurveyId)
-            ? _labels.GetValueOrDefault(response.ItemId ?? string.Empty, string.Empty)
+            ? _labels.TryGetValue(response, out var label) ? label : string.Empty
             : SurveyAnonymity.ResponseLabel(Surveys.GetValueOrDefault(response.SurveyId ?? string.Empty), response, null);
     }
 

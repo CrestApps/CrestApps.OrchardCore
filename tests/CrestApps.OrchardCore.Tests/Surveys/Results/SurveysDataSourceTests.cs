@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.DataSources;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -9,7 +10,9 @@ using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.DataSources;
@@ -749,6 +752,64 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         // Assert: every row shows, and each response is read once, for its row (the count reads the index only).
         Assert.Equal(22, ids.Count);
         Assert.Equal(21, recorder.Surveys.Count(id => id == "survey2"));
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AOneDayFilterOnModifiedAfterADaylightSavingChange_FindsTheFirstHourOfTheLongDay()
+    {
+        // Arrange: R8-Mi23, the site is in New York, where 1 November 2026 lasts 25 hours (the clocks go back at 02:00).
+        // The survey was released in October; one response came in at 00:30 on 1 November (04:30 UTC, still daylight time).
+        await AddPlainAnonymousAsync("p", 5, new DateTime(2026, 10, 28, 16, 0, 0, DateTimeKind.Utc));
+        await AddPlainAnonymousAsync("early", 1, new DateTime(2026, 11, 1, 4, 30, 0, DateTimeKind.Utc));
+        await using var session = _store.OpenSession();
+        var source = Source(session, Zones("America/New_York", "America/New_York"), SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+        var shownDay = new DateTime(2026, 11, 2, 5, 0, 0, DateTimeKind.Utc);
+
+        // Act: "Modified on 2 November", the day the rows of 1 November show as changed on (the end of their day).
+        var ids = await ReadIdsAsync(
+            source,
+            "SurveyResponses",
+            new DataCondition { Field = "ModifiedUtc", Operator = DataFilterOperator.GreaterThanOrEqual, Values = [shownDay] },
+            new DataCondition { Field = "ModifiedUtc", Operator = DataFilterOperator.LessThanOrEqual, Values = [shownDay.AddDays(1).AddSeconds(-1)] });
+
+        // Assert: the raw read starts at the start of 1 November in New York (04:00 UTC), not 24 hours before 2 November
+        // (05:00 UTC), so the response of its first hour is read.
+        Assert.Contains("early0", ids);
+    }
+
+    [Fact]
+    public async Task SurveyResponses_AnonymousLabels_StayWithTheirRowsAcrossPages()
+    {
+        // Arrange: R8-Mi34, more anonymous responses than one page of the read apart (500), on a survey with its secret,
+        // so each response has a keyed label.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await AddPlainAnonymousAsync("k", 505, _day);
+
+        await using (var write = _store.OpenSession())
+        {
+            var existing = await new SurveyStore(write).FindByIdAsync("survey2", cancellationToken);
+            existing.AnonymitySecret = "plain-test-secret";
+            await write.SaveAsync(existing, false, SurveysConstants.CollectionName, cancellationToken);
+            await write.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+        var store = new SurveyStore(session);
+        var services = new ServiceCollection()
+            .AddSingleton(store)
+            .AddSingleton(new SurveyAnonymitySecrets(new EphemeralDataProtectionProvider(), store, NullLogger<SurveyAnonymitySecrets>.Instance))
+            .AddSingleton(provider => new SurveyRespondentNames(provider, RecipeRoundTrip.Localizer<SurveyRespondentNames>()))
+            .BuildServiceProvider();
+        var source = Source(session, services, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act
+        var rows = await ReadAsync(source, "SurveyResponses", TestSecurity.User("kim"), maxRows: 1000);
+        var labels = rows.Where(row => row.Key != "r1").Select(row => (string)row.Value["Number"]).ToList();
+
+        // Assert: every anonymous row carries its own keyed label.
+        Assert.Equal(506, labels.Count);
+        Assert.All(labels, label => Assert.False(string.IsNullOrEmpty(label)));
+        Assert.Equal(labels.Count, labels.Distinct(StringComparer.Ordinal).Count());
     }
 
     // A condition every response passes that the data set evaluates on its documents, so the anonymous survey's count

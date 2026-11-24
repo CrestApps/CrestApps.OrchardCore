@@ -640,6 +640,8 @@ public sealed class SurveyResultsQueries
             return;
         }
 
+        // Up to four parameters per group: with the scope's other filters (no IN list of ids here), well under SQL
+        // Server's limit of 2,100 (see SurveyResponseGroupFilter.MaxGroups for the budget).
         if (groups.Count > SurveyResponseGroupFilter.MaxGroups)
         {
             throw new ArgumentException($"At most {SurveyResponseGroupFilter.MaxGroups} groups can be left out of one query.", nameof(groups));

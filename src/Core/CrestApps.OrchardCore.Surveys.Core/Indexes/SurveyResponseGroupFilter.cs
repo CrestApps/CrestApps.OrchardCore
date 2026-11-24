@@ -13,9 +13,14 @@ namespace CrestApps.OrchardCore.Surveys.Core.Indexes;
 public static class SurveyResponseGroupFilter
 {
     /// <summary>
-    /// The most groups one query leaves out: each takes up to four parameters, well under SQL Server's limit of 2,100.
+    /// The most groups one query leaves out. YesSql binds five parameters for each group (the test flag, survey, collector,
+    /// version and context kind), so the groups take up to 1,000. A query may also name up to
+    /// <see cref="Services.SurveyIdChunks.Size"/> (1,000) ids in one IN list, one parameter each, and about ten parameters
+    /// of other filters (statuses, context kinds, grading, a user, dates): about 2,010 in the worst case, under SQL
+    /// Server's limit of 2,100. A test runs that worst case on SQL Server. Raise neither this nor the chunk size without
+    /// lowering the other.
     /// </summary>
-    public const int MaxGroups = 250;
+    public const int MaxGroups = 200;
 
     /// <summary>
     /// Leaves the real responses of some groups out of a query.
