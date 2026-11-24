@@ -16,8 +16,8 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks
 {
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Starts sending queued broadcasts through the outreach engine, each recipient in a" +
-        "n individual 1:1 thread.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Broadcast Fan-out")]
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Starts sending queued broadcasts through the outreach engine; each recipient gets" +
+        " the message on their own, and a conversation opens when one replies.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Broadcast Fan-out")]
     public sealed class MessagingBroadcastBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
     {
         public MessagingBroadcastBackgroundTask() { }

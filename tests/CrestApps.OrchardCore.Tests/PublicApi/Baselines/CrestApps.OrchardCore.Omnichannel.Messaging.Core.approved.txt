@@ -415,6 +415,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public static void SetQuotedText(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, string quotedText) { }
         public static void SetSubject(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, string subject) { }
     }
+    public sealed class MessagingMessageOrigin
+    {
+        public MessagingMessageOrigin() { }
+        public bool IsAutomatic { get; set; }
+    }
+    public static class MessagingMessageOriginExtensions
+    {
+        public static bool IsAutomatic(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message) { }
+        public static void SetAutomatic(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, bool isAutomatic) { }
+    }
     public readonly struct MessagingQueuePolicy : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingQueuePolicy>
     {
         public MessagingQueuePolicy(bool Exists, int FirstResponseTargetSeconds, string BusinessHoursCalendarId) { }
@@ -895,7 +905,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers
 {
     public sealed class AutoReplyRouter : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRouter
     {
-        public AutoReplyRouter(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock) { }
+        public AutoReplyRouter(OrchardCore.ContentManagement.IContentManager contentManager, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
         public int Order { get; }
         public System.Threading.Tasks.Task<bool> TryRouteAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }

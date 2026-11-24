@@ -185,8 +185,8 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
         foreach (var row in rows.Where(row => !kept.Contains(row.Id)))
         {
             // The index row goes first: on SQL Server it has a foreign key to its document.
-            await IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {indexTable} WHERE {idColumn} = @Id", ("@Id", row.Id));
-            await IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {documentTable} WHERE {idColumn} = @DocumentId", ("@DocumentId", row.DocumentId));
+            await DeleteIndexRowAsync(indexTable, idColumn, row.Id);
+            await DeleteDocumentAsync(documentTable, idColumn, row.DocumentId);
         }
     }
 
@@ -251,8 +251,17 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
         foreach (var row in rows.Where(row => !kept.Contains(row.Id)))
         {
             // The index row goes first: on SQL Server it has a foreign key to its document.
-            await IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {indexTable} WHERE {idColumn} = @Id", ("@Id", row.Id));
-            await IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {documentTable} WHERE {idColumn} = @DocumentId", ("@DocumentId", row.DocumentId));
+            await DeleteIndexRowAsync(indexTable, idColumn, row.Id);
+            await DeleteDocumentAsync(documentTable, idColumn, row.DocumentId);
         }
     }
+
+    // Removes the index row of a duplicate record. Its document goes next; on SQL Server the index row has a foreign key
+    // to it, so the row goes first.
+    private Task DeleteIndexRowAsync(string indexTable, string idColumn, long id)
+        => IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {indexTable} WHERE {idColumn} = @Id", ("@Id", id));
+
+    // Removes the document of a duplicate record, once its index row is gone.
+    private Task DeleteDocumentAsync(string documentTable, string idColumn, long documentId)
+        => IndexMigrationSql.ExecuteAsync(SchemaBuilder, $"DELETE FROM {documentTable} WHERE {idColumn} = @DocumentId", ("@DocumentId", documentId));
 }

@@ -163,7 +163,7 @@ public sealed class EmailSuppressionList : IEmailSuppressionList
         // a deployment exporting it) never skips or repeats one.
         var items = await query
             .OrderByDescending(index => index.CreatedUtc)
-            .ThenByDescending(index => index.DocumentId)
+            .ThenByDescending(index => index.Id)
             .Skip(skip)
             .Take(size)
             .ListAsync(cancellationToken);

@@ -25,7 +25,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
     {
         public EmailDeliveryLog(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<int> CountAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> CountForRecipientAsync(string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> CountMessagesForRecipientAsync(string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> FindSendingAddressIdAsync(string messageId, string recipient, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTime?> GetLastBulkSentUtcAsync(string addressId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTime?> GetSentTimeAsync(string addressId, System.DateTime sinceUtc, int position, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default) { }
@@ -44,6 +44,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         Throttled = 1,
         Blocked = 2,
         HardBounce = 3,
+        Rejected = 4,
     }
     public enum EmailHealthLevel
     {
@@ -61,6 +62,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         public const int SoftBouncesBeforeSuppression = 3;
         public const double WarningBounceRate = 0.02D;
         public const double WarningComplaintRate = 0.001D;
+        public static readonly System.TimeSpan DeliveryLogRetention;
         public static readonly System.TimeSpan DomainBackoff;
         public static readonly System.TimeSpan DomainDeferralWindow;
         public static readonly System.TimeSpan SoftBounceWindow;
@@ -83,6 +85,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         public static CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendDecision Defer(System.DateTime retryAfterUtc, Microsoft.Extensions.Localization.LocalizedString reason) { }
         public static CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendDecision Refuse(Microsoft.Extensions.Localization.LocalizedString reason) { }
     }
+    public enum EmailSendKind
+    {
+        Reply = 0,
+        Automated = 1,
+        Bulk = 2,
+    }
     public sealed class EmailSendPacer : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelSendPacer
     {
         public EmailSendPacer(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSendingGovernor governor) { }
@@ -93,7 +101,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
     {
         public EmailSendingGovernor(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailDeliveryLog log, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSuppressionList suppressions, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSendingStateStore stateStore, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendingGovernor> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendingGovernor> stringLocalizer) { }
         public System.Threading.Tasks.Task CheckHealthAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendDecision> EvaluateAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, string recipient, bool isBulk, bool reserveTurn, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendDecision> EvaluateAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendKind kind, bool reserveTurn, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailAddressHealth> GetHealthAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task NoteDomainDeferralAsync(string addressId, string recipientDomain, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTime?> PauseAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingPauseKind kind, string reason, System.Threading.CancellationToken cancellationToken = default) { }
@@ -105,12 +113,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
     {
         public EmailSendingStateStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState> FindAsync(string addressId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState> FindFreshAsync(string addressId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task SaveAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState state, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class EmailSentMessageFinder : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSentMessageFinder
     {
         public EmailSentMessageFinder(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage> FindAsync(string messageId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EmailSuppressionConsentSource : CrestApps.OrchardCore.Consent.IConsentSource
+    {
+        public const string SourceName = "email-suppression-list";
+        public EmailSuppressionConsentSource(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSuppressionList suppressions) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<bool> HasOptedOutAsync(CrestApps.OrchardCore.Consent.ConsentQuery query, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordAsync(string channel, string address, CrestApps.OrchardCore.Consent.ConsentChange change, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class EmailSuppressionList : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSuppressionList
     {
@@ -132,7 +149,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
     public interface IEmailDeliveryLog
     {
         System.Threading.Tasks.Task<int> CountAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<int> CountForRecipientAsync(string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> CountMessagesForRecipientAsync(string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> FindSendingAddressIdAsync(string messageId, string recipient, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTime?> GetLastBulkSentUtcAsync(string addressId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTime?> GetSentTimeAsync(string addressId, System.DateTime sinceUtc, int position, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default);
@@ -143,7 +160,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
     public interface IEmailSendingGovernor
     {
         System.Threading.Tasks.Task CheckHealthAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendDecision> EvaluateAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, string recipient, bool isBulk, bool reserveTurn, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendDecision> EvaluateAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSendKind kind, bool reserveTurn, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailAddressHealth> GetHealthAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NoteDomainDeferralAsync(string addressId, string recipientDomain, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTime?> PauseAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingPauseKind kind, string reason, System.Threading.CancellationToken cancellationToken = default);
@@ -154,6 +171,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
     public interface IEmailSendingStateStore
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState> FindAsync(string addressId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState> FindFreshAsync(string addressId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task SaveAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState state, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IEmailSentMessageFinder
@@ -234,7 +252,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents
     }
     public sealed class MailgunDeliveryEventParser : CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents.IEmailDeliveryEventParser
     {
-        public MailgunDeliveryEventParser(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, OrchardCore.Modules.IClock clock) { }
+        public MailgunDeliveryEventParser(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents.MailgunDeliveryEventParser> logger) { }
         public string Name { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents.EmailDeliveryEventParseResult> ParseAsync(Microsoft.AspNetCore.Http.HttpRequest request, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailInboundSettings settings, System.Threading.CancellationToken cancellationToken = default) { }
         public static CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents.EmailDeliveryEvent Parse(System.Text.Json.JsonElement data) { }
@@ -314,7 +332,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound
     public sealed class EmailInboundReceiver : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.IEmailInboundReceiver
     {
         public const string InboxProviderName = "email";
-        public EmailInboundReceiver(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore attachmentStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Webhooks.IProviderWebhookInbox> inboxes, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Webhooks.IProviderWebhookInboxHandler> inboxHandlers, CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents.IEmailDeliveryEventProcessor deliveryEvents, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.EmailInboundReceiver> logger) { }
+        public EmailInboundReceiver(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentStore attachmentStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Webhooks.IProviderWebhookInbox> inboxes, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Webhooks.IProviderWebhookInboxHandler> inboxHandlers, CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents.IEmailDeliveryEventProcessor deliveryEvents, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSentMessageFinder sentMessages, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.EmailInboundReceiver> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.EmailInboundResult> ReceiveAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.InboundEmail email, string source, bool dispatch = true, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class EmailInboundResult
@@ -368,6 +386,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound
         public string InReplyTo { get; set; }
         public string MessageId { get; set; }
         public System.Collections.Generic.IList<string> References { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.InboundEmailAddress ReplyTo { get; set; }
         public string StrippedReply { get; set; }
         public string Subject { get; set; }
         public string TextBody { get; set; }
@@ -394,9 +413,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound
         public InboundEmailDeliveryReport() { }
         public string Action { get; set; }
         public string Diagnostic { get; set; }
+        public bool IsDeliveryStatus { get; }
         public bool IsPermanentFailure { get; }
         public string OriginalMessageId { get; set; }
         public string Recipient { get; set; }
+        public string ReportType { get; set; }
         public string Status { get; set; }
     }
     public static class MimeInboundEmailParser
@@ -522,6 +543,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models
         Throttled = 6,
         Complaint = 7,
         Unsubscribed = 8,
+        Rejected = 9,
     }
     public sealed class EmailDeliveryLogEntry
     {
@@ -586,6 +608,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models
         public bool IsAutoGenerated { get; set; }
         public string MessageId { get; set; }
         public System.Collections.Generic.IList<string> References { get; set; }
+        public string ReplyTo { get; set; }
     }
     public static class EmailMessageMetadataExtensions
     {
@@ -625,6 +648,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models
         public string PauseReason { get; set; }
         public System.DateTime? PausedUntilUtc { get; set; }
         public System.DateTime? PausedUtc { get; set; }
+        public System.DateTime? ResumedUtc { get; set; }
         public bool IsPaused(System.DateTime utcNow) { }
     }
     public sealed class EmailServerSettings
@@ -669,7 +693,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services
     }
     public sealed class EmailConnectionTester : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailConnectionTester
     {
-        public EmailConnectionTester(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.IEmailMailboxReader mailboxReader) { }
+        public EmailConnectionTester(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.IEmailMailboxReader mailboxReader, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailConnectionTester> logger) { }
         public System.Threading.Tasks.Task<string> TestImapAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailMailboxSettings mailbox, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> TestSmtpAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -698,7 +722,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services
     }
     public sealed class EmailOptOutService : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailOptOutService
     {
-        public EmailOptOutService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailOptOutService> logger) { }
+        public const string ConsentSource = "email-unsubscribe";
+        public EmailOptOutService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Consent.IConsentService consentService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailOptOutService> logger) { }
         public System.Threading.Tasks.Task<int> OptOutAsync(string address, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class EmailSecretProtector : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector
@@ -709,7 +734,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services
     }
     public sealed class EmailUnsubscribeLinks : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailUnsubscribeLinks
     {
-        public EmailUnsubscribeLinks(Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider, OrchardCore.Settings.ISiteService siteService) { }
+        public static readonly System.TimeSpan Lifetime;
+        public EmailUnsubscribeLinks(CrestApps.OrchardCore.Core.Services.SignedTokenService signedTokens, OrchardCore.Settings.ISiteService siteService) { }
         public System.Threading.Tasks.Task<string> CreateUrlAsync(string contactAddress, string serviceAddress, System.Threading.CancellationToken cancellationToken = default) { }
         public bool TryRead(string token, out string contactAddress, out string serviceAddress) { }
     }
@@ -766,6 +792,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports
         public const int SmtpSubmissionPort = 587;
         public const int TimeoutMilliseconds = 30000;
         public static System.Threading.Tasks.Task ConnectAsync(MailKit.IMailService client, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int port, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, System.Threading.CancellationToken cancellationToken) { }
+        public static string DescribeFailure(System.Exception exception) { }
+        public static bool IsSameAccount(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings stored, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings candidate, int defaultPort, int implicitTlsPort) { }
         public static int ResolvePort(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int defaultPort, int implicitTlsPort) { }
         public static MailKit.Security.SecureSocketOptions ToSocketOptions(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailConnectionSecurity security) { }
     }
@@ -864,7 +892,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks
     }
     public sealed class MailgunInboundEmailParser : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks.IInboundEmailWebhookParser
     {
-        public MailgunInboundEmailParser(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, OrchardCore.Modules.IClock clock) { }
+        public MailgunInboundEmailParser(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks.MailgunInboundEmailParser> logger) { }
         public string Name { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks.InboundEmailWebhookResult> ParseAsync(Microsoft.AspNetCore.Http.HttpRequest request, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailInboundSettings settings, System.Threading.CancellationToken cancellationToken = default) { }
         public static bool IsSignatureValid(string signingKey, string timestamp, string token, string signature, System.DateTime utcNow) { }

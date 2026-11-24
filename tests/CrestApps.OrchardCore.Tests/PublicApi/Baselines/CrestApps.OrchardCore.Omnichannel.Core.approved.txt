@@ -157,6 +157,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
     {
         public static bool IsValid(string address) { }
         public static string Normalize(string address) { }
+        public static string[] WithCanonicalForms(System.Collections.Generic.IEnumerable<string> addresses) { }
     }
     public static class StringExtensions
     {
@@ -277,6 +278,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public System.DateTime? DoNotEmailUtc { get; set; }
         public bool DoNotSms { get; set; }
         public System.DateTime? DoNotSmsUtc { get; set; }
+    }
+    public sealed class OmnichannelContactEmailAddressIndex : YesSql.Indexes.MapIndex, CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch
+    {
+        public const int EmailAddressLength = 255;
+        public OmnichannelContactEmailAddressIndex() { }
+        public string ContentItemId { get; set; }
+        public string ContentType { get; set; }
+        public long DocumentId { get; set; }
+        public bool IsConverted { get; set; }
+        public bool Latest { get; set; }
+        public string NormalizedEmailAddress { get; set; }
+        public bool Published { get; set; }
     }
     public sealed class OmnichannelContactIndex : YesSql.Indexes.MapIndex, CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch
     {

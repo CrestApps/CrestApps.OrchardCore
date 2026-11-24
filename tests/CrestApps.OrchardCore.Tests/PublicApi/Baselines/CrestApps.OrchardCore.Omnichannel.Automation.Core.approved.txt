@@ -2,6 +2,12 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Automation
 {
+    public sealed class AutomatedActivityScanCursors
+    {
+        public AutomatedActivityScanCursors() { }
+        public long FollowUp { get; set; }
+        public long OwedReply { get; set; }
+    }
     public sealed class AutomatedConversationHandler : CrestApps.OrchardCore.Omnichannel.Core.IOmnichannelEventHandler
     {
         public AutomatedConversationHandler(
@@ -79,6 +85,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Automation
                     OrchardCore.Locking.ILocalLock localLock,
                     YesSql.ISession session,
                     OrchardCore.Modules.IClock clock,
+                    CrestApps.OrchardCore.Omnichannel.Automation.AutomatedActivityScanCursors cursors,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedFollowUpService> logger) { }
         public System.Threading.Tasks.Task<int> SendDueAsync(System.DateTime deadlineUtc, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -90,7 +97,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Automation
     public sealed class AutomatedOwedReplyRecovery
     {
         public static readonly System.TimeSpan MaxOwedReplyAge;
-        public AutomatedOwedReplyRecovery(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Automation.IAutomatedMessagingChannel> channels, CrestApps.OrchardCore.Omnichannel.Automation.AutomatedConversationHandler handler, CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGate conversationGate, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedOwedReplyRecovery> logger) { }
+        public AutomatedOwedReplyRecovery(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Automation.IAutomatedMessagingChannel> channels, CrestApps.OrchardCore.Omnichannel.Automation.AutomatedConversationHandler handler, CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGate conversationGate, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, YesSql.ISession session, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.Omnichannel.Automation.AutomatedActivityScanCursors cursors, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedOwedReplyRecovery> logger) { }
         public System.Threading.Tasks.Task<int> RecoverAsync(System.DateTime deadlineUtc, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public interface IAutomatedMessagingChannel
