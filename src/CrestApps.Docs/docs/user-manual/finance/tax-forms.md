@@ -167,14 +167,7 @@ The statement prints the recipient fields you marked as printed, two to a row, i
 
 **W-2 box 12D** (a recipient field with no formula): tick **Pay codes report to it** and **Add up on the filing**, and choose **Printed when not zero**. On the 401(k) pay code, choose *Forms W-2 and W-3: 12 Code D* under **Tax form fields**. Box 1, `WAGES('IncomeTax')`, already leaves the deferral out because the pay code is a deduction taken before income tax.
 
-**T4 box 26** (pensionable earnings up to the year's maximum, only for someone who paid CPP or QPP):
-
-```text
-IF(HASTAX('CA-CPP', 'CA-QC-QPP'),
-   LEAST(VALUE('MaximumPensionableEarnings'),
-         GREATEST(WAGES('SocialInsurance'), IF(HASTAX('CA-QC-QPP'), TAXABLE('CA-QC-QPP'), TAXABLE('CA-CPP')))),
-   0)
-```
+**T4 box 26** (pensionable earnings up to the year's maximum, only for someone who paid CPP or QPP): `IF(HASTAX('CA-CPP', 'CA-QC-QPP'), LEAST(VALUE('MaximumPensionableEarnings'), GREATEST(WAGES('SocialInsurance'), IF(HASTAX('CA-QC-QPP'), TAXABLE('CA-QC-QPP'), TAXABLE('CA-CPP')))), 0)`. When the person paid neither, the box is 0.
 
 **Form 1099-NEC threshold**: recipient fields `1` `GROSS()` and `4` `TAX('US-BWH')`, the condition `[1] >= VALUE('ReportingThreshold') OR [4] > 0`, and the yearly value *ReportingThreshold* 600 from 1982 and 2,000 from 2026. The 1096's lines are filing fields `3` `RECIPIENTS()`, `4` `TOTAL('4')` and `5` `TOTAL('1')`.
 
