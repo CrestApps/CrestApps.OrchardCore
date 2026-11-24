@@ -49,13 +49,15 @@ internal sealed class SurveyWorkflowInputBuilder
         input["Respondent"] = anonymous ? null : response.Respondent?.ToString();
         input["Status"] = response.Status.ToString();
         input["Grading"] = response.Grading.ToString();
-        input["AttemptNumber"] = response.AttemptNumber;
+        // An anonymous response carries no attempt number (it ties a person's responses together) and its completion
+        // time by the day only (in UTC), as every other output of an anonymous survey.
+        input["AttemptNumber"] = anonymous ? null : response.AttemptNumber;
         input["Score"] = response.Score;
         input["MaxScore"] = response.MaxScore;
         input["Percent"] = response.Percent;
         input["Passed"] = response.Passed;
         input["IsTest"] = response.IsTest;
-        input["CompletedUtc"] = response.CompletedUtc?.ToString("O", CultureInfo.InvariantCulture);
+        input["CompletedUtc"] = (anonymous ? DayOf(response.CompletedUtc) : response.CompletedUtc)?.ToString("O", CultureInfo.InvariantCulture);
         input[SurveyWorkflowInput.Actor] = context.CausedByWorkflow ? SurveyWorkflowInput.WorkflowActor : context.ActorId ?? (anonymous ? null : response.UserId);
         input[SurveyWorkflowInput.CausedByWorkflow] = context.CausedByWorkflow;
         input[SurveyWorkflowInput.Anonymous] = anonymous;
@@ -83,6 +85,14 @@ internal sealed class SurveyWorkflowInputBuilder
 
         return input;
     }
+
+    /// <summary>
+    /// Gets the start of the day (in UTC) of a time, as anonymous responses show their times.
+    /// </summary>
+    /// <param name="utc">The time, in UTC.</param>
+    /// <returns>The start of its day, or <see langword="null"/>.</returns>
+    internal static DateTime? DayOf(DateTime? utc)
+        => utc is { } value ? DateTime.SpecifyKind(DateTime.SpecifyKind(value, DateTimeKind.Utc).Date, DateTimeKind.Utc) : null;
 
     /// <summary>
     /// Builds the input of a survey event.

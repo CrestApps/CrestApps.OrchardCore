@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
 using Dapper;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using YesSql;
 using YesSql.Services;
 
@@ -14,16 +16,19 @@ public sealed class SurveyListService
 {
     private readonly ISession _session;
     private readonly SurveyIndexReader _reader;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyListService"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     /// <param name="reader">Reads the surveys whose index rows wait for the reindex step.</param>
-    public SurveyListService(ISession session, SurveyIndexReader reader)
+    /// <param name="logger">The logger, or <see langword="null"/>.</param>
+    public SurveyListService(ISession session, SurveyIndexReader reader, ILogger<SurveyListService> logger = null)
     {
         _session = session;
         _reader = reader;
+        _logger = (ILogger)logger ?? NullLogger.Instance;
     }
 
     /// <summary>
@@ -60,16 +65,26 @@ public sealed class SurveyListService
                 .Select(survey => survey.ItemId)
                 .ToList();
 
-            if (staleTagged.Count == 0)
-            {
-                root = root.With<SurveyTagIndex>(index => index.Tag == tag);
-            }
-            else
+            if (staleTagged.Count > 0)
             {
                 var indexed = (await _session.QueryIndex<SurveyTagIndex>(index => index.Tag == tag, collection: SurveysConstants.CollectionName).ListAsync(cancellationToken))
                     .Select(row => row.SurveyId);
 
                 tagged = [.. indexed.Concat(staleTagged).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal)];
+
+                if (!SurveyIdChunks.FitsOneList(tagged.Length))
+                {
+                    // One IN list holds at most SurveyIdChunks.Size ids, so the tag index alone pages the surveys: every
+                    // indexed survey is listed, and those still waiting for the reindex step join the filter once it
+                    // reaches them. This is said in the log rather than cutting the list silently.
+                    _logger.LogWarning("The tag filter '{Tag}' matches {Count} surveys, {Stale} of them waiting for the reindex step; those are left out of the filter until the reindex step reaches them.", tag, tagged.Length, staleTagged.Count);
+                    tagged = null;
+                }
+            }
+
+            if (tagged is null)
+            {
+                root = root.With<SurveyTagIndex>(index => index.Tag == tag);
             }
         }
 
@@ -77,8 +92,8 @@ public sealed class SurveyListService
 
         if (tagged is not null)
         {
-            // Only while some surveys wait for the reindex step: one IN list holds at most SurveyIdChunks.Size ids.
-            var ids = tagged.Take(SurveyIdChunks.Size).ToArray();
+            // Only while some surveys wait for the reindex step, and only when they fit in one IN list (above).
+            var ids = tagged;
             q = q.Where(index => index.ItemId.IsIn(ids));
         }
 
@@ -116,8 +131,13 @@ public sealed class SurveyListService
             var staleOwned = stale
                 .Where(survey => string.Equals(survey.OwnerId, ownerId, StringComparison.Ordinal))
                 .Select(survey => survey.ItemId)
-                .Take(SurveyIdChunks.Size)
                 .ToArray();
+
+            if (!SurveyIdChunks.FitsOneList(staleOwned.Length))
+            {
+                _logger.LogWarning("{Count} surveys of the owner '{OwnerId}' wait for the reindex step; the first {Size} are listed until the reindex step reaches the rest.", staleOwned.Length, ownerId, SurveyIdChunks.Size);
+                staleOwned = staleOwned[..SurveyIdChunks.Size];
+            }
 
             q = staleOwned.Length == 0
                 ? q.Where(index => index.OwnerId == ownerId)

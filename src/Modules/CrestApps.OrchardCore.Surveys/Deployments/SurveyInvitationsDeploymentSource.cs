@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Recipes;
+using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore.Deployment;
 using YesSql;
 
@@ -18,6 +19,7 @@ internal sealed class SurveyInvitationsDeploymentSource : DeploymentSourceBase<S
     private readonly SurveyStore _surveyStore;
     private readonly SurveysRecipeExporter _exporter;
     private readonly SurveysExportAuthorizer _authorizer;
+    private readonly ISurveyAuditTrail _auditTrail;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationsDeploymentSource"/> class.
@@ -26,22 +28,31 @@ internal sealed class SurveyInvitationsDeploymentSource : DeploymentSourceBase<S
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="exporter">The exporter.</param>
     /// <param name="authorizer">The export authorizer.</param>
+    /// <param name="auditTrail">The audit trail, where each export (or refusal) is recorded.</param>
     public SurveyInvitationsDeploymentSource(
         ISession session,
         SurveyStore surveyStore,
         SurveysRecipeExporter exporter,
-        SurveysExportAuthorizer authorizer)
+        SurveysExportAuthorizer authorizer,
+        ISurveyAuditTrail auditTrail)
     {
         _session = session;
         _surveyStore = surveyStore;
         _exporter = exporter;
         _authorizer = authorizer;
+        _auditTrail = auditTrail;
     }
 
     /// <inheritdoc />
     protected override async Task ProcessAsync(SurveyInvitationsDeploymentStep step, DeploymentPlanResult result)
     {
         var invitations = new JsonArray();
+
+        var recipeStep = new JsonObject
+        {
+            ["name"] = SurveysRecipeSteps.Invitations,
+            [SurveysRecipeSteps.InvitationsSection] = invitations,
+        };
 
         if (await _authorizer.CanExportResponsesAsync())
         {
@@ -68,12 +79,14 @@ internal sealed class SurveyInvitationsDeploymentSource : DeploymentSourceBase<S
                     }
                 }
             }
+
+            await _authorizer.ExportedAsync(_auditTrail, SurveyAuditEvents.InvitationsExported, invitations.Count);
+        }
+        else
+        {
+            await _authorizer.RefusedAsync(_auditTrail, recipeStep, SurveysRecipeSteps.Invitations);
         }
 
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = SurveysRecipeSteps.Invitations,
-            [SurveysRecipeSteps.InvitationsSection] = invitations,
-        });
+        result.Steps.Add(recipeStep);
     }
 }

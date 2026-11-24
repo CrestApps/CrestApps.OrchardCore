@@ -44,21 +44,24 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
 
         var group = S["Response"].Value;
         var respondent = S["Respondent"].Value;
+        var other = S["Other"].Value;
 
         AddField("Id", S["Response ID"], DataFieldType.Text, row => row.Response.ItemId, group).IsIdentifier = true;
         // Response numbers are one sequence for the whole site, so an anonymous survey shows the start of the random id.
-        AddField("Number", S["Number"], DataFieldType.Text, row => SurveyAnonymity.ResponseLabel(row.Survey, row.Response), group);
+        AddField("Number", S["Number"], DataFieldType.Text, row => LabelOf(row.Response), group);
         AddField("SurveyId", S["Survey ID"], DataFieldType.Text, row => row.Response.SurveyId, group).IsIdentifier = true;
         AddField("SurveyName", S["Survey"], DataFieldType.Text, row => row.Survey?.Name, group);
-        AddField("VersionNumber", S["Version"], DataFieldType.Integer, row => (long)row.Response.VersionNumber, group);
+        // On an anonymous survey, the version, context kind and collector show only when enough completed responses
+        // share them (SurveyAnonymousAttributes), and there is no attempt number, which would tie a person's responses.
+        AddField("VersionNumber", S["Version"], DataFieldType.Integer, row => AttributesOf(row.Response).ShowsVersion ? (long)row.Response.VersionNumber : null, group);
         AddField("Status", S["Status"], DataFieldType.Text, row => row.Response.Status.ToString(), group);
         AddField("Grading", S["Grading"], DataFieldType.Text, row => row.Response.Grading.ToString(), group);
         AddField("Respondent", S["Respondent"], DataFieldType.Text, row => row.ShowsIdentity ? row.Response.Respondent?.ToString() : null, respondent);
         AddField("UserName", S["User name"], DataFieldType.Text, row => row.ShowsIdentity ? row.UserName : null, respondent);
-        AddField("ContextKind", S["Context kind"], DataFieldType.Text, row => row.Response.Context?.Kind, group);
+        AddField("ContextKind", S["Context kind"], DataFieldType.Text, row => row.Response.Context is null || AttributesOf(row.Response).ShowsContextKind ? row.Response.Context?.Kind : other, group);
         AddField("ContextId", S["Context ID"], DataFieldType.Text, row => IsAnonymous(row.Response.SurveyId) ? null : row.Response.Context?.Id, group).IsIdentifier = true;
-        AddField("Collector", S["Collector"], DataFieldType.Text, row => row.Collector, group);
-        AddField("Attempt", S["Attempt"], DataFieldType.Integer, row => (long)row.Response.AttemptNumber, group);
+        AddField("Collector", S["Collector"], DataFieldType.Text, row => string.IsNullOrEmpty(row.Response.CollectorId) || AttributesOf(row.Response).ShowsCollector ? row.Collector : other, group);
+        AddField("Attempt", S["Attempt"], DataFieldType.Integer, row => AttemptOf(row.Response), group);
         AddField("StartedUtc", S["Started"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.StartedUtc), group);
         AddField("CompletedUtc", S["Completed"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.CompletedUtc), group);
         AddField("DurationSeconds", S["Duration (seconds)"], DataFieldType.Integer, row => row.Response.CompletedUtc is { } completed && completed >= row.Response.StartedUtc ? (long)(completed - row.Response.StartedUtc).TotalSeconds : null, group);
@@ -68,7 +71,7 @@ internal sealed class SurveyResponsesDataSet : SurveysDataSetBase<SurveyResponse
         AddField("Passed", S["Passed"], DataFieldType.Boolean, row => row.Response.Passed, group);
         AddField("Ending", S["Ending"], DataFieldType.Text, row => row.Ending, group);
         AddField("IsTest", S["Test"], DataFieldType.Boolean, row => row.Response.IsTest, group);
-        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, row => TimeOf(row.Response.SurveyId, row.Response.ModifiedUtc), group);
+        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, row => ChangedOf(row.Response.SurveyId, row.Response.ModifiedUtc), group);
 
         foreach (var provider in _providers)
         {

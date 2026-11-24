@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -32,6 +34,10 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
 
     private readonly SurveyDataSetAccess _access;
     private readonly Dictionary<string, (Func<TRow, object> Read, DataFieldType Type)> _readers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SurveyAnonymousAttributes> _attributes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _labels = new(StringComparer.Ordinal);
+    private bool _prepared;
+    private bool _readableAll;
 
     private protected SurveysDataSetBase(
         DataSetDescriptor descriptor,
@@ -103,10 +109,16 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     /// <inheritdoc />
     protected override async Task<Func<IQueryIndex<TIndex>, IQueryIndex<TIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var (all, surveys) = await ReadableAsync(context, cancellationToken);
+        // LoadAsync reads the surveys first, to widen the date range of an anonymous survey before the index is read.
+        var all = _readableAll;
 
-        Surveys = surveys;
-        (Settings, TimeZone) = await _access.AnonymityAsync();
+        if (!_prepared)
+        {
+            await PrepareAsync(context, cancellationToken);
+            all = _readableAll;
+        }
+
+        _prepared = false;
 
         if (Surveys.Count == 0)
         {
@@ -128,15 +140,26 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
         // that survive the viewer's filters: the engine filters rows again after this read, so a filter on an answer (or
         // on the status) could otherwise narrow a released survey to one person. Each condition the engine passes down is
         // evaluated here before a response counts; a condition this can't evaluate counts nothing, which only hides more.
-        // A survey's rows wait until its completed, non-test responses reach the minimum, and each status waits until
-        // that many real responses share it; a group that never does is dropped. Test rows never count; they show once
-        // the survey's completed responses reach the minimum.
+        // A survey's rows show once its completed, non-test responses reach the minimum, and each status once that many
+        // real responses share it; a group that never does is dropped. Test rows never count; they show once the
+        // survey's completed responses reach the minimum. The collector, version and context kind of each row are groups
+        // too (SurveyAnonymousAttributes).
+        //
+        // An anonymous survey's rows are also held until the read ends, then written in the order of their response ids,
+        // so where a row sits among the rows read by time says nothing of when it came in; and only once the day they last
+        // changed on has ended in the site's time zone, when their change time (the data set's date) reads the end of that
+        // day. An incremental read, which keeps the rows whose change time is past the largest it read, then never skips
+        // one: a row is released at the time it reads.
         var conditions = (query.Conditions ?? [])
             .Where(condition => condition is not null && !_ungatedFields.Contains(condition.Field ?? string.Empty))
             .ToArray();
-        var groups = new Dictionary<string, AnonymousGroup>(StringComparer.Ordinal);
+        var held = new Dictionary<string, List<(TRow Row, SurveyResponse Response)>>(StringComparer.Ordinal);
+        var now = _access.UtcNow();
 
-        await foreach (var row in base.LoadAsync(query, cancellationToken))
+        await PrepareAsync(query.Context, cancellationToken);
+        _prepared = true;
+
+        await foreach (var row in base.LoadAsync(WholeDaysQuery(query), cancellationToken))
         {
             if (!Surveys.ContainsKey(SurveyIdOf(row) ?? string.Empty))
             {
@@ -154,21 +177,159 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
                 continue;
             }
 
-            if (!groups.TryGetValue(surveyId, out var group))
+            if (SurveyAnonymity.EndOfDayUtc(response.ModifiedUtc, TimeZone) > now)
             {
-                groups[surveyId] = group = new AnonymousGroup(minimum);
+                continue;
             }
 
-            if (!response.IsTest && Matches(row, conditions))
+            if (!held.TryGetValue(surveyId, out var rows))
             {
-                group.Count(response);
+                held[surveyId] = rows = [];
             }
 
-            foreach (var released in group.Add(row, response))
+            rows.Add((row, response));
+        }
+
+        foreach (var (surveyId, rows) in held)
+        {
+            foreach (var row in await ReleaseAsync(Surveys[surveyId], rows, conditions, cancellationToken))
             {
-                yield return released;
+                yield return row;
             }
         }
+    }
+
+    // Reads the surveys the principal may read, the site settings and the time zone, once per read.
+    private async Task PrepareAsync(DataSourceContext context, CancellationToken cancellationToken)
+    {
+        var (all, surveys) = await ReadableAsync(context, cancellationToken);
+
+        Surveys = surveys;
+        _readableAll = all;
+        (Settings, TimeZone) = await _access.AnonymityAsync();
+    }
+
+    // Decides which held rows of one anonymous survey show, and in which order.
+    private async Task<List<TRow>> ReleaseAsync(Survey survey, List<(TRow Row, SurveyResponse Response)> rows, DataCondition[] conditions, CancellationToken cancellationToken)
+    {
+        var minimum = SurveyAnonymity.MinimumGroupSize(survey, Settings);
+        var attributes = await AttributesAsync(survey, minimum, cancellationToken);
+
+        foreach (var (_, response) in rows)
+        {
+            if (!_labels.ContainsKey(response.ItemId ?? string.Empty))
+            {
+                _labels[response.ItemId ?? string.Empty] = await _access.LabelAsync(survey, response, cancellationToken);
+            }
+        }
+
+        var completed = new HashSet<string>(StringComparer.Ordinal);
+        var counted = new Dictionary<SurveyResponseStatus, HashSet<string>>();
+
+        foreach (var (row, response) in rows)
+        {
+            if (response.IsTest || attributes.Of(response).Hidden || !Matches(row, conditions))
+            {
+                continue;
+            }
+
+            if (!counted.TryGetValue(response.Status, out var ids))
+            {
+                counted[response.Status] = ids = new HashSet<string>(StringComparer.Ordinal);
+            }
+
+            ids.Add(response.ItemId ?? string.Empty);
+
+            if (CountsTowardGroupSize(response))
+            {
+                completed.Add(response.ItemId ?? string.Empty);
+            }
+        }
+
+        if (completed.Count < minimum)
+        {
+            return [];
+        }
+
+        // A status with no row that passes the filters stays hidden: the consumer would drop its rows anyway, and a row
+        // this data set misjudged must not slip out in a group of one.
+        bool Shows(SurveyResponse response)
+        {
+            if (response.IsTest)
+            {
+                return true;
+            }
+
+            var count = counted.GetValueOrDefault(response.Status)?.Count ?? 0;
+
+            return count >= minimum && SurveyGroupGate.ShowsStatus(minimum, completed.Count, count);
+        }
+
+        return rows
+            .Where(pair => !attributes.Of(pair.Response).Hidden && Shows(pair.Response))
+            .OrderBy(pair => pair.Response.ItemId, StringComparer.Ordinal)
+            .Select(pair => pair.Row)
+            .ToList();
+    }
+
+    // The small-group rule of the per-row attributes of an anonymous survey, counted once per read.
+    private async Task<SurveyAnonymousAttributes> AttributesAsync(Survey survey, int minimum, CancellationToken cancellationToken)
+    {
+        if (!_attributes.TryGetValue(survey.ItemId, out var attributes))
+        {
+            var queries = new SurveyResultsQueries(Session);
+
+            _attributes[survey.ItemId] = attributes = SurveyAnonymousAttributes.Create(
+                minimum,
+                await queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.CollectorId), cancellationToken),
+                await queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.VersionNumber), cancellationToken),
+                await queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.ContextKind), cancellationToken));
+        }
+
+        return attributes;
+    }
+
+    // A copy of the query whose date range, on a read that may hold an anonymous survey's rows, is widened to whole days
+    // in the site's time zone before it reaches the index: stepping the time of day of a filter can't tell, minute by
+    // minute, when an anonymous response changed. The engine filters every row again on its own conditions.
+    private DataSourceQuery WholeDaysQuery(DataSourceQuery query)
+    {
+        if (DateColumn is not { } dated || !Surveys.Values.Any(survey => SurveyAnonymity.MinimumGroupSize(survey, Settings) > 0))
+        {
+            return query;
+        }
+
+        var (from, to) = DataConditions.DateRange(query.Conditions, dated.Field);
+
+        if (from is null && to is null)
+        {
+            return query;
+        }
+
+        var conditions = (query.Conditions ?? [])
+            .Where(condition => condition is null || !string.Equals(condition.Field, dated.Field, StringComparison.Ordinal))
+            .ToList();
+
+        if (from is { } start && start > DateTime.MinValue.AddDays(2))
+        {
+            conditions.Add(new DataCondition { Field = dated.Field, Operator = DataFilterOperator.GreaterThanOrEqual, Values = [SurveyAnonymity.StartOfDayUtc(start, TimeZone)] });
+        }
+
+        if (to is { } end && end < DateTime.MaxValue.AddDays(-2))
+        {
+            conditions.Add(new DataCondition { Field = dated.Field, Operator = DataFilterOperator.LessThanOrEqual, Values = [SurveyAnonymity.EndOfDayUtc(end, TimeZone)] });
+        }
+
+        return new DataSourceQuery
+        {
+            DataSet = query.DataSet,
+            Fields = query.Fields,
+            Conditions = conditions,
+            MaxRows = query.MaxRows,
+            BatchSize = query.BatchSize,
+            Parameters = query.Parameters,
+            Context = query.Context,
+        };
     }
 
     /// <summary>
@@ -211,92 +372,6 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     }
 
     /// <summary>
-    /// The rows of one anonymous survey held back until their groups are large enough.
-    /// </summary>
-    private sealed class AnonymousGroup
-    {
-        private readonly int _minimum;
-        private readonly HashSet<string> _completed = new(StringComparer.Ordinal);
-        private readonly Dictionary<SurveyResponseStatus, HashSet<string>> _counted = [];
-        private readonly Dictionary<SurveyResponseStatus, List<TRow>> _held = [];
-        private readonly HashSet<SurveyResponseStatus> _released = [];
-        private readonly List<TRow> _heldTests = [];
-
-        public AnonymousGroup(int minimum)
-        {
-            _minimum = minimum;
-        }
-
-        public void Count(SurveyResponse response)
-        {
-            if (!_counted.TryGetValue(response.Status, out var ids))
-            {
-                _counted[response.Status] = ids = new HashSet<string>(StringComparer.Ordinal);
-            }
-
-            ids.Add(response.ItemId ?? string.Empty);
-
-            if (CountsTowardGroupSize(response))
-            {
-                _completed.Add(response.ItemId ?? string.Empty);
-            }
-        }
-
-        public List<TRow> Add(TRow row, SurveyResponse response)
-        {
-            var open = _completed.Count >= _minimum;
-
-            if (response.IsTest)
-            {
-                if (open)
-                {
-                    return [row];
-                }
-
-                _heldTests.Add(row);
-
-                return [];
-            }
-
-            if (_released.Contains(response.Status))
-            {
-                return [row];
-            }
-
-            if (!_held.TryGetValue(response.Status, out var rows))
-            {
-                _held[response.Status] = rows = [];
-            }
-
-            rows.Add(row);
-
-            return open ? Release() : [];
-        }
-
-        private List<TRow> Release()
-        {
-            var released = new List<TRow>(_heldTests);
-            _heldTests.Clear();
-
-            foreach (var (status, rows) in _held.ToArray())
-            {
-                // A status with no row that passes the filters stays held: the consumer would drop its rows anyway, and
-                // a row this data set misjudged must not slip out in a group of one.
-                var count = _counted.GetValueOrDefault(status)?.Count ?? 0;
-
-                if (count >= _minimum && SurveyGroupGate.ShowsStatus(_minimum, _completed.Count, count))
-                {
-                    _released.Add(status);
-                    _held.Remove(status);
-                    released.AddRange(rows);
-                }
-            }
-
-            return released;
-        }
-    }
-
-    /// <summary>
     /// Gets whether a response counts toward an anonymous survey's minimum group size: only completed, non-test
     /// responses do, as in the reports.
     /// </summary>
@@ -320,6 +395,69 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     /// <returns><see langword="true"/> when it is.</returns>
     protected bool IsAnonymous(string surveyId)
         => SurveyDataSetAccess.IsAnonymous(Surveys.GetValueOrDefault(surveyId ?? string.Empty));
+
+    /// <summary>
+    /// Gets the label of a response as a row shows it: its number on an identified survey, or on an anonymous survey a
+    /// keyed hash of its id (<see cref="SurveyAnonymity.ResponseLabel"/>), worked out before its rows are released.
+    /// </summary>
+    /// <param name="response">The response.</param>
+    /// <returns>The label.</returns>
+    protected string LabelOf(SurveyResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return IsAnonymous(response.SurveyId)
+            ? _labels.GetValueOrDefault(response.ItemId ?? string.Empty, string.Empty)
+            : SurveyAnonymity.ResponseLabel(Surveys.GetValueOrDefault(response.SurveyId ?? string.Empty), response, null);
+    }
+
+    /// <summary>
+    /// Gets what a row of a response may show of its collector, version and context kind: everything on an identified
+    /// survey; on an anonymous survey, only the values enough completed responses share (see
+    /// <see cref="SurveyAnonymousAttributes"/>).
+    /// </summary>
+    /// <param name="response">The response.</param>
+    /// <returns>What may show.</returns>
+    protected SurveyRowAttributes AttributesOf(SurveyResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return IsAnonymous(response.SurveyId) && _attributes.TryGetValue(response.SurveyId ?? string.Empty, out var attributes)
+            ? attributes.Of(response)
+            : IsAnonymous(response.SurveyId) ? new SurveyRowAttributes(false, false, false, false) : SurveyRowAttributes.All;
+    }
+
+    /// <summary>
+    /// Gets the attempt number a row of a response shows: none on an anonymous survey, where it would tie a person's
+    /// responses together.
+    /// </summary>
+    /// <param name="response">The response.</param>
+    /// <returns>The attempt number, or <see langword="null"/>.</returns>
+    protected long? AttemptOf(SurveyResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return IsAnonymous(response.SurveyId) ? null : response.AttemptNumber;
+    }
+
+    /// <summary>
+    /// Gets the change time of a response as a row shows it: as stored, in UTC, or for an anonymous survey the end of the
+    /// day it changed on in the site's time zone (the time its rows are released, so incremental reads skip none).
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="utc">The time, in UTC.</param>
+    /// <returns>The time to show, in UTC, or <see langword="null"/>.</returns>
+    protected DateTime? ChangedOf(string surveyId, DateTime? utc)
+    {
+        if (utc is not { } value)
+        {
+            return null;
+        }
+
+        return IsAnonymous(surveyId)
+            ? SurveyAnonymity.EndOfDayUtc(value, TimeZone)
+            : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    }
 
     /// <summary>
     /// Gets a time of a response as a row shows it: as stored, in UTC, or for an anonymous survey the start of its day.

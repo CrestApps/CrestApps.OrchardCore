@@ -271,4 +271,67 @@ public sealed class SurveysPortabilityOwnershipTests
 
     private static ClaimsPrincipal SignedIn()
         => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-admin1"), new Claim(ClaimTypes.Name, "admin1")], "Test"));
+
+    [Fact]
+    public void AnExportedAnonymousResponse_HasDayOnlyTimes_AndNoTimePerAnswer()
+    {
+        // Arrange: R6-M4, a response as SurveysRecipeJson writes it.
+        var node = new JsonObject
+        {
+            ["StartedUtc"] = "2026-11-10T10:31:05Z",
+            ["LastActivityUtc"] = new DateTime(2026, 11, 10, 10, 40, 0, DateTimeKind.Utc),
+            ["CompletedUtc"] = "2026-11-10T10:41:09.123Z",
+            ["Answers"] = new JsonObject
+            {
+                ["q1"] = new JsonObject { ["Values"] = new JsonArray("red"), ["AnsweredUtc"] = "2026-11-10T10:33:00Z", ["CheckedUtc"] = "2026-11-10T10:33:01Z" },
+            },
+            ["PageVisits"] = new JsonArray(new JsonObject { ["EnteredUtc"] = "2026-11-10T10:32:00Z" }),
+        };
+
+        // Act
+        SurveysRecipeExporter.DaysOnly(node);
+        var json = node.ToJsonString();
+
+        // Assert
+        Assert.DoesNotContain("10:3", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("10:4", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("AnsweredUtc", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("CheckedUtc", json, StringComparison.Ordinal);
+        Assert.Equal(new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc), node["CompletedUtc"]!.GetValue<DateTime>());
+        Assert.Equal(new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc), node["PageVisits"]![0]!["EnteredUtc"]!.GetValue<DateTime>());
+    }
+
+    [Fact]
+    public async Task InvitationAndAccommodationSteps_WithoutTheExportPermission_SayWhyTheyAreEmpty()
+    {
+        // Arrange: R6-L27, a refusal must be visible, not an empty step that looks like nothing to export.
+        var authorization = new Mock<IAuthorizationService>();
+        authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+        await using var harness = await DeploymentHarnessAsync(authorization.Object);
+
+        // Act
+        var steps = await harness.RunAsync(async services =>
+        {
+            services.GetRequiredService<IHttpContextAccessor>().HttpContext = new DefaultHttpContext { User = SignedIn() };
+
+            try
+            {
+                var result = new DeploymentPlanResult(Mock.Of<IFileBuilder>(), new RecipeDescriptor());
+
+                await services.GetRequiredService<SurveyInvitationsDeploymentSource>().ProcessDeploymentStepAsync(new SurveyInvitationsDeploymentStep(), result);
+                await services.GetRequiredService<SurveyOverridesDeploymentSource>().ProcessDeploymentStepAsync(new SurveyOverridesDeploymentStep(), result);
+
+                return result.Steps.ToList();
+            }
+            finally
+            {
+                services.GetRequiredService<IHttpContextAccessor>().HttpContext = null;
+            }
+        });
+
+        // Assert
+        Assert.Equal(2, steps.Count);
+        Assert.All(steps, step => Assert.False(string.IsNullOrEmpty(step[SurveysExportAuthorizer.RefusedProperty]?.GetValue<string>())));
+    }
 }

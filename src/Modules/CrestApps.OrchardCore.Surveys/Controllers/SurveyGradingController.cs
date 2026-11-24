@@ -432,7 +432,7 @@ public sealed class SurveyGradingController : Controller
             SurveyTitle = survey?.Title,
             CanChangeScores = await CanChangeScoresAsync(survey, response),
             RespondentName = await RespondentNameAsync(response),
-            Label = SurveyAnonymity.ResponseLabel(survey, response),
+            Label = await HttpContext.RequestServices.GetRequiredService<SurveyRespondentNames>().GetLabelAsync(survey, response, HttpContext.RequestAborted),
             IsAnonymous = survey is null || SurveyAnonymity.IsAnonymous(survey),
             Feedback = response.Feedback,
         };

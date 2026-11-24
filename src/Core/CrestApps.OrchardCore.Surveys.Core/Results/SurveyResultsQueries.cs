@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -220,6 +221,36 @@ public sealed class SurveyResultsQueries
             {
                 counts[value] = counts.GetValueOrDefault(value) + SurveyIndexSql.Long(item["Total"]);
             }
+        }
+
+        return counts;
+    }
+
+    /// <summary>
+    /// Counts the completed, non-test responses of a survey by each value of one index column (the collector, the
+    /// version number or the context kind), for the small-group rule of the per-row attributes of an anonymous survey.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="column">The name of the <see cref="SurveyResponseIndex"/> column.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The counts, by the column's value as invariant text (empty for none).</returns>
+    public async Task<IReadOnlyDictionary<string, long>> CountCompletedByAsync(string surveyId, string column, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(column);
+
+        var value = _sql.Column(column);
+        var builder = _sql.Builder<SurveyResponseIndex>(SurveysConstants.ResponsesCollectionName);
+        var parameters = new DynamicParameters();
+        builder.Selector($"{value} AS GroupValue, COUNT(*) AS Total");
+        Where(builder, parameters, new SurveyResultsScope { SurveyId = surveyId, CompletedOnly = true, IncludeTest = false });
+        builder.GroupBy(value);
+
+        var counts = new Dictionary<string, long>(StringComparer.Ordinal);
+
+        foreach (var item in await _sql.QueryAsync(builder, parameters, cancellationToken))
+        {
+            var key = item["GroupValue"] is null or DBNull ? string.Empty : Convert.ToString(item["GroupValue"], CultureInfo.InvariantCulture);
+            counts[key] = counts.GetValueOrDefault(key) + SurveyIndexSql.Long(item["Total"]);
         }
 
         return counts;

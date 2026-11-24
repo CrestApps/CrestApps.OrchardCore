@@ -29,6 +29,17 @@ public class SurveyResponseDetailsViewModel
     public string RespondentName { get; set; }
 
     /// <summary>
+    /// Gets or sets the label staff see for the response: its number, or a keyed code on an anonymous survey.
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the response's version number may show. On an anonymous survey, a version too few completed
+    /// responses share is not shown.
+    /// </summary>
+    public bool ShowsVersion { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the question shapes with all details, page by page.
     /// </summary>
     public IList<IShape> Questions { get; set; } = [];

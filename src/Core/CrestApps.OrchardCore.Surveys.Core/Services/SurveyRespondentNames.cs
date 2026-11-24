@@ -1,5 +1,8 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using YesSql;
+using ISession = YesSql.ISession;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Users;
@@ -29,6 +32,7 @@ public sealed class SurveyRespondentNames
     private readonly IServiceProvider _serviceProvider;
     private readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Survey> _surveys = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _secrets = new(StringComparer.Ordinal);
 
     internal readonly IStringLocalizer S;
 
@@ -170,7 +174,7 @@ public sealed class SurveyRespondentNames
 
     /// <summary>
     /// Gets the label staff see for a response (see <see cref="SurveyAnonymity.ResponseLabel"/>): its number, or on an
-    /// anonymous (or unknown) survey the start of its random id.
+    /// anonymous (or unknown) survey a keyed hash of its id under the survey's anonymity secret.
     /// </summary>
     /// <param name="response">The response.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -179,7 +183,100 @@ public sealed class SurveyRespondentNames
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        return SurveyAnonymity.ResponseLabel(await SurveyOfAsync(response.SurveyId, cancellationToken), response);
+        var survey = await SurveyOfAsync(response.SurveyId, cancellationToken);
+
+        return SurveyAnonymity.ResponseLabel(survey, response, await SecretOfAsync(survey, cancellationToken));
+    }
+
+    /// <summary>
+    /// Gets the label staff see for a response of a survey already loaded, which may be a summary without its secret.
+    /// </summary>
+    /// <param name="survey">The survey, or <see langword="null"/> to look it up.</param>
+    /// <param name="response">The response.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The label.</returns>
+    public async Task<string> GetLabelAsync(Survey survey, SurveyResponse response, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        if (survey is not null && !SurveyAnonymity.IsAnonymous(survey))
+        {
+            return SurveyAnonymity.ResponseLabel(survey, response, null);
+        }
+
+        return await GetLabelAsync(response, cancellationToken);
+    }
+
+    /// <summary>
+    /// Finds the responses of an anonymous survey whose label is a text, ignoring case and surrounding spaces: the
+    /// label is a keyed hash, so the survey's response ids are read from the index and hashed, a page at a time.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="label">The label searched for.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The ids of the matching responses; usually one, or none.</returns>
+    public async Task<IReadOnlyList<string>> FindByLabelAsync(Survey survey, string label, CancellationToken cancellationToken = default)
+    {
+        var search = label?.Trim().ToLowerInvariant();
+
+        if (survey is null || string.IsNullOrEmpty(search) || search.Length != SurveyAnonymity.AnonymousLabelLength
+            || _serviceProvider.GetService<ISession>() is not { } session)
+        {
+            return [];
+        }
+
+        var secret = await SecretOfAsync(await SurveyOfAsync(survey.ItemId, cancellationToken) ?? survey, cancellationToken);
+        var surveyId = survey.ItemId;
+        var matches = new List<string>();
+        var lastId = 0L;
+
+        while (true)
+        {
+            var rows = (await session.QueryIndex<SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Id > lastId, collection: SurveysConstants.ResponsesCollectionName)
+                .OrderBy(index => index.Id)
+                .Take(LabelSearchPageSize)
+                .ListAsync(cancellationToken)).ToList();
+
+            matches.AddRange(rows
+                .Where(row => string.Equals(SurveyAnonymity.AnonymousLabel(secret, row.ItemId), search, StringComparison.Ordinal))
+                .Select(row => row.ItemId));
+
+            if (rows.Count < LabelSearchPageSize)
+            {
+                return matches;
+            }
+
+            lastId = rows[^1].Id;
+        }
+    }
+
+    // How many index rows a label search reads at a time.
+    private const int LabelSearchPageSize = 2000;
+
+    // The anonymity secret of an anonymous survey in plain text, read once per scope; empty when it can't be read on
+    // this node (the labels are then empty rather than guessable).
+    private async Task<string> SecretOfAsync(Survey survey, CancellationToken cancellationToken)
+    {
+        if (survey is null || !SurveyAnonymity.IsAnonymous(survey) || _serviceProvider.GetService<SurveyAnonymitySecrets>() is not { } secrets)
+        {
+            return null;
+        }
+
+        if (!_secrets.TryGetValue(survey.ItemId ?? string.Empty, out var secret))
+        {
+            try
+            {
+                secret = await secrets.RevealAsync(survey, cancellationToken);
+            }
+            catch (SurveyAnonymitySecretUnreadableException)
+            {
+                secret = null;
+            }
+
+            _secrets[survey.ItemId ?? string.Empty] = secret;
+        }
+
+        return secret;
     }
 
     private async Task<Survey> SurveyOfAsync(string surveyId, CancellationToken cancellationToken)

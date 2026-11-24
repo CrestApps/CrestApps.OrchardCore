@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.AuditTrail;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Integrations;
@@ -17,7 +19,7 @@ public sealed class SurveysAuditTrailObserverTests
     {
         // Arrange
         var auditTrail = new Mock<ISurveyAuditTrail>();
-        var observer = new SurveysAuditTrailObserver(auditTrail.Object);
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
 
         // Act: a respondent's reopen has no actor.
         await observer.ReopenedAsync(Context(AnonymityMode.Anonymous, actorId: null));
@@ -31,7 +33,7 @@ public sealed class SurveysAuditTrailObserverTests
     {
         // Arrange
         var auditTrail = new Mock<ISurveyAuditTrail>();
-        var observer = new SurveysAuditTrailObserver(auditTrail.Object);
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
 
         // Act
         await observer.ReopenedAsync(Context(AnonymityMode.Identified, actorId: null));
@@ -45,7 +47,7 @@ public sealed class SurveysAuditTrailObserverTests
     {
         // Arrange
         var auditTrail = new Mock<ISurveyAuditTrail>();
-        var observer = new SurveysAuditTrailObserver(auditTrail.Object);
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
 
         // Act
         await observer.VoidedAsync(Context(AnonymityMode.Anonymous, actorId: "admin-id"));
@@ -59,7 +61,7 @@ public sealed class SurveysAuditTrailObserverTests
     {
         // Arrange
         var auditTrail = new Mock<ISurveyAuditTrail>();
-        var observer = new SurveysAuditTrailObserver(auditTrail.Object);
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
 
         // Act: a retention delete is a system event, with no actor.
         await observer.DeletedAsync(Context(AnonymityMode.Anonymous, actorId: null));
@@ -75,4 +77,7 @@ public sealed class SurveysAuditTrailObserverTests
             Response = new SurveyResponse { ItemId = "r1", SurveyId = "s1" },
             ActorId = actorId,
         };
+
+    private static CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames Names()
+        => new(new ServiceCollection().BuildServiceProvider(), RecipeRoundTrip.Localizer<CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames>());
 }

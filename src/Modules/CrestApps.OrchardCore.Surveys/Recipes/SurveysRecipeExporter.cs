@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Surveys.Core.Services;
@@ -168,6 +169,11 @@ internal sealed class SurveysRecipeExporter
             if (anonymous.Contains(response.SurveyId))
             {
                 node.Remove(nameof(SurveyResponse.Number));
+
+                // Exact times would line an anonymous response up with what an identified response, or anything else
+                // that says when a person finished, records: its times go out by the day only (in UTC, a machine format),
+                // and the time of each answer not at all.
+                DaysOnly(node);
             }
 
             if (!string.IsNullOrEmpty(response.CollectorId) && collectorNames.TryGetValue(response.CollectorId, out var collectorName))
@@ -195,6 +201,57 @@ internal sealed class SurveysRecipeExporter
         }
 
         return array;
+    }
+
+    // The property names whose times an anonymous response leaves out instead of cutting to the day: when each answer
+    // was given or checked.
+    private static readonly HashSet<string> _droppedTimes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(SurveyAnswer.AnsweredUtc),
+        nameof(SurveyAnswer.CheckedUtc),
+    };
+
+    /// <summary>
+    /// Cuts every time of an exported anonymous response (each property whose name ends in <c>Utc</c>, at any depth) to
+    /// the start of its day in UTC, and removes the times of its answers.
+    /// </summary>
+    /// <param name="node">The exported response.</param>
+    internal static void DaysOnly(JsonNode node)
+    {
+        switch (node)
+        {
+            case JsonObject value:
+                foreach (var (name, child) in value.ToList())
+                {
+                    if (!name.EndsWith("Utc", StringComparison.OrdinalIgnoreCase))
+                    {
+                        DaysOnly(child);
+                    }
+                    else if (_droppedTimes.Contains(name))
+                    {
+                        value.Remove(name);
+                    }
+                    else if (child is JsonValue time && time.TryGetValue<DateTime>(out var utc))
+                    {
+                        value[name] = DateTime.SpecifyKind(DateTime.SpecifyKind(utc, DateTimeKind.Utc).Date, DateTimeKind.Utc);
+                    }
+                    else if (child is JsonValue text && text.TryGetValue<string>(out var raw)
+                        && DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var parsed))
+                    {
+                        value[name] = DateTime.SpecifyKind(parsed.Date, DateTimeKind.Utc);
+                    }
+                }
+
+                break;
+
+            case JsonArray items:
+                foreach (var item in items)
+                {
+                    DaysOnly(item);
+                }
+
+                break;
+        }
     }
 
     /// <summary>

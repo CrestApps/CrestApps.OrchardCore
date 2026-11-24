@@ -290,6 +290,75 @@ public sealed class SurveysPersonalDataContributorTests
     }
 
     [Fact]
+    public async Task Erasure_WithInvitationUniqueness_KeepsALinksParticipationSomeoneElseUsedToo()
+    {
+        // Arrange: R6-L27, as above, but someone else answered through the same (forwarded) link, so the link's
+        // participation row counts them too.
+        const string userId = "user-learner1";
+        var responseId = IdGenerator.GenerateId();
+        var invitation = new SurveyInvitation { ItemId = IdGenerator.GenerateId(), SurveyId = "byinvite", Email = "team-inbox@example.com", Status = SurveyInvitationStatus.Completed };
+        string invitationKey = null;
+        await using var harness = await IntegrationsTestHarness.CreateAsync(services => services.AddScoped<SurveysPersonalDataContributor>());
+        await harness.RunAsync(async services =>
+        {
+            var survey = IntegrationsTestHarness.NewSurvey("byinvite", "byinvite");
+            survey.Access.Limits = new RespondentLimits { Uniqueness = UniquenessMode.Invitation };
+            await services.GetRequiredService<SurveyStore>().CreateAsync(survey);
+            invitationKey = SurveyRespondentKeys.For(survey, null, new SurveyRespondentIdentity { UserId = userId }, invitation);
+
+            await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(invitation);
+            await services.GetRequiredService<SurveyParticipationStore>().CreateAsync(new SurveyParticipation { ItemId = IdGenerator.GenerateId(), SurveyId = "byinvite", RespondentKey = invitationKey, Day = new DateOnly(2026, 11, 1), CompletedCount = 1 });
+            await services.GetRequiredService<SurveyResponseStore>().CreateAsync(new SurveyResponse
+            {
+                ItemId = responseId,
+                SurveyId = "byinvite",
+                Number = "R1",
+                UserId = userId,
+                InvitationId = invitation.ItemId,
+                Status = SurveyResponseStatus.Completed,
+            });
+            await services.GetRequiredService<SurveyResponseStore>().CreateAsync(new SurveyResponse
+            {
+                ItemId = IdGenerator.GenerateId(),
+                SurveyId = "byinvite",
+                Number = "R2",
+                UserId = "user-someone-else",
+                InvitationId = invitation.ItemId,
+                Status = SurveyResponseStatus.Completed,
+            });
+        });
+
+        // Act
+        var export = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataExport();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().ExportAsync(new PersonalDataExportContext(new PersonalDataSubject(userId), result));
+
+            return result;
+        });
+
+        var erased = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataAnonymizeResult();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject(userId), "[removed]", result));
+
+            return result;
+        });
+
+        // Assert: the person's response loses everything that names them, and the shared row stays, so erasing one person
+        // doesn't give the link's uses back to everyone who has it.
+        Assert.Equal("i:" + invitation.ItemId, invitationKey);
+        Assert.DoesNotContain(export.Records, item => item.Kind == "SurveyParticipation");
+        Assert.False(erased.Records.ContainsKey("SurveyParticipation"));
+        var (response, participationLeft) = await harness.RunAsync(async services => (
+            await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(responseId),
+            await services.GetRequiredService<SurveyParticipationStore>().GetAllAsync()));
+        Assert.Null(response.UserId);
+        Assert.Null(response.InvitationId);
+        Assert.Single(participationLeft);
+    }
+
+    [Fact]
     public async Task Erasure_OfAResponseInProgress_ClearsItsKey_SoTheDeadlineCompletionWritesNoParticipationBack()
     {
         // Arrange: a timed survey the person started while signed in; the start is counted under u:{id}.

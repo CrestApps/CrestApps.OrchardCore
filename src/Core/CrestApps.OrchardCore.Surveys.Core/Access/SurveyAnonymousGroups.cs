@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Results;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,7 @@ public sealed class SurveyAnonymousGroups
 {
     private readonly SurveyResultsQueries _queries;
     private readonly IServiceProvider _serviceProvider;
+    private readonly Dictionary<string, SurveyAnonymousAttributes> _attributes = new(StringComparer.Ordinal);
     private SurveySettings _settings;
     private bool _settingsRead;
 
@@ -84,6 +86,35 @@ public sealed class SurveyAnonymousGroups
         }
 
         return (await DecideAsync(survey, null, [response.Status], cancellationToken)).Shows(response.Status, response.IsTest);
+    }
+
+    /// <summary>
+    /// Gets the small-group rule of the attributes each row of a survey prints (collector, version, context kind),
+    /// counted on all of the survey's completed, non-test responses: <see cref="SurveyAnonymousAttributes.Open"/> for an
+    /// identified survey. Counted once per survey and scope.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The rule.</returns>
+    public async Task<SurveyAnonymousAttributes> AttributesAsync(Survey survey, CancellationToken cancellationToken = default)
+    {
+        var minimum = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
+
+        if (minimum == 0 || string.IsNullOrEmpty(survey?.ItemId))
+        {
+            return SurveyAnonymousAttributes.Open;
+        }
+
+        if (!_attributes.TryGetValue(survey.ItemId, out var attributes))
+        {
+            _attributes[survey.ItemId] = attributes = SurveyAnonymousAttributes.Create(
+                minimum,
+                await _queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.CollectorId), cancellationToken),
+                await _queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.VersionNumber), cancellationToken),
+                await _queries.CountCompletedByAsync(survey.ItemId, nameof(SurveyResponseIndex.ContextKind), cancellationToken));
+        }
+
+        return attributes;
     }
 
     private static SurveyResultsScope RealOf(Survey survey, SurveyResultsScope narrowing)

@@ -8,7 +8,8 @@ namespace CrestApps.OrchardCore.Surveys.Webhooks;
 internal static class SurveyWebhookPayloads
 {
     /// <summary>
-    /// Builds the payload of a response event. An anonymous response carries no user, respondent or IP address.
+    /// Builds the payload of a response event. An anonymous response carries no user, respondent, IP address or attempt
+    /// number, and its times by the day only.
     /// </summary>
     /// <param name="survey">The survey, or <see langword="null"/>.</param>
     /// <param name="response">The response.</param>
@@ -34,13 +35,15 @@ internal static class SurveyWebhookPayloads
             ["respondent"] = anonymous ? null : response.Respondent?.ToString(),
             ["collectorId"] = response.CollectorId,
             ["context"] = response.Context?.ToString(),
-            ["attemptNumber"] = response.AttemptNumber,
+            // An anonymous response carries no attempt number (it ties a person's responses together) and its times by
+            // the day only, in UTC. The delivery itself follows the response, so a receiver must not log when it arrived.
+            ["attemptNumber"] = anonymous ? null : response.AttemptNumber,
             ["score"] = response.Score,
             ["maxScore"] = response.MaxScore,
             ["percent"] = response.Percent,
             ["passed"] = response.Passed,
-            ["startedUtc"] = response.StartedUtc,
-            ["completedUtc"] = response.CompletedUtc,
+            ["startedUtc"] = anonymous ? Workflows.SurveyWorkflowInputBuilder.DayOf(response.StartedUtc) : response.StartedUtc,
+            ["completedUtc"] = anonymous ? Workflows.SurveyWorkflowInputBuilder.DayOf(response.CompletedUtc) : response.CompletedUtc,
             ["properties"] = response.Properties,
         };
     }

@@ -105,11 +105,23 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
             surveyIds = allowed.ToList();
         }
 
-        var (hidden, listsAnonymous) = await AnonymousSurveysAsync(surveyIds, cancellationToken);
+        var (hidden, listsAnonymous, pending) = await AnonymousSurveysAsync(surveyIds, cancellationToken);
 
         if (!string.IsNullOrEmpty(surveyId) && hidden.Contains(surveyId))
         {
             return (0, []);
+        }
+
+        if (surveyIds.Count == 0 && !SurveyIdChunks.FitsOneList(hidden.Count))
+        {
+            // More hidden surveys than one NOT IN list holds: the queue names the surveys with responses to grade
+            // instead, which the response queries read a chunk at a time.
+            surveyIds = [.. pending.Where(id => !hidden.Contains(id))];
+
+            if (surveyIds.Count == 0)
+            {
+                return (0, []);
+            }
         }
 
         return await _queries.ListAsync(new SurveyResponseQuery
@@ -142,7 +154,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
     /// (a grader can't open their answers one at a time before there is a crowd to hide in), and whether the queue
     /// lists any other anonymous survey.
     /// </summary>
-    private async Task<(HashSet<string> Hidden, bool ListsAnonymous)> AnonymousSurveysAsync(List<string> surveyIds, CancellationToken cancellationToken)
+    private async Task<(HashSet<string> Hidden, bool ListsAnonymous, string[] Pending)> AnonymousSurveysAsync(List<string> surveyIds, CancellationToken cancellationToken)
     {
         var hidden = new HashSet<string>(StringComparer.Ordinal);
         var listsAnonymous = false;
@@ -152,7 +164,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
 
         if (pending.Length == 0)
         {
-            return (hidden, false);
+            return (hidden, false, pending);
         }
 
         // Summaries from the survey index (the anonymity and the minimum are all that is read), a chunk of ids at a time
@@ -188,7 +200,7 @@ public sealed class SurveyGradingQueue : ISurveyGradingQueue
             }
         }
 
-        return (hidden, listsAnonymous);
+        return (hidden, listsAnonymous, pending);
     }
 
     /// <inheritdoc />

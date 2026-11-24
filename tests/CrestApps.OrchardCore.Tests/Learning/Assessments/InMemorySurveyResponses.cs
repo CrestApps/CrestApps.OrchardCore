@@ -42,6 +42,8 @@ internal sealed class InMemorySurveyResponses : ISurveyResponseQueries
             .Where(response => query.Statuses.Count == 0 || query.Statuses.Contains(response.Status))
             .Where(response => query.Grading is null || response.Grading == query.Grading)
             .Where(response => query.ContextKinds.Count == 0 || (response.Context is { } context && query.ContextKinds.Contains(context.Kind)))
+            .Where(response => query.CompletedFromUtc is null || response.CompletedUtc >= query.CompletedFromUtc)
+            .Where(response => query.CompletedToUtc is null || response.CompletedUtc < query.CompletedToUtc)
             .ToList();
 
         matches = query.OrderById

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Surveys.Core.Results;
@@ -46,15 +47,23 @@ internal sealed class SurveyActivityReport : IReport
         ArgumentNullException.ThrowIfNull(context);
 
         var range = context.Filter.GetDateRange();
+        var from = range.FromUtc;
         var to = range.ToUtc is { } end && end.Ticks < DateTime.MaxValue.Ticks ? end.AddTicks(1) : (DateTime?)null;
         var rows = new List<(string Title, long Completed, long Pending)>();
         var readable = await _data.ListReadableAsync(context.User, cancellationToken);
+
+        if (readable.Any(SurveyAnonymity.IsAnonymous))
+        {
+            // With an anonymous survey among them, the counts are of whole days in the site's time zone: stepping the
+            // filter's time of day would otherwise tell, minute by minute, when an anonymous response came in.
+            (from, to) = SurveyAnonymity.WholeDays(from, to, await _data.SiteTimeZoneAsync());
+        }
 
         if (readable.Count > 0)
         {
             // Two grouped counts for every readable survey at once (by chunks of survey ids), not two queries per survey.
             var all = await _data.CanReadEverySurveyAsync(context.User, cancellationToken);
-            var counts = await _queries.CountActivityAsync(all ? null : readable.Select(survey => survey.ItemId), range.FromUtc, to, cancellationToken);
+            var counts = await _queries.CountActivityAsync(all ? null : readable.Select(survey => survey.ItemId), from, to, cancellationToken);
 
             foreach (var survey in readable)
             {

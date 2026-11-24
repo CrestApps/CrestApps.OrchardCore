@@ -103,6 +103,25 @@ internal sealed class SurveyDataSetAccess
     }
 
     /// <summary>
+    /// Gets the current time, in UTC.
+    /// </summary>
+    /// <returns>The time.</returns>
+    public DateTime UtcNow()
+        => _serviceProvider.GetService<IClock>()?.UtcNow ?? DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets the label staff see for a response (<see cref="SurveyRespondentNames.GetLabelAsync(Survey, SurveyResponse, CancellationToken)"/>).
+    /// </summary>
+    /// <param name="survey">The survey, possibly a summary.</param>
+    /// <param name="response">The response.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The label.</returns>
+    public async Task<string> LabelAsync(Survey survey, SurveyResponse response, CancellationToken cancellationToken)
+        => _serviceProvider.GetService<SurveyRespondentNames>() is { } names
+            ? await names.GetLabelAsync(survey, response, cancellationToken)
+            : Core.Access.SurveyAnonymity.ResponseLabel(survey, response, null);
+
+    /// <summary>
     /// Gets whether a survey hides who responded.
     /// </summary>
     /// <param name="survey">The survey, or <see langword="null"/>.</param>

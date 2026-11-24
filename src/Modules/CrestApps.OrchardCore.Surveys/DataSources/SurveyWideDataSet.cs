@@ -23,6 +23,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
 {
     private readonly Survey _survey;
     private readonly IReadOnlyDictionary<string, SurveyVersion> _versions;
+    private readonly string _other;
     private readonly SurveyResponseColumns _columns;
     private readonly SurveyRespondentNames _names;
     private readonly SurveyDataSetAccess _access;
@@ -51,6 +52,7 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
 
         var group = S["Response"].Value;
         var answers = S["Answers"].Value;
+        _other = S["Other"].Value;
 
         AddValue("Id", S["Response ID"], DataFieldType.Text, group).IsIdentifier = true;
         AddValue("Number", S["Number"], DataFieldType.Text, group);
@@ -104,7 +106,8 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
         var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
             ["Id"] = document.ItemId,
-            ["Number"] = SurveyAnonymity.ResponseLabel(_survey, document),
+            // The label, and what an anonymous row shows of its version and context kind, are set once it is released.
+            ["Number"] = null,
             ["VersionNumber"] = (long)document.VersionNumber,
             ["Status"] = document.Status.ToString(),
             ["StartedUtc"] = TimeOf(document.SurveyId, document.StartedUtc),
@@ -133,6 +136,20 @@ internal sealed class SurveyWideDataSet : SurveysDataSetBase<SurveyResponse, Sur
     {
         await foreach (var row in base.LoadAsync(query, cancellationToken))
         {
+            var shows = AttributesOf(row.Response);
+
+            row.Values["Number"] = LabelOf(row.Response);
+
+            if (!shows.ShowsVersion)
+            {
+                row.Values["VersionNumber"] = null;
+            }
+
+            if (!shows.ShowsContextKind && row.Response.Context is not null)
+            {
+                row.Values["ContextKind"] = _other;
+            }
+
             row.Values["Respondent"] = ShowsIdentity(row.Response.SurveyId)
                 ? await _names.GetUserAsync(row.Response.UserId, cancellationToken)
                 : await _names.GetAsync(row.Response, Surveys.GetValueOrDefault(row.Response.SurveyId ?? string.Empty), cancellationToken);

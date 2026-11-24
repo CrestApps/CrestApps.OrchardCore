@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Recipes;
+using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore.Deployment;
 using YesSql;
 
@@ -18,6 +19,7 @@ internal sealed class SurveyOverridesDeploymentSource : DeploymentSourceBase<Sur
     private readonly SurveyStore _surveyStore;
     private readonly SurveysRecipeExporter _exporter;
     private readonly SurveysExportAuthorizer _authorizer;
+    private readonly ISurveyAuditTrail _auditTrail;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyOverridesDeploymentSource"/> class.
@@ -26,22 +28,31 @@ internal sealed class SurveyOverridesDeploymentSource : DeploymentSourceBase<Sur
     /// <param name="surveyStore">The survey store.</param>
     /// <param name="exporter">The exporter.</param>
     /// <param name="authorizer">The export authorizer.</param>
+    /// <param name="auditTrail">The audit trail, where each export (or refusal) is recorded.</param>
     public SurveyOverridesDeploymentSource(
         ISession session,
         SurveyStore surveyStore,
         SurveysRecipeExporter exporter,
-        SurveysExportAuthorizer authorizer)
+        SurveysExportAuthorizer authorizer,
+        ISurveyAuditTrail auditTrail)
     {
         _session = session;
         _surveyStore = surveyStore;
         _exporter = exporter;
         _authorizer = authorizer;
+        _auditTrail = auditTrail;
     }
 
     /// <inheritdoc />
     protected override async Task ProcessAsync(SurveyOverridesDeploymentStep step, DeploymentPlanResult result)
     {
         var entries = new JsonArray();
+
+        var recipeStep = new JsonObject
+        {
+            ["name"] = SurveysRecipeSteps.Overrides,
+            [SurveysRecipeSteps.OverridesSection] = entries,
+        };
 
         if (await _authorizer.CanExportResponsesAsync())
         {
@@ -68,12 +79,14 @@ internal sealed class SurveyOverridesDeploymentSource : DeploymentSourceBase<Sur
                     }
                 }
             }
+
+            await _authorizer.ExportedAsync(_auditTrail, SurveyAuditEvents.OverridesExported, entries.Count);
+        }
+        else
+        {
+            await _authorizer.RefusedAsync(_auditTrail, recipeStep, SurveysRecipeSteps.Overrides);
         }
 
-        result.Steps.Add(new JsonObject
-        {
-            ["name"] = SurveysRecipeSteps.Overrides,
-            [SurveysRecipeSteps.OverridesSection] = entries,
-        });
+        result.Steps.Add(recipeStep);
     }
 }
