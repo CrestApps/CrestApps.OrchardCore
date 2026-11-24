@@ -403,7 +403,7 @@ public sealed class SurveyInvitationsController : Controller
 
             if (waiting > 0)
             {
-                await _notifier.WarningAsync(H["{0} invitations will be sent later: today's e-mail limit was reached, or another send was still going out. They go out by themselves with the hourly reminder run.", waiting]);
+                await _notifier.WarningAsync(H["{0} invitations will be sent later: today's e-mail limit was reached, another send was still going out, or the mail server didn't take them. They go out by themselves with the hourly reminder run.", waiting]);
             }
         }
 
@@ -429,7 +429,16 @@ public sealed class SurveyInvitationsController : Controller
         try
         {
             var sent = await _invitations.SendPendingAsync(collectorId, HttpContext.RequestAborted);
-            await _notifier.SuccessAsync(H["{0} invitations were sent.", sent]);
+
+            if (_invitations.AnotherSendIsGoingOut)
+            {
+                await _notifier.WarningAsync(H["Nothing was sent: another send of invitations is going out right now. Try again in a few minutes."]);
+            }
+            else
+            {
+                await _notifier.SuccessAsync(H["{0} invitations were sent.", sent]);
+                await NotifyMailServerFailedAsync();
+            }
         }
         catch (SurveyAnonymitySecretUnreadableException)
         {
@@ -458,7 +467,16 @@ public sealed class SurveyInvitationsController : Controller
         try
         {
             var sent = await _invitations.RemindAsync(collectorId, force: true, HttpContext.RequestAborted);
-            await _notifier.SuccessAsync(H["{0} reminders were sent.", sent]);
+
+            if (_invitations.AnotherSendIsGoingOut)
+            {
+                await _notifier.WarningAsync(H["{0} reminders were sent. Another send of invitations was going out at the same time, so some people may not have been reminded now; the hourly reminder run reminds them when they are due, or try again in a few minutes.", sent]);
+            }
+            else
+            {
+                await _notifier.SuccessAsync(H["{0} reminders were sent.", sent]);
+                await NotifyMailServerFailedAsync();
+            }
         }
         catch (SurveyAnonymitySecretUnreadableException)
         {
@@ -466,6 +484,16 @@ public sealed class SurveyInvitationsController : Controller
         }
 
         return RedirectToAction(nameof(Index), new { collectorId });
+    }
+
+    // The mail server failing e-mails as in an outage holds the send's other e-mails; the administrator is told why fewer
+    // went out than expected.
+    private async Task NotifyMailServerFailedAsync()
+    {
+        if (_invitations.MailServerFailed)
+        {
+            await _notifier.WarningAsync(H["The mail server didn't take the e-mails, so the rest wait. They are tried again with the hourly reminder run."]);
+        }
     }
 
     // An anonymous survey's secret that this server can't read (Data Protection keys that aren't shared) stops the
