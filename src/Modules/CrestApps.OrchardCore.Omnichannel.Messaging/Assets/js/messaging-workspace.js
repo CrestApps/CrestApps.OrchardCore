@@ -766,22 +766,6 @@ import {
 
     // ---- Toasts ------------------------------------------------------------------------------------------------
 
-    // sameOriginUrl already returns only a path on this site. The scheme check says so again in the form code scanning
-    // recognizes, so a javascript:, vbscript: or data: link can never reach a toast.
-    function withoutScriptUrl(url) {
-        if (!url) {
-            return '';
-        }
-
-        var trimmed = String(url).trim();
-
-        if (/^javascript:/i.test(trimmed) || /^vbscript:/i.test(trimmed) || /^data:/i.test(trimmed)) {
-            return '';
-        }
-
-        return url;
-    }
-
     function showToast(title, body, href) {
         var container = document.querySelector('[data-toast-container]');
 
@@ -812,11 +796,17 @@ import {
         // textContent (not innerHTML) so message content can never inject markup.
         bodyElement.textContent = body || '';
 
-        var safeHref = withoutScriptUrl(sameOriginUrl(href, root.location.href));
+        var safeHref = sameOriginUrl(href, root.location.href);
 
         if (safeHref) {
+            // The link starts at this page's own origin and takes only its path, query and fragment from the page data,
+            // so it can never lead to another site or run script, whatever the data holds.
+            var target = new URL(safeHref, root.location.origin);
             var link = document.createElement('a');
-            link.href = safeHref;
+            link.href = root.location.origin;
+            link.pathname = target.pathname;
+            link.search = target.search;
+            link.hash = target.hash;
             link.className = 'd-block mt-2 fw-semibold';
             link.textContent = viewText;
             bodyElement.appendChild(link);

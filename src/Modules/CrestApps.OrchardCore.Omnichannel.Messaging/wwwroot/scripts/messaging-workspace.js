@@ -792,12 +792,6 @@
 				}
 			});
 		}
-		function withoutScriptUrl(url) {
-			if (!url) return "";
-			var trimmed = String(url).trim();
-			if (/^javascript:/i.test(trimmed) || /^vbscript:/i.test(trimmed) || /^data:/i.test(trimmed)) return "";
-			return url;
-		}
 		function showToast(title, body, href) {
 			var container = document.querySelector("[data-toast-container]");
 			if (!container) return;
@@ -820,10 +814,14 @@
 			var bodyElement = document.createElement("div");
 			bodyElement.className = "toast-body";
 			bodyElement.textContent = body || "";
-			var safeHref = withoutScriptUrl(sameOriginUrl(href, root.location.href));
+			var safeHref = sameOriginUrl(href, root.location.href);
 			if (safeHref) {
+				var target = new URL(safeHref, root.location.origin);
 				var link = document.createElement("a");
-				link.href = safeHref;
+				link.href = root.location.origin;
+				link.pathname = target.pathname;
+				link.search = target.search;
+				link.hash = target.hash;
 				link.className = "d-block mt-2 fw-semibold";
 				link.textContent = viewText;
 				bodyElement.appendChild(link);
