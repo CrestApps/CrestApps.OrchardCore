@@ -1,4 +1,12 @@
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<TaxForm>>
+@using Microsoft.Extensions.Localization
+@using OrchardCore
+@inject Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Taxation.Services.TaxFormSourceOptions> SourceOptions
+@inject Microsoft.Extensions.Localization.IStringLocalizerFactory LocalizerFactory
+
+@{
+    var sources = SourceOptions.Value.Sources;
+}
 
 <zone Name="Title">
     <breadcrumb name="TaxForms" title="@T["Tax forms"]" />
@@ -16,7 +24,22 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add tax form"]</a>
+                    @if (sources.Count > 1)
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle create" type="button" data-bs-toggle="dropdown" aria-expanded="false">@T["Add tax form"]</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @foreach (var source in sources)
+                                {
+                                    <li><a class="dropdown-item" asp-action="Create" asp-route-source="@source.Name">@T["Prepared from {0}", LocalizerFactory.Localize(source.DisplayName).Value]</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add tax form"]</a>
+                    }
                 </div>
             </div>
         </div>
@@ -24,7 +47,7 @@
 
     <admin-list name="TaxForms" context="Model.List"
                 show-select-all="false"
-                empty-message="@T["<strong>Nothing here!</strong> No tax form has been added yet. Add one, or run a tax forms recipe under Configuration › Recipes, such as United States Payroll: federal tax forms."]">
+                empty-message="@T["<strong>Nothing here!</strong> No tax form has been added yet. Add one, or run a tax forms recipe under Configuration › Recipes, such as United States Payroll: federal tax forms or Tax Returns: generic return form."]">
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
             <admin-list-column name="Name" position="20" title="@T["Form"]" />

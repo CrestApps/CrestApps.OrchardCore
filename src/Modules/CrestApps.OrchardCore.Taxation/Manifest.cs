@@ -74,11 +74,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = TaxationConstants.Feature.Returns,
     Name = "Tax Returns",
-    Description = "Sales and use tax returns: the periods each tax registration files for, from its filing frequency and due day, and a return per period with the figures the modules give (taxable sales, tax collected, use tax purchases), its form's boxes, the amount due, and its status (draft, ready, filed, amended), payments and amendments.",
+    Description = "Sales and use tax returns: the periods each tax registration files for, from its filing frequency and due day, and a return per period with the figures the modules give (taxable sales, tax collected, use tax purchases), its form's boxes (a tax form whose fields are worked out by formulas, edited under Taxation > Tax Forms), the amount due, and its status (draft, ready, filed, amended), payments and amendments.",
     Category = "Finance",
     Dependencies =
     [
         TaxationConstants.Feature.Taxation,
+        TaxationConstants.Feature.TaxForms,
     ]
 )]
 

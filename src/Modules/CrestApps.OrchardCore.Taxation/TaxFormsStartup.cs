@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Taxation.Core;
+using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using CrestApps.OrchardCore.Taxation.Deployments;
 using CrestApps.OrchardCore.Taxation.Drivers;
@@ -37,6 +38,7 @@ public sealed class TaxFormsStartup : StartupBase
         // The forms live in their own YesSql collection, created with the tenant's store.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TaxationConstants.TaxFormsCollectionName));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxForm>, TaxFormHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxForm>, SalesTaxFormHandler>());
         services.AddDataMigration<TaxFormMigrations>()
             .AddIndexProvider<TaxFormIndexProvider>();
         services.AddDisplayDriver<TaxForm, TaxFormDisplayDriver>();

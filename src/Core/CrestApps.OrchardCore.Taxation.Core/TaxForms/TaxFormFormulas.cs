@@ -818,7 +818,7 @@ public static class TaxFormEvaluator
 public static class TaxFormsCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the tax form store, manager and formula functions. The handler that checks a form is registered by the
+    /// Registers the tax form store, manager, formula functions and recipe seeder. The handler that checks a form is registered by the
     /// Tax Forms feature, with its recipe step.
     /// </summary>
     /// <param name="services">The services.</param>
@@ -831,6 +831,7 @@ public static class TaxFormsCoreServiceCollectionExtensions
         services.TryAddScoped<CrestApps.OrchardCore.Taxation.Services.ITaxFormManager, TaxFormManager>();
         services.TryAddScoped<CrestApps.Core.Services.ICatalogManager<TaxForm>>(serviceProvider => serviceProvider.GetRequiredService<CrestApps.OrchardCore.Taxation.Services.ITaxFormManager>());
         services.TryAddSingleton<TaxFormFunctionCatalog>();
+        services.TryAddScoped<TaxFormRecipeSeeder>();
         services.AddTaxFormFunctions<TaxFormFunctions>();
 
         return services;

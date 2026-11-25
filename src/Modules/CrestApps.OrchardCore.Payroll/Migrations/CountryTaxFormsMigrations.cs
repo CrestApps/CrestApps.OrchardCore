@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.Payroll.Migrations;
@@ -11,16 +11,16 @@ internal sealed class UnitedStatesTaxFormsMigrations : DataMigration
 {
     public const string RecipeFileName = "payroll-united-states-tax-forms.recipe.json";
 
-    private readonly PayrollTaxFormRecipeSeeder _seeder;
+    private readonly TaxFormRecipeSeeder _seeder;
 
-    public UnitedStatesTaxFormsMigrations(PayrollTaxFormRecipeSeeder seeder)
+    public UnitedStatesTaxFormsMigrations(TaxFormRecipeSeeder seeder)
     {
         _seeder = seeder;
     }
 
     public async Task<int> CreateAsync()
     {
-        await _seeder.SeedAsync(RecipeFileName);
+        await _seeder.SeedAsync(typeof(UnitedStatesTaxFormsMigrations).Assembly.GetName().Name, RecipeFileName);
 
         return 1;
     }
@@ -34,16 +34,16 @@ internal sealed class CanadaTaxFormsMigrations : DataMigration
 {
     public const string RecipeFileName = "payroll-canada-tax-forms.recipe.json";
 
-    private readonly PayrollTaxFormRecipeSeeder _seeder;
+    private readonly TaxFormRecipeSeeder _seeder;
 
-    public CanadaTaxFormsMigrations(PayrollTaxFormRecipeSeeder seeder)
+    public CanadaTaxFormsMigrations(TaxFormRecipeSeeder seeder)
     {
         _seeder = seeder;
     }
 
     public async Task<int> CreateAsync()
     {
-        await _seeder.SeedAsync(RecipeFileName);
+        await _seeder.SeedAsync(typeof(UnitedStatesTaxFormsMigrations).Assembly.GetName().Name, RecipeFileName);
 
         return 1;
     }

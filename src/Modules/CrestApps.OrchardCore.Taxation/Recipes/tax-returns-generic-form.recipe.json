@@ -1,0 +1,148 @@
+{
+  "name": "TaxReturnsGenericForm",
+  "displayName": "Tax Returns: generic return form",
+  "description": "Adds the generic sales and use tax return as a tax form: the figures of the period totaled by kind (gross, exempt and taxable sales, sales tax, use tax, withholding, tax collected in excess, credits) and the amount due. A registration whose filing schedule names no form files with it. Running it again puts back its shipped fields and formulas. Edit it, or add a jurisdiction's own return with its discounts and penalties, under Taxation > Tax Forms.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "taxation"
+  ],
+  "tags": [
+    "taxation",
+    "sales tax",
+    "tax returns",
+    "tax forms"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Taxation.TaxForms",
+        "CrestApps.OrchardCore.Taxation.Returns"
+      ]
+    },
+    {
+      "name": "TaxForms",
+      "Forms": [
+        {
+          "Name": "Generic",
+          "DisplayName": "Generic return (totals by kind)",
+          "Description": "The return any registration can file with: the period's figures totaled by kind. It has no discount, penalty or interest; a jurisdiction's own return adds them with DAYSLATE, MONTHSLATE and ONTIME.",
+          "Source": "SalesTax",
+          "Jurisdiction": null,
+          "Enabled": true,
+          "Values": [],
+          "Checks": [],
+          "Fields": [
+            {
+              "Number": "GrossSales",
+              "Label": "Gross sales",
+              "Level": "Filing",
+              "Formula": "AMOUNT('GrossSales')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "ExemptSales",
+              "Label": "Exempt and deducted sales",
+              "Level": "Filing",
+              "Formula": "AMOUNT('ExemptSales')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "TaxableSales",
+              "Label": "Taxable sales",
+              "Level": "Filing",
+              "Formula": "IF(HASLINES('TaxableSales'), AMOUNT('TaxableSales'), [GrossSales] - [ExemptSales])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "SalesTax",
+              "Label": "Sales tax",
+              "Level": "Filing",
+              "Formula": "TAX('TaxableSales')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "UseTaxPurchases",
+              "Label": "Purchases subject to use tax",
+              "Level": "Filing",
+              "Formula": "AMOUNT('UseTaxPurchases')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "UseTax",
+              "Label": "Use tax",
+              "Level": "Filing",
+              "Formula": "TAX('UseTaxPurchases')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "Withholding",
+              "Label": "Withholding",
+              "Level": "Filing",
+              "Formula": "TAX('Withholding')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "ExcessCollected",
+              "Label": "Tax collected in excess",
+              "Level": "Filing",
+              "Formula": "TAX('ExcessCollected')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "TotalTax",
+              "Label": "Total tax",
+              "Level": "Filing",
+              "Formula": "[SalesTax] + [UseTax] + [Withholding] + [ExcessCollected]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "Credits",
+              "Label": "Credits and prepayments",
+              "Level": "Filing",
+              "Formula": "TAX('Credit')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "AmountDue",
+              "Label": "Amount due",
+              "Level": "Filing",
+              "Formula": "[TotalTax] - [Credits]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Properties": {
+            "SalesTaxFormSettings": {
+              "AmountDueField": "AmountDue"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

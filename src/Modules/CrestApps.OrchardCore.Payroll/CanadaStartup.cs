@@ -27,7 +27,6 @@ public sealed class CanadaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTaxFormFunctions<CanadaTaxFormFunctions>();
-        services.TryAddScoped<PayrollTaxFormRecipeSeeder>();
         services.AddDataMigration<CanadaTaxFormsMigrations>();
         services.AddDisplayDriver<Employer, EmployerCanadaDisplayDriver>();
     }
