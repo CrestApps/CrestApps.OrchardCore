@@ -191,7 +191,7 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
             && bool.TryParse(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture), out var wanted)
             && wanted;
         var filings = (await _filings.ListByEmployersAsync(scope.All ? null : [.. scope.EmployerIds], cancellationToken))
-            .Where(filing => filing.Form == FormW2.FormName && filing.Status != PayrollFilingStatus.Amended)
+            .Where(filing => filing.Form == UnitedStatesTaxForms.FormW2 && filing.Status != PayrollFilingStatus.Amended)
             .GroupBy(filing => (filing.EmployerId, filing.Year))
             .Select(group =>
             {

@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Security.Claims;
-using System.Text.Json.Serialization;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -253,76 +253,10 @@ public sealed class TaxReturnHandler : CatalogEntryHandlerBase<TaxReturn>
 }
 
 /// <summary>
-/// The built-in form any registration can file with: the lines summed by kind. Its boxes are <c>GrossSales</c>,
-/// <c>ExemptSales</c>, <c>TaxableSales</c>, <c>SalesTax</c>, <c>UseTaxPurchases</c>, <c>UseTax</c>, <c>Withholding</c>,
-/// <c>ExcessCollected</c>, <c>TotalTax</c>, <c>Credits</c> and <c>AmountDue</c>. It has no discount, penalty or interest;
-/// a jurisdiction's own form adds them.
-/// </summary>
-public sealed class GenericTaxReturnForm : ITaxReturnForm
-{
-    /// <summary>
-    /// The stored name.
-    /// </summary>
-    public const string FormName = "Generic";
-
-    private static readonly LocalizationSource _displayName = LocalizationSource.Create<GenericTaxReturnForm>("Generic return (totals by kind)");
-
-    /// <inheritdoc />
-    public string Name
-        => FormName;
-
-    /// <inheritdoc />
-    [JsonIgnore]
-    public LocalizationSource DisplayName
-        => _displayName;
-
-    /// <inheritdoc />
-    public Task ComputeAsync(TaxReturnFormContext context, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-
-        var taxReturn = context.Return;
-        var lines = taxReturn.Lines;
-
-        decimal Amount(string kind)
-            => lines.Where(line => line.Kind == kind).Sum(line => line.Amount);
-
-        decimal Tax(string kind)
-            => lines.Where(line => line.Kind == kind).Sum(line => line.TaxAmount);
-
-        var grossSales = Amount(TaxReturnLineKinds.GrossSales);
-        var exemptSales = Amount(TaxReturnLineKinds.ExemptSales);
-        var taxableSales = lines.Any(line => line.Kind == TaxReturnLineKinds.TaxableSales)
-            ? Amount(TaxReturnLineKinds.TaxableSales)
-            : grossSales - exemptSales;
-        var salesTax = Tax(TaxReturnLineKinds.TaxableSales);
-        var useTax = Tax(TaxReturnLineKinds.UseTaxPurchases);
-        var withholding = Tax(TaxReturnLineKinds.Withholding);
-        var excess = Tax(TaxReturnLineKinds.ExcessCollected);
-        var credits = Tax(TaxReturnLineKinds.Credit);
-        var totalTax = salesTax + useTax + withholding + excess;
-
-        taxReturn.Boxes["GrossSales"] = grossSales;
-        taxReturn.Boxes["ExemptSales"] = exemptSales;
-        taxReturn.Boxes["TaxableSales"] = taxableSales;
-        taxReturn.Boxes["SalesTax"] = salesTax;
-        taxReturn.Boxes["UseTaxPurchases"] = Amount(TaxReturnLineKinds.UseTaxPurchases);
-        taxReturn.Boxes["UseTax"] = useTax;
-        taxReturn.Boxes["Withholding"] = withholding;
-        taxReturn.Boxes["ExcessCollected"] = excess;
-        taxReturn.Boxes["TotalTax"] = totalTax;
-        taxReturn.Boxes["Credits"] = credits;
-        taxReturn.Boxes["AmountDue"] = totalTax - credits;
-        taxReturn.AmountDue = totalTax - credits;
-
-        return Task.CompletedTask;
-    }
-}
-
-/// <summary>
 /// The default <see cref="ITaxReturnService"/>: periods from each registration's filing schedule, returns prepared from
-/// every <see cref="ITaxReturnDataProvider"/> and worked out by the registration's <see cref="ITaxReturnForm"/>, and
-/// every change told to the <see cref="ITaxReturnObserver"/>s.
+/// every <see cref="ITaxReturnDataProvider"/> and worked out by the registration's form (a tax form of the sales tax
+/// source, or an <see cref="ITaxReturnForm"/> a module adds), and every change told to the
+/// <see cref="ITaxReturnObserver"/>s.
 /// </summary>
 public sealed class TaxReturnService : ITaxReturnService
 {
@@ -330,9 +264,12 @@ public sealed class TaxReturnService : ITaxReturnService
     private readonly IMerchantTaxRegistrationStore _registrations;
     private readonly IEnumerable<ITaxReturnDataProvider> _providers;
     private readonly IEnumerable<ITaxReturnForm> _forms;
+    private readonly ITaxFormManager _taxForms;
+    private readonly TaxFormFunctionCatalog _functions;
     private readonly IServiceProvider _services;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
+    private readonly Dictionary<bool, IReadOnlyDictionary<string, ITaxReturnForm>> _formsCache = [];
 
     internal readonly IStringLocalizer S;
 
@@ -342,7 +279,9 @@ public sealed class TaxReturnService : ITaxReturnService
     /// <param name="returns">The returns.</param>
     /// <param name="registrations">The registrations.</param>
     /// <param name="providers">The data providers.</param>
-    /// <param name="forms">The forms.</param>
+    /// <param name="forms">The forms modules add in code.</param>
+    /// <param name="taxForms">The tax forms, of which those of the sales tax source are return forms.</param>
+    /// <param name="functions">The functions of the tax forms' formulas.</param>
     /// <param name="services">The services, for the observers.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock, for today's date.</param>
@@ -352,6 +291,8 @@ public sealed class TaxReturnService : ITaxReturnService
         IMerchantTaxRegistrationStore registrations,
         IEnumerable<ITaxReturnDataProvider> providers,
         IEnumerable<ITaxReturnForm> forms,
+        ITaxFormManager taxForms,
+        TaxFormFunctionCatalog functions,
         IServiceProvider services,
         IClock clock,
         ILocalClock localClock,
@@ -361,6 +302,8 @@ public sealed class TaxReturnService : ITaxReturnService
         _registrations = registrations;
         _providers = providers;
         _forms = forms;
+        _taxForms = taxForms;
+        _functions = functions;
         _services = services;
         _clock = clock;
         _localClock = localClock;
@@ -368,14 +311,30 @@ public sealed class TaxReturnService : ITaxReturnService
     }
 
     /// <inheritdoc />
-    public IReadOnlyDictionary<string, ITaxReturnForm> GetForms()
+    public async Task<IReadOnlyDictionary<string, ITaxReturnForm>> GetFormsAsync(bool includeDisabled = false, CancellationToken cancellationToken = default)
     {
-        var forms = new Dictionary<string, ITaxReturnForm>(StringComparer.Ordinal);
+        // Read once a request: a list of periods asks for every row.
+        if (_formsCache.TryGetValue(includeDisabled, out var cached))
+        {
+            return cached;
+        }
+
+        var forms = new Dictionary<string, ITaxReturnForm>(StringComparer.OrdinalIgnoreCase);
+
+        // The tax forms first, by title; a form a module adds in code only under a name no tax form has.
+        foreach (var form in (await _taxForms.ListBySourceAsync(TaxationConstants.SalesTaxFormSource, cancellationToken))
+            .Where(form => !string.IsNullOrEmpty(form.Name) && (includeDisabled || form.Enabled))
+            .OrderBy(form => form.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        {
+            forms.TryAdd(form.Name, new TaxFormReturnForm(form, _functions, S));
+        }
 
         foreach (var form in _forms)
         {
-            forms[form.Name] = form;
+            forms.TryAdd(form.Name, form);
         }
+
+        _formsCache[includeDisabled] = forms;
 
         return forms;
     }
@@ -466,7 +425,7 @@ public sealed class TaxReturnService : ITaxReturnService
 
         var formName = annualReconciliation ? schedule.AnnualForm : FormOf(schedule, annual: false);
 
-        if (!GetForms().ContainsKey(formName))
+        if (!(await GetFormsAsync(cancellationToken: cancellationToken)).ContainsKey(formName))
         {
             result.Errors.Add(S["The return form {0} is not available: turn on the feature that adds it.", formName]);
 
@@ -728,7 +687,7 @@ public sealed class TaxReturnService : ITaxReturnService
     private static string FormOf(TaxFilingSchedule schedule, bool annual)
         => annual
             ? schedule.AnnualForm
-            : string.IsNullOrEmpty(schedule.Form) ? GenericTaxReturnForm.FormName : schedule.Form;
+            : string.IsNullOrEmpty(schedule.Form) ? TaxationConstants.GenericTaxReturnFormName : schedule.Form;
 
     // A registration files for the periods it is effective in, at least in part.
     private static bool Covers(MerchantTaxRegistration registration, TaxReturnPeriod period)
@@ -810,7 +769,7 @@ public sealed class TaxReturnService : ITaxReturnService
         taxReturn.Boxes.Clear();
         taxReturn.AmountDue = 0;
 
-        if (!GetForms().TryGetValue(taxReturn.Form ?? string.Empty, out var form))
+        if (!(await GetFormsAsync(includeDisabled: true, cancellationToken)).TryGetValue(taxReturn.Form ?? string.Empty, out var form))
         {
             taxReturn.Notes.Add(S["The return form {0} is not available: turn on the feature that adds it.", taxReturn.Form ?? string.Empty]);
 
@@ -845,14 +804,116 @@ public sealed class TaxReturnService : ITaxReturnService
 }
 
 /// <summary>
+/// Tells the tax form page that a sales tax form has returns or that registrations file with it: returns keep its name,
+/// so it keeps it and is turned off rather than deleted.
+/// </summary>
+public sealed class TaxReturnTaxFormUsage : ITaxFormUsage
+{
+    private readonly TaxReturnStore _returns;
+    private readonly IMerchantTaxRegistrationStore _registrations;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TaxReturnTaxFormUsage"/> class.
+    /// </summary>
+    /// <param name="returns">The returns.</param>
+    /// <param name="registrations">The registrations.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TaxReturnTaxFormUsage(TaxReturnStore returns, IMerchantTaxRegistrationStore registrations, IStringLocalizer<TaxReturnTaxFormUsage> stringLocalizer)
+    {
+        _returns = returns;
+        _registrations = registrations;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetUsagesAsync(TaxForm form, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(form);
+
+        if (string.IsNullOrEmpty(form.Name) || !string.Equals(form.Source, TaxationConstants.SalesTaxFormSource, StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        var uses = new List<string>();
+        var generic = string.Equals(form.Name, TaxationConstants.GenericTaxReturnFormName, StringComparison.OrdinalIgnoreCase);
+
+        // A return keeps the name it was prepared with: the form's (in capitals), or Generic for the generic one.
+        var name = form.Name;
+        var returns = generic
+            ? await _returns.CountAsync(index => index.Form == name || index.Form == TaxationConstants.GenericTaxReturnFormName, cancellationToken)
+            : await _returns.CountAsync(index => index.Form == name, cancellationToken);
+
+        if (returns > 0)
+        {
+            uses.Add(S.Plural(returns, "1 tax return", "{0} tax returns").Value);
+        }
+
+        var registrations = (await _registrations.GetAllAsync(cancellationToken)).Count(registration => registration.Filing is { } filing
+            && (string.Equals(filing.Form, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(filing.AnnualForm, name, StringComparison.OrdinalIgnoreCase)
+                || (generic && string.IsNullOrEmpty(filing.Form) && TaxFilingFrequencies.IsKnown(filing.Frequency))));
+
+        if (registrations > 0)
+        {
+            uses.Add(S.Plural(registrations, "1 tax registration", "{0} tax registrations").Value);
+        }
+
+        return uses;
+    }
+}
+
+/// <summary>
+/// Checks what Tax Returns keeps on a tax form of the sales tax source: the field the amount due is read from is one of
+/// its filing fields. The Tax Forms feature registers it with the form's other rules, next to the recipe step; it does
+/// nothing for a form of another source.
+/// </summary>
+public sealed class SalesTaxFormHandler : CatalogEntryHandlerBase<TaxForm>
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SalesTaxFormHandler"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public SalesTaxFormHandler(IStringLocalizer<SalesTaxFormHandler> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override Task ValidatingAsync(ValidatingContext<TaxForm> context, CancellationToken cancellationToken = default)
+    {
+        var form = context.Model;
+
+        if (!string.Equals(form.Source?.Trim(), TaxationConstants.SalesTaxFormSource, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.CompletedTask;
+        }
+
+        var amountDue = form.AmountDueField();
+
+        if (!form.Fields.Any(field => field.Level == TaxFormFieldLevel.Filing && string.Equals(field.Number?.Trim(), amountDue, StringComparison.Ordinal)))
+        {
+            context.Result.Fail(new System.ComponentModel.DataAnnotations.ValidationResult(S["A return's amount due is read from field {0}: add it as a filing field, or name another field on the Sales tax return card.", amountDue], [nameof(TaxForm.Fields)]));
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
 /// Registers Tax Returns' services.
 /// </summary>
 public static class TaxReturnsCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the returns, their service and the generic form; the feature that imports returns registers
-    /// <see cref="TaxReturnHandler"/>. The registrations they file under come from Sales Tax
-    /// (<c>AddTaxationCore</c>). Calling it twice adds nothing twice.
+    /// Registers the returns, their service, and the sales tax source of Tax Forms with its functions (the return forms
+    /// are tax forms of it; the generic one comes from Tax Returns' recipe); the feature that imports returns registers
+    /// <see cref="TaxReturnHandler"/>. The registrations they file under come from Sales Tax (<c>AddTaxationCore</c>).
+    /// Calling it twice adds nothing twice.
     /// </summary>
     /// <param name="services">The services.</param>
     /// <returns>The services.</returns>
@@ -864,7 +925,18 @@ public static class TaxReturnsCoreServiceCollectionExtensions
         services.TryAddScoped<ITaxReturnManager, TaxReturnManager>();
         services.TryAddScoped<ICatalogManager<TaxReturn>>(serviceProvider => serviceProvider.GetRequiredService<ITaxReturnManager>());
         services.TryAddScoped<ITaxReturnService, TaxReturnService>();
-        services.AddTaxReturnForm<GenericTaxReturnForm>();
+        services.AddTaxFormsCore();
+        services.AddTaxFormSource(new TaxFormSource(
+            TaxationConstants.SalesTaxFormSource,
+            LocalizationSource.Create<TaxReturnService>("Sales tax returns"),
+            LocalizationSource.Create<TaxReturnService>("A tax registration's returns: the boxes of a sales and use tax return and its amount due, worked out from the figures the modules give for the period (taxable sales, tax collected, use tax purchases)."))
+        {
+            HasRecipients = false,
+            HasPeriod = false,
+            RequiresJurisdiction = false,
+        });
+        services.AddTaxFormFunctions<SalesTaxFormFunctions>();
+        services.AddTaxFormUsage<TaxReturnTaxFormUsage>();
 
         return services;
     }
