@@ -34,23 +34,6 @@ public abstract class SkillSubjectSkillsDisplayDriverBase<TModel> : DisplayDrive
     internal readonly IStringLocalizer S;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SkillSubjectSkillsDisplayDriverBase{TModel}"/> class, whose card is
-    /// titled "Skills" without a translation.
-    /// </summary>
-    /// <param name="skillManager">The skill manager.</param>
-    /// <param name="assignmentService">The skill assignment service.</param>
-    /// <param name="httpContextAccessor">The HTTP context accessor, for the signed-in user.</param>
-    /// <param name="authorizationService">The authorization service.</param>
-    protected SkillSubjectSkillsDisplayDriverBase(
-        ISkillManager skillManager,
-        ISkillAssignmentService assignmentService,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-        : this(skillManager, assignmentService, httpContextAccessor, authorizationService, null)
-    {
-    }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="SkillSubjectSkillsDisplayDriverBase{TModel}"/> class.
     /// </summary>
     /// <param name="skillManager">The skill manager.</param>
@@ -127,7 +110,7 @@ public abstract class SkillSubjectSkillsDisplayDriverBase<TModel> : DisplayDrive
                 Category = skill.Category,
                 Proficiency = held.TryGetValue(skill.ItemId, out var assignment) ? assignment.Proficiency : 0,
             }).ToList();
-        }).Location(l => l.Zone(Zone(), Position()).Card(S is null ? new LocalizedString("Skills", "Skills") : S["Skills"], CardPosition));
+        }).Location(l => l.Zone(Zone(), Position()).Card(S["Skills"], CardPosition));
     }
 
     /// <inheritdoc/>
