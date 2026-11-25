@@ -195,7 +195,7 @@ public sealed class MyPayController : Controller
             return NotFound();
         }
 
-        return File(await documents.WriteAsync(filing, person), "application/pdf", PayrollTaxFormDocuments.FileName(filing));
+        return File(await documents.WriteAsync(filing, person), "application/pdf", await documents.FileNameAsync(filing));
     }
 
     [Admin("my-pay/details/{id}", "PayrollMyPayDetails")]

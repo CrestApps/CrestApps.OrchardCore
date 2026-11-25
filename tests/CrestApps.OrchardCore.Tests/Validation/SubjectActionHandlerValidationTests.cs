@@ -141,7 +141,61 @@ public class SubjectActionHandlerValidationTests
         Assert.True(context.Result.Succeeded);
     }
 
-    private static async Task<ValidatingContext<SubjectAction>> ValidateAsync(SubjectAction action, string configuredSubject)
+    [Fact]
+    public async Task ValidatingAsync_WhenTheFollowUpGoesToAMissingDialerProfile_Fails()
+    {
+        var action = new SubjectAction { DispositionId = "d1", Source = OmnichannelConstants.ActionTypes.TryAgain };
+        action.Put(new TryAgainActionMetadata());
+        action.Put(new FollowUpRoutingMetadata { Target = FollowUpRoutingTarget.Dialer, DialerProfileId = "missing" });
+
+        var context = await ValidateAsync(action, configuredSubject: null, Mock.Of<IActivityDialerContributor>());
+
+        AssertFailedFor(context, "DialWith");
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenTheFollowUpGoesToAnExistingDialerProfile_Succeeds()
+    {
+        var action = new SubjectAction { DispositionId = "d1", Source = OmnichannelConstants.ActionTypes.TryAgain };
+        action.Put(new TryAgainActionMetadata());
+        action.Put(new FollowUpRoutingMetadata { Target = FollowUpRoutingTarget.Dialer, DialerProfileId = "power" });
+
+        var dialer = new Mock<IActivityDialerContributor>();
+        dialer.Setup(x => x.FindByIdAsync("power", It.IsAny<CancellationToken>())).ReturnsAsync(new ActivityDialerProfileDescriptor { ProfileId = "power" });
+
+        var context = await ValidateAsync(action, configuredSubject: null, dialer.Object);
+
+        Assert.True(context.Result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(FollowUpOwnerPoolSource.Team, "PoolTeamId")]
+    [InlineData(FollowUpOwnerPoolSource.Roles, "PoolRoleNames")]
+    [InlineData(FollowUpOwnerPoolSource.Users, "PoolUserIds")]
+    public async Task ValidatingAsync_WhenThePoolHasNobodyToPick_Fails(FollowUpOwnerPoolSource source, string member)
+    {
+        var action = new SubjectAction { DispositionId = "d1", Source = OmnichannelConstants.ActionTypes.NewActivity };
+        action.Put(new NewActivityActionMetadata { AssignmentType = SubjectActionOwnerAssignmentType.Pool });
+        action.Put(new FollowUpOwnerPoolMetadata { Source = source, RoleNames = [" "], UserIds = [] });
+
+        var context = await ValidateAsync(action, configuredSubject: null);
+
+        AssertFailedFor(context, member);
+    }
+
+    [Fact]
+    public async Task ValidatingAsync_WhenThePoolNamesUsers_Succeeds()
+    {
+        var action = new SubjectAction { DispositionId = "d1", Source = OmnichannelConstants.ActionTypes.TryAgain };
+        action.Put(new TryAgainActionMetadata { AssignmentType = SubjectActionOwnerAssignmentType.Pool });
+        action.Put(new FollowUpOwnerPoolMetadata { Source = FollowUpOwnerPoolSource.Users, UserIds = ["u1"] });
+
+        var context = await ValidateAsync(action, configuredSubject: null);
+
+        Assert.True(context.Result.Succeeded);
+    }
+
+    private static async Task<ValidatingContext<SubjectAction>> ValidateAsync(SubjectAction action, string configuredSubject, IActivityDialerContributor dialerContributor = null)
     {
         var flowSettingsService = new Mock<ISubjectFlowSettingsService>();
 
@@ -155,6 +209,7 @@ public class SubjectActionHandlerValidationTests
         var handler = new SubjectActionHandler(
             flowSettingsService.Object,
             new Mock<ISession>().Object,
+            dialerContributor is null ? [] : [dialerContributor],
             new PassThroughStringLocalizer<SubjectActionHandler>());
 
         var context = new ValidatingContext<SubjectAction>(action);

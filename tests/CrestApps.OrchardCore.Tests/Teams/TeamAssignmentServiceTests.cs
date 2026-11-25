@@ -163,6 +163,40 @@ public sealed class TeamAssignmentServiceTests
         Assert.Equal(TeamAssignmentOutcome.NoneAvailable, honoringAll.Outcome);
     }
 
+    [Fact]
+    public async Task CandidateUserIds_ArePickedFromInsteadOfTheTeam_WithTheSameRules()
+    {
+        // Arrange
+        // The team has only "ana"; the caller's own pool, such as a queue's signed-in agents, is "ben", "cy" and "dee".
+        var service = Create(
+            members: ["ana"],
+            load: new()
+            {
+                ["ana"] = Load(0, _noon.AddHours(-9)),
+                ["ben"] = Load(4, _noon.AddHours(-1)),
+                ["cy"] = Load(1, _noon.AddHours(-3)),
+                ["dee"] = Load(2, _noon.AddHours(-2)),
+            },
+            unavailable: ["cy"]);
+
+        var request = new TeamAssignmentRequest
+        {
+            CandidateUserIds = ["ben", "cy", "dee", "dee", string.Empty],
+            WorkKind = WorkKind,
+            Strategy = TeamAssignmentStrategies.RoundRobin,
+        };
+
+        // Act
+        var picked = await service.PickAsync(request, TestContext.Current.CancellationToken);
+
+        request.CandidateUserIds = [];
+        var emptyPool = await service.PickAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("dee", picked.Member?.UserId);
+        Assert.Equal(TeamAssignmentOutcome.NoMembers, emptyPool.Outcome);
+    }
+
     private static TeamAssignmentRequest Request(string strategy)
         => new() { TeamId = "t1", WorkKind = WorkKind, Strategy = strategy };
 

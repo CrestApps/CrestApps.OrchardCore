@@ -56,14 +56,14 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   widgets; webhook events; the pay date calendar source; audit events; notices of returned deposits and changed bank
   accounts; personal data; the opt-in `PayrollPayHistory` step; the scheduled-run workflow recipe.
 - Liabilities and filings (Payroll): tax liabilities by deposit period with recorded deposits, filings prepared by
-  country forms (`IPayrollFilingForm`), filed and amended, and year end; the United States pack adds Forms 941, 940 and
-  W-2/W-3 and the SSA EFW2 file format.
+  Taxation tax forms whose source is Payroll (`PayrollTaxFormFunctions`, `PayrollTaxFormSettings`; the forms, their
+  fields and formulas are edited under Commerce > Taxation > Tax Forms), filed and amended, and year end.
 - Garnishments (`CrestApps.OrchardCore.Payroll.Garnishments`): orders withheld within the law's limits and sent to
   their payees by check or deposit.
-- United States Payroll Filings (`CrestApps.OrchardCore.Payroll.UnitedStates`): Forms 941, 940, 945, W-2/W-3,
-  1099-NEC and 1096 and the EFW2 file, over Taxation's United States Income Tax (Form W-4, state certificates and the
+- United States Payroll Filings (`CrestApps.OrchardCore.Payroll.UnitedStates`): adds Forms 941, 940, 945, W-2/W-3,
+  1099-NEC and 1096 from its tax forms recipe, and the EFW2 file, over Taxation's United States Income Tax (Form W-4, state certificates and the
   2026 federal rules). The W-2 has the state and local boxes 15 to 20.
-- Canada Payroll Filings (`CrestApps.OrchardCore.Payroll.Canada`): T4 and RL-1 slips and summaries, the T4 XML file,
+- Canada Payroll Filings (`CrestApps.OrchardCore.Payroll.Canada`): adds the T4 and RL-1 forms from its tax forms recipe, the T4 XML file,
   and CRA and Revenu Québec remittances, over Taxation's Canada Income Tax.
 - My Pay (`CrestApps.OrchardCore.Payroll.SelfService`): `MyPayController` (own statements, stubs, elections and net
   pay split through the profile editor's `MyPay` group), `MyPayStaffHomeLinks`, the `PayDetailsChanged` security notice.

@@ -28,6 +28,7 @@ public sealed class MessagingAndTelephonyConfigurationCoverageTests
     private static readonly Dictionary<string, string> _configuration = new(StringComparer.Ordinal)
     {
         [nameof(MessageTemplate)] = MessagingDeploymentSteps.MessageTemplate,
+        [nameof(MessagingRoutingRule)] = MessagingDeploymentSteps.RoutingRules,
         [nameof(TelephonyExtension)] = TelephonyDeploymentSteps.Extension,
     };
 

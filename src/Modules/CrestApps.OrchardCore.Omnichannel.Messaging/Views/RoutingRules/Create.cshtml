@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MessagingRoutingRulesCreate" title="@T["New Routing Rule"]">
+        <breadcrumb-item id="MessagingRoutingRules" action="Index" controller="RoutingRules" area="CrestApps.OrchardCore.Omnichannel.Messaging" permission="@MessagingPermissions.ManageRoutingRules.Name">@T["Routing Rules"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

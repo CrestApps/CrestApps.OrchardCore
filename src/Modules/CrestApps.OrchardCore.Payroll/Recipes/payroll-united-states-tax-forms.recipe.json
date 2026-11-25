@@ -1,0 +1,986 @@
+{
+  "name": "PayrollUnitedStatesTaxForms",
+  "displayName": "United States Payroll: federal tax forms",
+  "description": "Adds the federal tax forms an employer registered in US files, worked out from the final pay statements: Form 941 (quarterly), Forms 940 and 945, Forms W-2 and W-3, and Forms 1099-NEC and 1096. Running it again puts back the shipped fields and formulas of these forms. Edit the forms, or add others, under Taxation > Tax Forms; check the figures against the IRS's current instructions before filing.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "united states",
+    "tax forms",
+    "941",
+    "w-2",
+    "1099-nec"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Taxation.TaxForms",
+        "CrestApps.OrchardCore.Payroll",
+        "CrestApps.OrchardCore.Payroll.UnitedStates"
+      ]
+    },
+    {
+      "name": "TaxForms",
+      "Forms": [
+        {
+          "Name": "US-941",
+          "DisplayName": "Form 941 (quarterly federal return)",
+          "Description": "The employer's quarterly federal tax return: wages, income tax withheld, Social Security and Medicare wages and taxes (both sides, at the form's rates), the fractions-of-cents adjustment, the deposits and the balance.",
+          "Source": "Payroll",
+          "Jurisdiction": "US",
+          "Period": "Quarter",
+          "HasRecipientStatements": false,
+          "StatementPerJurisdiction": false,
+          "RecipientCondition": null,
+          "MissingTaxIdNote": null,
+          "Enabled": true,
+          "Values": [
+            {
+              "Name": "SocialSecurityRate",
+              "Year": 2000,
+              "Amount": 0.124
+            },
+            {
+              "Name": "MedicareRate",
+              "Year": 2000,
+              "Amount": 0.029
+            },
+            {
+              "Name": "AdditionalMedicareRate",
+              "Year": 2013,
+              "Amount": 0.009
+            }
+          ],
+          "Checks": [],
+          "Fields": [
+            {
+              "Number": "1",
+              "Label": "1 Number of employees paid for the pay period including the 12th of the quarter's last month",
+              "Level": "Filing",
+              "Formula": "HEADCOUNT(12)",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "2",
+              "Label": "2 Wages, tips, and other compensation",
+              "Level": "Filing",
+              "Formula": "WAGES('IncomeTax')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "3",
+              "Label": "3 Federal income tax withheld",
+              "Level": "Filing",
+              "Formula": "TAX('US-FIT')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5a",
+              "Label": "5a Taxable social security wages",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, TAXABLE('US-SS-EE') - [5b])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5a.tax",
+              "Label": "5a Tax on taxable social security wages",
+              "Level": "Filing",
+              "Formula": "ROUND([5a] * VALUE('SocialSecurityRate'), 2)",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5b",
+              "Label": "5b Taxable social security tips",
+              "Level": "Filing",
+              "Formula": "PAYKIND('Tips')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5b.tax",
+              "Label": "5b Tax on taxable social security tips",
+              "Level": "Filing",
+              "Formula": "ROUND([5b] * VALUE('SocialSecurityRate'), 2)",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5c",
+              "Label": "5c Taxable Medicare wages and tips",
+              "Level": "Filing",
+              "Formula": "TAXABLE('US-MED-EE')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5c.tax",
+              "Label": "5c Tax on taxable Medicare wages and tips",
+              "Level": "Filing",
+              "Formula": "ROUND([5c] * VALUE('MedicareRate'), 2)",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5d",
+              "Label": "5d Taxable wages and tips subject to Additional Medicare Tax withholding",
+              "Level": "Filing",
+              "Formula": "TAXABLE('US-MED-ADD')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5d.tax",
+              "Label": "5d Additional Medicare Tax",
+              "Level": "Filing",
+              "Formula": "ROUND([5d] * VALUE('AdditionalMedicareRate'), 2)",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5e",
+              "Label": "5e Total social security and Medicare taxes",
+              "Level": "Filing",
+              "Formula": "[5a.tax] + [5b.tax] + [5c.tax] + [5d.tax]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "6",
+              "Label": "6 Total taxes before adjustments",
+              "Level": "Filing",
+              "Formula": "[3] + [5e]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "7",
+              "Label": "7 Current quarter's adjustment for fractions of cents",
+              "Level": "Filing",
+              "Formula": "TAX('US-SS-EE', 'US-SS-ER', 'US-MED-EE', 'US-MED-ER', 'US-MED-ADD') - [5e]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "10",
+              "Label": "10 Total taxes after adjustments",
+              "Level": "Filing",
+              "Formula": "[6] + [7]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "12",
+              "Label": "12 Total taxes after adjustments and nonrefundable credits",
+              "Level": "Filing",
+              "Formula": "[10]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "13",
+              "Label": "13 Total deposits for this quarter",
+              "Level": "Filing",
+              "Formula": "DEPOSITS('US', 'Withholding')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "14",
+              "Label": "14 Balance due",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [12] - [13])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "15",
+              "Label": "15 Overpayment",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [13] - [12])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Statement": {},
+          "Properties": {
+            "PayrollTaxFormSettings": {
+              "Workers": "Employees",
+              "PeopleJurisdiction": null,
+              "ListJurisdictionAmounts": false,
+              "PayCodeFieldPrefix": null
+            }
+          }
+        },
+        {
+          "Name": "US-940",
+          "DisplayName": "Form 940 (annual federal unemployment return)",
+          "Description": "The employer's annual federal unemployment (FUTA) return: payments to employees, the part exempt or over each person's wage base, the taxable wages, the tax at the federal rule's rate, the deposits and the balance.",
+          "Source": "Payroll",
+          "Jurisdiction": "US",
+          "Period": "Year",
+          "HasRecipientStatements": false,
+          "StatementPerJurisdiction": false,
+          "RecipientCondition": null,
+          "MissingTaxIdNote": null,
+          "Enabled": true,
+          "Values": [
+            {
+              "Name": "WageBase",
+              "Year": 1983,
+              "Amount": 7000
+            },
+            {
+              "Name": "Rate",
+              "Year": 2011,
+              "Amount": 0.6
+            }
+          ],
+          "Checks": [],
+          "Fields": [
+            {
+              "Number": "5",
+              "Label": "5 Payments to each employee in excess of the FUTA wage base",
+              "Level": "Recipient",
+              "Formula": "GREATEST(0, WAGES('Unemployment') - COALESCE(RULE('US-FUTA', 'WageBase'), VALUE('WageBase')))",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "3",
+              "Label": "3 Total payments to all employees",
+              "Level": "Filing",
+              "Formula": "GROSS()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "4",
+              "Label": "4 Payments exempt from FUTA tax",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [3] - WAGES('Unemployment'))",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "6",
+              "Label": "6 Subtotal",
+              "Level": "Filing",
+              "Formula": "[4] + [5]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "7",
+              "Label": "7 Total taxable FUTA wages",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [3] - [6])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "8",
+              "Label": "8 FUTA tax before adjustments",
+              "Level": "Filing",
+              "Formula": "ROUND([7] * COALESCE(RULE('US-FUTA', 'Rate'), VALUE('Rate')) / 100, 2)",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "12",
+              "Label": "12 Total FUTA tax after adjustments",
+              "Level": "Filing",
+              "Formula": "[8]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "13",
+              "Label": "13 FUTA tax deposited for the year",
+              "Level": "Filing",
+              "Formula": "DEPOSITS('US', 'Unemployment')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "14",
+              "Label": "14 Balance due",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [12] - [13])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "15",
+              "Label": "15 Overpayment",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [13] - [12])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Statement": {},
+          "Properties": {
+            "PayrollTaxFormSettings": {
+              "Workers": "Employees",
+              "PeopleJurisdiction": null,
+              "ListJurisdictionAmounts": false,
+              "PayCodeFieldPrefix": null
+            }
+          }
+        },
+        {
+          "Name": "US-945",
+          "DisplayName": "Form 945 (annual return of withheld federal income tax)",
+          "Description": "The annual return of federal income tax withheld from payments that are not wages: the backup withholding on contractors' payments, the deposits made for it and the balance. It is kept out of Form 941.",
+          "Source": "Payroll",
+          "Jurisdiction": "US",
+          "Period": "Year",
+          "HasRecipientStatements": false,
+          "StatementPerJurisdiction": false,
+          "RecipientCondition": null,
+          "MissingTaxIdNote": null,
+          "Enabled": true,
+          "Values": [],
+          "Checks": [],
+          "Fields": [
+            {
+              "Number": "1",
+              "Label": "1 Federal income tax withheld from pensions, annuities, IRAs and gambling winnings",
+              "Level": "Filing",
+              "Formula": "0",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "2",
+              "Label": "2 Backup withholding",
+              "Level": "Filing",
+              "Formula": "TAX('US-BWH')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "3",
+              "Label": "3 Total taxes",
+              "Level": "Filing",
+              "Formula": "[1] + [2]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "4",
+              "Label": "4 Total deposits for the year",
+              "Level": "Filing",
+              "Formula": "DEPOSITS('US', 'NonPayrollWithholding')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5",
+              "Label": "5 Balance due",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [3] - [4])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "6",
+              "Label": "6 Overpayment",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [4] - [3])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Statement": {},
+          "Properties": {
+            "PayrollTaxFormSettings": {
+              "Workers": "Contractors",
+              "PeopleJurisdiction": null,
+              "ListJurisdictionAmounts": false,
+              "PayCodeFieldPrefix": null
+            }
+          }
+        },
+        {
+          "Name": "US-W2",
+          "DisplayName": "Forms W-2 and W-3 (wage and tax statements)",
+          "Description": "The wage and tax statement of each employee for a year (Form W-2) and their totals (Form W-3): wages, income tax, Social Security and Medicare wages and taxes, tips, the box 8, 10, 11 and 12 amounts of the pay codes that report to them, and the state and local wages and income tax of boxes 15 to 20 (W-3 boxes 16 to 19). An employee with no tax id on file is noted.",
+          "Source": "Payroll",
+          "Jurisdiction": "US",
+          "Period": "Year",
+          "HasRecipientStatements": true,
+          "StatementPerJurisdiction": false,
+          "RecipientCondition": null,
+          "MissingTaxIdNote": "{0}: no tax id on file.",
+          "Enabled": true,
+          "Values": [],
+          "Checks": [],
+          "Fields": [
+            {
+              "Number": "1",
+              "Label": "1 Wages, tips, other compensation",
+              "Level": "Recipient",
+              "Formula": "WAGES('IncomeTax')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "2",
+              "Label": "2 Federal income tax withheld",
+              "Level": "Recipient",
+              "Formula": "TAX('US-FIT')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "3",
+              "Label": "3 Social security wages",
+              "Level": "Recipient",
+              "Formula": "GREATEST(0, TAXABLE('US-SS-EE') - PAYKIND('Tips'))",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "4",
+              "Label": "4 Social security tax withheld",
+              "Level": "Recipient",
+              "Formula": "TAX('US-SS-EE')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "5",
+              "Label": "5 Medicare wages and tips",
+              "Level": "Recipient",
+              "Formula": "TAXABLE('US-MED-EE')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "6",
+              "Label": "6 Medicare tax withheld",
+              "Level": "Recipient",
+              "Formula": "TAX('US-MED-EE', 'US-MED-ADD')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "7",
+              "Label": "7 Social security tips",
+              "Level": "Recipient",
+              "Formula": "LEAST(PAYKIND('Tips'), TAXABLE('US-SS-EE'))",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "8",
+              "Label": "8 Allocated tips",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "10",
+              "Label": "10 Dependent care benefits",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "11",
+              "Label": "11 Nonqualified plans",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12A",
+              "Label": "12 Code A: Uncollected social security or RRTA tax on tips",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12B",
+              "Label": "12 Code B: Uncollected Medicare tax on tips",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12C",
+              "Label": "12 Code C: Taxable cost of group-term life insurance over $50,000",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12D",
+              "Label": "12 Code D: Elective deferrals to a section 401(k) plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12E",
+              "Label": "12 Code E: Elective deferrals to a section 403(b) plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12F",
+              "Label": "12 Code F: Elective deferrals to a section 408(k)(6) SEP",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12G",
+              "Label": "12 Code G: Elective deferrals and employer contributions to a section 457(b) plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12H",
+              "Label": "12 Code H: Elective deferrals to a section 501(c)(18)(D) plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12J",
+              "Label": "12 Code J: Nontaxable sick pay",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12K",
+              "Label": "12 Code K: 20% excise tax on excess golden parachute payments",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12L",
+              "Label": "12 Code L: Substantiated employee business expense reimbursements",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12M",
+              "Label": "12 Code M: Uncollected social security or RRTA tax on group-term life insurance",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12N",
+              "Label": "12 Code N: Uncollected Medicare tax on group-term life insurance",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12P",
+              "Label": "12 Code P: Excludable moving expense reimbursements",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12Q",
+              "Label": "12 Code Q: Nontaxable combat pay",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12R",
+              "Label": "12 Code R: Employer contributions to an Archer MSA",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12S",
+              "Label": "12 Code S: Employee salary reduction contributions under a section 408(p) SIMPLE plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12T",
+              "Label": "12 Code T: Adoption benefits",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12V",
+              "Label": "12 Code V: Income from the exercise of nonstatutory stock options",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12W",
+              "Label": "12 Code W: Employer contributions to a health savings account",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12Y",
+              "Label": "12 Code Y: Deferrals under a section 409A nonqualified deferred compensation plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12Z",
+              "Label": "12 Code Z: Income under a nonqualified deferred compensation plan that fails section 409A",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12AA",
+              "Label": "12 Code AA: Designated Roth contributions under a section 401(k) plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12BB",
+              "Label": "12 Code BB: Designated Roth contributions under a section 403(b) plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12DD",
+              "Label": "12 Code DD: Cost of employer-sponsored health coverage",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12EE",
+              "Label": "12 Code EE: Designated Roth contributions under a governmental section 457(b) plan",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12FF",
+              "Label": "12 Code FF: Permitted benefits under a qualified small employer health reimbursement arrangement",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12GG",
+              "Label": "12 Code GG: Income from qualified equity grants under section 83(i)",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12HH",
+              "Label": "12 Code HH: Aggregate deferrals under section 83(i) elections",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "12II",
+              "Label": "12 Code II: Medicaid waiver payments excluded from gross income",
+              "Level": "Recipient",
+              "Formula": null,
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": true,
+              "Print": "WhenNotZero"
+            },
+            {
+              "Number": "c",
+              "Label": "c Total number of Forms W-2",
+              "Level": "Filing",
+              "Formula": "RECIPIENTS()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "16",
+              "Label": "16 State wages, tips, etc.",
+              "Level": "Filing",
+              "Formula": "REGIONWAGES()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "17",
+              "Label": "17 State income tax",
+              "Level": "Filing",
+              "Formula": "REGIONTAX()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "18",
+              "Label": "18 Local wages, tips, etc.",
+              "Level": "Filing",
+              "Formula": "LOCALWAGES()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "19",
+              "Label": "19 Local income tax",
+              "Level": "Filing",
+              "Formula": "LOCALTAX()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Statement": {
+            "Name": "Form W-2",
+            "Title": "Form W-2 Wage and Tax Statement",
+            "Copy": "Copy B, to be filed with the employee's federal tax return; Copies C and 2 for the employee's records",
+            "TaxIdLabel": "Employee's social security number",
+            "TaxIdFormat": "XXX-XX-{0}",
+            "FilerTaxIdLabel": "Employer identification number (EIN)",
+            "FilerAccountJurisdiction": null,
+            "FileName": "W-2"
+          },
+          "Properties": {
+            "PayrollTaxFormSettings": {
+              "Workers": "Employees",
+              "PeopleJurisdiction": null,
+              "ListJurisdictionAmounts": true,
+              "PayCodeFieldPrefix": "W2:"
+            }
+          }
+        },
+        {
+          "Name": "US-1099NEC",
+          "DisplayName": "Forms 1099-NEC and 1096 (nonemployee compensation)",
+          "Description": "Form 1099-NEC of each contractor paid at least the year's reporting threshold (2,000 from 2026, 600 before) or withheld on, and the Form 1096 count and totals: box 1 the contractor's payments, box 4 the backup withholding. A contractor with no tax id on file is noted.",
+          "Source": "Payroll",
+          "Jurisdiction": "US",
+          "Period": "Year",
+          "HasRecipientStatements": true,
+          "StatementPerJurisdiction": false,
+          "RecipientCondition": "[1] >= VALUE('ReportingThreshold') OR [4] > 0",
+          "MissingTaxIdNote": "{0}: no tax id on file.",
+          "Enabled": true,
+          "Values": [
+            {
+              "Name": "ReportingThreshold",
+              "Year": 1982,
+              "Amount": 600
+            },
+            {
+              "Name": "ReportingThreshold",
+              "Year": 2026,
+              "Amount": 2000
+            }
+          ],
+          "Checks": [],
+          "Fields": [
+            {
+              "Number": "1",
+              "Label": "1 Nonemployee compensation",
+              "Level": "Recipient",
+              "Formula": "GROSS()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "4",
+              "Label": "4 Federal income tax withheld",
+              "Level": "Recipient",
+              "Formula": "TAX('US-BWH')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "3",
+              "Label": "3 Total number of forms",
+              "Level": "Filing",
+              "Formula": "RECIPIENTS()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "4",
+              "Label": "4 Federal income tax withheld",
+              "Level": "Filing",
+              "Formula": "TOTAL('4')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "5",
+              "Label": "5 Total amount reported",
+              "Level": "Filing",
+              "Formula": "TOTAL('1')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Statement": {
+            "Name": "Form 1099-NEC",
+            "Title": "Form 1099-NEC Nonemployee Compensation",
+            "Copy": "Copy B, for the recipient",
+            "TaxIdLabel": "Recipient's TIN",
+            "TaxIdFormat": "XXXXX{0}",
+            "FilerTaxIdLabel": "Payer's TIN",
+            "FilerAccountJurisdiction": null,
+            "FileName": "1099-NEC"
+          },
+          "Properties": {
+            "PayrollTaxFormSettings": {
+              "Workers": "Contractors",
+              "PeopleJurisdiction": null,
+              "ListJurisdictionAmounts": false,
+              "PayCodeFieldPrefix": null
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -27,7 +27,7 @@ public sealed class ContactCenterWorkflowSubscriptionsTests
         var workflowManager = new Mock<IWorkflowManager>();
         var deduplication = new Mock<IContactCenterEventDeduplicationService>();
         var subscriptions = Subscriptions(Workflow(true, Event("ActivityDispositionApplied", isStart: true)));
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, subscriptions);
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, subscriptions, ContactCenterWorkflowEventHandlerTests.PassThroughAgents());
 
         // Act
         await handler.HandleAsync(new InteractionEvent { ItemId = "event-1", EventType = "AgentConnected" }, TestContext.Current.CancellationToken);
@@ -47,7 +47,7 @@ public sealed class ContactCenterWorkflowSubscriptionsTests
             .Setup(service => service.TryBeginAsync(It.IsAny<string>(), "event-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         var subscriptions = Subscriptions(Workflow(true, Event("ActivityDispositionApplied", isStart: true)));
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, subscriptions);
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, subscriptions, ContactCenterWorkflowEventHandlerTests.PassThroughAgents());
 
         // Act
         await handler.HandleAsync(new InteractionEvent { ItemId = "event-1", EventType = "ActivityDispositionApplied", AggregateId = "activity-1" }, TestContext.Current.CancellationToken);

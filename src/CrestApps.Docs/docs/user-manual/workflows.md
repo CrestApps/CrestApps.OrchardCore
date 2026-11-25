@@ -48,7 +48,7 @@ You can use these in any field that takes Liquid, for example `{{ Workflow.Input
 | `InteractionId` | The call or conversation the event is about. |
 | `AggregateType`, `AggregateId` | The record the event is about, such as an activity. Activity tasks take `{{ Workflow.Input.AggregateId }}`. |
 | `ActorId`, `ActorType` | Who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform itself (`system`). |
-| `AgentId`, `AgentUserId` | Which agent the change is about, whoever made it. |
+| `AgentId`, `AgentUserId`, `AgentUserName` | Which agent the change is about, whoever made it, by agent profile, user id and user name. On a call the dialer placed for an agent, this is that agent: the one a Power or Progressive dial reserved before dialing, or the one a Predictive call was connected to once a person answered. A Predictive call nobody answered never had an agent, so these are empty. |
 | `SourceComponent` | The part of the platform that raised the event. |
 | `Data` | The event's own details, for example `{{ Workflow.Input.Data.PhoneNumber }}`. See the two events below. |
 
@@ -93,6 +93,8 @@ When the dialer dispositions a call, what happens next is up to the disposition.
 - **In a workflow.** Use the **Schedule Dialer Retry** task. It does the same, but the workflow decides when: set **Delay in minutes** (empty uses the profile's retry delay, and a shorter delay is raised to it). It ends with **Scheduled** (the next activity is in `{{ Workflow.Output.NextActivityItemId }}`), **Exhausted** when no attempt is left, or **Failed**.
 
 Use one or the other for the same disposition, or the contact gets two follow-up activities. A **Schedule Dialer Retry** that runs after the dialer already retried the call on its own finds that attempt and does not create another.
+
+To have an agent work the next activity instead of the dialer, set **Dial with** to *Manual* on the subject flow's **Try Again** or **New Activity** action; see [Campaign, dialer and owner of the follow-up](subject-flows.md#campaign-dialer-and-owner-of-the-follow-up).
 
 To retry a busy line after 15 minutes from a workflow:
 

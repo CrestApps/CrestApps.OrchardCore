@@ -1,18 +1,4 @@
 @model ShapeViewModel<MyPayTaxFormViewModel>
 
-@switch (Model.Value.Filing.Form)
-{
-    case CrestApps.OrchardCore.Payroll.Core.UnitedStates.Form1099Nec.FormName:
-        <strong>@T["Form 1099-NEC for {0}", Model.Value.Filing.Year]</strong>
-        break;
-    case CrestApps.OrchardCore.Payroll.Core.Canada.FormT4.FormName:
-        <strong>@T["T4 slip for {0}", Model.Value.Filing.Year]</strong>
-        break;
-    case CrestApps.OrchardCore.Payroll.Core.Canada.FormRl1.FormName:
-        <strong>@T["RL-1 slip for {0}", Model.Value.Filing.Year]</strong>
-        break;
-    default:
-        <strong>@T["Form W-2 for {0}", Model.Value.Filing.Year]</strong>
-        break;
-}
+<strong>@T["{0} for {1}", Model.Value.StatementName ?? Model.Value.Filing.Form, Model.Value.Filing.Year]</strong>
 <span class="text-muted small ms-1">@Model.Value.EmployerName</span>

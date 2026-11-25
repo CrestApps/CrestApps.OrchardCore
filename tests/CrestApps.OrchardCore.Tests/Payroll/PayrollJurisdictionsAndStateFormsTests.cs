@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Payroll.Core.Services;
+using CrestApps.OrchardCore.Payroll.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.Core.UnitedStates;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -108,7 +109,7 @@ public sealed class PayrollJurisdictionsAndStateFormsTests
             Statement(("US-MI-SIT", "US-MI", IncomeTaxCategories.IncomeTax, 1850m, 69.14m), ("US-MI-DETROIT-R", "US-MI-DETROIT", IncomeTaxCategories.IncomeTax, 1850m, 43.85m)),
         };
 
-        var amounts = FormW2.JurisdictionAmounts(statements, employer);
+        var amounts = PayrollFilingSums.JurisdictionAmounts(statements, employer);
 
         // Federal tax and a contribution aren't state or local income tax; the state's withholding account is its id.
         Assert.Equal(
@@ -116,7 +117,7 @@ public sealed class PayrollJurisdictionsAndStateFormsTests
             amounts.Select(amount => (amount.Jurisdiction, amount.AccountId, amount.Name, amount.Wages, amount.Tax)));
 
         // One W-2 row: Michigan with Detroit beside it.
-        var row = Assert.Single(FormW2Document.StateRows(amounts));
+        var row = Assert.Single(PayrollTaxStatementDocument.StateRows(amounts));
 
         Assert.Equal(("US-MI", "US-MI-DETROIT"), (row.State.Jurisdiction, row.Local.Jurisdiction));
     }
@@ -124,7 +125,7 @@ public sealed class PayrollJurisdictionsAndStateFormsTests
     [Fact]
     public void FormW2_StateRows_PairEachStateWithItsLocalities()
     {
-        var rows = FormW2Document.StateRows(
+        var rows = PayrollTaxStatementDocument.StateRows(
         [
             new PayrollFilingJurisdictionAmount { Jurisdiction = "US-MI", Wages = 10m },
             new PayrollFilingJurisdictionAmount { Jurisdiction = "US-MI-DETROIT", Wages = 6m },

@@ -1,10 +1,13 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.RoutingRules;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
@@ -13,6 +16,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -328,6 +332,58 @@ public sealed class MessagingFeatureActivationTests
             services => Task.FromResult(services.GetServices<IOmnichannelProcessor>().Select(processor => processor.Channel).ToArray()));
 
         Assert.Contains(OmnichannelConstants.Channels.Email, channels);
+    }
+
+    [Fact]
+    public async Task FreshTenant_MessagingWorkspace_HasRoutingRules_AndEnablesTeamsAndQueues()
+    {
+        // Arrange
+        // The routing rules are part of the workspace. They pick through Teams assignment and read queue sign-ins, so
+        // the workspace brings both by dependency, and the rules' catalog, router and evaluator resolve on a fresh tenant.
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = "messaging-routing-rules",
+            ProviderProfile = "none",
+            Features = [MessagingConstants.Feature.Sms],
+        });
+
+        await host.ExecuteInTenantScopeAsync(tenant, async services =>
+        {
+            var rules = services.GetRequiredService<ICatalogManager<MessagingRoutingRule>>();
+            var rule = await rules.NewAsync();
+            rule.DisplayText = "Replies to a named user";
+            rule.CandidateSource = MessagingRoutingCandidateSources.Users;
+            rule.UserIds = ["nobody-with-an-agent-profile"];
+
+            await rules.CreateAsync(rule);
+        });
+
+        // Act
+        var (enabledFeatureIds, routerNames, match, ruleCount) = await host.ExecuteInTenantScopeAsync(tenant, async services =>
+        {
+            var features = await services.GetRequiredService<IShellFeaturesManager>().GetEnabledFeaturesAsync();
+            var routers = services.GetServices<IMessagingInboundRouter>().Select(router => router.GetType().Name).ToArray();
+            var evaluator = services.GetRequiredService<IMessagingRoutingRuleEvaluator>();
+            var assigned = await evaluator.AssignAsync(new MessagingRoutingRuleRequest
+            {
+                Conversation = new MessagingConversation { ItemId = "c1", Channel = OmnichannelConstants.Channels.Sms },
+                Trigger = MessagingRoutingRuleTriggers.ContactReplied,
+            });
+
+            var stored = await services.GetRequiredService<ICatalogManager<MessagingRoutingRule>>().GetAllAsync();
+
+            return (features.Select(feature => feature.Id).ToArray(), routers, assigned, stored.Count());
+        });
+
+        // Assert
+        Assert.Contains(TeamsConstants.Features.Teams, enabledFeatureIds);
+        Assert.Contains(ContactCenterConstants.Feature.Queues, enabledFeatureIds);
+        Assert.Contains("RoutingRulesRouter", routerNames);
+        Assert.Equal(1, ruleCount);
+
+        // The rule's only user has no agent profile, so nobody is assigned and the conversation is left as it was.
+        Assert.Null(match);
     }
 
     [Fact]

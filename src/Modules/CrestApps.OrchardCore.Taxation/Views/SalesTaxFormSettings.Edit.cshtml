@@ -1,0 +1,21 @@
+@model SalesTaxFormSettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Sales tax return"]</div>
+    <div class="card-body">
+        <p class="hint mb-3">@T["A registration whose filing schedule names this form works its returns out with it: the fields are the return's boxes, worked out from the figures the modules gave for the period, and a failed check is a note on the return."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="AmountDueField">
+            <label asp-for="AmountDueField" class="ocat-label ocat-label-required">@T["Amount due field"]</label>
+            <div class="ocat-end">
+                <input asp-for="AmountDueField" class="form-control" maxlength="20" style="max-width: 12rem" list="salesTaxFormFilingFields" />
+                <datalist id="salesTaxFormFilingFields">
+                    @foreach (var number in Model.FilingFields)
+                    {
+                        <option value="@number"></option>
+                    }
+                </datalist>
+                <span class="hint">@T["The box or line that is the amount the return says is due, after credits, discounts, penalty and interest, such as AmountDue or 21. Payments recorded on the return are taken off it for its balance."]</span>
+            </div>
+        </div>
+    </div>
+</div>

@@ -82,19 +82,15 @@ internal sealed class TryAgainSubjectActionDisplayDriver : DisplayDriver<Subject
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var normalizedUserName = model.NormalizedUserName?.Trim();
-
-        if (model.AssignmentType != SubjectActionOwnerAssignmentType.SpecificOwner)
-        {
-            normalizedUserName = null;
-        }
+        // Who owns the follow-up is edited in the action's follow-up section, which keeps it on this metadata.
+        action.TryGet<TryAgainActionMetadata>(out var existing);
 
         action.Put(new TryAgainActionMetadata
         {
             MaxAttempt = model.MaxAttempt,
             UrgencyLevel = model.UrgencyLevel,
-            AssignmentType = model.AssignmentType,
-            NormalizedUserName = normalizedUserName,
+            AssignmentType = existing?.AssignmentType ?? SubjectActionOwnerAssignmentType.SameOwner,
+            NormalizedUserName = existing?.NormalizedUserName,
             DefaultScheduleHours = model.DefaultScheduleHours,
         });
 

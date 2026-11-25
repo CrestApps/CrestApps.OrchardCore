@@ -9,4 +9,9 @@ public static class MessagingDeploymentSteps
     /// The recipe step that carries the canned-response message templates.
     /// </summary>
     public const string MessageTemplate = "OmnichannelMessageTemplate";
+
+    /// <summary>
+    /// The recipe step that carries the routing rules.
+    /// </summary>
+    public const string RoutingRules = "MessagingRoutingRules";
 }

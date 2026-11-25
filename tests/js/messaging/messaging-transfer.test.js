@@ -154,8 +154,9 @@ describe('assignmentToastTitle', () => {
 describe('the transfer row in the thread', () => {
     const view = readFileSync('src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Views/Admin/_ThreadEvent.cshtml', 'utf8');
 
-    it('is worded by the tested ThreadTimeline.DescribeTransfer', () => {
-        expect(view).toContain('ThreadTimeline.DescribeTransfer(Model, T)');
+    // Describe words a transfer through DescribeTransfer and a routing-rule assignment on its own; both are tested.
+    it('is worded by the tested ThreadTimeline.Describe', () => {
+        expect(view).toContain('ThreadTimeline.Describe(Model, T)');
     });
 
     it('still shows the note', () => {

@@ -429,6 +429,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string ActivityId { get; set; }
         public string ProfileId { get; set; }
     }
+    public enum ActivityDialerWithdrawResult
+    {
+        NotQueued = 0,
+        Withdrawn = 1,
+        InFlight = 2,
+    }
     public enum ActivityDispositionActor
     {
         Unknown = 0,
@@ -768,6 +774,42 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool HasNamedOwner { get; set; }
         public int? MaxAttempts { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity PreviousActivity { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpRoutingTarget Route { get; set; }
+    }
+    public sealed class FollowUpOwnerPoolMetadata
+    {
+        public FollowUpOwnerPoolMetadata() { }
+        public string[] RoleNames { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolSource Source { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpOwnerPoolStrategy Strategy { get; set; }
+        public string TeamId { get; set; }
+        public string[] UserIds { get; set; }
+    }
+    public enum FollowUpOwnerPoolSource
+    {
+        Team = 0,
+        Roles = 1,
+        Users = 2,
+    }
+    public enum FollowUpOwnerPoolStrategy
+    {
+        RoundRobin = 0,
+        FewestOpenActivities = 1,
+    }
+    public sealed class FollowUpRoutingMetadata
+    {
+        public FollowUpRoutingMetadata() { }
+        public string CampaignId { get; set; }
+        public string DialerProfileId { get; set; }
+        public string Source { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.FollowUpRoutingTarget Target { get; set; }
+        public bool ChangesRouting() { }
+    }
+    public enum FollowUpRoutingTarget
+    {
+        SameAsBefore = 0,
+        Agent = 1,
+        Dialer = 2,
     }
     public enum HandoffAvailability
     {
@@ -1470,6 +1512,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         SameOwner = 0,
         SpecificOwner = 1,
+        CallAgent = 2,
+        Pool = 3,
     }
     public static class SubjectActionOwnerAssignmentTypeResolver
     {
@@ -1617,6 +1661,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         string Source { get; }
         System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IActivityCallAgentResolver
+    {
+        System.Threading.Tasks.Task<string> FindAgentUserIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IActivityDialerContributor
     {
         System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default);
@@ -1625,6 +1673,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerCampaignMoveResult> MoveToCampaignAsync(string activityId, string campaignId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerWithdrawResult> WithdrawAsync(string activityId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityDispositionHandler
     {

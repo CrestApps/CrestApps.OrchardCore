@@ -44,15 +44,21 @@ public sealed class DefaultTeamAssignmentService : ITeamAssignmentService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (string.IsNullOrEmpty(request.TeamId))
+        if (request.CandidateUserIds is null && string.IsNullOrEmpty(request.TeamId))
         {
             return new TeamAssignmentResult(null, TeamAssignmentOutcome.NoTeam);
         }
 
         var excluded = new HashSet<string>(request.ExcludedUserIds ?? [], StringComparer.Ordinal);
 
+        // The candidates a caller names, such as a queue's signed-in agents, are picked from the same way as a team's
+        // members, so a caller with its own pool still shares one round robin and one least-loaded rule.
+        var members = request.CandidateUserIds is not null
+            ? request.CandidateUserIds.Select(userId => new TeamMember { TeamId = request.TeamId, UserId = userId })
+            : await _membershipService.GetMembersAsync(request.TeamId, request.IncludeSubTeams, cancellationToken: cancellationToken);
+
         // One candidate per person: a member of the team and of one of its sub-teams is considered once.
-        IReadOnlyList<TeamMember> candidates = (await _membershipService.GetMembersAsync(request.TeamId, request.IncludeSubTeams, cancellationToken: cancellationToken))
+        IReadOnlyList<TeamMember> candidates = members
             .Where(member => !string.IsNullOrEmpty(member.UserId) && !excluded.Contains(member.UserId))
             .GroupBy(member => member.UserId, StringComparer.Ordinal)
             .Select(group => group.First())

@@ -19,7 +19,8 @@ public sealed class ContactCenterWorkflowEventHandlerTests
         var handler = new ContactCenterWorkflowEventHandler(
             new Mock<IWorkflowManager>().Object,
             new Mock<IContactCenterEventDeduplicationService>().Object,
-            ListensForEverything());
+            ListensForEverything(),
+            PassThroughAgents());
 
         // Act
         var replaySafety = handler.ReplaySafety;
@@ -37,7 +38,7 @@ public sealed class ContactCenterWorkflowEventHandlerTests
         deduplication
             .Setup(service => service.TryBeginAsync("ContactCenter/WorkflowBridge/v1", "event-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything());
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything(), PassThroughAgents());
         var interactionEvent = new InteractionEvent
         {
             ItemId = "event-1",
@@ -69,7 +70,7 @@ public sealed class ContactCenterWorkflowEventHandlerTests
             .SetupSequence(service => service.TryBeginAsync("ContactCenter/WorkflowBridge/v1", "event-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true)
             .ReturnsAsync(false);
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything());
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything(), PassThroughAgents());
         var interactionEvent = new InteractionEvent
         {
             ItemId = "event-1",
@@ -159,13 +160,23 @@ public sealed class ContactCenterWorkflowEventHandlerTests
         deduplication
             .Setup(service => service.TryBeginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything());
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything(), PassThroughAgents());
 
         await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
 
         Assert.NotNull(input);
 
         return input;
+    }
+
+    internal static IContactCenterEventAgentResolver PassThroughAgents()
+    {
+        var resolver = new Mock<IContactCenterEventAgentResolver>();
+        resolver
+            .Setup(r => r.ResolveAsync(It.IsAny<InteractionEvent>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InteractionEvent _, string agentId, string userId, CancellationToken _) => (agentId, userId, (string)null));
+
+        return resolver.Object;
     }
 
     private static IContactCenterWorkflowSubscriptions ListensForEverything()

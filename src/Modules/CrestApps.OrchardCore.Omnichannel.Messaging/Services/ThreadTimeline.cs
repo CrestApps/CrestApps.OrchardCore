@@ -73,6 +73,29 @@ public static class ThreadTimeline
     }
 
     /// <summary>
+    /// Words a history entry as the thread shows it: a transfer, or a routing rule that gave the conversation to an agent.
+    /// </summary>
+    /// <param name="entry">The history entry.</param>
+    /// <param name="T">The localizer of the view that shows it.</param>
+    /// <returns>The sentence. The names are its arguments, so they are encoded once, when it is written.</returns>
+    public static LocalizedHtmlString Describe(MessagingConversationEvent entry, IHtmlLocalizer T)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(T);
+
+        if (entry.Kind != MessagingConversationEventKind.Routed)
+        {
+            return DescribeTransfer(entry, T);
+        }
+
+        var to = string.IsNullOrWhiteSpace(entry.ToName) ? T.GetString("an agent").Value : entry.ToName;
+
+        return string.IsNullOrWhiteSpace(entry.RuleName)
+            ? T["Assigned to {0} by a routing rule", to]
+            : T["Assigned to {0} by the routing rule {1}", to, entry.RuleName];
+    }
+
+    /// <summary>
     /// Words a transfer as the thread shows it, from the names captured when it happened. A queue is named as one, so
     /// "to Billing" is not read as a person called Billing, and whoever made the transfer is only named apart from the
     /// sender when it was somebody else, such as a supervisor.

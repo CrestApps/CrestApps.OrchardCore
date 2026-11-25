@@ -153,7 +153,7 @@ public sealed class TaxReturnsController : Controller
         }
 
         var registration = await _registrations.FindByIdAsync(taxReturn.RegistrationId, HttpContext.RequestAborted);
-        var formName = _service.GetForms().TryGetValue(taxReturn.Form ?? string.Empty, out var form)
+        var formName = (await _service.GetFormsAsync(includeDisabled: true, HttpContext.RequestAborted)).TryGetValue(taxReturn.Form ?? string.Empty, out var form)
             ? _localizerFactory.Localize(form.DisplayName).Value
             : taxReturn.Form;
         var title = taxReturn.Amendment > 0

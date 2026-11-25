@@ -1,0 +1,259 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
+@model MessagingRoutingRuleViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="card mb-3">
+    <div class="card-header">@T["General"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="DisplayText">
+            <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="DisplayText" class="form-control" />
+                <span asp-validation-for="DisplayText" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Order">
+            <label asp-for="Order" class="ocat-label">@T["Order"]</label>
+            <div class="ocat-end">
+                <input asp-for="Order" type="number" step="1" class="form-control" />
+                <span class="hint">@T["Rules are tried from the lowest order up. The first rule that finds an agent assigns the conversation."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+                    <label class="form-check-label" asp-for="Enabled">@T["Enabled"]</label>
+                    <span class="hint dashed">@T["A disabled rule is never tried."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["When the rule applies"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="OnContactReplied" />
+                    <label class="form-check-label" asp-for="OnContactReplied">@T["A contact replies to a conversation nobody owns"]</label>
+                    <span class="hint dashed">@T["Such as a text a workflow or a broadcast sent without an agent, or a conversation waiting in a queue's shared inbox."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="OnNewConversation" />
+                    <label class="form-check-label" asp-for="OnNewConversation">@T["A contact starts a new conversation"]</label>
+                    <span class="hint dashed">@T["Only when the number's entry point sends it to a queue or to nobody, not to one agent."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="OnStartedWithoutAgent" />
+                    <label class="form-check-label" asp-for="OnStartedWithoutAgent">@T["A workflow or broadcast starts a conversation without an agent"]</label>
+                    <span class="hint dashed">@T["The conversation is assigned as soon as the message is sent, before the contact replies. Leave this off to assign only the conversations the contact answers."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="OnWaiting" data-routing-rule-waiting />
+                    <label class="form-check-label" asp-for="OnWaiting">@T["A contact's message is still waiting for a person"]</label>
+                    <span class="hint dashed">@T["Tries the rule again every minute on conversations nobody owns, so one that found no agent available goes to an agent as soon as one is."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="WaitingMinutes" data-routing-rule-waiting-minutes>
+            <label asp-for="WaitingMinutes" class="ocat-label">@T["Wait (minutes)"]</label>
+            <div class="ocat-end">
+                <input asp-for="WaitingMinutes" type="number" min="1" step="1" class="form-control" />
+                <span asp-validation-for="WaitingMinutes" class="text-danger"></span>
+                <span class="hint">@T["How long the contact's message waits before the rule is tried again."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Conversations the rule takes"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Leave a list empty to take every value."]</p>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Channels" class="ocat-label">@T["Channels"]</label>
+            <div class="ocat-end">
+                <select asp-for="Channels" asp-items="Model.AvailableChannels" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every channel"]"></select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ServiceAddresses" class="ocat-label">@T["Business numbers and addresses"]</label>
+            <div class="ocat-end">
+                <select asp-for="ServiceAddresses" asp-items="Model.AvailableServiceAddresses" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Every number and address"]"></select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="QueueIds" class="ocat-label">@T["Queues"]</label>
+            <div class="ocat-end">
+                <select asp-for="QueueIds" asp-items="Model.AvailableQueues" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Any queue, or none"]"></select>
+                <span class="hint">@T["The queue that owns the conversation or, for a new one, the queue its entry point sends it to."]</span>
+            </div>
+        </div>
+
+        @if (Model.AvailableCampaigns.Count > 0)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="CampaignIds" class="ocat-label">@T["Campaigns"]</label>
+                <div class="ocat-end">
+                    <select asp-for="CampaignIds" asp-items="Model.AvailableCampaigns" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Any campaign, or none"]"></select>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3" data-routing-rule-candidates>
+    <div class="card-header">@T["Who gets the conversation"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="CandidateSource">
+            <label asp-for="CandidateSource" class="ocat-label">@T["Agents"]</label>
+            <div class="ocat-end">
+                <select asp-for="CandidateSource" asp-items="Model.AvailableCandidateSources" class="form-select" data-routing-rule-source></select>
+                <span asp-validation-for="CandidateSource" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" data-routing-rule-source-fields="@MessagingRoutingCandidateSources.QueueSignedIn @MessagingRoutingCandidateSources.QueueMembers">
+            <label asp-for="CandidateQueueId" class="ocat-label">@T["Queue"]</label>
+            <div class="ocat-end">
+                <select asp-for="CandidateQueueId" asp-items="Model.AvailableQueues.Select(queue => new SelectListItem(queue.Text, queue.Value, queue.Value == Model.CandidateQueueId))" class="form-select">
+                    <option value="">@T["The conversation's own queue"]</option>
+                </select>
+                <span class="hint">@T["A conversation that belongs to no queue is skipped when the rule uses its own queue."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="TeamIds" data-routing-rule-source-fields="@MessagingRoutingCandidateSources.Teams">
+            <label asp-for="TeamIds" class="ocat-label">@T["Teams"]</label>
+            <div class="ocat-end">
+                <select asp-for="TeamIds" asp-items="Model.AvailableTeams" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Select teams"]"></select>
+                <span asp-validation-for="TeamIds" class="text-danger"></span>
+                <span class="hint">@T["The members of these teams and of the teams under them."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="RoleNames" data-routing-rule-source-fields="@MessagingRoutingCandidateSources.Roles">
+            <label asp-for="RoleNames" class="ocat-label">@T["Roles"]</label>
+            <div class="ocat-end">
+                <select asp-for="RoleNames" asp-items="Model.AvailableRoles" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Select roles"]"></select>
+                <span asp-validation-for="RoleNames" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="UserIds" data-routing-rule-source-fields="@MessagingRoutingCandidateSources.Users">
+            <label asp-for="UserIds" class="ocat-label">@T["Users"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("UserPicker", new
+                {
+                    audience = "Staff",
+                    name = Html.NameFor(m => m.UserIds).ToString(),
+                    selectedValues = Model.UserIds,
+                    valueType = "userId",
+                    multiple = true,
+                    buttonText = T["Select users"].Value,
+                    searchPlaceholder = T["Search users"].Value,
+                    smallButton = false,
+                })
+                <span asp-validation-for="UserIds" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <span class="hint">@T["Only users with an agent profile can get conversations."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Strategy">
+            <label asp-for="Strategy" class="ocat-label">@T["Pick"]</label>
+            <div class="ocat-end">
+                <select asp-for="Strategy" asp-items="Model.AvailableStrategies" class="form-select"></select>
+                <span asp-validation-for="Strategy" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="OnlyAvailableAgents" />
+                    <label class="form-check-label" asp-for="OnlyAvailableAgents">@T["Only agents available for messaging"]</label>
+                    <span class="hint dashed">@T["Agents who turned messaging on and have the messaging workspace open."]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="RespectMaxConcurrent" />
+                    <label class="form-check-label" asp-for="RespectMaxConcurrent">@T["Skip agents at their conversation limit"]</label>
+                    <span class="hint dashed">@T["Live calls count toward the limit, each as several conversations."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const card = document.querySelector('[data-routing-rule-candidates]');
+        const source = card?.querySelector('[data-routing-rule-source]');
+        const waiting = document.querySelector('[data-routing-rule-waiting]');
+        const waitingMinutes = document.querySelector('[data-routing-rule-waiting-minutes]');
+
+        const showSourceFields = () => {
+            card.querySelectorAll('[data-routing-rule-source-fields]').forEach(fields => {
+                const sources = fields.getAttribute('data-routing-rule-source-fields').split(' ');
+                fields.classList.toggle('d-none', !sources.includes(source.value));
+            });
+        };
+
+        const showWaitingMinutes = () => {
+            waitingMinutes.classList.toggle('d-none', !waiting.checked);
+        };
+
+        if (source) {
+            source.addEventListener('change', showSourceFields);
+            showSourceFields();
+        }
+
+        if (waiting && waitingMinutes) {
+            waiting.addEventListener('change', showWaitingMinutes);
+            showWaitingMinutes();
+        }
+    })();
+</script>

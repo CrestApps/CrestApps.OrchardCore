@@ -1,0 +1,45 @@
+@model ShapeViewModel<MessagingRoutingRule>
+
+@{
+    var rule = Model.Value;
+
+    var source = rule.CandidateSource switch
+    {
+        MessagingRoutingCandidateSources.QueueSignedIn => T["Signed in to a queue"],
+        MessagingRoutingCandidateSources.QueueMembers => T["Queue agents"],
+        MessagingRoutingCandidateSources.Teams => T["Teams"],
+        MessagingRoutingCandidateSources.Roles => T["Roles"],
+        MessagingRoutingCandidateSources.Users => T["Specific users"],
+        _ => T["Unknown"],
+    };
+
+    var strategy = rule.Strategy switch
+    {
+        MessagingRoutingRuleStrategies.RoundRobin => T["Round robin"],
+        MessagingRoutingRuleStrategies.LeastOpenConversations => T["Fewest open conversations"],
+        MessagingRoutingRuleStrategies.LeastLoaded => T["Least busy"],
+        _ => T["Unknown"],
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Who can get the conversations"]">
+    <i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@source
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["How an agent is picked"]">
+    <i class="fa-solid fa-shuffle text-secondary me-1" aria-hidden="true"></i>@strategy
+</span>
+
+@if (rule.Triggers.HasFlag(MessagingRoutingRuleTriggers.StartedWithoutAgent))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Conversations a workflow or another automated send starts without an agent are assigned at once."]">
+        <i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["At send"]
+    </span>
+}
+
+@if (!rule.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["This rule is disabled."]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}
