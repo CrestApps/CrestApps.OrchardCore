@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -148,6 +149,7 @@ internal sealed class TestMessageToolDoubles
             .Returns((string phoneNumber) => phoneNumber.StartsWith('+') && phoneNumber.Length > 8 && phoneNumber.Skip(1).All(char.IsDigit));
 
         services.AddSingleton(Options.Create(providerOptions));
+        services.AddSingleton<IOptionsMonitor<SmsProviderOptions>>(new TestOptionsMonitor<SmsProviderOptions>(providerOptions));
         services.AddSingleton(resolver.Object);
         services.AddSingleton(phoneValidator.Object);
     }

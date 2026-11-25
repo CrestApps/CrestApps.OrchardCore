@@ -76,8 +76,9 @@ public sealed class SendTestSmsTool : AIFunction
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
-        // The providers the SMS Test page offers: the enabled ones.
-        var availableProviders = services.GetRequiredService<IOptions<SmsProviderOptions>>().Value.Providers
+        // The providers the SMS Test page offers: the enabled ones. A settings save refreshes these options without a
+        // restart, so they are read through the monitor.
+        var availableProviders = services.GetRequiredService<IOptionsMonitor<SmsProviderOptions>>().CurrentValue.Providers
             .Where(entry => entry.Value.IsEnabled)
             .Select(entry => entry.Key)
             .Order(StringComparer.OrdinalIgnoreCase)
