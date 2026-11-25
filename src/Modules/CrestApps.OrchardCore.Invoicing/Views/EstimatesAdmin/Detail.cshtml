@@ -140,7 +140,7 @@
                                         <span class="d-block small text-muted">@T["{0}% invoiced", done.ToString("0.##")]</span>
                                     </span>
                                     <div class="input-group input-group-sm" style="max-width: 7rem;">
-                                        <input type="number" name="percents[@line.Id]" class="form-control" min="0" max="@((100m - done).ToString(System.Globalization.CultureInfo.InvariantCulture))" step="any" disabled="@(done >= 100m)" aria-label="@T["Percent of {0} to invoice now", line.Name]" />
+                                        <input type="number" name="percents[@line.Id]" class="form-control" min="0" max="@((100m - done).ToString(System.Globalization.CultureInfo.InvariantCulture))" step="any" disabled="@(done >= 100m)" aria-label="@T["Percent of {0} to invoice now", line.Name]" /><input type="hidden" name="__Invariant" value="percents[@line.Id]" />
                                         <span class="input-group-text">%</span>
                                     </div>
                                 </div>

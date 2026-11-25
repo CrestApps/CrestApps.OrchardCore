@@ -53,7 +53,7 @@
                name="customAmount"
                id="@(formId)-amount"
                value="@(selected?.Amount)"
-               class="form-control form-control-sm" />
+               class="form-control form-control-sm" /><input type="hidden" name="__Invariant" value="customAmount" />
     </div>
 
     <div class="mb-2 @(selected?.AllowQuantity == true ? string.Empty : "d-none")" data-signup-quantity>

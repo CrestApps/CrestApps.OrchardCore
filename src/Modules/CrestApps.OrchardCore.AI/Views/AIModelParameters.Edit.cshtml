@@ -62,7 +62,7 @@
                         case AIDeploymentParameterKind.Integer:
                             <input type="number" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"
                                    value="@parameter.Value" placeholder="@T["Use deployment default"]"
-                                   step="@(parameter.Kind == AIDeploymentParameterKind.Integer ? "1" : "any")" disabled />
+                                   step="@(parameter.Kind == AIDeploymentParameterKind.Integer ? "1" : "any")" disabled /><input type="hidden" name="__Invariant" value="@fieldName" />
                             break;
                         default:
                             <input type="text" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"

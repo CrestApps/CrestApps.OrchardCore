@@ -35,6 +35,9 @@
                     <input type="hidden" name="kind" value="@kind" />
                     <input type="hidden" name="latitude" />
                     <input type="hidden" name="longitude" />
+                    @* The browser writes coordinates with a dot: read them the same in every culture. *@
+                    <input type="hidden" name="__Invariant" value="latitude" />
+                    <input type="hidden" name="__Invariant" value="longitude" />
                     <input type="hidden" name="key" />
                     <input type="hidden" name="source" value="Web" />
                     <input type="hidden" name="returnUrl" value="@returnUrl" />

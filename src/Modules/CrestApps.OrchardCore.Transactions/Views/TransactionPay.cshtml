@@ -68,7 +68,7 @@ else
                         <input id="pay-amount" name="amount" type="number" class="form-control" inputmode="decimal" required
                                min="@smallestInput"
                                max="@CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)"
-                               step="@amountStep" />
+                               step="@amountStep" /><input type="hidden" name="__Invariant" value="amount" />
                     </div>
                     <div class="col-12 col-sm-auto">
                         <button type="submit" class="btn btn-outline-primary">@T["Pay this amount"]</button>

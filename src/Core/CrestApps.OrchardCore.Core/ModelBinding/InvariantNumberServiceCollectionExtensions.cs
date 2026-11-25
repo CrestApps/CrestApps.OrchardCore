@@ -6,16 +6,18 @@ using Microsoft.Extensions.Options;
 namespace CrestApps.OrchardCore.Core.ModelBinding;
 
 /// <summary>
-/// Registers the handling that lets a number posted from a form bind the same in every culture.
+/// Turns on ASP.NET Core's own handling of number inputs in every culture.
 /// </summary>
 public static class InvariantNumberServiceCollectionExtensions
 {
     /// <summary>
-    /// Makes the tenant's forms bind and render numbers the same in every culture: a posted <see cref="decimal"/>,
-    /// <see cref="double"/> or <see cref="float"/> action parameter, or a property of a CrestApps model, is read with the
-    /// invariant culture first and the request culture second, never with a group separator, and an <c>asp-for</c> number
-    /// input writes its value invariantly. Call it from the <c>Startup</c> of every module whose forms post a number with a
-    /// fraction or bind one to a floating-point action parameter. Calling it more than once registers it once.
+    /// Turns on <see cref="Microsoft.AspNetCore.Mvc.Rendering.FormInputRenderMode.DetectCultureFromInputType"/>: an
+    /// <c>asp-for</c> number input writes its value invariantly and adds a hidden <c>__Invariant</c> field naming it, so
+    /// the framework reads the posted value invariantly too, in every culture (a decimal-comma one such as de-DE included).
+    /// A hand-written number input (<c>name="..."</c> without <c>asp-for</c>) writes its value with
+    /// <see cref="System.Globalization.CultureInfo.InvariantCulture"/> and adds the <c>__Invariant</c> field itself, and so
+    /// does a script that posts a number. Call it from the <c>Startup</c> of every module whose forms post a number with a
+    /// fraction. Calling it more than once registers it once.
     /// </summary>
     /// <param name="services">The tenant's services.</param>
     /// <returns>The same <paramref name="services"/>.</returns>
@@ -23,7 +25,6 @@ public static class InvariantNumberServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<MvcOptions>, InvariantNumberMvcOptionsSetup>());
         services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<MvcViewOptions>, InvariantNumberMvcViewOptionsSetup>());
 
         return services;

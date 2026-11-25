@@ -66,7 +66,7 @@
         }
     </td>
     <td data-label="@T["Quantity"]" data-line-amount-cell>
-        <input type="number" name="Lines[@i].Quantity" value="@Invariant(line.Quantity)" step="any" min="0" class="form-control form-control-sm document-line-number" data-line-field="quantity" aria-label="@T["Quantity"]" />
+        <input type="number" name="Lines[@i].Quantity" value="@Invariant(line.Quantity)" step="any" min="0" class="form-control form-control-sm document-line-number" data-line-field="quantity" aria-label="@T["Quantity"]" /><input type="hidden" name="__Invariant" value="Lines[@i].Quantity" />
     </td>
     <td data-label="@T["Unit"]" data-line-amount-cell>
         @if (editor.CanEditText)
@@ -79,10 +79,10 @@
         }
     </td>
     <td data-label="@T["Price"]" data-line-amount-cell>
-        <input type="number" name="Lines[@i].UnitPrice" value="@Invariant(line.UnitPrice)" step="any" class="form-control form-control-sm document-line-number" data-line-field="unitPrice" aria-label="@T["Price"]" />
+        <input type="number" name="Lines[@i].UnitPrice" value="@Invariant(line.UnitPrice)" step="any" class="form-control form-control-sm document-line-number" data-line-field="unitPrice" aria-label="@T["Price"]" /><input type="hidden" name="__Invariant" value="Lines[@i].UnitPrice" />
     </td>
     <td data-label="@T["Discount %"]" data-line-amount-cell>
-        <input type="number" name="Lines[@i].DiscountPercent" value="@Invariant(line.DiscountPercent)" step="any" min="0" max="100" class="form-control form-control-sm document-line-number" data-line-field="discountPercent" aria-label="@T["Discount %"]" />
+        <input type="number" name="Lines[@i].DiscountPercent" value="@Invariant(line.DiscountPercent)" step="any" min="0" max="100" class="form-control form-control-sm document-line-number" data-line-field="discountPercent" aria-label="@T["Discount %"]" /><input type="hidden" name="__Invariant" value="Lines[@i].DiscountPercent" />
     </td>
     <td data-label="@T["Tax category"]" data-line-amount-cell>
         @if (editor.CanEditText)

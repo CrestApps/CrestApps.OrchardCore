@@ -19,140 +19,98 @@ using WorkOrdersStartup = CrestApps.OrchardCore.WorkOrders.Startup;
 namespace CrestApps.OrchardCore.Tests.Core.ModelBinding;
 
 /// <summary>
-/// Found while fixing F4 (third fix verification): MVC binds a form value in the request's culture, while a number input
-/// and script always write a dot. In de-DE "12.50" bound as 1250 and in fr-FR it did not bind, in every admin and staff
-/// action that takes a number from a form. These tests post through MVC's own value providers and model binders, with the
-/// services each module's <c>Startup</c> registers, under the request culture, as the actions are called in a site.
+/// A number input and script always post a dot ("12.50"), while MVC reads a form value in the request culture: in de-DE
+/// "12.50" binds as 1250 and in fr-FR it doesn't bind. ASP.NET Core's own answer is the <c>__Invariant</c> form field: a
+/// field it names is read with the invariant culture. An <c>asp-for</c> number input adds it by itself once
+/// <c>AddInvariantNumberInputs()</c> turns on <see cref="FormInputRenderMode.DetectCultureFromInputType"/>; a hand-written
+/// input or a script adds it next to the value. These tests post through MVC's own value providers and model binders, with
+/// the services each module's <c>Startup</c> registers, under the request culture, as the actions are called in a site.
 /// </summary>
 public sealed class InvariantNumberModelBindingTests
 {
-    public static TheoryData<string, string> Posts => new()
-    {
-        { "en-US", "12.50" },
-        { "de-DE", "12.50" },
-        { "fr-FR", "12.50" },
-        { "nl-NL", "12.50" },
-        { "de-DE", "12,50" },
-        { "fr-FR", "12,50" },
-    };
+    public static TheoryData<string> Cultures => new() { "en-US", "de-DE", "fr-FR", "nl-NL" };
 
     [Theory]
-    [MemberData(nameof(Posts))]
-    public async Task StoreCreditChange_BindsTheAmountTheFormSent(string culture, string posted)
+    [MemberData(nameof(Cultures))]
+    public async Task StoreCreditChange_BindsTheAmountTheFormSent(string culture)
     {
-        var result = await BindAsync<StoreCreditAdminController>(new CustomersStartup(), nameof(StoreCreditAdminController.Change), culture, new() { ["amount"] = posted });
+        var result = await BindAsync<StoreCreditAdminController>(new CustomersStartup(), nameof(StoreCreditAdminController.Change), culture, Invariant(new() { ["amount"] = "12.50" }));
 
         Assert.Equal(12.50m, result.Arguments[1]);
     }
 
     [Theory]
-    [MemberData(nameof(Posts))]
-    public async Task GiftCardAdjust_BindsTheAmountTheFormSent(string culture, string posted)
+    [MemberData(nameof(Cultures))]
+    public async Task GiftCardAdjust_BindsANegativeAmountTheFormSent(string culture)
     {
-        var result = await BindAsync<GiftCardsAdminController>(new OrdersStartup(), nameof(GiftCardsAdminController.Adjust), culture, new() { ["amount"] = posted });
+        var result = await BindAsync<GiftCardsAdminController>(new OrdersStartup(), nameof(GiftCardsAdminController.Adjust), culture, Invariant(new() { ["amount"] = "-5.25" }));
+
+        Assert.Equal(-5.25m, result.Arguments[1]);
+    }
+
+    [Theory]
+    [MemberData(nameof(Cultures))]
+    public async Task ReturnRefund_BindsTheAmountTheFormSent(string culture)
+    {
+        var result = await BindAsync<ReturnsAdminController>(new OrdersStartup(), nameof(ReturnsAdminController.Refund), culture, Invariant(new() { ["amount"] = "12.50" }));
 
         Assert.Equal(12.50m, result.Arguments[1]);
     }
 
+    // A property of a view model binds the same way as an action parameter.
     [Theory]
-    [MemberData(nameof(Posts))]
-    public async Task ReturnRefund_BindsTheAmountTheFormSent(string culture, string posted)
+    [MemberData(nameof(Cultures))]
+    public async Task OrderRefund_BindsTheAmountPropertyTheFormSent(string culture)
     {
-        var result = await BindAsync<ReturnsAdminController>(new OrdersStartup(), nameof(ReturnsAdminController.Refund), culture, new() { ["amount"] = posted });
-
-        Assert.Equal(12.50m, result.Arguments[1]);
-    }
-
-    // A property of a CrestApps view model binds the same way as an action parameter.
-    [Theory]
-    [MemberData(nameof(Posts))]
-    public async Task OrderRefund_BindsTheAmountPropertyTheFormSent(string culture, string posted)
-    {
-        var result = await BindAsync<OrdersAdminController>(new OrdersStartup(), nameof(OrdersAdminController.Refund), culture, new() { ["Amount"] = posted, ["Reason"] = "Damaged" });
+        var result = await BindAsync<OrdersAdminController>(new OrdersStartup(), nameof(OrdersAdminController.Refund), culture, Invariant(new() { ["Amount"] = "12.50" }, KeyValuePair.Create("Reason", new StringValues("Damaged"))));
 
         Assert.Equal(12.50m, Assert.IsType<OrderRefundInputModel>(result.Arguments[1]).Amount);
     }
 
     [Theory]
-    [MemberData(nameof(Posts))]
-    public async Task WorkOrderUse_BindsTheQuantityTheFormSent(string culture, string posted)
+    [MemberData(nameof(Cultures))]
+    public async Task WorkOrderUse_BindsTheQuantityTheFormSent(string culture)
     {
-        var result = await BindAsync<WorkOrdersController>(new WorkOrdersStartup(), nameof(WorkOrdersController.Use), culture, new() { ["quantity"] = posted });
+        var result = await BindAsync<WorkOrdersController>(new WorkOrdersStartup(), nameof(WorkOrdersController.Use), culture, Invariant(new() { ["quantity"] = "12.50" }));
 
         Assert.Equal(12.50m, result.Arguments[2]);
     }
 
     [Theory]
-    [MemberData(nameof(Posts))]
-    public async Task TimesheetAddLine_BindsTheHoursTheFormSent(string culture, string posted)
+    [MemberData(nameof(Cultures))]
+    public async Task TimesheetAddLine_BindsTheHoursTheFormSent(string culture)
     {
-        var result = await BindAsync<TimesheetsController>(new WorkforceStartup(), nameof(TimesheetsController.AddLine), culture, new() { ["hours"] = posted, ["date"] = "2026-11-16" });
+        var result = await BindAsync<TimesheetsController>(new WorkforceStartup(), nameof(TimesheetsController.AddLine), culture, Invariant(new() { ["hours"] = "12.50" }, KeyValuePair.Create("date", new StringValues("2026-11-16"))));
 
         Assert.Equal(12.50m, result.Arguments[3]);
     }
 
-    // The time clock's script writes the browser's coordinates, which always have a dot.
+    // The time clock's script writes the browser's coordinates, which always have a dot, and names them in __Invariant.
     [Theory]
-    [InlineData("en-US")]
-    [InlineData("de-DE")]
-    [InlineData("fr-FR")]
+    [MemberData(nameof(Cultures))]
     public async Task TimeClockPunch_BindsTheCoordinatesTheScriptSent(string culture)
     {
-        var result = await BindAsync<MyTimeController>(new WorkforceStartup(), nameof(MyTimeController.Punch), culture, new()
+        var result = await BindAsync<MyTimeController>(new WorkforceStartup(), nameof(MyTimeController.Punch), culture, Invariant(new()
         {
-            ["kind"] = "In",
             ["latitude"] = "52.520008",
             ["longitude"] = "-13.404954",
-        });
+        }, KeyValuePair.Create("kind", new StringValues("In"))));
 
         Assert.Equal(52.520008d, result.Arguments[1]);
         Assert.Equal(-13.404954d, result.Arguments[2]);
     }
 
-    // The bug the binding fixes, as MVC alone reads a form value: the dot is a group separator in de-DE and nl-NL, and not a
-    // number in fr-FR.
+    // The bug the __Invariant field fixes, as MVC reads a form value without it: the dot is a group separator in de-DE and
+    // nl-NL, and not a number in fr-FR.
     [Theory]
     [InlineData("de-DE", 1250)]
     [InlineData("nl-NL", 1250)]
     [InlineData("fr-FR", null)]
-    public async Task WithoutTheInvariantBinding_TheFrameworkReadsTheFormValueInTheRequestCulture(string culture, int? expected)
+    public async Task WithoutTheInvariantField_TheFrameworkReadsTheFormValueInTheRequestCulture(string culture, int? expected)
     {
-        var result = await BindAsync<StoreCreditAdminController>(startup: null, nameof(StoreCreditAdminController.Change), culture, new() { ["amount"] = "12.50" });
+        var result = await BindAsync<StoreCreditAdminController>(new CustomersStartup(), nameof(StoreCreditAdminController.Change), culture, new() { ["amount"] = "12.50" });
 
         Assert.Equal((decimal?)expected, (decimal?)result.Arguments[1]);
-    }
-
-    // A group separator is never taken: "1,250" is not twelve hundred and fifty in one culture and 1.25 in another.
-    [Theory]
-    [InlineData("en-US", "12,50")]
-    [InlineData("en-US", "1,250")]
-    [InlineData("de-DE", "1.250,00")]
-    [InlineData("de-DE", "twelve")]
-    [InlineData("en-US", "Infinity")]
-    public async Task AValueThatIsNotANumber_IsAModelError(string culture, string posted)
-    {
-        var result = await BindAsync<StoreCreditAdminController>(new CustomersStartup(), nameof(StoreCreditAdminController.Change), culture, new() { ["amount"] = posted });
-
-        Assert.Null(result.Arguments[1]);
-        Assert.False(result.ModelState.IsValid);
-        Assert.Equal(posted, result.ModelState["amount"]?.AttemptedValue);
-    }
-
-    [Fact]
-    public async Task AnEmptyValue_BindsNothing()
-    {
-        var result = await BindAsync<StoreCreditAdminController>(new CustomersStartup(), nameof(StoreCreditAdminController.Change), "de-DE", new() { ["amount"] = string.Empty });
-
-        Assert.Null(result.Arguments[1]);
-        Assert.True(result.ModelState.IsValid);
-    }
-
-    [Fact]
-    public async Task ANegativeAmount_KeepsItsSign()
-    {
-        var result = await BindAsync<GiftCardsAdminController>(new OrdersStartup(), nameof(GiftCardsAdminController.Adjust), "de-DE", new() { ["amount"] = "-5.25" });
-
-        Assert.Equal(-5.25m, result.Arguments[1]);
     }
 
     // An asp-for number input writes its value invariantly and marks it with an __Invariant field.
@@ -165,17 +123,29 @@ public sealed class InvariantNumberModelBindingTests
     }
 
     [Fact]
-    public void AddInvariantNumberInputs_CalledTwice_RegistersTheBinderOnce()
+    public void AddInvariantNumberInputs_CalledTwice_RegistersItOnce()
     {
-        using var services = new ServiceCollection().AddLogging().AddMvcCore().Services
+        var services = new ServiceCollection()
             .AddInvariantNumberInputs()
-            .AddInvariantNumberInputs()
-            .BuildServiceProvider();
+            .AddInvariantNumberInputs();
 
-        var providers = services.GetRequiredService<IOptions<MvcOptions>>().Value.ModelBinderProviders;
+        Assert.Single(services, descriptor => descriptor.ImplementationType?.Name == "InvariantNumberMvcViewOptionsSetup");
+    }
 
-        Assert.Single(providers, provider => provider.GetType().Name == "InvariantNumberModelBinderProvider");
-        Assert.Equal("InvariantNumberModelBinderProvider", providers[0].GetType().Name);
+    // Posts numbers as a number input or a script does, with the __Invariant field naming them, plus other fields as they are.
+    private static Dictionary<string, StringValues> Invariant(Dictionary<string, StringValues> numbers, params KeyValuePair<string, StringValues>[] others)
+    {
+        var form = new Dictionary<string, StringValues>(numbers, StringComparer.OrdinalIgnoreCase)
+        {
+            ["__Invariant"] = new StringValues([.. numbers.Keys]),
+        };
+
+        foreach (var (key, value) in others)
+        {
+            form[key] = value;
+        }
+
+        return form;
     }
 
     private static Task<FormPostBinder.Result> BindAsync<TController>(IStartup startup, string action, string culture, Dictionary<string, StringValues> form)

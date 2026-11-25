@@ -107,7 +107,7 @@
                                 <td><input type="date" name="Schedule[@i].DueDate" value="@row.DueDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" data-schedule-date aria-label="@T["Due"]" /></td>
                                 <td>
                                     <div class="input-group input-group-sm">
-                                        <input type="number" step="any" min="0" name="Schedule[@i].@(schedulePercent ? "Percent" : "Amount")" value="@value?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control text-end" data-schedule-value aria-label="@T["Part"]" />
+                                        <input type="number" step="any" min="0" name="Schedule[@i].@(schedulePercent ? "Percent" : "Amount")" value="@value?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control text-end" data-schedule-value aria-label="@T["Part"]" /><input type="hidden" name="__Invariant" value="Schedule[@i].@(schedulePercent ? "Percent" : "Amount")" />
                                         <span class="input-group-text" data-schedule-suffix>@(schedulePercent ? "%" : scheduleCurrency)</span>
                                     </div>
                                 </td>
@@ -133,7 +133,7 @@
                         <td><input type="date" name="Schedule[__index__].DueDate" class="form-control form-control-sm" data-schedule-date aria-label="@T["Due"]" /></td>
                         <td>
                             <div class="input-group input-group-sm">
-                                <input type="number" step="any" min="0" name="Schedule[__index__].Amount" class="form-control text-end" data-schedule-value aria-label="@T["Part"]" />
+                                <input type="number" step="any" min="0" name="Schedule[__index__].Amount" class="form-control text-end" data-schedule-value aria-label="@T["Part"]" /><input type="hidden" name="__Invariant" value="Schedule[__index__].Amount" />
                                 <span class="input-group-text" data-schedule-suffix></span>
                             </div>
                         </td>

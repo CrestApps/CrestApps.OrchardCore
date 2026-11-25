@@ -126,7 +126,7 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-sm-3">
                         <label class="form-label small" for="score@(item.Index)">@T["Score (of {0})", item.Points.ToString("0.##")]</label>
-                        <input class="form-control form-control-sm" id="score@(item.Index)" name="score@(item.Index)" type="number" min="0" max="@item.Points.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" value="@item.Score?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canEdit)" />
+                        <input class="form-control form-control-sm" id="score@(item.Index)" name="score@(item.Index)" type="number" min="0" max="@item.Points.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" value="@item.Score?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canEdit)" /><input type="hidden" name="__Invariant" value="score@(item.Index)" />
                     </div>
                     <div class="col-sm-9">
                         <label class="form-label small" for="comment@(item.Index)">@T["Comment to the learner"]</label>

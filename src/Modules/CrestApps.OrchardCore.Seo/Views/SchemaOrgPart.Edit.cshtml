@@ -80,7 +80,7 @@
                     <input type="datetime-local" class="form-control" id="@id" name="@name" value="@value" />
                     break;
                 case SchemaOrgValueKind.Number:
-                    <input type="number" step="any" class="form-control" id="@id" name="@name" value="@value" />
+                    <input type="number" step="any" class="form-control" id="@id" name="@name" value="@value" /><input type="hidden" name="__Invariant" value="@name" />
                     break;
                 case SchemaOrgValueKind.Url:
                 case SchemaOrgValueKind.Image:

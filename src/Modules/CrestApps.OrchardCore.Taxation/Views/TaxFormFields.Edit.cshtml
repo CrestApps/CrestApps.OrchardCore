@@ -42,7 +42,7 @@
                 <input name="@(name).Name" value="@value.Name" class="form-control form-control-sm" aria-label="@T["Name"]" />
             </td>
             <td><input name="@(name).Year" value="@value.Year" type="number" min="1900" max="9999" class="form-control form-control-sm" aria-label="@T["From year"]" /></td>
-            <td><input name="@(name).Amount" value="@(value.Amount?.ToString(System.Globalization.CultureInfo.InvariantCulture))" type="number" step="any" class="form-control form-control-sm" aria-label="@T["Value"]" /></td>
+            <td><input name="@(name).Amount" value="@(value.Amount?.ToString(System.Globalization.CultureInfo.InvariantCulture))" type="number" step="any" class="form-control form-control-sm" aria-label="@T["Value"]" /><input type="hidden" name="__Invariant" value="@(name).Amount" /></td>
             <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
         </tr>
     }

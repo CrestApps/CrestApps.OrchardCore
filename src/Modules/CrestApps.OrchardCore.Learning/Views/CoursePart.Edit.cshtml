@@ -224,6 +224,11 @@
                         input.name = prefix + '[' + i + ']' + input.name.substring(input.name.indexOf(']') + 1);
                     }
                 });
+
+                // Each number input is followed by the __Invariant field that names it, so its dot is read the same in every culture.
+                row.querySelectorAll('input[name="__Invariant"]').forEach(function (marker) {
+                    marker.value = marker.previousElementSibling ? marker.previousElementSibling.name : '';
+                });
             });
         }
 

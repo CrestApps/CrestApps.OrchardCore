@@ -116,6 +116,9 @@
 					row.querySelectorAll("[name]").forEach(function(input) {
 						input.setAttribute("name", renumber(input.getAttribute("name"), "Lines", index));
 					});
+					row.querySelectorAll("input[name=\"__Invariant\"]").forEach(function(marker) {
+						marker.value = marker.previousElementSibling ? marker.previousElementSibling.getAttribute("name") : "";
+					});
 					var position = row.querySelector("[data-line-position]");
 					if (position) position.textContent = String(index + 1);
 				});

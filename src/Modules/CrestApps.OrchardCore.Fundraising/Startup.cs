@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Commerce.Core;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Fundraising.Drivers;
 using CrestApps.OrchardCore.Fundraising.Handlers;
@@ -30,8 +29,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         // Donations live in their own YesSql collection, which has to be declared to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(FundraisingConstants.CollectionName));
         services.AddDataMigration<FundraisingMigrations>()

@@ -286,7 +286,7 @@
                                 <td>
                                     <form asp-action="Use" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-1">
                                         <input type="hidden" name="lineId" value="@line.Id" />
-                                        <input name="quantity" type="number" min="0" step="@(counted ? "1" : "any")" class="form-control form-control-sm" style="max-width: 6rem" aria-label="@T["How many"]" required />
+                                        <input name="quantity" type="number" min="0" step="@(counted ? "1" : "any")" class="form-control form-control-sm" style="max-width: 6rem" aria-label="@T["How many"]" required /><input type="hidden" name="__Invariant" value="quantity" />
                                         @if (counted)
                                         {
                                             <select name="locationId" class="form-select form-select-sm" style="max-width: 12rem" aria-label="@T["Taken from"]" required>
@@ -378,7 +378,7 @@
                                 case ChecklistQuestionKind.Number:
                                 case ChecklistQuestionKind.MeterReading:
                                     <div class="input-group input-group-sm">
-                                        <input id="@field" name="@field" value="@answer" type="number" step="any" min="@question.Min?.ToString(CultureInfo.InvariantCulture)" max="@question.Max?.ToString(CultureInfo.InvariantCulture)" class="form-control" disabled="@(!editable)" />
+                                        <input id="@field" name="@field" value="@answer" type="number" step="any" min="@question.Min?.ToString(CultureInfo.InvariantCulture)" max="@question.Max?.ToString(CultureInfo.InvariantCulture)" class="form-control" disabled="@(!editable)" /><input type="hidden" name="__Invariant" value="@field" />
                                         @if (!string.IsNullOrEmpty(question.Unit ?? question.Meter))
                                         {
                                             <span class="input-group-text">@(question.Unit ?? question.Meter)</span>

@@ -48,8 +48,8 @@
                             </select>
                         </td>
                     }
-                    <td><input name="@(lines)[@i].Quantity" value="@line.Quantity.ToString("0.##", CultureInfo.InvariantCulture)" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Quantity"]" /></td>
-                    <td><input name="@(lines)[@i].UnitPrice" value="@line.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)" type="number" min="0" step="0.01" class="form-control form-control-sm" aria-label="@T["Unit price"]" /></td>
+                    <td><input name="@(lines)[@i].Quantity" value="@line.Quantity.ToString("0.##", CultureInfo.InvariantCulture)" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Quantity"]" /><input type="hidden" name="__Invariant" value="@(lines)[@i].Quantity" /></td>
+                    <td><input name="@(lines)[@i].UnitPrice" value="@line.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture)" type="number" min="0" step="0.01" class="form-control form-control-sm" aria-label="@T["Unit price"]" /><input type="hidden" name="__Invariant" value="@(lines)[@i].UnitPrice" /></td>
                     <td>
                         <input type="checkbox" name="@(lines)[@i].Billable" value="true" class="form-check-input" checked="@line.Billable" aria-label="@T["Billed"]" />
                         <input type="hidden" name="@(lines)[@i].Billable" value="false" />
