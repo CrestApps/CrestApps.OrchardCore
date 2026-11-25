@@ -867,7 +867,8 @@ public sealed class TaxReturnTaxFormUsage : ITaxFormUsage
 
 /// <summary>
 /// Checks what Tax Returns keeps on a tax form of the sales tax source: the field the amount due is read from is one of
-/// its filing fields.
+/// its filing fields. The Tax Forms feature registers it with the form's other rules, next to the recipe step; it does
+/// nothing for a form of another source.
 /// </summary>
 public sealed class SalesTaxFormHandler : CatalogEntryHandlerBase<TaxForm>
 {
@@ -935,7 +936,6 @@ public static class TaxReturnsCoreServiceCollectionExtensions
             RequiresJurisdiction = false,
         });
         services.AddTaxFormFunctions<SalesTaxFormFunctions>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxForm>, SalesTaxFormHandler>());
         services.AddTaxFormUsage<TaxReturnTaxFormUsage>();
 
         return services;

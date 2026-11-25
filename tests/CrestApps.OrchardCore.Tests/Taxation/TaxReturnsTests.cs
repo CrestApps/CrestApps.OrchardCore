@@ -575,6 +575,7 @@ public sealed class TaxReturnsTests
                 services.AddSingleton<ITaxReturnObserver>(provider => provider.GetRequiredService<RecordingObserver>());
                 services.AddSingleton<ITaxReturnForm>(new AnnualForm());
                 services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxForm>, TaxFormHandler>());
+                services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxForm>, SalesTaxFormHandler>());
             },
             async schemaBuilder =>
             {
