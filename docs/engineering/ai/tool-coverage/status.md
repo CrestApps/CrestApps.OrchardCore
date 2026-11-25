@@ -1642,6 +1642,14 @@ The Write row keeps the floor on purpose: Core's Write kind needs no approval, s
 
 Not done yet: the OC profile editor has no **Tool approval** setting (the Core sample hosts show it on the Capabilities tab), so today a profile can change it only through its stored settings.
 
+## Main's content tools fixed after the UI test (2026-11-25)
+
+Four tools that shipped with main failed in the admin chat and are fixed in this pull request:
+
+- `unpublishContentItem` (`Contents/UnpublishContentTool.cs`) loaded the published version with `GetAsync(id)`, so an item with a draft threw "Not the latest version" from the content manager. It now loads `VersionOptions.Latest`, as the content manager expects, and says so when the item is not published instead of reporting a success.
+- `deleteContentItem` (`Contents/DeleteContentTool.cs`) made the same lookup, so an item whose latest version is a draft (a clone, or an item with an unpublished change) could not be found. It now loads `VersionOptions.Latest`; removing it still removes every version.
+- `removeContentTypeDefinition` and `removeContentPartDefinition` (`ContentTypes/RemoveContentTypeDefinitionsTool.cs`, `RemoveContentPartDefinitionsTool.cs`) imported the DeleteContentDefinition step as a recipe through `RecipeExecutionService`, which runs in a scope and connection of its own. On SQLite that waited for the write lock the chat request already held (any earlier write, and saving the chat on every approval turn) and failed with "database is locked". They now run the step in the tool call's scope with `RecipeStepRunner`, build the step as JSON objects instead of text with the name spliced in, and return the step's own errors.
+
 ## Bugs found in main's code (reported, not fixed)
 
 - **Fulfillment.** `FulfillmentAdminController.Send` and `SendAgain` do not check that the order is paid; the card only hides its button. A posted Send for an unpaid order records requests that settle as Needs attention (not paid) and notify every shipper. The engine itself never sends an unpaid order to a partner.
@@ -1652,8 +1660,7 @@ Not done yet: the OC profile editor has no **Tool approval** setting (the Core s
 - **Ticket priorities.** The Priorities page's delete check (`TicketSettingsUsage`) does not count desk priority matrices, ticket category priorities or service level policy targets. A priority deleted on the page while a desk's matrix names it makes every later save of that desk fail; a category's new tickets fall back to Normal; a policy's target no longer applies. The `ticketPriority` kind checks all three itself.
 - **Record sources.** `WorkOrderRecordSource` and `ContentItemRecordSource` describe a record without checking who reads it. The service-level tools therefore return a title only for a record its kind's access provider grants to the caller.
 - **Content tools.** `getContentItemById` (`AI.Agent/Contents/GetContentTool.cs`) and `createOrUpdateContentItem` (`CreateOrUpdateContentTool.cs`) make no content authorization call, and `isDraft: false` publishes. With them on a profile, a caller can read a restricted knowledge article in full or publish an article.
-- **Content versions (found in the UI test, 2026-11-24).** `unpublishContentItem` (`UnpublishContentTool.cs`) and `deleteContentItem` (`DeleteContentTool.cs`) load the item with `GetAsync(id)`, which is the published version. Unpublishing an item that has a draft throws "Not the latest version", and deleting an item whose latest version is a draft says the item can't be found. Both should load `VersionOptions.Latest`.
-- **Content definitions (found in the UI test).** `removeContentTypeDefinition` and `removeContentPartDefinition` run the DeleteContentDefinition step through `RecipeExecutionService`, which imports the recipe in its own scope and connection. On SQLite that waits for the chat request's write lock and fails with "database is locked" when anything was written earlier in the request, including saving the chat on an approval turn. Running the step in the request scope, as `RecipeStepRunner` does, avoids it. A type made with `applyContentTypeDefinitionFromRecipe` is not visible to other tools until the message ends.
+- **Content definitions (found in the UI test).** A type made with `applyContentTypeDefinitionFromRecipe` is not visible to other tools until the message ends.
 - **Content search (found in the UI test).** `searchForContentItems` returned unrelated items for a term that matched one menu, and not the menu.
 - **Users and conversations (found in the UI test).** `getUserInfo` returns the raw user object; a model read its `IsLockoutEnabled` as "locked out" (`getUser` reports `lockedOut`). `listAIConversations` and `viewAIConversation` return raw UTC times.
 

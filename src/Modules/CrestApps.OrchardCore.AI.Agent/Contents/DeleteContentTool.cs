@@ -70,7 +70,8 @@ public sealed class DeleteContentTool : AIFunction
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
-        var contentItem = await contentManager.GetAsync(contentItemId);
+        // The latest version, so an item whose newest version is a draft is found too; removing it removes every version.
+        var contentItem = await contentManager.GetAsync(contentItemId, VersionOptions.Latest);
 
         if (contentItem is null)
         {

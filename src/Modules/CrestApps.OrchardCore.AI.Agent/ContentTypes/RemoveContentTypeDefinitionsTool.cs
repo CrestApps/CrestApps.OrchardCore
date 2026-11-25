@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
-using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,6 +14,8 @@ namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 public sealed class RemoveContentTypeDefinitionsTool : AIFunction
 {
     public const string TheName = "removeContentTypeDefinition";
+
+    private const string DeleteContentDefinitionStepName = "DeleteContentDefinition";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
@@ -57,7 +58,6 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
         }
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-        var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
@@ -81,21 +81,15 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
                 """;
         }
 
-        var data = JsonNode.Parse(
-            $$"""
-            {
-              "steps": [
-                {
-                  "name": "DeleteContentDefinition",
-                  "ContentTypes": [
-                    "{{name}}"
-                  ]
-                }
-              ]
-            }
-            """);
+        // The step runs in this scope. Importing it as a recipe ran it in a scope and connection of its own, which waits
+        // for the write lock the chat request holds (on SQLite, "database is locked").
+        var errors = await RecipeStepRunner.RunAsync(arguments.Services, DeleteContentDefinitionStepName, new JsonObject
+        {
+            ["name"] = DeleteContentDefinitionStepName,
+            ["ContentTypes"] = new JsonArray(typeDefinition.Name),
+        });
 
-        if (await recipeExecutionService.ExecuteRecipeAsync(data))
+        if (errors.Count == 0)
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
@@ -107,6 +101,6 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
 
         logger.LogWarning("AI tool '{ToolName}' failed to remove content type definition '{ContentType}'.", TheName, name);
 
-        return "Unable to remove the content type definition.";
+        return $"Unable to remove the content type definition: {string.Join(" ", errors)}";
     }
 }
