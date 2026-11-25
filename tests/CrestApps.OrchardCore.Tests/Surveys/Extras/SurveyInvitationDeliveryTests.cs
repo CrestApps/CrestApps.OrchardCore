@@ -1288,6 +1288,37 @@ public sealed class SurveyInvitationDeliveryTests
     }
 
     [Fact]
+    public async Task ASingleInvite_ThatSentNoEmail_LetsGoOfTheEmailLockAtOnce_AndOneThatSentAnEmailKeepsItUntilItsScopeSaves()
+    {
+        // Arrange: R9-Mi4, a single invite (a workflow's Send Survey Invitation task) takes the tenant's e-mail lock
+        // before it reads; one to an unknown survey sends nothing.
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+
+        // Act
+        var (notFound, heldAfterNothingSent) = await harness.RunAsync(async services =>
+        {
+            var result = await services.GetRequiredService<SurveyInvitationService>().InviteAsync(new SurveyInvitationRequest { SurveyId = "unknown", Email = "ana@example.com" });
+
+            return (result, services.GetRequiredService<SurveyInvitationEmailLimit>().HoldsLock);
+        });
+        var heldAfterAnEmail = await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyInvitationService>().InviteAsync(new SurveyInvitationRequest { SurveyId = survey.ItemId, Email = "bo@example.com" });
+
+            return services.GetRequiredService<SurveyInvitationEmailLimit>().HoldsLock;
+        });
+
+        // Assert: with nothing e-mailed there is nothing to count, so the lock is let go of before the scope ends; once
+        // an e-mail went out it is kept until the scope saves, so no other sender counts the day without it.
+        Assert.Equal(SurveyErrorCode.NotFound, notFound.Error);
+        Assert.False(heldAfterNothingSent);
+        Assert.True(heldAfterAnEmail);
+    }
+
+    [Fact]
     public async Task ARespondentWriteFromAnotherScope_DuringARun_IsNotBlocked_AndNeitherWriteOverwritesTheOther()
     {
         // Arrange: three invitations sent three days ago, due their one reminder (R8-M3).

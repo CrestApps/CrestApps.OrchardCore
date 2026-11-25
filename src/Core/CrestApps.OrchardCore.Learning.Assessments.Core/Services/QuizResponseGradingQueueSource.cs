@@ -97,7 +97,29 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
             // every survey's waiting attempts are read, oldest first, and the attempts of anonymous surveys are left out.
             // No anonymous attempt is listed here, rather than one the hidden-survey and hidden-group rules would leave
             // out; the count is of the listed attempts only. An attempt whose survey isn't found is listed as before,
-            // without a name, number or time (PageAsync).
+            // without a name, number or time (PageAsync). The anonymous surveys are left out in the query, by their ids
+            // from the survey index, so a page reads one page of attempts (R9-Mi3).
+            if (_serviceProvider.GetService<SurveyIndexReader>() is { } anonymousReader)
+            {
+                var (waiting, page) = await _responseQueries.ListAsync(new SurveyResponseQuery
+                {
+                    Statuses = [SurveyResponseStatus.Completed],
+                    Grading = GradingStatus.Pending,
+                    ContextKinds = [LearningSurveyContexts.EnrollmentKind, LearningSurveyContexts.CourseKind],
+                    ExcludedUserId = grader,
+                    ExcludedSurveyIds = [.. await anonymousReader.ListAnonymousIdsAsync(cancellationToken)],
+                    OldestFirst = true,
+                    Take = Math.Min(take, SurveysConstants.PageSize),
+                }, cancellationToken);
+
+                foreach (var surveyId in page.Select(response => response.SurveyId).Distinct(StringComparer.Ordinal))
+                {
+                    known[surveyId] = await _surveyManager.FindByIdAsync(surveyId, cancellationToken);
+                }
+
+                return await PageAsync(waiting, [.. page], known, titles, timeZone, [], cancellationToken);
+            }
+
             var (_, all) = await ReadOldestAsync([], grader, int.MaxValue, cancellationToken);
             var named = new List<SurveyResponse>();
 

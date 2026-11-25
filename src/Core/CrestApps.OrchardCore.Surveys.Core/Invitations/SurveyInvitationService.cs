@@ -151,26 +151,41 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Another send holds the e-mail lock (R8-Mi11): the invitation is still created (and held), but an existing one is
-        // left as it is, since this copy may be older than that send's marks.
-        var busy = IsEmail(request) && await IsAnotherSendGoingOutAsync(cancellationToken);
-        var survey = await FindLiveSurveyAsync(request.SurveyId, cancellationToken);
-        var collector = survey is null ? null : await FindCollectorAsync(survey, request.CollectorId, cancellationToken);
-
-        if (collector is null)
+        try
         {
-            return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
+            // Another send holds the e-mail lock (R8-Mi11): the invitation is still created (and held), but an existing
+            // one is left as it is, since this copy may be older than that send's marks.
+            var busy = IsEmail(request) && await IsAnotherSendGoingOutAsync(cancellationToken);
+            var survey = await FindLiveSurveyAsync(request.SurveyId, cancellationToken);
+            var collector = survey is null ? null : await FindCollectorAsync(survey, request.CollectorId, cancellationToken);
+
+            if (collector is null)
+            {
+                return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
+            }
+
+            var result = await CreateCoreAsync(survey, collector, request, requireRecipient: true, mayChangeExisting: !busy, cancellationToken);
+
+            if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
+            {
+                result.Invitation = (await DeliverAsync(survey, collector, result.Invitation, result.Link, isReminder: false, cancellationToken)).Invitation;
+                await ResolveFailuresAsync(cancellationToken);
+            }
+
+            return result;
         }
-
-        var result = await CreateCoreAsync(survey, collector, request, requireRecipient: true, mayChangeExisting: !busy, cancellationToken);
-
-        if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
+        finally
         {
-            result.Invitation = (await DeliverAsync(survey, collector, result.Invitation, result.Link, isReminder: false, cancellationToken)).Invitation;
-            await ResolveFailuresAsync(cancellationToken);
+            // A single invite doesn't commit (that would commit its caller's unfinished work too), so once an e-mail of
+            // this scope went out it keeps the e-mail lock until the scope saves: let go earlier, another sender would
+            // count the day's e-mails without it. When none went out (not found, a user invitation, the e-mail held or
+            // refused) there is nothing to count, so the lock is let go of at once rather than held to the end of the
+            // scope (R9-Mi4); a later invite of the scope takes it again.
+            if (!_commitsAsItGoes && !_emailLimit.HasSent)
+            {
+                await _emailLimit.ReleaseAsync();
+            }
         }
-
-        return result;
     }
 
     /// <summary>
@@ -324,54 +339,83 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         var now = _clock.UtcNow;
         var settings = Settings(collector);
-        var invitation = existing ?? new SurveyInvitation
-        {
-            ItemId = IdGenerator.GenerateId(),
-            SurveyId = survey.ItemId,
-            CollectorId = collector.ItemId,
-            UserId = request.UserId,
-            Recipient = request.Recipient,
-            Email = email,
-            Status = SurveyInvitationStatus.Pending,
-            CreatedUtc = now,
-        };
 
-        invitation.DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? invitation.DisplayName ?? email : request.DisplayName.Trim();
-        invitation.ExpiresUtc = request.ExpiresUtc ?? (settings.ExpiresAfterDays is > 0 ? now.AddDays(settings.ExpiresAfterDays.Value) : invitation.ExpiresUtc);
-
-        if (invitation.Status == SurveyInvitationStatus.Expired && (invitation.ExpiresUtc is null || invitation.ExpiresUtc > now))
+        void Apply(SurveyInvitation invitation)
         {
-            invitation.Status = SurveyInvitationStatus.Pending;
+            invitation.DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? invitation.DisplayName ?? email : request.DisplayName.Trim();
+            invitation.ExpiresUtc = request.ExpiresUtc ?? (settings.ExpiresAfterDays is > 0 ? now.AddDays(settings.ExpiresAfterDays.Value) : invitation.ExpiresUtc);
+
+            if (invitation.Status == SurveyInvitationStatus.Expired && (invitation.ExpiresUtc is null || invitation.ExpiresUtc > now))
+            {
+                invitation.Status = SurveyInvitationStatus.Pending;
+            }
+
+            // Inviting again retries an invitation that bounced or whose address had opted out: it is pending again, and
+            // the sender and the opt-out checks decide again when it is sent.
+            if (invitation.Status is SurveyInvitationStatus.Bounced or SurveyInvitationStatus.OptedOut)
+            {
+                invitation.Status = SurveyInvitationStatus.Pending;
+                invitation.Properties.Remove(nameof(SurveyInvitationHold));
+            }
+
+            // Inviting again also gives reminders that failed for good another chance.
+            invitation.Properties.Remove(nameof(SurveyInvitationReminderFailures));
+
+            if (request.Context is { IsEmpty: false } context)
+            {
+                invitation.Put(new SurveyInvitationContext { Context = context.ToString() });
+            }
         }
-
-        // Inviting again retries an invitation that bounced or whose address had opted out: it is pending again, and the
-        // sender and the opt-out checks decide again when it is sent.
-        if (invitation.Status is SurveyInvitationStatus.Bounced or SurveyInvitationStatus.OptedOut)
-        {
-            invitation.Status = SurveyInvitationStatus.Pending;
-            invitation.Properties.Remove(nameof(SurveyInvitationHold));
-        }
-
-        // Inviting again also gives reminders that failed for good another chance.
-        invitation.Properties.Remove(nameof(SurveyInvitationReminderFailures));
-
-        if (request.Context is { IsEmpty: false } context)
-        {
-            invitation.Put(new SurveyInvitationContext { Context = context.ToString() });
-        }
-
-        var token = await IssueTokenAsync(survey, invitation, cancellationToken);
 
         if (existing is null)
         {
-            await _invitationStore.CreateAsync(invitation, cancellationToken);
-        }
-        else
-        {
-            await _invitationStore.UpdateAsync(invitation, cancellationToken);
+            var created = new SurveyInvitation
+            {
+                ItemId = IdGenerator.GenerateId(),
+                SurveyId = survey.ItemId,
+                CollectorId = collector.ItemId,
+                UserId = request.UserId,
+                Recipient = request.Recipient,
+                Email = email,
+                Status = SurveyInvitationStatus.Pending,
+                CreatedUtc = now,
+            };
+
+            Apply(created);
+
+            var token = await IssueTokenAsync(survey, created, cancellationToken);
+
+            await _invitationStore.CreateAsync(created, cancellationToken);
+
+            return new SurveyInvitationResult { Invitation = created, Link = await _links.BuildAsync(token) };
         }
 
-        return new SurveyInvitationResult { Invitation = invitation, Link = await _links.BuildAsync(token) };
+        // A re-invite writes its fields on the current copy, not on the one it found (R9-Mi2): a completion or an open
+        // committed since must not be written back over. A completion committed meanwhile makes it InvitationUsed, as
+        // one found completed is.
+        var issued = await IssueAsync(survey, existing.ItemId, cancellationToken);
+        var used = false;
+        var current = await _invitationStore.UpdateCurrentAsync(existing, invitation =>
+        {
+            if (invitation.Status == SurveyInvitationStatus.Completed)
+            {
+                used = true;
+
+                return false;
+            }
+
+            Apply(invitation);
+            issued.ApplyTo(invitation);
+
+            return true;
+        }, cancellationToken: cancellationToken);
+
+        if (used)
+        {
+            return new SurveyInvitationResult { Error = SurveyErrorCode.InvitationUsed, Invitation = current };
+        }
+
+        return new SurveyInvitationResult { Invitation = current, Link = await _links.BuildAsync(issued.Token) };
     }
 
     /// <summary>
