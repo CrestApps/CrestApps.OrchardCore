@@ -98,19 +98,15 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var normalizedUserName = model.NormalizedUserName?.Trim();
-
-        if (model.AssignmentType != SubjectActionOwnerAssignmentType.SpecificOwner)
-        {
-            normalizedUserName = null;
-        }
+        // Who owns the follow-up is edited in the action's follow-up section, which keeps it on this metadata.
+        action.TryGet<NewActivityActionMetadata>(out var existing);
 
         action.Put(new NewActivityActionMetadata
         {
             SubjectContentType = model.SubjectContentType,
             UrgencyLevel = model.UrgencyLevel,
-            AssignmentType = model.AssignmentType,
-            NormalizedUserName = normalizedUserName,
+            AssignmentType = existing?.AssignmentType ?? SubjectActionOwnerAssignmentType.SameOwner,
+            NormalizedUserName = existing?.NormalizedUserName,
             DefaultScheduleHours = model.DefaultScheduleHours,
         });
 

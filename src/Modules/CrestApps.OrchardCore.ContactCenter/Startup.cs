@@ -348,6 +348,7 @@ public sealed class ContactCenterWorkflowsStartup : StartupBase
         services.AddScoped<IContactCenterWorkflowEventTypeProvider, ContactCenterWorkflowEventTypeProvider>();
         services.AddActivity<ContactCenterEvent, ContactCenterEventDisplayDriver>();
         services.AddScoped<IContactCenterEventHandler, ContactCenterWorkflowEventHandler>();
+        services.TryAddScoped<IContactCenterEventAgentResolver, ContactCenterEventAgentResolver>();
         services.AddSingleton<ContactCenterWorkflowSubscriptionCache>();
         services.AddScoped<IContactCenterWorkflowSubscriptions, ContactCenterWorkflowSubscriptions>();
         services.AddScoped<IWorkflowTypeEventHandler, ContactCenterWorkflowSubscriptionInvalidator>();
@@ -467,5 +468,21 @@ public sealed class ContactCenterHealthChecksStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddContactCenterHealthEndpoints();
+    }
+}
+
+/// <summary>
+/// Lets the Contact Center Event name the user of an agent profile the event or its call records, when the agent
+/// profiles are available.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.AgentServices)]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
+public sealed class ContactCenterWorkflowAgentsStartup : StartupBase
+{
+    public override int Order => 10;
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Replace(ServiceDescriptor.Scoped<IContactCenterEventAgentResolver, AgentProfileEventAgentResolver>());
     }
 }

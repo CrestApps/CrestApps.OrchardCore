@@ -42,6 +42,13 @@ public sealed class FollowUpActivityContext
     public bool HasChosenSchedule { get; set; }
 
     /// <summary>
+    /// Gets or sets who the subject action routed the follow-up to. <see cref="FollowUpRoutingTarget.Agent"/> makes it an
+    /// agent's call, so the work's carrier does not take it in; <see cref="FollowUpRoutingTarget.Dialer"/> queues it on
+    /// the follow-up's own campaign under its own dialer profile, whoever carried the activity it follows.
+    /// </summary>
+    public FollowUpRoutingTarget Route { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a handler refused the follow-up, so it is not created.
     /// </summary>
     public bool Cancel { get; set; }
