@@ -39,7 +39,7 @@
                             }
                         </select>
                     </td>
-                    <td><input name="@(prefix + ".MinimumGrade")" value="@row.MinimumGrade" type="number" min="0" step="0.01" class="form-control form-control-sm" aria-label="@T["Minimum grade or credits"]" /></td>
+                    <td><input name="@(prefix + ".MinimumGrade")" value="@Convert.ToString(row.MinimumGrade, System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" step="0.01" class="form-control form-control-sm" aria-label="@T["Minimum grade or credits"]" /></td>
                 </tr>
             }
         </tbody>

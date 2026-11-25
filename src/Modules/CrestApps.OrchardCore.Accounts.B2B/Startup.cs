@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Navigation;
 using CrestApps.OrchardCore.Accounts.B2B.Deployments;
 using CrestApps.OrchardCore.Accounts.B2B.Recipes;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Shipping;
 using CrestApps.OrchardCore.Shipping.Services;
@@ -42,6 +43,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // The business settings are a part on the account; price lists live in their own YesSql collection, which has
         // to be declared to be stored.
         services.AddContentPart<B2BAccountPart>()

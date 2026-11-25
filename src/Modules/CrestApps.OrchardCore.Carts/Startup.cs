@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Carts.Migrations;
 using CrestApps.OrchardCore.Carts.Services;
 using CrestApps.OrchardCore.Carts.Tasks;
 using CrestApps.OrchardCore.Carts.ViewModels;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using Fluid;
@@ -34,6 +35,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Carts live in their own YesSql collection, which has to be declared for its documents to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CartConstants.CollectionName));
         services.AddDataMigration<CartMigrations>()

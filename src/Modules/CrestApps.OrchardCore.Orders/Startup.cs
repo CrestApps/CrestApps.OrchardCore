@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Services;
@@ -58,6 +59,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Orders live in their own YesSql collection, which has to be declared for its documents to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(OrderConstants.CollectionName));
         services.AddDataMigration<OrderMigrations>()

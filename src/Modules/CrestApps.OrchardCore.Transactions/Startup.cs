@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Commerce.Core;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
@@ -50,6 +51,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TransactionsConstants.CollectionName));
 
         services

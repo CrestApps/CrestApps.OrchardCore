@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
@@ -59,6 +60,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterStorage.CollectionName));
 
         services.ValidateTenantOptionsOnActivation();

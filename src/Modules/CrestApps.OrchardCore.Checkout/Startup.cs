@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using CrestApps.OrchardCore.Checkout.Navigation;
@@ -50,6 +51,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
         services.AddScoped<IStoreSetupStep, CurrencySetupStep>();

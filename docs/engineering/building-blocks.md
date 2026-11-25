@@ -70,6 +70,7 @@ Rules that follow from the table:
 | A phone number | **PhoneNumbers** | `PhoneNumber` (E.164 value type), `IPhoneNumberService` to parse and normalize | Store a phone as an unnormalized string; it can then never match a CRM, DNC or caller-ID number |
 | Phone verification | **PhoneNumbers.Verifications** | `IPhoneNumberVerificationProvider` | Add a lookup provider with its own credentials |
 | Time-zone pickers | Orchard `ITimeZoneSelectListProvider`, refined by **TimeZones** | Inject `ITimeZoneSelectListProvider` | Build `SelectListItem`s from `IClock.GetTimeZones()` |
+| Numbers posted from forms (decimal-comma cultures) | `CrestApps.OrchardCore.Core` (`ModelBinding`) | `services.AddInvariantNumberInputs()` in the module's startup: form-posted `decimal`/`double`/`float` action parameters and CrestApps model properties, and the elements of collections and dictionaries of them, read invariantly first, then in the request culture, never with a group separator (body, header, query, route and `[ModelBinder]` values keep the framework's binder); `asp-for` number inputs write their value invariantly. Hand-written inputs write `value`/`min`/`max`/`step` with `CultureInfo.InvariantCulture` (`InvariantNumberInputsArchitectureTests` checks the call) | Bind the number as a string and parse it in the action |
 | Content fields for phone and address | **ContentFields** | `PhoneField`, `AddressField` and their settings in `ContentFields.Abstractions` | Reference the ContentFields module project from a `.Core` library |
 
 ### Time

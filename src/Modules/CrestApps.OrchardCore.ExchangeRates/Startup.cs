@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.ExchangeRates.Core;
 using CrestApps.OrchardCore.ExchangeRates.Core.Indexes;
 using CrestApps.OrchardCore.ExchangeRates.Core.Services;
@@ -37,6 +38,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services
             .AddExchangeRates()
             .AddIndexProvider<ExchangeRateIndexProvider>()

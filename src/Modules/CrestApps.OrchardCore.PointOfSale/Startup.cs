@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.PointOfSale.Api;
@@ -33,6 +34,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Registers and shifts live in their own YesSql collection, which has to be declared to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(PosConstants.CollectionName));
         services.AddDataMigration<PosMigrations>()

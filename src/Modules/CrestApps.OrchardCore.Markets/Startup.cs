@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Markets.Deployments;
 using CrestApps.OrchardCore.Markets.Drivers;
 using CrestApps.OrchardCore.Markets.Indexes;
@@ -31,6 +32,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Markets live in their own YesSql collection, which has to be declared to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(MarketsConstants.CollectionName));
         services.AddDataMigration<MarketMigrations>()

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -72,6 +73,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
 
         services.AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>();
