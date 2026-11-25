@@ -47,6 +47,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Save Coupon"])
             .WithDescription(S["Creates or changes a coupon or automatic discount: code, percentage or fixed amount, what it applies to, dates in the site's time zone, use limits, spend and quantity conditions, buy X get Y, product, category, customer and channel limits, and what it combines with. It is checked with the same rules as the coupon editor and never changes how often a coupon was used."])
             .WithCategory(S["Promotions"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
 
@@ -54,13 +55,14 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Coupon"])
             .WithDescription(S["Deletes a coupon together with all its generated codes. Orders that already used it keep their discount."])
             .WithCategory(S["Promotions"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<GenerateCouponCodesTool>(GenerateCouponCodesTool.TheName)
             .WithTitle(S["Generate Coupon Codes"])
             .WithDescription(S["Generates 1 to 5,000 unique codes that share a coupon's discount and rules, with an optional prefix and a use limit per code. The codes are never returned in the chat: the result gives how many were made and a link that downloads them as a CSV file. Not available for an automatic discount."])
             .WithCategory(S["Promotions"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
     }

@@ -291,8 +291,9 @@ internal static class EditorReplay
     {
         var type = shape.GetType();
 
-        // A strongly typed shape is a proxy type generated at run time that derives from the view model type.
-        while (type.Assembly.IsDynamic && type.BaseType is not null)
+        // A strongly typed shape derives from the view model type: a proxy type generated at run time, or a sealed
+        // type Orchard Core's shape source generator writes at build time, which adds IShape to the view model.
+        while (type.BaseType is not null && (type.Assembly.IsDynamic || IsCompiledShapeType(type)))
         {
             type = type.BaseType;
         }
@@ -301,6 +302,14 @@ internal static class EditorReplay
             ? null
             : type;
     }
+
+    private static bool IsCompiledShapeType(Type type)
+        => type.IsSealed &&
+            typeof(IShape).IsAssignableFrom(type) &&
+            type.BaseType is { } baseType &&
+            baseType != typeof(object) &&
+            !typeof(IShape).IsAssignableFrom(baseType) &&
+            baseType.Assembly != typeof(IShape).Assembly;
 
     private static void AddFields(string path, ModelMetadata metadata, object model, List<EditorField> fields, JsonObject values, List<string> unsupported, EditorCaptureOptions options, int depth)
     {

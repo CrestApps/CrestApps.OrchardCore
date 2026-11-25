@@ -148,7 +148,8 @@ public sealed class SaveDeploymentPlanTool : AIFunction
             return $"Nothing was saved: {string.Join(", ", unknown.Distinct())} is not a step type of this site; the feature that provides it may be off. Use listDeploymentPlans with includeSteps to see the step types.";
         }
 
-        var existing = (await services.GetRequiredService<IDeploymentPlanService>().GetDeploymentPlansAsync(name)).FirstOrDefault();
+        var existing = (await DeploymentToolSupport.GetPlansAsync(services))
+            .FirstOrDefault(plan => string.Equals(plan.Name, name, StringComparison.OrdinalIgnoreCase));
 
         var errors = await RecipeStepRunner.RunAsync(services, DeploymentToolSupport.RecipeStepName, new JsonObject
         {
@@ -165,11 +166,15 @@ public sealed class SaveDeploymentPlanTool : AIFunction
             return $"Nothing was saved: {string.Join(" ", errors)}";
         }
 
+        // A new plan gets its ID when it is saved, so it is read back.
+        var saved = existing ?? (await DeploymentToolSupport.GetPlansAsync(services))
+            .FirstOrDefault(plan => string.Equals(plan.Name, name, StringComparison.OrdinalIgnoreCase));
+
         return AgentToolResults.Json(new
         {
             saved = true,
             created = existing is null,
-            id = existing?.Id,
+            id = saved?.Id,
             name,
             stepCount = planSteps.Count,
             stepTypes = planSteps.Select(step => step["Type"]?.GetValue<string>()).ToList(),

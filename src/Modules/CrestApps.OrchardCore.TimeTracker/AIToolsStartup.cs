@@ -68,7 +68,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithDescription(S["Deletes a time entry, with a reason."])
             .WithCategory(S["Time Tracker"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         // The Stages and Categories pages bind their own forms (no display driver), so the records are read-only here.
         services.AddAIRecordKind<TimeStage>("timeStage", kind => kind

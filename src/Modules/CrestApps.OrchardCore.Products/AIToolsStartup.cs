@@ -152,7 +152,7 @@ public sealed class FeedsAIToolsStartup : StartupBase
             .WithTitle(S["Regenerate Product Feed Key"])
             .WithDescription(S["Makes a new access key for the product feed addresses, or removes the key so the feed is public. A new key stops every feed address already given to a shopping channel from working until it is updated there. The key itself is never shown; the settings page shows the new addresses."])
             .WithCategory(S["Products"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

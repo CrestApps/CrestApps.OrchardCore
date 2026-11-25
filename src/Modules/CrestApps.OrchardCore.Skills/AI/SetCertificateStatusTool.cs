@@ -9,8 +9,8 @@ namespace CrestApps.OrchardCore.Skills.AI;
 
 /// <summary>
 /// Verifies or revokes a certificate through <see cref="ICertificationRecordService.VerifyAsync"/> and
-/// <see cref="ICertificationRecordService.RevokeAsync"/>, as the Certificates page's Verify and Revoke do; the reason of a
-/// revoke is added to the notes. Verifying is refused when the certificate's type requires a copy and none is attached.
+/// <see cref="ICertificationRecordService.RevokeAsync"/>, as the Certificates page's Verify and Revoke do; a revoke keeps
+/// its reason, who revoked it and when on the certificate, apart from the notes. Verifying is refused when the certificate's type requires a copy and none is attached.
 /// The caller is recorded as the person who verified it. A staff member must be among the people the caller manages. It
 /// needs <see cref="SkillsPermissions.AssignSkills"/>.
 /// </summary>
@@ -37,7 +37,7 @@ internal sealed class SetCertificateStatusTool : SkillsAIToolBase
         },
         "reason": {
           "type": "string",
-          "description": "Why the certificate is revoked; it is added to the certificate's notes."
+          "description": "Why the certificate is revoked; it is kept on the certificate as revokedReason."
         }
       },
       "required": ["certificateId", "action"],

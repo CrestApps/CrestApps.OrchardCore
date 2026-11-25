@@ -50,7 +50,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Send Messaging Message"])
             .WithDescription(S["Sends a message to a customer, either as a reply in an existing conversation or as a new conversation from a chosen address to one recipient. Refused when the recipient opted out, the address is invalid, or quiet hours apply."])
             .WithCategory(S["Messaging"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<UpdateMessagingConversationTool>(UpdateMessagingConversationTool.TheName)
@@ -96,7 +96,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Send Messaging Broadcast"])
             .WithDescription(S["Queues one message to many existing CRM contacts (by contact ID, never typed numbers) from a chosen address; each contact gets an individual 1:1 thread at their own address. Opted-out numbers are skipped and text messages wait for quiet hours to end. Costs carrier fees per message."])
             .WithCategory(S["Messaging"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

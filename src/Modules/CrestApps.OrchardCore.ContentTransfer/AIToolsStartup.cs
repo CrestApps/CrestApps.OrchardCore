@@ -57,7 +57,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Content Transfer Entry"])
             .WithDescription(S["Deletes an import or export entry and its stored file in the background. Content items already imported are not removed."])
             .WithCategory(S["Content Transfer"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

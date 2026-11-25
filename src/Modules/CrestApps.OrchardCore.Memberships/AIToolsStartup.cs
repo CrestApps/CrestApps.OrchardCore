@@ -38,7 +38,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["End Membership"])
             .WithDescription(S["Ends an active membership now and removes the member from the roles it added. Refunds nothing and cannot be undone from the admin; the member must buy again."])
             .WithCategory(S["Memberships"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

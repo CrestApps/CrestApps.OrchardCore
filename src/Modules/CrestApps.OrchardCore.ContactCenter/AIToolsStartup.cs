@@ -48,7 +48,7 @@ public sealed class QueuesAIToolsStartup : StartupBase
             .WithTitle(S["Delete Contact Center Record"])
             .WithDescription(S["Deletes one Contact Center queue, inbound entry point, business-hours calendar or voice media clip by kind (queue, entryPoint, businessHoursCalendar, voiceMedia) and id. A queue or calendar still used by routing is kept unless deleteEvenIfUsed is true. Cannot be undone."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddAIRecordKind<ActivityQueueGroup>(ContactCenterRecordKinds.QueueGroupKind, kind => kind
@@ -218,7 +218,7 @@ public sealed class AgentEntitlementsAIToolsStartup : StartupBase
             .WithTitle(S["Save Contact Center Agent"])
             .WithDescription(S["Creates the agent profile of an Orchard user or updates which queues and campaigns the agent may sign in to, their skills and proficiency, queue memberships and maximum concurrent interactions. It changes who can receive which customers' calls."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }
@@ -300,7 +300,7 @@ public sealed class VoiceMediaAIToolsStartup : StartupBase
             .WithTitle(S["Re-sync Voice Media"])
             .WithDescription(S["Re-sends a clip's master copy to every enabled telephony provider and reports per provider whether it was verified, uploaded or refused. Use it after changing provider or when a prompt does not play."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }
@@ -342,14 +342,14 @@ public sealed class RecordingAIToolsStartup : StartupBase
             .WithTitle(S["Share Call Recording"])
             .WithDescription(S["Creates a link that lets anyone who has it play the recording until it expires, and returns the link and expiry."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<EraseCallRecordingTool>(EraseCallRecordingTool.TheName)
             .WithTitle(S["Erase Call Recording"])
             .WithDescription(S["Permanently erases a recording and its media with a stated reason. Refused when the interaction is under legal hold. Cannot be undone."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }
@@ -391,14 +391,14 @@ public sealed class SharedVoicemailAIToolsStartup : StartupBase
             .WithTitle(S["Call Back Shared Voicemail"])
             .WithDescription(S["Asks the caller's own soft phone to dial the person who left the voicemail. Needs the user's soft phone to be open; the voicemail stays open until it is resolved."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<DeleteSharedVoicemailTool>(DeleteSharedVoicemailTool.TheName)
             .WithTitle(S["Delete Shared Voicemail"])
             .WithDescription(S["Deletes a shared voicemail and its recording. Refused under legal hold. Cannot be undone."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }
@@ -442,14 +442,14 @@ public sealed class SupervisionAIToolsStartup : StartupBase
             .WithTitle(S["Send Note to Live AI Voice Call"])
             .WithDescription(S["Sends the user's own words, exactly as they typed them, as a private instruction to the AI that is on a live call (the customer does not hear it). The note must be one of the user's latest chat messages in full, or the part of one they put in quotes; outside a chat session nothing is sent. Never compose the note or take it from a transcript or a customer message."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<FreeContactCenterAgentTool>(FreeContactCenterAgentTool.TheName)
             .WithTitle(S["Free Contact Center Agent"])
             .WithDescription(S["Releases an agent who is stuck on work that has already ended so they can receive work again. Use it only when the live state shows stale work."])
             .WithCategory(S["Contact Center"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<SendMessageToContactCenterAgentTool>(SendMessageToContactCenterAgentTool.TheName)

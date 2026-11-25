@@ -37,7 +37,7 @@ public sealed class ContentTypesToolsStartup : StartupBase
             .WithTitle(S["Remove Content Type Part"])
             .WithDescription(S["Removes a part from a content type. Existing items keep the stored data but it is no longer edited or displayed; a part that owns the type's fields cannot be re-created with the same data automatically."])
             .WithCategory(S["Content Definitions"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<SaveContentPartFieldTool>(SaveContentPartFieldTool.TheName)
@@ -50,7 +50,7 @@ public sealed class ContentTypesToolsStartup : StartupBase
             .WithTitle(S["Remove Content Part Field"])
             .WithDescription(S["Removes a field from a content part or content type. Existing items keep the stored values but they are no longer edited or displayed."])
             .WithCategory(S["Content Definitions"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListShapeAlternatesTool>(ListShapeAlternatesTool.TheName)

@@ -39,14 +39,14 @@ public sealed class McpConnectionsToolsStartup : StartupBase
             .WithTitle(S["Save MCP Connection"])
             .WithDescription(S["Creates or updates a remote (SSE) MCP connection: title, endpoint and authentication. Credentials are never taken: a person enters them on the admin page. Tools of a connected server run with whatever that server allows, so confirm the address with the user. Local-process (stdio) connections cannot be created or changed with this tool."])
             .WithCategory(S["MCP"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<DeleteMcpConnectionTool>(DeleteMcpConnectionTool.TheName)
             .WithTitle(S["Delete MCP Connections"])
             .WithDescription(S["Deletes MCP connections by id. Profiles that used them lose those tools."])
             .WithCategory(S["MCP"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Agent.Editors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -70,8 +71,51 @@ internal static class SiteSettingsEditor
         var updater = new FormValuesModelUpdater(services, httpContext, null);
 
         var shape = await displayManager.BuildEditorAsync(site, updater, false, groupId);
+        var editor = Capture(services, shape);
 
-        return Capture(services, shape);
+        if (editor is null || editor.Sections.Count == 0)
+        {
+            var logger = services.GetService<ILoggerFactory>()?.CreateLogger(typeof(SiteSettingsEditor));
+
+            if (logger?.IsEnabled(LogLevel.Debug) == true)
+            {
+                logger.LogDebug(
+                    "The settings editor of the group '{GroupId}' has no section the tools can read. Has HttpContext: {HasHttpContext}; signed in: {SignedIn}. Zones: {Zones}. Unsupported: {Unsupported}.",
+                    groupId,
+                    httpContext is not null,
+                    httpContext?.User?.Identity?.IsAuthenticated == true,
+                    DescribeZones(shape),
+                    editor is null ? "(no editor)" : string.Join("; ", editor.Unsupported));
+            }
+        }
+
+        return editor;
+    }
+
+    private static string DescribeZones(IShape shape)
+    {
+        if (shape is null)
+        {
+            return "(no shape)";
+        }
+
+        var zones = new List<string>();
+
+        foreach (var zone in shape.Properties)
+        {
+            if (zone.Value is not IShape zoneShape)
+            {
+                continue;
+            }
+
+            var items = (zoneShape.Items ?? [])
+                .OfType<IShape>()
+                .Select(item => $"{item.Metadata.Type} [{item.GetType().Name}, prefix '{item.Metadata.Prefix}', {item.Items?.Count ?? 0} items]");
+
+            zones.Add($"{zone.Key}: {string.Join(", ", items)}");
+        }
+
+        return zones.Count == 0 ? "(none)" : string.Join(" | ", zones);
     }
 
     /// <summary>

@@ -46,7 +46,7 @@ public sealed class ReturnsAIToolsStartup : StartupBase
             .WithTitle(S["Update Order Return Status"])
             .WithDescription(S["Approves a return, declines it (a reason is required), or closes an exchange once the replacement is on its way. Each of these emails the buyer, with the message given."])
             .WithCategory(S["Orders"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<ReceiveOrderReturnTool>(ReceiveOrderReturnTool.TheName)

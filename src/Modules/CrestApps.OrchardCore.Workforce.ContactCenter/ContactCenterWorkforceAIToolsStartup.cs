@@ -190,6 +190,7 @@ public sealed class IntradayAIToolsStartup : StartupBase
             .WithDescription(S["Offers voluntary overtime or voluntary time off to a team for a time range, for a number of places. Workers see it in My Work and take a place until none are left."])
             .WithCategory(S["Workforce"])
             .Selectable()
+            .AsWrite()
             .RequireApproval();
 
         services.AddCoreAITool<CloseIntradayOfferTool>(CloseIntradayOfferTool.ToolName)

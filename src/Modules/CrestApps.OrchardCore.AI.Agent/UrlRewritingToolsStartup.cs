@@ -44,7 +44,7 @@ public sealed class UrlRewritingToolsStartup : StartupBase
             .WithTitle(S["Delete URL Rewrite Rule"])
             .WithDescription(S["Deletes one or more URL rewriting rules by id."])
             .WithCategory(S["URL Rewriting"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

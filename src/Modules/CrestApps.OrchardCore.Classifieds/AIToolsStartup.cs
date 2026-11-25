@@ -38,7 +38,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Moderate Classified"])
             .WithDescription(S["Approves a posted listing (publishes it and starts its term from now) or rejects it with an optional reason (takes it down and emails the poster the reason). The poster of a rejected listing can edit it and post it again."])
             .WithCategory(S["Classifieds"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

@@ -30,7 +30,7 @@ public sealed class SmsToolsStartup : StartupBase
             .WithTitle(S["Send Test SMS"])
             .WithDescription(S["Sends the fixed test text message to a phone number through a chosen SMS provider and returns the provider's result or error. Each message costs money; use it only to check SMS settings."])
             .WithCategory(S["Communications"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

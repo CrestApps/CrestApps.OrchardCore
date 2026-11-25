@@ -44,7 +44,7 @@ public sealed class McpServerToolsStartup : StartupBase
             .WithTitle(S["Delete MCP Prompts"])
             .WithDescription(S["Deletes MCP server prompts by id."])
             .WithCategory(S["MCP Server"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListMcpResourcesTool>(ListMcpResourcesTool.TheName)
@@ -57,14 +57,14 @@ public sealed class McpServerToolsStartup : StartupBase
             .WithTitle(S["Save MCP Resource"])
             .WithDescription(S["Creates or updates an MCP server resource of a given type and URI pattern. A resource makes files, media, content or a remote FTP/SFTP folder readable by MCP clients, so confirm what it exposes. Credentials are never taken: FTP and SFTP resources, and file resources (which read files of the server), are created and changed on the admin page."])
             .WithCategory(S["MCP Server"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteMcpResourceTool>(DeleteMcpResourceTool.TheName)
             .WithTitle(S["Delete MCP Resources"])
             .WithDescription(S["Deletes MCP server resources by id."])
             .WithCategory(S["MCP Server"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

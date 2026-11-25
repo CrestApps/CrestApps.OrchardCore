@@ -82,6 +82,7 @@ public sealed class SchedulingAdminAIToolsStartup : StartupBase
             .WithDescription(S["Confirms a requested appointment, or marks a past one completed or no-show. Use changeAppointment to move or cancel."])
             .WithCategory(S["Scheduling"])
             .Selectable()
+            .AsWrite()
             .RequireApproval();
 
         services.AddCoreAITool<GetAppointmentTypeTool>(GetAppointmentTypeTool.ToolName)
@@ -101,7 +102,7 @@ public sealed class SchedulingAdminAIToolsStartup : StartupBase
             .WithDescription(S["Deletes an appointment type. Appointments already booked keep pointing at it, so turn the type off instead when it has appointments."])
             .WithCategory(S["Scheduling"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         services.AddCoreAITool<ListAppointmentWaitlistTool>(ListAppointmentWaitlistTool.ToolName)
             .WithTitle(S["List appointment waitlist"])

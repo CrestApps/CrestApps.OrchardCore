@@ -31,7 +31,7 @@ public sealed class AIMemoryToolsStartup : StartupBase
             .WithTitle(S["Clear AI User Memory"])
             .WithDescription(S["Deletes everything the AI has remembered about one user and returns how many memories were removed. It cannot be undone."])
             .WithCategory(S["AI Memory"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

@@ -47,14 +47,14 @@ public sealed class TransactionActionsAIToolsStartup : StartupBase
             .WithTitle(S["Reverse Transaction Entry"])
             .WithDescription(S["Takes back a payment recorded by hand, or an adjustment, so it is owed again; needs the previewToken from previewTransactionAction."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<CancelTransactionAutoChargeTool>(CancelTransactionAutoChargeTool.TheName)
             .WithTitle(S["Cancel Transaction Auto Charge"])
             .WithDescription(S["Cancels the saved-card charge scheduled on a transaction, so the owner pays the balance themselves."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<SetPartyCollectionSettingsTool>(SetPartyCollectionSettingsTool.TheName)
@@ -103,7 +103,7 @@ public sealed class TransactionCreditAIToolsStartup : StartupBase
             .WithTitle(S["Apply Transaction Credit"])
             .WithDescription(S["Pays toward a transaction with its payer's customer credit; needs the previewToken from previewTransactionAction and a new idempotencyKey."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

@@ -52,7 +52,7 @@ public sealed class WorkOrdersAIToolsStartup : StartupBase
             .WithDescription(S["Cancels an open work order (a reason is required) or closes a completed one. Both are final: the work order cannot be reopened."])
             .WithCategory(S["Field Service"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         services.AddCoreAITool<RecordWorkOrderPartUsedTool>(RecordWorkOrderPartUsedTool.ToolName)
             .WithTitle(S["Record work order part used"])
@@ -71,7 +71,7 @@ public sealed class WorkOrdersAIToolsStartup : StartupBase
             .WithDescription(S["Completes a work order once its required answers, signature and photos are in, and creates the customer's invoice when the type is billable. It returns what is still missing instead when it cannot complete."])
             .WithCategory(S["Field Service"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         services.AddCoreAITool<ListWorkOrderSettingsTool>(ListWorkOrderSettingsTool.ToolName)
             .WithTitle(S["List work order settings"])
@@ -96,7 +96,7 @@ public sealed class WorkOrdersAIToolsStartup : StartupBase
             .WithDescription(S["Deletes a work order type, checklist, service level or sub-status. Refused while work orders use the type, or while a type uses the checklist or service level."])
             .WithCategory(S["Field Service"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
     }
 }
 
@@ -136,6 +136,7 @@ public sealed class ServiceAgreementsAIToolsStartup : StartupBase
             .WithDescription(S["Creates or updates a service agreement: customer, contact, address, assets, start and end, the hours it covers, schedules (work order type, repeat rule, lead days), pricing and status. Setting the status to Active starts making work orders; Canceled stops them."])
             .WithCategory(S["Field Service"])
             .Selectable()
+            .AsWrite()
             .RequireApproval();
 
         services.AddCoreAITool<RunServiceAgreementTool>(RunServiceAgreementTool.ToolName)
@@ -143,6 +144,7 @@ public sealed class ServiceAgreementsAIToolsStartup : StartupBase
             .WithDescription(S["Makes the work orders of an active agreement that are due now, once each, and returns how many were made. The background task does this hourly; use it to avoid waiting. With Dispatch set to create visits for new work orders, each one gets a visit."])
             .WithCategory(S["Field Service"])
             .Selectable()
+            .AsWrite()
             .RequireApproval();
 
         services.AddCoreAITool<DeleteServiceAgreementTool>(DeleteServiceAgreementTool.ToolName)
@@ -150,6 +152,6 @@ public sealed class ServiceAgreementsAIToolsStartup : StartupBase
             .WithDescription(S["Deletes a draft service agreement. An agreement that is not a draft cannot be deleted; cancel it with saveServiceAgreement instead."])
             .WithCategory(S["Field Service"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
     }
 }

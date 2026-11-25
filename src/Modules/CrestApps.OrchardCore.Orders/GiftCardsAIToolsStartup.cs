@@ -47,7 +47,7 @@ public sealed class GiftCardsAIToolsStartup : StartupBase
             .WithTitle(S["Issue Gift Card"])
             .WithDescription(S["Creates a gift card worth an amount in a currency, with an optional expiry, recipient and note, and optionally emails it to the recipient with a message. It creates money the holder can spend at checkout. The site makes up the code, which is never shown here; every call needs a new idempotency key."])
             .WithCategory(S["Gift Cards"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<UpdateGiftCardTool>(UpdateGiftCardTool.TheName)
@@ -60,14 +60,14 @@ public sealed class GiftCardsAIToolsStartup : StartupBase
             .WithTitle(S["Adjust Gift Card Balance"])
             .WithDescription(S["Adds to a gift card's balance, or takes from it with a negative amount, in the card's currency, with a required reason that is kept in the card's activity. It is refused while the card is being used at a checkout. Every call needs a new idempotency key."])
             .WithCategory(S["Gift Cards"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<EmailGiftCardTool>(EmailGiftCardTool.TheName)
             .WithTitle(S["Email Gift Card"])
             .WithDescription(S["Emails a gift card with its code to its saved recipient again. The card must have a recipient email."])
             .WithCategory(S["Gift Cards"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

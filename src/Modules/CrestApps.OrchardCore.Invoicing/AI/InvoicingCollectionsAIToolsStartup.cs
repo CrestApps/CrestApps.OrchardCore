@@ -47,7 +47,7 @@ public sealed class InvoicingCollectionsAIToolsStartup : StartupBase
             .WithTitle(S["Send an invoice statement"])
             .WithDescription(S["E-mails a customer their statement with its PDF, to their billing address on file: open items (what they still owe and how late) or activity over a period."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddAIRecordKind<LateFeePolicy>(LateFeePolicyKind, kind => kind

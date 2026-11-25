@@ -40,6 +40,7 @@ public sealed class OpenShiftAIToolsStartup : StartupBase
             .WithDescription(S["Posts a shift nobody has, for a team, day and time, optionally from a shift template that brings its breaks and the skills needed. The team's settings decide how it is claimed (first come, approval or seniority) and the deadline. Eligible workers are notified."])
             .WithCategory(S["Workforce"])
             .Selectable()
+            .AsWrite()
             .RequireApproval();
 
         services.AddCoreAITool<DecideOpenShiftClaimTool>(DecideOpenShiftClaimTool.ToolName)
@@ -47,7 +48,7 @@ public sealed class OpenShiftAIToolsStartup : StartupBase
             .WithDescription(S["Gives an open shift to a worker (one who claimed it or any eligible worker), or declines a worker's claim with a note. The worker is notified."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddCoreAITool<CancelOpenShiftTool>(CancelOpenShiftTool.ToolName)
             .WithTitle(S["Cancel open shift"])
@@ -66,14 +67,14 @@ public sealed class OpenShiftAIToolsStartup : StartupBase
             .WithDescription(S["Offers one worker's shift to another worker, as a giveaway or a swap for one of theirs, on the worker's behalf. The other worker is asked to accept."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddCoreAITool<DecideShiftTradeTool>(DecideShiftTradeTool.ToolName)
             .WithTitle(S["Decide shift trade"])
             .WithDescription(S["Approves, declines (with a note) or cancels a shift trade, or accepts or rejects it for the other worker. Approving swaps the shifts on the published schedule and notifies both workers."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
     }
 }
 

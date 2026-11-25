@@ -39,6 +39,7 @@ public sealed class AIDataSourcesToolsStartup : StartupBase
             .WithTitle(S["Save AI Data Source"])
             .WithDescription(S["Creates an AI data source of a given source type, or updates an existing one by id. Use it after listAIDataSources shows the source types; an existing data source whose configuration is locked can only be renamed. Prefer a data connection or the default connection over typing credentials; credentials are never taken."])
             .WithCategory(S["AI Knowledge"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
 
@@ -46,7 +47,7 @@ public sealed class AIDataSourcesToolsStartup : StartupBase
             .WithTitle(S["Delete AI Data Source"])
             .WithDescription(S["Deletes an AI data source. Profiles, web crawlers and file sources that point at it stop having knowledge to search; this cannot be undone."])
             .WithCategory(S["AI Knowledge"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

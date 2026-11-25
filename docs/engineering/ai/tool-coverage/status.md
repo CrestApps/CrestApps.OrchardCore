@@ -1020,7 +1020,7 @@ Built from section 3 of the maintainer's review of pull request 1334 ("generic r
 
 **Tests** (`tests/CrestApps.OrchardCore.Tests/Agent/Records/`): every tool refuses an anonymous caller, a caller without the read permission and an unknown kind (with the list of kinds); the write tools refuse a caller who can only read; list paging and the text filter; get and not found; the projection never returns the canary secret or `Properties`; create and update through a real display driver (normalization, the secret and `Properties` kept); values keyed by section; dry run (valid and invalid); a driver error and a record rule error each return the schema; secret, unknown, fixed and wrong-shape values are refused with the schema; two saves in one scope; delete with in-use and not found; the kind enum in the schema; the registration (texts, only `deleteRecord` asks); name and projection validation of `AddAIRecordKind`; a field the editor does not change reported as `unchanged`; the Taxation kinds' registration, a tax category created through the real `TaxCategoryDisplayDriver`, a tax jurisdiction updated through the real `TaxJurisdictionDisplayDriver` (city changed; level, country and effective date kept; the name reported unchanged), and a category a tax rule uses kept.
 
-**Open questions.** No "Destructive" tool kind exists in CrestApps.Core at this version, so `deleteRecord` only asks for approval. The `kind` enum is not narrowed per agent or per caller yet (the review wants each agent's kinds only). `saveRecord` does not ask for approval, as setup records can be changed back; a kind that changes AI configuration would need the AI configuration guard first. Editors with a list of objects (tax tables, shipping zones) need the replay to support object lists.
+**Open questions.** No "Destructive" tool kind existed in CrestApps.Core at this version, so `deleteRecord` only asked for approval; it is `.AsDestructive()` since Core `2.0.0-preview.389` (see [Tool kinds](#tool-kinds-instead-of-requireapproval-2026-11-24)). The `kind` enum is not narrowed per agent or per caller yet (the review wants each agent's kinds only). `saveRecord` does not ask for approval, as setup records can be changed back; a kind that changes AI configuration would need the AI configuration guard first. Editors with a list of objects (tax tables, shipping zones) need the replay to support object lists.
 
 ## Rework: the rest of commerce core (returns to point of sale)
 
@@ -1233,7 +1233,7 @@ The maintainer's review of pull request 1334 drops the tools below. They were bu
 | `saveMediaTextFile` | 3 | Too dangerous: it writes `.js`, `.css` and `.svg` served from the site's own origin |
 | `getMediaOptions` | 3 | Duplicate: to be folded into the `listMediaFiles` and import results |
 | `purgeMediaCache` | 3 | Rare, and the manager is in a module assembly |
-| `runSqlQuery` | 4 | Too dangerous: YesSql's `Document` table holds every record, password hashes included, and approval is skipped inside agents |
+| `runSqlQuery` | 4 | Too dangerous: YesSql's `Document` table holds every record, password hashes included, and approval was skipped inside agents (Core asks inside agents since `2.0.0-preview.389`, but the first reason stands) |
 | `saveQuery`, `deleteQuery` | 4 | Too dangerous: together they let the model save SQL and then run it |
 | `runSearchQuery` | 4 | The model must invent the query DSL; `searchIndex` covers "what do visitors find" |
 | `saveUserCustomSettings` | 5 | No validation, by the plan's own note |
@@ -1625,6 +1625,23 @@ A second review found these gaps in the new-from-main tools and in two Orders to
 - **Invoice issue.** `issueInvoice` checks whether the draft needs approval before it runs the issue command, as the page decides which button to show, so the command never refuses and discards the message's earlier work.
 - **Approval added.** `pauseOrResumeRecurringPlan` asks, because resuming a plan that charges can bill a saved card. `saveServiceAgreement` asks, because saving it Active starts work orders. `adjustTransaction` needs a token from `previewTransactionAction`.
 
+## Tool kinds instead of `.RequireApproval()` (2026-11-24)
+
+CrestApps.Core `2.0.0-preview.389` (#327) added tool kinds, which is F3 of [01-foundation.md](01-foundation.md#f3-kind-on-the-registration-s-core). In that version an explicit `.RequireApproval()` is an approval floor: the tool asks before every call and no profile setting lowers it, and where nobody can be asked (a workflow, voice, an MCP client, background work) it never runs. A tool that asks because of its kind follows the profile's tool approval setting (`AIToolApprovalSettings`), which can let it run without asking.
+
+All 236 tools that asked (the 11 from main, 2 that main had without approval, and 223 new ones) now declare a kind. The same 236 tools still ask by default.
+
+| Kind | Tools | Rule used |
+|---|---|---|
+| Destructive (`.AsDestructive()`) | 101 | Deletes, or cannot be undone: deletes, cancels, voids, closes, final decisions, issuing an invoice, running a workflow or background task, rebuilding an index |
+| External (`.AsExternal()`) | 70 | Sends an email, text, call, webhook or notice to a person; calls a paid service (model, embeddings, geocoding, carrier, lookup); moves money or value (payments, refunds, credit, gift cards, points, tips); points the site at an outside endpoint (A2A, MCP, data connection, tool instance, deployment) |
+| Security (`.AsSecurity()`) | 49 | Changes access or sign-in (roles, users, owners, shares, share links, account members, API keys, feed keys, secrets, Stripe keys), what the site runs (recipes, workflow types, features, site settings, tenants, an AI profile's tools) or exports personal data |
+| Write (`.AsWrite()` with `.RequireApproval()`) | 16 | A change that can be undone, kept asking as decided in the batches: `saveAIDataSource`, `saveAIFileSource`, `setHomepage`, `saveB2BAccountSettings`, `respondToCalendarEvent`, `updateCalendarEvent`, `saveCoupon`, `generateCouponCodes`, `importLocalDncList`, `setLocalDncListImportState`, `pauseOrResumeRecurringPlan`, `setAppointmentStatus`, `runServiceAgreement`, `saveServiceAgreement`, `postOpenShift`, `postIntradayOffer` |
+
+The Write row keeps the floor on purpose: Core's Write kind needs no approval, so dropping `.RequireApproval()` would stop them asking. Whether they should ask at all is for the maintainer. The other 474 tools have no kind (`Unspecified`, as before); giving them Read or Write would only add MCP tool hints. New tools declare a kind instead of calling `.RequireApproval()`, and call it only for a tool of another kind that should ask.
+
+Not done yet: the OC profile editor has no **Tool approval** setting (the Core sample hosts show it on the Capabilities tab), so today a profile can change it only through its stored settings.
+
 ## Bugs found in main's code (reported, not fixed)
 
 - **Fulfillment.** `FulfillmentAdminController.Send` and `SendAgain` do not check that the order is paid; the card only hides its button. A posted Send for an unpaid order records requests that settle as Needs attention (not paid) and notify every shipper. The engine itself never sends an unpaid order to a partner.
@@ -1635,11 +1652,16 @@ A second review found these gaps in the new-from-main tools and in two Orders to
 - **Ticket priorities.** The Priorities page's delete check (`TicketSettingsUsage`) does not count desk priority matrices, ticket category priorities or service level policy targets. A priority deleted on the page while a desk's matrix names it makes every later save of that desk fail; a category's new tickets fall back to Normal; a policy's target no longer applies. The `ticketPriority` kind checks all three itself.
 - **Record sources.** `WorkOrderRecordSource` and `ContentItemRecordSource` describe a record without checking who reads it. The service-level tools therefore return a title only for a record its kind's access provider grants to the caller.
 - **Content tools.** `getContentItemById` (`AI.Agent/Contents/GetContentTool.cs`) and `createOrUpdateContentItem` (`CreateOrUpdateContentTool.cs`) make no content authorization call, and `isDraft: false` publishes. With them on a profile, a caller can read a restricted knowledge article in full or publish an article.
+- **Content versions (found in the UI test, 2026-11-24).** `unpublishContentItem` (`UnpublishContentTool.cs`) and `deleteContentItem` (`DeleteContentTool.cs`) load the item with `GetAsync(id)`, which is the published version. Unpublishing an item that has a draft throws "Not the latest version", and deleting an item whose latest version is a draft says the item can't be found. Both should load `VersionOptions.Latest`.
+- **Content definitions (found in the UI test).** `removeContentTypeDefinition` and `removeContentPartDefinition` run the DeleteContentDefinition step through `RecipeExecutionService`, which imports the recipe in its own scope and connection. On SQLite that waits for the chat request's write lock and fails with "database is locked" when anything was written earlier in the request, including saving the chat on an approval turn. Running the step in the request scope, as `RecipeStepRunner` does, avoids it. A type made with `applyContentTypeDefinitionFromRecipe` is not visible to other tools until the message ends.
+- **Content search (found in the UI test).** `searchForContentItems` returned unrelated items for a term that matched one menu, and not the menu.
+- **Users and conversations (found in the UI test).** `getUserInfo` returns the raw user object; a model read its `IsLockoutEnabled` as "locked out" (`getUser` reports `lockedOut`). `listAIConversations` and `viewAIConversation` return raw UTC times.
 
 ## Notes for the maintainer
 
 - `EgressNetwork.IsInternal` does not classify NAT64 (`64:ff9b::/96`) or `198.18.0.0/15`, which the Tenant Hierarchy classifier does. `importMediaFromUrl` relies on it.
-- All tool calls of one chat message share one service scope, so Orchard Core's immutable document reads stay stale until the scope commits. The URL rewriting and translation tools handle it (commit 8bf806dfe); any later tool that writes through a document manager and reads it back in the same message needs the same care.
+- All tool calls of one chat message share one service scope, so Orchard Core's immutable document reads stay stale until the scope commits. The URL rewriting and translation tools handle it (commit 8bf806dfe); any later tool that writes through a document manager and reads it back in the same message needs the same care. The deployment plan tools read the plans with a session query, because `IDeploymentPlanService` keeps the first list it read for the scope. Still open: `checkBusinessHours` does not see a calendar `saveBusinessHoursCalendar` created earlier in the same message (both use `INamedCatalogManager<BusinessHoursSchedule>`).
+- When a profile has more than 30 tools, Core's `DefaultOrchestrator` sends the model only the 20 whose words best match the message (`ScopingThreshold`, `InitialToolCount`). A profile with several large groups selected therefore loses tools from some messages.
 - `AI.Agent` now references the Lucene and Elasticsearch core packages, which pulls Lucene.Net and the Elasticsearch client in for every site that installs it.
 - Web crawlers fetch any address the server can reach: neither the crawler editor, the sitemap strategy nor the crawler's `HttpClient` blocks internal or loopback hosts. The crawler tools check what the editor checks and say so; an egress check belongs in the crawler's HTTP client.
 - On this machine the shared compiler server produced bogus Razor errors (tag helpers not found) in batch 14; building with `-p:UseSharedCompilation=false -p:UseRazorBuildServer=false` worked.

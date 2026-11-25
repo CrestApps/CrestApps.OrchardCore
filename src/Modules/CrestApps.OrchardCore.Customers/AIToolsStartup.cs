@@ -57,21 +57,21 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Customer Address"])
             .WithDescription(S["Deletes one address from a customer's address book."])
             .WithCategory(S["Customers"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ExportCustomerDataTool>(ExportCustomerDataTool.TheName)
             .WithTitle(S["Export Customer Data"])
             .WithDescription(S["Returns the link that downloads everything the store holds on a customer, for a data access request. Opening the link builds the file, checks the permission again and records the export in the customer's privacy log; the data never passes through the conversation."])
             .WithCategory(S["Customers"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<EraseCustomerDataTool>(EraseCustomerDataTool.TheName)
             .WithTitle(S["Erase Customer Data"])
             .WithDescription(S["Erases a customer's personal data for an erasure request, everywhere the site keeps it: every module that holds personal data about the customer (orders, and any other module's records) erases its part too, orders keep their totals without the personal details, and the customer record is anonymized. This cannot be undone."])
             .WithCategory(S["Customers"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }
@@ -102,7 +102,7 @@ public sealed class StoreCreditAIToolsStartup : StartupBase
             .WithTitle(S["Adjust Customer Store Credit"])
             .WithDescription(S["Adds or removes store credit for a customer in a currency, with a reason shown in the credit history. A positive amount is money the store gives away."])
             .WithCategory(S["Customers"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }
@@ -133,7 +133,7 @@ public sealed class LoyaltyAIToolsStartup : StartupBase
             .WithTitle(S["Adjust Customer Loyalty Points"])
             .WithDescription(S["Adds or removes loyalty points for a customer, with a reason shown in the points history."])
             .WithCategory(S["Customers"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

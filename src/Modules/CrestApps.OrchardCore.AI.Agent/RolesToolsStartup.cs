@@ -49,14 +49,14 @@ public sealed class RolesToolsStartup : StartupBase
             .WithTitle(S["Save Role"])
             .WithDescription(S["Creates a role, or updates a role's description and permissions (add, remove or replace; a new role can copy the permissions of another role). It refuses to change the administrator role's permissions and names every security-critical permission it would grant. A permission name no enabled feature provides is refused with the closest names that exist."])
             .WithCategory(S["Roles Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteRoleTool>(DeleteRoleTool.TheName)
             .WithTitle(S["Delete Role"])
             .WithDescription(S["Deletes a custom role and removes it from every user and OpenID application that has it; this cannot be undone. System roles cannot be deleted."])
             .WithCategory(S["Roles Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

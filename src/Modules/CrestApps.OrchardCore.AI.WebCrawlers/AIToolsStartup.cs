@@ -38,21 +38,21 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Save AI Web Crawler"])
             .WithDescription(S["Creates a web crawler for a public website, or updates one by id. It needs an existing Web AI data source. Saving queues a full synchronization of that data source, which crawls the site and spends embedding tokens in the background."])
             .WithCategory(S["AI Knowledge"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<DeleteAIWebCrawlerTool>(DeleteAIWebCrawlerTool.TheName)
             .WithTitle(S["Delete AI Web Crawler"])
             .WithDescription(S["Deletes a web crawler. Its pages stop being refreshed in the knowledge base."])
             .WithCategory(S["AI Knowledge"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<RunAIWebCrawlerTool>(RunAIWebCrawlerTool.TheName)
             .WithTitle(S["Run AI Web Crawler"])
             .WithDescription(S["Re-crawls one website now and queues its new, changed and removed pages for indexing, returning the three counts. It sends requests to the website and spends embedding tokens for every changed page."])
             .WithCategory(S["AI Knowledge"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

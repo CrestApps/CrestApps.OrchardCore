@@ -37,14 +37,14 @@ public sealed class DataPipelinesCoreToolsStartup : StartupBase
             .WithTitle(S["Revoke Shared Link"])
             .WithDescription(S["Stops a shared link from working for all its recipients. The shared file or resource is kept until the link is deleted."])
             .WithCategory(S["Shared Links"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteSharedLinkTool>(DeleteSharedLinkTool.TheName)
             .WithTitle(S["Delete Shared Link"])
             .WithDescription(S["Deletes a shared link together with the resource it shared, such as the stored copy of an exported file. Cannot be undone."])
             .WithCategory(S["Shared Links"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

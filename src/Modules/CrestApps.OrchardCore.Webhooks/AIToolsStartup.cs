@@ -45,21 +45,21 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Save Webhook"])
             .WithDescription(S["Creates a webhook that posts signed JSON for chosen events, or all events, to an https URL, or updates one by id, including enabling or disabling it. A new webhook gets a signing secret that the administrator copies from its admin page."])
             .WithCategory(S["Webhooks"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<RotateWebhookSecretTool>(RotateWebhookSecretTool.TheName)
             .WithTitle(S["Rotate Webhook Secret"])
             .WithDescription(S["Gives a webhook a new signing secret. Deliveries are signed with it from then on, so the receiver rejects them until the new secret is entered there."])
             .WithCategory(S["Webhooks"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteWebhookTool>(DeleteWebhookTool.TheName)
             .WithTitle(S["Delete Webhook"])
             .WithDescription(S["Deletes a webhook and its delivery log. Nothing more is sent to it."])
             .WithCategory(S["Webhooks"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListWebhookDeliveriesTool>(ListWebhookDeliveriesTool.TheName)
@@ -72,7 +72,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Send Webhook Delivery"])
             .WithDescription(S["Sends to a webhook now and returns the receiver's status code or the error: with ping true, a test ping event, to check that a receiver is reachable and accepts the signature; with a deliveryId from listWebhookDeliveries, that logged delivery again."])
             .WithCategory(S["Webhooks"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

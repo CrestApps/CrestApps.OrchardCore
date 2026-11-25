@@ -32,7 +32,7 @@ public sealed class AIChatSessionsToolsStartup : StartupBase
             .WithTitle(S["Delete AI Conversation"])
             .WithDescription(S["Deletes one AI conversation and its transcript by session id. It cannot be undone. Only your own conversations can be deleted, as on a profile's chat History page."])
             .WithCategory(S["AI Conversations"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

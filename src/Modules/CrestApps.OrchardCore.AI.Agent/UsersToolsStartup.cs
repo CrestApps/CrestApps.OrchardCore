@@ -43,7 +43,7 @@ public sealed class UsersToolsStartup : StartupBase
             .WithTitle(S["Save User"])
             .WithDescription(S["Updates a user's user name, email and phone number. It cannot create a user and it cannot set a password; roles are changed with setUserRoles."])
             .WithCategory(S["Users Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<SetUserAccountStateTool>(SetUserAccountStateTool.TheName)
@@ -56,7 +56,7 @@ public sealed class UsersToolsStartup : StartupBase
             .WithTitle(S["Delete User"])
             .WithDescription(S["Permanently deletes a user account; this cannot be undone. It refuses for the calling user's own account, the site super user and the only enabled administrator; suggest setUserAccountState with action disable when the admin only wants to block access."])
             .WithCategory(S["Users Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

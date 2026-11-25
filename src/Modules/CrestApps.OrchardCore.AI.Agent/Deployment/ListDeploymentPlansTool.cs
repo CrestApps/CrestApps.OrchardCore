@@ -85,7 +85,7 @@ public sealed class ListDeploymentPlansTool : AIFunction
         var includeSteps = arguments.GetFirstValueOrDefault("includeSteps", false);
         var (page, pageSize) = AgentToolResults.ReadPaging(arguments);
 
-        var plans = (await services.GetRequiredService<IDeploymentPlanService>().GetAllDeploymentPlansAsync())
+        var plans = (await DeploymentToolSupport.GetPlansAsync(services))
             .Where(plan => string.IsNullOrEmpty(search) || plan.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
             .OrderBy(plan => plan.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();

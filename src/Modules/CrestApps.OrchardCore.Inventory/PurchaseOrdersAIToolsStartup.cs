@@ -67,14 +67,14 @@ public sealed class PurchaseOrdersAIToolsStartup : StartupBase
             .WithTitle(S["Cancel Purchase Order"])
             .WithDescription(S["Cancels a purchase order that is not fully received. What already arrived stays in stock; a canceled order cannot be changed or reopened."])
             .WithCategory(S["Inventory"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<DeletePurchaseOrderTool>(DeletePurchaseOrderTool.TheName)
             .WithTitle(S["Delete Purchase Order"])
             .WithDescription(S["Deletes a draft purchase order. An order already sent to a supplier cannot be deleted, only canceled."])
             .WithCategory(S["Inventory"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

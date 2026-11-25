@@ -43,7 +43,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Product Review"])
             .WithDescription(S["Permanently deletes one product review. Prefer rejecting; use delete for spam or personal data that must be removed."])
             .WithCategory(S["Product Reviews"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

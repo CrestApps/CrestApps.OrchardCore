@@ -40,7 +40,7 @@ public sealed class FeedsAIToolsStartup : StartupBase
             .WithTitle(S["Push Agent Feeds"])
             .WithDescription(S["Pushes the product feed now, over SFTP and to every enabled ACP feed API, using the saved settings, and returns each result. Use it after fixing products or settings instead of waiting for the nightly push."])
             .WithCategory(S["Agentic Commerce"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

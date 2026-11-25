@@ -103,7 +103,7 @@ public sealed class RecipesStartup : StartupBase
             .WithTitle(S["Apply Site Configuration"])
             .WithDescription(S["Applies predefined system configurations and settings using AI assistance."])
             .WithCategory(S["Recipes"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName)
@@ -123,7 +123,7 @@ public sealed class RecipesStartup : StartupBase
             .WithDescription(S["Enables AI agents to import and run Orchard Core recipes within your site. Before calling this tool, call getOrchardCoreRecipeJsonSchema first whenever it is available, then build the recipe JSON to match that schema exactly."])
             .WithCategory(S["Recipes"])
             .WithDependency(GetRecipeJsonSchemaTool.TheName)
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ListNonStartupRecipesTool>(ListNonStartupRecipesTool.TheName)
@@ -136,7 +136,7 @@ public sealed class RecipesStartup : StartupBase
             .WithTitle(S["Run Non-Startup Recipes"])
             .WithDescription(S["Executes Orchard Core recipes that are not configured to run at application startup."])
             .WithCategory(S["Recipes"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }
@@ -194,14 +194,14 @@ public sealed class TenantsStartup : StartupBase
             .WithTitle(S["Disable Tenant"])
             .WithDescription(S["Disables a tenant that is currently active."])
             .WithCategory(S["Tenants Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<RemoveTenantTool>(RemoveTenantTool.TheName)
             .WithTitle(S["Remove Tenant"])
             .WithDescription(S["Removes an existing tenant that can be safely deleted."])
             .WithCategory(S["Tenants Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ReloadTenantTool>(ReloadTenantTool.TheName)
@@ -214,7 +214,7 @@ public sealed class TenantsStartup : StartupBase
             .WithTitle(S["Setup Tenant"])
             .WithDescription(S["Sets up new tenants."])
             .WithCategory(S["Tenants Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }
@@ -275,7 +275,7 @@ public sealed class ContentsStartup : StartupBase
             .WithTitle(S["Delete Content Item"])
             .WithDescription(S["Deletes a content item from the system."])
             .WithCategory(S["Content Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<CloneContentTool>(CloneContentTool.TheName)
@@ -403,14 +403,14 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
             .WithTitle(S["Remove Content Type Definitions"])
             .WithDescription(S["Removes the content type definition."])
             .WithCategory(S["Content Definitions"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName)
             .WithTitle(S["Remove Content Part Definitions"])
             .WithDescription(S["Removes the content part definition."])
             .WithCategory(S["Content Definitions"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName)
@@ -444,7 +444,7 @@ public sealed class FeaturesStartup : StartupBase
             .WithTitle(S["Disable Site Feature"])
             .WithDescription(S["Disabled site features."])
             .WithCategory(S["Features Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<EnableFeatureTool>(EnableFeatureTool.TheName)
@@ -523,7 +523,7 @@ public sealed class EmailStartup : StartupBase
             .WithTitle(S["Send Emails"])
             .WithDescription(S["Sends an email using the configured email provider."])
             .WithCategory(S["Communications"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }
@@ -551,7 +551,7 @@ public sealed class SmsStartup : StartupBase
             .WithTitle(S["Send SMS message"])
             .WithDescription(S["Sends a SMS message to a user."])
             .WithCategory(S["Communications"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }
@@ -674,7 +674,7 @@ public sealed class WorkflowsRecipesStartup : StartupBase
             .WithTitle(S["Create Workflows"])
             .WithDescription(S["Create or update information a workflow."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName)

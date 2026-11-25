@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Deployment;
 using OrchardCore.Json;
+using YesSql;
+using YSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Agent.Deployment;
 
@@ -17,6 +19,16 @@ internal static class DeploymentToolSupport
     /// The name of the recipe step that creates or replaces deployment plans by name.
     /// </summary>
     public const string RecipeStepName = "deployment";
+
+    /// <summary>
+    /// Reads every deployment plan from the session. <see cref="IDeploymentPlanService"/> keeps the plans it read for
+    /// the rest of the scope, and all tool calls of one chat message share one scope, so a plan saved earlier in the
+    /// message would be missing from it. A session query sees it, because the session saves pending changes first.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <returns>The plans.</returns>
+    public static async Task<List<DeploymentPlan>> GetPlansAsync(IServiceProvider services)
+        => (await services.GetRequiredService<YSession>().Query<DeploymentPlan>().ListAsync()).ToList();
 
     /// <summary>
     /// Describes the steps of a plan: the step type and the fields of each step, in the plan's order.

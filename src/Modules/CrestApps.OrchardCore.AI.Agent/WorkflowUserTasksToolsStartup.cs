@@ -31,7 +31,7 @@ public sealed class WorkflowUserTasksToolsStartup : StartupBase
             .WithTitle(S["Complete Workflow User Task"])
             .WithDescription(S["Chooses a user task action, such as Approve or Reject, for a content item that a workflow is waiting on, which resumes that workflow on the matching outcome. Called without an action, or with an unknown one, it returns the actions the current user may choose for that item."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

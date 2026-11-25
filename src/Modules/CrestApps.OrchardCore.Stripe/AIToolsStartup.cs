@@ -40,7 +40,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Disconnect Stripe"])
             .WithDescription(S["Disconnects the Stripe account of the live or the test environment: removes the webhook at Stripe and clears the stored keys for it. Checkout can no longer take card payments in that environment until an administrator connects again on the Stripe settings page."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

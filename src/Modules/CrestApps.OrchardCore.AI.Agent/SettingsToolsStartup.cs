@@ -43,7 +43,7 @@ public sealed class SettingsToolsStartup : StartupBase
             .WithTitle(S["Update Site Settings"])
             .WithDescription(S["Changes fields of one settings group; send only the fields to change, in the shape returned by getSiteSettings. Returns validation errors, or the saved values and whether the site is reloading."])
             .WithCategory(S["Site Settings"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

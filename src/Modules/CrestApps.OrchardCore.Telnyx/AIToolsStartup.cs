@@ -53,7 +53,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Set Telnyx Number Caller Name"])
             .WithDescription(S["Sets the caller name shown for an owned number. Carriers can take days to show it."])
             .WithCategory(S["Telephony"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

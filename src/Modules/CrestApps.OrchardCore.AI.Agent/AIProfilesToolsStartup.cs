@@ -49,14 +49,14 @@ public sealed class AIProfilesToolsStartup : StartupBase
             .WithTitle(S["Set AI Profile Capabilities"])
             .WithDescription(S["Sets which tools, tool instances and agents a profile can use, and for an agent whether it may run its tools and whether it is always available. Refused for the running assistant and for tools that are unsafe on a profile visitors can reach. MCP and A2A connections are set on the profile's page."])
             .WithCategory(S["AI Profiles"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteAIProfileTool>(DeleteAIProfileTool.TheName)
             .WithTitle(S["Delete AI Profile"])
             .WithDescription(S["Deletes one profile by id; it cannot be restored. Refused for a profile marked not removable, the running assistant and its agents, a profile people or clients can reach (chat widget, admin chat, API key, visitors) and a profile another profile uses as an agent."])
             .WithCategory(S["AI Profiles"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<DiagnoseAIProfileTool>(DiagnoseAIProfileTool.TheName)
@@ -75,14 +75,14 @@ public sealed class AIProfilesToolsStartup : StartupBase
             .WithTitle(S["Restore AI Profile Version"])
             .WithDescription(S["Restores a profile to a saved version; the restore is saved as a new version, so it can be undone. It can bring back earlier tools and instructions, so the same refusals as setAIProfileCapabilities apply."])
             .WithCategory(S["AI Profiles"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<TestAIProfileTool>(TestAIProfileTool.TheName)
             .WithTitle(S["Test AI Profile"])
             .WithDescription(S["Sends one message to a profile and returns its reply, with the profile's tools turned off. Use it to check an edit. It makes a paid model call."])
             .WithCategory(S["AI Profiles"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<ListAIProfileTemplatesTool>(ListAIProfileTemplatesTool.TheName)
@@ -101,7 +101,7 @@ public sealed class AIProfilesToolsStartup : StartupBase
             .WithTitle(S["Delete AI Profile Templates"])
             .WithDescription(S["Deletes stored templates by id. Profiles that selected a deleted SystemPrompt template lose that block of instructions."])
             .WithCategory(S["AI Profile Templates"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

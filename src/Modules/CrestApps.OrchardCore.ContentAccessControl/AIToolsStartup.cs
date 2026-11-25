@@ -37,7 +37,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Set Content Item Access Roles"])
             .WithDescription(S["Sets the roles that may view a content item on a content type that restricts access by role. An empty list makes the item visible to everyone who can view content; it fails when the type has no restricting role picker part."])
             .WithCategory(S["Content Access Control"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

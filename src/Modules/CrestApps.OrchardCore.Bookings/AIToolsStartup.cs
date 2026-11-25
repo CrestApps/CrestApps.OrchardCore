@@ -51,14 +51,14 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Cancel Booking"])
             .WithDescription(S["Cancels a booking, refunds the buyer the stated amount and currency (0 for no refund, refundAll for everything paid), cancels any balance still owed, frees the dates and emails the buyer. Every call needs a new idempotency key; a repeated key is refused. Cannot be undone."])
             .WithCategory(S["Bookings"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ChargeBookingBalanceTool>(ChargeBookingBalanceTool.TheName)
             .WithTitle(S["Charge Booking Balance"])
             .WithDescription(S["Charges the balance still owed on a booking to the card its deposit was paid with, now, including after an earlier failed attempt. The amount and currency must equal the balance owed, and every call needs a new idempotency key. Fails when nothing is owed."])
             .WithCategory(S["Bookings"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<ListBookingDatesTool>(ListBookingDatesTool.TheName)

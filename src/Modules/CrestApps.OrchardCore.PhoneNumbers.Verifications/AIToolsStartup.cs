@@ -38,7 +38,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Retry Phone Number Verifications"])
             .WithDescription(S["Re-queues phone verifications for the given content item ids, or for all failed ones, and runs them against the enabled lookup provider. Each lookup is a billable provider call; fails when no provider is enabled."])
             .WithCategory(S["Phone Numbers"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

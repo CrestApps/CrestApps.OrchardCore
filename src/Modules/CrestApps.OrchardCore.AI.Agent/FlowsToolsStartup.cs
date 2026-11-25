@@ -44,7 +44,7 @@ public sealed class FlowsToolsStartup : StartupBase
             .WithTitle(S["Remove Nested Content Item"])
             .WithDescription(S["Deletes one widget or contained item, and everything nested inside it, from a content item's Flow, Bag or widget-zone part."])
             .WithCategory(S["Content Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

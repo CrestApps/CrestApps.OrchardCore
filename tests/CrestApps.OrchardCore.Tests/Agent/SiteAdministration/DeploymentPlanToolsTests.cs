@@ -1,5 +1,11 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Agent.Deployment;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using OrchardCore.Deployment;
+using OrchardCore.Deployment.Services;
+using OrchardCore.Recipes.Models;
+using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.Tests.Agent.SiteAdministration;
 
@@ -55,6 +61,43 @@ public sealed class DeploymentPlanToolsTests
     }
 
     [Fact]
+    public async Task SaveDeploymentPlan_ThenListInTheSameScope_ListsTheNewPlanWithItsId()
+    {
+        // Arrange
+        var harness = new SiteAdministrationToolHarness();
+
+        harness.Configure = services =>
+        {
+            // As Orchard Core's plan service does: the plans it reads first are kept for the rest of the scope,
+            // which every tool call of one chat message shares.
+            List<DeploymentPlan> cached = null;
+            var planService = new Mock<IDeploymentPlanService>();
+            planService.Setup(service => service.GetAllDeploymentPlansAsync())
+                .ReturnsAsync(() => cached ??= [.. harness.Plans]);
+            planService.Setup(service => service.GetDeploymentPlansAsync(It.IsAny<string[]>()))
+                .ReturnsAsync((string[] names) => (cached ??= [.. harness.Plans]).Where(plan => names.Contains(plan.Name)).ToList());
+            services.AddSingleton(planService.Object);
+            services.AddSingleton<IRecipeStepHandler>(new SavingPlanStepHandler(harness));
+        };
+
+        using var services = harness.Build();
+
+        // Act
+        var saved = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new SaveDeploymentPlanTool(), services, new()
+        {
+            ["name"] = "Settings only",
+            ["steps"] = JsonNode.Parse("""[ { "type": "TestExportStep", "step": { "IncludeAll": false } } ]"""),
+        }));
+        var listed = AgentToolTestContext.ReadJson(await AgentToolTestContext.InvokeAsync(new ListDeploymentPlansTool(), services, new()));
+
+        // Assert
+        Assert.True(saved.GetProperty("created").GetBoolean());
+        Assert.Equal(8, saved.GetProperty("id").GetInt64());
+        Assert.Contains(listed.GetProperty("items").EnumerateArray(), item =>
+            item.GetProperty("name").GetString() == "Settings only" && item.GetProperty("id").GetInt64() == 8);
+    }
+
+    [Fact]
     public async Task SaveDeploymentPlan_WhenAStepTypeIsUnknown_SavesNothing()
     {
         // Arrange
@@ -103,5 +146,40 @@ public sealed class DeploymentPlanToolsTests
         // Assert
         Assert.StartsWith("Nothing was deleted: there is no deployment plan with the ID 99", result);
         Assert.Empty(harness.DeletedPlans);
+    }
+
+    /// <summary>
+    /// Saves the plans of a <c>deployment</c> step as the recipe step does: a new plan gets the next ID.
+    /// </summary>
+    private sealed class SavingPlanStepHandler : IRecipeStepHandler
+    {
+        private readonly SiteAdministrationToolHarness _harness;
+
+        public SavingPlanStepHandler(SiteAdministrationToolHarness harness)
+        {
+            _harness = harness;
+        }
+
+        public Task ExecuteAsync(RecipeExecutionContext context)
+        {
+            if (context.Name == DeploymentToolSupport.RecipeStepName && context.Step["Plans"] is JsonArray plans)
+            {
+                foreach (var plan in plans)
+                {
+                    var name = plan["Name"].GetValue<string>();
+
+                    if (!_harness.Plans.Any(existing => existing.Name == name))
+                    {
+                        _harness.Plans.Add(new DeploymentPlan
+                        {
+                            Id = _harness.Plans.Max(existing => existing.Id) + 1,
+                            Name = name,
+                        });
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
     }
 }

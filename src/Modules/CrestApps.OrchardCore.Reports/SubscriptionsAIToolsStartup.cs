@@ -38,21 +38,21 @@ public sealed class SubscriptionsAIToolsStartup : StartupBase
             .WithTitle(S["Save Report Subscription"])
             .WithDescription(S["Creates a schedule that emails a built-in report daily, weekly or monthly to up to 50 addresses, or updates one by id, including enabling or disabling it. The report is emailed for the period before each run; it needs the Email feature to be configured."])
             .WithCategory(S["Reports"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<SendReportSubscriptionTool>(SendReportSubscriptionTool.TheName)
             .WithTitle(S["Send Report Subscription"])
             .WithDescription(S["Emails a subscription's report to its recipients now, for the period before now, without changing its schedule. Returns the error when the email could not be sent."])
             .WithCategory(S["Reports"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<DeleteReportSubscriptionTool>(DeleteReportSubscriptionTool.TheName)
             .WithTitle(S["Delete Report Subscription"])
             .WithDescription(S["Deletes a report subscription so its report is no longer emailed."])
             .WithCategory(S["Reports"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

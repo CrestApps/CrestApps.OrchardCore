@@ -103,14 +103,14 @@ public sealed class CalendarManagementAIToolsStartup : StartupBase
             .WithDescription(S["Replaces who a calendar is shared with: users and roles at free/busy, read, write or manage level. Read the current shares with getCalendar first, because the list you give replaces them."])
             .WithCategory(S["Calendar"])
             .Selectable()
-            .RequireApproval();
+            .AsSecurity();
 
         services.AddCoreAITool<DeleteCalendarTool>(DeleteCalendarTool.ToolName)
             .WithTitle(S["Delete calendar"])
             .WithDescription(S["Deletes a calendar and every event on it. Refused for a calendar a module manages (appointments, workforce teams, fleet assets)."])
             .WithCategory(S["Calendar"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         services.AddCoreAITool<GetCalendarEventTool>(GetCalendarEventTool.ToolName)
             .WithTitle(S["Get calendar event"])
@@ -123,6 +123,7 @@ public sealed class CalendarManagementAIToolsStartup : StartupBase
             .WithDescription(S["Changes an event's title, type, times, time zone, location, description, status, busy/free, visibility, category, reminders, recurrence or attendees; for a repeating event say which occurrences (this one, this and following, all). Use moveCalendarEvent when only the time changes."])
             .WithCategory(S["Calendar"])
             .Selectable()
+            .AsWrite()
             .RequireApproval();
 
         services.AddCoreAITool<DeleteCalendarEventTool>(DeleteCalendarEventTool.ToolName)
@@ -130,13 +131,14 @@ public sealed class CalendarManagementAIToolsStartup : StartupBase
             .WithDescription(S["Permanently deletes an event (the whole series for a repeating event). Prefer cancelCalendarEvent, which keeps the event and tells the attendees."])
             .WithCategory(S["Calendar"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         services.AddCoreAITool<RespondToCalendarEventTool>(RespondToCalendarEventTool.ToolName)
             .WithTitle(S["Respond to calendar event"])
             .WithDescription(S["Records the user's own answer to an invitation: accepted, tentative or declined. It cannot answer for someone else."])
             .WithCategory(S["Calendar"])
             .Selectable()
+            .AsWrite()
             .RequireApproval();
 
         services.AddCoreAITool<ListCalendarCategoriesTool>(ListCalendarCategoriesTool.ToolName)
@@ -156,7 +158,7 @@ public sealed class CalendarManagementAIToolsStartup : StartupBase
             .WithDescription(S["Deletes an event category. Events that used it keep their own color and lose the category."])
             .WithCategory(S["Calendar"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
     }
 }
 
@@ -216,6 +218,6 @@ public sealed class CalendarFeedsAIToolsStartup : StartupBase
             .WithDescription(S["Makes a new private subscription address for a calendar, or removes it. The old address stops working at once, so everyone subscribed must be given the new one."])
             .WithCategory(S["Calendar"])
             .Selectable()
-            .RequireApproval();
+            .AsSecurity();
     }
 }

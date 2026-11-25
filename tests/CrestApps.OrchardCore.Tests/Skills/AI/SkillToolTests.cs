@@ -337,7 +337,7 @@ public sealed class SkillToolTests
         // Assert
         Assert.Equal("A-1", Assert.Single(expiring.GetProperty("items").EnumerateArray()).GetProperty("number").GetString());
         Assert.Equal("Revoked", revoked.GetProperty("certificate").GetProperty("status").GetString());
-        Assert.Equal("Failed the refresher.", revoked.GetProperty("certificate").GetProperty("notes").GetString());
+        Assert.Equal("Failed the refresher.", revoked.GetProperty("certificate").GetProperty("revokedReason").GetString());
         Assert.Equal(0, afterRevoke.GetProperty("total").GetInt32());
         Assert.Equal(2, byPerson.GetProperty("total").GetInt32());
     }

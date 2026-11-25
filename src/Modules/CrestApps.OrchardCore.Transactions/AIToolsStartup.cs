@@ -48,28 +48,28 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Record Transaction Payment"])
             .WithDescription(S["Records money received outside the site against a transaction: an amount in its currency with how it was paid, when it was received, a reference and a note, or everything still owed with entireBalance. More than is owed is refused unless creditExcess keeps the rest as the customer's credit. No money moves, but the entry cannot be removed afterwards and it can send the customer a receipt. Every call needs a new idempotency key."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<AdjustTransactionTool>(AdjustTransactionTool.TheName)
             .WithTitle(S["Adjust Transaction"])
             .WithDescription(S["Lowers what is owed on a transaction without money being received, as a discount, waiver, credit or write-off, with a reason; everything still owed needs entireBalance. Needs the previewToken from previewTransactionAction and a new idempotency key."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<CancelTransactionTool>(CancelTransactionTool.TheName)
             .WithTitle(S["Cancel Transaction"])
             .WithDescription(S["Cancels an outstanding transaction so it is no longer collected or reminded, with an optional reason. It cannot be reopened and it refunds nothing."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<SendTransactionNoticeTool>(SendTransactionNoticeTool.TheName)
             .WithTitle(S["Send Transaction Notice"])
             .WithDescription(S["Sends the transaction's owner either its invoice with the link that pays it, or a payment reminder. A reminder needs the Transaction Reminders feature and an outstanding balance."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<AddTransactionNoteTool>(AddTransactionNoteTool.TheName)
@@ -114,7 +114,7 @@ public sealed class PaymentLedgerAIToolsStartup : StartupBase
             .WithTitle(S["Refund Payment"])
             .WithDescription(S["Refunds an amount of one settled payment that is not an order's (such as a subscription or booking payment) through its payment provider, with a reason; everything still refundable needs refundAll. Payments of orders are refused: use refundOrder. The amount cannot exceed what is still refundable, the refund cannot be undone, and a method that cannot refund automatically is recorded for settling by hand. Every call needs a new idempotency key."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<ListRefundsTool>(ListRefundsTool.TheName)
@@ -127,7 +127,7 @@ public sealed class PaymentLedgerAIToolsStartup : StartupBase
             .WithTitle(S["Resolve Refund"])
             .WithDescription(S["Marks a refund that is waiting for manual review as settled, with the reference of the money returned outside the site. Use it only after the customer was actually paid back; it cannot be undone and it completes the refund on the order or transaction."])
             .WithCategory(S["Payments"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<ListPaymentIssuesTool>(ListPaymentIssuesTool.TheName)

@@ -39,42 +39,42 @@ public sealed class ParentAIToolsStartup : StartupBase
             .WithTitle(S["Save Child Tenant"])
             .WithDescription(S["Creates a child tenant (name, slug, description, setup recipe) and starts its setup, or changes the name, slug and description of an existing one. Creating provisions a database and fails when the policy's child limit is reached or the address is taken."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ChangeChildTenantStateTool>(ChangeChildTenantStateTool.TheName)
             .WithTitle(S["Change Child Tenant State"])
             .WithDescription(S["Suspends, resumes or reloads one or more child tenants. Suspending takes the site offline for its users; a tenant pending removal must be restored before it can be resumed."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<RemoveChildTenantTool>(RemoveChildTenantTool.TheName)
             .WithTitle(S["Remove Child Tenant"])
             .WithDescription(S["Removes a suspended child tenant and its database, at once or after the policy's grace period. Requires the tenant's exact display name as confirmation."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<RestoreChildTenantTool>(RestoreChildTenantTool.TheName)
             .WithTitle(S["Restore Child Tenant"])
             .WithDescription(S["Cancels the pending removal of a child tenant during its grace period. The tenant stays suspended until resumed."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<RetryChildTenantSetupTool>(RetryChildTenantSetupTool.TheName)
             .WithTitle(S["Retry Child Tenant Setup"])
             .WithDescription(S["Creates a child tenant whose setup failed again, with the same name, address and recipe, and runs the setup. Use it only on entries in the Failed state."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DiscardChildTenantTool>(DiscardChildTenantTool.TheName)
             .WithTitle(S["Discard Child Tenant"])
             .WithDescription(S["Deletes the leftovers of a child tenant that cannot be used: discards a failed setup with its registry entry, or dismisses the entry of a tenant the platform removed or moved."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListChildTenantFeaturesTool>(ListChildTenantFeaturesTool.TheName)
@@ -87,7 +87,7 @@ public sealed class ParentAIToolsStartup : StartupBase
             .WithTitle(S["Set Child Tenant Features"])
             .WithDescription(S["Enables or disables features in a child tenant. Blocked and always-on features are ignored; the tenant must be running."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ListChildTenantAccessGrantsTool>(ListChildTenantAccessGrantsTool.TheName)
@@ -100,14 +100,14 @@ public sealed class ParentAIToolsStartup : StartupBase
             .WithTitle(S["Grant Child Tenant Access"])
             .WithDescription(S["Lets a parent user (by user name or email) or a parent role enter one child tenant or all of them, with the given child roles."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<RevokeChildTenantAccessTool>(RevokeChildTenantAccessTool.TheName)
             .WithTitle(S["Revoke Child Tenant Access"])
             .WithDescription(S["Removes an access grant by its id. Open sessions end at their next validation."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }
@@ -145,42 +145,42 @@ public sealed class PlatformAIToolsStartup : StartupBase
             .WithTitle(S["Save Parent Tenant"])
             .WithDescription(S["Makes an ordinary tenant a parent tenant (slug, display name, policy) or changes the display name and policy of an existing parent. Making a parent changes the tenant's host and forces the Parent feature on; it fails until AddTenantHierarchy() is in the host."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ChangeParentTenantStateTool>(ChangeParentTenantStateTool.TheName)
             .WithTitle(S["Change Parent Tenant State"])
             .WithDescription(S["Suspends a parent tenant with all its running children, or resumes it with exactly the children suspended with it."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<UnmakeParentTenantTool>(UnmakeParentTenantTool.TheName)
             .WithTitle(S["Unmake Parent Tenant"])
             .WithDescription(S["Turns a parent tenant back into an ordinary tenant. Only works when it has no children left."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<RemoveParentTenantTool>(RemoveParentTenantTool.TheName)
             .WithTitle(S["Remove Parent Tenant"])
             .WithDescription(S["Removes a suspended parent tenant and all its child tenants with their data. Requires the parent's exact tenant name as confirmation."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<MoveChildTenantTool>(MoveChildTenantTool.TheName)
             .WithTitle(S["Move Child Tenant"])
             .WithDescription(S["Moves a child tenant to another parent, or gives an orphaned child a parent. Its address follows the new parent's pattern and sessions from the old parent end."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DetachChildTenantTool>(DetachChildTenantTool.TheName)
             .WithTitle(S["Detach Child Tenant"])
             .WithDescription(S["Makes an orphaned child tenant an ordinary tenant that no parent manages."])
             .WithCategory(S["Tenant Hierarchy"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

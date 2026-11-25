@@ -39,7 +39,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Save Data Connection"])
             .WithDescription(S["Creates a connection for a connector (HTTP API, Elasticsearch or media files), or updates one by id: name, description and the connector's settings. A connection's connector cannot be changed. Credentials are never taken: the result links to the page where a person enters them."])
             .WithCategory(S["Data Connectors"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<TestDataConnectionTool>(TestDataConnectionTool.TheName)
@@ -52,7 +52,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Data Connection"])
             .WithDescription(S["Deletes a connection and its stored credentials. It is refused while any data set still reads the connection."])
             .WithCategory(S["Data Connectors"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListDataConnectionResourcesTool>(ListDataConnectionResourcesTool.TheName)
@@ -95,7 +95,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Connected Data Set"])
             .WithDescription(S["Deletes a connected data set with its imported rows and its refresh history. Reports and data pipelines that read it will find it missing."])
             .WithCategory(S["Data Connectors"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

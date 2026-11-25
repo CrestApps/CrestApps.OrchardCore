@@ -39,7 +39,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Sync AI Data Source"])
             .WithDescription(S["Queues a full synchronization of one data source into its AI knowledge base index, which re-reads the source and generates embeddings in the background. Use it when answers are stale; it costs embedding tokens in proportion to the size of the source."])
             .WithCategory(S["AI Knowledge"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<SearchAIDataSourceTool>(SearchAIDataSourceTool.TheName)

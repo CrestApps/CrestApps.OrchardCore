@@ -43,7 +43,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Skill"])
             .WithDescription(S["Deletes a skill from the catalog. Disable it instead when people still hold it."])
             .WithCategory(S["Skills"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<SaveCertificationTypeTool>(SaveCertificationTypeTool.TheName)
@@ -56,7 +56,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Certification Type"])
             .WithDescription(S["Deletes a certification type. Disable it instead when certificates of this type exist."])
             .WithCategory(S["Skills"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<GetSubjectSkillsTool>(GetSubjectSkillsTool.TheName)
@@ -99,7 +99,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Certificate"])
             .WithDescription(S["Deletes a certificate record. Use revoke instead to keep the history."])
             .WithCategory(S["Skills"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

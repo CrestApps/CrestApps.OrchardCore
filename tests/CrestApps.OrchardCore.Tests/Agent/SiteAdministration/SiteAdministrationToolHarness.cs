@@ -226,7 +226,16 @@ internal sealed class SiteAdministrationToolHarness
             .ReturnsAsync((string[] names) => Plans.Where(plan => names.Contains(plan.Name)).ToList());
         services.AddSingleton(planService.Object);
 
+        // The deployment plan tools read the plans with a session query, which sees the plans saved so far.
+        var planQuery = new Mock<global::YesSql.IQuery<DeploymentPlan>>();
+        planQuery.Setup(query => query.ListAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Plans.ToList());
+
+        var rootQuery = new Mock<global::YesSql.IQuery>();
+        rootQuery.Setup(query => query.For<DeploymentPlan>(It.IsAny<bool>())).Returns(planQuery.Object);
+
         var session = new Mock<YSession>();
+        session.Setup(s => s.Query(It.IsAny<string>())).Returns(rootQuery.Object);
         session.Setup(s => s.GetAsync<DeploymentPlan>(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((long[] ids, string _, CancellationToken _) => Plans.Where(plan => ids.Contains(plan.Id)).ToList());
         session.Setup(s => s.Delete(It.IsAny<object>(), It.IsAny<string>()))

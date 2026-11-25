@@ -61,14 +61,14 @@ public sealed class InvoicingAIToolsStartup : StartupBase
             .WithTitle(S["Issue an invoice"])
             .WithDescription(S["Issues a draft invoice: numbers it and posts what it totals to the ledger as owed, optionally e-mailing it to the customer, or submits it for approval when its total needs approval."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<DecideInvoiceApprovalTool>(DecideInvoiceApprovalTool.TheName)
             .WithTitle(S["Approve or reject an invoice"])
             .WithDescription(S["For invoices waiting for approval only (findInvoices with status pendingApproval): approves one, which issues it, or rejects it with a reason, which makes it a draft again. Other approval requests use decideApprovalRequest."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<PreviewInvoiceActionTool>(PreviewInvoiceActionTool.TheName)
@@ -81,21 +81,21 @@ public sealed class InvoicingAIToolsStartup : StartupBase
             .WithTitle(S["Void an invoice"])
             .WithDescription(S["Voids an open invoice nothing was paid or credited on, or waives a late fee by voiding its debit note. Needs the previewToken from previewInvoiceAction."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<WriteOffInvoiceTool>(WriteOffInvoiceTool.TheName)
             .WithTitle(S["Write off an invoice"])
             .WithDescription(S["Writes off everything still owed on an open invoice as uncollectible, with a reason. Needs the previewToken from previewInvoiceAction."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<RecordInvoicePaymentTool>(RecordInvoicePaymentTool.TheName)
             .WithTitle(S["Record an invoice payment"])
             .WithDescription(S["Records money received outside the site against an open invoice, up to what is still owed, and when it was received. Needs the previewToken from previewInvoiceAction and a new idempotency key."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

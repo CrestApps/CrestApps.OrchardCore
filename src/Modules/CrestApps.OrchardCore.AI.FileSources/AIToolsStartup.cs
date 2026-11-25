@@ -38,6 +38,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Save AI File Source"])
             .WithDescription(S["Creates a file source for a connector (file system or FTP), or updates one by id. It needs an existing File AI data source; a file system path can only be inside the tenant's own file-sources folder. Passwords and keys are entered on the admin page."])
             .WithCategory(S["AI Knowledge"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
 
@@ -45,14 +46,14 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete AI File Source"])
             .WithDescription(S["Deletes a file source and queues the removal of everything it ingested from the knowledge base."])
             .WithCategory(S["AI Knowledge"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<RunAIFileSourceTool>(RunAIFileSourceTool.TheName)
             .WithTitle(S["Run AI File Source"])
             .WithDescription(S["Queues a run that reads a file source's folder and ingests new and changed files in the background. It connects to the folder or server and spends embedding and vision tokens, and can take minutes on a large folder."])
             .WithCategory(S["AI Knowledge"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

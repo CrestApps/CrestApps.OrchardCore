@@ -57,14 +57,14 @@ public sealed class WorkflowsToolsStartup : StartupBase
             .WithTitle(S["Enable or Disable Workflow Type"])
             .WithDescription(S["Enables or disables a workflow. Enabled, its start events start instances again; disabled, its events no longer start instances and its HTTP URL answers not found, while waiting instances are kept. Takes effect at once, without publishing."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteWorkflowTypeTool>(DeleteWorkflowTypeTool.TheName)
             .WithTitle(S["Delete Workflow Type"])
             .WithDescription(S["Permanently deletes one or more workflows with their versions, draft, instances and journals. Prefer setWorkflowTypeEnabled with enabled false when the user only wants a workflow to stop."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListWorkflowInstancesTool>(ListWorkflowInstancesTool.TheName)
@@ -83,28 +83,28 @@ public sealed class WorkflowsToolsStartup : StartupBase
             .WithTitle(S["Run Workflow Type"])
             .WithDescription(S["Starts a new instance of an enabled workflow's published version that starts with \"Started by Workflow\", with values for its input variables, and returns the instance id, status, fault and output variables. Workflows that start with another event cannot be started this way; for an HTTP Request start it returns the URL and method instead."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<RerunWorkflowInstancesTool>(RerunWorkflowInstancesTool.TheName)
             .WithTitle(S["Rerun Workflow Instances"])
             .WithDescription(S["Runs instances again: retry continues faulted instances from the activity that faulted (or a given activity) with their state; restart starts a new instance on the published version with the original input. Activities run again, so emails, HTTP calls and content changes can repeat."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<CancelWorkflowInstancesTool>(CancelWorkflowInstancesTool.TheName)
             .WithTitle(S["Cancel Workflow Instances"])
             .WithDescription(S["Cancels instances that have not ended: they become Aborted, stop waiting for their events and drop a pending retry. A cancelled instance cannot be resumed."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<DeleteWorkflowInstancesTool>(DeleteWorkflowInstancesTool.TheName)
             .WithTitle(S["Delete Workflow Instances"])
             .WithDescription(S["Permanently deletes instances and their journals. Use cancelWorkflowInstances when the history should be kept."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

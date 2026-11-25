@@ -38,14 +38,14 @@ public sealed class AIToolInstancesToolsStartup : StartupBase
             .WithTitle(S["Save AI Tool Instance"])
             .WithDescription(S["Creates a tool instance from a source or updates one by id. An instance can call an outside address with stored credentials, so check the address with the user. The name cannot change after creation. An instance attached to the running assistant cannot be changed."])
             .WithCategory(S["AI Tool Instances"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<DeleteAIToolInstanceTool>(DeleteAIToolInstanceTool.TheName)
             .WithTitle(S["Delete AI Tool Instances"])
             .WithDescription(S["Deletes tool instances by id. Instances owned by someone else are skipped unless the user may manage those."])
             .WithCategory(S["AI Tool Instances"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

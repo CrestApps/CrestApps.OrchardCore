@@ -42,7 +42,7 @@ public sealed class MenuToolsStartup : StartupBase
             .WithTitle(S["Delete Menu Item"])
             .WithDescription(S["Deletes a menu item and all its child items from a menu."])
             .WithCategory(S["Content Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

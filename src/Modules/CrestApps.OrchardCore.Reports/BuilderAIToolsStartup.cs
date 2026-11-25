@@ -60,7 +60,7 @@ public sealed class BuilderAIToolsStartup : StartupBase
             .WithTitle(S["Share Report Design"])
             .WithDescription(S["Sets the users and roles a designed report is shared with. The people it is shared with see the report's data with its owner's access."])
             .WithCategory(S["Report Builder"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<RestoreReportDesignVersionTool>(RestoreReportDesignVersionTool.TheName)
@@ -73,14 +73,14 @@ public sealed class BuilderAIToolsStartup : StartupBase
             .WithTitle(S["Delete Report Design"])
             .WithDescription(S["Deletes a designed report with its drafts and versions, or an unpublished draft that was never published. People it was shared with lose it."])
             .WithCategory(S["Report Builder"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<SetReportShareLinkTool>(SetReportShareLinkTool.TheName)
             .WithTitle(S["Set Report Share Link"])
             .WithDescription(S["Creates or revokes a link that opens a designed report for named recipients. create takes the recipients, an expiry in days, an optional maximum number of uses, whether export is allowed and a note, and emails the link to the recipients; the link itself is never returned, since it holds a secret token. revoke takes the link id from getReport with share links and stops the link from working."])
             .WithCategory(S["Report Builder"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ListReportViewsTool>(ListReportViewsTool.TheName)
@@ -99,7 +99,7 @@ public sealed class BuilderAIToolsStartup : StartupBase
             .WithTitle(S["Delete Report View"])
             .WithDescription(S["Deletes a report view. Reports and other views that read it stop working, so check its usages first."])
             .WithCategory(S["Report Builder"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListReportGroupsTool>(ListReportGroupsTool.TheName)
@@ -118,7 +118,7 @@ public sealed class BuilderAIToolsStartup : StartupBase
             .WithTitle(S["Delete Report Group"])
             .WithDescription(S["Deletes a report group. Check what it contains first; the service refuses or reports what blocks the deletion."])
             .WithCategory(S["Report Builder"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

@@ -84,7 +84,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Stock Location"])
             .WithDescription(S["Removes a stock location from the list. The default location cannot be removed; units still at a removed location stay on their items and can be sold or transferred out."])
             .WithCategory(S["Inventory"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

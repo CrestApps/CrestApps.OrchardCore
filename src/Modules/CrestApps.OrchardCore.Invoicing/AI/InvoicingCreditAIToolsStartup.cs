@@ -45,7 +45,7 @@ public sealed class CreditNoteAIToolsStartup : StartupBase
             .WithTitle(S["Issue a credit note"])
             .WithDescription(S["Issues a previewed credit note: lowers what the invoice owes, refunds the payment or adds customer credit."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }
@@ -83,7 +83,7 @@ public sealed class EstimateAIToolsStartup : StartupBase
             .WithTitle(S["Send an estimate"])
             .WithDescription(S["Numbers an estimate and e-mails it to the customer with the link to accept or decline it."])
             .WithCategory(S["Invoicing"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<ConvertEstimateToInvoiceTool>(ConvertEstimateToInvoiceTool.TheName)
@@ -133,6 +133,7 @@ public sealed class RecurringPlanAIToolsStartup : StartupBase
             .WithTitle(S["Pause or resume a recurring invoice plan"])
             .WithDescription(S["Pauses a recurring invoice plan, skipping its runs meanwhile, or resumes it from its next date."])
             .WithCategory(S["Invoicing"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
 

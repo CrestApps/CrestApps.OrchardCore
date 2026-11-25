@@ -75,7 +75,7 @@ public sealed class SoftPhoneAIToolsStartup : StartupBase
             .WithTitle(S["Dial From Soft Phone"])
             .WithDescription(S["Asks the calling user's own soft phone to dial a number. Nothing happens when their soft phone is not open; outbound screening (do-not-call, short codes) still applies in the phone."])
             .WithCategory(S["Telephony"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

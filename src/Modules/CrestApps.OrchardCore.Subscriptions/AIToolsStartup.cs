@@ -45,14 +45,14 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Cancel Subscription"])
             .WithDescription(S["Cancels an agreement now or at the end of the paid period and tells the payment provider to stop billing. Cannot be undone; a canceled agreement is not restarted, the customer must subscribe again. It never refunds."])
             .WithCategory(S["Subscriptions"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<SetSubscriptionPausedTool>(SetSubscriptionPausedTool.TheName)
             .WithTitle(S["Pause or Resume Subscription"])
             .WithDescription(S["Pauses billing on an agreement (with a reason) or resumes a paused or past-due one. The change is sent to the payment provider, so resuming means the customer is billed again."])
             .WithCategory(S["Subscriptions"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }
@@ -136,14 +136,14 @@ public sealed class InstallmentPlansAIToolsStartup : StartupBase
             .WithTitle(S["Charge Installment Payment"])
             .WithDescription(S["Charges the customer's saved card for one scheduled payment of a plan now, by payment number, with the payment's amount and currency to confirm it and a new idempotency key. Use it for a due or failed payment; it fails when the plan has no saved card. A charge cannot be undone."])
             .WithCategory(S["Subscriptions"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<CancelInstallmentPlanTool>(CancelInstallmentPlanTool.TheName)
             .WithTitle(S["Cancel Installment Plan"])
             .WithDescription(S["Cancels a plan so payments not yet received are no longer collected. Cannot be undone; payments already received are not refunded. A customer whose plan had started is emailed."])
             .WithCategory(S["Subscriptions"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

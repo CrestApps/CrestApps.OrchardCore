@@ -36,7 +36,7 @@ public sealed class RateLimitsToolsStartup : StartupBase
             .WithTitle(S["Enable or Disable Rate-Limit Policies"])
             .WithDescription(S["Enables or disables one or more rate-limit policies, and the tenant reloads. Enabling a global policy with a low limit can lock everyone out, this chat included; disabling removes that protection and needs a confirmation for a policy that protects sign-in."])
             .WithCategory(S["Rate Limits"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

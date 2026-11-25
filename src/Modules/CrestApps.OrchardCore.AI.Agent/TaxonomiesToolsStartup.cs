@@ -49,7 +49,7 @@ public sealed class TaxonomiesToolsStartup : StartupBase
             .WithTitle(S["Delete Taxonomy Term"])
             .WithDescription(S["Deletes a term and all its child terms from a taxonomy. Content items that reference the term keep the stale ID and are not updated."])
             .WithCategory(S["Content Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

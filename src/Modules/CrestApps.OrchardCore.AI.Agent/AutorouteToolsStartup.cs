@@ -32,6 +32,7 @@ public sealed class AutorouteToolsStartup : StartupBase
             .WithTitle(S["Set Homepage"])
             .WithDescription(S["Makes a published content item the site's home page. The item's type must have an Autoroute part with a path and the route must not be disabled."])
             .WithCategory(S["Content Management"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
     }

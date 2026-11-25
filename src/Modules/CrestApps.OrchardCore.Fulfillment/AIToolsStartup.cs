@@ -40,7 +40,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Send Order To Fulfillment Partners"])
             .WithDescription(S["Queues a paid order for the fulfillment partners that don't have it yet, and again where a request is waiting or needs attention; or queues one request again by its id. It is sent within about a minute and the partner then makes and ships the items, which cannot be undone here."])
             .WithCategory(S["Fulfillment Partners"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

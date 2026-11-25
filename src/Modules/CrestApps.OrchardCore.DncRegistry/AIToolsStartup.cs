@@ -39,6 +39,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Import Local Do-Not-Call List"])
             .WithDescription(S["Creates a local do-not-call list for a country from phone numbers given inline or from a CSV file in the media library, and queues it for background import."])
             .WithCategory(S["Telephony"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
 
@@ -46,6 +47,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Set Local Do-Not-Call List Import State"])
             .WithDescription(S["Starts or resumes processing of a queued or failed list now, or pauses a running import."])
             .WithCategory(S["Telephony"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
 
@@ -53,7 +55,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Local Do-Not-Call List"])
             .WithDescription(S["Deletes a local do-not-call list and all its numbers in the background. Those numbers can be dialed again afterwards, so this weakens compliance screening and cannot be undone."])
             .WithCategory(S["Telephony"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

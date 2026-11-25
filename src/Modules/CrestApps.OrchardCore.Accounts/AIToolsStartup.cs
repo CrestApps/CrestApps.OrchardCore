@@ -69,7 +69,7 @@ public sealed class MembersAIToolsStartup : StartupBase
             .WithTitle(S["Set Account Members"])
             .WithDescription(S["Replaces the users who sign in for an account and their role (Member or Admin), by user name or email. Each user must exist and can belong to one account only; the tool fails without changing anything when one does not qualify."])
             .WithCategory(S["Accounts"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }
@@ -106,7 +106,7 @@ public sealed class LocationsAIToolsStartup : StartupBase
             .WithTitle(S["Delete Account Location"])
             .WithDescription(S["Removes a location from an account by its location id. Orders and work orders that already used it keep their copy of the address."])
             .WithCategory(S["Accounts"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

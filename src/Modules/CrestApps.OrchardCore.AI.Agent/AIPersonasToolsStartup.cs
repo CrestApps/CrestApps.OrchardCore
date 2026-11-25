@@ -44,7 +44,7 @@ public sealed class AIPersonasToolsStartup : StartupBase
             .WithTitle(S["Delete AI Personas"])
             .WithDescription(S["Deletes personas by id. Profiles that linked to a deleted persona then run without a persona; the result says how many."])
             .WithCategory(S["AI Personas"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

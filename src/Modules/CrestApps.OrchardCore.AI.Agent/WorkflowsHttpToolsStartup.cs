@@ -31,7 +31,7 @@ public sealed class WorkflowsHttpToolsStartup : StartupBase
             .WithTitle(S["Trigger Workflow Signal"])
             .WithDescription(S["Sends a named signal: resumes the instances waiting on a Signal event with that name for a given instance id or correlation id, and starts enabled workflows whose start activity is that signal. Use it to move a waiting workflow forward, for example an approval step."])
             .WithCategory(S["Workflow Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

@@ -38,14 +38,14 @@ public sealed class AIApiKeysToolsStartup : StartupBase
             .WithTitle(S["Save AI API Key"])
             .WithDescription(S["Enables or disables an existing API key, or sets or removes its expiry. It cannot create a key or change its name, scopes, roles, web sites or allowed profiles; send the user to the API keys page for those. A browser key whose profiles run tools not safe for visitors is not enabled again."])
             .WithCategory(S["AI API Keys"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteAIApiKeyTool>(DeleteAIApiKeyTool.TheName)
             .WithTitle(S["Delete AI API Keys"])
             .WithDescription(S["Deletes (revokes) API keys by id. Clients using them stop working at once."])
             .WithCategory(S["AI API Keys"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

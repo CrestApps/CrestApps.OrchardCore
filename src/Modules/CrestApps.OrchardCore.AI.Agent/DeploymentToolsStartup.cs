@@ -42,7 +42,7 @@ public sealed class DeploymentToolsStartup : StartupBase
             .WithTitle(S["Delete Deployment Plan"])
             .WithDescription(S["Permanently deletes a deployment plan. It does not touch data already exported."])
             .WithCategory(S["Deployment"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

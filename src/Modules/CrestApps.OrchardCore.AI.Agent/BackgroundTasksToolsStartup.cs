@@ -37,7 +37,7 @@ public sealed class BackgroundTasksToolsStartup : StartupBase
             .WithTitle(S["Run Background Task"])
             .WithDescription(S["Queues one or more background tasks to run now, outside their schedule. It returns once the run is requested; use listBackgroundTasks afterwards to see the result."])
             .WithCategory(S["Background Tasks"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

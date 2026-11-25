@@ -59,21 +59,21 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Refund Order"])
             .WithDescription(S["Gives money back for an order: a stated amount and currency, or everything still refundable with refundAll, newest payment first through the payment provider, optionally putting the items back into stock or giving the amount as store credit instead. Call previewRefund first and show its result to the user: this tool needs the previewToken it returns, for the same order, amount, currency and options, and a new idempotency key; a used or expired token and a repeated key are refused. A refund cannot be undone; a payment method that cannot refund automatically is recorded for settling by hand. For a buyer's return, give its returnId: the refund then closes the return and emails the buyer."])
             .WithCategory(S["Orders"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<CancelOrderTool>(CancelOrderTool.TheName)
             .WithTitle(S["Cancel Order"])
             .WithDescription(S["Cancels an order with an optional note, optionally putting what a paid order sold back into stock; anything still owed for it is canceled too. It never refunds: what was paid stays refundable with refundOrder. A canceled order cannot be reopened."])
             .WithCategory(S["Orders"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ResendOrderConfirmationTool>(ResendOrderConfirmationTool.TheName)
             .WithTitle(S["Resend Order Confirmation"])
             .WithDescription(S["Emails a paid order's confirmation to the customer again and notes it on the order. It needs the order to have a customer email and the site's email to be set up."])
             .WithCategory(S["Orders"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<SaveDraftOrderTool>(SaveDraftOrderTool.TheName)
@@ -86,7 +86,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Send Order Invoice"])
             .WithDescription(S["Emails the buyer the invoice of a draft order, or the quote, with the link to review and pay it; sending again is allowed while it is unpaid. It needs the site's email and base URL to be set up."])
             .WithCategory(S["Orders"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

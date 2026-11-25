@@ -38,14 +38,14 @@ public sealed class A2AConnectionsToolsStartup : StartupBase
             .WithTitle(S["Save A2A Connection"])
             .WithDescription(S["Creates or updates a connection to a remote A2A host: title, HTTP or HTTPS endpoint and authentication. Credentials are never taken: a person enters them on the admin page. Profiles that use it send conversation content to that host."])
             .WithCategory(S["Agent-to-Agent"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<DeleteA2AConnectionTool>(DeleteA2AConnectionTool.TheName)
             .WithTitle(S["Delete A2A Connections"])
             .WithDescription(S["Deletes A2A connections by id. Profiles that used them lose those remote agents."])
             .WithCategory(S["Agent-to-Agent"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

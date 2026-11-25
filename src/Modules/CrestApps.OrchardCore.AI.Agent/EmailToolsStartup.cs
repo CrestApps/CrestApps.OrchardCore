@@ -30,7 +30,7 @@ public sealed class EmailToolsStartup : StartupBase
             .WithTitle(S["Send Test Email"])
             .WithDescription(S["Sends a test email through a chosen email provider (or the default one) and returns the provider's result or error. Use it to check email settings after changing them; it also lists the available providers when none is given."])
             .WithCategory(S["Communications"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

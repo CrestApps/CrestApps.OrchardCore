@@ -46,14 +46,14 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Send Marketing Campaign Test"])
             .WithDescription(S["Sends one test email of a campaign, rendered with a sample customer from its segment, to the address given. Use it to check the content before sending the campaign. An address that opted out of email is refused."])
             .WithCategory(S["Marketing"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<SendMarketingCampaignTool>(SendMarketingCampaignTool.TheName)
             .WithTitle(S["Send Marketing Campaign"])
             .WithDescription(S["Starts sending a draft campaign to every reachable customer in its segment, or schedules it when its send time is in the future. Opted-out addresses are skipped. Requires the site's email and base URL to be set up; emails go out in batches and cannot be recalled."])
             .WithCategory(S["Marketing"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<CancelMarketingCampaignTool>(CancelMarketingCampaignTool.TheName)

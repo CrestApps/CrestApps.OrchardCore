@@ -52,7 +52,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Ship Shipment"])
             .WithDescription(S["Marks a pending shipment as shipped with its carrier, tracking number and optional tracking link; or, given an order instead, creates and ships in one step everything still to ship on it. The buyer is emailed that the order is on its way when shipped emails are on."])
             .WithCategory(S["Shipping"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<UpdateShipmentStatusTool>(UpdateShipmentStatusTool.TheName)
@@ -65,7 +65,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Shipment"])
             .WithDescription(S["Removes a shipment that has not left yet and puts its items back among those still to ship."])
             .WithCategory(S["Shipping"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<GetShipmentLabelRatesTool>(GetShipmentLabelRatesTool.TheName)
@@ -78,7 +78,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Buy Shipment Label"])
             .WithDescription(S["Buys the chosen carrier label for a pending shipment from a quote of getShipmentLabelRates, at the rate's amount and currency, which costs money on the carrier account, then marks the shipment shipped with the label's carrier and tracking number and returns the label link. A bought label cannot be refunded from here. Every call needs a new idempotency key."])
             .WithCategory(S["Shipping"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<TestShippingRatesTool>(TestShippingRatesTool.TheName)

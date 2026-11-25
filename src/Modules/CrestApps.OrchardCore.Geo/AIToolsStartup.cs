@@ -44,14 +44,14 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Service Territory"])
             .WithDescription(S["Deletes a service territory. Its child territories move up to its parent."])
             .WithCategory(S["Geo"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<FindServiceTerritoryTool>(FindServiceTerritoryTool.TheName)
             .WithTitle(S["Find Service Territory"])
             .WithDescription(S["Finds which service territory covers a street address, a latitude/longitude or a postal code. A street address is geocoded first with the configured maps provider (a billable call that needs the Manage Geo settings permission), and the result returns the point it found."])
             .WithCategory(S["Geo"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

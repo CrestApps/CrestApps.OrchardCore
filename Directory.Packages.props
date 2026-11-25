@@ -93,7 +93,6 @@
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />
-    <PackageVersion Include="OrchardCore.OpenId.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.PublishLater" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Queries.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ReCaptcha.Core" Version="$(OrchardCoreVersion)" />

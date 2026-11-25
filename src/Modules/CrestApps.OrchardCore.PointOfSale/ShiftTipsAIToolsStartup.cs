@@ -34,7 +34,7 @@ public sealed class ShiftTipsAIToolsStartup : StartupBase
             .WithTitle(S["Declare Shift Tips"])
             .WithDescription(S["Declares or corrects the card and cash tips of a closed register shift until payroll took them; with Payroll on, card tips are paid on the next pay run."])
             .WithCategory(S["Point of Sale"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
     }
 }

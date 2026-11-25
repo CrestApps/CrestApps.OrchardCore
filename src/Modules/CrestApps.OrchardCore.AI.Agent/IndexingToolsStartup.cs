@@ -55,14 +55,14 @@ public sealed class IndexingToolsStartup : StartupBase
             .WithTitle(S["Rebuild Index Profile"])
             .WithDescription(S["Deletes and recreates the physical index of one or more index profiles and re-indexes everything in the background. Search on those indexes returns incomplete results until indexing finishes."])
             .WithCategory(S["Search Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<DeleteIndexProfileTool>(DeleteIndexProfileTool.TheName)
             .WithTitle(S["Delete Index Profile"])
             .WithDescription(S["Deletes one or more index profiles together with their physical indexes. Check first that no saved query, the site search settings or a content picker uses the index."])
             .WithCategory(S["Search Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

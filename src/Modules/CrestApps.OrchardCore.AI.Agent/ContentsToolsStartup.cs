@@ -61,14 +61,14 @@ public sealed class ContentsToolsStartup : StartupBase
             .WithTitle(S["Discard Content Item Draft"])
             .WithDescription(S["Discards the unpublished draft of a content item so the published version becomes the latest again. Fails when the latest version is published; when the item was never published the item disappears from the lists."])
             .WithCategory(S["Content Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ChangeContentItemOwnerTool>(ChangeContentItemOwnerTool.TheName)
             .WithTitle(S["Change Content Item Owner"])
             .WithDescription(S["Changes the owner of a content item to another user, given by user name, user ID or email. Ownership decides who can edit, publish or delete the item under the \"own content\" permissions."])
             .WithCategory(S["Content Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

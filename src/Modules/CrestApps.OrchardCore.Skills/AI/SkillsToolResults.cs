@@ -94,6 +94,9 @@ internal static class SkillsToolResults
             validToday = record.IsValidOn(today),
             verifiedBy = record.VerifiedBy,
             verifiedAt = await SkillsAIToolBase.LocalAsync(services, record.VerifiedUtc),
+            revokedReason = record.RevokedReason,
+            revokedBy = record.RevokedBy,
+            revokedAt = await SkillsAIToolBase.LocalAsync(services, record.RevokedUtc),
             notes = record.Notes,
         };
 

@@ -38,7 +38,7 @@ public sealed class AIDeploymentsToolsStartup : StartupBase
             .WithTitle(S["Save AI Deployment"])
             .WithDescription(S["Creates a deployment under a provider or updates one by id: name, model, connection, capabilities and, for speech providers, the contained endpoint. Keys are never taken or shown: a person enters the key on the admin page the result links to. It decides which provider receives the site's AI traffic. Deployments from configuration cannot be changed."])
             .WithCategory(S["AI Models"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<SetAIDeploymentPricingTool>(SetAIDeploymentPricingTool.TheName)
@@ -51,7 +51,7 @@ public sealed class AIDeploymentsToolsStartup : StartupBase
             .WithTitle(S["Delete AI Deployments"])
             .WithDescription(S["Deletes deployments by id. Profiles that named a deleted deployment fall back or stop working. Deployments from configuration and the site's default deployments are skipped."])
             .WithCategory(S["AI Models"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListAIVoicesTool>(ListAIVoicesTool.TheName)
@@ -64,7 +64,7 @@ public sealed class AIDeploymentsToolsStartup : StartupBase
             .WithTitle(S["Delete AI Voice"])
             .WithDescription(S["Deletes a voice at the provider. It cannot be undone, and profiles or personas that use the voice lose it."])
             .WithCategory(S["AI Models"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

@@ -144,7 +144,7 @@ public sealed class TimeOffAdminAIToolsStartup : StartupBase
             .WithDescription(S["Approves, declines or cancels a time-off request, with a note. Approving books the days, puts them on the team calendar and handles the worker's shifts by the team's rule; the worker is notified."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddCoreAITool<GetWorkerTimeOffTool>(GetWorkerTimeOffTool.ToolName)
             .WithTitle(S["Get worker time off"])
@@ -157,7 +157,7 @@ public sealed class TimeOffAdminAIToolsStartup : StartupBase
             .WithDescription(S["Adds to or takes from a worker's time-off balance for a policy on a date, with a note and an optional expiry. It is written to the ledger and cannot be edited afterwards, only offset."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         services.AddCoreAITool<AssignTimeOffPolicyTool>(AssignTimeOffPolicyTool.ToolName)
             .WithTitle(S["Assign time-off policy"])
@@ -214,7 +214,7 @@ public sealed class TimeClockAdminAIToolsStartup : StartupBase
             .WithDescription(S["Approves one or more timesheets, sends one back to the worker with a reason, or reopens an approved one. The worker is notified."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddCoreAITool<SaveTimesheetPunchTool>(SaveTimesheetPunchTool.ToolName)
             .WithTitle(S["Save timesheet punch"])

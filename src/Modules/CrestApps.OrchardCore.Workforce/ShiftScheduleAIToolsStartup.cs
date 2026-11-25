@@ -73,21 +73,21 @@ public sealed class ShiftScheduleAIToolsStartup : StartupBase
             .WithDescription(S["Publishes a draft schedule: shifts go on the team calendar, workers are notified, and shifts nobody has are offered as open shifts. Blocked by labor rule problems unless an override reason is given; run workforceExplainViolations first."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddCoreAITool<ChangePublishedShiftTool>(ChangePublishedShiftTool.ToolName)
             .WithTitle(S["Change published shift"])
             .WithDescription(S["Changes a published shift: new times, another worker, or removal, with a reason and whether the worker asked for it. The worker is notified and a late change can record predictability pay."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddCoreAITool<DeleteShiftScheduleTool>(DeleteShiftScheduleTool.ToolName)
             .WithTitle(S["Delete shift schedule"])
             .WithDescription(S["Deletes a draft schedule and its draft shifts. A published schedule cannot be deleted."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
     }
 }
 
@@ -131,7 +131,7 @@ public sealed class LaborRulesAIToolsStartup : StartupBase
             .WithDescription(S["Approves a predictability pay entry so it is paid with the worker's timesheet, or waives it with a reason. A decision can't be undone."])
             .WithCategory(S["Workforce"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddAIRecordKind<LaborRuleSet>("laborRuleSet", kind => kind
             .WithTitle(S["Labor rule set"])

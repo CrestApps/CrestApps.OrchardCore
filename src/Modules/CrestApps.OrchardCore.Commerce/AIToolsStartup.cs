@@ -41,7 +41,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Run Store Setup Step"])
             .WithDescription(S["Runs one setup step's quick action with the given field values (for example add the Product type, choose the store currency, save the store details, add a flat shipping rate, add the staff roles) and marks the step done. Only steps that report a quick action can be run; some of them create a content type or roles."])
             .WithCategory(S["Commerce"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

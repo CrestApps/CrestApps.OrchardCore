@@ -32,7 +32,7 @@ public sealed class UserRolesToolsStartup : StartupBase
             .WithTitle(S["Set User Roles"])
             .WithDescription(S["Adds roles to a user or removes roles from a user. It refuses to change the calling user's own roles, to remove the administrator role from the only enabled administrator, and to touch a role the caller may not assign."])
             .WithCategory(S["Users Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ExplainUserAccessTool>(ExplainUserAccessTool.TheName)

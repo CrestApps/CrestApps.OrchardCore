@@ -39,6 +39,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Save B2B Account Settings"])
             .WithDescription(S["Turns business buying on or off for an account and sets tax id, billing email, payment terms (net days, deposit percent, credit limit, purchase order required), price list, monthly budget and per-buyer order limits. Buyers must already be members of the account."])
             .WithCategory(S["Accounts"])
+            .AsWrite()
             .RequireApproval()
             .Selectable();
 
@@ -46,7 +47,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Configure B2B Punchout"])
             .WithDescription(S["Enables or disables punchout for an account and chooses the member the procurement system shops as; the buyer cannot be a site administrator. Never issues, returns or accepts a punchout key: a new key is issued on the account's editor, which shows it once."])
             .WithCategory(S["Accounts"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<ListPriceListsTool>(ListPriceListsTool.TheName)
@@ -65,7 +66,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Price List"])
             .WithDescription(S["Deletes a price list. Accounts that used it fall back to normal prices."])
             .WithCategory(S["Accounts"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

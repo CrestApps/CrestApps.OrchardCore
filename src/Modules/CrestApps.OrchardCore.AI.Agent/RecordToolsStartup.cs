@@ -54,6 +54,6 @@ public sealed class RecordToolsStartup : StartupBase
             .WithDescription(S["Deletes records of a kind by their ids. A record that is still in use is not deleted. This cannot be undone."])
             .WithCategory(S["Records"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
     }
 }

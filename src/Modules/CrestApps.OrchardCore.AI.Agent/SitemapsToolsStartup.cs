@@ -42,7 +42,7 @@ public sealed class SitemapsToolsStartup : StartupBase
             .WithTitle(S["Delete Sitemap"])
             .WithDescription(S["Deletes a sitemap or a sitemap index. Indexes that contain the sitemap are not updated."])
             .WithCategory(S["Search Engine Optimization"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

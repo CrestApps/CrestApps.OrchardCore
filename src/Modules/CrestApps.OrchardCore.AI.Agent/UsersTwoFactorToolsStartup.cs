@@ -32,7 +32,7 @@ public sealed class UsersTwoFactorToolsStartup : StartupBase
             .WithTitle(S["Reset User Sign-In Factors"])
             .WithDescription(S["Resets the second sign-in factors of a user who lost them: switches off two-factor authentication, and can also forget their authenticator app key so a lost device's codes stop working. The user's other sessions are signed out. It refuses for the calling user's own account and never returns a key or a recovery code. Passkeys cannot be removed here: the Orchard Core version this site runs has no passkeys."])
             .WithCategory(S["Users Management"])
-            .RequireApproval()
+            .AsSecurity()
             .Selectable();
     }
 }

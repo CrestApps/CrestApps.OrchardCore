@@ -50,7 +50,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Delete Omnichannel Record"])
             .WithDescription(S["Deletes one omnichannel cadence or subject flow action by kind (cadence, subjectAction) and id. Dispositions, lead statuses and opportunity stages are deleted with deleteRecord; campaigns, campaign groups and addresses cannot be deleted."])
             .WithCategory(S["Omnichannel"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddAIRecordKind<OmnichannelCampaign>(OmnichannelRecordKinds.CampaignKind, kind => kind
@@ -111,7 +111,7 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Purge Omnichannel Activities"])
             .WithDescription(S["Purges activities by id so they are never worked. Cannot be undone; activities on a live call are skipped."])
             .WithCategory(S["Omnichannel"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 
@@ -139,14 +139,14 @@ public sealed class AIToolsStartup : StartupBase
             .WithTitle(S["Load Activity Load"])
             .WithDescription(S["Starts loading a saved batch in the background, creating one activity per match. For an automated or dialer batch this leads to real calls or text messages to customers. A batch can be loaded only once."])
             .WithCategory(S["Omnichannel"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<DeleteActivityBatchTool>(DeleteActivityBatchTool.TheName)
             .WithTitle(S["Delete Activity Load"])
             .WithDescription(S["Deletes an activity load record. Refused while it is loading. The activities it already created are kept."])
             .WithCategory(S["Omnichannel"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }
@@ -201,7 +201,7 @@ public sealed class ManagementAIToolsStartup : StartupBase
             .WithTitle(S["Queue AI Call or Text"])
             .WithDescription(S["Queues an automated AI phone call or AI text conversation to one phone number (E.164) with a given AI profile, optionally from a chosen address, for a contact, campaign and subject, now or at a scheduled time. It does not place the call or send the text itself: the queued activity reaches a real customer and uses paid telephony and model usage when it is placed. An opted-out number is refused up front, and the activity is screened again (opt-out, do-not-call, calling window, numbers not in service) when it is placed."])
             .WithCategory(S["Omnichannel"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<RecordContactOptOutTool>(RecordContactOptOutTool.TheName)

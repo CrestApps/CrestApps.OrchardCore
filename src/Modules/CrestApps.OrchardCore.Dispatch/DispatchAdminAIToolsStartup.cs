@@ -59,14 +59,14 @@ public sealed class DispatchAdminAIToolsStartup : StartupBase
             .WithDescription(S["Moves a visit to Dispatched, En route, On site or Paused, with an optional note. En route texts or emails the customer when customer notices are on."])
             .WithCategory(S["Field Service"])
             .Selectable()
-            .RequireApproval();
+            .AsExternal();
 
         services.AddCoreAITool<CloseVisitTool>(CloseVisitTool.ToolName)
             .WithTitle(S["Close visit"])
             .WithDescription(S["Ends a visit as Completed, Incomplete or Canceled, with a note. These are final, and Completed and Canceled notify the customer when notices are on."])
             .WithCategory(S["Field Service"])
             .Selectable()
-            .RequireApproval();
+            .AsDestructive();
 
         services.AddCoreAITool<GetDispatchBoardTool>(GetDispatchBoardTool.ToolName)
             .WithTitle(S["Get dispatch board"])

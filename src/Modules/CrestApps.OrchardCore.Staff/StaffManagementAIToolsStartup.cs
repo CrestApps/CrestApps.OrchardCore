@@ -47,14 +47,14 @@ public sealed class StaffManagementAIToolsStartup : StartupBase
             .WithTitle(S["Terminate Staff Member"])
             .WithDescription(S["Ends a staff member's employment, now or after a last working day still to come. Terminating offboards the person in the other modules (shifts, dispatch visits, Contact Center, phone extension), as the staff editor's Terminated status does, and cannot be undone. It needs the staff member's id, or the exact e-mail address or employee number of one person; a name only lists who matches."])
             .WithCategory(S["Staff"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<DeleteStaffMemberTool>(DeleteStaffMemberTool.TheName)
             .WithTitle(S["Delete Staff Member"])
             .WithDescription(S["Deletes a staff record. It is refused while people still report to them; end their employment with terminateStaffMember instead to keep their history."])
             .WithCategory(S["Staff"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
 
         services.AddCoreAITool<ListStaffCapabilitiesTool>(ListStaffCapabilitiesTool.TheName)
@@ -73,7 +73,7 @@ public sealed class StaffManagementAIToolsStartup : StartupBase
             .WithTitle(S["Delete Staff Capability"])
             .WithDescription(S["Deletes a custom capability, or resets a built-in one to its defaults. Staff who had a deleted capability keep it until they are next saved."])
             .WithCategory(S["Staff"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }

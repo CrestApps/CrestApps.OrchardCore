@@ -51,7 +51,7 @@ public sealed class MediaToolsStartup : StartupBase
             .WithTitle(S["Import Media From URL"])
             .WithDescription(S["Downloads a file from a public http(s) URL and stores it in a media folder, returning its media path and public URL. Use it when the user gives a link to an image or document; the extension must be allowed, the size within the upload limit, and an existing file is only replaced when `overwrite` is set."])
             .WithCategory(S["Media Management"])
-            .RequireApproval()
+            .AsExternal()
             .Selectable();
 
         services.AddCoreAITool<MoveMediaFilesTool>(MoveMediaFilesTool.TheName)
@@ -64,7 +64,7 @@ public sealed class MediaToolsStartup : StartupBase
             .WithTitle(S["Delete Media"])
             .WithDescription(S["Permanently deletes one or more media files by path. There is no recycle bin and content that references the files will show broken media, so confirm the exact paths first. Folders cannot be deleted with this tool; delete them in the Media Library."])
             .WithCategory(S["Media Management"])
-            .RequireApproval()
+            .AsDestructive()
             .Selectable();
     }
 }
