@@ -25,6 +25,7 @@
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="CrestApps.Core.Data.YesSql" />
+    <PackageReference Include="OrchardCore.DataSources.Core" />
   </ItemGroup>
 
   <ItemGroup>

@@ -3,14 +3,15 @@
 @model MessagingConversationEvent
 
 @{
-    // ThreadTimeline.DescribeTransfer words the sentence from the names captured when the transfer happened, so the
+    // ThreadTimeline.Describe words the sentence from the names captured when the entry was recorded, so the
     // choice of who is named, and how a queue is, is tested there.
-    var transfer = ThreadTimeline.DescribeTransfer(Model, T);
+    var transfer = ThreadTimeline.Describe(Model, T);
+    var icon = Model.Kind == MessagingConversationEventKind.Routed ? "fa-solid fa-route" : "fa-solid fa-share";
 }
 
 <div class="messaging-history-event d-flex flex-column align-items-center text-center text-muted small my-3" data-history-event>
     <span class="badge rounded-pill text-bg-light border fw-normal text-wrap px-3 py-2">
-        <i class="fa-solid fa-share me-1" aria-hidden="true"></i>
+        <i class="@icon me-1" aria-hidden="true"></i>
         @{
             // Written from a code block, as the sentence always was, so the badge keeps its exact whitespace.
             @transfer

@@ -19,6 +19,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
 {
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly ISession _session;
+    private readonly IActivityDialerContributor _dialerContributor;
 
     internal readonly IStringLocalizer S;
 
@@ -31,8 +32,10 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
     public SubjectActionHandler(
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ISession session,
+        IEnumerable<IActivityDialerContributor> dialerContributors,
         IStringLocalizer<SubjectActionHandler> stringLocalizer)
     {
+        _dialerContributor = dialerContributors.FirstOrDefault();
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _session = session;
         S = stringLocalizer;
@@ -77,12 +80,55 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
             }
 
             await ValidateOwnerAsync(context, metadata.AssignmentType, metadata.NormalizedUserName);
+            await ValidateFollowUpAsync(context, metadata.AssignmentType, cancellationToken);
         }
         else if (string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.OrdinalIgnoreCase))
         {
             var metadata = action.GetOrCreate<TryAgainActionMetadata>();
 
             await ValidateOwnerAsync(context, metadata.AssignmentType, metadata.NormalizedUserName);
+            await ValidateFollowUpAsync(context, metadata.AssignmentType, cancellationToken);
+        }
+    }
+
+    // The follow-up section: a dialer profile that exists, and a pool with somebody in it.
+    private async Task ValidateFollowUpAsync(
+        ValidatingContext<SubjectAction> context,
+        SubjectActionOwnerAssignmentType assignmentType,
+        CancellationToken cancellationToken)
+    {
+        var action = context.Model;
+
+        if (action.TryGet<FollowUpRoutingMetadata>(out var routing) && routing.Target == FollowUpRoutingTarget.Dialer)
+        {
+            if (string.IsNullOrWhiteSpace(routing.DialerProfileId) ||
+                _dialerContributor is null ||
+                await _dialerContributor.FindByIdAsync(routing.DialerProfileId.Trim(), cancellationToken) is null)
+            {
+                context.Result.Fail(new ValidationResult(S["The selected dialer profile no longer exists."], ["DialWith"]));
+            }
+        }
+
+        if (assignmentType != SubjectActionOwnerAssignmentType.Pool)
+        {
+            return;
+        }
+
+        var pool = action.GetOrCreate<FollowUpOwnerPoolMetadata>();
+
+        switch (pool.Source)
+        {
+            case FollowUpOwnerPoolSource.Team when string.IsNullOrWhiteSpace(pool.TeamId):
+                context.Result.Fail(new ValidationResult(S["Choose the team whose members get the follow-up."], ["PoolTeamId"]));
+                break;
+
+            case FollowUpOwnerPoolSource.Roles when !(pool.RoleNames ?? []).Any(role => !string.IsNullOrWhiteSpace(role)):
+                context.Result.Fail(new ValidationResult(S["Choose at least one role."], ["PoolRoleNames"]));
+                break;
+
+            case FollowUpOwnerPoolSource.Users when !(pool.UserIds ?? []).Any(user => !string.IsNullOrWhiteSpace(user)):
+                context.Result.Fail(new ValidationResult(S["Choose at least one user."], ["PoolUserIds"]));
+                break;
         }
     }
 
@@ -100,7 +146,7 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
 
         if (string.IsNullOrWhiteSpace(owner))
         {
-            context.Result.Fail(new ValidationResult(S["A user is required when the assignment type is Specific owner."], [nameof(NewActivityActionMetadata.NormalizedUserName)]));
+            context.Result.Fail(new ValidationResult(S["Choose the user who owns the follow-up."], [nameof(NewActivityActionMetadata.NormalizedUserName)]));
 
             return;
         }

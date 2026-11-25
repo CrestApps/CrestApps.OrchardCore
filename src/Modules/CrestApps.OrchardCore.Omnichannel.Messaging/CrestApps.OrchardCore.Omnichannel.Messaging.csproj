@@ -45,6 +45,8 @@
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Outreach.Core/CrestApps.OrchardCore.Outreach.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Outreach/CrestApps.OrchardCore.Outreach.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Teams/CrestApps.OrchardCore.Teams.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Teams.Abstractions/CrestApps.OrchardCore.Teams.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
   </ItemGroup>

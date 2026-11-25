@@ -18,6 +18,7 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
     private readonly IDialerProfileManager _dialerProfileManager;
     private readonly IActivityQueueService _activityQueueService;
     private readonly IQueueItemManager _queueItemManager;
+    private readonly IQueuedWorkWithdrawalService _withdrawalService;
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
@@ -31,6 +32,7 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
     /// <param name="dialerProfileManager">The dialer profile manager.</param>
     /// <param name="activityQueueService">The activity queue service.</param>
     /// <param name="queueItemManager">The queue item manager, which reads and re-tags waiting campaign records.</param>
+    /// <param name="withdrawalService">The service that takes a record out of its campaign's queue.</param>
     /// <param name="session">The YesSql session, used to read the queue items of many activities at once.</param>
     /// <param name="distributedLock">The distributed lock, used to move a record while routing cannot offer it.</param>
     /// <param name="coordinationOptions">The coordination options that time the queue lock.</param>
@@ -38,6 +40,7 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
         IDialerProfileManager dialerProfileManager,
         IActivityQueueService activityQueueService,
         IQueueItemManager queueItemManager,
+        IQueuedWorkWithdrawalService withdrawalService,
         ISession session,
         IDistributedLock distributedLock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions)
@@ -45,6 +48,7 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
         _dialerProfileManager = dialerProfileManager;
         _activityQueueService = activityQueueService;
         _queueItemManager = queueItemManager;
+        _withdrawalService = withdrawalService;
         _session = session;
         _distributedLock = distributedLock;
         _coordinationOptions = coordinationOptions.Value;
@@ -129,6 +133,39 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
             priority: null,
             dialerProfileId: profile.ProfileId,
             cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Only a record in a campaign's queue is taken out: a record waiting in a real queue was routed there for its own
+    /// reasons. A record routing is about to offer is dropped by routing itself, which skips dialer records whose
+    /// activity is no longer dialer work, so a deferred withdrawal still takes it off the dialer.
+    /// </remarks>
+    public async Task<ActivityDialerWithdrawResult> WithdrawAsync(
+        string activityId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(activityId);
+
+        var existing = await _queueItemManager.FindByActivityIdAsync(activityId, cancellationToken);
+
+        if (existing is null || existing.IsSettled || !ContactCenterConstants.IsCampaignQueue(existing.QueueId))
+        {
+            return ActivityDialerWithdrawResult.NotQueued;
+        }
+
+        var outcome = await _withdrawalService.WithdrawAsync(
+            activityId,
+            QueuedWorkWithdrawalReasons.MovedOffDialer,
+            ContactCenterActor.System,
+            cancellationToken);
+
+        return outcome switch
+        {
+            QueuedWorkWithdrawalOutcome.NothingQueued => ActivityDialerWithdrawResult.NotQueued,
+            QueuedWorkWithdrawalOutcome.LeftWithAgent => ActivityDialerWithdrawResult.InFlight,
+            _ => ActivityDialerWithdrawResult.Withdrawn,
+        };
     }
 
     /// <inheritdoc/>

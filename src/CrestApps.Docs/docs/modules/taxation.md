@@ -6,6 +6,7 @@ description: A provider-agnostic, extensible taxation framework for Orchard Core
 user_manual:
   - user-manual/commerce/taxes
   - user-manual/finance/tax-returns
+  - user-manual/finance/tax-forms
 ---
 
 | | |
@@ -621,6 +622,38 @@ A resident of a taxing city pays only its resident rate; anyone else who works i
 
 Form W-4's election adds **Nonresident alien** (`UnitedStatesIncomeTax.Fields.NonresidentAlien`): for a form from 2020 or later, the rule's `NonresidentAlienAddition` parameter (`UnitedStatesIncomeTax.NonresidentAlienAddition`, 16,100 in the 2026 recipe, from Publication 15-T) is added to the year's wages before withholding.
 
+## Tax forms
+
+**Tax Forms** (`CrestApps.OrchardCore.Taxation.TaxForms`) keeps tax forms as records (`TaxForm`, `ITaxFormManager`, in the `TaxForms` collection) that any module can prepare from its own records: their fields (the boxes and lines), a formula for each field, yearly values, checks and how a recipient's statement is printed. The page is **Commerce** → **Taxation** → **Tax Forms** (`ManageTaxForms`); how to build a form and every formula function are in the user manual's [Tax forms](../user-manual/finance/tax-forms.md).
+
+- **Fields** (`TaxFormField`: `Number`, `Label`, `Level` `Recipient` or `Filing`, `Formula`, `AddToFiling`, `AcceptsReportedAmounts`, `Print`). A recipient field is worked out from one recipient's records; a filing field from every reported recipient's, after the totals of the recipient fields added up on the filing. `TaxFormFormulas.Compile` orders the fields by what their formulas read and refuses a cycle, an unknown field or function, two fields of one number at one level, a filing field numbered like a totaled recipient field, and aggregates. `TaxFormHandler` runs it when a form is saved or imported.
+- **Formulas** are Orchard Core's Data Pipelines formula language (`ExpressionCompiler`, with the built-in functions), over a row whose slot 0 holds a `TaxFormFormulaContext` (the form, the period, the services, the recipients so far and the source's `Data`) and whose other slots hold the fields. Every form can call `VALUE`, `TOTAL`, `RECIPIENTS`, `ISACCOUNT`, `FILINGYEAR` and `FILINGQUARTER` (`TaxFormFunctions`).
+- **Sources.** A module that prepares forms registers a source, `services.AddTaxFormSource(name, displayName, description, reportedAmountsLabel)` or `services.AddTaxFormSource(new TaxFormSource(...) { HasRecipients = false, HasPeriod = false, RequiresJurisdiction = false })` for a source whose forms have only filing fields, no period of their own and an optional jurisdiction (the editor then hides the recipients, the statement and the period, and `TaxFormHandler` refuses a recipient field), and its functions, `services.AddTaxFormFunctions<T>()`: an `ITaxFormFunctionProvider` whose `Source` names it (or `null` for every form). A form's formulas see the built-ins, every form's functions and its source's (`TaxFormFunctionCatalog.For(source)`), never data pipelines or reports. A function reads what the source handed it with `TaxFormFormulaContext.DataOf<T>(context)`. The source can keep settings on the form (`form.Put(settings)`) and add a card to the editor with a `DisplayDriver<TaxForm>`.
+- **Working a form out.** The source builds `TaxFormRecipientInput`s (what each recipient's formulas read, plus a tag of its own) and what the filing reads, and calls `TaxFormEvaluator.Evaluate`, with `ReportedAmount` for fields that accept reported amounts (pay codes, for Payroll). The result has the recipients reported (each recipient's condition, `RecipientCondition`, or any field not zero), the filing's fields and the notes of the failed checks. The source stores the filing in its own record.
+- **Usage.** `services.AddTaxFormUsage<T>()` (`ITaxFormUsage`) tells the page what uses a form, such as Payroll's filings: a used form keeps its name and is turned off rather than deleted.
+- **Seeding from a recipe.** `TaxFormRecipeSeeder.SeedAsync(moduleId, recipeFileName)` adds the forms of a module's tax forms recipe (its `Recipes` folder) that a site doesn't have yet, by name, without running the recipe's other steps. A feature's data migration calls it, so turning the feature on, or updating a site that had it on, gives the forms; Payroll's country features and Tax Returns use it.
+- **Recipes and deployment.** The `TaxForms` step (`Forms`, matched by id then name, replaced with the recipe's, fields included) and the **Tax forms** deployment step, both described to CrestApps Recipes. A source's settings ride in `Properties`.
+
+```json
+{
+  "name": "TaxForms",
+  "Forms": [
+    {
+      "Name": "US-945", "DisplayName": "Form 945 (annual return of withheld federal income tax)", "Source": "Payroll",
+      "Jurisdiction": "US", "Period": "Year",
+      "Properties": { "PayrollTaxFormSettings": { "Workers": "Contractors" } },
+      "Fields": [
+        { "Number": "2", "Label": "2 Backup withholding", "Level": "Filing", "Formula": "TAX('US-BWH')" },
+        { "Number": "4", "Label": "4 Total deposits for the year", "Level": "Filing", "Formula": "DEPOSITS('US', 'NonPayrollWithholding')" },
+        { "Number": "5", "Label": "5 Balance due", "Level": "Filing", "Formula": "GREATEST(0, [2] - [4])" }
+      ]
+    }
+  ]
+}
+```
+
+Payroll is one source: see [Payroll: tax forms](payroll.md#tax-forms). Tax Returns is the other: see [Return forms as tax forms](#return-forms-as-tax-forms).
+
 ## Tax returns
 
 The **Tax Returns** feature (`CrestApps.OrchardCore.Taxation.Returns`) files sales and use tax returns, and any tax a jurisdiction's return combines with them (such as a state's withholding). It never reads sales itself: the figures come from the modules that keep them, so a site with its own ledger files from its books. The screens are described in the [User Manual](../user-manual/finance/tax-returns.md).
@@ -634,7 +667,7 @@ A `MerchantTaxRegistration` has a `Filing` schedule (`TaxFilingSchedule`), or no
 | `Frequency` | `Monthly`, `Quarterly` or `Annual` (`TaxFilingFrequencies`) |
 | `DueMonthsAfterPeriod`, `DueDay` | The return is due on `DueDay` of the month `DueMonthsAfterPeriod` after the period's last month (default the 20th of the month after); a day past the month's end is its last day |
 | `MoveToNextBusinessDay` | A due date on a Saturday or a Sunday moves to the Monday after (default on) |
-| `Form` | The `ITaxReturnForm` of the periodic returns; empty for the built-in `Generic` form |
+| `Form` | The return form of the periodic returns (a tax form of the `SalesTax` source, or an `ITaxReturnForm`); empty for the generic form (`TaxationConstants.GenericTaxReturnFormName`, `Generic`) |
 | `AnnualForm`, `AnnualDueMonthsAfterYear`, `AnnualDueDay` | A yearly reconciliation return filed besides the monthly or quarterly ones, such as a state's annual return |
 
 `TaxReturnPeriod` is a period (`Frequency`, `Start`, `End`) with its key (`2026-10`, `2026-Q3`, `2026`); `TaxReturnPeriod.Parse`, `For` and `Between` work periods out, and `TaxFilingSchedule.DueDateOf(period, annualReconciliation)` the due date. `ITaxReturnService.ListPeriodsAsync(from, to)` lists, for every active registration with a schedule, the periods that end in the span and that the registration is effective in, each with its due date and current return (`TaxReturnPeriodSummary`).
@@ -660,8 +693,41 @@ A draft past its due date is worked out as filed today (in the site's time zone)
 | Interface | Registration | Responsibility |
 | --- | --- | --- |
 | `ITaxReturnDataProvider` (`Name`, `ContributeAsync(TaxReturnDataContext)`) | `services.AddTaxReturnDataProvider<T>()` | Adds a period's figures to `context.Lines` (and notes to `context.Notes`); every provider runs for every return. A line has a `Kind` (`TaxReturnLineKinds`: `GrossSales`, `ExemptSales`, `TaxableSales`, `UseTaxPurchases`, `Withholding`, `Credit`, `ExcessCollected`, or a form's own), `JurisdictionId`, `TaxType` (such as `UseTax`), `FormLine`, `Category`, `Amount` and `TaxAmount` |
-| `ITaxReturnForm` (`Name`, `DisplayName`, `ComputeAsync(TaxReturnFormContext)`) | `services.AddTaxReturnForm<T>()` | Works out the return's `Boxes` and `AmountDue` from its lines; `context.FiledOn` is the day it counts as filed (for discounts, penalties and interest). The built-in `Generic` form sums the lines by kind |
+| `ITaxReturnForm` (`Name`, `DisplayName`, `ComputeAsync(TaxReturnFormContext)`) | `services.AddTaxReturnForm<T>()` | A return form in code, for what a formula can't do: works out the return's `Boxes` and `AmountDue` from its lines; `context.FiledOn` is the day it counts as filed (for discounts, penalties and interest). Most forms are tax forms instead (below); a tax form of the same name wins |
 | `ITaxReturnObserver` (`ChangedAsync(TaxReturnChange)`) | `services.AddTaxReturnObserver<T>()` | Hears `Prepared`, `Ready`, `Reopened`, `Filed`, `Amended`, `PaymentRecorded` and `PaymentRemoved`, after the change is saved in the session and before it is committed: post a filed return or a payment to the books, or record a payroll tax deposit for the withholding paid with it |
+
+### Return forms as tax forms
+
+Tax Returns depends on Tax Forms and registers the `SalesTax` source (`TaxationConstants.SalesTaxFormSource`, shown as **Sales tax returns**) with no recipients, no period and an optional jurisdiction. A tax form of that source is a return form: `ITaxReturnService.GetFormsAsync(includeDisabled)` lists the enabled ones (all, with `includeDisabled`, to work out or show a return prepared before) wrapped in `TaxFormReturnForm`, then the `ITaxReturnForm`s modules add under a name no tax form has, keyed ignoring case. It replaces the synchronous `GetForms()`.
+
+- **Working a return out.** `TaxFormReturnForm.ComputeAsync` compiles the form (`TaxFormFunctionCatalog.For("SalesTax")`) and calls `TaxFormEvaluator.Evaluate` with no recipients and a `SalesTaxFormData` (the `TaxReturn`, the `MerchantTaxRegistration` and `FiledOn`) as the filing data. Every field becomes a box, a failed check a note of the return, and the field named by `SalesTaxFormSettings.AmountDueField` (in the form's `Properties`, `AmountDue` when empty) the `AmountDue`. A form whose formulas don't work leaves a note and no boxes. `FILINGYEAR()` is the year of the period's end and `FILINGQUARTER()` its quarter (0 for an annual return).
+- **Functions** (`SalesTaxFormFunctions`, category *Sales tax*): `AMOUNT`, `TAX` and `HASLINES(kind, [jurisdiction], [taxType], [category])` over the lines (an empty or `*` filter matches anything, `*` is a wildcard, a line with no `JurisdictionId` is the return's own; `SalesTaxFormFunctions.Match` is the same matching for code), `LINEAMOUNT` and `LINETAX(formLine)` over the lines a provider gave a `FormLine`, `REGISTRATION('Number' | 'Jurisdiction' | 'TaxType' | 'Name')`, `DAYSLATE()`, `MONTHSLATE()` (a month begun counts) and `ONTIME()` for penalties, interest and discounts, `PAID()`, `PAIDEARLIER()` and `AMENDMENT()` for payments and amendments, `ISRECONCILIATION()` and `PERIODMONTHS()`. Each is listed with an example in the user manual's [Tax forms](../user-manual/finance/tax-forms.md#for-sales-tax-returns).
+- **Checks.** `SalesTaxFormHandler` (registered by Tax Forms with the form's other rules) refuses a `SalesTax` form whose amount due field isn't one of its filing fields; `TaxFormHandler` refuses a recipient field.
+- **The editor.** With more than one source, **Add tax form** lists them (`Create?source=SalesTax`); a new form's source select reopens the page for the chosen source. The **Sales tax return** card (`SalesTaxFormSettingsDisplayDriver`) edits the amount due field.
+- **The generic form** ships as the `tax-returns-generic-form.recipe.json` recipe (**Tax Returns: generic return form**): fields `GrossSales`, `ExemptSales`, `TaxableSales`, `SalesTax`, `UseTaxPurchases`, `UseTax`, `Withholding`, `ExcessCollected`, `TotalTax`, `Credits` and `AmountDue`, the boxes the former `GenericTaxReturnForm` class worked out. Tax Returns' migration seeds it when the feature is turned on or a site that had it on is updated. A registration whose schedule names no form keeps `Form` empty, and its returns keep the name `Generic`.
+- **Usage.** `TaxReturnTaxFormUsage` counts a form's returns and the registrations that file with it, so a used form keeps its name and is turned off rather than deleted.
+
+```json
+{
+  "name": "TaxForms",
+  "Forms": [
+    {
+      "Name": "US-MI-5080",
+      "DisplayName": "Michigan sales, use and withholding monthly return",
+      "Source": "SalesTax",
+      "Jurisdiction": "US-MI",
+      "Values": [ { "Name": "DiscountRate", "Year": 2020, "Amount": 0.005 } ],
+      "Fields": [
+        { "Number": "6", "Label": "6 Total tax", "Level": "Filing", "Formula": "TAX('TaxableSales', 'us-mi') + TAX('UseTaxPurchases')" },
+        { "Number": "7", "Label": "7 Discount", "Level": "Filing", "Formula": "IF(ONTIME(), LEAST(ROUND([6] * VALUE('DiscountRate'), 2), 15), 0)" },
+        { "Number": "8", "Label": "8 Penalty", "Level": "Filing", "Formula": "IF(ONTIME(), 0, ROUND(LEAST([6] * 0.05 * MONTHSLATE(), [6] * 0.25), 2))" },
+        { "Number": "21", "Label": "21 Amount due", "Level": "Filing", "Formula": "[6] - [7] + [8] - TAX('Credit')" }
+      ],
+      "Properties": { "SalesTaxFormSettings": { "AmountDueField": "21" } }
+    }
+  ]
+}
+```
 
 **The payment form.** The **Payments** card's form is built through `IDisplayManager<TaxReturnPaymentEntry>`, from the return being paid (`Return`) and the `TaxReturnPayment` being recorded (`Payment`). Tax Returns' driver edits the amount, the day, the reference and the method; a pack adds a display driver that edits what its observer needs into `Payment.Properties`, such as the account the payment came from, and checks `entry.Return` (its jurisdiction or form) so its fields show only on its returns. A driver that adds a model error stops the payment.
 

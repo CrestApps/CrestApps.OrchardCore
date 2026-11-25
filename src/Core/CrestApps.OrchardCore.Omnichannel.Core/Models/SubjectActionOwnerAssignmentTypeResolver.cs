@@ -14,6 +14,11 @@ public static class SubjectActionOwnerAssignmentTypeResolver
         SubjectActionOwnerAssignmentType assignmentType,
         string normalizedUserName)
     {
+        if (assignmentType is SubjectActionOwnerAssignmentType.CallAgent or SubjectActionOwnerAssignmentType.Pool)
+        {
+            return assignmentType;
+        }
+
         if (assignmentType == SubjectActionOwnerAssignmentType.SpecificOwner ||
             !string.IsNullOrWhiteSpace(normalizedUserName))
         {

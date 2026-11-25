@@ -124,7 +124,7 @@ public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
             && bool.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out var wanted)
             && wanted;
         var filings = (await _filings.ListByEmployersAsync(scope.All ? null : [.. scope.EmployerIds], cancellationToken))
-            .Where(filing => filing.Form == FormT4.FormName && filing.Status != PayrollFilingStatus.Amended)
+            .Where(filing => filing.Form == CanadaTaxForms.FormT4 && filing.Status != PayrollFilingStatus.Amended)
             .GroupBy(filing => (filing.EmployerId, filing.Year))
             .Select(group =>
             {

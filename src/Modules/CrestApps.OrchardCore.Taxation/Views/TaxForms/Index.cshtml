@@ -1,0 +1,62 @@
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<TaxForm>>
+@using Microsoft.Extensions.Localization
+@using OrchardCore
+@inject Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Taxation.Services.TaxFormSourceOptions> SourceOptions
+@inject Microsoft.Extensions.Localization.IStringLocalizerFactory LocalizerFactory
+
+@{
+    var sources = SourceOptions.Value.Sources;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TaxForms" title="@T["Tax forms"]" />
+</zone>
+
+@* The form is necessary to generate an antiforgery token for delete actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-client-side-search="true">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="button" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    @if (sources.Count > 1)
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle create" type="button" data-bs-toggle="dropdown" aria-expanded="false">@T["Add tax form"]</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @foreach (var source in sources)
+                                {
+                                    <li><a class="dropdown-item" asp-action="Create" asp-route-source="@source.Name">@T["Prepared from {0}", LocalizerFactory.Localize(source.DisplayName).Value]</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add tax form"]</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="TaxForms" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No tax form has been added yet. Add one, or run a tax forms recipe under Configuration › Recipes, such as United States Payroll: federal tax forms or Tax Returns: generic return form."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Form"]" />
+            <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">@T["Your search returned no results."]</div>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

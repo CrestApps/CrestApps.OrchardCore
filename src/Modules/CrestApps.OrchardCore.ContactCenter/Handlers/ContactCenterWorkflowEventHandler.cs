@@ -16,14 +16,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// </summary>
 /// <remarks>
 /// <c>ActorId</c> and <c>ActorType</c> say who made the change: the agent, a supervisor, a workflow, the provider or
-/// the platform. <c>AgentId</c> and <c>AgentUserId</c> say which agent the change is about, whoever made it, so a
-/// workflow acting on the agent reads them rather than the actor.
+/// the platform. <c>AgentId</c>, <c>AgentUserId</c> and <c>AgentUserName</c> say which agent the change is about,
+/// whoever made it, so a workflow acting on the agent reads them rather than the actor. On a call the dialer placed
+/// for an agent -- a Power or Progressive dial, or a Predictive one once an agent is connected -- they name that agent,
+/// read from the call when the event's own payload does not.
 /// </remarks>
 public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandler
 {
     private readonly IWorkflowManager _workflowManager;
     private readonly IContactCenterEventDeduplicationService _deduplicationService;
     private readonly IContactCenterWorkflowSubscriptions _subscriptions;
+    private readonly IContactCenterEventAgentResolver _agentResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterWorkflowEventHandler"/> class.
@@ -31,14 +34,17 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
     /// <param name="workflowManager">The workflow manager used to trigger the workflow event.</param>
     /// <param name="deduplicationService">The durable per-handler event deduplication service.</param>
     /// <param name="subscriptions">Tells whether any workflow listens for an event type.</param>
+    /// <param name="agentResolver">Completes the agent the event is about, from the call and the agent profiles.</param>
     public ContactCenterWorkflowEventHandler(
         IWorkflowManager workflowManager,
         IContactCenterEventDeduplicationService deduplicationService,
-        IContactCenterWorkflowSubscriptions subscriptions)
+        IContactCenterWorkflowSubscriptions subscriptions,
+        IContactCenterEventAgentResolver agentResolver)
     {
         _workflowManager = workflowManager;
         _deduplicationService = deduplicationService;
         _subscriptions = subscriptions;
+        _agentResolver = agentResolver;
     }
 
     /// <inheritdoc/>
@@ -73,6 +79,8 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
         }
 
         var (agentId, agentUserId) = ResolveAgent(interactionEvent);
+        string agentUserName;
+        (agentId, agentUserId, agentUserName) = await _agentResolver.ResolveAsync(interactionEvent, agentId, agentUserId, cancellationToken);
 
         var input = new Dictionary<string, object>
         {
@@ -84,6 +92,7 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
             ["ActorType"] = interactionEvent.ActorType.ToString(),
             ["AgentId"] = agentId,
             ["AgentUserId"] = agentUserId,
+            ["AgentUserName"] = agentUserName,
             ["SourceComponent"] = interactionEvent.SourceComponent,
 
             // What the event itself says -- a dialer attempt's outcome and the number it called, a disposition and the
@@ -122,7 +131,7 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
                 if (document.RootElement.ValueKind == JsonValueKind.Object)
                 {
                     agentId = ReadString(document.RootElement, "AgentId") ?? ReadString(document.RootElement, "SelectedAgentId");
-                    userId = ReadString(document.RootElement, "UserId");
+                    userId = ReadString(document.RootElement, "UserId") ?? ReadString(document.RootElement, "AgentUserId");
                 }
             }
             catch (JsonException)

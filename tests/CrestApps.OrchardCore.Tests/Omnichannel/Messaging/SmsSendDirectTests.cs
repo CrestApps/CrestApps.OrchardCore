@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.RoutingRules;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -58,7 +59,46 @@ public class SmsSendDirectTests
         store.Verify(s => s.CreateAsync(It.Is<MessagingConversation>(c => c.ContactAddress == "+15551112222" && c.ServiceAddress == "+15559998888"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static (MessagingConversationService Service, Mock<IMessagingConversationStore> Store, Mock<ISmsDispatcher> Dispatcher) CreateService(MessagingConversation existing)
+    [Fact]
+    public async Task SendDirectAsync_WithoutAnAgent_LetsTheRoutingRulesAssignTheNewConversationAtOnce()
+    {
+        // Arrange
+        var evaluator = new Mock<IMessagingRoutingRuleEvaluator>();
+        evaluator
+            .Setup(e => e.AssignAsync(It.Is<MessagingRoutingRuleRequest>(r => r.Trigger == MessagingRoutingRuleTriggers.StartedWithoutAgent), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MessagingRoutingRuleRequest request, CancellationToken _) =>
+            {
+                request.Conversation.AssignedAgentId = "agent-9";
+                request.Conversation.AssignmentStatus = ConversationAssignmentStatus.Assigned;
+
+                return new MessagingRoutingRuleMatch(new MessagingRoutingRule { DisplayText = "Workflow texts" }, "agent-9", "user-9");
+            });
+
+        var (service, store, _) = CreateService(existing: null, evaluator.Object);
+
+        // Act
+        var result = await service.SendDirectAsync("SMS", "+15559998888", "+15551112222", "hello", actingAgentId: null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        store.Verify(s => s.CreateAsync(It.Is<MessagingConversation>(c => c.AssignedAgentId == "agent-9"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendDirectAsync_ByAnAgent_DoesNotTryTheRoutingRules()
+    {
+        // Arrange
+        var evaluator = new Mock<IMessagingRoutingRuleEvaluator>();
+        var (service, _, _) = CreateService(existing: null, evaluator.Object);
+
+        // Act
+        await service.SendDirectAsync("SMS", "+15559998888", "+15551112222", "hello", "agent-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        evaluator.Verify(e => e.AssignAsync(It.IsAny<MessagingRoutingRuleRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static (MessagingConversationService Service, Mock<IMessagingConversationStore> Store, Mock<ISmsDispatcher> Dispatcher) CreateService(MessagingConversation existing, IMessagingRoutingRuleEvaluator evaluator = null)
     {
         var store = new Mock<IMessagingConversationStore>();
         store.Setup(s => s.FindByContactAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
@@ -90,7 +130,8 @@ public class SmsSendDirectTests
             new NoOpSmsFirstResponseSlaService(),
             new FakeAttachmentUrlProvider(),
             clock.Object,
-            NullLogger<MessagingConversationService>.Instance);
+            NullLogger<MessagingConversationService>.Instance,
+            evaluator is null ? null : [evaluator]);
 
         return (service, store, dispatcher);
     }

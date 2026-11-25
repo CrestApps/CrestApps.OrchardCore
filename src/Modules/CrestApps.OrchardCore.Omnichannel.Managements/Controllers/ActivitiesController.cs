@@ -1821,10 +1821,54 @@ public sealed class ActivitiesController : Controller
         }
 
         var processedCount = 0;
+        var dialerContributor = _dialerContributors.FirstOrDefault();
+        var leftOnCallCount = 0;
+        var committed = false;
+        newSource = newSource.Trim();
 
-        foreach (var activity in activities)
+        foreach (var loaded in activities)
         {
-            activity.Source = newSource.Trim();
+            var activity = loaded;
+
+            // Once a record was taken out of the dialer queue the unit of work was committed, and a committed session no
+            // longer tracks what it loaded before, so saving an activity read earlier would store a second copy.
+            if (committed)
+            {
+                activity = await _omnichannelActivityManager.FindByIdAsync(loaded.ItemId);
+
+                if (activity is null)
+                {
+                    continue;
+                }
+            }
+
+            // A dialer record given a source the dialer does not drive leaves the dialer: it used to keep its place in the
+            // campaign's dialer queue under its new label, and the dialer called it anyway.
+            if (dialerContributor is not null &&
+                ActivitySources.IsDialer(activity.Source) &&
+                !ActivitySources.IsDialer(newSource))
+            {
+                var withdrawn = await dialerContributor.WithdrawAsync(activity.ItemId, HttpContext.RequestAborted);
+                committed = true;
+
+                if (withdrawn == ActivityDialerWithdrawResult.InFlight)
+                {
+                    leftOnCallCount++;
+
+                    continue;
+                }
+
+                activity = await _omnichannelActivityManager.FindByIdAsync(loaded.ItemId);
+
+                if (activity is null)
+                {
+                    continue;
+                }
+
+                activity.DialerProfileId = null;
+            }
+
+            activity.Source = newSource;
 
             if (newInteractionType.HasValue)
             {
@@ -1848,6 +1892,11 @@ public sealed class ActivitiesController : Controller
 
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
+        }
+
+        if (leftOnCallCount > 0)
+        {
+            await _notifier.WarningAsync(H["{0} activities were left unchanged because the dialer took them while they were being changed.", leftOnCallCount]);
         }
 
         return processedCount;
@@ -2123,29 +2172,8 @@ public sealed class ActivitiesController : Controller
             string.Equals(activity.ContactContentItemId, contactContentItemId, StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// The number the dialer can call for an activity: its own when it is already a phone activity with a number,
-    /// otherwise its contact's preferred phone number, unless the contact has opted out of calls.
-    /// </summary>
-    private async Task<string> FindDialableDestinationAsync(OmnichannelActivity activity)
-    {
-        if (string.Equals(activity.Channel, OmnichannelConstants.Channels.Phone, StringComparison.Ordinal) &&
-            !string.IsNullOrWhiteSpace(activity.PreferredDestination))
-        {
-            return activity.PreferredDestination;
-        }
-
-        if (string.IsNullOrEmpty(activity.ContactContentItemId))
-        {
-            return null;
-        }
-
-        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
-        return contact is null
-            ? null
-            : OmnichannelHelper.GetPreferredDestenation(contact, _contactMethods.Get(contact), OmnichannelConstants.Channels.Phone);
-    }
+    private Task<string> FindDialableDestinationAsync(OmnichannelActivity activity)
+        => ActivityDialDestinations.FindAsync(activity, _contentManager, _contactMethods);
 
     private static void ResetAssignment(OmnichannelActivity activity)
     {

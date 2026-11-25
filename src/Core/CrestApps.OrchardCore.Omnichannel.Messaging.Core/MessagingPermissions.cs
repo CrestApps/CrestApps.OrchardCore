@@ -60,4 +60,9 @@ public static class MessagingPermissions
     /// Grants the ability to send a group message (broadcast) from the workspace.
     /// </summary>
     public static readonly Permission SendGroupMessages = new("SendGroupMessages", LocalizationSource.Create("Send group messages", typeof(MessagingPermissions)));
+
+    /// <summary>
+    /// Grants the ability to manage the routing rules that assign conversations nobody owns to agents.
+    /// </summary>
+    public static readonly Permission ManageRoutingRules = new("ManageMessagingRoutingRules", LocalizationSource.Create("Manage messaging routing rules", typeof(MessagingPermissions)));
 }

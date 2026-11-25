@@ -27,7 +27,7 @@ A tax registration says where your business collects a tax and under which numbe
 5. With Tax Returns on, the **Returns** card sets how the business files:
    - **Filing frequency**: monthly, quarterly or annually. **Files no return here** leaves the registration out of the tax returns.
    - **Due day** and **Months after the period**: day 20 and 1 month means the 20th of the month after the period. A day past the end of a month is its last day. Tick **Move a due date on a weekend to the Monday after** when the agency does.
-   - **Return form**: how the return's boxes are worked out. **Generic return (totals by kind)** adds up the figures by kind; a pack adds the forms of its jurisdictions.
+   - **Return form**: how the return's boxes are worked out. **Generic return (totals by kind)** adds up the figures by kind. A jurisdiction's own return, with its discount for filing on time, its penalty and interest, is a tax form you build under **Commerce** → **Taxation** → **Tax Forms**, prepared from **Sales tax returns** (see [Tax forms](tax-forms.md#sales-tax-returns)); a pack can add one too.
    - **Annual return form**, **Annual return due day** and **Annual return month**: a yearly return filed besides the monthly or quarterly ones, when the jurisdiction asks for one. Day 28 and month 2 means February 28 after the year.
 6. Choose **Save**.
 

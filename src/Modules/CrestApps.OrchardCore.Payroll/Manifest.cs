@@ -34,13 +34,14 @@ using OrchardCore.Modules.Manifest;
         ApprovalsConstants.Features.Approvals,
         AddressConstants.Feature.ModuleId,
         TaxationConstants.Feature.IncomeTax,
+        TaxationConstants.Feature.TaxForms,
     ]
 )]
 
 [assembly: Feature(
     Id = PayrollConstants.Features.UnitedStates,
     Name = "United States Payroll Filings",
-    Description = "The employer's federal payroll returns made from pay statements: Forms 941, 940 and 945, W-2 and W-3, 1099-NEC and 1096, the SSA EFW2 wage file and year end. The taxes themselves come from Taxation's United States Income Tax.",
+    Description = "The employer's federal payroll returns made from pay statements: adds Forms 941, 940 and 945, W-2 and W-3, 1099-NEC and 1096 as tax forms you can edit under Commerce > Taxation > Tax Forms, and the SSA EFW2 wage file. The taxes themselves come from Taxation's United States Income Tax.",
     Category = "Payroll",
     Dependencies =
     [
@@ -52,7 +53,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = PayrollConstants.Features.Canada,
     Name = "Canada Payroll Filings",
-    Description = "The employer's Canadian payroll filings made from pay statements: source deductions remitted to the CRA and to Revenu Québec on the employer's remitter schedule, T4 slips and the T4 Summary with the T4 XML file, and RL-1 slips with the RL-1 Summary, shown to people in My Pay. The deductions themselves come from Taxation's Canada Income Tax.",
+    Description = "The employer's Canadian payroll filings made from pay statements: source deductions remitted to the CRA and to Revenu Québec on the employer's remitter schedule, T4 slips and the T4 Summary with the T4 XML file, and RL-1 slips with the RL-1 Summary, added as tax forms you can edit under Commerce > Taxation > Tax Forms and shown to people in My Pay. The deductions themselves come from Taxation's Canada Income Tax.",
     Category = "Payroll",
     Dependencies =
     [
