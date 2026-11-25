@@ -50,6 +50,7 @@ public sealed class UsersToolsStartup : StartupBase
             .WithTitle(S["Set User Account State"])
             .WithDescription(S["Enables, disables or unlocks one or more user accounts, or marks their email as confirmed without sending an email. Disabling refuses the calling user's own account, the site super user and the only enabled administrator. Use enable to approve users waiting for moderation and unlock when getUser shows a lockout."])
             .WithCategory(S["Users Management"])
+            .AsSecurity()
             .Selectable();
 
         services.AddCoreAITool<DeleteUserTool>(DeleteUserTool.TheName)

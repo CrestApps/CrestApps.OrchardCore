@@ -24,7 +24,7 @@ public sealed class OrchardUserRoleToolRegistrationTests
         { SaveUserTool.TheName, true },
         { SetUserRolesTool.TheName, true },
         { ExplainUserAccessTool.TheName, false },
-        { SetUserAccountStateTool.TheName, false },
+        { SetUserAccountStateTool.TheName, true },
         { DeleteUserTool.TheName, true },
         { ResetUserSignInFactorsTool.TheName, true },
         { ListRolesTool.TheName, false },

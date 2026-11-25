@@ -400,7 +400,7 @@ When a saved query fails, `runQuery` says that it failed and leaves the error in
 | `listUsers` | Lists user accounts with optional filters (text in the user name, email, role, enabled or disabled), sorting and paging. It returns ID, user name, email, roles and status only. |
 | `getUser` | Returns one user by ID, user name or email: profile, roles, enabled, email confirmed, whether a password is set, locked out until, failed sign-in count, two-factor state, external login provider names, time zone, culture and custom user settings. |
 | `saveUser` | Updates the user name, email and phone number of a user. It does not create a user and takes no password. Asks for approval. |
-| `setUserAccountState` | Enables, disables or unlocks up to 20 user accounts, or marks their email as confirmed without sending an email (`action`: `enable`, `disable`, `unlock`, `confirmEmail`), and reports the outcome for each. Use `enable` to approve registrations that wait for moderation. |
+| `setUserAccountState` | Enables, disables or unlocks up to 20 user accounts, or marks their email as confirmed without sending an email (`action`: `enable`, `disable`, `unlock`, `confirmEmail`), and reports the outcome for each. Use `enable` to approve registrations that wait for moderation. Asks for approval. |
 | `deleteUser` | Permanently deletes a user account. Asks for approval. |
 
 These tools are added beside `getUserInfo` and `searchForUsers`. They check, for the person in the chat, the permission the matching action of the **Access Control > Users** page checks, on the user it acts on, so the permissions for the users of one role (for example **Edit users in Editor role**) work as they do on that page:

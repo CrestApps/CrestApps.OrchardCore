@@ -1629,13 +1629,13 @@ A second review found these gaps in the new-from-main tools and in two Orders to
 
 CrestApps.Core `2.0.0-preview.389` (#327) added tool kinds, which is F3 of [01-foundation.md](01-foundation.md#f3-kind-on-the-registration-s-core). In that version an explicit `.RequireApproval()` is an approval floor: the tool asks before every call and no profile setting lowers it, and where nobody can be asked (a workflow, voice, an MCP client, background work) it never runs. A tool that asks because of its kind follows the profile's tool approval setting (`AIToolApprovalSettings`), which can let it run without asking.
 
-All 236 tools that asked (the 11 from main, 2 that main had without approval, and 223 new ones) now declare a kind. The same 236 tools still ask by default.
+All 236 tools that asked (the 11 from main, 2 that main had without approval, and 223 new ones) now declare a kind. The same 236 tools still ask by default. After the UI test, `setUserAccountState` (enable, disable or unlock other accounts) became Security too, so 237 tools ask.
 
 | Kind | Tools | Rule used |
 |---|---|---|
 | Destructive (`.AsDestructive()`) | 101 | Deletes, or cannot be undone: deletes, cancels, voids, closes, final decisions, issuing an invoice, running a workflow or background task, rebuilding an index |
 | External (`.AsExternal()`) | 70 | Sends an email, text, call, webhook or notice to a person; calls a paid service (model, embeddings, geocoding, carrier, lookup); moves money or value (payments, refunds, credit, gift cards, points, tips); points the site at an outside endpoint (A2A, MCP, data connection, tool instance, deployment) |
-| Security (`.AsSecurity()`) | 49 | Changes access or sign-in (roles, users, owners, shares, share links, account members, API keys, feed keys, secrets, Stripe keys), what the site runs (recipes, workflow types, features, site settings, tenants, an AI profile's tools) or exports personal data |
+| Security (`.AsSecurity()`) | 50 | Changes access or sign-in (roles, users, account states, owners, shares, share links, account members, API keys, feed keys, secrets, Stripe keys), what the site runs (recipes, workflow types, features, site settings, tenants, an AI profile's tools) or exports personal data |
 | Write (`.AsWrite()` with `.RequireApproval()`) | 16 | A change that can be undone, kept asking as decided in the batches: `saveAIDataSource`, `saveAIFileSource`, `setHomepage`, `saveB2BAccountSettings`, `respondToCalendarEvent`, `updateCalendarEvent`, `saveCoupon`, `generateCouponCodes`, `importLocalDncList`, `setLocalDncListImportState`, `pauseOrResumeRecurringPlan`, `setAppointmentStatus`, `runServiceAgreement`, `saveServiceAgreement`, `postOpenShift`, `postIntradayOffer` |
 
 The Write row keeps the floor on purpose: Core's Write kind needs no approval, so dropping `.RequireApproval()` would stop them asking. Whether they should ask at all is for the maintainer. The other 474 tools have no kind (`Unspecified`, as before); giving them Read or Write would only add MCP tool hints. New tools declare a kind instead of calling `.RequireApproval()`, and call it only for a tool of another kind that should ask.
