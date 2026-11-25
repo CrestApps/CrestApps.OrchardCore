@@ -71,6 +71,7 @@ public sealed class CourseCompletionEvaluator
                 Course = outline.Course,
                 Outline = outline,
                 Grade = grade,
+                NoGradeSource = grade is null && CourseGradeCalculator.HasNoGradeSource(outline, progress),
             }))
             {
                 return false;

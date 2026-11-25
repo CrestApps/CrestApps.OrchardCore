@@ -393,14 +393,20 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     private async Task<(bool Done, Release Release)> CountInSqlAsync(Survey survey, int minimum, SurveyAnonymousAttributes attributes, IReadOnlyDictionary<SurveyResponseGroup, long> counts, DateTime now, CancellationToken cancellationToken)
     {
         var large = counts.Where(pair => pair.Value >= minimum).Select(pair => pair.Key).ToList();
-        List<SurveyResponseGroup> hidden = attributes.OtherIsLarge ? [] : [.. counts.Where(pair => pair.Value < minimum).Select(pair => pair.Key)];
+        var queries = new SurveyResultsQueries(Session);
+
+        // The hidden groups are taken from every response, not only the completed ones (R9-M1): a group with no completed
+        // response is hidden too (SurveyAnonymousAttributes.Hides), and its in-progress, abandoned or screened-out
+        // responses must not count toward their status, as the document path, the admin list and the report leave them out.
+        List<SurveyResponseGroup> hidden = attributes.OtherIsLarge
+            ? []
+            : [.. (await queries.CountByGroupAsync(survey.ItemId, completedOnly: false, cancellationToken)).Keys.Where(attributes.Hides)];
 
         if (large.Count > SurveyResponseGroupFilter.MaxGroups || hidden.Count > SurveyResponseGroupFilter.MaxGroups)
         {
             return (false, null);
         }
 
-        var queries = new SurveyResultsQueries(Session);
         var statuses = new Dictionary<SurveyResponseStatus, DateTime>();
 
         foreach (var (status, count) in await queries.CountByStatusAsync(new SurveyResultsScope { SurveyId = survey.ItemId, HiddenGroups = hidden }, cancellationToken))

@@ -37,4 +37,10 @@ public sealed class CompletionCriterionContext
     /// Gets or sets the course grade, when it has one.
     /// </summary>
     public decimal? Grade { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether nothing in the course gives the learner a grade (no item counts toward it, or every one that
+    /// does recorded the learner's completion only), which is why <see cref="Grade"/> is <see langword="null"/>.
+    /// </summary>
+    public bool NoGradeSource { get; set; }
 }

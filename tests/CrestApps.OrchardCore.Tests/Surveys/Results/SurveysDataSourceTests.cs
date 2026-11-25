@@ -782,6 +782,28 @@ public sealed class SurveysDataSourceTests : IAsyncLifetime
         Assert.DoesNotContain(ids, id => id.StartsWith("now", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SurveyResponses_AGroupWithNoCompletedResponse_DoesNotCountTowardAStatus(bool readsDocuments)
+    {
+        // Arrange: R9-M1, the usual collector has ten completed responses and one abandoned (dana0); a collector sent to
+        // four people has four abandoned and no completed response, so it is hidden, and "Other" holds too few to show.
+        await AddPlainAnonymousAsync("p", 10, _day.AddDays(-2));
+        await AddAnonymousAsync("dana", 1, _day.AddDays(-2), SurveyResponseStatus.Abandoned);
+        await AddAnonymousAsync("b", 4, _day.AddDays(-2), SurveyResponseStatus.Abandoned, "sent-to-four");
+        await using var session = _store.OpenSession();
+        var source = Source(session, SurveysPermissions.ViewSurveyResponses, SurveysPermissions.ViewOwnSurveyResponses);
+
+        // Act: a read with no row conditions takes the SQL path; a condition on the rows takes the document path.
+        var ids = await ReadIdsAsync(source, "SurveyResponses", DocumentsCondition(readsDocuments));
+
+        // Assert: the hidden collector's four don't count toward Abandoned, so one abandoned row is too few to show, on
+        // both paths (counted, the status would show, and its one visible row would be dana0).
+        Assert.DoesNotContain("dana0", ids);
+        Assert.DoesNotContain(ids, id => id.StartsWith('b'));
+    }
+
     [Fact]
     public async Task SurveyResponses_APreviewOfAnotherSurvey_DoesNotReadTheAnonymousSurveysResponses()
     {

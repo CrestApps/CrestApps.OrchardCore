@@ -32,6 +32,27 @@ public static class CourseGradeCalculator
         => ComputeBreakdown(outline, progress).Grade;
 
     /// <summary>
+    /// Gets whether nothing in a course gives the learner a grade: the course is known, and no item of its outline counts
+    /// toward the grade with a weight above 0, or every one that does recorded the learner's completion only (an
+    /// anonymous quiz). A course grade that is <see langword="null"/> for this reason has nothing to check a minimum
+    /// against; a <see langword="null"/> grade for any other reason (an imported enrollment, a course that couldn't be
+    /// loaded) is no grade at all (R9-M3).
+    /// </summary>
+    /// <param name="outline">The outline.</param>
+    /// <param name="progress">The progress of the enrollment, or <see langword="null"/> when there is none.</param>
+    /// <returns><see langword="true"/> when nothing gives a grade.</returns>
+    public static bool HasNoGradeSource(CourseOutline outline, EnrollmentProgress progress)
+    {
+        ArgumentNullException.ThrowIfNull(outline);
+
+        return outline.Course is not null
+            && !outline.Entries.Any(entry => entry.Part?.Gradable == true
+                && entry.Part.Weight > 0
+                && !string.IsNullOrEmpty(entry.Item?.ContentItemId)
+                && progress?.Find(entry.Item.ContentItemId)?.CompletionOnly != true);
+    }
+
+    /// <summary>
     /// Computes the course grade with the score of each gradebook category and the items each one left out.
     /// </summary>
     /// <param name="outline">The outline.</param>

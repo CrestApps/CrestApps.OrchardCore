@@ -50,9 +50,12 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private readonly IDistributedLock _distributedLock;
     private readonly ILogger _logger;
 
-    // The e-mails of this scope the mail server failed, whose attempts are counted when the scope's e-mail work ends: all
-    // of them when an e-mail of the scope went out, otherwise each by the lone-failure rule (R8-M2).
-    private readonly List<(string ItemId, bool IsReminder)> _unconfirmedFailures = [];
+    // The e-mails of this scope the mail server failed, whose attempts are counted when the scope's e-mail work ends. A
+    // failure is confirmed as its address's when an e-mail of the scope went out after it (R9-M2): the mail server was
+    // taking e-mails then, so it uses up an attempt. The failures after the last e-mail that went out (an outage or a
+    // throttle that started partway through, or addresses tried last) can't be told from an outage, so each uses one up
+    // by the lone-failure rule (R8-M2).
+    private readonly List<(string ItemId, bool IsReminder, bool Confirmed)> _unconfirmedFailures = [];
 
     // How many e-mails in a row the mail server failed; at two the scope stops sending, as in an outage.
     private int _failuresInARow;
@@ -985,6 +988,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 // ends), and the run goes on.
                 _emailLimit.AddSent();
                 _failuresInARow = 0;
+                ConfirmFailures();
             }
 
             invitation = await SaveCheckedAsync(invitation, current =>
@@ -1265,9 +1269,16 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         {
             RefusedEmails++;
 
-            if (!_unconfirmedFailures.Contains((invitation.ItemId, isReminder)))
+            var index = _unconfirmedFailures.FindIndex(failure => failure.ItemId == invitation.ItemId && failure.IsReminder == isReminder);
+
+            if (index >= 0)
             {
-                _unconfirmedFailures.Add((invitation.ItemId, isReminder));
+                // Failed again: confirmed only by an e-mail that goes out after this failure.
+                _unconfirmedFailures[index] = (invitation.ItemId, isReminder, false);
+            }
+            else
+            {
+                _unconfirmedFailures.Add((invitation.ItemId, isReminder, false));
             }
 
             if (++_failuresInARow >= 2)
@@ -1286,10 +1297,22 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         }, cancellationToken);
     }
 
-    // Ends a send's e-mail work for its failures (R8-M2): when an e-mail of the send went out, the mail server was taking
-    // e-mails, so every failure of the send was its address's and uses up an attempt; when none went out, each may be an
-    // outage and uses one up at most once per SurveyInvitationHold.LoneFailureInterval. So several refused addresses in
-    // one list bounce after their attempts, however they sit in the list.
+    // Marks every failure so far as its address's: an e-mail just went out after them, so the mail server was taking
+    // e-mails (R9-M2).
+    private void ConfirmFailures()
+    {
+        for (var index = 0; index < _unconfirmedFailures.Count; index++)
+        {
+            _unconfirmedFailures[index] = _unconfirmedFailures[index] with { Confirmed = true };
+        }
+    }
+
+    // Ends a send's e-mail work for its failures: a failure an e-mail of the send went out after was its address's and
+    // uses up an attempt (R8-M2); a failure no e-mail went out after (the trailing ones, such as the two in a row that
+    // stopped a send when an outage or a throttle started partway through) may be an outage, and uses one up at most once
+    // per SurveyInvitationHold.LoneFailureInterval (R9-M2). So several refused addresses in one list bounce after their
+    // attempts, however they sit in the list, and a throttle that hits a run partway through never bounces valid
+    // addresses: at most one attempt a day, as in an outage.
     private async Task ResolveFailuresAsync(CancellationToken cancellationToken)
     {
         if (_unconfirmedFailures.Count == 0)
@@ -1297,14 +1320,15 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             return;
         }
 
-        var lone = !_emailLimit.HasSent;
         var now = _clock.UtcNow;
         var failures = _unconfirmedFailures.ToArray();
 
         _unconfirmedFailures.Clear();
 
-        foreach (var (itemId, isReminder) in failures)
+        foreach (var (itemId, isReminder, confirmed) in failures)
         {
+            var lone = !confirmed;
+
             // Loaded again (a copy this session may track is let go of first), so the count lands on the current copy.
             var current = await _invitationStore.ReloadAsync(itemId, cancellationToken);
 

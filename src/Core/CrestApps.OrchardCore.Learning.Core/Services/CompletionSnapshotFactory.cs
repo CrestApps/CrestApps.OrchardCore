@@ -33,6 +33,7 @@ public static class CompletionSnapshotFactory
             CompletedUtc = completedUtc,
             Grade = grade,
             Passed = passed,
+            NoGradeSource = grade is null && CourseGradeCalculator.HasNoGradeSource(outline, progress),
             SecondsSpent = progress?.Items.Sum(item => item.SecondsSpent) ?? 0,
             CompletedBy = completedBy,
             Reason = reason,

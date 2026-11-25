@@ -4,10 +4,10 @@ using CrestApps.OrchardCore.Learning.Services;
 namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
-/// Met when the course grade reaches a percentage. A course grade is <see langword="null"/> only when nothing in the course
-/// counts toward it for the learner (no item counts toward the grade, or every one that does recorded the learner's
-/// completion only, as an anonymous quiz does): the criterion then has no grade to check and is met, so it never keeps the
-/// course from completing. The course editor warns when the course has nothing that gives a grade.
+/// Met when the course grade reaches a percentage. When nothing in the course gives the learner a grade (no item counts
+/// toward it, or every one that does recorded the learner's completion only, as an anonymous quiz does), the criterion
+/// has no grade to check and is met, so it never keeps the course from completing; the course editor warns about such a
+/// course. Any other missing grade is not met (R9-M3).
 /// </summary>
 public sealed class MinimumGradeCriterion : ICourseCompletionCriterion
 {
@@ -26,8 +26,7 @@ public sealed class MinimumGradeCriterion : ICourseCompletionCriterion
             return Task.FromResult(false);
         }
 
-        // No grade means nothing in the course gives one (see CourseGradeCalculator): an item without a score counts as 0,
-        // so a learner who simply hasn't been scored yet has a grade of 0, not null.
-        return Task.FromResult(context.Grade is not { } grade || grade >= minimum);
+        // An item without a score counts as 0, so a learner who simply hasn't been scored yet has a grade of 0, not null.
+        return Task.FromResult(context.Grade is { } grade ? grade >= minimum : context.NoGradeSource);
     }
 }
