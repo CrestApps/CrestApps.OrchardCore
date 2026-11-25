@@ -99,25 +99,42 @@ public sealed class QuizResponseGradingQueueSource : IGradingQueueSource
             // out; the count is of the listed attempts only. An attempt whose survey isn't found is listed as before,
             // without a name, number or time (PageAsync). The anonymous surveys are left out in the query, by their ids
             // from the survey index, so a page reads one page of attempts (R9-Mi3).
-            if (_serviceProvider.GetService<SurveyIndexReader>() is { } anonymousReader)
+            // One query names at most SurveyIdChunks.Size excluded surveys; past that, every attempt is read as before.
+            if (_serviceProvider.GetService<SurveyIndexReader>() is { } anonymousReader
+                && await anonymousReader.ListAnonymousIdsAsync(cancellationToken) is { Count: <= SurveyIdChunks.Size } excludedAnonymous)
             {
-                var (waiting, page) = await _responseQueries.ListAsync(new SurveyResponseQuery
-                {
-                    Statuses = [SurveyResponseStatus.Completed],
-                    Grading = GradingStatus.Pending,
-                    ContextKinds = [LearningSurveyContexts.EnrollmentKind, LearningSurveyContexts.CourseKind],
-                    ExcludedUserId = grader,
-                    ExcludedSurveyIds = [.. await anonymousReader.ListAnonymousIdsAsync(cancellationToken)],
-                    OldestFirst = true,
-                    Take = Math.Min(take, SurveysConstants.PageSize),
-                }, cancellationToken);
+                var waiting = 0;
+                var listed = new List<SurveyResponse>();
 
-                foreach (var surveyId in page.Select(response => response.SurveyId).Distinct(StringComparer.Ordinal))
+                while (listed.Count < take)
+                {
+                    var (total, page) = await _responseQueries.ListAsync(new SurveyResponseQuery
+                    {
+                        Statuses = [SurveyResponseStatus.Completed],
+                        Grading = GradingStatus.Pending,
+                        ContextKinds = [LearningSurveyContexts.EnrollmentKind, LearningSurveyContexts.CourseKind],
+                        ExcludedUserId = grader,
+                        ExcludedSurveyIds = [.. excludedAnonymous],
+                        OldestFirst = true,
+                        Skip = listed.Count,
+                        Take = Math.Min(take - listed.Count, SurveysConstants.PageSize),
+                    }, cancellationToken);
+
+                    waiting = total;
+                    listed.AddRange(page);
+
+                    if (page.Count == 0 || listed.Count >= total)
+                    {
+                        break;
+                    }
+                }
+
+                foreach (var surveyId in listed.Select(response => response.SurveyId).Distinct(StringComparer.Ordinal))
                 {
                     known[surveyId] = await _surveyManager.FindByIdAsync(surveyId, cancellationToken);
                 }
 
-                return await PageAsync(waiting, [.. page], known, titles, timeZone, [], cancellationToken);
+                return await PageAsync(waiting, listed, known, titles, timeZone, [], cancellationToken);
             }
 
             var (_, all) = await ReadOldestAsync([], grader, int.MaxValue, cancellationToken);

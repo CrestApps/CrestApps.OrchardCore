@@ -45,11 +45,23 @@ public static class CourseGradeCalculator
     {
         ArgumentNullException.ThrowIfNull(outline);
 
-        return outline.Course is not null
-            && !outline.Entries.Any(entry => entry.Part?.Gradable == true
-                && entry.Part.Weight > 0
-                && !string.IsNullOrEmpty(entry.Item?.ContentItemId)
-                && progress?.Find(entry.Item.ContentItemId)?.CompletionOnly != true);
+        if (outline.Course is null)
+        {
+            return false;
+        }
+
+        // An item in a gradebook category whose weight is 0 or less weighs nothing in the grade, as ComputeBreakdown
+        // leaves such a category out; an item with no category, or an unknown one, weighs in with its own weight.
+        var categoryWeights = (outline.Course.Get<CoursePart>(nameof(CoursePart))?.GradeCategories ?? [])
+            .Where(category => !string.IsNullOrEmpty(category?.Id))
+            .GroupBy(category => category.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().Weight, StringComparer.Ordinal);
+
+        return !outline.Entries.Any(entry => entry.Part?.Gradable == true
+            && entry.Part.Weight > 0
+            && !string.IsNullOrEmpty(entry.Item?.ContentItemId)
+            && progress?.Find(entry.Item.ContentItemId)?.CompletionOnly != true
+            && (string.IsNullOrEmpty(entry.Part.GradeCategoryId) || !categoryWeights.TryGetValue(entry.Part.GradeCategoryId, out var categoryWeight) || categoryWeight > 0));
     }
 
     /// <summary>

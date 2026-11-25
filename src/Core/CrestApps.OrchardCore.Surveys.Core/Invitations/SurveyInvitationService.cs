@@ -51,10 +51,11 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private readonly ILogger _logger;
 
     // The e-mails of this scope the mail server failed, whose attempts are counted when the scope's e-mail work ends. A
-    // failure is confirmed as its address's when an e-mail of the scope went out after it (R9-M2): the mail server was
-    // taking e-mails then, so it uses up an attempt. The failures after the last e-mail that went out (an outage or a
-    // throttle that started partway through, or addresses tried last) can't be told from an outage, so each uses one up
-    // by the lone-failure rule (R8-M2).
+    // failure is confirmed as its address's when an e-mail of the scope went out after it: the mail server was taking
+    // e-mails then, so it uses up an attempt. A failure no e-mail went out after also counts when an earlier e-mail of
+    // the scope went out and the send didn't stop as in an outage (one address tried last, refused). Only the failures
+    // in a row that stopped the send (an outage or a throttle that started partway through), or the failures of a scope
+    // that sent nothing, can't be told from an outage: each uses up an attempt by the lone-failure rule (R8-M2, R9-M2).
     private readonly List<(string ItemId, bool IsReminder, bool Confirmed)> _unconfirmedFailures = [];
 
     // How many e-mails in a row the mail server failed; at two the scope stops sending, as in an outage.
@@ -151,41 +152,35 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        try
+        // Another send holds the e-mail lock (R8-Mi11): the invitation is still created (and held), but an existing one is
+        // left as it is, since this copy may be older than that send's marks.
+        var busy = IsEmail(request) && await IsAnotherSendGoingOutAsync(cancellationToken);
+        var survey = await FindLiveSurveyAsync(request.SurveyId, cancellationToken);
+        var collector = survey is null ? null : await FindCollectorAsync(survey, request.CollectorId, cancellationToken);
+
+        if (collector is null)
         {
-            // Another send holds the e-mail lock (R8-Mi11): the invitation is still created (and held), but an existing
-            // one is left as it is, since this copy may be older than that send's marks.
-            var busy = IsEmail(request) && await IsAnotherSendGoingOutAsync(cancellationToken);
-            var survey = await FindLiveSurveyAsync(request.SurveyId, cancellationToken);
-            var collector = survey is null ? null : await FindCollectorAsync(survey, request.CollectorId, cancellationToken);
-
-            if (collector is null)
-            {
-                return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
-            }
-
-            var result = await CreateCoreAsync(survey, collector, request, requireRecipient: true, mayChangeExisting: !busy, cancellationToken);
-
-            if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
-            {
-                result.Invitation = (await DeliverAsync(survey, collector, result.Invitation, result.Link, isReminder: false, cancellationToken)).Invitation;
-                await ResolveFailuresAsync(cancellationToken);
-            }
-
-            return result;
-        }
-        finally
-        {
-            // A single invite doesn't commit (that would commit its caller's unfinished work too), so once an e-mail of
-            // this scope went out it keeps the e-mail lock until the scope saves: let go earlier, another sender would
-            // count the day's e-mails without it. When none went out (not found, a user invitation, the e-mail held or
-            // refused) there is nothing to count, so the lock is let go of at once rather than held to the end of the
-            // scope (R9-Mi4); a later invite of the scope takes it again.
+            // Nothing was written and nothing e-mailed, so the e-mail lock this invite took is let go of at once rather
+            // than held to the end of the scope (R9-Mi4). Otherwise a single invite keeps it until its scope saves: it
+            // commits nothing itself (that would commit its caller's unfinished work too), and its writes, e-mailed or
+            // held, must reach the database before another sender reads or counts them.
             if (!_commitsAsItGoes && !_emailLimit.HasSent)
             {
                 await _emailLimit.ReleaseAsync();
             }
+
+            return new SurveyInvitationResult { Error = SurveyErrorCode.NotFound };
         }
+
+        var result = await CreateCoreAsync(survey, collector, request, requireRecipient: true, mayChangeExisting: !busy, cancellationToken);
+
+        if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
+        {
+            result.Invitation = (await DeliverAsync(survey, collector, result.Invitation, result.Link, isReminder: false, cancellationToken)).Invitation;
+            await ResolveFailuresAsync(cancellationToken);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -1352,11 +1347,12 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     }
 
     // Ends a send's e-mail work for its failures: a failure an e-mail of the send went out after was its address's and
-    // uses up an attempt (R8-M2); a failure no e-mail went out after (the trailing ones, such as the two in a row that
-    // stopped a send when an outage or a throttle started partway through) may be an outage, and uses one up at most once
-    // per SurveyInvitationHold.LoneFailureInterval (R9-M2). So several refused addresses in one list bounce after their
-    // attempts, however they sit in the list, and a throttle that hits a run partway through never bounces valid
-    // addresses: at most one attempt a day, as in an outage.
+    // uses up an attempt (R8-M2), and so does one tried last in a send that e-mailed others and didn't stop. The
+    // failures in a row that stopped a send (an outage or a throttle that started partway through), and those of a send
+    // that e-mailed nobody, may be an outage: each uses one up at most once per SurveyInvitationHold.LoneFailureInterval
+    // (R9-M2). So several refused addresses in one list bounce after their attempts, however they sit in the list, a
+    // single refused address on a busy list bounces after a few hourly runs, and a throttle that hits a run partway
+    // through never bounces valid addresses: at most one attempt a day, as in an outage.
     private async Task ResolveFailuresAsync(CancellationToken cancellationToken)
     {
         if (_unconfirmedFailures.Count == 0)
@@ -1369,9 +1365,13 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         _unconfirmedFailures.Clear();
 
+        // The failures no e-mail went out after are the ones in a row that stopped the send, when it stopped.
+        var stoppedAsInAnOutage = _emailLimit.MailServerFailed;
+        var sentAny = _emailLimit.HasSent;
+
         foreach (var (itemId, isReminder, confirmed) in failures)
         {
-            var lone = !confirmed;
+            var lone = !confirmed && (stoppedAsInAnOutage || !sentAny);
 
             // Loaded again (a copy this session may track is let go of first), so the count lands on the current copy.
             var current = await _invitationStore.ReloadAsync(itemId, cancellationToken);

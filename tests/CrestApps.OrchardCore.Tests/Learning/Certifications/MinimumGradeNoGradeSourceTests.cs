@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Core.Requirements;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Certifications;
 
@@ -83,6 +84,29 @@ public sealed class MinimumGradeNoGradeSourceTests
 
         // Assert
         Assert.Equal(expected, met);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(40, false)]
+    public void AGradableItemInACategoryWeighingNothing_GivesNoGrade_AsTheCalculatorLeavesItOut(decimal categoryWeight, bool expected)
+    {
+        // Arrange: a course whose only gradable item sits in a gradebook category (a recipe can set its weight to 0).
+        var course = new ContentItem { ContentItemId = "course1" };
+        course.Alter<CoursePart>(nameof(CoursePart), part => part.GradeCategories = [new GradeCategory { Id = "quizzes", Name = "Quizzes", Weight = categoryWeight }]);
+        var quiz = new ContentItem { ContentItemId = "quiz1" };
+        var outline = new CourseOutline
+        {
+            Course = course,
+            Entries = [new CourseOutlineEntry { Item = quiz, Part = new CourseItemPart { Gradable = true, Weight = 1, GradeCategoryId = "quizzes" } }],
+        };
+
+        // Act
+        var noGradeSource = CourseGradeCalculator.HasNoGradeSource(outline, progress: null);
+
+        // Assert: it agrees with the calculator, whose grade is null when the only category weighs nothing.
+        Assert.Equal(expected, noGradeSource);
+        Assert.Equal(expected, CourseGradeCalculator.Compute(outline, progress: null) is null);
     }
 
     [Fact]
