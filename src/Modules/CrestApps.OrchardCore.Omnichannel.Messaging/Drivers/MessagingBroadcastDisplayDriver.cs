@@ -7,6 +7,7 @@ using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Drivers;
 
@@ -16,18 +17,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Drivers;
 internal sealed class MessagingBroadcastDisplayDriver : DisplayDriver<MessagingBroadcast>
 {
     private readonly IMessagingChannelResolver _channelResolver;
+    private readonly IDocumentManager<MessagingBroadcastQueueOutcomes> _queueOutcomes;
 
     internal readonly IStringLocalizer S;
 
     public MessagingBroadcastDisplayDriver(
         IMessagingChannelResolver channelResolver,
+        IDocumentManager<MessagingBroadcastQueueOutcomes> queueOutcomes,
         IStringLocalizer<MessagingBroadcastDisplayDriver> stringLocalizer)
     {
         _channelResolver = channelResolver;
+        _queueOutcomes = queueOutcomes;
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Display(MessagingBroadcast broadcast, BuildDisplayContext context)
+    public override async Task<IDisplayResult> DisplayAsync(MessagingBroadcast broadcast, BuildDisplayContext context)
     {
         // A broadcast is only displayed as a row of the admin list of broadcasts.
         if (context.DisplayType is not (OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid))
@@ -35,15 +39,27 @@ internal sealed class MessagingBroadcastDisplayDriver : DisplayDriver<MessagingB
             return null;
         }
 
+        // The run's counts with what the outbox did with the messages the channel held back, which the outbox keeps in a
+        // document of its own. The document is read once for the whole list.
+        var outcome = (await _queueOutcomes.GetOrCreateImmutableAsync()).Find(broadcast.ItemId);
+        var status = broadcast.GetDisplayStatus(outcome);
+
         // The row's classes and attributes are rendered on its row element, in both admin list layouts. The list is
         // searched client side, on the name, channel, sending address and status of each broadcast, the status as the
         // row shows it.
         if (context.Shape is Shape rowShape)
         {
-            var status = broadcast.GetDisplayStatus();
-
             rowShape.Classes.Add("item");
             rowShape.Attributes["data-filter-value"] = $"{broadcast.Name} {broadcast.Channel} {broadcast.ServiceAddress} {status} {GetStatusText(status)}".ToLowerInvariant();
+        }
+
+        void Progress(BroadcastProgressViewModel model)
+        {
+            model.Broadcast = broadcast;
+            model.Status = status;
+            model.SentCount = broadcast.GetSentCount(outcome);
+            model.QueuedCount = broadcast.GetQueuedCount(outcome);
+            model.FailedCount = broadcast.GetFailedCount(outcome);
         }
 
         return Combine(
@@ -65,10 +81,10 @@ internal sealed class MessagingBroadcastDisplayDriver : DisplayDriver<MessagingB
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:2")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "From:1")
                 .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(broadcast.ServiceAddress))),
-            View("MessagingBroadcast_Status_SummaryAdmin", broadcast)
+            Initialize<BroadcastProgressViewModel>("MessagingBroadcast_Status_SummaryAdmin", Progress)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:3")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:1"),
-            View("MessagingBroadcast_Progress_SummaryAdmin", broadcast)
+            Initialize<BroadcastProgressViewModel>("MessagingBroadcast_Progress_SummaryAdmin", Progress)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:1")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Progress:1"),
             View("MessagingBroadcast_DefaultMeta_SummaryAdmin", broadcast)

@@ -71,11 +71,17 @@ public interface IAutomatedMessagingChannel
     bool IsOptOutRequest(OmnichannelMessage message, SubjectFlowSettings flowSettings);
 
     /// <summary>
-    /// Records on a contact that they opted out of the channel.
+    /// Records that the contact opted out of the channel at the address they wrote from: on the address itself, so no
+    /// send on the channel reaches it whoever it is sent to, on every record that holds it, and on the activity's own
+    /// contact. The records the opt-out reaches through the address are saved by it; the caller saves
+    /// <paramref name="contact"/> when this returns <see langword="true"/>.
     /// </summary>
-    /// <param name="contact">The contact.</param>
+    /// <param name="contact">The activity's contact, or <see langword="null"/> when it has none.</param>
+    /// <param name="address">The contact's address the opt-out came from.</param>
     /// <param name="utcNow">The current time.</param>
-    void ApplyOptOut(ContentItem contact, DateTime utcNow);
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when <paramref name="contact"/> was changed here and is still to be saved.</returns>
+    Task<bool> ApplyOptOutAsync(ContentItem contact, string address, DateTime utcNow, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the subject flow's own default reply delay for the channel, used when the activity was given none.

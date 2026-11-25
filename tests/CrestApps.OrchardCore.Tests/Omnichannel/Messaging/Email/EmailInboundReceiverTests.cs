@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
+using CrestApps.OrchardCore.Tests.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -276,6 +277,109 @@ public sealed class EmailInboundReceiverTests
         events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task ReceiveAsync_ADeliveryReportAboutAnEmailSentWithoutAMessageIdOfOurs_IsApplied()
+    {
+        // Arrange: Orchard Core's email service cannot set the Message-ID, so its emails are logged without one, and no
+        // workspace message carries the id the receiving server reports.
+        var events = new Mock<IEmailDeliveryEventProcessor>();
+        var log = new InMemoryEmailDeliveryLog();
+        log.AddSent("address-support", new DateTime(2026, 10, 8, 9, 0, 0, DateTimeKind.Utc), recipient: "ann@example.com", messageId: null);
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: events.Object, deliveryLog: log);
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<MKX1@mailkit.local>", Recipient = "Ann@Example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert: the bounce suppresses the dead address instead of being dropped as a forgery.
+        events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ReportsTiedToOneSendByTheRecipient_CountAsOneEventWhateverTheirMessageIds()
+    {
+        // Arrange: one email to Ann was logged without a Message-ID, and a forger sends the same report twice with
+        // different made-up Message-IDs, hoping each counts as another bounce.
+        var events = new List<EmailDeliveryEvent>();
+        var log = new InMemoryEmailDeliveryLog();
+        log.AddSent("address-support", new DateTime(2026, 10, 8, 9, 0, 0, DateTimeKind.Utc), recipient: "ann@example.com", messageId: null);
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: RecordingProcessor(events), deliveryLog: log);
+
+        var first = Email();
+        first.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<made-up-1@evil.example>", Recipient = "ann@example.com", Action = "failed", Status = "5.1.1" };
+        var second = Email();
+        second.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<made-up-2@evil.example>", Recipient = "ann@example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(first, "imap", dispatch: true, TestContext.Current.CancellationToken);
+        await receiver.ReceiveAsync(second, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert: both name the same logged send, so the delivery event processor recognises the second as a repeat.
+        Assert.Equal(2, events.Count);
+        Assert.Equal(events[0].EventId, events[1].EventId);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ADeliveryReportAboutAnAIEmailOnlyTheLogHolds_IsApplied()
+    {
+        // Arrange: the AI's emails go straight to the channel and are logged with their Message-ID, but are not
+        // workspace messages.
+        var events = new Mock<IEmailDeliveryEventProcessor>();
+        var log = new InMemoryEmailDeliveryLog();
+        log.AddSent("address-support", new DateTime(2026, 9, 1, 9, 0, 0, DateTimeKind.Utc), recipient: "ann@example.com", messageId: "ai-1@contoso.com");
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: events.Object, deliveryLog: log);
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<ai-1@contoso.com>", Recipient = "ann@example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ADeliveryReportNamingALoggedEmailButAnotherRecipient_IsIgnored()
+    {
+        // Arrange: the id is one of ours, but that email went to Ann, and an email without an id went to the victim.
+        var events = new Mock<IEmailDeliveryEventProcessor>();
+        var log = new InMemoryEmailDeliveryLog();
+        log.AddSent("address-support", new DateTime(2026, 10, 8, 9, 0, 0, DateTimeKind.Utc), recipient: "ann@example.com", messageId: "ai-1@contoso.com");
+        log.AddSent("address-support", new DateTime(2026, 10, 8, 9, 0, 0, DateTimeKind.Utc), recipient: "victim@example.com", messageId: null);
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: events.Object, deliveryLog: log);
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<ai-1@contoso.com>", Recipient = "victim@example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ADeliveryReportAboutAnOldEmailWithoutAMessageId_IsIgnored()
+    {
+        // Arrange: the only email to the recipient is weeks older than any real bounce of it could be.
+        var events = new Mock<IEmailDeliveryEventProcessor>();
+        var log = new InMemoryEmailDeliveryLog();
+        log.AddSent("address-support", new DateTime(2026, 9, 1, 9, 0, 0, DateTimeKind.Utc), recipient: "ann@example.com", messageId: null);
+        var receiver = CreateReceiver(new RecordingInbox(), deliveryEvents: events.Object, deliveryLog: log);
+
+        var email = Email();
+        email.DeliveryReport = new InboundEmailDeliveryReport { OriginalMessageId = "<MKX1@mailkit.local>", Recipient = "ann@example.com", Action = "failed", Status = "5.1.1" };
+
+        // Act
+        await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        events.Verify(processor => processor.ProcessAsync(It.IsAny<IEnumerable<EmailDeliveryEvent>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Theory]
     [InlineData("failed", "5.1.1", EmailDeliveryEventKind.HardBounce)]
     [InlineData("failed", "4.2.2", EmailDeliveryEventKind.SoftBounce)]
@@ -480,7 +584,8 @@ public sealed class EmailInboundReceiverTests
         IReadOnlyCollection<string> ownAddresses = null,
         IMessagingAttachmentStore attachmentStore = null,
         IEmailDeliveryEventProcessor deliveryEvents = null,
-        IEmailSentMessageFinder sentMessages = null)
+        IEmailSentMessageFinder sentMessages = null,
+        IEmailDeliveryLog deliveryLog = null)
     {
         var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
         endpointManager
@@ -502,6 +607,7 @@ public sealed class EmailInboundReceiverTests
             [],
             deliveryEvents ?? Mock.Of<IEmailDeliveryEventProcessor>(),
             sentMessages ?? Mock.Of<IEmailSentMessageFinder>(),
+            deliveryLog ?? new InMemoryEmailDeliveryLog(),
             clock.Object,
             NullLogger<EmailInboundReceiver>.Instance);
     }

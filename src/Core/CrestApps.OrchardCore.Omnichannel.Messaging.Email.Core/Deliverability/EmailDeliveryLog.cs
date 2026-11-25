@@ -83,6 +83,23 @@ public interface IEmailDeliveryLog
     Task<string> FindSendingAddressIdAsync(string messageId, string recipient, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the email sent to <paramref name="recipient"/> that a delivery report may be about: the email logged under
+    /// <paramref name="messageId"/>, when one was; otherwise the newest email to the recipient since
+    /// <paramref name="sinceUtc"/> that was logged without a message identifier, as a transport that cannot set one
+    /// (Orchard Core's email service) logs every email.
+    /// </summary>
+    /// <param name="messageId">The message identifier the report names, without angle brackets, or <see langword="null"/>.</param>
+    /// <param name="recipient">The recipient the report names, normalized.</param>
+    /// <param name="sinceUtc">The oldest send a report without a known message identifier may be about.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// A key that names that one logged send, so the reports about it count once however their own identifiers differ;
+    /// <see langword="null"/> when no such email was sent. An email logged under <paramref name="messageId"/> to another
+    /// recipient gives <see langword="null"/>, because the report then names a recipient the email never went to.
+    /// </returns>
+    Task<string> FindSentEntryKeyAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Deletes entries older than a time, oldest first, at most <paramref name="maxEntries"/> of them (and never more than
     /// 500 at once). The deletes run in the caller's unit of work, which commits them.
     /// </summary>
@@ -215,6 +232,49 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
 
         return byRecipient?.AddressId;
     }
+
+    public async Task<string> FindSentEntryKeyAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(recipient))
+        {
+            return null;
+        }
+
+        var key = EmailDeliveryLogIndexProvider.Truncate(recipient, EmailDeliveryLogIndex.RecipientLength);
+
+        if (!string.IsNullOrEmpty(messageId))
+        {
+            var id = EmailDeliveryLogIndexProvider.Truncate(messageId, EmailDeliveryLogIndex.MessageIdLength);
+
+            var byMessage = (await _session.QueryIndex<EmailDeliveryLogIndex>(index => index.MessageId == id && index.Kind == _sent, collection: Collection)
+                .ListAsync(cancellationToken)).ToArray();
+
+            // An email logged under the id is the one the report is about; the report counts only if it names the
+            // recipient that email went to.
+            if (byMessage.Length > 0)
+            {
+                return ToEntryKey(byMessage.FirstOrDefault(row => string.Equals(row.Recipient, key, StringComparison.Ordinal)));
+            }
+        }
+
+        // A transport that cannot set the Message-ID logs its emails without one, so a report about such an email can only
+        // be tied to it by the recipient and a recent send. The newest such send is the one, so reports that name made-up
+        // identifiers all land on it and count once.
+        var byRecipient = await _session.QueryIndex<EmailDeliveryLogIndex>(
+                index => index.Recipient == key &&
+                    index.Kind == _sent &&
+                    index.OccurredUtc >= sinceUtc &&
+                    (index.MessageId == null || index.MessageId == string.Empty),
+                collection: Collection)
+            .OrderByDescending(index => index.OccurredUtc)
+            .Take(1)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return ToEntryKey(byRecipient);
+    }
+
+    private static string ToEntryKey(EmailDeliveryLogIndex row)
+        => row is null ? null : "sent:" + row.Id.ToString(CultureInfo.InvariantCulture);
 
     public async Task<int> PruneAsync(DateTime beforeUtc, int maxEntries, CancellationToken cancellationToken = default)
     {

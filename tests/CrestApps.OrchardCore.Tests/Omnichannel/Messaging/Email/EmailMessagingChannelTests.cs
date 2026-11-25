@@ -44,7 +44,7 @@ public sealed class EmailMessagingChannelTests
     {
         // The channel spells its name out (see EmailChannelConstants.ChannelName); this keeps it the shared value.
         Assert.Equal(OmnichannelConstants.Channels.Email, EmailChannelConstants.ChannelName);
-        Assert.Equal(OmnichannelConstants.Channels.Email, new global::CrestApps.OrchardCore.Omnichannel.Email.Services.EmailAutomatedMessagingChannel().Channel);
+        Assert.Equal(OmnichannelConstants.Channels.Email, new global::CrestApps.OrchardCore.Omnichannel.Email.Services.EmailAutomatedMessagingChannel(Mock.Of<IEmailOptOutService>()).Channel);
     }
 
     [Fact]

@@ -1,10 +1,9 @@
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Models
-@model ShapeViewModel<MessagingBroadcast>
+@model BroadcastProgressViewModel
 
 @{
     // A broadcast whose recipients were all processed is still sending while some of its messages wait in the outbox.
-    var status = Model.Value.GetDisplayStatus();
-    var label = status switch
+    var label = Model.Status switch
     {
         MessagingBroadcastStatus.Draft => T["Draft"],
         MessagingBroadcastStatus.Queued => T["Queued"],

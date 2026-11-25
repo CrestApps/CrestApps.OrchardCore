@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
 using YesSql;
@@ -22,7 +23,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// The default <see cref="IMessagingOutbox"/>. It re-attempts queued outbound messages whose retry time has
 /// arrived, respecting a per-endpoint send budget so a backlog of retries cannot burst past what a carrier
 /// permits one number to send, and marks a message failed only once its backoff schedule is exhausted. A broadcast's
-/// message that is sent, or fails for good, here is counted on the broadcast, which showed it as queued until then.
+/// message that is sent, or fails for good, here is counted in <see cref="MessagingBroadcastQueueOutcomes"/>, which only
+/// the outbox writes, so the broadcast stops showing it as queued.
 /// </summary>
 public sealed class MessagingOutbox : IMessagingOutbox
 {
@@ -30,7 +32,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
     private readonly IMessagingRealTimeNotifier _notifier;
     private readonly IMessagingConversationStore _conversationStore;
     private readonly IMessagingAttachmentUrlProvider _attachmentUrlProvider;
-    private readonly IMessagingBroadcastStore _broadcastStore;
+    private readonly IDocumentManager<MessagingBroadcastQueueOutcomes> _queueOutcomes;
     private readonly MessagingWorkspaceOptions _options;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -43,7 +45,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
     /// <param name="notifier">The real-time notifier that moves the bubble's state in the open thread.</param>
     /// <param name="conversationStore">The conversation store used to address the notification.</param>
     /// <param name="attachmentUrlProvider">The provider of the links a picture message is re-sent with.</param>
-    /// <param name="broadcastStore">The store of the broadcasts whose queued messages are counted when they leave.</param>
+    /// <param name="queueOutcomes">The record of what became of broadcasts' queued messages, which only the outbox writes.</param>
     /// <param name="options">The workspace options carrying the batch size and per-endpoint budget.</param>
     /// <param name="session">The session the messages are read from and saved to.</param>
     /// <param name="clock">The clock.</param>
@@ -53,7 +55,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         IMessagingRealTimeNotifier notifier,
         IMessagingConversationStore conversationStore,
         IMessagingAttachmentUrlProvider attachmentUrlProvider,
-        IMessagingBroadcastStore broadcastStore,
+        IDocumentManager<MessagingBroadcastQueueOutcomes> queueOutcomes,
         IOptions<MessagingWorkspaceOptions> options,
         ISession session,
         IClock clock,
@@ -63,7 +65,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         _notifier = notifier;
         _conversationStore = conversationStore;
         _attachmentUrlProvider = attachmentUrlProvider;
-        _broadcastStore = broadcastStore;
+        _queueOutcomes = queueOutcomes;
         _options = options.Value;
         _session = session;
         _clock = clock;
@@ -240,24 +242,26 @@ public sealed class MessagingOutbox : IMessagingOutbox
             : (outcome.Sent, outcome.Failed + 1);
     }
 
-    // Applied once, after the sends, and each broadcast is read just before it is saved, so another writer (a batch of
-    // the broadcast's own run) has as small a window as possible to save it in between.
+    // Applied once, after the sends, to the outcomes document and never to the broadcast: the broadcast's run saves the
+    // broadcast at the same time, and either would overwrite the count the other just saved. Only the outbox, which runs
+    // one pass at a time, writes this document.
     private async Task ApplyBroadcastOutcomesAsync(Dictionary<string, (int Sent, int Failed)> outcomes, CancellationToken cancellationToken)
     {
+        if (outcomes.Count == 0)
+        {
+            return;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var document = await _queueOutcomes.GetOrCreateMutableAsync();
+
         foreach (var (broadcastId, outcome) in outcomes)
         {
-            var broadcast = await _broadcastStore.FindByIdAsync(broadcastId, cancellationToken);
-
-            if (broadcast is null)
-            {
-                continue;
-            }
-
-            broadcast.RecordQueuedOutcome(outcome.Sent, outcome.Failed);
-            broadcast.ModifiedUtc = _clock.UtcNow;
-
-            await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
+            document.RecordQueuedOutcome(broadcastId, outcome.Sent, outcome.Failed);
         }
+
+        await _queueOutcomes.UpdateAsync(document);
     }
 
     private async Task<IList<string>> BuildMediaUrlsAsync(IMessagingChannel channel, OmnichannelMessage message, CancellationToken cancellationToken)

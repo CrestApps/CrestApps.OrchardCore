@@ -21,8 +21,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 /// hands it to the inbound receiver, then marks it read (and moves it, when the address says so). The position is kept per
 /// address with the folder's <c>UIDVALIDITY</c>, so a renumbered folder starts again from the newest mail rather than
 /// receiving everything twice, and a redelivered email is absorbed by the inbox's <c>Message-ID</c> check. An email that
-/// is too large, or that cannot be read or received, is passed over and left unread in the mailbox, so one bad email
-/// never holds up the rest.
+/// is too large, or that cannot be read, is passed over and left unread in the mailbox, so one bad email never holds up
+/// the rest. One the receiver fails on is tried again by the next few reads, so a passing fault loses no email.
 /// </summary>
 public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 {
@@ -30,6 +30,17 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
     /// The most emails one read takes, so a backlog is worked through over several passes rather than in one long one.
     /// </summary>
     public const int MaxMessagesPerRead = 50;
+
+    /// <summary>
+    /// How many reads try an email the inbound receiver fails on before it is passed over. A failure that passes (the
+    /// database or the file store briefly out of reach) is retried rather than losing the email; one that keeps coming
+    /// back is the email's own. The read moves past a failing email meanwhile, so it never holds up the mail after it.
+    /// </summary>
+    public const int MaxReceiveAttempts = 5;
+
+    // The most failing emails remembered for another try. More than this failing at once is a fault of the site, which
+    // fails the read itself long before; any beyond it are passed over.
+    private const int MaxRetryUids = 200;
 
     private readonly IEmailInboundReceiver _receiver;
     private readonly ICatalog<EmailMailboxSyncState> _syncStates;
@@ -85,7 +96,10 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             state.Folder = folderName;
             state.UidValidity = 0;
             state.LastUid = 0;
+            state.RetryUids = [];
         }
+
+        state.RetryUids ??= [];
 
         var result = new EmailMailboxReadResult();
 
@@ -211,8 +225,9 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
     /// </summary>
     /// <remarks>
     /// An email above <see cref="EmailChannelConstants.MaxInboundEmailBytes"/> is never downloaded, and one that cannot
-    /// be read or received is passed over: both are left unread where they are, for a person to open in their mail
-    /// client, and the position moves past them so the mailbox does not try them again on every read. A failure of the
+    /// be read is passed over: both are left unread where they are, for a person to open in their mail client, and the
+    /// position moves past them so the mailbox does not try them again on every read. One the receiver fails on is
+    /// remembered and tried again by the next reads, up to <see cref="MaxReceiveAttempts"/> times. A failure of the
     /// connection itself ends the read instead, since it is no fault of the email and would fail every email after it;
     /// the next read starts again from the same email.
     /// </remarks>
@@ -265,6 +280,15 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
                 break;
             }
 
+            if (outcome == MessageOutcome.Failed)
+            {
+                RememberFailure(state, uid, address);
+            }
+            else
+            {
+                state.RetryUids.Remove(uid.Id);
+            }
+
             if (outcome == MessageOutcome.Received)
             {
                 await folder.AddFlagsAsync(uid, MessageFlags.Seen, silent: true, cancellationToken);
@@ -280,6 +304,34 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             // Only ever forward: the unread mail of a first read's look-back lies below the position it started at.
             state.LastUid = Math.Max(state.LastUid, uid.Id);
         }
+    }
+
+    // Keeps an email the receiver failed on for the next read to try again, until it has failed on every try it gets.
+    private void RememberFailure(EmailMailboxSyncState state, UniqueId uid, OmnichannelChannelEndpoint address)
+    {
+        var attempts = (state.RetryUids.TryGetValue(uid.Id, out var previous) ? previous : 0) + 1;
+
+        if (attempts < MaxReceiveAttempts && (state.RetryUids.ContainsKey(uid.Id) || state.RetryUids.Count < MaxRetryUids))
+        {
+            state.RetryUids[uid.Id] = attempts;
+
+            _logger.LogWarning(
+                "Message {Uid} in the mailbox of email address '{AddressId}' could not be received ({Attempts} of {MaxAttempts} tries); the next read tries it again.",
+                uid.Id,
+                address.ItemId.SanitizeLogValue(),
+                attempts,
+                MaxReceiveAttempts);
+
+            return;
+        }
+
+        state.RetryUids.Remove(uid.Id);
+
+        _logger.LogError(
+            "Message {Uid} in the mailbox of email address '{AddressId}' could not be received after {Attempts} tries and was passed over. It is left unread in the mailbox.",
+            uid.Id,
+            address.ItemId.SanitizeLogValue(),
+            attempts);
     }
 
     // The sizes the server reports, asked for the whole batch at once, so an email too large to receive is passed over
@@ -326,7 +378,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
     // The mail to receive, oldest first. The first read of a mailbox, or of a renumbered folder, receives only what
     // arrives from now on (plus, when asked, the unread mail of the last few days), so connecting a busy mailbox does
     // not flood the workspace with its history.
-    private async Task<IList<UniqueId>> FindNewMailAsync(IMailFolder folder, EmailMailboxSyncState state, EmailMailboxSettings mailbox, CancellationToken cancellationToken)
+    internal async Task<IList<UniqueId>> FindNewMailAsync(IMailFolder folder, EmailMailboxSyncState state, EmailMailboxSettings mailbox, CancellationToken cancellationToken)
     {
         if (state.UidValidity != folder.UidValidity || state.LastUid == 0)
         {
@@ -334,6 +386,9 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 
             state.UidValidity = folder.UidValidity;
             state.LastUid = folder.UidNext is { } next && next.Id > 0 ? next.Id - 1 : 0;
+
+            // The UIDs of a renumbered folder name other emails now.
+            state.RetryUids = [];
 
             if (isRenumbered || mailbox.InitialLookbackDays <= 0)
             {
@@ -351,10 +406,37 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 
         // A range ending in * always includes the newest message, even when its UID is below the start, so the result is
         // filtered to what is genuinely new.
-        return found
+        var newMail = found
             .Where(uid => uid.Id > state.LastUid)
             .OrderBy(uid => uid.Id)
             .ToList();
+
+        // The emails the receiver failed on come first, while they are still in the folder. One a person moved or
+        // deleted meanwhile is no longer there, and is forgotten.
+        var retryUids = await FindRetryMailAsync(folder, state, cancellationToken);
+
+        return [.. retryUids, .. newMail.Where(uid => !state.RetryUids.ContainsKey(uid.Id))];
+    }
+
+    private static async Task<IList<UniqueId>> FindRetryMailAsync(IMailFolder folder, EmailMailboxSyncState state, CancellationToken cancellationToken)
+    {
+        if (state.RetryUids.Count == 0)
+        {
+            return [];
+        }
+
+        var wanted = new UniqueIdSet(state.RetryUids.Keys.Order().Select(id => new UniqueId(state.UidValidity, id)), SortOrder.Ascending);
+        var present = (await folder.SearchAsync(SearchQuery.Uids(wanted), cancellationToken))
+            .Where(uid => state.RetryUids.ContainsKey(uid.Id))
+            .OrderBy(uid => uid.Id)
+            .ToList();
+
+        foreach (var gone in state.RetryUids.Keys.Except(present.Select(uid => uid.Id)).ToArray())
+        {
+            state.RetryUids.Remove(gone);
+        }
+
+        return present;
     }
 
     private async Task<MessageOutcome> ReceiveAsync(IMailFolder folder, UniqueId uid, OmnichannelChannelEndpoint address, EmailMailboxReadResult readResult, CancellationToken cancellationToken)
@@ -398,14 +480,15 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
         }
         catch (Exception ex) when (IsEmailFailure(ex))
         {
-            // Retrying an email the receiver fails on would stop every email behind it for good.
-            _logger.LogError(
+            // The failure may pass (the database or the file store briefly out of reach), so the email is tried again on
+            // the next reads rather than lost; the read moves on meanwhile, so it holds up no email behind it.
+            _logger.LogWarning(
                 ex,
-                "Message {Uid} in the mailbox of email address '{AddressId}' could not be received and was passed over. It is left unread in the mailbox.",
+                "The inbound receiver failed on message {Uid} in the mailbox of email address '{AddressId}'.",
                 uid.Id,
                 address.ItemId.SanitizeLogValue());
 
-            return MessageOutcome.PassedOver;
+            return MessageOutcome.Failed;
         }
 
         if (!string.IsNullOrEmpty(result.InboxMessageId))
@@ -424,8 +507,11 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
         // Handed to the receiver; it is marked read (and moved) and counted.
         Received,
 
-        // Too large, unreadable or refused by the receiver; it is left as it is and the read moves past it.
+        // Too large or unreadable; it is left as it is and the read moves past it.
         PassedOver,
+
+        // The receiver failed on it; the read moves past it, and the next read tries it again (up to its limit).
+        Failed,
 
         // The receiver could not take it right now; the read stops here and the next one starts again from it.
         Busy,

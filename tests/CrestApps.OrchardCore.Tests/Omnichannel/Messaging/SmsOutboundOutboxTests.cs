@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using Moq;
+using OrchardCore.Documents;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -88,7 +89,7 @@ public sealed class SmsOutboundOutboxTests
             Mock.Of<IMessagingRealTimeNotifier>(),
             Mock.Of<IMessagingConversationStore>(),
             new FakeAttachmentUrlProvider(),
-            Mock.Of<IMessagingBroadcastStore>(),
+            Mock.Of<IDocumentManager<MessagingBroadcastQueueOutcomes>>(),
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),
             Mock.Of<ISession>(),
             Mock.Of<IClock>(),

@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -161,7 +162,7 @@ public sealed class AutomatedConversationSafeguardsTests
     public void LockExpiration_OutlastsTheLongestEmailSettleAndTypingPause()
     {
         // Arrange
-        var channel = new EmailAutomatedMessagingChannel();
+        var channel = new EmailAutomatedMessagingChannel(Mock.Of<IEmailOptOutService>());
 
         // Act
         var longestSettle = channel.GetReadingDelay(TimeSpan.FromHours(3), pendingCharacters: 100_000);
@@ -194,7 +195,7 @@ public sealed class AutomatedConversationSafeguardsTests
         var session = new Mock<ISession>();
 
         var starter = new AutomatedEntryPointConversationStarter(
-            [new EmailAutomatedMessagingChannel()],
+            [new EmailAutomatedMessagingChannel(Mock.Of<IEmailOptOutService>())],
             routingResolver.Object,
             Mock.Of<IMessagingConversationStore>(),
             Mock.Of<IMessagingContactResolver>(),

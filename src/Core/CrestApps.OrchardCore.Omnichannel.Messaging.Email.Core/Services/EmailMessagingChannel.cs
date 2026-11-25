@@ -26,6 +26,9 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     // has a row for each.
     private const int SearchRowsPerRecord = 4;
 
+    // The characters LIKE reads as wildcards on one database or another.
+    private static readonly char[] _likeWildcards = ['%', '_', '[', ']'];
+
     private static readonly MessagingChannelCapabilities _capabilities = new()
     {
         SupportsSubject = true,
@@ -171,12 +174,24 @@ public sealed class EmailMessagingChannel : IMessagingChannel
                 index => index.NormalizedEmailAddress == normalized && index.Published)
             .ListAsync(cancellationToken);
 
-        // Records saved before the per-address index existed get their rows from a background backfill. Until it reaches
-        // them, they are still found by their primary address, as before.
+        // Records saved before the per-address index existed get their rows from a background backfill, which also fills
+        // their canonical primary email. Until it reaches them, that column is empty too, so they are found by the primary
+        // email as it was saved: in the spelling given and in its canonical form, because PostgreSQL and SQLite compare
+        // text by case.
+        // Each lookup is a seek on an index of its own column; one query joining them with OR scanned the whole table.
         if (!matches.Any())
         {
             matches = await _session.QueryIndex<OmnichannelContactIndex>(
-                    index => index.Published && index.NormalizedPrimaryEmailAddress == normalized)
+                    index => index.NormalizedPrimaryEmailAddress == normalized && index.Published)
+                .ListAsync(cancellationToken);
+        }
+
+        if (!matches.Any())
+        {
+            var spellings = OmnichannelEmailAddress.WithCanonicalForms([address]);
+
+            matches = await _session.QueryIndex<OmnichannelContactIndex>(
+                    index => index.PrimaryEmailAddress.IsIn(spellings) && index.Published)
                 .ListAsync(cancellationToken);
         }
 
@@ -202,21 +217,42 @@ public sealed class EmailMessagingChannel : IMessagingChannel
             return [];
         }
 
+        // The search runs as LIKE '%term%', where '_' and '%' (both common in addresses) are wildcards and SQL Server
+        // also reads '['. The database is asked for the longest stretch of the term without them, and the rows it returns
+        // are then held to the whole term as typed.
+        var segment = GetLikeSafeSegment(normalized);
+
+        if (segment.Length < 3)
+        {
+            return [];
+        }
+
         var types = contactTypes.ToArray();
         var limit = Math.Max(1, take);
+        var filtered = segment.Length != normalized.Length;
 
         // The address index carries the version and the content type, so the search reads it alone, across every
-        // address of each record rather than only the first.
+        // address of each record rather than only the first. A search that is filtered afterwards reads more rows, so
+        // the rows the filter drops do not leave it short.
         var rows = await _session.QueryIndex<OmnichannelContactEmailAddressIndex>(
-                index => index.Latest && index.ContentType.IsIn(types) && index.NormalizedEmailAddress.Contains(normalized))
-            .Take(limit * SearchRowsPerRecord)
+                index => index.Latest && index.ContentType.IsIn(types) && index.NormalizedEmailAddress.Contains(segment))
+            .Take(limit * SearchRowsPerRecord * (filtered ? SearchRowsPerRecord : 1))
             .ListAsync(cancellationToken);
 
         return rows
+            .Where(row => !filtered || (row.NormalizedEmailAddress?.Contains(normalized, StringComparison.Ordinal) ?? false))
             .Select(row => row.ContentItemId)
             .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
             .Distinct(StringComparer.Ordinal)
             .Take(limit)
             .ToArray();
     }
+
+    // The longest part of a search term that holds none of the characters LIKE treats as wildcards.
+    internal static string GetLikeSafeSegment(string term)
+        => string.IsNullOrEmpty(term)
+            ? string.Empty
+            : term.Split(_likeWildcards, StringSplitOptions.RemoveEmptyEntries)
+                .OrderByDescending(part => part.Length)
+                .FirstOrDefault() ?? string.Empty;
 }

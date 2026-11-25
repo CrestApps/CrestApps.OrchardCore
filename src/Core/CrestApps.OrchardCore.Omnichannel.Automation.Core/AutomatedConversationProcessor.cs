@@ -37,7 +37,6 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IContactOptOutResolver _optOutResolver;
-    private readonly IEnumerable<IOmnichannelSendPacer> _pacers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -55,7 +54,6 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
     /// <param name="liquidTemplateManager">The Liquid template manager the opening message is rendered with.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="optOutResolver">The resolver of a contact's opt-outs.</param>
-    /// <param name="pacers">The pacers that hold outreach back while a sending address is at its limit or paused.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public AutomatedConversationProcessor(
@@ -70,7 +68,6 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IContactOptOutResolver optOutResolver,
-        IEnumerable<IOmnichannelSendPacer> pacers,
         IClock clock,
         ILogger<AutomatedConversationProcessor> logger)
     {
@@ -85,7 +82,6 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _optOutResolver = optOutResolver;
-        _pacers = pacers;
         _clock = clock;
         _logger = logger;
     }
@@ -125,15 +121,11 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
         var endpoint = await ResolveSendingAddressAsync(activity, flowSettings, cancellationToken)
             ?? throw new InvalidOperationException($"The activity '{activity.ItemId}' has no {_automatedChannel.Channel} address to send its opening message from. Pick one on the activity load or on the subject.");
 
-        // Asked before anything is composed or sent: an address at its sending limit, warming up or paused holds the
-        // activity back for its turn, and the caller reschedules it without counting an attempt.
-        var sendTime = await GetBulkSendTimeAsync(endpoint, cancellationToken);
-
-        if (sendTime is not null)
-        {
-            throw new OmnichannelActivityDeferredException(sendTime.Value, $"The {_automatedChannel.Channel} address '{endpoint.Value}' may not send more outreach until {sendTime.Value:u}.");
-        }
-
+        // Whether the address may send now is decided once, by the channel when the message is sent, which knows the
+        // recipient (and so the receiving domain's limit and the suppression list) as well as the address's limits. An
+        // address at its limit, warming up or paused holds the message back there, and the activity is rescheduled for
+        // the turn it was given, without counting an attempt. Asking here as well read the same state twice for every
+        // opening message.
         var chatSession = string.IsNullOrWhiteSpace(activity.AISessionId)
             ? null
             : await _chatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
@@ -232,28 +224,6 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
     }
 
     // The address the activity was loaded with, else the one its subject answers on, as long as it is used on the channel.
-    private async Task<DateTime?> GetBulkSendTimeAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
-    {
-        DateTime? latest = null;
-
-        foreach (var pacer in _pacers)
-        {
-            if (!string.Equals(pacer.Channel, _automatedChannel.Channel, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var sendTime = await pacer.GetBulkSendTimeAsync(endpoint, reserveTurn: true, cancellationToken);
-
-            if (sendTime is not null && (latest is null || sendTime > latest))
-            {
-                latest = sendTime;
-            }
-        }
-
-        return latest;
-    }
-
     private async Task<OmnichannelChannelEndpoint> ResolveSendingAddressAsync(OmnichannelActivity activity, SubjectFlowSettings flowSettings, CancellationToken cancellationToken)
     {
         foreach (var id in new[] { activity.ChannelEndpointId, flowSettings.ChannelEndpointId })

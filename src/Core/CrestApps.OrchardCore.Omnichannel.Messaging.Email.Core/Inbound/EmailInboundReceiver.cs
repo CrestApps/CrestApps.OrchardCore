@@ -38,12 +38,17 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
 
     private const int MaxAttachments = 10;
 
+    // How far back a bounce report that names no email the site logged an id for may reach. A sending server gives up
+    // on an email within five days, so a real report about one of ours always falls inside it.
+    private static readonly TimeSpan _bounceReportWindow = TimeSpan.FromDays(7);
+
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IMessagingAttachmentStore _attachmentStore;
     private readonly IEnumerable<IProviderWebhookInbox> _inboxes;
     private readonly IEnumerable<IProviderWebhookInboxHandler> _inboxHandlers;
     private readonly IEmailDeliveryEventProcessor _deliveryEvents;
     private readonly IEmailSentMessageFinder _sentMessages;
+    private readonly IEmailDeliveryLog _deliveryLog;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -55,6 +60,8 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
     /// <param name="inboxes">The durable provider inbox, when the feature that provides it is enabled.</param>
     /// <param name="inboxHandlers">The inbox handlers, used directly when there is no inbox.</param>
     /// <param name="deliveryEvents">The processor bounce reports are handed to, which suppresses the address and marks the email failed.</param>
+    /// <param name="sentMessages">Finds a workspace message a bounce report names.</param>
+    /// <param name="deliveryLog">The log of every email the site sent, which a bounce report must match.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public EmailInboundReceiver(
@@ -64,6 +71,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
         IEnumerable<IProviderWebhookInboxHandler> inboxHandlers,
         IEmailDeliveryEventProcessor deliveryEvents,
         IEmailSentMessageFinder sentMessages,
+        IEmailDeliveryLog deliveryLog,
         IClock clock,
         ILogger<EmailInboundReceiver> logger)
     {
@@ -73,6 +81,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
         _inboxHandlers = inboxHandlers;
         _deliveryEvents = deliveryEvents;
         _sentMessages = sentMessages;
+        _deliveryLog = deliveryLog;
         _clock = clock;
         _logger = logger;
     }
@@ -370,10 +379,9 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
 
         // Anybody can email a delivery report. One is believed only when it is about an email this site sent, to the
         // address the report names: otherwise a forged report could suppress any address or pause the sender.
-        var original = await _sentMessages.FindAsync(MimeInboundEmailParser.TrimMessageId(report.OriginalMessageId), cancellationToken);
+        var (isAboutEmailSent, sentEntryKey) = await FindReportedSendAsync(report, cancellationToken);
 
-        if (original is null ||
-            !string.Equals(OmnichannelEmailAddress.Normalize(original.CustomerAddress), OmnichannelEmailAddress.Normalize(report.Recipient), StringComparison.Ordinal))
+        if (!isAboutEmailSent)
         {
             _logger.LogWarning("A delivery report about an email this site did not send to that recipient was ignored.");
 
@@ -387,7 +395,13 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
                     Kind = kind.Value,
                     Recipient = report.Recipient,
                     MessageId = report.OriginalMessageId,
-                    EventId = $"{report.OriginalMessageId}:{report.Recipient}:{report.Action}",
+
+                    // A report tied to its email through the delivery log is counted once for that logged send. The
+                    // report's own Message-ID is the sender's to choose, so keying on it would let one forged report,
+                    // resent with new identifiers, count as many bounces.
+                    EventId = sentEntryKey is null
+                        ? $"{report.OriginalMessageId}:{report.Recipient}:{report.Action}"
+                        : $"{sentEntryKey}:{report.Action}",
                     Status = report.Status,
                     Reason = report.Diagnostic,
                     OccurredUtc = _clock.UtcNow,
@@ -397,6 +411,29 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             cancellationToken);
 
         _logger.LogWarning("An email the business sent bounced ({Status}).", (report.Status ?? report.Action).SanitizeLogValue());
+    }
+
+    // Whether a report is about an email this site sent to the recipient it names. A workspace message stored under the
+    // reported id settles it. Otherwise the delivery log does, which holds every email sent, those of the AI and of a
+    // transport that cannot set the Message-ID included: the email logged under the id, or a recent one to the recipient
+    // logged without an id. The key names the logged send it was matched to, when the log settled it.
+    private async Task<(bool IsAboutEmailSent, string SentEntryKey)> FindReportedSendAsync(InboundEmailDeliveryReport report, CancellationToken cancellationToken)
+    {
+        var messageId = MimeInboundEmailParser.TrimMessageId(report.OriginalMessageId);
+        var recipient = OmnichannelEmailAddress.Normalize(report.Recipient);
+
+        if (!string.IsNullOrEmpty(messageId) && await _sentMessages.FindAsync(messageId, cancellationToken) is { } original)
+        {
+            return (string.Equals(OmnichannelEmailAddress.Normalize(original.CustomerAddress), recipient, StringComparison.Ordinal), null);
+        }
+
+        var sentEntryKey = await _deliveryLog.FindSentEntryKeyAsync(
+            EmailSendingGovernor.TrimMessageId(messageId),
+            recipient,
+            _clock.UtcNow.Subtract(_bounceReportWindow),
+            cancellationToken);
+
+        return (sentEntryKey is not null, sentEntryKey);
     }
 
     // Only a failure or a delay is a problem with the delivery. A report that the email was delivered, relayed or

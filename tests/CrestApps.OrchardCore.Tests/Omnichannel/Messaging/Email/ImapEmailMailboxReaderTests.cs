@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using MailKit;
+using MailKit.Search;
 using Microsoft.Extensions.Logging.Abstractions;
 using MimeKit;
 using Moq;
@@ -56,19 +57,74 @@ public sealed class ImapEmailMailboxReaderTests
     }
 
     [Fact]
-    public async Task ReceiveBatchAsync_AnEmailTheReceiverFailsOn_IsPassedOverSoItCannotHoldUpTheMailbox()
+    public async Task ReceiveBatchAsync_AnEmailTheReceiverFailsOn_IsKeptForTheNextReadWithoutHoldingUpTheMailbox()
     {
-        // Arrange
+        // Arrange: the receiver fails on one email, as it does while the database is briefly out of reach.
         var harness = new Harness();
         harness.FailingMessageId = "m2@example.com";
 
         // Act
         await harness.ReceiveAsync(1, 2, 3);
 
-        // Assert: the read moves past it, so the next read does not try it again forever.
+        // Assert: the read moves on to the mail after it, and the email is kept for the next read to try again.
         Assert.Equal(new[] { "m1@example.com", "m2@example.com", "m3@example.com" }, harness.Received);
         Assert.Equal(2, harness.Result.Received);
         Assert.Equal(3u, harness.State.LastUid);
+        Assert.Equal(1, Assert.Contains(2u, harness.State.RetryUids));
+    }
+
+    [Fact]
+    public async Task ReceiveBatchAsync_AKeptEmailTheReceiverTakesLater_IsReceivedAndForgotten()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.State.LastUid = 3;
+        harness.State.RetryUids[2] = 1;
+
+        // Act
+        await harness.ReceiveAsync(2);
+
+        // Assert
+        Assert.Equal(new[] { "m2@example.com" }, harness.Received);
+        Assert.Equal(1, harness.Result.Received);
+        Assert.Empty(harness.State.RetryUids);
+        Assert.Equal(3u, harness.State.LastUid);
+    }
+
+    [Fact]
+    public async Task ReceiveBatchAsync_AnEmailThatFailsOnEveryTry_IsPassedOverAfterTheLast()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.FailingMessageId = "m2@example.com";
+        harness.State.LastUid = 3;
+        harness.State.RetryUids[2] = ImapEmailMailboxReader.MaxReceiveAttempts - 1;
+
+        // Act
+        await harness.ReceiveAsync(2);
+
+        // Assert: a failure that keeps coming back is the email's own, so it is not tried for ever.
+        Assert.Empty(harness.State.RetryUids);
+        Assert.Equal(0, harness.Result.Received);
+    }
+
+    [Fact]
+    public async Task FindNewMailAsync_TriesAKeptEmailBeforeTheNewMail()
+    {
+        // Arrange: UIDs 1 to 5 are in the folder, 3 was the last read, and the receiver failed on 2.
+        var harness = new Harness();
+        harness.State.LastUid = 3;
+        harness.State.RetryUids[2] = 1;
+        harness.State.RetryUids[9] = 1;
+        harness.FolderUids.AddRange([1u, 2u, 3u, 4u, 5u]);
+        harness.Folder.SetupGet(folder => folder.UidValidity).Returns(1u);
+
+        // Act
+        var uids = await harness.Reader.FindNewMailAsync(harness.Folder.Object, harness.State, new EmailMailboxSettings(), TestContext.Current.CancellationToken);
+
+        // Assert: 9 is gone from the folder (a person moved it), so it is forgotten.
+        Assert.Equal(new[] { 2u, 4u, 5u }, uids.Select(uid => uid.Id));
+        Assert.Equal(new[] { 2u }, harness.State.RetryUids.Keys);
     }
 
     [Fact]
@@ -115,6 +171,19 @@ public sealed class ImapEmailMailboxReaderTests
                 .Setup(folder => folder.GetMessageAsync(It.IsAny<MailKit.UniqueId>(), It.IsAny<CancellationToken>(), It.IsAny<ITransferProgress>()))
                 .ReturnsAsync((MailKit.UniqueId uid, CancellationToken _, ITransferProgress _) => Message(uid.Id));
 
+            // A UID search answers with the folder's UIDs it names: a range ending in * names every UID from its start.
+            Folder
+                .Setup(folder => folder.SearchAsync(It.IsAny<SearchQuery>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((SearchQuery query, CancellationToken _) =>
+                {
+                    var uids = ((UidSearchQuery)query).Uids;
+                    var found = uids is UniqueIdRange range
+                        ? FolderUids.Where(id => id >= range.Start.Id)
+                        : FolderUids.Where(id => uids.Any(uid => uid.Id == id));
+
+                    return found.Select(id => new MailKit.UniqueId(1, id)).ToList();
+                });
+
             var receiver = new Mock<IEmailInboundReceiver>();
             receiver
                 .Setup(value => value.ReceiveAsync(It.IsAny<InboundEmail>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
@@ -144,6 +213,8 @@ public sealed class ImapEmailMailboxReaderTests
         public Mock<IMailFolder> Folder { get; } = new();
 
         public Dictionary<uint, uint> Sizes { get; } = new();
+
+        public List<uint> FolderUids { get; } = [];
 
         public List<string> Received { get; } = [];
 

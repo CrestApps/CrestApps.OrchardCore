@@ -189,6 +189,48 @@ public sealed class EmailDispatcherDeliverabilityTests
     }
 
     [Fact]
+    public async Task SendAsync_AnAutoReplyWhileTheAddressIsBlocked_WaitsForThePause()
+    {
+        // Arrange: a provider blocked the address, and a spam run with forged senders keeps setting off the entry point's
+        // auto-reply.
+        var harness = new Harness();
+        var pausedUntil = harness.Clock.UtcNow.AddHours(4);
+        harness.States.States[Harness.AddressId] = new EmailSendingState
+        {
+            ItemId = "state-1",
+            AddressId = Harness.AddressId,
+            PauseKind = EmailSendingPauseKind.Blocked,
+            PausedUntilUtc = pausedUntil,
+            PausedUtc = harness.Clock.UtcNow,
+            PauseReason = "550 5.7.1",
+            ConsecutiveBlocks = 1,
+        };
+
+        // Act
+        var result = await harness.Dispatcher.SendAsync(Message("forged@example.net", MessagingOutboundPurpose.AutoReply), TestContext.Current.CancellationToken);
+
+        // Assert: nothing leaves the blocked address on its own.
+        Assert.True(result.IsDeferred);
+        Assert.Equal(pausedUntil, result.RetryAfterUtc);
+        Assert.Empty(harness.Transport.Sent);
+    }
+
+    [Fact]
+    public async Task SendAsync_AutoRepliesPastTheHourlyLimit_AreHeldBack()
+    {
+        // Arrange
+        var harness = new Harness(limits => limits.MaxPerHour = 1);
+        harness.Log.AddSent(Harness.AddressId, harness.Clock.UtcNow.AddMinutes(-10));
+
+        // Act
+        var result = await harness.Dispatcher.SendAsync(Message("forged@example.net", MessagingOutboundPurpose.AutoReply), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsDeferred);
+        Assert.Empty(harness.Transport.Sent);
+    }
+
+    [Fact]
     public async Task SendAsync_AnAutomatedReplyWhileTheAddressIsPaused_WaitsForThePause()
     {
         // Arrange

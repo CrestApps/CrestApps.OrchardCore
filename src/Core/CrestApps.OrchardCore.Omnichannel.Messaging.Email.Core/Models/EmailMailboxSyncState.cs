@@ -49,4 +49,11 @@ public sealed class EmailMailboxSyncState : CatalogItem
     /// Gets or sets how many attempts in a row have failed, which spaces out the next attempts.
     /// </summary>
     public int ConsecutiveFailures { get; set; }
+
+    /// <summary>
+    /// Gets or sets the emails the inbound receiver failed on, by UID, with how many reads have failed on each. Each read
+    /// tries them again before the new mail, so a failure that passes (the database or the file store briefly out of
+    /// reach) does not lose the email; one that keeps failing is passed over once it reaches its limit.
+    /// </summary>
+    public Dictionary<uint, int> RetryUids { get; set; } = [];
 }

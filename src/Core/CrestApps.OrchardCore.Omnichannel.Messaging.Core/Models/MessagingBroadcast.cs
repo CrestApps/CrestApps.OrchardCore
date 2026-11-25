@@ -60,7 +60,8 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
 
     /// <summary>
     /// Gets or sets the number of recipients the outreach run counted as sent, which includes the messages the channel
-    /// held back. <see cref="MessagingBroadcastExtensions.GetSentCount(MessagingBroadcast)"/> leaves those out.
+    /// held back. <see cref="MessagingBroadcastExtensions.GetSentCount(MessagingBroadcast, MessagingBroadcastQueueOutcome)"/>
+    /// leaves those out.
     /// </summary>
     public int SentCount { get; set; }
 
@@ -71,14 +72,12 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
 
     /// <summary>
     /// Gets or sets the number of messages the channel held back (the sending address was at its limit, or the provider
-    /// was briefly unreachable) that are still waiting in the outbox.
+    /// was briefly unreachable) for the outbox to send later. Only the broadcast's run writes it; what the outbox did
+    /// with them is in <see cref="MessagingBroadcastQueueOutcomes"/>, and
+    /// <see cref="MessagingBroadcastExtensions.GetQueuedCount(MessagingBroadcast, MessagingBroadcastQueueOutcome)"/>
+    /// gives how many still wait.
     /// </summary>
     public int QueuedCount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of held-back messages the outbox gave up on.
-    /// </summary>
-    public int QueuedFailedCount { get; set; }
 
     /// <summary>
     /// Gets or sets the number of recipients that were not sent to because they opted out of the channel.

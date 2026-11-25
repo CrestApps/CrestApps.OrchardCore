@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Email.Services;
@@ -20,6 +21,17 @@ internal sealed class EmailAutomatedMessagingChannel : IAutomatedMessagingChanne
     /// The shortest settle before an email is answered, so a customer who sends a correction a moment later gets one reply.
     /// </summary>
     internal static readonly TimeSpan MinimumSettle = TimeSpan.FromSeconds(15);
+
+    private readonly IEmailOptOutService _optOutService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailAutomatedMessagingChannel"/> class.
+    /// </summary>
+    /// <param name="optOutService">The service that records an opt-out on an address and every record holding it.</param>
+    public EmailAutomatedMessagingChannel(IEmailOptOutService optOutService)
+    {
+        _optOutService = optOutService;
+    }
 
     /// <summary>
     /// The longest settle, whatever the configured reply delay says, so a reply always comes within minutes. The
@@ -84,11 +96,25 @@ internal sealed class EmailAutomatedMessagingChannel : IAutomatedMessagingChanne
     }
 
     /// <inheritdoc/>
-    public void ApplyOptOut(ContentItem contact, DateTime utcNow)
+    public async Task<bool> ApplyOptOutAsync(ContentItem contact, string address, DateTime utcNow, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(contact);
+        // Through the service the unsubscribe link uses, which records the opt-out on the address and on every record
+        // holding it (saving each), so a reply asking to stop counts as surely as the link does.
+        if (OmnichannelEmailAddress.IsValid(address))
+        {
+            await _optOutService.OptOutAsync(address, cancellationToken);
+        }
 
-        contact.Alter<OmnichannelContactPart>(part => part.SetDoNotEmail(true, utcNow));
+        // The activity's own contact is marked even when it no longer holds the address the request came from. One the
+        // service already marked is left alone, so it is not saved a second time.
+        if (contact is null || (contact.TryGet<OmnichannelContactPart>(out var part) && part.DoNotEmail))
+        {
+            return false;
+        }
+
+        contact.Alter<OmnichannelContactPart>(contactPart => contactPart.SetDoNotEmail(true, utcNow));
+
+        return true;
     }
 
     /// <inheritdoc/>

@@ -737,10 +737,10 @@ public sealed partial class AutomatedConversationHandler : IOmnichannelEventHand
     {
         var contact = await GetContactAsync(_contentManager, activity);
 
-        if (contact is not null)
+        // Recorded on the address as well as the contact, so a send to it from another record, a broadcast or another
+        // campaign honors the request as surely as the unsubscribe link would.
+        if (await channel.ApplyOptOutAsync(contact, activity.PreferredDestination, _clock.UtcNow, cancellationToken))
         {
-            channel.ApplyOptOut(contact, _clock.UtcNow);
-
             await _contentManager.UpdateAsync(contact);
         }
 

@@ -594,6 +594,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.Admin.AdminListContext List { get; set; }
     }
+    public class BroadcastProgressViewModel
+    {
+        public BroadcastProgressViewModel() { }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast Broadcast { get; set; }
+        public int FailedCount { get; set; }
+        public int QueuedCount { get; set; }
+        public int SentCount { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingBroadcastStatus Status { get; set; }
+    }
     public class ChannelTabViewModel : CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.ChannelViewModel
     {
         public ChannelTabViewModel() { }

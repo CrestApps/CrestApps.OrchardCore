@@ -190,14 +190,18 @@ public sealed class MessagingBroadcastOutreachTests
 
         // Assert: the run accepted all three, but one waits in the outbox, so it is shown as queued and the broadcast as
         // still sending.
-        Assert.Equal((3, 1, 2, 0), (broadcast.SentCount, broadcast.QueuedCount, broadcast.GetSentCount(), broadcast.GetFailedCount()));
-        Assert.Equal(MessagingBroadcastStatus.Running, broadcast.GetDisplayStatus());
+        var outcomes = new MessagingBroadcastQueueOutcomes();
+        var outcome = outcomes.Find(broadcast.ItemId);
+
+        Assert.Equal((3, 1, 2, 0), (broadcast.SentCount, broadcast.GetQueuedCount(outcome), broadcast.GetSentCount(outcome), broadcast.GetFailedCount(outcome)));
+        Assert.Equal(MessagingBroadcastStatus.Running, broadcast.GetDisplayStatus(outcome));
 
         // Act: the outbox sends the held message.
-        broadcast.RecordQueuedOutcome(sent: 1, failed: 0);
+        outcomes.RecordQueuedOutcome(broadcast.ItemId, sent: 1, failed: 0);
+        outcome = outcomes.Find(broadcast.ItemId);
 
         // Assert
-        Assert.Equal((0, 3, MessagingBroadcastStatus.Completed), (broadcast.QueuedCount, broadcast.GetSentCount(), broadcast.GetDisplayStatus()));
+        Assert.Equal((0, 3, MessagingBroadcastStatus.Completed), (broadcast.GetQueuedCount(outcome), broadcast.GetSentCount(outcome), broadcast.GetDisplayStatus(outcome)));
     }
 
     [Fact]
@@ -206,19 +210,49 @@ public sealed class MessagingBroadcastOutreachTests
         // Arrange
         var broadcast = new MessagingBroadcast
         {
+            ItemId = "b1",
             Status = MessagingBroadcastStatus.Completed,
             SentCount = 3,
             FailedCount = 1,
             QueuedCount = 2,
         };
 
+        var outcomes = new MessagingBroadcastQueueOutcomes();
+
         // Act
-        broadcast.RecordQueuedOutcome(sent: 1, failed: 1);
+        outcomes.RecordQueuedOutcome("b1", sent: 1, failed: 1);
+        var outcome = outcomes.Find("b1");
 
         // Assert
         Assert.Equal(
-            (0, 1, 2, 2, MessagingBroadcastStatus.Completed),
-            (broadcast.QueuedCount, broadcast.QueuedFailedCount, broadcast.GetSentCount(), broadcast.GetFailedCount(), broadcast.GetDisplayStatus()));
+            (0, 2, 2, MessagingBroadcastStatus.Completed),
+            (broadcast.GetQueuedCount(outcome), broadcast.GetSentCount(outcome), broadcast.GetFailedCount(outcome), broadcast.GetDisplayStatus(outcome)));
+    }
+
+    [Fact]
+    public void TheRunSavingTheBroadcast_DoesNotUndoWhatTheOutboxRecorded()
+    {
+        // Arrange: the run read the broadcast (two messages held), then the outbox sent both held messages while the run was
+        // still working, and the run then saves the broadcast it read.
+        var readByTheRun = new MessagingBroadcast
+        {
+            ItemId = "b1",
+            Status = MessagingBroadcastStatus.Completed,
+            SentCount = 5,
+            QueuedCount = 2,
+        };
+
+        var outcomes = new MessagingBroadcastQueueOutcomes();
+        outcomes.RecordQueuedOutcome("b1", sent: 2, failed: 0);
+
+        // Act: whatever the run writes on the broadcast, the outbox's counts are on a document of their own.
+        readByTheRun.SentCount = 5;
+        var outcome = outcomes.Find("b1");
+
+        // Assert: nothing is left queued, so the broadcast is not shown sending for ever.
+        Assert.Equal(0, readByTheRun.GetQueuedCount(outcome));
+        Assert.Equal(MessagingBroadcastStatus.Completed, readByTheRun.GetDisplayStatus(outcome));
+        Assert.Equal(5, readByTheRun.GetSentCount(outcome));
     }
 
     [Fact]

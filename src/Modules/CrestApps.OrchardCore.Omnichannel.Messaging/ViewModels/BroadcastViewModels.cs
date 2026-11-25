@@ -69,3 +69,35 @@ public class BroadcastListViewModel
     [BindNever]
     public AdminListContext List { get; set; }
 }
+
+/// <summary>
+/// A broadcast's progress as a row of the admin list shows it: the run's counts with what the outbox did with the
+/// messages the channel held back.
+/// </summary>
+public class BroadcastProgressViewModel
+{
+    /// <summary>
+    /// Gets or sets the broadcast.
+    /// </summary>
+    public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast Broadcast { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status shown: a completed broadcast with messages still queued is still sending.
+    /// </summary>
+    public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingBroadcastStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many recipients the message was actually sent to.
+    /// </summary>
+    public int SentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many held-back messages still wait in the outbox.
+    /// </summary>
+    public int QueuedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many recipients the message could not be sent to.
+    /// </summary>
+    public int FailedCount { get; set; }
+}

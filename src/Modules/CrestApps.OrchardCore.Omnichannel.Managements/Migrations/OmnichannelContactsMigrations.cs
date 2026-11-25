@@ -26,8 +26,13 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
     private const int ReindexBatchSize = 100;
     private const string PrimaryAddressIndexName = "IDX_OCIndex_Email";
+    private const string SavedPrimaryAddressIndexName = "IDX_OCIndex_PrimaryEmail";
 
     private static readonly string[] _emailIndexColumns = ["NormalizedPrimaryEmailAddress", "Published", "Latest"];
+
+    // The primary email as it was saved, which an inbound email or an unsubscribe is matched on until the email address
+    // backfill has indexed the record's addresses.
+    private static readonly string[] _savedEmailIndexColumns = ["PrimaryEmailAddress", "Published", "Latest"];
 
     private static readonly (string Name, string[] Columns)[] _contactIndexIndexes =
     [
@@ -119,6 +124,9 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
             table.CreateIndex(PrimaryAddressIndexName, _emailIndexColumns));
 
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+            table.CreateIndex(SavedPrimaryAddressIndexName, _savedEmailIndexColumns));
+
         await CreateEmailAddressIndexTableAsync(SchemaBuilder);
 
         foreach (var (name, columns) in _emailAddressIndexIndexes)
@@ -129,7 +137,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         ScheduleContactDefinitionRepair();
 
-        return 16;
+        return 17;
     }
 
     /// <summary>
@@ -378,6 +386,17 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         await _steps.RequestAsync(ContactEmailAddressIndexStep.StepName);
 
         return 16;
+    }
+
+    /// <summary>
+    /// Indexes the primary email as it was saved. Until the email address backfill reaches a record, an inbound email
+    /// or an unsubscribe finds it by that column, and without an index each such lookup read the whole contact index.
+    /// </summary>
+    public async Task<int> UpdateFrom16Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelContactIndex>(SchemaBuilder, SavedPrimaryAddressIndexName, collection: null, _savedEmailIndexColumns);
+
+        return 17;
     }
 
     internal static Task CreateEmailAddressIndexTableAsync(ISchemaBuilder schemaBuilder)

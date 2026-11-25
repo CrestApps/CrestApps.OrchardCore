@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core.Services;
+﻿using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Modules.Omnichannel;
@@ -99,6 +100,70 @@ public sealed class EmailMessagingChannelContactMatchTests : IAsyncLifetime
         Assert.Equal([ann.ContentItemId], byDomain);
         Assert.Equal([ann.ContentItemId], bySecond);
         Assert.Empty(otherType);
+    }
+
+    [Fact]
+    public async Task FindContactIdsAsync_FindsARecordTheBackfillHasNotReachedByItsPrimaryEmailAsSaved()
+    {
+        // Arrange: records saved before the email address index existed have no address rows and no canonical primary
+        // email until the backfill saves them again.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var ann = CrmPersonalDataTestContacts.Create("Ann Lee", ["ann@example.com"], []);
+        var bob = CrmPersonalDataTestContacts.Create("Bob Ray", ["Bob.Ray@Example.com"], []);
+        await ContactPhoneTestStore.SaveAsync(_store, ann, bob);
+        await ForgetEmailIndexingAsync();
+
+        await using var session = _store.CreateSession();
+        var channel = CreateChannel(session);
+
+        // Act
+        var byCanonical = await channel.FindContactIdsAsync("\"Ann Lee\" <Ann@Example.com>", cancellationToken);
+        var bySavedSpelling = await channel.FindContactIdsAsync("Bob.Ray@Example.com", cancellationToken);
+
+        // Assert
+        Assert.Equal([ann.ContentItemId], byCanonical);
+        Assert.Equal([bob.ContentItemId], bySavedSpelling);
+    }
+
+    [Fact]
+    public async Task SearchContactIdsByAddressAsync_TakesUnderscoresLiterally()
+    {
+        // Arrange: in LIKE, '_' matches any one character, so "j_smith" would also find "jasmith".
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var underscore = CrmPersonalDataTestContacts.Create("John Smith", ["j_smith@contoso.com"], []);
+        var other = CrmPersonalDataTestContacts.Create("Jane Smith", ["jasmith@contoso.com"], []);
+        await ContactPhoneTestStore.SaveAsync(_store, underscore, other);
+
+        await using var session = _store.CreateSession();
+        var channel = CreateChannel(session);
+
+        // Act
+        var ids = await channel.SearchContactIdsByAddressAsync("j_smith", [ContactPhoneTestStore.ContactContentType], 10, cancellationToken);
+        var everything = await channel.SearchContactIdsByAddressAsync("%%%", [ContactPhoneTestStore.ContactContentType], 10, cancellationToken);
+
+        // Assert
+        Assert.Equal([underscore.ContentItemId], ids);
+        Assert.Empty(everything);
+    }
+
+    // Puts the store back in the state of a tenant whose records were saved before the email address index existed.
+    private async Task ForgetEmailIndexingAsync()
+    {
+        var configuration = _store.Configuration;
+        var dialect = configuration.SqlDialect;
+
+        string Table(Type type)
+            => dialect.QuoteForTableName(configuration.TablePrefix + configuration.TableNameConvention.GetIndexTable(type), configuration.Schema);
+
+        await using var connection = configuration.ConnectionFactory.CreateConnection();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            $"DELETE FROM {Table(typeof(OmnichannelContactEmailAddressIndex))}; " +
+            $"UPDATE {Table(typeof(OmnichannelContactIndex))} SET {dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.NormalizedPrimaryEmailAddress))} = NULL;";
+
+        await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
     }
 
     private static EmailMessagingChannel CreateChannel(global::YesSql.ISession session)

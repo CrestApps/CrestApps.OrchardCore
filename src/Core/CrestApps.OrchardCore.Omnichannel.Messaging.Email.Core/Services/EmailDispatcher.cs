@@ -101,12 +101,14 @@ public sealed class EmailDispatcher : IEmailDispatcher
         var senderName = string.IsNullOrWhiteSpace(settings.SenderName) ? endpoint.DisplayText : settings.SenderName.Trim();
         var isBulk = message.Purpose is MessagingOutboundPurpose.Broadcast or MessagingOutboundPurpose.Outreach;
 
-        // An automated reply (an AI agent or a workflow) stays a reply, threaded and without an unsubscribe link, but it
-        // runs at machine speed, so it waits for the address's pauses and its hourly and daily limits like bulk mail does.
-        // A person's own reply is never held back.
+        // An automated reply (an AI agent, a workflow or an entry point's auto-reply) stays a reply, threaded and without
+        // an unsubscribe link, but it runs at machine speed, so it waits for the address's pauses and its hourly and daily
+        // limits like bulk mail does. An auto-reply answers whoever writes in, forged senders included, so without the
+        // limits a spam run would send unlimited mail from an address a provider has already blocked. A person's own reply
+        // is never held back.
         var sendKind = isBulk
             ? EmailSendKind.Bulk
-            : message.Purpose == MessagingOutboundPurpose.Automation
+            : message.Purpose is MessagingOutboundPurpose.Automation or MessagingOutboundPurpose.AutoReply
                 ? EmailSendKind.Automated
                 : EmailSendKind.Reply;
 
