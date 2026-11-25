@@ -28,44 +28,6 @@
 </div>
 
 <div class="ocat-limited-wrapper">
-    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
-    <div class="ocat-limited">
-        <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
-            <option value="">@T["Any"]</option>
-        </select>
-        <span class="hint">@T["The currency the amounts are in. The method is offered only for orders in it. Leave it on Any when the store sells in one currency."]</span>
-    </div>
-</div>
-
-<div class="ocat-limited-wrapper">
-    <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category code"]</label>
-    <div class="ocat-limited">
-        <input asp-for="TaxCategoryCode" class="form-control" />
-        <span class="hint">@T["How the shipping charge is taxed, by tax category code. Leave it empty for the store's default."]</span>
-    </div>
-</div>
-
-@if (Model.Surcharges.Count > 0)
-{
-    <div class="ocat-wrapper">
-        <span class="ocat-label">@T["Surcharge per unit, by shipping class"]</span>
-        <div class="ocat-end">
-            <ul class="list-group">
-                @for (var i = 0; i < Model.Surcharges.Count; i++)
-                {
-                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
-                        <label for="@Html.IdFor(m => m.Surcharges[i].Amount)" class="mb-0">@Model.Surcharges[i].ShippingClass</label>
-                        <input type="hidden" asp-for="Surcharges[i].ShippingClass" />
-                        <input asp-for="Surcharges[i].Amount" type="number" min="0" step="any" class="form-control form-control-sm w-auto" />
-                    </li>
-                }
-            </ul>
-            <span class="hint">@T["Added to the rate for each unit of a product in the class, such as 15 for each bulky item."]</span>
-        </div>
-    </div>
-}
-
-<div class="ocat-limited-wrapper">
     <label asp-for="Position" class="ocat-label">@T["Position"]</label>
     <div class="ocat-limited">
         <input asp-for="Position" type="number" class="form-control" />

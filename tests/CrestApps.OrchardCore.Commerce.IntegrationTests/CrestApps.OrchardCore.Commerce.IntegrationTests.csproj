@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="OrchardCore.Application.Cms.Core.Targets" />
+    <PackageReference Include="TheOldAdmin" ExcludeAssets="all" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>

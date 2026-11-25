@@ -1,0 +1,13 @@
+@model TimeOffAllotmentEditViewModel
+
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="AutoApprove" class="form-check-input" /><label asp-for="AutoApprove" class="form-check-label">@T["Approve requests that fit with no manager"]</label><span class="hint dashed">@T["A request on days with a place left is approved as soon as it is made."]</span></div></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="WhenFull" class="ocat-label">@T["When it's full"]</label>
+    <div class="ocat-end">
+        <select asp-for="WhenFull" class="form-select" style="max-width: 24rem">
+            <option value="Waitlist">@T["Put the request on the waitlist"]</option>
+            <option value="Pending">@T["Send the request to a manager"]</option>
+        </select>
+        <span class="hint">@T["A waitlisted request is approved, in the order requests came in, when a place frees up."]</span>
+    </div>
+</div>

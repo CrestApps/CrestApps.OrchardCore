@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 
@@ -25,14 +26,24 @@ public sealed class ExternalLearningController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IEducationCreditService _credits;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ExternalLearningReviewViewModel> _reviewDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
-    public ExternalLearningController(IAuthorizationService authorizationService, IEducationCreditService credits, INotifier notifier, IHtmlLocalizer<ExternalLearningController> htmlLocalizer)
+    public ExternalLearningController(
+        IAuthorizationService authorizationService,
+        IEducationCreditService credits,
+        INotifier notifier,
+        IDisplayManager<ExternalLearningReviewViewModel> reviewDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IHtmlLocalizer<ExternalLearningController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _credits = credits;
         _notifier = notifier;
+        _reviewDisplayManager = reviewDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -81,14 +92,18 @@ public sealed class ExternalLearningController : Controller
             return NotFound();
         }
 
-        return View(new ExternalLearningReviewViewModel
+        var model = new ExternalLearningReviewViewModel
         {
             Id = id,
             Submission = submission,
             UserName = (await users.GetUserNamesAsync([submission.UserId])).TryGetValue(submission.UserId, out var name) ? name : submission.UserId,
             TypeName = (await _credits.FindTypeAsync(submission.CreditTypeId, HttpContext.RequestAborted))?.Name,
             IsOwnLearning = string.Equals(submission.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal),
-        });
+        };
+
+        model.Editor = await _reviewDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -100,6 +115,8 @@ public sealed class ExternalLearningController : Controller
         {
             return Forbid();
         }
+
+        await _reviewDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         var reviewerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var result = decision == "accept"

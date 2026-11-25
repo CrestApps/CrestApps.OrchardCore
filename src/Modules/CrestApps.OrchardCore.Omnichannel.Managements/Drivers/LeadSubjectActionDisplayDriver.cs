@@ -52,7 +52,7 @@ internal sealed class LeadSubjectActionDisplayDriver : DisplayDriver<SubjectActi
                     .OrderBy(status => status.Order)
                     .Select(status => new SelectListItem(status.Name, status.ItemId, status.ItemId == model.SetLeadStatusId))
                     .ToList();
-            }).Location("Content:101"),
+            }).Location(l => l.Zone("Content", "101").Card(S["Lead Status"], "30")),
         };
 
         if (IsConvertLead(action))
@@ -76,7 +76,7 @@ internal sealed class LeadSubjectActionDisplayDriver : DisplayDriver<SubjectActi
                     new SelectListItem(S["Always create a new account"], nameof(LeadConversionAccountMode.CreateNew), metadata.AccountMode == LeadConversionAccountMode.CreateNew),
                     new SelectListItem(S["No account"], nameof(LeadConversionAccountMode.None), metadata.AccountMode == LeadConversionAccountMode.None),
                 ];
-            }).Location("Content:5"));
+            }).Location(l => l.Zone("Content", "5").Card(S["Action"], "20")));
         }
 
         return Combine(results);

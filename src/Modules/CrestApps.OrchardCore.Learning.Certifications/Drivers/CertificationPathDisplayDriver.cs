@@ -14,8 +14,8 @@ using YesSql;
 namespace CrestApps.OrchardCore.Learning.Certifications.Drivers;
 
 /// <summary>
-/// The "Earned through learning" card of the certification editor: the requirements, the reference date, the renewal
-/// window and grace period. The path is saved with the certification, never without it.
+/// The "Earned Through Learning", "Requirements" and "Expiry and Renewal" cards of the certification editor: the
+/// requirements, the reference date, the renewal window and grace period. The path is saved with the certification, never without it.
 /// </summary>
 internal sealed class CertificationPathDisplayDriver : DisplayDriver<Certification>
 {
@@ -52,33 +52,67 @@ internal sealed class CertificationPathDisplayDriver : DisplayDriver<Certificati
 
     public override IDisplayResult Edit(Certification certification, BuildEditorContext context)
     {
-        return Initialize<CertificationPathViewModel>("CertificationPath_Edit", async model =>
+        // The three cards share one read of the path and its options.
+        var source = new Lazy<Task<CertificationPathViewModel>>(() => BuildAsync(certification, context.IsNew));
+
+        return Combine(
+            Initialize<CertificationPathViewModel>("CertificationPath_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "10").Card(S["Earned Through Learning"], "10")),
+            Initialize<CertificationPathViewModel>("CertificationPathRequirements_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "11").Card(S["Requirements"], "11")),
+            Initialize<CertificationPathViewModel>("CertificationPathRenewal_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "12").Card(S["Expiry and Renewal"], "12")));
+    }
+
+    private async Task<CertificationPathViewModel> BuildAsync(Certification certification, bool isNew)
+    {
+        var model = new CertificationPathViewModel();
+        var path = _pending.Path ?? (isNew ? null : await _paths.FindByCertificationAsync(certification.ItemId));
+
+        if (path is not null)
         {
-            var path = _pending.Path ?? (context.IsNew ? null : await _paths.FindByCertificationAsync(certification.ItemId));
+            model.Earned = true;
+            model.PathId = path.ItemId;
+            model.Enabled = path.Enabled;
+            model.Join = path.Join;
+            model.InitialRequirements = path.InitialRequirements.Select(ToRow).ToList();
+            model.RenewalRequirements = path.RenewalRequirements.Select(ToRow).ToList();
+            model.ReferenceDate = path.ReferenceDate;
+            model.FixedMonth = path.FixedMonth;
+            model.FixedDay = path.FixedDay;
+            model.MinimumIntervalMonths = path.MinimumIntervalMonths;
+            model.RenewalWindowDays = path.RenewalWindowDays;
+            model.GracePeriodDays = path.GracePeriodDays;
+            model.StartsOnFirstRequirement = path.StartsOnFirstRequirement;
+            model.EnrollOnRenewal = path.EnrollOnRenewal;
+        }
 
-            if (path is not null)
-            {
-                model.Earned = true;
-                model.PathId = path.ItemId;
-                model.Enabled = path.Enabled;
-                model.Join = path.Join;
-                model.InitialRequirements = path.InitialRequirements.Select(ToRow).ToList();
-                model.RenewalRequirements = path.RenewalRequirements.Select(ToRow).ToList();
-                model.ReferenceDate = path.ReferenceDate;
-                model.FixedMonth = path.FixedMonth;
-                model.FixedDay = path.FixedDay;
-                model.MinimumIntervalMonths = path.MinimumIntervalMonths;
-                model.RenewalWindowDays = path.RenewalWindowDays;
-                model.GracePeriodDays = path.GracePeriodDays;
-                model.StartsOnFirstRequirement = path.StartsOnFirstRequirement;
-                model.EnrollOnRenewal = path.EnrollOnRenewal;
-            }
+        model.InitialRequirements.AddRange(Enumerable.Range(0, EmptyRows).Select(_ => new CertificationRequirementRow()));
+        model.RenewalRequirements.AddRange(Enumerable.Range(0, EmptyRows).Select(_ => new CertificationRequirementRow()));
+        model.KindOptions = _requirements.Select(kind => new SelectListItem(kind.DisplayName, kind.Kind)).ToList();
+        model.TargetOptions = await TargetOptionsAsync();
 
-            model.InitialRequirements.AddRange(Enumerable.Range(0, EmptyRows).Select(_ => new CertificationRequirementRow()));
-            model.RenewalRequirements.AddRange(Enumerable.Range(0, EmptyRows).Select(_ => new CertificationRequirementRow()));
-            model.KindOptions = _requirements.Select(kind => new SelectListItem(kind.DisplayName, kind.Kind)).ToList();
-            model.TargetOptions = await TargetOptionsAsync();
-        }).Location("Content:10");
+        return model;
+    }
+
+    private static void Populate(CertificationPathViewModel source, CertificationPathViewModel model)
+    {
+        model.Earned = source.Earned;
+        model.PathId = source.PathId;
+        model.Enabled = source.Enabled;
+        model.Join = source.Join;
+        model.InitialRequirements = source.InitialRequirements;
+        model.RenewalRequirements = source.RenewalRequirements;
+        model.ReferenceDate = source.ReferenceDate;
+        model.FixedMonth = source.FixedMonth;
+        model.FixedDay = source.FixedDay;
+        model.MinimumIntervalMonths = source.MinimumIntervalMonths;
+        model.RenewalWindowDays = source.RenewalWindowDays;
+        model.GracePeriodDays = source.GracePeriodDays;
+        model.StartsOnFirstRequirement = source.StartsOnFirstRequirement;
+        model.EnrollOnRenewal = source.EnrollOnRenewal;
+        model.KindOptions = source.KindOptions;
+        model.TargetOptions = source.TargetOptions;
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Certification certification, UpdateEditorContext context)

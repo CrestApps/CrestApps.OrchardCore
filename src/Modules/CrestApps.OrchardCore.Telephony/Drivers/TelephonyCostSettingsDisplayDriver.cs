@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Telephony.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -20,13 +21,20 @@ public sealed class TelephonyCostSettingsDisplayDriver : SiteDisplayDriver<Telep
     protected override string SettingsGroupId
         => TelephonyConstants.SettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TelephonyCostSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    public TelephonyCostSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TelephonyCostSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<TelephonyCostSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
     }
@@ -38,7 +46,7 @@ public sealed class TelephonyCostSettingsDisplayDriver : SiteDisplayDriver<Telep
         {
             model.Currency = settings.Currency;
             model.PerMinute = settings.PerMinute;
-        }).Location("Content:3#Costs")
+        }).Location(l => l.Zone("Content", "3").Tab(S["Costs"]).Card(S["Pricing"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
     }

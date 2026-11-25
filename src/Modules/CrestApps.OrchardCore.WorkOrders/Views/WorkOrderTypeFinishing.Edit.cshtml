@@ -1,0 +1,17 @@
+@model WorkOrderTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RequiresSignature" type="checkbox" class="form-check-input" />
+            <label asp-for="RequiresSignature" class="form-check-label">@T["The customer must sign"]</label>
+            <span class="hint dashed">@T["A work order of this type can't be completed until someone signs for the work."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="RequiredPhotos" class="ocat-label">@T["Photos needed"]</label>
+    <div class="ocat-end">
+        <input asp-for="RequiredPhotos" type="number" min="0" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>

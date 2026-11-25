@@ -56,7 +56,7 @@ public sealed class SoftPhoneWidgetSettingsDisplayDriver : SiteDisplayDriver<Sof
                 : SoftPhoneWidgetSettings.DefaultRecentCallsCount;
             model.DefaultCountryCode = settings.DefaultCountryCode;
             model.Countries = BuildCountries();
-        }).Location("Content:5#Soft Phone")
+        }).Location(l => l.Zone("Content", "5").Tab(S["Soft Phone"]).Card(S["Widget"], "20"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
     }

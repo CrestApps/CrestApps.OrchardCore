@@ -105,7 +105,7 @@ internal sealed class AIProfileTemplateCopilotDisplayDriver : DisplayDriver<AIPr
             {
                 model.AvailableModels = [];
             }
-        }).Location("Content:2%Parameters;5")
+        }).Location(l => l.Zone("Content", "2").Card(S["Parameters"], "5"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

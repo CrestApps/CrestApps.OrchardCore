@@ -1,0 +1,9 @@
+@model BroadcastCreateViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Body">
+    <label asp-for="Body" class="ocat-label ocat-label-required">@T["Message"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Body" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Body" class="text-danger"></span>
+    </div>
+</div>

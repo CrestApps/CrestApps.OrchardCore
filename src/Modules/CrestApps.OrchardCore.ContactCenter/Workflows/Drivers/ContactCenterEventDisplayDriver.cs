@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
@@ -14,13 +15,26 @@ public sealed class ContactCenterEventDisplayDriver : ActivityDisplayDriver<Cont
 {
     private readonly IContactCenterWorkflowEventTypeProvider _eventTypeProvider;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEventDisplayDriver"/> class.
     /// </summary>
     /// <param name="eventTypeProvider">The provider that supplies the selectable Contact Center event types.</param>
-    public ContactCenterEventDisplayDriver(IContactCenterWorkflowEventTypeProvider eventTypeProvider)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ContactCenterEventDisplayDriver(
+        IContactCenterWorkflowEventTypeProvider eventTypeProvider,
+        IStringLocalizer<ContactCenterEventDisplayDriver> stringLocalizer)
     {
         _eventTypeProvider = eventTypeProvider;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(ContactCenterEvent activity, BuildEditorContext context)
+    {
+        return Initialize<ContactCenterEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
     }
 
     /// <inheritdoc/>

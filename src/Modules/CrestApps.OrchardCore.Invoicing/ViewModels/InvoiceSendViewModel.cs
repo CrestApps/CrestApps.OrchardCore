@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Invoicing.ViewModels;
 
@@ -7,6 +8,12 @@ namespace CrestApps.OrchardCore.Invoicing.ViewModels;
 /// </summary>
 public class InvoiceSendViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor of the page, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     public string ItemId { get; set; }
 
     public string To { get; set; }

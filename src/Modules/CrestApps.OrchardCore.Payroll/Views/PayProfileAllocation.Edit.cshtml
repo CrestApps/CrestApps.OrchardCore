@@ -1,0 +1,20 @@
+@model PayProfileViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DepartmentTeamId" class="ocat-label">@T["Department"]</label>
+    <div class="ocat-end">
+        <select asp-for="DepartmentTeamId" asp-items="Model.Teams" class="form-select" style="max-width: 24rem">
+            <option value="">@T["None"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ActivityCode" class="ocat-label">@T["Activity and job"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="ActivityCode" class="form-control" style="max-width: 12rem" placeholder="@T["Activity"]" />
+            <input asp-for="Job" class="form-control" style="max-width: 12rem" placeholder="@T["Job"]" aria-label="@T["Job"]" />
+        </div>
+        <span class="hint">@T["Used when an input says nothing about where its cost goes."]</span>
+    </div>
+</div>

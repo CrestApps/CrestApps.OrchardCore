@@ -80,18 +80,18 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
         return Combine(
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionChatConnection_Edit", PopulateAsync)
-                .Location("Parameters:3#Settings;1"),
+                .Location(l => l.Zone("Parameters", "3").Tab(S["Settings"], "1").Card(S["Deployments & Interactions"], "2")),
             // The model that speaks, separate from the text model above. Naming one is how an interaction
             // opts into a spoken conversation, so it sits directly beneath the deployment it is not.
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConversationDeployment_Edit", PopulateAsync)
-                .Location("Parameters:3.4#Settings;1"),
+                .Location(l => l.Zone("Parameters", "3.4").Tab(S["Settings"], "1").Card(S["Deployments & Interactions"], "2")),
             // The voice belongs to whatever carries the conversation, so it sits with the conversation
             // deployment rather than beside the chat's send controls. Hidden until the client sees that a
             // realtime deployment actually resolves.
             View("ChatInteractionRealtimeVoice_Edit", interaction)
-                .Location("Parameters:3.5#Settings;1"),
+                .Location(l => l.Zone("Parameters", "3.5").Tab(S["Settings"], "1").Card(S["Deployments & Interactions"], "2")),
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionUtilityConnection_Edit", PopulateAsync)
-                .Location("Parameters:3.7#Settings;1"));
+                .Location(l => l.Zone("Parameters", "3.7").Tab(S["Settings"], "1").Card(S["Deployments & Interactions"], "2")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

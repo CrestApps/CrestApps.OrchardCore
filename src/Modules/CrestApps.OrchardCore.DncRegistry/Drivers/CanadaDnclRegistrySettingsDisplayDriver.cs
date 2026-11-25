@@ -52,7 +52,7 @@ public sealed class CanadaDnclRegistrySettingsDisplayDriver : SiteDisplayDriver<
             viewModel.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
             viewModel.AccountNumber = settings.AccountNumber;
             viewModel.BaseUrl = settings.BaseUrl;
-        }).Location("Content:10")
+        }).Location(l => l.Zone("Content", "10").Card(S["Connection"], "10"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
             _httpContextAccessor.HttpContext?.User,

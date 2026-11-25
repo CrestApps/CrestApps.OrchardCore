@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Telnyx.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -18,13 +19,19 @@ internal sealed class TelnyxEntryPointAIAgentDisplayDriver : DisplayDriver<Conta
 {
     private readonly IAIProfileManager _profileManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxEntryPointAIAgentDisplayDriver"/> class.
     /// </summary>
     /// <param name="profileManager">The AI profiles.</param>
-    public TelnyxEntryPointAIAgentDisplayDriver(IAIProfileManager profileManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TelnyxEntryPointAIAgentDisplayDriver(
+        IAIProfileManager profileManager,
+        IStringLocalizer<TelnyxEntryPointAIAgentDisplayDriver> stringLocalizer)
     {
         _profileManager = profileManager;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -48,7 +55,7 @@ internal sealed class TelnyxEntryPointAIAgentDisplayDriver : DisplayDriver<Conta
                     profile.ItemId,
                     string.Equals(profile.ItemId, entryPoint.TargetAIProfileId, StringComparison.Ordinal)))
                 .ToList();
-        }).Location("Content:2.1%Routing;2");
+        }).Location(l => l.Zone("Content", "2.1").Card(S["Routing"], "2"));
     }
 
     /// <inheritdoc/>

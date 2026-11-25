@@ -55,7 +55,7 @@ internal sealed class ActivityQueueGroupDisplayDriver : DisplayDriver<ActivityQu
             model.Id = group.ItemId;
             model.Name = group.Name;
             model.Description = group.Description;
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     /// <inheritdoc/>

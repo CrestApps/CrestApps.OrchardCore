@@ -1,0 +1,24 @@
+@model TimeEntryEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reason" class="form-control" placeholder="@T["Such as: forgot to clock out"]" />
+        <span asp-validation-for="Reason" class="text-danger"></span>
+        <span class="hint">@T["Kept with the entry and, when the Audit Trail is on, recorded there."]</span>
+    </div>
+</div>
+@if (Model.Changes.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Changed before"]</span>
+        <div class="ocat-end">
+            <ul class="list-unstyled small mb-0">
+                @foreach (var change in Model.Changes.AsEnumerable().Reverse())
+                {
+                    <li>@TimeTrackerTimeZone.Format(change.Utc, Model.TimeZoneId) · @change.By: @change.Reason <span class="text-muted">(@T["was {0}", change.Before])</span></li>
+                }
+            </ul>
+        </div>
+    </div>
+}

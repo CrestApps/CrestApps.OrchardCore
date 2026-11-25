@@ -1,0 +1,16 @@
+@model MyAccountViewModel
+
+<div class="ocat-wrapper" data-customer-business asp-validation-class-for="CompanyName">
+    <label asp-for="CompanyName" class="ocat-label ocat-label-required">@T["Company"]</label>
+    <div class="ocat-end">
+        <input asp-for="CompanyName" class="form-control" autocomplete="organization" />
+        <span asp-validation-for="CompanyName"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" data-customer-business asp-validation-class-for="TaxId">
+    <label asp-for="TaxId" class="ocat-label">@T["Tax id"]</label>
+    <div class="ocat-end">
+        <input asp-for="TaxId" class="form-control" />
+        <span class="hint">@T["Such as a VAT number, shown on your invoices."]</span>
+    </div>
+</div>

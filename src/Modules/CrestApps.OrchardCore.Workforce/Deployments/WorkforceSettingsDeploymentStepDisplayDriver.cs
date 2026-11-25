@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -9,6 +10,17 @@ namespace CrestApps.OrchardCore.Workforce.Deployments;
 /// </summary>
 internal sealed class WorkforceSettingsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, WorkforceSettingsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkforceSettingsDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public WorkforceSettingsDeploymentStepDisplayDriver(IStringLocalizer<WorkforceSettingsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(WorkforceSettingsDeploymentStep step, BuildDisplayContext context)
     {
         return CombineAsync(
@@ -18,6 +30,7 @@ internal sealed class WorkforceSettingsDeploymentStepDisplayDriver : DisplayDriv
 
     public override IDisplayResult Edit(WorkforceSettingsDeploymentStep step, BuildEditorContext context)
     {
-        return View("WorkforceSettingsDeploymentStep_Fields_Edit", step).Location("Content");
+        return View("WorkforceSettingsDeploymentStep_Fields_Edit", step)
+            .Location(l => l.Zone("Content").Card(S["Workforce Settings"], "10"));
     }
 }

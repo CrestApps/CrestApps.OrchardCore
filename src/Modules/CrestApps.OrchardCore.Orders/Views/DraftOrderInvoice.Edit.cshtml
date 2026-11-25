@@ -1,0 +1,24 @@
+@model DraftOrderEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Note">
+    <label asp-for="Note" class="ocat-label">@T["Note for the buyer"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Note" rows="2" maxlength="2000" class="form-control" placeholder="@T["Thanks for your call. Here's the order we discussed."]"></textarea>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="DueDate">
+    <label asp-for="DueDate" class="ocat-label">@T["Pay by (optional)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="DueDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+    </div>
+</div>
+
+@if (!Model.CanEmail)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <p class="small text-warning">@T["Email isn't set up, so the invoice can't be emailed. You can still copy the order's pay link from its page."]</p>
+        </div>
+    </div>
+}

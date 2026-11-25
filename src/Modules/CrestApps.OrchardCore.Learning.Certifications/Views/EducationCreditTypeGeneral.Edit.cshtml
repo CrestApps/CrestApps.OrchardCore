@@ -1,0 +1,24 @@
+@model EducationCreditTypeEditViewModel
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Name" class="form-control" maxlength="100" autofocus required />
+        <span class="hint">@T["Such as CPD hours, CEU or PDU."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Unit" class="ocat-label">@T["Unit"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Unit" class="form-control" maxlength="50" />
+        <span class="hint">@T["Shown after an amount, such as hours. Empty shows the name."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-limited">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>

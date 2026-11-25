@@ -44,6 +44,11 @@ public sealed class CreateAIActivityTaskDisplayDriver : ActivityDisplayDriver<Cr
         S = stringLocalizer;
     }
 
+    /// <inheritdoc />
+    public override IDisplayResult Edit(CreateAIActivityTask activity, BuildEditorContext context)
+        => Initialize<CreateAIActivityTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+
     /// <inheritdoc/>
     protected override async ValueTask EditActivityAsync(CreateAIActivityTask activity, CreateAIActivityTaskViewModel model)
     {

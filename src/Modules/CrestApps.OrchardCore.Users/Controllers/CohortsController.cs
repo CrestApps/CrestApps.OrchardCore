@@ -10,6 +10,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Users;
@@ -26,6 +27,8 @@ public sealed class CohortsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ICohortService _cohorts;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<CohortEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -37,12 +40,16 @@ public sealed class CohortsController : Controller
         IAuthorizationService authorizationService,
         ICohortService cohorts,
         INotifier notifier,
+        IDisplayManager<CohortEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CohortsController> htmlLocalizer,
         IStringLocalizer<CohortsController> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _cohorts = cohorts;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -106,19 +113,23 @@ public sealed class CohortsController : Controller
             return Forbid();
         }
 
-        if (string.IsNullOrEmpty(id))
+        var model = new CohortEditViewModel();
+
+        if (!string.IsNullOrEmpty(id))
         {
-            return View(new CohortEditViewModel());
+            var cohort = await _cohorts.FindByIdAsync(id, HttpContext.RequestAborted);
+
+            if (cohort is null)
+            {
+                return NotFound();
+            }
+
+            model = new CohortEditViewModel { CohortId = cohort.CohortId, Name = cohort.Name, Description = cohort.Description };
         }
 
-        var cohort = await _cohorts.FindByIdAsync(id, HttpContext.RequestAborted);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(id));
 
-        if (cohort is null)
-        {
-            return NotFound();
-        }
-
-        return View(new CohortEditViewModel { CohortId = cohort.CohortId, Name = cohort.Name, Description = cohort.Description });
+        return View(model);
     }
 
     /// <summary>
@@ -143,6 +154,8 @@ public sealed class CohortsController : Controller
         {
             return NotFound();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(id));
 
         var result = string.IsNullOrEmpty(id)
             ? await _cohorts.CreateAsync(model.Name, model.Description, cancellationToken: HttpContext.RequestAborted)

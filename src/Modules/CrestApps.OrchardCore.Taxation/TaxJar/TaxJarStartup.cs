@@ -47,12 +47,16 @@ public sealed class TaxJarSettingsDisplayDriver : SiteDisplayDriver<TaxJarSettin
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
+    internal readonly IStringLocalizer S;
+
     public TaxJarSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
-        IOptionsUpdateNotifier optionsUpdateNotifier)
+        IOptionsUpdateNotifier optionsUpdateNotifier,
+        IStringLocalizer<TaxJarSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
@@ -63,14 +67,22 @@ public sealed class TaxJarSettingsDisplayDriver : SiteDisplayDriver<TaxJarSettin
         => GroupId;
 
     public override IDisplayResult Edit(ISite site, TaxJarSettings settings, BuildEditorContext context)
-        => Initialize<TaxJarSettingsViewModel>("TaxJarSettings_Edit", model =>
-        {
-            model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
-            model.UseSandbox = settings.UseSandbox;
-            model.Countries = string.Join(", ", settings.Countries ?? []);
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TaxationPermissions.ManageTaxation))
-        .OnGroup(SettingsGroupId);
+        => Combine(
+            Initialize<TaxJarSettingsViewModel>("TaxJarSettings_Edit", model => Populate(model, settings))
+                .Location(l => l.Zone("Content", "1").Card(S["Connection"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TaxationPermissions.ManageTaxation))
+                .OnGroup(SettingsGroupId),
+            Initialize<TaxJarSettingsViewModel>("TaxJarSettingsCountries_Edit", model => Populate(model, settings))
+                .Location(l => l.Zone("Content", "2").Card(S["Countries"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TaxationPermissions.ManageTaxation))
+                .OnGroup(SettingsGroupId));
+
+    private static void Populate(TaxJarSettingsViewModel model, TaxJarSettings settings)
+    {
+        model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
+        model.UseSandbox = settings.UseSandbox;
+        model.Countries = string.Join(", ", settings.Countries ?? []);
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, TaxJarSettings settings, UpdateEditorContext context)
     {

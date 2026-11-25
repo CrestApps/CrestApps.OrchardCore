@@ -71,25 +71,35 @@ internal sealed class BusinessDocumentTemplateDisplayDriver : DisplayDriver<Busi
     }
 
     public override IDisplayResult Edit(BusinessDocumentTemplate template, BuildEditorContext context)
-        => Initialize<BusinessDocumentTemplateViewModel>("BusinessDocumentTemplateFields_Edit", model =>
-        {
-            model.Name = template.Name;
-            model.Description = template.Description;
-            model.Kinds = [.. template.Kinds ?? []];
-            model.IsDefault = template.IsDefault;
-            model.LogoUrl = template.LogoUrl;
-            model.UseAccentColor = !string.IsNullOrWhiteSpace(template.AccentColor);
-            model.AccentColor = BusinessDocumentStyle.TryNormalizeAccentColor(template.AccentColor, out var color) ? color : DefaultAccentColor;
-            model.PaperSize = template.PaperSize;
-            model.Footer = template.Footer;
-            model.KindOptions = GetKindOptions(template.Kinds);
-            model.PaperSizeOptions =
-            [
-                new SelectListItem(S["The renderer's default (Letter)"], nameof(BusinessDocumentPaperSize.Default)),
-                new SelectListItem(S["Letter"], nameof(BusinessDocumentPaperSize.Letter)),
-                new SelectListItem(S["A4"], nameof(BusinessDocumentPaperSize.A4)),
-            ];
-        }).Location("Content:1");
+        => Combine(
+            Initialize<BusinessDocumentTemplateViewModel>("BusinessDocumentTemplateFields_Edit", model =>
+            {
+                FillValues(model, template);
+                model.KindOptions = GetKindOptions(template.Kinds);
+            }).Location(l => l.Zone("Content", "1").Card(S["Template"], "10")),
+            Initialize<BusinessDocumentTemplateViewModel>("BusinessDocumentTemplateLook_Edit", model =>
+            {
+                FillValues(model, template);
+                model.PaperSizeOptions =
+                [
+                    new SelectListItem(S["The renderer's default (Letter)"], nameof(BusinessDocumentPaperSize.Default)),
+                    new SelectListItem(S["Letter"], nameof(BusinessDocumentPaperSize.Letter)),
+                    new SelectListItem(S["A4"], nameof(BusinessDocumentPaperSize.A4)),
+                ];
+            }).Location(l => l.Zone("Content", "2").Card(S["Look"], "20")));
+
+    private static void FillValues(BusinessDocumentTemplateViewModel model, BusinessDocumentTemplate template)
+    {
+        model.Name = template.Name;
+        model.Description = template.Description;
+        model.Kinds = [.. template.Kinds ?? []];
+        model.IsDefault = template.IsDefault;
+        model.LogoUrl = template.LogoUrl;
+        model.UseAccentColor = !string.IsNullOrWhiteSpace(template.AccentColor);
+        model.AccentColor = BusinessDocumentStyle.TryNormalizeAccentColor(template.AccentColor, out var color) ? color : DefaultAccentColor;
+        model.PaperSize = template.PaperSize;
+        model.Footer = template.Footer;
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(BusinessDocumentTemplate template, UpdateEditorContext context)
     {

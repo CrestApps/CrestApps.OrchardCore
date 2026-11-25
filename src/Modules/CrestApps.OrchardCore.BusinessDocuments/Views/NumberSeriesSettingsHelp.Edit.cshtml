@@ -1,0 +1,65 @@
+@model NumberSeriesSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="mb-1">@T["A pattern is text with tokens in braces: {0} is the number, {1} the number with at least as many digits as zeros, {2} the year, {3} the year in two digits and {4} the month of the day the number is issued, in the site's time zone.", "{seq}", "{seq:0000}", "{yyyy}", "{yy}", "{MM}"]</p>
+        <p class="mb-0 text-muted">@T["A pattern has exactly one {0} token. Numbers that start again each year need {1} or {2}, and each month {3} too, so that no number repeats. A series left as it was registered follows the format of the feature that registered it.", "{seq}", "{yyyy}", "{yy}", "{MM}"]</p>
+    </div>
+</div>
+
+@if (Model.Series.Count == 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info mb-0">@T["No enabled feature registers a number series yet."]</div>
+        </div>
+    </div>
+}
+
+<script at="Foot">
+    (function () {
+        function pad(value, digits) {
+            var text = String(value);
+
+            while (text.length < digits) {
+                text = '0' + text;
+            }
+
+            return text;
+        }
+
+        function write(pattern, first, today) {
+            var parts = today.split('-');
+
+            return pattern.replace(/\{(seq(?::(0+))?|yyyy|yy|MM)\}/g, function (token, name, zeros) {
+                if (name === 'yyyy') {
+                    return parts[0];
+                }
+
+                if (name === 'yy') {
+                    return parts[0].substring(2);
+                }
+
+                if (name === 'MM') {
+                    return parts[1];
+                }
+
+                return pad(first, zeros ? zeros.length : 1);
+            });
+        }
+
+        document.querySelectorAll('[data-number-series]').forEach(function (card) {
+            var pattern = card.querySelector('[data-number-series-pattern]');
+            var first = card.querySelector('[data-number-series-first]');
+            var example = card.querySelector('[data-number-series-example]');
+            var update = function () {
+                var number = parseInt(first.value, 10);
+
+                example.textContent = write(pattern.value || '', isNaN(number) || number < 1 ? 1 : number, card.dataset.today);
+            };
+
+            pattern.addEventListener('input', update);
+            first.addEventListener('input', update);
+        });
+    })();
+</script>

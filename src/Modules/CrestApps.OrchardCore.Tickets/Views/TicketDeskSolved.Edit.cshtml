@@ -1,0 +1,28 @@
+@model TicketDeskViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper">
+    <label asp-for="ReopenWindowDays" class="ocat-label">@T["Reopen window (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReopenWindowDays" class="form-control" type="number" min="0" />
+        <span class="hint">@T["A reply from the requester inside this many days after solving reopens the ticket; a later one opens a follow-up."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AutoCloseDays" class="ocat-label">@T["Close solved tickets after (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="AutoCloseDays" class="form-control" type="number" min="0" />
+        <span class="hint">@T["0 keeps solved tickets until someone closes them."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DeleteProtectedInformationDays" class="ocat-label">@T["Delete protected information after (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="DeleteProtectedInformationDays" class="form-control" type="number" min="0" />
+        <span class="hint">@T["Days after a ticket is closed that its protected information (logins and other secrets) is deleted. 0 keeps it."]</span>
+    </div>
+</div>

@@ -80,7 +80,7 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
                 model.AvailableModels = ClaudeModelSelectListFactory.Build([], settings.DefaultModel);
             }
         })
-        .Location("Content:9%Claude;1")
+        .Location(l => l.Zone("Content", "9").Card(S["Authentication"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ClaudePermissionProvider.ManageClaudeSettings));
     }

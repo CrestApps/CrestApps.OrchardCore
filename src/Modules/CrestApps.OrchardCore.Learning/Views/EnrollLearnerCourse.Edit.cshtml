@@ -1,0 +1,18 @@
+@model EnrollViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="UserId">
+    <label asp-for="UserId" class="ocat-label">@T["Learner"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, buttonText = T["Choose a learner"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false, required = true })
+        <span asp-validation-for="UserId"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="CourseId">
+    <label asp-for="CourseId" class="ocat-label">@T["Course"]</label>
+    <div class="ocat-end">
+        <select asp-for="CourseId" asp-items="Model.CourseOptions" class="form-select">
+            <option value="">@T["Choose a course"]</option>
+        </select>
+        <span asp-validation-for="CourseId"></span>
+    </div>
+</div>

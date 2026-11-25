@@ -94,7 +94,7 @@ public sealed class OmnichannelContactImportOptionsDisplayDriver : DisplayDriver
                     .ToList();
                 viewModel.LeadSources = await _leadSources.GetOptionsAsync(options.LeadSourceId);
             }
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Import Options"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ImportContent model, UpdateEditorContext context)

@@ -46,7 +46,7 @@ public sealed class BankTransferSettingsDisplayDriver : SiteDisplayDriver<BankTr
             model.Enabled = settings.Enabled;
             model.Instructions = settings.Instructions;
             model.NetTermDays = settings.NetTermDays;
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Bank Transfer"], "20"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
         .OnGroup(SettingsGroupId);
 
@@ -91,9 +91,11 @@ public sealed class CashOnDeliverySettingsDisplayDriver : SiteDisplayDriver<Cash
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    internal readonly IStringLocalizer S;
 
-    public CashOnDeliverySettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    public CashOnDeliverySettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, IStringLocalizer<CashOnDeliverySettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
     }
@@ -108,7 +110,7 @@ public sealed class CashOnDeliverySettingsDisplayDriver : SiteDisplayDriver<Cash
         {
             model.Enabled = settings.Enabled;
             model.Instructions = settings.Instructions;
-        }).Location("Content:10")
+        }).Location(l => l.Zone("Content", "10").Card(S["Cash on Delivery"], "30"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
         .OnGroup(SettingsGroupId);
 

@@ -55,13 +55,19 @@ internal sealed class A2AConnectionDisplayDriver : ConnectionAuthDisplayDriverBa
 
     public override IDisplayResult Edit(A2AConnection connection, BuildEditorContext context)
     {
-        return Initialize<A2AConnectionFieldsViewModel>("A2AConnectionFields_Edit", model =>
-        {
-            model.DisplayText = connection.DisplayText;
-            model.Endpoint = connection.Endpoint;
+        return Combine(
+            Initialize<A2AConnectionFieldsViewModel>("A2AConnectionGeneral_Edit", model => Populate(connection, model))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<A2AConnectionFieldsViewModel>("A2AConnectionAuthentication_Edit", model => Populate(connection, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Authentication"], "20")));
+    }
 
-            PopulateAuthFields(connection.GetOrCreate<A2AConnectionMetadata>(), model, JSOptions.Indented);
-        }).Location("Content:1");
+    private static void Populate(A2AConnection connection, A2AConnectionFieldsViewModel model)
+    {
+        model.DisplayText = connection.DisplayText;
+        model.Endpoint = connection.Endpoint;
+
+        PopulateAuthFields(connection.GetOrCreate<A2AConnectionMetadata>(), model, JSOptions.Indented);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(A2AConnection connection, UpdateEditorContext context)

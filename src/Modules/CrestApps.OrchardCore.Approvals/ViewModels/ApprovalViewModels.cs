@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Approvals.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Approvals.ViewModels;
 
@@ -233,6 +234,12 @@ public class ApprovalDecideViewModel
     /// Gets or sets the approver's note.
     /// </summary>
     public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the decision, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 
     /// <summary>
     /// Gets or sets the request.

@@ -1,0 +1,30 @@
+@model RequiredLearningEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Name" class="form-control" maxlength="200" autofocus required />
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="TargetKind" class="ocat-label">@T["What is required"]</label>
+    <div class="ocat-limited">
+        <select asp-for="TargetKind" class="form-select" data-target-kind>
+            @foreach (var target in Model.Targets)
+            {
+                <option value="@target.Kind" selected="@(target.Kind == Model.TargetKind)">@target.DisplayName</option>
+            }
+        </select>
+        @foreach (var target in Model.Targets)
+        {
+            <select name="TargetId" class="form-select mt-2" data-target-for="@target.Kind" aria-label="@target.DisplayName">
+                <option value="">@T["Choose one"]</option>
+                @foreach (var option in target.Options)
+                {
+                    <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                }
+            </select>
+        }
+    </div>
+</div>

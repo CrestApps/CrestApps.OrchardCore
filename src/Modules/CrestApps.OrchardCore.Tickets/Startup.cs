@@ -101,6 +101,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<TicketUploads>();
         services.AddScoped<TicketPresence>();
         services.AddDisplayDriver<TicketRow, TicketRowDisplayDriver>();
+        services.AddDisplayDriver<TicketCreateViewModel, TicketCreateEditDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TicketAutoCloseBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TicketProblemIncidentsBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TicketBacklogBackgroundTask>();

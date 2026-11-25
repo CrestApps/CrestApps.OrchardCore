@@ -72,7 +72,7 @@ internal sealed class AIToolInstanceDisplayDriver : DisplayDriver<AIToolInstance
             model.Name = instance.Name;
             model.Description = instance.Description;
             model.IsNew = context.IsNew;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)

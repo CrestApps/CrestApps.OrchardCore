@@ -34,12 +34,25 @@ internal sealed class WorkforceTeamDisplayDriver : DisplayDriver<Team>
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(Team team, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(Team team, BuildEditorContext context)
     {
-        return Initialize<WorkforceTeamEditViewModel>("WorkforceTeamFields_Edit", async model =>
-        {
-            var settings = team.GetWorkforceSettings();
+        var features = await GetEnabledFeaturesAsync();
+        var showShiftPlanning = features.Contains(WorkforceConstants.Features.ShiftPlanning);
+        var showTimeOff = showShiftPlanning && features.Contains(WorkforceConstants.Features.TimeOff);
+        var showTimeClock = features.Contains(WorkforceConstants.Features.TimeClock);
+        var settings = team.GetWorkforceSettings();
+        IList<SelectListItem> policyOptions = null;
 
+        // The policy manager is registered only while the time clock is on.
+        if (showTimeClock && _timeClockPolicyManagers.FirstOrDefault() is { } policies)
+        {
+            policyOptions = (await policies.ListEnabledAsync())
+                .Select(policy => new SelectListItem(policy.Name, policy.ItemId, policy.ItemId == settings.TimeClockPolicyId))
+                .ToList();
+        }
+
+        void Populate(WorkforceTeamEditViewModel model)
+        {
             model.TeamAddress = WorkforceGeocodeTargets.AddressText(team.Address);
             model.Latitude = settings.Location?.Latitude;
             model.Longitude = settings.Location?.Longitude;
@@ -49,21 +62,35 @@ internal sealed class WorkforceTeamDisplayDriver : DisplayDriver<Team>
                 ? (settings.ShiftTradesNeedApproval.Value ? "true" : "false")
                 : null;
             model.TimeOffShiftHandling = settings.TimeOffShiftHandling?.ToString();
+            model.ShowShiftPlanning = showShiftPlanning;
+            model.ShowTimeOff = showTimeOff;
+            model.ShowTimeClock = showTimeClock;
 
-            var features = await GetEnabledFeaturesAsync();
-
-            model.ShowShiftPlanning = features.Contains(WorkforceConstants.Features.ShiftPlanning);
-            model.ShowTimeOff = model.ShowShiftPlanning && features.Contains(WorkforceConstants.Features.TimeOff);
-            model.ShowTimeClock = features.Contains(WorkforceConstants.Features.TimeClock);
-
-            // The policy manager is registered only while the time clock is on.
-            if (model.ShowTimeClock && _timeClockPolicyManagers.FirstOrDefault() is { } policies)
+            if (policyOptions is not null)
             {
-                model.TimeClockPolicyOptions = (await policies.ListEnabledAsync())
-                    .Select(policy => new SelectListItem(policy.Name, policy.ItemId, policy.ItemId == model.TimeClockPolicyId))
-                    .ToList();
+                model.TimeClockPolicyOptions = policyOptions;
             }
-        }).Location("Content:5");
+        }
+
+        var results = new List<IDisplayResult>
+        {
+            Initialize<WorkforceTeamEditViewModel>("WorkforceTeamSite_Edit", Populate)
+                .Location(l => l.Zone("Content", "5").Card(S["Work Site"], "50")),
+        };
+
+        if (showTimeClock)
+        {
+            results.Add(Initialize<WorkforceTeamEditViewModel>("WorkforceTeamTimeClock_Edit", Populate)
+                .Location(l => l.Zone("Content", "5").Card(S["Time Clock"], "51")));
+        }
+
+        if (showShiftPlanning)
+        {
+            results.Add(Initialize<WorkforceTeamEditViewModel>("WorkforceTeamShifts_Edit", Populate)
+                .Location(l => l.Zone("Content", "5").Card(S["Shift Planning"], "52")));
+        }
+
+        return Combine([.. results]);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Team team, UpdateEditorContext context)
@@ -104,7 +131,7 @@ internal sealed class WorkforceTeamDisplayDriver : DisplayDriver<Team>
             ? new WorkforceLocation { Latitude = latitude, Longitude = longitude }
             : null;
 
-        return Edit(team, context);
+        return await EditAsync(team, context);
     }
 
     private async Task<HashSet<string>> GetEnabledFeaturesAsync()

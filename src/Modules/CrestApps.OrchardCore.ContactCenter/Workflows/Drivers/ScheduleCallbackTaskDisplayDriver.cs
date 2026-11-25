@@ -32,6 +32,13 @@ public sealed class ScheduleCallbackTaskDisplayDriver : ActivityDisplayDriver<Sc
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(ScheduleCallbackTask activity, BuildEditorContext context)
+    {
+        return Initialize<ScheduleCallbackTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(ScheduleCallbackTask activity, ScheduleCallbackTaskViewModel model)
     {
         model.Destination = activity.Destination;

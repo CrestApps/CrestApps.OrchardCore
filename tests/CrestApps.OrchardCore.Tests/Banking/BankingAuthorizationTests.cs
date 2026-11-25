@@ -334,7 +334,7 @@ public sealed class BankingAuthorizationTests
             updateModelAccessor.Object,
             (displayManager ?? new Mock<IDisplayManager<BankAccount>>()).Object,
             notifier ?? new RecordingNotifier(),
-            new BankAccountLinkFlow(context.Service, context.Manager, Mock.Of<IShapeFactory>(), RecipeRoundTrip.Localizer<BankAccountLinkFlow>()),
+            new BankAccountLinkFlow(context.Service, context.Manager, Mock.Of<IShapeFactory>(), Mock.Of<IDisplayManager<BankAccountLinkViewModel>>(), updateModelAccessor.Object, RecipeRoundTrip.Localizer<BankAccountLinkFlow>()),
             new EchoHtmlLocalizer<MyBankAccountsController>());
 
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = TestSecurity.User(userName) } };

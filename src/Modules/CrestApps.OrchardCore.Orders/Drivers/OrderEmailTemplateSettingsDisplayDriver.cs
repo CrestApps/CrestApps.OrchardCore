@@ -47,23 +47,30 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
         => GroupId;
 
     public override IDisplayResult Edit(ISite site, OrderEmailTemplateSettings settings, BuildEditorContext context)
-        => Initialize<OrderEmailTemplateSettingsViewModel>("OrderEmailTemplateSettings_Edit", model =>
-        {
-            model.Layout = settings.Layout;
-            model.Templates = [.. _emailOptions.Value.Kinds.Select(kind =>
+    {
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<OrderEmailTemplateSettingsViewModel>(shapeType, model =>
             {
-                var entry = settings.Templates.TryGetValue(kind.Name, out var template)
-                    ? new OrderEmailTemplateViewModel { Kind = kind.Name, IsEnabled = template.IsEnabled, Subject = template.Subject, Body = template.Body }
-                    : new OrderEmailTemplateViewModel { Kind = kind.Name, Body = "{{ Content }}" };
+                model.Layout = settings.Layout;
+                model.Templates = [.. _emailOptions.Value.Kinds.Select(kind =>
+                {
+                    var entry = settings.Templates.TryGetValue(kind.Name, out var template)
+                        ? new OrderEmailTemplateViewModel { Kind = kind.Name, IsEnabled = template.IsEnabled, Subject = template.Subject, Body = template.Body }
+                        : new OrderEmailTemplateViewModel { Kind = kind.Name, Body = "{{ Content }}" };
 
-                entry.Title = _stringLocalizerFactory.Localize(kind.Title);
-                entry.Values = kind.Values is null ? null : _stringLocalizerFactory.Localize(kind.Values);
+                    entry.Title = _stringLocalizerFactory.Localize(kind.Title);
+                    entry.Values = kind.Values is null ? null : _stringLocalizerFactory.Localize(kind.Values);
 
-                return entry;
-            })];
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
-        .OnGroup(SettingsGroupId);
+                    return entry;
+                })];
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
+            .OnGroup(SettingsGroupId);
+
+        return Combine(
+            Card("OrderEmailTemplateSettingsLayout_Edit", "1", S["Layout"], "10"),
+            Card("OrderEmailTemplateSettingsTemplates_Edit", "1.1", S["Email Templates"], "20"));
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, OrderEmailTemplateSettings settings, UpdateEditorContext context)
     {

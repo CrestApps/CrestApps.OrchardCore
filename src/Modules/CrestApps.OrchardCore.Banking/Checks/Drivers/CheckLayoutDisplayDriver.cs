@@ -62,56 +62,73 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
         => Editor(layout, null);
 
     // The editor, with the payer's address as stored, or as posted when it is given.
-    private ShapeResult Editor(CheckLayout layout, AddressEditorViewModel postedPayerAddress)
-        => Initialize<CheckLayoutViewModel>("CheckLayoutFields_Edit", async model =>
-        {
-            model.PayerAddress = postedPayerAddress ?? await _addressEditor.BuildAsync(layout.PayerAddress, AddressOptions(layout.PayerAddress?.Country));
-            model.PayerAddressEditor = await _shapeFactory.CreateAddressEditorAsync(model.PayerAddress, $"{Prefix}.{nameof(CheckLayoutViewModel.PayerAddress)}");
-            model.Name = layout.Name;
-            model.Description = layout.Description;
-            model.Stock = layout.Stock;
-            model.Form = layout.Form;
-            model.OffsetX = Text(layout.OffsetX);
-            model.OffsetY = Text(layout.OffsetY);
-            model.PrintMicr = layout.PrintMicr;
-            model.UseAuxiliaryOnUs = layout.UseAuxiliaryOnUs;
-            model.MicrFontSize = Text(layout.MicrFontSize);
-            model.MicrSymbolCharacters = layout.MicrSymbolCharacters;
-            model.PayerName = layout.PayerName;
-            model.SecondSignatureAbove = layout.SecondSignatureAbove?.ToString(CultureInfo.InvariantCulture);
-            model.HasSignature = layout.HasSignature;
-            model.HasSecondSignature = layout.HasSecondSignature;
-            model.HasMicrFont = layout.HasMicrFont;
-            model.Fields = CheckFieldNames.All
-                .Select(name =>
-                {
-                    var position = CheckLayoutDefaults.Get(layout, name);
+    private CombinedResult Editor(CheckLayout layout, AddressEditorViewModel postedPayerAddress)
+        => Combine(
+            Initialize<CheckLayoutViewModel>("CheckLayoutFields_Edit", model => Populate(model, layout))
+                .Location(l => l.Zone("Content", "1").Card(S["The Layout"], "10")),
+            Initialize<CheckLayoutViewModel>("CheckLayoutDesigner_Edit", model => Populate(model, layout))
+                .Location(l => l.Zone("Content", "2").Card(S["Check Designer"], "20")),
+            Initialize<CheckLayoutViewModel>("CheckLayoutPayer_Edit", async model =>
+            {
+                Populate(model, layout);
 
-                    return new CheckFieldPositionViewModel
-                    {
-                        Name = name,
-                        Label = Label(name),
-                        X = Text(position.X),
-                        Y = Text(position.Y),
-                        Width = Text(position.Width),
-                        FontSize = Text(position.FontSize),
-                        Hidden = position.Hidden,
-                    };
-                })
-                .ToList();
-            model.StockOptions =
-            [
-                new SelectListItem(S["Blank check paper"], nameof(CheckStock.Blank), layout.Stock == CheckStock.Blank),
-                new SelectListItem(S["Pre-printed checks"], nameof(CheckStock.PrePrinted), layout.Stock == CheckStock.PrePrinted),
-            ];
-            model.FormOptions =
-            [
-                new SelectListItem(S["Check on top, two vouchers below"], nameof(CheckForm.CheckOnTop), layout.Form == CheckForm.CheckOnTop),
-                new SelectListItem(S["Check in the middle, a voucher above and below"], nameof(CheckForm.CheckInMiddle), layout.Form == CheckForm.CheckInMiddle),
-                new SelectListItem(S["Check on the bottom, two vouchers above"], nameof(CheckForm.CheckOnBottom), layout.Form == CheckForm.CheckOnBottom),
-                new SelectListItem(S["Three checks a sheet, no voucher"], nameof(CheckForm.ThreePerPage), layout.Form == CheckForm.ThreePerPage),
-            ];
-        }).Location("Content:1");
+                model.PayerAddress = postedPayerAddress ?? await _addressEditor.BuildAsync(layout.PayerAddress, AddressOptions(layout.PayerAddress?.Country));
+                model.PayerAddressEditor = await _shapeFactory.CreateAddressEditorAsync(model.PayerAddress, $"{Prefix}.{nameof(CheckLayoutViewModel.PayerAddress)}");
+            }).Location(l => l.Zone("Content", "3").Card(S["Payer (Blank Paper)"], "30")),
+            Initialize<CheckLayoutViewModel>("CheckLayoutSignatures_Edit", model => Populate(model, layout))
+                .Location(l => l.Zone("Content", "4").Card(S["Signatures"], "40")),
+            Initialize<CheckLayoutViewModel>("CheckLayoutMicr_Edit", model => Populate(model, layout))
+                .Location(l => l.Zone("Content", "5").Card(S["Check Line (MICR)"], "50")),
+            Initialize<CheckLayoutViewModel>("CheckLayoutCalibration_Edit", model => Populate(model, layout))
+                .Location(l => l.Zone("Content", "6").Card(S["Calibration"], "60")));
+
+    private void Populate(CheckLayoutViewModel model, CheckLayout layout)
+    {
+        model.Name = layout.Name;
+        model.Description = layout.Description;
+        model.Stock = layout.Stock;
+        model.Form = layout.Form;
+        model.OffsetX = Text(layout.OffsetX);
+        model.OffsetY = Text(layout.OffsetY);
+        model.PrintMicr = layout.PrintMicr;
+        model.UseAuxiliaryOnUs = layout.UseAuxiliaryOnUs;
+        model.MicrFontSize = Text(layout.MicrFontSize);
+        model.MicrSymbolCharacters = layout.MicrSymbolCharacters;
+        model.PayerName = layout.PayerName;
+        model.SecondSignatureAbove = layout.SecondSignatureAbove?.ToString(CultureInfo.InvariantCulture);
+        model.HasSignature = layout.HasSignature;
+        model.HasSecondSignature = layout.HasSecondSignature;
+        model.HasMicrFont = layout.HasMicrFont;
+        model.Fields = CheckFieldNames.All
+            .Select(name =>
+            {
+                var position = CheckLayoutDefaults.Get(layout, name);
+
+                return new CheckFieldPositionViewModel
+                {
+                    Name = name,
+                    Label = Label(name),
+                    X = Text(position.X),
+                    Y = Text(position.Y),
+                    Width = Text(position.Width),
+                    FontSize = Text(position.FontSize),
+                    Hidden = position.Hidden,
+                };
+            })
+            .ToList();
+        model.StockOptions =
+        [
+            new SelectListItem(S["Blank check paper"], nameof(CheckStock.Blank), layout.Stock == CheckStock.Blank),
+            new SelectListItem(S["Pre-printed checks"], nameof(CheckStock.PrePrinted), layout.Stock == CheckStock.PrePrinted),
+        ];
+        model.FormOptions =
+        [
+            new SelectListItem(S["Check on top, two vouchers below"], nameof(CheckForm.CheckOnTop), layout.Form == CheckForm.CheckOnTop),
+            new SelectListItem(S["Check in the middle, a voucher above and below"], nameof(CheckForm.CheckInMiddle), layout.Form == CheckForm.CheckInMiddle),
+            new SelectListItem(S["Check on the bottom, two vouchers above"], nameof(CheckForm.CheckOnBottom), layout.Form == CheckForm.CheckOnBottom),
+            new SelectListItem(S["Three checks a sheet, no voucher"], nameof(CheckForm.ThreePerPage), layout.Form == CheckForm.ThreePerPage),
+        ];
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(CheckLayout layout, UpdateEditorContext context)
     {

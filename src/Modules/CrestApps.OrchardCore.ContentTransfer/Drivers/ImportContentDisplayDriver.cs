@@ -25,16 +25,22 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
     }
 
     public override Task<IDisplayResult> EditAsync(ImportContent model, BuildEditorContext context)
-        => Task.FromResult<IDisplayResult>(
-            Initialize<ContentImportViewModel>("ImportContentFile_Edit", viewModel =>
-            {
-                var options = model.GetOrCreate<ImportContentOptionsPart>();
-                viewModel.File = model.File;
-                viewModel.PublishImportedContent = options.PublishImportedContent;
-                viewModel.AcceptedFileTypes = string.Join(',', AllowedExtensions(model));
-                viewModel.ShowContentOptions = model.IsContentType;
-            })
-            .Location("Content:1"));
+        => Task.FromResult<IDisplayResult>(Combine(
+            Initialize<ContentImportViewModel>("ImportContentFile_Edit", viewModel => FillValues(viewModel, model))
+                .Location(l => l.Zone("Content", "1").Card(S["File"], "10")),
+            Initialize<ContentImportViewModel>("ImportContentOptions_Edit", viewModel => FillValues(viewModel, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Options"], "20"))
+                .RenderWhen(() => Task.FromResult(model.IsContentType))));
+
+    private void FillValues(ContentImportViewModel viewModel, ImportContent model)
+    {
+        var options = model.GetOrCreate<ImportContentOptionsPart>();
+
+        viewModel.File = model.File;
+        viewModel.PublishImportedContent = options.PublishImportedContent;
+        viewModel.AcceptedFileTypes = string.Join(',', AllowedExtensions(model));
+        viewModel.ShowContentOptions = model.IsContentType;
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ImportContent model, UpdateEditorContext context)
     {

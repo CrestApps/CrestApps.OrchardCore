@@ -48,7 +48,7 @@ public sealed class LtiDataTests
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.OK, list.StatusCode);
         Assert.True(editor.StatusCode == System.Net.HttpStatusCode.OK, html);
-        Assert.Contains("Give the tool these platform details", html, StringComparison.Ordinal);
+        Assert.Contains("Platform Details", html, StringComparison.Ordinal);
         Assert.Contains("learning/lti/jwks", html, StringComparison.Ordinal);
     }
 

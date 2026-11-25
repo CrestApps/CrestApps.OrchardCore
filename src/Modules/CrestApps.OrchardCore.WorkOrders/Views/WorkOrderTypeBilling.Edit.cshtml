@@ -1,0 +1,25 @@
+@model WorkOrderTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="BillingMode" class="ocat-label">@T["Billed"]</label>
+    <div class="ocat-end">
+        <select asp-for="BillingMode" class="form-select">
+            <option value="@WorkOrderBillingMode.NotBillable">@T["Not billed"]</option>
+            <option value="@WorkOrderBillingMode.FixedPrice">@T["At a fixed price"]</option>
+            <option value="@WorkOrderBillingMode.TimeAndMaterials">@T["For the time and materials used"]</option>
+        </select>
+        <span class="hint">@T["When Transactions is on, completing a billed work order makes its invoice."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="FixedPrice" class="ocat-label">@T["Fixed price"]</label>
+    <div class="ocat-end">
+        <input asp-for="FixedPrice" type="number" min="0" step="0.01" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-end">
+        <input asp-for="Currency" class="form-control" maxlength="3" />
+    </div>
+</div>

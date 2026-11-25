@@ -37,20 +37,37 @@ public sealed class ReferralSettingsDisplayDriver : CustomerSettingsDisplayDrive
         => CustomersConstants.ReferralSettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, ReferralSettings settings, BuildEditorContext context)
-        => Initialize<ReferralSettingsViewModel>("ReferralSettings_Edit", async model =>
+    {
+        return Combine(
+            Initialize<ReferralSettingsViewModel>("ReferralSettings_Edit", model => FillAsync(model, settings, includeCoupons: true))
+                .Location(l => l.Zone("Content", "1").Card(S["Referred Friend"], "10"))
+                .RenderWhen(CanManageCustomersAsync)
+                .OnGroup(SettingsGroupId),
+            Initialize<ReferralSettingsViewModel>("ReferralSettingsReward_Edit", model => FillAsync(model, settings, includeCoupons: false))
+                .Location(l => l.Zone("Content", "2").Card(S["Customer Reward"], "20"))
+                .RenderWhen(CanManageCustomersAsync)
+                .OnGroup(SettingsGroupId));
+    }
+
+    // Only the card that lists the coupons needs them.
+    private async ValueTask FillAsync(ReferralSettingsViewModel model, ReferralSettings settings, bool includeCoupons)
+    {
+        model.FriendCouponId = settings.FriendCouponId;
+        model.RewardKind = settings.RewardKind;
+        model.RewardAmount = settings.RewardAmount;
+        model.RewardPoints = settings.RewardPoints;
+        model.MinimumOrderAmount = settings.MinimumOrderAmount;
+
+        if (!includeCoupons)
         {
-            model.FriendCouponId = settings.FriendCouponId;
-            model.RewardKind = settings.RewardKind;
-            model.RewardAmount = settings.RewardAmount;
-            model.RewardPoints = settings.RewardPoints;
-            model.MinimumOrderAmount = settings.MinimumOrderAmount;
-            model.Coupons = [.. (await _couponStore.GetAllAsync())
-                .Where(coupon => !coupon.IsAutomatic)
-                .OrderBy(coupon => coupon.Code, StringComparer.OrdinalIgnoreCase)
-                .Select(coupon => new SelectListItem(string.IsNullOrEmpty(coupon.Description) ? coupon.Code : $"{coupon.Code} ({coupon.Description})", coupon.ItemId, coupon.ItemId == settings.FriendCouponId))];
-        }).Location("Content:1")
-        .RenderWhen(CanManageCustomersAsync)
-        .OnGroup(SettingsGroupId);
+            return;
+        }
+
+        model.Coupons = [.. (await _couponStore.GetAllAsync())
+            .Where(coupon => !coupon.IsAutomatic)
+            .OrderBy(coupon => coupon.Code, StringComparer.OrdinalIgnoreCase)
+            .Select(coupon => new SelectListItem(string.IsNullOrEmpty(coupon.Description) ? coupon.Code : $"{coupon.Code} ({coupon.Description})", coupon.ItemId, coupon.ItemId == settings.FriendCouponId))];
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, ReferralSettings settings, UpdateEditorContext context)
     {

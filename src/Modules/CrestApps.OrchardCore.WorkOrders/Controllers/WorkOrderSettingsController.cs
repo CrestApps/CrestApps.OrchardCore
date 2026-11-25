@@ -16,6 +16,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -57,6 +58,10 @@ public sealed class WorkOrderSettingsController : Controller
     private readonly WorkOrderStore _workOrderStore;
     private readonly ISession _session;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<WorkOrderTypeEditViewModel> _typeDisplayManager;
+    private readonly IDisplayManager<ChecklistTemplateEditViewModel> _checklistDisplayManager;
+    private readonly IDisplayManager<WorkOrderSubStatusEditViewModel> _subStatusDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -73,6 +78,10 @@ public sealed class WorkOrderSettingsController : Controller
     /// <param name="workOrderStore">The work order store.</param>
     /// <param name="session">The session.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="typeDisplayManager">The display manager of the type editor.</param>
+    /// <param name="checklistDisplayManager">The display manager of the checklist editor.</param>
+    /// <param name="subStatusDisplayManager">The display manager of the sub-status editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkOrderSettingsController(
@@ -85,6 +94,10 @@ public sealed class WorkOrderSettingsController : Controller
         WorkOrderStore workOrderStore,
         ISession session,
         INotifier notifier,
+        IDisplayManager<WorkOrderTypeEditViewModel> typeDisplayManager,
+        IDisplayManager<ChecklistTemplateEditViewModel> checklistDisplayManager,
+        IDisplayManager<WorkOrderSubStatusEditViewModel> subStatusDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<WorkOrderSettingsController> htmlLocalizer,
         IStringLocalizer<WorkOrderSettingsController> stringLocalizer)
     {
@@ -97,6 +110,10 @@ public sealed class WorkOrderSettingsController : Controller
         _workOrderStore = workOrderStore;
         _session = session;
         _notifier = notifier;
+        _typeDisplayManager = typeDisplayManager;
+        _checklistDisplayManager = checklistDisplayManager;
+        _subStatusDisplayManager = subStatusDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -202,6 +219,8 @@ public sealed class WorkOrderSettingsController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _typeDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -227,6 +246,11 @@ public sealed class WorkOrderSettingsController : Controller
         {
             return NotFound();
         }
+
+        // The options of the editor are filled first: its shapes show them.
+        await PopulateAsync(form);
+
+        form.Editor = await _typeDisplayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
 
         item.Name = form.Name?.Trim();
         item.Color = string.IsNullOrWhiteSpace(form.Color) ? null : form.Color.Trim();
@@ -254,7 +278,10 @@ public sealed class WorkOrderSettingsController : Controller
 
         if (!ModelState.IsValid)
         {
+            // The empty rows to add to are put back, and the editor shows them.
             await PopulateAsync(form);
+
+            form.Editor = await _typeDisplayManager.BuildEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
 
             return View(form);
         }
@@ -308,6 +335,8 @@ public sealed class WorkOrderSettingsController : Controller
 
         AddBlankQuestions(model);
 
+        model.Editor = await _checklistDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -333,6 +362,8 @@ public sealed class WorkOrderSettingsController : Controller
         {
             return NotFound();
         }
+
+        form.Editor = await _checklistDisplayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
 
         var previous = item.Questions.ToDictionary(question => question.Id ?? string.Empty, StringComparer.Ordinal);
 
@@ -370,6 +401,8 @@ public sealed class WorkOrderSettingsController : Controller
         {
             AddBlankQuestions(form);
 
+            form.Editor = await _checklistDisplayManager.BuildEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
+
             return View(form);
         }
 
@@ -399,14 +432,18 @@ public sealed class WorkOrderSettingsController : Controller
             return NotFound();
         }
 
-        return View(new WorkOrderSubStatusEditViewModel
+        var model = new WorkOrderSubStatusEditViewModel
         {
             Id = id,
             Name = item.Name,
             ParentStatus = string.IsNullOrEmpty(id) ? WorkOrderStatus.OnHold : item.ParentStatus,
             Color = item.Color,
             PausesSla = item.PausesSla,
-        });
+        };
+
+        model.Editor = await _subStatusDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
+        return View(model);
     }
 
     /// <summary>
@@ -431,6 +468,8 @@ public sealed class WorkOrderSettingsController : Controller
         {
             return NotFound();
         }
+
+        form.Editor = await _subStatusDisplayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
 
         item.Name = form.Name?.Trim();
         item.ParentStatus = form.ParentStatus;

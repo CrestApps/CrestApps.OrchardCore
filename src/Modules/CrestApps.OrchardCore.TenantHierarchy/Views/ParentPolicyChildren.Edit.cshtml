@@ -1,0 +1,86 @@
+@model ParentPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxChildren" class="ocat-label">@T["Limit"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxChildren" type="number" min="0" max="10000" class="form-control" />
+        <span asp-validation-for="MaxChildren" class="text-danger"></span>
+        <span class="hint">@T["The highest number of child tenants the parent may have."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ChildHostPattern" class="ocat-label">@T["Address pattern"]</label>
+    <div class="ocat-end">
+        <input asp-for="ChildHostPattern" class="form-control" placeholder="{business}.{parent address}" spellcheck="false" />
+        <span asp-validation-for="ChildHostPattern" class="text-danger"></span>
+        <span class="hint">@T["Leave empty to use {{business}} followed by the parent's address. A custom pattern must start with {{business}}. and must not use a wildcard."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Recipes" class="ocat-label">@T["Setup recipes"]</label>
+    <div class="ocat-end">
+        @foreach (var recipe in Model.AvailableRecipes)
+        {
+            var id = $"recipe-{recipe.Value}";
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="Recipes" value="@recipe.Value" id="@id" @(recipe.Selected ? "checked" : null) />
+                <label class="form-check-label" for="@id">@recipe.Text</label>
+            </div>
+        }
+        <span class="hint">@T["The recipes a new child tenant can start from. Select none to allow every setup recipe. A recipe must not enable a blocked feature."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DatabaseStrategy" class="ocat-label">@T["Database"]</label>
+    <div class="ocat-end">
+        <select asp-for="DatabaseStrategy" class="form-select">
+            <option value="@ChildDatabaseStrategy.SqlitePerChild">@T["A SQLite file per child tenant"]</option>
+            <option value="@ChildDatabaseStrategy.DatabasePerChild">@T["A database and login per child tenant"]</option>
+            <option value="@ChildDatabaseStrategy.SchemaPerChild">@T["A schema and login per child tenant"]</option>
+            <option value="@ChildDatabaseStrategy.TablePrefixPerChild">@T["A table prefix per child tenant"]</option>
+        </select>
+        <span class="hint">@T["A database per child tenant isolates best. A shared database with table prefixes blocks the SQL queries feature in child tenants."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DatabasePool" class="ocat-label">@T["Database pool"]</label>
+    <div class="ocat-end">
+        <select asp-for="DatabasePool" asp-items="Model.DatabasePools" class="form-select">
+            <option value="">@T["None (SQLite only)"]</option>
+        </select>
+        <span asp-validation-for="DatabasePool" class="text-danger"></span>
+        <span class="hint">@T["A database server configured on the host under TenantHierarchy:DatabasePools. Its credentials are never shown to a tenant."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="BlockedFeatures" class="ocat-label">@T["Blocked features"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="BlockedFeatures" class="form-control font-monospace" rows="3" spellcheck="false"></textarea>
+        <span class="hint">@T["One feature identifier per line. These features are hidden from child tenants, in addition to the built-in list."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DeniedLocalPermissions" class="ocat-label">@T["Denied to local users"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="DeniedLocalPermissions" class="form-control font-monospace" rows="3" spellcheck="false"></textarea>
+        <span class="hint">@T["One permission name per line, for example ManageRecipes. The child tenant's own users never get these, even administrators. People from the parent are not affected."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RemovalGraceDays" class="ocat-label">@T["Keep removed child tenants"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="RemovalGraceDays" type="number" min="0" max="365" class="form-control" />
+            <span class="input-group-text">@T["days"]</span>
+        </div>
+        <span asp-validation-for="RemovalGraceDays" class="text-danger"></span>
+        <span class="hint">@T["0 removes a child tenant at once. More keeps it suspended and restorable for that many days."]</span>
+    </div>
+</div>

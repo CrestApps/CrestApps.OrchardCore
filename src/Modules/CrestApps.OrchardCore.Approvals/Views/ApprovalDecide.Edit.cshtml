@@ -1,0 +1,9 @@
+@model ApprovalDecideViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Note">
+    <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Note" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["Required to reject: the requester sees it."]</span>
+    </div>
+</div>

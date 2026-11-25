@@ -37,29 +37,39 @@ internal sealed class ShippingMethodDisplayDriver : DisplayDriver<ShippingMethod
     }
 
     public override IDisplayResult Edit(ShippingMethod method, BuildEditorContext context)
-        => Initialize<ShippingMethodViewModel>("ShippingMethodFields_Edit", async model =>
-        {
-            var settings = await _siteService.GetSettingsAsync<ShippingSettings>();
+    {
+        return Combine(
+            Initialize<ShippingMethodViewModel>("ShippingMethodFields_Edit", model => FillAsync(model, method))
+                .Location(l => l.Zone("Content", "1").Card(S["Method"], "10")),
+            Initialize<ShippingMethodViewModel>("ShippingMethodFieldsCurrency_Edit", model => FillAsync(model, method))
+                .Location(l => l.Zone("Content", "2").Card(S["Currency and Tax"], "20")),
+            Initialize<ShippingMethodViewModel>("ShippingMethodFieldsSurcharges_Edit", model => FillAsync(model, method))
+                .Location(l => l.Zone("Content", "3").Card(S["Surcharges"], "30")));
+    }
 
-            model.Name = method.Name;
-            model.Description = method.Description;
-            model.Enabled = method.Enabled;
-            model.Position = method.Position;
-            model.Currency = method.Currency;
-            model.TaxCategoryCode = method.TaxCategoryCode;
-            model.ProviderDisplayName = _providers.FirstOrDefault(provider => string.Equals(provider.Name, method.ProviderName, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? method.ProviderName;
-            model.Currencies = (await _currencyProvider.GetCurrenciesAsync())
-                .Select(currency => new SelectListItem($"{currency.CurrencyCode} ({currency.DisplayName})", currency.CurrencyCode, string.Equals(currency.CurrencyCode, method.Currency, StringComparison.OrdinalIgnoreCase)))
-                .ToArray();
-            model.Surcharges = (settings.ShippingClasses ?? [])
-                .Union((IEnumerable<string>)method.ClassSurcharges?.Keys ?? [], StringComparer.OrdinalIgnoreCase)
-                .Select(shippingClass => new ShippingClassSurchargeViewModel
-                {
-                    ShippingClass = shippingClass,
-                    Amount = method.ClassSurcharges?.TryGetValue(shippingClass, out var amount) == true ? amount : null,
-                })
-                .ToList();
-        }).Location("Content:1");
+    private async ValueTask FillAsync(ShippingMethodViewModel model, ShippingMethod method)
+    {
+        var settings = await _siteService.GetSettingsAsync<ShippingSettings>();
+
+        model.Name = method.Name;
+        model.Description = method.Description;
+        model.Enabled = method.Enabled;
+        model.Position = method.Position;
+        model.Currency = method.Currency;
+        model.TaxCategoryCode = method.TaxCategoryCode;
+        model.ProviderDisplayName = _providers.FirstOrDefault(provider => string.Equals(provider.Name, method.ProviderName, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? method.ProviderName;
+        model.Currencies = (await _currencyProvider.GetCurrenciesAsync())
+            .Select(currency => new SelectListItem($"{currency.CurrencyCode} ({currency.DisplayName})", currency.CurrencyCode, string.Equals(currency.CurrencyCode, method.Currency, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        model.Surcharges = (settings.ShippingClasses ?? [])
+            .Union((IEnumerable<string>)method.ClassSurcharges?.Keys ?? [], StringComparer.OrdinalIgnoreCase)
+            .Select(shippingClass => new ShippingClassSurchargeViewModel
+            {
+                ShippingClass = shippingClass,
+                Amount = method.ClassSurcharges?.TryGetValue(shippingClass, out var amount) == true ? amount : null,
+            })
+            .ToList();
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
     {
@@ -114,6 +124,9 @@ internal sealed class FlatRateMethodDisplayDriver : ShippingMethodSettingsDispla
         S = stringLocalizer;
     }
 
+    protected override LocalizedString CardName
+        => S["Flat Rate"];
+
     protected override ValueTask BuildViewModelAsync(FlatRateSettingsViewModel model, FlatRateSettings settings)
     {
         model.Amount = settings.Amount;
@@ -150,6 +163,9 @@ internal sealed class TableRateMethodDisplayDriver : ShippingMethodSettingsDispl
         _siteService = siteService;
         S = stringLocalizer;
     }
+
+    protected override LocalizedString CardName
+        => S["Table Rate"];
 
     protected override async ValueTask BuildViewModelAsync(TableRateSettingsViewModel model, TableRateSettings settings)
     {
@@ -212,6 +228,9 @@ internal sealed class FreeShippingMethodDisplayDriver : ShippingMethodSettingsDi
         S = stringLocalizer;
     }
 
+    protected override LocalizedString CardName
+        => S["Free Shipping"];
+
     protected override ValueTask BuildViewModelAsync(FreeShippingSettingsViewModel model, FreeShippingSettings settings)
     {
         model.MinimumSubtotal = settings.MinimumSubtotal;
@@ -244,6 +263,9 @@ internal sealed class LocalDeliveryMethodDisplayDriver : ShippingMethodSettingsD
     {
         S = stringLocalizer;
     }
+
+    protected override LocalizedString CardName
+        => S["Local Delivery"];
 
     protected override ValueTask BuildViewModelAsync(LocalDeliverySettingsViewModel model, LocalDeliverySettings settings)
     {
@@ -305,6 +327,9 @@ internal sealed class CarrierRateMethodDisplayDriver : ShippingMethodSettingsDis
         _carriers = carriers;
         S = stringLocalizer;
     }
+
+    protected override LocalizedString CardName
+        => S["Carrier Rates"];
 
     protected override async ValueTask BuildViewModelAsync(CarrierRateSettingsViewModel model, CarrierRateSettings settings)
     {

@@ -41,6 +41,13 @@ public sealed class RerunConversationAnalysisTaskDisplayDriver : ActivityDisplay
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(RerunConversationAnalysisTask activity, BuildEditorContext context)
+    {
+        return Initialize<RerunConversationAnalysisTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Conversation"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(RerunConversationAnalysisTask activity, UpdateEditorContext context)
     {
         var model = new RerunConversationAnalysisTaskViewModel();

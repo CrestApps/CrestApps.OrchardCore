@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -39,6 +40,8 @@ public sealed class GradingController : Controller
     private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly IEnumerable<IAttemptObserver> _observers;
+    private readonly IDisplayManager<QuizOverridesViewModel> _overridesDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -57,8 +60,12 @@ public sealed class GradingController : Controller
         IClock clock,
         INotifier notifier,
         IEnumerable<IAttemptObserver> observers,
+        IDisplayManager<QuizOverridesViewModel> overridesDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<GradingController> htmlLocalizer)
     {
+        _overridesDisplayManager = overridesDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _observers = observers;
         _attemptStore = attemptStore;
         _overrideStore = overrideStore;
@@ -290,7 +297,11 @@ public sealed class GradingController : Controller
             return NotFound();
         }
 
-        return View(await BuildOverridesAsync(new QuizOverridesViewModel(), quiz));
+        var model = await BuildOverridesAsync(new QuizOverridesViewModel(), quiz);
+
+        model.Editor = await _overridesDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View(model);
     }
 
     /// <summary>
@@ -316,6 +327,8 @@ public sealed class GradingController : Controller
         {
             return NotFound();
         }
+
+        model.Editor = await _overridesDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         var user = string.IsNullOrWhiteSpace(model.UserName) ? null : await userManager.FindByNameAsync(model.UserName.Trim());
 

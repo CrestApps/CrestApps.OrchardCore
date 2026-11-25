@@ -56,7 +56,7 @@ internal sealed class AIPersonaDeploymentStepDisplayDriver : DisplayDriver<Deplo
                 })
                 .OrderBy(entry => entry.DisplayText, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Personas"], "10"));
     }
 
     /// <inheritdoc />

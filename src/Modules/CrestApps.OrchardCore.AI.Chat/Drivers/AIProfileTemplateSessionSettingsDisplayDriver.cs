@@ -32,7 +32,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
         {
             var dataExtractionSettings = template.GetOrCreate<AIProfileDataExtractionSettings>();
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
-        }).Location("Content:1#Data Processing & Metrics;10")
+        }).Location(l => l.Zone("Content", "1").Tab(S["Data Processing & Metrics"], "10").Card(S["Sessions"], "1"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

@@ -71,8 +71,8 @@ internal sealed class MessagingEntryPointDisplayDriver : DisplayDriver<ContactCe
         }
 
         return Combine(
-            Initialize<MessagingEntryPointViewModel>("MessagingEntryPoint_Edit", PopulateAsync).Location("Content:3%Routing;2"),
-            Initialize<MessagingEntryPointViewModel>("MessagingEntryPointClosed_Edit", PopulateAsync).Location("Content:2%Hours;3"));
+            Initialize<MessagingEntryPointViewModel>("MessagingEntryPoint_Edit", PopulateAsync).Location(l => l.Zone("Content", "3").Card(S["Routing"], "2")),
+            Initialize<MessagingEntryPointViewModel>("MessagingEntryPointClosed_Edit", PopulateAsync).Location(l => l.Zone("Content", "2").Card(S["Hours"], "3")));
     }
 
     /// <inheritdoc/>

@@ -1,8 +1,11 @@
 using CrestApps.OrchardCore.Learning.Programs.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
 using YesSql;
 
@@ -41,9 +44,20 @@ public sealed class RequiredLearningEventDisplayDriver<TActivity> : ActivityDisp
 {
     private readonly IRequiredLearningService _requiredLearning;
 
-    public RequiredLearningEventDisplayDriver(IRequiredLearningService requiredLearning)
+    internal readonly IStringLocalizer S;
+
+    public RequiredLearningEventDisplayDriver(
+        IRequiredLearningService requiredLearning,
+        IStringLocalizer<RequiredLearningEventDisplayDriver<TActivity>> stringLocalizer)
     {
         _requiredLearning = requiredLearning;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+    {
+        return Initialize<RequiredLearningEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Trigger"], "10"));
     }
 
     protected override async ValueTask EditActivityAsync(TActivity activity, RequiredLearningEventViewModel model)
@@ -63,9 +77,20 @@ public sealed class LearningPathCompletedEventDisplayDriver : ActivityDisplayDri
 {
     private readonly ISession _session;
 
-    public LearningPathCompletedEventDisplayDriver(ISession session)
+    internal readonly IStringLocalizer S;
+
+    public LearningPathCompletedEventDisplayDriver(
+        ISession session,
+        IStringLocalizer<LearningPathCompletedEventDisplayDriver> stringLocalizer)
     {
         _session = session;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(LearningPathCompletedEvent activity, BuildEditorContext context)
+    {
+        return Initialize<LearningPathCompletedEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Trigger"], "10"));
     }
 
     protected override async ValueTask EditActivityAsync(LearningPathCompletedEvent activity, LearningPathCompletedEventViewModel model)
@@ -86,9 +111,20 @@ public sealed class RequireLearningTaskDisplayDriver : ActivityDisplayDriver<Req
 {
     private readonly IRequiredLearningService _requiredLearning;
 
-    public RequireLearningTaskDisplayDriver(IRequiredLearningService requiredLearning)
+    internal readonly IStringLocalizer S;
+
+    public RequireLearningTaskDisplayDriver(
+        IRequiredLearningService requiredLearning,
+        IStringLocalizer<RequireLearningTaskDisplayDriver> stringLocalizer)
     {
         _requiredLearning = requiredLearning;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(RequireLearningTask activity, BuildEditorContext context)
+    {
+        return Initialize<RequireLearningTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Task"], "10"));
     }
 
     protected override async ValueTask EditActivityAsync(RequireLearningTask activity, RequireLearningTaskViewModel model)
@@ -115,9 +151,20 @@ public sealed class GrantRequiredLearningExemptionTaskDisplayDriver : ActivityDi
 {
     private readonly IRequiredLearningService _requiredLearning;
 
-    public GrantRequiredLearningExemptionTaskDisplayDriver(IRequiredLearningService requiredLearning)
+    internal readonly IStringLocalizer S;
+
+    public GrantRequiredLearningExemptionTaskDisplayDriver(
+        IRequiredLearningService requiredLearning,
+        IStringLocalizer<GrantRequiredLearningExemptionTaskDisplayDriver> stringLocalizer)
     {
         _requiredLearning = requiredLearning;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(GrantRequiredLearningExemptionTask activity, BuildEditorContext context)
+    {
+        return Initialize<RequireLearningTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Task"], "10"));
     }
 
     protected override async ValueTask EditActivityAsync(GrantRequiredLearningExemptionTask activity, RequireLearningTaskViewModel model)

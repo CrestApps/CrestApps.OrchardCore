@@ -1,0 +1,57 @@
+@model WebMcpSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ExposeAllTools" data-webmcp-expose-all-tools="true" />
+            <label class="form-check-label" asp-for="ExposeAllTools">
+                @T["Expose all tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, every selectable tool and tool instance is offered, and the selection below is ignored. Leave disabled to offer only the tools you select."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const init = () => {
+            const exposeAllTools = document.querySelector('[data-webmcp-expose-all-tools="true"]');
+
+            if (!exposeAllTools) {
+                return;
+            }
+
+            // The tool pickers are separate shapes, and other cards on the settings page (such as the MCP Server) render
+            // the same pickers. Every field of this card is posted under the same prefix (for example "WebMcpSettings."),
+            // so pick the pickers whose fields share the prefix of this checkbox.
+            const prefix = exposeAllTools.name.substring(0, exposeAllTools.name.lastIndexOf('.') + 1);
+
+            if (!prefix) {
+                return;
+            }
+
+            const sections = new Set();
+
+            document.querySelectorAll('.tool-groups-container input, [id^="tool-instance-"]').forEach(input => {
+                if (input.name && input.name.startsWith(prefix)) {
+                    const section = input.closest('.ocat-wrapper');
+
+                    if (section) {
+                        sections.add(section);
+                    }
+                }
+            });
+
+            const toggleToolSelectors = () => sections.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
+
+            exposeAllTools.addEventListener('change', toggleToolSelectors);
+            toggleToolSelectors();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+</script>

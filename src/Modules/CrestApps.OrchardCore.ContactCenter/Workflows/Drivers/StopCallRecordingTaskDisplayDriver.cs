@@ -32,6 +32,13 @@ public sealed class StopCallRecordingTaskDisplayDriver : ActivityDisplayDriver<S
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(StopCallRecordingTask activity, BuildEditorContext context)
+    {
+        return Initialize<RecordingInteractionTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(StopCallRecordingTask activity, RecordingInteractionTaskViewModel model)
     {
         model.InteractionId = activity.InteractionId;

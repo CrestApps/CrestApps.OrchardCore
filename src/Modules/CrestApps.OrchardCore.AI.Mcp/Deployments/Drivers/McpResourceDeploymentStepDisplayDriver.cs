@@ -63,7 +63,7 @@ internal sealed class McpResourceDeploymentStepDisplayDriver : DisplayDriver<Dep
             {
                 Selected = step.ResourceIds is not null && step.ResourceIds.Contains(resource.ItemId),
             }).ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["MCP Resources"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpResourceDeploymentStep step, UpdateEditorContext context)

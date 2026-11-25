@@ -3,6 +3,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -16,12 +17,18 @@ internal sealed class LeadDispositionDisplayDriver : DisplayDriver<OmnichannelDi
 {
     private readonly INamedCatalog<LeadStatus> _statuses;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadDispositionDisplayDriver"/> class.
     /// </summary>
     /// <param name="statuses">The lead status catalog.</param>
-    public LeadDispositionDisplayDriver(INamedCatalog<LeadStatus> statuses)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public LeadDispositionDisplayDriver(
+        INamedCatalog<LeadStatus> statuses,
+        IStringLocalizer<LeadDispositionDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _statuses = statuses;
     }
 
@@ -35,7 +42,7 @@ internal sealed class LeadDispositionDisplayDriver : DisplayDriver<OmnichannelDi
                 .OrderBy(status => status.Order)
                 .Select(status => new SelectListItem(status.Name, status.ItemId, status.ItemId == model.SetLeadStatusId))
                 .ToList();
-        }).Location("Content:5%General;1");
+        }).Location(l => l.Zone("Content", "5").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelDisposition disposition, UpdateEditorContext context)

@@ -1,0 +1,19 @@
+@model CampaignEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Such as October win-back. Only staff see it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SegmentId">
+    <label asp-for="SegmentId" class="ocat-label ocat-label-required">@T["Segment"]</label>
+    <div class="ocat-end">
+        <select asp-for="SegmentId" asp-items="Model.Segments" class="form-select"><option value="">@T["Choose a segment"]</option></select>
+        <span asp-validation-for="SegmentId" class="text-danger"></span>
+        <span class="hint">@T["It goes to the segment's customers who accept marketing, as the segment is when each batch goes out."]</span>
+    </div>
+</div>

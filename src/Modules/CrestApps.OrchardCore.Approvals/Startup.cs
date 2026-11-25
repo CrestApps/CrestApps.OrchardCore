@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Approvals.Models;
 using CrestApps.OrchardCore.Approvals.Navigation;
 using CrestApps.OrchardCore.Approvals.Recipes;
 using CrestApps.OrchardCore.Approvals.Reports;
+using CrestApps.OrchardCore.Approvals.ViewModels;
 using CrestApps.OrchardCore.Approvals.Workflows;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
@@ -47,6 +48,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<ApprovalPolicy, ApprovalPolicyDisplayDriver>();
         services.AddDisplayDriver<ApprovalPolicy, ApprovalPolicyConditionsDisplayDriver>();
         services.AddDisplayDriver<ApprovalRequest, ApprovalRequestDisplayDriver>();
+        services.AddDisplayDriver<ApprovalDecideViewModel, ApprovalDecideDisplayDriver>();
         services.AddPermissionProvider<ApprovalsPermissionProvider>();
         services.AddNavigationProvider<ApprovalsAdminMenu>();
     }

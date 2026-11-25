@@ -1,14 +1,19 @@
 @model TicketApprovalSettingsViewModel
 
-<h3 class="h6 mt-3">@T["Approval"]</h3>
-<p class="hint">@T["A new ticket of this type waits for these steps, one after the other, before work goes on. One approver of a step approves it; one refusal solves the ticket and tells the requester why. Leave every step empty for no approval."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["A new ticket of this type waits for these steps, one after the other, before work goes on. One approver of a step approves it; one refusal solves the ticket and tells the requester why. Leave every step empty for no approval."]</span>
+    </div>
+</div>
 
-<div class="mb-2">
-    <label asp-for="WaitingStatusId" class="form-label small">@T["Status while waiting"]</label>
-    <select asp-for="WaitingStatusId" asp-items="Model.Statuses" class="form-select form-select-sm">
-        <option value="">@T["The first waiting status"]</option>
-    </select>
-    <span class="hint">@T["Such as a Waiting for approval status; add one under Tickets, Statuses."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="WaitingStatusId">
+    <label asp-for="WaitingStatusId" class="ocat-label">@T["Status while waiting"]</label>
+    <div class="ocat-end">
+        <select asp-for="WaitingStatusId" asp-items="Model.Statuses" class="form-select">
+            <option value="">@T["The first waiting status"]</option>
+        </select>
+        <span class="hint">@T["Such as a Waiting for approval status; add one under Tickets, Statuses."]</span>
+    </div>
 </div>
 
 @for (var i = 0; i < Model.Steps.Count; i++)

@@ -1,0 +1,13 @@
+@model MySettingsViewModel
+
+<div class="ocat-wrapper">
+    <label for="reminder-minutes" class="ocat-label">@T["Remind me of a shift"]</label>
+    <div class="ocat-end">
+        <select id="reminder-minutes" name="reminderMinutes" class="form-select">
+            @foreach (var (minutes, label) in new[] { (0, T["Never"].Value), (15, T["15 minutes before"].Value), (30, T["30 minutes before"].Value), (60, T["1 hour before"].Value), (120, T["2 hours before"].Value), (240, T["4 hours before"].Value) })
+            {
+                <option value="@minutes" selected="@(minutes == Model.ReminderMinutes)">@label</option>
+            }
+        </select>
+    </div>
+</div>

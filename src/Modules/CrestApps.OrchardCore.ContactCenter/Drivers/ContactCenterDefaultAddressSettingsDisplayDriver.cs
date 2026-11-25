@@ -63,7 +63,7 @@ public sealed class ContactCenterDefaultAddressSettingsDisplayDriver : SiteDispl
             model.PhoneAddressOptions = BuildOptions(addresses, OmnichannelConstants.Channels.Phone, settings.DefaultPhoneAddressId);
             model.SmsAddressOptions = BuildOptions(addresses, OmnichannelConstants.Channels.Sms, settings.DefaultSmsAddressId);
         })
-        .Location("Content:4#Default numbers")
+        .Location(l => l.Zone("Content", "4").Tab(S["Default Numbers"], "4").Card(S["Default Numbers"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ContactCenterPermissions.ManageContactCenter));
     }

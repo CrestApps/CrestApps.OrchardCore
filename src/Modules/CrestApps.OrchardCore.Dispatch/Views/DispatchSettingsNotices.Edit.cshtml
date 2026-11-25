@@ -1,0 +1,71 @@
+@model DispatchSettingsViewModel
+
+@if (!Model.CanSendNotices)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info">@T["Turn on SMS or Email to send notices; they go to the work order's contact."]</div>
+        </div>
+    </div>
+}
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="NoticesEnabled" />
+            <label class="form-check-label" asp-for="NoticesEnabled">@T["Tell customers about their visit"]</label>
+            <span class="hint dashed">@T["By text when the contact has a phone, else by email."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="TrackingEnabled" />
+            <label class="form-check-label" asp-for="TrackingEnabled">@T["Send a link to follow the technician"]</label>
+            <span class="hint dashed">@T["The link shows the arrival window and, once on the way, the expected time. It stops working when the visit is over."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ReminderHour" class="ocat-label">@T["Reminder hour"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReminderHour" class="form-control" type="number" min="0" max="23" />
+        <span asp-validation-for="ReminderHour" class="text-danger"></span>
+        <span class="hint">@T["Reminders go out the day before, from this hour."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="hint mb-0">@T["Words in braces are filled in: {0}.", "{Company}, {Number}, {Date}, {Window}, {Technician}, {Eta}, {TrackingUrl}"]</p>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ScheduledText" class="ocat-label">@T["Scheduled"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="ScheduledText" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ReminderText" class="ocat-label">@T["Reminder"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="ReminderText" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="EnRouteText" class="ocat-label">@T["On the way"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="EnRouteText" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="CompletedText" class="ocat-label">@T["Done"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="CompletedText" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="CanceledText" class="ocat-label">@T["Canceled"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="CanceledText" class="form-control" rows="2"></textarea>
+    </div>
+</div>

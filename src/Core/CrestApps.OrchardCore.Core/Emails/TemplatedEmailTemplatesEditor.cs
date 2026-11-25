@@ -7,15 +7,21 @@ namespace CrestApps.OrchardCore.Core.Emails;
 /// <summary>
 /// The editor of a module's templated e-mails: one template per kind of the module's group (on or off, a subject and a
 /// body) and a layout around them all. A module's settings driver builds the <see cref="TemplatedEmailTemplatesEditorViewModel"/>
-/// with <see cref="Build"/>, renders the shared <c>TemplatedEmailTemplatesEditor</c> shape (Resources), and reads it back
+/// with <see cref="Build"/>, renders the shared <see cref="LayoutShapeType"/> shape (the layout card) and one
+/// <see cref="TemplateShapeType"/> shape (Resources) for each of the entries (a card each), and reads it back
 /// with <see cref="Apply"/>, which checks every part with the restricted Liquid the e-mails render with.
 /// </summary>
 public static class TemplatedEmailTemplatesEditor
 {
     /// <summary>
-    /// The name of the shared editor shape.
+    /// The name of the shared shape that edits the layout (with the introduction above it).
     /// </summary>
-    public const string ShapeType = "TemplatedEmailTemplatesEditor";
+    public const string LayoutShapeType = "TemplatedEmailLayoutEditor";
+
+    /// <summary>
+    /// The name of the shared shape that edits one template, the entry at <see cref="TemplatedEmailTemplatesEditorViewModel.Index"/>.
+    /// </summary>
+    public const string TemplateShapeType = "TemplatedEmailTemplateEditor";
 
     /// <summary>
     /// Fills the editor from the group's kinds and the templates kept for them.
@@ -143,6 +149,11 @@ public class TemplatedEmailTemplatesEditorViewModel
     /// Gets or sets the text above the editor: what the templates read (<c>{{ Content }}</c> and the module's models).
     /// </summary>
     public string Introduction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the entry of <see cref="Templates"/> that a template shape renders. The layout shape ignores it.
+    /// </summary>
+    public int Index { get; set; }
 
     /// <summary>
     /// Gets or sets the layout around every e-mail of the group.

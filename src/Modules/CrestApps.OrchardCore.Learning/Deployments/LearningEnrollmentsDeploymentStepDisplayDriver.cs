@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Learning.Services;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,12 +16,16 @@ internal sealed class LearningEnrollmentsDeploymentStepDisplayDriver : DisplayDr
     private readonly CourseEditorOptions _editorOptions;
     private readonly ILocalClock _localClock;
 
+    internal readonly IStringLocalizer S;
+
     public LearningEnrollmentsDeploymentStepDisplayDriver(
         CourseEditorOptions editorOptions,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        IStringLocalizer<LearningEnrollmentsDeploymentStepDisplayDriver> stringLocalizer)
     {
         _editorOptions = editorOptions;
         _localClock = localClock;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(LearningEnrollmentsDeploymentStep step, BuildDisplayContext context)
@@ -39,7 +44,7 @@ internal sealed class LearningEnrollmentsDeploymentStepDisplayDriver : DisplayDr
             model.From = step.FromUtc is { } from ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(from, DateTimeKind.Utc))).DateTime : null;
             model.To = step.ToUtc is { } to ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(to, DateTimeKind.Utc))).DateTime : null;
             model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [step.CourseId]);
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Learner Records"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(LearningEnrollmentsDeploymentStep step, UpdateEditorContext context)

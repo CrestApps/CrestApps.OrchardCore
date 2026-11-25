@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
@@ -27,6 +28,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     private readonly bool _aiVoiceAnswererRegistered;
     private readonly EntryPointAIAgentOptions _aiAgentOptions;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointDisplayDriver"/> class.
     /// </summary>
@@ -35,13 +38,16 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     /// <param name="channelOptions">The channels entry points can answer.</param>
     /// <param name="aiVoiceAnswerers">The providers' AI voice answerers, which make an AI voice agent a call target.</param>
     /// <param name="aiAgentOptions">The other channels whose traffic an AI agent can answer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterEntryPointDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
         IOmnichannelChannelEndpointManager addressManager,
         IOptions<EntryPointChannelOptions> channelOptions,
         IEnumerable<IInboundAIVoiceAnswerer> aiVoiceAnswerers,
-        IOptions<EntryPointAIAgentOptions> aiAgentOptions)
+        IOptions<EntryPointAIAgentOptions> aiAgentOptions,
+        IStringLocalizer<ContactCenterEntryPointDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _aiAgentOptions = aiAgentOptions.Value;
         _aiVoiceAnswererRegistered = aiVoiceAnswerers.Any();
         _optionsProvider = optionsProvider;
@@ -143,9 +149,9 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         }
 
         return Combine(
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointGeneral_Edit", Populate).Location("Content:1%General;1"),
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointRouting_Edit", Populate).Location("Content:1%Routing;2"),
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointHours_Edit", Populate).Location("Content:1%Hours;3"));
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointGeneral_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["General"], "1")),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointRouting_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Routing"], "2")),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointHours_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Hours"], "3")));
     }
 
     /// <inheritdoc/>

@@ -1,0 +1,84 @@
+@model GarnishmentOrderViewModel
+@using System.Globalization
+
+<div class="ocat-wrapper" asp-validation-class-for="Amount">
+    <label asp-for="Amount" class="ocat-label">@T["Amount each pay"]</label>
+    <div class="ocat-end">
+        <input asp-for="Amount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Percent">
+    <label asp-for="Percent" class="ocat-label">@T["Percent of disposable earnings"]</label>
+    <div class="ocat-end">
+        <input asp-for="Percent" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+        <span asp-validation-for="Percent" class="text-danger"></span>
+        <span class="hint">@T["Disposable earnings are gross pay less the employee's taxes. An amount and a percent add up."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="TotalOwed">
+    <label asp-for="TotalOwed" class="ocat-label">@T["Total owed"]</label>
+    <div class="ocat-end">
+        <input asp-for="TotalOwed" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="TotalOwed" class="text-danger"></span>
+        <span class="hint">@T["The order completes once this much was withheld; empty for an order with no end amount."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="LimitPercent">
+    <label asp-for="LimitPercent" class="ocat-label">@T["Limit (% of disposable earnings)"]</label>
+    <div class="ocat-end">
+        <input asp-for="LimitPercent" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+        <span asp-validation-for="LimitPercent" class="text-danger"></span>
+        <span class="hint">@T["The most the law lets the order take: 50 to 65 for support (shared by the person's support orders), 25 for a creditor and 15 for a student loan (shared with the orders before it). Empty takes the kind's."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="OtherDependents" type="checkbox" class="form-check-input" />
+            <label asp-for="OtherDependents" class="form-check-label">@T["Supports another spouse or child"]</label>
+            <span class="hint dashed">@T["For a support order: the person supports a spouse or child the order doesn't cover, so the limit is 50% instead of 60%."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="ArrearsOver12Weeks" type="checkbox" class="form-check-input" />
+            <label asp-for="ArrearsOver12Weeks" class="form-check-label">@T["Arrears over 12 weeks old"]</label>
+            <span class="hint dashed">@T["For a support order: it collects support more than 12 weeks overdue, so the limit is 5 points higher (55% or 65%)."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="ProtectedWeeklyAmount">
+    <label asp-for="ProtectedWeeklyAmount" class="ocat-label">@T["Pay left each week"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProtectedWeeklyAmount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span class="hint">@T["A creditor order never takes pay below this much a week: 30 times the federal minimum wage (217.50) unless a state's is higher."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="ExemptAmount">
+    <label asp-for="ExemptAmount" class="ocat-label">@T["Exempt each pay"]</label>
+    <div class="ocat-end">
+        <input asp-for="ExemptAmount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span class="hint">@T["For a tax levy: the take-home pay exempt each pay, from the levy notice. The levy takes the rest."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Priority">
+    <label asp-for="Priority" class="ocat-label">@T["Order of withholding"]</label>
+    <div class="ocat-end">
+        <input asp-for="Priority" class="form-control" inputmode="numeric" style="max-width: 8rem" />
+        <span class="hint">@T["The lowest number is withheld first; orders with the same number by the day they were received. Empty takes the kind's: support first, then tax levies, bankruptcy, student loans and creditors."]</span>
+    </div>
+</div>
+@if (!Model.IsNew)
+{
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Withheld so far"]</label>
+        <div class="ocat-end">
+            <p class="form-control-plaintext mb-0">
+                @Model.Withheld.ToString("N2", CultureInfo.CurrentCulture)
+                @if (Model.Remaining is { } left)
+                {
+                    <span class="text-muted">· @T["{0} left", left.ToString("N2", CultureInfo.CurrentCulture)]</span>
+                }
+            </p>
+        </div>
+    </div>
+}

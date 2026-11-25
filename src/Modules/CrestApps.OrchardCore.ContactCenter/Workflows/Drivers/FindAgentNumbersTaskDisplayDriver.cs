@@ -32,6 +32,13 @@ public sealed class FindAgentNumbersTaskDisplayDriver : ActivityDisplayDriver<Fi
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(FindAgentNumbersTask activity, BuildEditorContext context)
+    {
+        return Initialize<FindAgentNumbersTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(FindAgentNumbersTask activity, FindAgentNumbersTaskViewModel model)
     {
         model.UserName = activity.UserName;

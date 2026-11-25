@@ -1,73 +1,68 @@
 @model MerchantTaxRegistrationFilingViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Returns"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Frequency" class="ocat-label">@T["Filing frequency"]</label>
-            <div class="ocat-end">
-                <select asp-for="Frequency" asp-items="Model.Frequencies" class="form-select"></select>
-                <span class="hint">@T["How often the business files a return under this registration. Its periods and due dates are listed under Commerce &gt; Taxation &gt; Tax Returns."]</span>
-                <span asp-validation-for="Frequency" class="text-danger"></span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Frequency" class="ocat-label">@T["Filing frequency"]</label>
+    <div class="ocat-end">
+        <select asp-for="Frequency" asp-items="Model.Frequencies" class="form-select"></select>
+        <span class="hint">@T["How often the business files a return under this registration. Its periods and due dates are listed under Commerce &gt; Taxation &gt; Tax Returns."]</span>
+        <span asp-validation-for="Frequency" class="text-danger"></span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="DueDay" class="ocat-label">@T["Due day"]</label>
-            <div class="ocat-end">
-                <input asp-for="DueDay" type="number" min="1" max="31" class="form-control" style="max-width: 8rem" />
-                <span class="hint">@T["The day of the month a return is due. A day past the end of the month is its last day."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="DueDay" class="ocat-label">@T["Due day"]</label>
+    <div class="ocat-end">
+        <input asp-for="DueDay" type="number" min="1" max="31" class="form-control" style="max-width: 8rem" />
+        <span class="hint">@T["The day of the month a return is due. A day past the end of the month is its last day."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="DueMonthsAfterPeriod" class="ocat-label">@T["Months after the period"]</label>
-            <div class="ocat-end">
-                <input asp-for="DueMonthsAfterPeriod" type="number" min="0" max="12" class="form-control" style="max-width: 8rem" />
-                <span class="hint">@T["Day 20 and 1 month: the 20th of the month after the period."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="DueMonthsAfterPeriod" class="ocat-label">@T["Months after the period"]</label>
+    <div class="ocat-end">
+        <input asp-for="DueMonthsAfterPeriod" type="number" min="0" max="12" class="form-control" style="max-width: 8rem" />
+        <span class="hint">@T["Day 20 and 1 month: the 20th of the month after the period."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="MoveToNextBusinessDay" type="checkbox" class="form-check-input" />
-                    <label asp-for="MoveToNextBusinessDay" class="form-check-label">@T["Move a due date on a weekend to the Monday after"]</label>
-                </div>
-            </div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="MoveToNextBusinessDay" type="checkbox" class="form-check-input" />
+            <label asp-for="MoveToNextBusinessDay" class="form-check-label">@T["Move a due date on a weekend to the Monday after"]</label>
         </div>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="Form" class="ocat-label">@T["Return form"]</label>
-            <div class="ocat-end">
-                <select asp-for="Form" asp-items="Model.Forms" class="form-select"></select>
-                <span class="hint">@T["How the return's boxes are worked out: a tax form prepared from sales tax returns, edited under Taxation › Tax Forms. The generic return totals the figures by kind."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Form" class="ocat-label">@T["Return form"]</label>
+    <div class="ocat-end">
+        <select asp-for="Form" asp-items="Model.Forms" class="form-select"></select>
+        <span class="hint">@T["How the return's boxes are worked out: a tax form prepared from sales tax returns, edited under Taxation › Tax Forms. The generic return totals the figures by kind."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="AnnualForm" class="ocat-label">@T["Annual return form"]</label>
-            <div class="ocat-end">
-                <select asp-for="AnnualForm" asp-items="Model.Forms" class="form-select">
-                    <option value="">@T["No annual return"]</option>
-                </select>
-                <span class="hint">@T["The yearly return filed besides the monthly or quarterly ones, when the jurisdiction asks for one."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="AnnualForm" class="ocat-label">@T["Annual return form"]</label>
+    <div class="ocat-end">
+        <select asp-for="AnnualForm" asp-items="Model.Forms" class="form-select">
+            <option value="">@T["No annual return"]</option>
+        </select>
+        <span class="hint">@T["The yearly return filed besides the monthly or quarterly ones, when the jurisdiction asks for one."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="AnnualDueDay" class="ocat-label">@T["Annual return due day"]</label>
-            <div class="ocat-end">
-                <input asp-for="AnnualDueDay" type="number" min="1" max="31" class="form-control" style="max-width: 8rem" />
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="AnnualDueDay" class="ocat-label">@T["Annual return due day"]</label>
+    <div class="ocat-end">
+        <input asp-for="AnnualDueDay" type="number" min="1" max="31" class="form-control" style="max-width: 8rem" />
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="AnnualDueMonthsAfterYear" class="ocat-label">@T["Annual return month"]</label>
-            <div class="ocat-end">
-                <input asp-for="AnnualDueMonthsAfterYear" type="number" min="0" max="12" class="form-control" style="max-width: 8rem" />
-                <span class="hint">@T["The month after the year: day 28 and month 2 is February 28."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="AnnualDueMonthsAfterYear" class="ocat-label">@T["Annual return month"]</label>
+    <div class="ocat-end">
+        <input asp-for="AnnualDueMonthsAfterYear" type="number" min="0" max="12" class="form-control" style="max-width: 8rem" />
+        <span class="hint">@T["The month after the year: day 28 and month 2 is February 28."]</span>
     </div>
 </div>

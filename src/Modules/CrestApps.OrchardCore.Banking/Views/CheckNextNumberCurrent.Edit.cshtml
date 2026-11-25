@@ -1,0 +1,19 @@
+@model CheckNextNumberViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        @if (Model.Current.Count == 0)
+        {
+            <p class="mb-0">@T["The business has no bank account yet."]</p>
+        }
+        else
+        {
+            <ul class="mb-0">
+                @foreach (var (name, next) in Model.Current)
+                {
+                    <li>@T["{0}: the next check gets number {1}.", name, next]</li>
+                }
+            </ul>
+        }
+    </div>
+</div>

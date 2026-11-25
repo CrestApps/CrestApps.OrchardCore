@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -15,20 +16,26 @@ internal sealed class AIProfileTemplatePersonaDisplayDriver : DisplayDriver<AIPr
 {
     private readonly IAIPersonaManager _personaManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileTemplatePersonaDisplayDriver"/> class.
     /// </summary>
     /// <param name="personaManager">The persona manager, which lists the personas to pick from.</param>
-    public AIProfileTemplatePersonaDisplayDriver(IAIPersonaManager personaManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileTemplatePersonaDisplayDriver(
+        IAIPersonaManager personaManager,
+        IStringLocalizer<AIProfileTemplatePersonaDisplayDriver> stringLocalizer)
     {
         _personaManager = personaManager;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
         return Initialize<AIPersonaPickerViewModel>("AIPersonaPicker_Edit", model => _personaManager.PopulatePersonaPickerAsync(model, template))
-            .Location("Content:3%Instructions;4")
+            .Location(l => l.Zone("Content", "3").Card(S["Instructions"], "4"))
             .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

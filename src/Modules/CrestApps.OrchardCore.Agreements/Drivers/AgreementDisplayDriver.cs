@@ -9,6 +9,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Agreements.Drivers;
 
@@ -22,11 +23,18 @@ internal sealed class AgreementDisplayDriver : DisplayDriver<Agreement>
     private readonly IContentManager _contentManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AgreementDisplayDriver(ITimeZoneSelectListProvider timeZones, IContentManager contentManager, IHttpContextAccessor httpContextAccessor)
+    internal readonly IStringLocalizer S;
+
+    public AgreementDisplayDriver(
+        ITimeZoneSelectListProvider timeZones,
+        IContentManager contentManager,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<AgreementDisplayDriver> stringLocalizer)
     {
         _timeZones = timeZones;
         _contentManager = contentManager;
         _httpContextAccessor = httpContextAccessor;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -73,7 +81,7 @@ internal sealed class AgreementDisplayDriver : DisplayDriver<Agreement>
             {
                 model.AccountName = account.DisplayText;
             }
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(Agreement agreement, UpdateEditorContext context)

@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Shipping.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -42,11 +43,18 @@ internal sealed class ShippingZonesDeploymentSource : NamedCatalogDeploymentSour
 
 internal sealed class ShippingZonesDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, ShippingZonesDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public ShippingZonesDeploymentStepDisplayDriver(IStringLocalizer<ShippingZonesDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(ShippingZonesDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("ShippingZonesDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("ShippingZonesDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(ShippingZonesDeploymentStep step, BuildEditorContext context)
-        => View("ShippingZonesDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("ShippingZonesDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Shipping Zones"], "10"));
 }

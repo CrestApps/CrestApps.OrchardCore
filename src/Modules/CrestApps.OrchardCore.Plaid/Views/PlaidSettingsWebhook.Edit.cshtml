@@ -1,0 +1,9 @@
+@model PlaidSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="plaid-webhook-url">@T["Webhook URL"]</label>
+    <div class="ocat-end">
+        <input id="plaid-webhook-url" class="form-control" value="@Model.WebhookUrl" readonly />
+        <span class="hint">@T["Sent to Plaid with each link, so you don't enter it anywhere. Plaid must reach it from the internet: an account whose number the bank made for Plaid is taken back to unverified when the person removes Plaid's access."]</span>
+    </div>
+</div>

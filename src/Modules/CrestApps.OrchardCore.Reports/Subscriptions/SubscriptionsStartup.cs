@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Subscriptions.Models;
 using CrestApps.OrchardCore.Reports.Subscriptions.Services;
+using CrestApps.OrchardCore.Reports.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -41,6 +42,7 @@ public sealed class SubscriptionsStartup : StartupBase
         services.AddPermissionProvider<ReportSubscriptionPermissionProvider>();
         services.AddNavigationProvider<ReportSubscriptionsAdminMenu>();
         services.AddDisplayDriver<ReportSubscription, ReportSubscriptionDisplayDriver>();
+        services.AddDisplayDriver<ReportSubscriptionEditViewModel, ReportSubscriptionEditDisplayDriver>();
     }
 }
 

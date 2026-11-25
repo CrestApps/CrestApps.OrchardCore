@@ -77,8 +77,12 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
         return Combine(
-            Initialize<EditAIDataSourceFieldsViewModel>("AIDataSourceFields_Edit", model => PopulateFieldsEditorModelAsync(dataSource, model)).Location("Content:1"),
-            Initialize<EditAIDataSourceSharedViewModel>("AIDataSourceShared_Edit", model => PopulateSharedEditorModelAsync(dataSource, model)).Location("Content:100")
+            Initialize<EditAIDataSourceFieldsViewModel>("AIDataSourceFields_Edit", model => PopulateFieldsEditorModelAsync(dataSource, model))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<EditAIDataSourceSharedViewModel>("AIDataSourceShared_Edit", model => PopulateSharedEditorModelAsync(dataSource, model))
+                .Location(l => l.Zone("Content", "100").Card(S["Search Index Profile"], "30")),
+            Initialize<EditAIDataSourceSharedViewModel>("AIDataSourceFieldMapping_Edit", model => PopulateSharedEditorModelAsync(dataSource, model))
+                .Location(l => l.Zone("Content", "101").Card(S["Field Mapping"], "40"))
         );
     }
 

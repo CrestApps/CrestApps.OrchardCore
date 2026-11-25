@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -9,6 +10,13 @@ namespace CrestApps.OrchardCore.Taxation.Drivers;
 
 internal sealed class TaxTableDisplayDriver : DisplayDriver<TaxTable>
 {
+    internal readonly IStringLocalizer S;
+
+    public TaxTableDisplayDriver(IStringLocalizer<TaxTableDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(TaxTable table, BuildDisplayContext context)
     {
         // The row's classes and attributes are rendered on its row element, in both admin list layouts.
@@ -35,24 +43,30 @@ internal sealed class TaxTableDisplayDriver : DisplayDriver<TaxTable>
 
     public override IDisplayResult Edit(TaxTable table, BuildEditorContext context)
     {
-        return Initialize<TaxTableViewModel>("TaxTableFields_Edit", model =>
-        {
-            model.IsNew = context.IsNew;
-            model.Name = table.Name;
-            model.EffectiveFromUtc = table.EffectiveFromUtc;
-            model.EffectiveToUtc = table.EffectiveToUtc;
+        return Combine(
+            Initialize<TaxTableViewModel>("TaxTableFields_Edit", model => Populate(model, table, context))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<TaxTableViewModel>("TaxTableRows_Edit", model => Populate(model, table, context))
+                .Location(l => l.Zone("Content", "2").Card(S["Rows"], "20")));
+    }
 
-            model.Rows = table.Rows
-                .Select(row => new TaxTableRowViewModel
-                {
-                    Minimum = row.Minimum,
-                    Maximum = row.Maximum,
-                    Rate = row.Rate,
-                    FixedAmount = row.FixedAmount,
-                    BaseAmount = row.BaseAmount,
-                })
-                .ToList();
-        }).Location("Content:1");
+    private static void Populate(TaxTableViewModel model, TaxTable table, BuildEditorContext context)
+    {
+        model.IsNew = context.IsNew;
+        model.Name = table.Name;
+        model.EffectiveFromUtc = table.EffectiveFromUtc;
+        model.EffectiveToUtc = table.EffectiveToUtc;
+
+        model.Rows = table.Rows
+            .Select(row => new TaxTableRowViewModel
+            {
+                Minimum = row.Minimum,
+                Maximum = row.Maximum,
+                Rate = row.Rate,
+                FixedAmount = row.FixedAmount,
+                BaseAmount = row.BaseAmount,
+            })
+            .ToList();
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TaxTable table, UpdateEditorContext context)

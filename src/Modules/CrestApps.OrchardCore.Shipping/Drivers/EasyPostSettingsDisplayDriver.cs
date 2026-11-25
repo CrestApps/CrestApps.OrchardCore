@@ -61,7 +61,7 @@ public sealed class EasyPostSettingsDisplayDriver : SiteDisplayDriver<EasyPostSe
             model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
             model.WebhookUrl = settings.WebhookId is null ? null : settings.WebhookUrl;
             model.PublicWebhookUrl = WebhookUrlFor(site.BaseUrl);
-        }).Location("Content:5#EasyPost")
+        }).Location(l => l.Zone("Content", "5").Tab(S["EasyPost"], "5").Card(S["EasyPost"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ShippingPermissions.ManageShipping))
         .OnGroup(SettingsGroupId);
 

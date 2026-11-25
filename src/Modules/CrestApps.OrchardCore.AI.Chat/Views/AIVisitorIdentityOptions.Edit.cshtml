@@ -3,67 +3,68 @@
 
 @model AIVisitorIdentityOptionsViewModel
 
-<fieldset class="mb-4">
-    <legend class="h5">@T["Anonymous visitor identity"]</legend>
-    <p class="hint">@T["Configure how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Configure how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage."]</span>
+    </div>
+</div>
 
-    <div class="ocat-wrapper">
-        <label asp-for="CookieName" class="ocat-label ocat-label-required">@T["Visitor cookie name"]</label>
-        <div class="ocat-end">
-            <input asp-for="CookieName" class="form-control" />
-            <span asp-validation-for="CookieName" class="text-danger"></span>
-            <span class="hint">@T["Stable first-party cookie used to identify anonymous visitors across chat sessions."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="CookieName" class="ocat-label ocat-label-required">@T["Visitor cookie name"]</label>
+    <div class="ocat-end">
+        <input asp-for="CookieName" class="form-control" />
+        <span asp-validation-for="CookieName" class="text-danger"></span>
+        <span class="hint">@T["Stable first-party cookie used to identify anonymous visitors across chat sessions."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CookieLifetimeDays" class="ocat-label">@T["Cookie lifetime (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="CookieLifetimeDays" class="form-control" type="number" min="1" max="3650" />
+        <span asp-validation-for="CookieLifetimeDays" class="text-danger"></span>
+        <span class="hint">@T["How long the anonymous visitor cookie remains valid before a new visitor identity is issued."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowCrossSiteEmbedding" />
+            <label class="form-check-label" asp-for="AllowCrossSiteEmbedding">@T["Allow cross-site embedding"]</label>
+            <span class="hint dashed">@T["Turn this on when the chat is embedded in a frame on another site. The cookie is otherwise written SameSite=Lax, which a browser refuses in a frame, so every request looks like a brand new visitor: the conversation does not survive a page load and the visitor rate-limit partition never accumulates. It stays HttpOnly either way, and identifies a visitor rather than authenticating one. A request that did not arrive over HTTPS keeps the SameSite=Lax cookie, because SameSite=None is only legal together with Secure."]</span>
         </div>
     </div>
+</div>
 
-    <div class="ocat-wrapper">
-        <label asp-for="CookieLifetimeDays" class="ocat-label">@T["Cookie lifetime (days)"]</label>
-        <div class="ocat-end">
-            <input asp-for="CookieLifetimeDays" class="form-control" type="number" min="1" max="3650" />
-            <span asp-validation-for="CookieLifetimeDays" class="text-danger"></span>
-            <span class="hint">@T["How long the anonymous visitor cookie remains valid before a new visitor identity is issued."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="UsePartitionedCookie" />
+            <label class="form-check-label" asp-for="UsePartitionedCookie">@T["Partition the cookie per embedding site"]</label>
+            <span class="hint dashed">@T["Applies only while cross-site embedding is on, and there is rarely a reason to turn it off. SameSite is not part of a cookie's identity, so without partitioning the cookie written in a frame replaces the first-party cookie of the same name and downgrades it everywhere. It also keeps the cookie working in browsers that are phasing out unrestricted third-party cookies, and gives a visitor a separate identifier per embedding site, which is what per-site abuse control wants."]</span>
         </div>
     </div>
+</div>
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="AllowCrossSiteEmbedding" />
-                <label class="form-check-label" asp-for="AllowCrossSiteEmbedding">@T["Allow cross-site embedding"]</label>
-                <span class="hint dashed">@T["Turn this on when the chat is embedded in a frame on another site. The cookie is otherwise written SameSite=Lax, which a browser refuses in a frame, so every request looks like a brand new visitor: the conversation does not survive a page load and the visitor rate-limit partition never accumulates. It stays HttpOnly either way, and identifies a visitor rather than authenticating one. A request that did not arrive over HTTPS keeps the SameSite=Lax cookie, because SameSite=None is only legal together with Secure."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="RemoteAddressMode" class="ocat-label">@T["Remote address storage mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="RemoteAddressMode" class="form-select">
+            <option value="@AIVisitorRemoteAddressMode.Disabled">@T["Disabled"]</option>
+            <option value="@AIVisitorRemoteAddressMode.Hashed">@T["Hashed (Recommended)"]</option>
+            <option value="@AIVisitorRemoteAddressMode.PlainText">@T["Plain text"]</option>
+            <option value="@AIVisitorRemoteAddressMode.Encrypted">@T["Encrypted"]</option>
+        </select>
+        <span class="hint">@T["Hashed keeps the default privacy-first behavior. Encrypted stores the address at rest with Data Protection while still using a salted hash for throttling keys."]</span>
     </div>
+</div>
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UsePartitionedCookie" />
-                <label class="form-check-label" asp-for="UsePartitionedCookie">@T["Partition the cookie per embedding site"]</label>
-                <span class="hint dashed">@T["Applies only while cross-site embedding is on, and there is rarely a reason to turn it off. SameSite is not part of a cookie's identity, so without partitioning the cookie written in a frame replaces the first-party cookie of the same name and downgrades it everywhere. It also keeps the cookie working in browsers that are phasing out unrestricted third-party cookies, and gives a visitor a separate identifier per embedding site, which is what per-site abuse control wants."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="RemoteAddressHashSalt" class="ocat-label">@T["Remote address hash salt"]</label>
+    <div class="ocat-end">
+        <input asp-for="RemoteAddressHashSalt" class="form-control" />
+        <span asp-validation-for="RemoteAddressHashSalt" class="text-danger"></span>
+        <span class="hint">@T["Application-specific salt used when hashing remote addresses for abuse controls. Required for Hashed and Encrypted modes."]</span>
     </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="RemoteAddressMode" class="ocat-label">@T["Remote address storage mode"]</label>
-        <div class="ocat-end">
-            <select asp-for="RemoteAddressMode" class="form-select">
-                <option value="@AIVisitorRemoteAddressMode.Disabled">@T["Disabled"]</option>
-                <option value="@AIVisitorRemoteAddressMode.Hashed">@T["Hashed (Recommended)"]</option>
-                <option value="@AIVisitorRemoteAddressMode.PlainText">@T["Plain text"]</option>
-                <option value="@AIVisitorRemoteAddressMode.Encrypted">@T["Encrypted"]</option>
-            </select>
-            <span class="hint">@T["Hashed keeps the default privacy-first behavior. Encrypted stores the address at rest with Data Protection while still using a salted hash for throttling keys."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="RemoteAddressHashSalt" class="ocat-label">@T["Remote address hash salt"]</label>
-        <div class="ocat-end">
-            <input asp-for="RemoteAddressHashSalt" class="form-control" />
-            <span asp-validation-for="RemoteAddressHashSalt" class="text-danger"></span>
-            <span class="hint">@T["Application-specific salt used when hashing remote addresses for abuse controls. Required for Hashed and Encrypted modes."]</span>
-        </div>
-    </div>
-</fieldset>
+</div>

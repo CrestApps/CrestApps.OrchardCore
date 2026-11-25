@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Learning.Packages.Migrations;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Learning.Packages.Recipes;
 using CrestApps.OrchardCore.Learning.Packages.Services;
+using CrestApps.OrchardCore.Learning.Packages.ViewModels;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Builder;
@@ -46,6 +47,7 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<LearningPackagePartDisplayDriver>()
             .UseDisplayDriver<LearningPackagePartLearnerDisplayDriver>();
 
+        services.AddDisplayDriver<PackageUploadViewModel, PackageUploadDisplayDriver>();
         services.AddPermissionProvider<PackagesPermissionProvider>();
         services.AddPersonalDataContributor<PackagesPersonalDataContributor>();
 

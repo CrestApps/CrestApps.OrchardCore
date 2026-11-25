@@ -112,14 +112,7 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
             }
         }
 
-        return Combine(
-            Initialize<GarnishmentOrderViewModel>("GarnishmentOrderFields_Edit", async model =>
-            {
-                Fill(model, order);
-                model.IsNew = context.IsNew;
-                await OptionsAsync(model, order);
-            }).Location("Content:1"),
-            await AddressAsync(await _addressEditor.BuildAsync(order.PayeeAddress, AddressOptions(order.PayeeAddress?.Country))));
+        return Editor(order, context.IsNew, await AddressAsync(await _addressEditor.BuildAsync(order.PayeeAddress, AddressOptions(order.PayeeAddress?.Country))));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(GarnishmentOrder order, UpdateEditorContext context)
@@ -196,14 +189,40 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
 
         await _addressEditor.PopulateAsync(address.Address, AddressOptions(address.Address.Country));
 
-        return Combine(
-            Initialize<GarnishmentOrderViewModel>("GarnishmentOrderFields_Edit", async edit =>
+        return Editor(order, context.IsNew, await AddressAsync(address.Address));
+    }
+
+    private CombinedResult Editor(GarnishmentOrder order, bool isNew, ShapeResult address)
+    {
+        var shapes = new List<IDisplayResult>
+        {
+            Initialize<GarnishmentOrderViewModel>("GarnishmentOrderFields_Edit", async model =>
             {
-                Fill(edit, order);
-                edit.IsNew = context.IsNew;
-                await OptionsAsync(edit, order);
-            }).Location("Content:1"),
-            await AddressAsync(address.Address));
+                Fill(model, order);
+                model.IsNew = isNew;
+                await ProfileOptionsAsync(model, order);
+                await PayCodeOptionsAsync(model, order);
+            }).Location(l => l.Zone("Content", "1").Card(S["Order"], "10")),
+            Initialize<GarnishmentOrderViewModel>("GarnishmentOrderAmounts_Edit", model =>
+            {
+                Fill(model, order);
+                model.IsNew = isNew;
+            }).Location(l => l.Zone("Content", "1").Card(S["Amount"], "20")),
+            Initialize<GarnishmentOrderViewModel>("GarnishmentOrderPayee_Edit", async model =>
+            {
+                Fill(model, order);
+                await BankAccountOptionsAsync(model, order);
+            }).Location(l => l.Zone("Content", "1").Card(S["Payee"], "30")),
+            address,
+        };
+
+        if (order.Remittances.Count > 0)
+        {
+            shapes.Add(Initialize<GarnishmentOrderViewModel>("GarnishmentOrderRemittances_Edit", model => Fill(model, order))
+                .Location(l => l.Zone("Content", "5").Card(S["Sent to the Payee"], "50")));
+        }
+
+        return Combine([.. shapes]);
     }
 
     private static void Fill(GarnishmentOrderViewModel model, GarnishmentOrder order)
@@ -236,13 +255,12 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
         model.Remittances = [.. order.Remittances.OrderByDescending(remittance => remittance.PayDate)];
     }
 
-    private async Task OptionsAsync(GarnishmentOrderViewModel model, GarnishmentOrder order)
+    private async Task ProfileOptionsAsync(GarnishmentOrderViewModel model, GarnishmentOrder order)
     {
-        var user = _httpContextAccessor.HttpContext?.User;
-        var scope = await _scope.GetScopeAsync(user, PayrollPermissions.ManageGarnishments);
-
         if (string.IsNullOrEmpty(order.ItemId) || model.IsNew)
         {
+            var user = _httpContextAccessor.HttpContext?.User;
+            var scope = await _scope.GetScopeAsync(user, PayrollPermissions.ManageGarnishments);
             var profiles = await _profiles.ListByEmployersAsync(scope.All ? null : [.. scope.EmployerIds]);
 
             foreach (var profile in profiles)
@@ -259,12 +277,18 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
         {
             model.ProfileName = $"{await _names.StaffAsync(chosen.StaffMemberId)} ({await _names.EmployerAsync(chosen.EmployerId)})";
         }
+    }
 
+    private async Task PayCodeOptionsAsync(GarnishmentOrderViewModel model, GarnishmentOrder order)
+    {
         model.PayCodes = [.. (await _codes.GetAllAsync())
             .Where(code => code.Class == PayCodeClass.Deduction)
             .OrderBy(code => code.Code, StringComparer.OrdinalIgnoreCase)
             .Select(code => new SelectListItem($"{code.Code} {code.Name}", code.ItemId, code.ItemId == order.PayCodeId))];
+    }
 
+    private async Task BankAccountOptionsAsync(GarnishmentOrderViewModel model, GarnishmentOrder order)
+    {
         // The payee's own accounts: owned by someone, never a staff member and never one of the business's.
         if (_services.GetService<IBankAccountManager>() is { } accounts)
         {
@@ -284,7 +308,7 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
         {
             model.Address = address;
             model.AddressEditor = editor;
-        }).Location("Content:3");
+        }).Location(l => l.Zone("Content", "3").Card(S["Payee's Mailing Address"], "40"));
     }
 
     private static AddressEditorOptions AddressOptions(string country)

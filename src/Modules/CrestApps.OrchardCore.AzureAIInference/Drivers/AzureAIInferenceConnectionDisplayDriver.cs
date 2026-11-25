@@ -40,22 +40,28 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
             return null;
         }
 
-        return Initialize<AzureAIInferenceConnectionViewModel>("AzureAIInferenceConnection_Edit", model =>
-        {
-            var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
+        return Combine(
+            Initialize<AzureAIInferenceConnectionViewModel>("AzureAIInferenceConnection_Edit", model => Populate(connection, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Connection"], "20")),
+            Initialize<AzureAIInferenceConnectionViewModel>("AzureAIInferenceAuthentication_Edit", model => Populate(connection, model))
+                .Location(l => l.Zone("Content", "5.1").Card(S["Authentication"], "30")));
+    }
 
-            model.Endpoint = metadata.Endpoint?.ToString();
-            model.AuthenticationTypes =
-            [
-                new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
-                new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
-                new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
-            ];
+    private void Populate(AIProviderConnection connection, AzureAIInferenceConnectionViewModel model)
+    {
+        var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
-            model.AuthenticationType = metadata.AuthenticationType;
-            model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
-            model.IdentityId = metadata.IdentityId;
-        }).Location("Content:5");
+        model.Endpoint = metadata.Endpoint?.ToString();
+        model.AuthenticationTypes =
+        [
+            new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
+            new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
+            new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
+        ];
+
+        model.AuthenticationType = metadata.AuthenticationType;
+        model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
+        model.IdentityId = metadata.IdentityId;
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)

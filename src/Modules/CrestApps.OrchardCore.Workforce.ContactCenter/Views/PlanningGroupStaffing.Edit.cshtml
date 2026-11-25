@@ -1,0 +1,31 @@
+@model PlanningGroupEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ShrinkagePercent" class="ocat-label">@T["Shrinkage %"]</label>
+    <div class="ocat-end">
+        <input asp-for="ShrinkagePercent" type="number" min="0" max="99" step="any" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Concurrency" class="ocat-label">@T["Contacts at once"]</label>
+    <div class="ocat-end">
+        <input asp-for="Concurrency" type="number" min="1" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="PatienceSeconds" class="ocat-label">@T["Customer patience (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="PatienceSeconds" type="number" min="1" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="HistoryWeeks" class="ocat-label">@T["Weeks of history"]</label>
+    <div class="ocat-end">
+        <input asp-for="HistoryWeeks" type="number" min="1" max="104" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Shrinkage is the share of paid time agents can't answer: breaks, meetings, absence. Contacts at once is for chats and messages. With a customer patience, staffing allows for customers who give up (Erlang A); without, nobody does (Erlang C)."]</span>
+    </div>
+</div>

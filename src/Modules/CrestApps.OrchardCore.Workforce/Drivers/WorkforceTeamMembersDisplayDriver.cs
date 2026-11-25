@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -17,12 +18,16 @@ internal sealed class WorkforceTeamMembersDisplayDriver : DisplayDriver<Team>
     private readonly IStaffMemberManager _workerManager;
     private readonly IClock _clock;
 
+    internal readonly IStringLocalizer S;
+
     public WorkforceTeamMembersDisplayDriver(
         IStaffMemberManager workerManager,
-        IClock clock)
+        IClock clock,
+        IStringLocalizer<WorkforceTeamMembersDisplayDriver> stringLocalizer)
     {
         _workerManager = workerManager;
         _clock = clock;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(Team team, BuildEditorContext context)
@@ -43,6 +48,6 @@ internal sealed class WorkforceTeamMembersDisplayDriver : DisplayDriver<Team>
                 worker.DisplayName,
                 worker.MembershipsOn(today).FirstOrDefault(membership => membership.TeamId == team.ItemId)?.Role.ToString(),
                 !string.IsNullOrEmpty(worker.UserId)))];
-        }).Location("Content:6");
+        }).Location(l => l.Zone("Content", "6").Card(S["Members"], "60"));
     }
 }

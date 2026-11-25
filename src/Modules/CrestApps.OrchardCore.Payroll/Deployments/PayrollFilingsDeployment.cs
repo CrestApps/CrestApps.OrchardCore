@@ -168,7 +168,7 @@ internal sealed class PayrollFilingsDeploymentStepDisplayDriver : DisplayDriver<
             View("PayrollFilingsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(PayrollFilingsDeploymentStep step, BuildEditorContext context)
-        => Initialize<PayrollFilingsDeploymentStepViewModel>("PayrollFilingsDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location("Content");
+        => Initialize<PayrollFilingsDeploymentStepViewModel>("PayrollFilingsDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location(l => l.Zone("Content", "1").Card(S["Tax Deposits and Filings"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(PayrollFilingsDeploymentStep step, UpdateEditorContext context)
     {

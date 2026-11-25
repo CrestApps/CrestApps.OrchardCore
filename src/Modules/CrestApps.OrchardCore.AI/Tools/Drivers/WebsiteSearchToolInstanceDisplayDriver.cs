@@ -34,20 +34,11 @@ internal sealed class WebsiteSearchToolInstanceDisplayDriver : DisplayDriver<AIT
             return null;
         }
 
-        return Initialize<WebsiteSearchToolInstanceViewModel>("WebsiteSearchToolInstance_Edit", model =>
-        {
-            var settings = instance.GetOrCreate<WebsiteSearchToolSettings>();
-
-            model.BaseUrl = settings.BaseUrl;
-            model.SearchPath = settings.SearchPath;
-            model.QueryParameter = settings.QueryParameter;
-            model.ExtraQuery = settings.ExtraQuery;
-            model.ResultsPath = settings.ResultsPath;
-            model.TitlePath = settings.TitlePath;
-            model.UrlPath = settings.UrlPath;
-            model.SnippetPath = settings.SnippetPath;
-            model.MaxResults = settings.MaxResults;
-        }).Location("Content:5");
+        return Combine(
+            Initialize<WebsiteSearchToolInstanceViewModel>("WebsiteSearchToolInstance_Edit", model => Populate(instance, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Search Endpoint"], "20")),
+            Initialize<WebsiteSearchToolInstanceViewModel>("WebsiteSearchToolInstanceMapping_Edit", model => Populate(instance, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Response Mapping"], "30")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)
@@ -114,4 +105,19 @@ internal sealed class WebsiteSearchToolInstanceDisplayDriver : DisplayDriver<AIT
 
     private static bool IsSource(AIToolInstance instance)
         => string.Equals(instance.Source, DocumentationToolConstants.WebsiteSearchSourceName, StringComparison.OrdinalIgnoreCase);
+
+    private static void Populate(AIToolInstance instance, WebsiteSearchToolInstanceViewModel model)
+    {
+        var settings = instance.GetOrCreate<WebsiteSearchToolSettings>();
+
+        model.BaseUrl = settings.BaseUrl;
+        model.SearchPath = settings.SearchPath;
+        model.QueryParameter = settings.QueryParameter;
+        model.ExtraQuery = settings.ExtraQuery;
+        model.ResultsPath = settings.ResultsPath;
+        model.TitlePath = settings.TitlePath;
+        model.UrlPath = settings.UrlPath;
+        model.SnippetPath = settings.SnippetPath;
+        model.MaxResults = settings.MaxResults;
+    }
 }

@@ -1,0 +1,17 @@
+@model RegisterEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="AddressLine1">
+    <span class="ocat-label ocat-label-required">@T["Store address"]</span>
+    <div class="ocat-end">
+        <span asp-validation-for="AddressLine1"></span>
+        <div class="row g-2">
+            <div class="col-12"><input asp-for="AddressLine1" class="form-control" placeholder="@T["Street address"]" /></div>
+            <div class="col-12"><input asp-for="AddressLine2" class="form-control" placeholder="@T["Address line 2"]" /></div>
+            <div class="col-md-4"><input asp-for="City" class="form-control" placeholder="@T["City"]" /></div>
+            <div class="col-md-3"><input asp-for="Region" class="form-control" placeholder="@T["State or province"]" /></div>
+            <div class="col-md-3"><input asp-for="PostalCode" class="form-control" placeholder="@T["Postal code"]" /></div>
+            <div class="col-md-2"><input asp-for="Country" class="form-control" placeholder="@T["Country"]" maxlength="2" /></div>
+        </div>
+        <span class="hint">@T["Sales at the register are taxed by this address, and its receipts show it. The country is its two-letter code, such as US."]</span>
+    </div>
+</div>

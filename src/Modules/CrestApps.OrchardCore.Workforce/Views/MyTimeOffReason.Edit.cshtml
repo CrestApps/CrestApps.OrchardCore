@@ -1,0 +1,8 @@
+@model MyTimeOffViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Reason" class="form-control" rows="2"></textarea>
+    </div>
+</div>

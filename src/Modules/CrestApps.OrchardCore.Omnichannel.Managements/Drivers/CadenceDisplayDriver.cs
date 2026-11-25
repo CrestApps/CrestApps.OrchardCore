@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -9,6 +10,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class CadenceDisplayDriver : DisplayDriver<Cadence>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CadenceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public CadenceDisplayDriver(IStringLocalizer<CadenceDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(Cadence schedule, BuildDisplayContext context)
     {
         // The row's classes and attributes are rendered on its row element, in both admin list layouts.
@@ -53,8 +65,8 @@ internal sealed class CadenceDisplayDriver : DisplayDriver<Cadence>
         }
 
         return Combine(
-            Initialize<CadenceViewModel>("CadenceGeneral_Edit", Populate).Location("Content:1%General;1"),
-            Initialize<CadenceViewModel>("CadenceSteps_Edit", Populate).Location("Content:1%Follow-up steps;2"));
+            Initialize<CadenceViewModel>("CadenceGeneral_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["General"], "1")),
+            Initialize<CadenceViewModel>("CadenceSteps_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Follow-up Steps"], "2")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Cadence schedule, UpdateEditorContext context)

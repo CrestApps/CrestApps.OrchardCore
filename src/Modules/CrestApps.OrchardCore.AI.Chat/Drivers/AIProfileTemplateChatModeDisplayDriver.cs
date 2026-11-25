@@ -117,7 +117,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
                 .Select(deployment => deployment.Name)
                 .ToArray();
-        }).Location("Content:1.7%Deployments & Interactions;2")
+        }).Location(l => l.Zone("Content", "1.7").Card(S["Deployments & Interactions"], "2"))
         .RenderWhen(async () =>
         {
             if (template.Source != AITemplateSources.Profile)

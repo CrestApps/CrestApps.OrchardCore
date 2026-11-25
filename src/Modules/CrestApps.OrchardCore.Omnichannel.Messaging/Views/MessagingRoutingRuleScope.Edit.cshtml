@@ -1,0 +1,44 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
+@model MessagingRoutingRuleViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Leave a list empty to take every value."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Channels" class="ocat-label">@T["Channels"]</label>
+    <div class="ocat-end">
+        <select asp-for="Channels" asp-items="Model.AvailableChannels" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every channel"]"></select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ServiceAddresses" class="ocat-label">@T["Business numbers and addresses"]</label>
+    <div class="ocat-end">
+        <select asp-for="ServiceAddresses" asp-items="Model.AvailableServiceAddresses" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Every number and address"]"></select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="QueueIds" class="ocat-label">@T["Queues"]</label>
+    <div class="ocat-end">
+        <select asp-for="QueueIds" asp-items="Model.AvailableQueues" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Any queue, or none"]"></select>
+        <span class="hint">@T["The queue that owns the conversation or, for a new one, the queue its entry point sends it to."]</span>
+    </div>
+</div>
+
+@if (Model.AvailableCampaigns.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="CampaignIds" class="ocat-label">@T["Campaigns"]</label>
+        <div class="ocat-end">
+            <select asp-for="CampaignIds" asp-items="Model.AvailableCampaigns" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Any campaign, or none"]"></select>
+        </div>
+    </div>
+}

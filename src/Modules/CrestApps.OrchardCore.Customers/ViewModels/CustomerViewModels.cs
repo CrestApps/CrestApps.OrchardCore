@@ -141,6 +141,12 @@ public class CustomerEditViewModel
 
     [BindNever]
     public IReadOnlyList<CustomerPrivacyEntry> PrivacyLog { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor of the customer's fields, built by the display drivers of <see cref="CustomerEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public global::OrchardCore.DisplayManagement.IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -212,6 +218,13 @@ public class CustomerAddressViewModel
     public bool IsDefaultBilling { get; set; }
 
     public bool IsDefaultShipping { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the address a customer's page for an administrator shows, built by the display
+    /// drivers of <see cref="CustomerAddressViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 public class MyAccountViewModel
@@ -240,6 +253,13 @@ public class MyAccountViewModel
     public string Phone { get; set; }
 
     public bool AcceptsMarketing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the profile the admin's My Account page shows, built by the display drivers of
+    /// <see cref="MyAccountViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 public class CustomerOrderSummary

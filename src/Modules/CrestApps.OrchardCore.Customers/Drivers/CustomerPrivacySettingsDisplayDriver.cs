@@ -37,7 +37,7 @@ public sealed class CustomerPrivacySettingsDisplayDriver : CustomerSettingsDispl
         {
             model.InactiveGuestMonths = settings.InactiveGuestMonths;
             model.GuestOrderMonths = settings.GuestOrderMonths;
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Privacy"], "20"))
         .RenderWhen(CanManageCustomersAsync)
         .OnGroup(SettingsGroupId);
 

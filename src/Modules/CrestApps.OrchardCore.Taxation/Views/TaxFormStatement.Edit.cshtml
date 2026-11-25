@@ -1,0 +1,46 @@
+@model TaxFormViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="StatementName" class="ocat-label">@T["Called"]</label>
+    <div class="ocat-end">
+        <input asp-for="StatementName" class="form-control" style="max-width: 20rem" />
+        <span class="hint">@T["What a recipient's statement is called where they see it, such as Form W-2 or T4 slip."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="StatementTitle" class="ocat-label">@T["Printed title"]</label>
+    <div class="ocat-end"><input asp-for="StatementTitle" class="form-control" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="StatementCopy" class="ocat-label">@T["Line under the title"]</label>
+    <div class="ocat-end"><input asp-for="StatementCopy" class="form-control" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="TaxIdLabel" class="ocat-label">@T["Recipient's tax id label"]</label>
+    <div class="ocat-end"><input asp-for="TaxIdLabel" class="form-control" style="max-width: 24rem" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="TaxIdFormat" class="ocat-label">@T["Masked tax id"]</label>
+    <div class="ocat-end">
+        <input asp-for="TaxIdFormat" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["How the recipient's tax id is printed, {0} being its last characters, such as XXX-XX-{0}.", "{0}"]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="FilerTaxIdLabel" class="ocat-label">@T["Filer's number label"]</label>
+    <div class="ocat-end"><input asp-for="FilerTaxIdLabel" class="form-control" style="max-width: 24rem" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="FilerAccountJurisdiction" class="ocat-label">@T["Filer's number from"]</label>
+    <div class="ocat-end">
+        <input asp-for="FilerAccountJurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
+        <span class="hint">@T["The jurisdiction of the filer's registration whose account number is printed, such as CA. Leave it empty to print the filer's tax id."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="FileName" class="ocat-label">@T["File name"]</label>
+    <div class="ocat-end">
+        <input asp-for="FileName" class="form-control" maxlength="40" style="max-width: 12rem" />
+        <span class="hint">@T["The start of the PDF's name, such as W-2 for W-2-2026.pdf."]</span>
+    </div>
+</div>

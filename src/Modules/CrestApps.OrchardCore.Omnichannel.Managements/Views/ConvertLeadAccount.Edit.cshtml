@@ -1,0 +1,61 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model ConvertLeadViewModel
+
+@{
+    var accountEndpoint = Url.RouteUrl(CrestApps.OrchardCore.Accounts.AccountsConstants.RouteNames.Search);
+    var selectedAccount = Model.MatchingAccounts.FirstOrDefault(account => account.ContentItemId == Model.ExistingAccountItemId);
+    var accountInitialJson = string.IsNullOrEmpty(Model.ExistingAccountItemId)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.ExistingAccountItemId, text = selectedAccount?.DisplayText ?? Model.ExistingAccountItemId, selected = true } });
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="AccountMode" id="account-existing" value="@LeadConversionAccountMode.UseExisting" data-account-mode />
+            <label class="form-check-label" for="account-existing">@T["Add the contact to an existing account"]</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="AccountMode" id="account-new" value="@LeadConversionAccountMode.CreateNew" data-account-mode />
+            <label class="form-check-label" for="account-new">@T["Create a new account"]</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="AccountMode" id="account-none" value="@LeadConversionAccountMode.None" data-account-mode />
+            <label class="form-check-label" for="account-none">@T["No account"]</label>
+            <span class="hint dashed">@T["A contact the lead is merged into keeps the account it already has."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-account-panel="@LeadConversionAccountMode.UseExisting">
+    <label class="ocat-label ocat-label-required">@T["Existing account"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = "convert-lead-account-selector",
+            inputName = Html.NameFor(m => m.ExistingAccountItemId).ToString(),
+            endpoint = accountEndpoint,
+            initialItemsJson = accountInitialJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Select an account"].Value,
+            searchPlaceholder = T["Search accounts"].Value,
+            emptyResultsText = T["No accounts found."].Value,
+            noSelectionText = T["No account selected."].Value,
+            selectedItemsLabel = T["Account"].Value,
+            availableItemsLabel = T["Accounts"].Value,
+            smallButton = false,
+        })
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-account-panel="@LeadConversionAccountMode.CreateNew">
+    <label asp-for="AccountName" class="ocat-label @(string.IsNullOrWhiteSpace(Model.Company) ? "ocat-label-required" : "")">@T["Account name"]</label>
+    <div class="ocat-end">
+        <input asp-for="AccountName" class="form-control" />
+        <span class="hint">@T["Starts from the lead's company."]</span>
+    </div>
+</div>

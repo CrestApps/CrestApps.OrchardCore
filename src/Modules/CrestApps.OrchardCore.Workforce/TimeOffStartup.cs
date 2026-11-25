@@ -44,10 +44,15 @@ public sealed class TimeOffStartup : StartupBase
             .AddIndexProvider<BlackoutPeriodIndexProvider>();
 
         services.AddDisplayDriver<TimeOffRequestRowViewModel, TimeOffRequestRowDisplayDriver>();
+        services.AddDisplayDriver<TimeOffRequestEditViewModel, TimeOffRequestEditDisplayDriver>();
         services.AddDisplayDriver<TimeOffType, TimeOffTypeRowDisplayDriver>();
+        services.AddDisplayDriver<TimeOffTypeEditViewModel, TimeOffTypeEditDisplayDriver>();
         services.AddDisplayDriver<TimeOffPolicy, TimeOffPolicyRowDisplayDriver>();
+        services.AddDisplayDriver<TimeOffPolicyEditViewModel, TimeOffPolicyEditDisplayDriver>();
         services.AddDisplayDriver<TimeOffAllotment, TimeOffAllotmentRowDisplayDriver>();
+        services.AddDisplayDriver<TimeOffAllotmentEditViewModel, TimeOffAllotmentEditDisplayDriver>();
         services.AddDisplayDriver<BlackoutPeriod, BlackoutPeriodRowDisplayDriver>();
+        services.AddDisplayDriver<BlackoutPeriodEditViewModel, BlackoutPeriodEditDisplayDriver>();
         services.AddDisplayDriver<TimeOffLedgerRowViewModel, TimeOffLedgerRowDisplayDriver>();
         services.AddDisplayDriver<StaffMember, WorkerTimeOffRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TimeOffAccrualBackgroundTask>();

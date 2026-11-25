@@ -1,0 +1,19 @@
+@model CertificationPathViewModel
+
+<div class="ocat-wrapper"><label asp-for="Join" class="ocat-label">@T["Requirements needed"]</label><div class="ocat-end">
+    <select asp-for="Join" class="form-select" style="max-width: 16rem">
+        <option value="@RequirementJoin.All">@T["All of them"]</option>
+        <option value="@RequirementJoin.Any">@T["Any one of them"]</option>
+    </select>
+</div></div>
+
+<div class="ocat-wrapper"><label class="ocat-label">@T["First certificate"]</label><div class="ocat-end">
+    <span asp-validation-for="InitialRequirements"></span>
+    @await Html.PartialAsync("CertificationRequirementRows", (Rows: Model.InitialRequirements, Name: nameof(Model.InitialRequirements), Model: Model))
+</div></div>
+
+<div class="ocat-wrapper"><label class="ocat-label">@T["Renewal"]</label><div class="ocat-end">
+    <span asp-validation-for="RenewalRequirements"></span>
+    @await Html.PartialAsync("CertificationRequirementRows", (Rows: Model.RenewalRequirements, Name: nameof(Model.RenewalRequirements), Model: Model))
+    <span class="hint">@T["Leave empty to renew with the same requirements as the first certificate. A minimum grade is a percent from 0 to 100."]</span>
+</div></div>

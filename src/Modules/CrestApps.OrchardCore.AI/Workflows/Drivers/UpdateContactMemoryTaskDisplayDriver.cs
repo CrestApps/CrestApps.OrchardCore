@@ -37,6 +37,13 @@ public sealed class UpdateContactMemoryTaskDisplayDriver : ActivityDisplayDriver
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(UpdateContactMemoryTask activity, BuildEditorContext context)
+    {
+        return Initialize<UpdateContactMemoryTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Contact Memory"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(UpdateContactMemoryTask activity, UpdateEditorContext context)
     {
         var model = new UpdateContactMemoryTaskViewModel();

@@ -101,7 +101,7 @@ internal sealed class CalendarDisplayDriver : DisplayDriver<Calendar>
             model.TypeIcon = type?.Icon ?? "fa-solid fa-calendar";
             model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(calendar.TimeZoneId);
             model.VisibilityOptions = CalendarSelectLists.Visibilities(S);
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Calendar calendar, UpdateEditorContext context)

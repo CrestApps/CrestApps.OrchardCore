@@ -6,6 +6,7 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Receipts.Drivers;
 
@@ -20,6 +21,8 @@ public sealed class ReceiptSettingsDisplayDriver : SiteDisplayDriver<ReceiptSett
     protected override string SettingsGroupId
         => ReceiptsConstants.SettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ReceiptSettingsDisplayDriver"/> class.
     /// </summary>
@@ -27,8 +30,10 @@ public sealed class ReceiptSettingsDisplayDriver : SiteDisplayDriver<ReceiptSett
     /// <param name="authorizationService">The authorization service.</param>
     public ReceiptSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<ReceiptSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
     }
@@ -36,20 +41,26 @@ public sealed class ReceiptSettingsDisplayDriver : SiteDisplayDriver<ReceiptSett
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, ReceiptSettings settings, BuildEditorContext context)
     {
-        return Initialize<ReceiptSettingsViewModel>("ReceiptSettings_Edit", model =>
-        {
-            model.HeaderTitle = settings.HeaderTitle;
-            model.BusinessName = settings.BusinessName;
-            model.LogoUrl = settings.LogoUrl;
-            model.BusinessAddress = settings.BusinessAddress;
-            model.ContactEmail = settings.ContactEmail;
-            model.ContactPhone = settings.ContactPhone;
-            model.Website = settings.Website;
-            model.FooterText = settings.FooterText;
-            model.ShowTestPaymentBadge = settings.ShowTestPaymentBadge;
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ReceiptsPermissions.ManageReceiptSettings))
-        .OnGroup(SettingsGroupId);
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<ReceiptSettingsViewModel>(shapeType, model =>
+            {
+                model.HeaderTitle = settings.HeaderTitle;
+                model.BusinessName = settings.BusinessName;
+                model.LogoUrl = settings.LogoUrl;
+                model.BusinessAddress = settings.BusinessAddress;
+                model.ContactEmail = settings.ContactEmail;
+                model.ContactPhone = settings.ContactPhone;
+                model.Website = settings.Website;
+                model.FooterText = settings.FooterText;
+                model.ShowTestPaymentBadge = settings.ShowTestPaymentBadge;
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ReceiptsPermissions.ManageReceiptSettings))
+            .OnGroup(SettingsGroupId);
+
+        return Combine(
+            Card("ReceiptSettingsHeader_Edit", "1", S["Header"], "10"),
+            Card("ReceiptSettingsBusiness_Edit", "1.1", S["Business"], "20"),
+            Card("ReceiptSettingsFooter_Edit", "1.2", S["Footer"], "30"));
     }
 
     /// <inheritdoc/>

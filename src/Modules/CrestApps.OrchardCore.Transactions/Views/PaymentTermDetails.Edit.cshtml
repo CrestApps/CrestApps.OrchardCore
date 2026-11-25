@@ -1,0 +1,25 @@
+@model PaymentTermViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Printed on documents, such as Net 30 or Due on receipt."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Can be chosen for new documents"]</label>
+            <span class="hint dashed">@T["Turn it off to stop using the term. Documents that already use it keep it."]</span>
+        </div>
+    </div>
+</div>

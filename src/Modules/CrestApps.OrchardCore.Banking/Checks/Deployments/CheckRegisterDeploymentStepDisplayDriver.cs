@@ -36,7 +36,7 @@ internal sealed class CheckRegisterDeploymentStepDisplayDriver : DisplayDriver<D
 
     public override IDisplayResult Edit(CheckRegisterDeploymentStep step, BuildEditorContext context)
     {
-        return View("CheckRegisterDeploymentStep_Fields_Edit", step).Location("Content");
+        return View("CheckRegisterDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Check Register"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CheckRegisterDeploymentStep step, UpdateEditorContext context)

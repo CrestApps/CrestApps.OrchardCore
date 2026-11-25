@@ -30,6 +30,11 @@ public sealed class SendTextMessageTaskDisplayDriver : ActivityDisplayDriver<Sen
         S = stringLocalizer;
     }
 
+    /// <inheritdoc />
+    public override IDisplayResult Edit(SendTextMessageTask activity, BuildEditorContext context)
+        => Initialize<SendTextMessageTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+
     /// <inheritdoc/>
     protected override void EditActivity(SendTextMessageTask activity, SendTextMessageTaskViewModel model)
     {

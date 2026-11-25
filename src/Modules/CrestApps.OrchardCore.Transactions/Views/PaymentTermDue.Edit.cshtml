@@ -1,0 +1,49 @@
+@model PaymentTermViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Kind">
+    <label asp-for="Kind" class="ocat-label ocat-label-required">@T["Due"]</label>
+    <div class="ocat-end">
+        <select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" data-payment-term-kind></select>
+        <span asp-validation-for="Kind" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Days" data-payment-term-for="NetDays EndOfMonth">
+    <label asp-for="Days" class="ocat-label">@T["Days"]</label>
+    <div class="ocat-end">
+        <input asp-for="Days" type="number" min="0" max="3650" class="form-control" style="max-width: 10rem" />
+        <span asp-validation-for="Days" class="text-danger"></span>
+        <span class="hint">@T["After the issue date, or after the end of the issue month."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="DayOfMonth" data-payment-term-for="DayOfNextMonth">
+    <label asp-for="DayOfMonth" class="ocat-label">@T["Day of the next month"]</label>
+    <div class="ocat-end">
+        <input asp-for="DayOfMonth" type="number" min="1" max="31" class="form-control" style="max-width: 10rem" value="@(Model.DayOfMonth > 0 ? Model.DayOfMonth : 1)" />
+        <span asp-validation-for="DayOfMonth" class="text-danger"></span>
+        <span class="hint">@T["From 1 to 31. A day the month does not have is its last day."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const kind = document.querySelector('[data-payment-term-kind]');
+
+        if (!kind) {
+            return;
+        }
+
+        // A field the chosen kind does not use is hidden and disabled, so the browser's form check skips it (a hidden
+        // day of the month of 0 would otherwise stop the form from being sent) and it is not posted.
+        const update = () => {
+            document.querySelectorAll('[data-payment-term-for]').forEach(row => {
+                const used = row.dataset.paymentTermFor.split(' ').includes(kind.value);
+
+                row.classList.toggle('d-none', !used);
+                row.querySelectorAll('input').forEach(input => input.disabled = !used);
+            });
+        };
+
+        kind.addEventListener('change', update);
+        update();
+    })();
+</script>

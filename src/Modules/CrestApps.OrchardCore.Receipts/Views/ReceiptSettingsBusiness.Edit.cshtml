@@ -1,0 +1,46 @@
+@model ReceiptSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="BusinessName">
+    <label asp-for="BusinessName" class="ocat-label">@T["Business name"]</label>
+    <div class="ocat-end">
+        <input asp-for="BusinessName" class="form-control" />
+        <span asp-validation-for="BusinessName"></span>
+        <span class="hint">@T["The issuing business name shown on the receipt. Leave empty to use the site name."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="BusinessAddress">
+    <label asp-for="BusinessAddress" class="ocat-label">@T["Business address"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="BusinessAddress" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="BusinessAddress"></span>
+        <span class="hint">@T["The postal address of the issuing business."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactEmail">
+    <label asp-for="ContactEmail" class="ocat-label">@T["Contact email"]</label>
+    <div class="ocat-end">
+        <input asp-for="ContactEmail" class="form-control" />
+        <span asp-validation-for="ContactEmail"></span>
+        <span class="hint">@T["The contact email address printed in the receipt footer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactPhone">
+    <label asp-for="ContactPhone" class="ocat-label">@T["Contact phone"]</label>
+    <div class="ocat-end">
+        <input asp-for="ContactPhone" class="form-control" />
+        <span asp-validation-for="ContactPhone"></span>
+        <span class="hint">@T["The contact phone number printed in the receipt footer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Website">
+    <label asp-for="Website" class="ocat-label">@T["Website"]</label>
+    <div class="ocat-end">
+        <input asp-for="Website" class="form-control" />
+        <span asp-validation-for="Website"></span>
+        <span class="hint">@T["The website printed in the receipt footer."]</span>
+    </div>
+</div>

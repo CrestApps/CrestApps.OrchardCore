@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Pipelines;
 using CrestApps.OrchardCore.Learning.Certifications.Recipes;
 using CrestApps.OrchardCore.Learning.Certifications.Reports;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
+using CrestApps.OrchardCore.Learning.Certifications.ViewModels;
 using CrestApps.OrchardCore.Learning.Certifications.Workflows;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
@@ -71,6 +72,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICourseCompletionLinkProvider, CertificationCompletionLinkProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Certification>, CertificationPathCatalogHandler>());
         services.AddDisplayDriver<Certification, CertificationPathDisplayDriver>();
+        services.AddDisplayDriver<EducationCreditTypeEditViewModel, EducationCreditTypeEditDisplayDriver>();
+        services.AddDisplayDriver<ExternalLearningReviewViewModel, ExternalLearningReviewDisplayDriver>();
         services.AddDisplayDriver<CertificationPathProgress, CertificationPathProgressRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, CertificationUpkeepBackgroundTask>();
         services.AddScoped<IEnrollmentReviewActionProvider, CertificationReviewActionProvider>();

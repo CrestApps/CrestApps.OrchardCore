@@ -1,0 +1,16 @@
+@model EnrollViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="AccessEnds" class="ocat-label">@T["Access ends"]</label>
+    <div class="ocat-end">
+        <input asp-for="AccessEnds" type="datetime-local" class="form-control" />
+        <span class="hint">@T["In your time zone. Leave empty for no end."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Due" class="ocat-label">@T["Due"]</label>
+    <div class="ocat-end">
+        <input asp-for="Due" type="datetime-local" class="form-control" />
+        <span class="hint">@T["In your time zone. Leave empty when the course has no due date."]</span>
+    </div>
+</div>

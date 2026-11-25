@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Skills.Services;
 using Json.Schema;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -66,13 +67,20 @@ internal sealed class LearningCertificationPathsDeploymentSource : DeploymentSou
 
 internal sealed class LearningCertificationPathsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, LearningCertificationPathsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public LearningCertificationPathsDeploymentStepDisplayDriver(IStringLocalizer<LearningCertificationPathsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(LearningCertificationPathsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("LearningCertificationPathsDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("LearningCertificationPathsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(LearningCertificationPathsDeploymentStep step, BuildEditorContext context)
-        => View("LearningCertificationPathsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("LearningCertificationPathsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Certification Paths"], "10"));
 }
 
 internal sealed class LearningCertificationPathsDeploymentStepSchema : DeploymentStepSchemaDefinitionBase

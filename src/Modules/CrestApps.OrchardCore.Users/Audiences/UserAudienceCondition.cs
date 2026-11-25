@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -54,9 +55,14 @@ internal sealed class UserAudienceConditionDisplayDriver : DisplayDriver<Conditi
 {
     private readonly IUserAudienceService _audiences;
 
-    public UserAudienceConditionDisplayDriver(IUserAudienceService audiences)
+    internal readonly IStringLocalizer S;
+
+    public UserAudienceConditionDisplayDriver(
+        IUserAudienceService audiences,
+        IStringLocalizer<UserAudienceConditionDisplayDriver> stringLocalizer)
     {
         _audiences = audiences;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(UserAudienceCondition condition, BuildDisplayContext context)
@@ -71,7 +77,7 @@ internal sealed class UserAudienceConditionDisplayDriver : DisplayDriver<Conditi
             model.Audiences = (await _audiences.ListAsync())
                 .Select(audience => new SelectListItem(audience.DisplayName, audience.Name, string.Equals(audience.Name, condition.AudienceName, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Audience"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(UserAudienceCondition condition, UpdateEditorContext context)
     {

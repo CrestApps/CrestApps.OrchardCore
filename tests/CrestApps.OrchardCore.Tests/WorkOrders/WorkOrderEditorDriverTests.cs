@@ -51,7 +51,13 @@ public sealed class WorkOrderEditorDriverTests
         {
             var result = await ((IDisplayDriver<WorkOrder>)CreateDriver(services)).BuildEditorAsync(workOrder, PostedFormUpdateModel.CreateContext(null));
 
-            return Assert.Single(await DisplayResultModels.BuildAsync<WorkOrderEditViewModel>(result));
+            // One shape for each card, each a copy of the work order's values: Details, Who, Where, When, Assets and Lines.
+            var models = await DisplayResultModels.BuildAsync<WorkOrderEditViewModel>(result);
+
+            Assert.Equal(6, models.Count);
+            Assert.All(models, card => Assert.Equal("wo-1", card.WorkOrderId));
+
+            return models[0];
         }, commit: false);
 
         // Assert
@@ -156,10 +162,12 @@ public sealed class WorkOrderEditorDriverTests
         }, commit: false);
 
         // Assert
-        Assert.Equal(["WorkOrderFields_Edit", ExtraSectionDisplayDriver<WorkOrder>.ShapeType], shapes.Select(shape => shape.Metadata.Type));
+        Assert.Equal(
+            ["WorkOrderFields_Edit", "WorkOrderWho_Edit", "WorkOrderWhere_Edit", "WorkOrderWhen_Edit", "WorkOrderAssets_Edit", "WorkOrderLines_Edit", ExtraSectionDisplayDriver<WorkOrder>.ShapeType],
+            shapes.Select(shape => shape.Metadata.Type));
         Assert.Equal("No heat", Assert.IsAssignableFrom<WorkOrderEditViewModel>(shapes[0]).Summary);
-        Assert.Equal(nameof(WorkOrder), shapes[0].Metadata.Prefix);
-        Assert.Equal(ExtraSectionDisplayDriver<WorkOrder>.Note, Assert.IsAssignableFrom<ExtraSectionViewModel>(shapes[1]).Note);
+        Assert.All(shapes.Take(6), shape => Assert.Equal(nameof(WorkOrder), shape.Metadata.Prefix));
+        Assert.Equal(ExtraSectionDisplayDriver<WorkOrder>.Note, Assert.IsAssignableFrom<ExtraSectionViewModel>(shapes[6]).Note);
     }
 
     [Fact]
@@ -199,7 +207,8 @@ public sealed class WorkOrderEditorDriverTests
             new WorkOrderCustomers(new PartyDirectory([]), services.GetRequiredService<ISession>(), []),
             localClock.Object,
             clock.Object,
-            services);
+            services,
+            RecipeRoundTrip.Localizer<WorkOrderDisplayDriver>());
     }
 
     private static Task<string> AddTypeAsync(CalendarTestHarness harness)

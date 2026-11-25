@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Learning.Certifications.Controllers;
@@ -18,14 +20,24 @@ public sealed class EducationCreditTypesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IEducationCreditService _credits;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<EducationCreditTypeEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
-    public EducationCreditTypesController(IAuthorizationService authorizationService, IEducationCreditService credits, INotifier notifier, IHtmlLocalizer<EducationCreditTypesController> htmlLocalizer)
+    public EducationCreditTypesController(
+        IAuthorizationService authorizationService,
+        IEducationCreditService credits,
+        INotifier notifier,
+        IDisplayManager<EducationCreditTypeEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IHtmlLocalizer<EducationCreditTypesController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _credits = credits;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -67,6 +79,8 @@ public sealed class EducationCreditTypesController : Controller
             model = new EducationCreditTypeEditViewModel { Id = type.ItemId, Name = type.Name, Unit = type.Unit, Description = type.Description, AllowExternalLearning = type.AllowExternalLearning };
         }
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -86,6 +100,8 @@ public sealed class EducationCreditTypesController : Controller
         {
             return NotFound();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(model.Id));
 
         type.Name = model.Name;
         type.Unit = model.Unit;

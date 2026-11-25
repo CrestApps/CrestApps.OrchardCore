@@ -44,8 +44,16 @@ internal sealed class HttpApiDataSetDisplayDriver : DisplayDriver<ConnectedDataS
             return null;
         }
 
-        return Initialize<HttpApiDataSetViewModel>("HttpApiDataSet_Edit", model =>
-        {
+        // The request, and how it pages, are two cards.
+        return Combine(
+            Initialize<HttpApiDataSetViewModel>("HttpApiDataSet_Edit", model => FillValues(model, dataSet))
+                .Location(l => l.Zone("Content", "5").Card(S["Request"], "30")),
+            Initialize<HttpApiDataSetViewModel>("HttpApiDataSetPaging_Edit", model => FillValues(model, dataSet))
+                .Location(l => l.Zone("Content", "5").Card(S["Paging"], "35")));
+    }
+
+    private void FillValues(HttpApiDataSetViewModel model, ConnectedDataSet dataSet)
+    {
             var settings = dataSet.GetOrCreate<HttpApiDataSetSettings>();
             var pagination = settings.Pagination ?? new HttpPaginationSettings();
 
@@ -69,7 +77,6 @@ internal sealed class HttpApiDataSetDisplayDriver : DisplayDriver<ConnectedDataS
                     .Where(format => !format.IsWorkbook && !string.Equals(format.Name, "json", StringComparison.OrdinalIgnoreCase))
                     .Select(format => new SelectListItem(format.DisplayName.Value, format.Name)),
             ];
-        }).Location("Content:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ConnectedDataSet dataSet, UpdateEditorContext context)
@@ -162,7 +169,7 @@ internal sealed class ElasticsearchDataSetDisplayDriver : DisplayDriver<Connecte
 
             model.Query = settings.Query;
             model.ScrollMinutes = settings.ScrollMinutes;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Search"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ConnectedDataSet dataSet, UpdateEditorContext context)
@@ -239,7 +246,7 @@ internal sealed class RelationalDataSetDisplayDriver : DisplayDriver<ConnectedDa
 
             model.Query = settings.Query;
             model.CommandTimeoutSeconds = settings.CommandTimeoutSeconds;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Query"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ConnectedDataSet dataSet, UpdateEditorContext context)
@@ -318,7 +325,7 @@ internal sealed class MediaFileDataSetDisplayDriver : DisplayDriver<ConnectedDat
             model.Delimiter = settings.Delimiter;
             model.HasHeaderRow = settings.HasHeaderRow;
             model.SheetName = settings.SheetName;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["File"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ConnectedDataSet dataSet, UpdateEditorContext context)

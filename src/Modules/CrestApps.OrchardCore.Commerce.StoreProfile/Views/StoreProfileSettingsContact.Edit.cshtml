@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Commerce.StoreProfile.ViewModels
+
+@model StoreProfileSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Email">
+    <label asp-for="Email" class="ocat-label">@T["Email"]</label>
+    <div class="ocat-end">
+        <input asp-for="Email" type="email" class="form-control" maxlength="254" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Phone">
+    <label asp-for="Phone" class="ocat-label">@T["Phone"]</label>
+    <div class="ocat-end">
+        <input asp-for="Phone" type="tel" class="form-control" maxlength="50" />
+        <span asp-validation-for="Phone" class="text-danger"></span>
+        <span class="hint">@T["Kept in international form when it can be read, in the country of the address below."]</span>
+    </div>
+</div>

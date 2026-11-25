@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Shipping.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
@@ -34,7 +35,7 @@ internal abstract class ShippingMethodSettingsDisplayDriver<TSettings, TViewMode
         }
 
         return Initialize<TViewModel>(_shapeType, model => BuildViewModelAsync(model, method.GetOrCreate<TSettings>()))
-            .Location("Content:5");
+            .Location(l => l.Zone("Content", "5").Card(CardName, "40"));
     }
 
     public sealed override async Task<IDisplayResult> UpdateAsync(ShippingMethod method, UpdateEditorContext context)
@@ -52,6 +53,11 @@ internal abstract class ShippingMethodSettingsDisplayDriver<TSettings, TViewMode
 
         return Edit(method, context);
     }
+
+    /// <summary>
+    /// Gets the title of the card holding the provider's settings.
+    /// </summary>
+    protected abstract LocalizedString CardName { get; }
 
     /// <summary>
     /// Fills the editor from the settings stored on the method.

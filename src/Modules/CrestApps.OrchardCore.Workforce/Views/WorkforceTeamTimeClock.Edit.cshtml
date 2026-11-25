@@ -1,0 +1,9 @@
+@model WorkforceTeamEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="TimeClockPolicyId" class="ocat-label">@T["Time clock policy"]</label>
+    <div class="ocat-end">
+        <select asp-for="TimeClockPolicyId" asp-items="Model.TimeClockPolicyOptions" class="form-select" style="max-width: 22rem"><option value="">@T["As the parent team"]</option></select>
+        <span class="hint">@T["How the team's time is clocked and paid. A team with none, and no parent with one, doesn't clock time."]</span>
+    </div>
+</div>

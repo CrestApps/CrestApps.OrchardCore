@@ -68,7 +68,7 @@ internal sealed class TryAgainSubjectActionDisplayDriver : DisplayDriver<Subject
             }
 
             model.SelectedUsers ??= [];
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Action"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SubjectAction action, UpdateEditorContext context)

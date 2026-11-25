@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.AI.FileSources.Sftp.ViewModels
+
+@model SftpFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ConnectionTimeout" class="ocat-label">@T["Connection timeout (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ConnectionTimeout" class="form-control" type="number" min="1" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="KeepAliveInterval" class="ocat-label">@T["Keep-alive interval (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="KeepAliveInterval" class="form-control" type="number" min="1" />
+    </div>
+</div>
+

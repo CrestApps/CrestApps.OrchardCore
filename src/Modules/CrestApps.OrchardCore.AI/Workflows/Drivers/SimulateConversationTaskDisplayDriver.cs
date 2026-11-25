@@ -61,6 +61,16 @@ public sealed class SimulateConversationTaskDisplayDriver : ActivityDisplayDrive
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(SimulateConversationTask activity, BuildEditorContext context)
+    {
+        return Combine(
+            Initialize<SimulateConversationTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Scenario"], "10")),
+            Initialize<SimulateConversationTaskViewModel>("SimulateConversationTaskEvaluation_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Evaluation"], "20")));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(SimulateConversationTask activity, UpdateEditorContext context)
     {
         var model = new SimulateConversationTaskViewModel();

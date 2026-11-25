@@ -14,6 +14,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -35,6 +37,8 @@ public sealed class PosDepartmentsAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<PosDepartmentEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -45,6 +49,8 @@ public sealed class PosDepartmentsAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<PosDepartmentEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<PosDepartmentsAdminController> htmlLocalizer,
         IStringLocalizer<PosDepartmentsAdminController> stringLocalizer)
     {
@@ -53,6 +59,8 @@ public sealed class PosDepartmentsAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -88,7 +96,10 @@ public sealed class PosDepartmentsAdminController : Controller
 
         var position = (await _departments.GetAllAsync(HttpContext.RequestAborted)).Select(department => department.Position).DefaultIfEmpty(0).Max() + 1;
 
-        return View("Edit", await PopulateAsync(new PosDepartmentEditViewModel { Position = position }));
+        var model = await PopulateAsync(new PosDepartmentEditViewModel { Position = position });
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -102,9 +113,12 @@ public sealed class PosDepartmentsAdminController : Controller
 
         var department = new PosDepartment { ItemId = IdGenerator.GenerateId(), CreatedUtc = _clock.UtcNow };
 
+        await PopulateAsync(model);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         if (!await ApplyAsync(model, department))
         {
-            return View("Edit", await PopulateAsync(model));
+            return View("Edit", model);
         }
 
         await _departments.CreateAsync(department);
@@ -125,7 +139,7 @@ public sealed class PosDepartmentsAdminController : Controller
             return NotFound();
         }
 
-        return View(await PopulateAsync(new PosDepartmentEditViewModel
+        var model = await PopulateAsync(new PosDepartmentEditViewModel
         {
             Name = department.Name,
             Number = department.Number,
@@ -135,7 +149,11 @@ public sealed class PosDepartmentsAdminController : Controller
             MaximumAmount = department.MaximumAmount?.ToString(CultureInfo.InvariantCulture),
             Position = department.Position,
             IsEnabled = department.IsEnabled,
-        }, department.ItemId));
+        }, department.ItemId);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -152,9 +170,12 @@ public sealed class PosDepartmentsAdminController : Controller
             return NotFound();
         }
 
+        await PopulateAsync(model, department.ItemId);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         if (!await ApplyAsync(model, department))
         {
-            return View(await PopulateAsync(model, department.ItemId));
+            return View(model);
         }
 
         await _departments.UpdateAsync(department);

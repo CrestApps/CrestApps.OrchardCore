@@ -1,0 +1,31 @@
+@model TimeEntryEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Times are in the {0} time zone.", Model.TimeZoneId]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Start">
+    <label asp-for="Start" class="ocat-label">@T["Start"]</label>
+    <div class="ocat-end">
+        <input asp-for="Start" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" type="datetime-local" step="1" class="form-control" />
+        <span asp-validation-for="Start" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="End">
+    <label asp-for="End" class="ocat-label">@T["End"]</label>
+    <div class="ocat-end">
+        <input asp-for="End" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" type="datetime-local" step="1" class="form-control" />
+        <span asp-validation-for="End" class="text-danger"></span>
+        @if (Model.IsOpen)
+        {
+            <span class="hint">@T["Leave it empty to keep the person in this stage now."]</span>
+        }
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+    <div class="ocat-end">
+        <input asp-for="Note" class="form-control" />
+    </div>
+</div>

@@ -3,19 +3,30 @@
 
 @model InviteToAccountTaskViewModel
 
-<div class="mb-3">
-    <label asp-for="AccountId" class="form-label">@T["Account id"]</label>
-    <input asp-for="AccountId" class="form-control code" />
+<div class="ocat-wrapper" asp-validation-class-for="AccountId">
+    <label asp-for="AccountId" class="ocat-label">@T["Account id"]</label>
+    <div class="ocat-end">
+        <input asp-for="AccountId" class="form-control code" />
+        <span asp-validation-for="AccountId"></span>
+    </div>
 </div>
-<div class="mb-3">
-    <label asp-for="Email" class="form-label">@T["E-mail"]</label>
-    <input asp-for="Email" class="form-control code" />
-    <span class="hint">@T["Liquid is allowed, such as {{ Workflow.Input.Email }}."]</span>
+
+<div class="ocat-wrapper" asp-validation-class-for="Email">
+    <label asp-for="Email" class="ocat-label">@T["E-mail"]</label>
+    <div class="ocat-end">
+        <input asp-for="Email" class="form-control code" />
+        <span asp-validation-for="Email"></span>
+        <span class="hint">@T["Liquid is allowed, such as {{ Workflow.Input.Email }}."]</span>
+    </div>
 </div>
-<div class="mb-3">
-    <label asp-for="Role" class="form-label">@T["Role"]</label>
-    <select asp-for="Role" class="form-select">
-        <option value="@AccountMemberRole.Member">@T["Member"]</option>
-        <option value="@AccountMemberRole.Admin">@T["Admin"]</option>
-    </select>
+
+<div class="ocat-wrapper" asp-validation-class-for="Role">
+    <label asp-for="Role" class="ocat-label">@T["Role"]</label>
+    <div class="ocat-end">
+        <select asp-for="Role" class="form-select">
+            <option value="@AccountMemberRole.Member">@T["Member"]</option>
+            <option value="@AccountMemberRole.Admin">@T["Admin"]</option>
+        </select>
+        <span asp-validation-for="Role"></span>
+    </div>
 </div>

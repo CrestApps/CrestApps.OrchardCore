@@ -1,0 +1,16 @@
+@model TaxReturnMarkFiledViewModel
+@using System.Globalization
+
+<div class="ocat-wrapper">
+    <label for="filedOn" class="ocat-label">@T["Filed on"]</label>
+    <div class="ocat-end">
+        <input id="filedOn" name="filedOn" type="date" value="@Model.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label for="confirmationNumber" class="ocat-label">@T["Confirmation number"]</label>
+    <div class="ocat-end">
+        <input id="confirmationNumber" name="confirmationNumber" class="form-control" style="max-width: 20rem" />
+        <span class="hint">@T["Once marked as filed, the return never changes: correct it with an amendment. Its boxes are worked out again as filed on that day, so a late return keeps its penalty."]</span>
+    </div>
+</div>

@@ -19,6 +19,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -42,6 +43,9 @@ public sealed class CredentialAwardsAdminController : Controller
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<AwardCredentialViewModel> _awardDisplayManager;
+    private readonly IDisplayManager<RevokeCredentialViewModel> _revokeDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -60,6 +64,9 @@ public sealed class CredentialAwardsAdminController : Controller
     /// <param name="localClock">The local clock.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="awardDisplayManager">The display manager of the form that awards a credential.</param>
+    /// <param name="revokeDisplayManager">The display manager of the form that revokes an award.</param>
+    /// <param name="updateModelAccessor">The model updater accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public CredentialAwardsAdminController(
@@ -74,9 +81,15 @@ public sealed class CredentialAwardsAdminController : Controller
         ILocalClock localClock,
         IClock clock,
         INotifier notifier,
+        IDisplayManager<AwardCredentialViewModel> awardDisplayManager,
+        IDisplayManager<RevokeCredentialViewModel> revokeDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IStringLocalizer<CredentialAwardsAdminController> stringLocalizer,
         IHtmlLocalizer<CredentialAwardsAdminController> htmlLocalizer)
     {
+        _awardDisplayManager = awardDisplayManager;
+        _revokeDisplayManager = revokeDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _awards = awards;
         _store = store;
         _definitions = definitions;
@@ -206,6 +219,8 @@ public sealed class CredentialAwardsAdminController : Controller
         var model = new AwardCredentialViewModel();
         await PopulateAsync(model);
 
+        model.Editor = await _awardDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -223,6 +238,10 @@ public sealed class CredentialAwardsAdminController : Controller
         {
             return Forbid();
         }
+
+        await PopulateAsync(model);
+
+        model.Editor = await _awardDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         if (string.IsNullOrEmpty(model.DefinitionId))
         {
@@ -261,8 +280,6 @@ public sealed class CredentialAwardsAdminController : Controller
 
             ModelState.AddModelError(string.Empty, Refusal(result.ErrorCode));
         }
-
-        await PopulateAsync(model);
 
         return View(model);
     }
@@ -326,7 +343,11 @@ public sealed class CredentialAwardsAdminController : Controller
             return NotFound();
         }
 
-        return View(await RevokeModelAsync(award, new RevokeCredentialViewModel()));
+        var model = await RevokeModelAsync(award, new RevokeCredentialViewModel());
+
+        model.Editor = await _revokeDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -352,6 +373,10 @@ public sealed class CredentialAwardsAdminController : Controller
             return NotFound();
         }
 
+        await RevokeModelAsync(award, model);
+
+        model.Editor = await _revokeDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         if (string.IsNullOrWhiteSpace(model.Reason))
         {
             ModelState.AddModelError(nameof(model.Reason), S["Say why the credential is revoked."]);
@@ -371,7 +396,7 @@ public sealed class CredentialAwardsAdminController : Controller
             ModelState.AddModelError(string.Empty, Refusal(result.ErrorCode));
         }
 
-        return View(await RevokeModelAsync(award, model));
+        return View(model);
     }
 
     /// <summary>

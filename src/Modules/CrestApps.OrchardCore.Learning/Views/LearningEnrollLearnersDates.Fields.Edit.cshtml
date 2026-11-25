@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Learning.Pipelines
+@model EnrollLearnersStepViewModel
+
+<div class="mb-3">
+    <label asp-for="DueField" class="form-label">@T["Due date field"]</label>
+    <input asp-for="DueField" class="form-control" />
+</div>
+<div class="mb-3">
+    <label asp-for="AccessEndsField" class="form-label">@T["Access ends field"]</label>
+    <input asp-for="AccessEndsField" class="form-control" />
+</div>

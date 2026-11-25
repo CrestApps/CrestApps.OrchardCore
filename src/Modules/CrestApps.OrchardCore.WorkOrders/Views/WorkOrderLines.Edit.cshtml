@@ -1,0 +1,8 @@
+@model WorkOrderEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Parts, labor and charges planned for the job. What is used is recorded on the work order's page."]</span>
+    </div>
+</div>
+<partial name="_LineRows" model="(Model.Lines, Model.StockItemOptions)" />

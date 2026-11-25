@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.TenantHierarchy.Migrations;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Recipes;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
+using CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,7 @@ public sealed class PlatformStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<TenantHierarchyPlatformService>();
+        services.AddDisplayDriver<ParentPolicyEditViewModel, ParentPolicyEditDisplayDriver>();
         services.AddPermissionProvider<PlatformPermissionProvider>();
         services.AddNavigationProvider<PlatformAdminMenu>();
     }
@@ -94,6 +96,7 @@ public sealed class ParentStartup : StartupBase
         services.AddDisplayDriver<Navbar, ParentSwitcherNavbarDisplayDriver>();
         services.AddDisplayDriver<AuditTrailEvent, HierarchyAuditTrailEventDisplayDriver>();
         services.AddDisplayDriver<ChildTenantListItem, ChildTenantListItemDisplayDriver>();
+        services.AddDisplayDriver<ChildTenantEditViewModel, ChildTenantEditDisplayDriver>();
         services.AddTransient<IConfigureOptions<AuditTrailOptions>, TenantHierarchyAuditTrailEventConfiguration>();
 
         services.AddRecipeExecutionStep<AccessGrantsStep>();

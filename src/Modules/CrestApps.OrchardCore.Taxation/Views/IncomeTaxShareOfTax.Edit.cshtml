@@ -1,28 +1,23 @@
 @model IncomeTaxShareOfTaxViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Share of another tax"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="ShareMultiplier">
-            <label asp-for="ShareMultiplier" class="ocat-label ocat-label-required">@T["Times"]</label>
-            <div class="ocat-end">
-                <div class="input-group" style="max-width: 24rem">
-                    <input asp-for="ShareMultiplier" class="form-control" inputmode="decimal" placeholder="1.4" aria-label="@T["Times"]" />
-                    <span class="input-group-text">@T["times the tax"]</span>
-                    <input asp-for="ShareOfTaxCode" class="form-control text-uppercase" placeholder="CA-EI" aria-label="@T["Tax code"]" />
-                </div>
-                <span asp-validation-for="ShareMultiplier" class="text-danger"></span>
-                <span asp-validation-for="ShareOfTaxCode" class="text-danger"></span>
-                <span class="hint">@T["The tax is a multiple of another tax of the same pay, by its tax code, such as the employer's EI premium (1.4 times CA-EI) or the employer's CPP (1 times CA-CPP)."]</span>
-            </div>
+<div class="ocat-wrapper" asp-validation-class-for="ShareMultiplier">
+    <label asp-for="ShareMultiplier" class="ocat-label ocat-label-required">@T["Times"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 24rem">
+            <input asp-for="ShareMultiplier" class="form-control" inputmode="decimal" placeholder="1.4" aria-label="@T["Times"]" />
+            <span class="input-group-text">@T["times the tax"]</span>
+            <input asp-for="ShareOfTaxCode" class="form-control text-uppercase" placeholder="CA-EI" aria-label="@T["Tax code"]" />
         </div>
-        <div class="ocat-wrapper" asp-validation-class-for="YearlyMaximum">
-            <label asp-for="YearlyMaximum" class="ocat-label">@T["Yearly maximum"]</label>
-            <div class="ocat-end">
-                <input asp-for="YearlyMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" />
-                <span asp-validation-for="YearlyMaximum" class="text-danger"></span>
-                <span class="hint">@T["The most tax taken in a calendar year; empty for no limit. Amounts take a dot for decimals."]</span>
-            </div>
-        </div>
+        <span asp-validation-for="ShareMultiplier" class="text-danger"></span>
+        <span asp-validation-for="ShareOfTaxCode" class="text-danger"></span>
+        <span class="hint">@T["The tax is a multiple of another tax of the same pay, by its tax code, such as the employer's EI premium (1.4 times CA-EI) or the employer's CPP (1 times CA-CPP)."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="YearlyMaximum">
+    <label asp-for="YearlyMaximum" class="ocat-label">@T["Yearly maximum"]</label>
+    <div class="ocat-end">
+        <input asp-for="YearlyMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="YearlyMaximum" class="text-danger"></span>
+        <span class="hint">@T["The most tax taken in a calendar year; empty for no limit. Amounts take a dot for decimals."]</span>
     </div>
 </div>

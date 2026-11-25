@@ -1,0 +1,41 @@
+@model BusinessDocumentTemplateViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="LogoUrl">
+    <label asp-for="LogoUrl" class="ocat-label">@T["Logo"]</label>
+    <div class="ocat-end">
+        <input asp-for="LogoUrl" class="form-control" maxlength="1000" placeholder="/media/logo.png" />
+        <span asp-validation-for="LogoUrl" class="text-danger"></span>
+        <span class="hint">@T["The address of a PNG or JPEG image in the media library, such as /media/logo.png. PDFs show only an image from the media library. A document with its own logo keeps it."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="UseAccentColor">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="UseAccentColor" class="form-check-input" />
+            <label asp-for="UseAccentColor" class="form-check-label">@T["Use an accent color"]</label>
+            <span class="hint dashed">@T["The title, the header of the line table and the total are printed in it."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="AccentColor">
+    <label asp-for="AccentColor" class="ocat-label">@T["Accent color"]</label>
+    <div class="ocat-end">
+        <input asp-for="AccentColor" type="color" class="form-control form-control-color" />
+        <span asp-validation-for="AccentColor" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="PaperSize">
+    <label asp-for="PaperSize" class="ocat-label">@T["Paper size"]</label>
+    <div class="ocat-end">
+        <select asp-for="PaperSize" asp-items="Model.PaperSizeOptions" class="form-select"></select>
+        <span asp-validation-for="PaperSize" class="text-danger"></span>
+        <span class="hint">@T["The size of the pages of PDFs and of printed pages."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Footer">
+    <label asp-for="Footer" class="ocat-label">@T["Footer"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Footer" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["Text printed at the bottom of the documents, such as a registration number or a thank-you note. A document with its own footer keeps it."]</span>
+    </div>
+</div>

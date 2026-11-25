@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Wizard.Workflows.Models;
 using CrestApps.OrchardCore.Wizard.Workflows.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
@@ -11,6 +12,24 @@ namespace CrestApps.OrchardCore.Wizard.Workflows.Drivers;
 /// </summary>
 public sealed class WizardCompletedEventDisplayDriver : ActivityDisplayDriver<WizardCompletedEvent, WizardEventViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WizardCompletedEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public WizardCompletedEventDisplayDriver(IStringLocalizer<WizardCompletedEventDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(WizardCompletedEvent activity, BuildEditorContext context)
+    {
+        return Initialize<WizardEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
     /// <inheritdoc/>
     protected override void EditActivity(WizardCompletedEvent activity, WizardEventViewModel model)
     {

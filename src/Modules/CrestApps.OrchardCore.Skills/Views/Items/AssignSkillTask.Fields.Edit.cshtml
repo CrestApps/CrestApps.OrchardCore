@@ -2,22 +2,34 @@
 
 @model AssignSkillTaskViewModel
 
-<div class="mb-3">
-    <label asp-for="SubjectKind" class="form-label">@T["Held by"]</label>
-    <input asp-for="SubjectKind" class="form-control code" />
-    <span class="hint">@T["User or Worker. Liquid is allowed."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="SubjectKind">
+    <label asp-for="SubjectKind" class="ocat-label">@T["Held by"]</label>
+    <div class="ocat-end">
+        <input asp-for="SubjectKind" class="form-control code" />
+        <span asp-validation-for="SubjectKind"></span>
+        <span class="hint">@T["User or Worker. Liquid is allowed."]</span>
+    </div>
 </div>
-<div class="mb-3">
-    <label asp-for="SubjectId" class="form-label">@T["User or worker id"]</label>
-    <input asp-for="SubjectId" class="form-control code" />
+<div class="ocat-wrapper" asp-validation-class-for="SubjectId">
+    <label asp-for="SubjectId" class="ocat-label">@T["User or worker id"]</label>
+    <div class="ocat-end">
+        <input asp-for="SubjectId" class="form-control code" />
+        <span asp-validation-for="SubjectId"></span>
+    </div>
 </div>
-<div class="mb-3">
-    <label asp-for="Skill" class="form-label">@T["Skill"]</label>
-    <input asp-for="Skill" class="form-control code" />
-    <span class="hint">@T["The skill name or id."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="Skill">
+    <label asp-for="Skill" class="ocat-label">@T["Skill"]</label>
+    <div class="ocat-end">
+        <input asp-for="Skill" class="form-control code" />
+        <span asp-validation-for="Skill"></span>
+        <span class="hint">@T["The skill name or id."]</span>
+    </div>
 </div>
-<div class="mb-3">
-    <label asp-for="Proficiency" class="form-label">@T["Proficiency"]</label>
-    <input asp-for="Proficiency" class="form-control code" />
-    <span class="hint">@T["From 1 (trainee) to 5 (expert). 0 takes the skill away."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="Proficiency">
+    <label asp-for="Proficiency" class="ocat-label">@T["Proficiency"]</label>
+    <div class="ocat-end">
+        <input asp-for="Proficiency" class="form-control code" />
+        <span asp-validation-for="Proficiency"></span>
+        <span class="hint">@T["From 1 (trainee) to 5 (expert). 0 takes the skill away."]</span>
+    </div>
 </div>

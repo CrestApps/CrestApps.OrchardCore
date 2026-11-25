@@ -1,4 +1,7 @@
 using CrestApps.OrchardCore.Learning.Services;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.Learning.Workflows;
@@ -12,13 +15,26 @@ public sealed class LearningEventActivityDisplayDriver<TActivity> : ActivityDisp
 {
     private readonly CourseEditorOptions _editorOptions;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningEventActivityDisplayDriver{TActivity}"/> class.
     /// </summary>
     /// <param name="editorOptions">The course options.</param>
-    public LearningEventActivityDisplayDriver(CourseEditorOptions editorOptions)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public LearningEventActivityDisplayDriver(
+        CourseEditorOptions editorOptions,
+        IStringLocalizer<LearningEventActivityDisplayDriver<TActivity>> stringLocalizer)
     {
         _editorOptions = editorOptions;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+    {
+        return Initialize<LearningEventActivityViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Trigger"], "10"));
     }
 
     /// <inheritdoc />

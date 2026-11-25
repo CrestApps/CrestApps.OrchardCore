@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -20,17 +21,22 @@ public sealed class DefaultOrchestratorSettingsDisplayDriver : SiteDisplayDriver
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultOrchestratorSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultOrchestratorSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<DefaultOrchestratorSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, DefaultOrchestratorSettings settings, BuildEditorContext context)
@@ -38,7 +44,7 @@ public sealed class DefaultOrchestratorSettingsDisplayDriver : SiteDisplayDriver
         return Initialize<DefaultOrchestratorSettingsViewModel>("DefaultOrchestratorSettings_Edit", model =>
         {
             model.EnablePreemptiveRag = settings.EnablePreemptiveRag;
-        }).Location("Content:3%Default Orchestrator;1")
+        }).Location(l => l.Zone("Content", "3").Card(S["Default Orchestrator"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

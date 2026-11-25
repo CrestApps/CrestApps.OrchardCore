@@ -1,0 +1,27 @@
+@model GarnishmentOrderViewModel
+@using System.Globalization
+
+<ul class="list-group list-group-flush">
+    @foreach (var row in Model.Remittances)
+    {
+        <li class="list-group-item px-0">
+            @row.PayDate.ToString("d", CultureInfo.CurrentCulture) · @T["Statement {0}", row.StatementNumber] · @row.Amount.ToString("N2", CultureInfo.CurrentCulture)
+            @if (!string.IsNullOrEmpty(row.Reference))
+            {
+                <span class="text-muted">· @row.Reference</span>
+            }
+            @if (row.Voided)
+            {
+                <span class="badge ta-badge fw-normal ms-1">@T["Voided"]</span>
+            }
+            @if (!string.IsNullOrEmpty(row.Problem))
+            {
+                <div class="text-danger small">@row.Problem</div>
+            }
+            @if (!row.Voided && string.IsNullOrEmpty(row.ReferenceId) && row.Method != CrestApps.OrchardCore.Payroll.Models.GarnishmentPaymentMethod.Outside && row.Amount > 0 && !string.IsNullOrEmpty(Model.OrderId))
+            {
+                <button type="submit" class="btn btn-sm btn-outline-secondary mt-1" formaction="@Url.Action("Retry", "Garnishments", new { area = "CrestApps.OrchardCore.Payroll", id = Model.OrderId, statementId = row.StatementId })" formnovalidate>@T["Send again"]</button>
+            }
+        </li>
+    }
+</ul>

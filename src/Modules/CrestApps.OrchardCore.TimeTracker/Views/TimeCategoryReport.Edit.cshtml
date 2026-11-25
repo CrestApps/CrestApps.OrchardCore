@@ -1,0 +1,25 @@
+@model TimeCategoryEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Position" class="ocat-label">@T["Column position"]</label>
+    <div class="ocat-end">
+        <input asp-for="Position" type="number" class="form-control" />
+        <span class="hint">@T["Lower comes first."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Factor">
+    <label asp-for="Factor" class="ocat-label">@T["Each minute counts"]</label>
+    <div class="ocat-end">
+        <input asp-for="Factor" type="number" min="0" max="10" step="0.01" class="form-control" />
+        <span asp-validation-for="Factor" class="text-danger"></span>
+        <span class="hint">@T["1 counts the time as it is; 1.5 counts it half again, such as for an overtime premium."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
+        </div>
+    </div>
+</div>

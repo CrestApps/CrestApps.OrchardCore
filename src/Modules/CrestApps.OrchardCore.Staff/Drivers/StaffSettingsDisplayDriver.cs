@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Staff.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -21,15 +22,19 @@ public sealed class StaffSettingsDisplayDriver : SiteDisplayDriver<StaffSettings
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="StaffSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    public StaffSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public StaffSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, IStringLocalizer<StaffSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -38,7 +43,7 @@ public sealed class StaffSettingsDisplayDriver : SiteDisplayDriver<StaffSettings
     /// <inheritdoc />
     public override IDisplayResult Edit(ISite site, StaffSettings settings, BuildEditorContext context)
         => Initialize<StaffSettingsViewModel>("StaffSettings_Edit", model => model.LimitPickersToStaff = settings.LimitPickersToStaff)
-            .Location("Content:1")
+            .Location(l => l.Zone("Content", "1").Card(S["People Pickers"], "10"))
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StaffPermissions.ManageStaff))
             .OnGroup(SettingsGroupId);
 
