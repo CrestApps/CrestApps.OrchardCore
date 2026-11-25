@@ -395,12 +395,22 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         _logger.LogWarning(
             "Bulk email from address '{AddressId}' is paused ({PauseKind}) until {PausedUntil}: {Reason}",
             addressId.SanitizeLogValue(),
-            kind,
+            DescribePause(kind),
             until?.ToString("u") ?? "it is resumed",
             reason.SanitizeLogValue());
 
         return until;
     }
+
+    // The kind is logged as a fixed word, so the line carries only text this class wrote.
+    private static string DescribePause(EmailSendingPauseKind kind)
+        => kind switch
+        {
+            EmailSendingPauseKind.Throttled => "throttled",
+            EmailSendingPauseKind.Blocked => "blocked",
+            EmailSendingPauseKind.PoorHealth => "poor health",
+            _ => "paused",
+        };
 
     public async Task NoteDomainDeferralAsync(string addressId, string recipientDomain, CancellationToken cancellationToken = default)
     {

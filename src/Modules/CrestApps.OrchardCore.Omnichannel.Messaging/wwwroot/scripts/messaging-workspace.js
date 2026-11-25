@@ -792,6 +792,12 @@
 				}
 			});
 		}
+		function withoutScriptUrl(url) {
+			if (!url) return "";
+			var trimmed = String(url).trim();
+			if (/^javascript:/i.test(trimmed) || /^vbscript:/i.test(trimmed) || /^data:/i.test(trimmed)) return "";
+			return url;
+		}
 		function showToast(title, body, href) {
 			var container = document.querySelector("[data-toast-container]");
 			if (!container) return;
@@ -814,7 +820,7 @@
 			var bodyElement = document.createElement("div");
 			bodyElement.className = "toast-body";
 			bodyElement.textContent = body || "";
-			var safeHref = sameOriginUrl(href, root.location.href);
+			var safeHref = withoutScriptUrl(sameOriginUrl(href, root.location.href));
 			if (safeHref) {
 				var link = document.createElement("a");
 				link.href = safeHref;

@@ -142,6 +142,14 @@ public class ValidationOwnershipArchitectureTests
             "src/Core/CrestApps.OrchardCore.Taxation.Core/Drivers/IncomeTaxRuleSourceDisplayDriver.cs",
             "Type a number of zero or more, with a dot for decimals.",
             "Rates, amounts and wage bases are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose ranges the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Email/Drivers/EmailAddressSettingsDisplayDriver.cs",
+            "nameof(model.SmtpPassword)",
+            "Only the editor has a password box left blank to keep the stored SMTP password, so only the editor can drop it when the server changes and ask for it again; a recipe carries the password itself."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Email/Drivers/EmailAddressSettingsDisplayDriver.cs",
+            "nameof(model.ImapPassword)",
+            "Only the editor has a password box left blank to keep the stored IMAP password, so only the editor can drop it when the server changes and ask for it again; a recipe carries the password itself."),
     ];
 
     private static readonly Regex _typeNameRegex = new(

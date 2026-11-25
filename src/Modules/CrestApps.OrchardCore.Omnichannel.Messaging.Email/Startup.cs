@@ -155,7 +155,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IChannelEndpointRule, EmailAddressSettingsRule>();
 
         // A warm-up turned on without a start date (by a recipe or an import) is dated on save, so it ramps up.
-        services.AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, EmailAddressWarmUpHandler>();
+        services.AddScoped<IChannelEndpointRule, EmailAddressWarmUpRule>();
         services.AddSiteDisplayDriver<EmailInboundSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(EmailInboundSettingsDisplayDriver.EmailSettingsGroupId, OmnichannelConstants.Permissions.ManageChannelEndpoints);
 

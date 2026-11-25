@@ -247,11 +247,10 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             if (sizes.TryGetValue(uid.Id, out var size) && size > EmailChannelConstants.MaxInboundEmailBytes)
             {
                 _logger.LogWarning(
-                    "Message {Uid} in the mailbox of email address '{AddressId}' is {Size} bytes, above the {Limit} bytes an inbound email may be, and was passed over. It is left unread in the mailbox.",
+                    "Message {Uid} in the mailbox of email address '{AddressId}' is {Size} bytes, above the size an inbound email may be, and was passed over. It is left unread in the mailbox.",
                     uid.Id,
                     address.ItemId.SanitizeLogValue(),
-                    size,
-                    EmailChannelConstants.MaxInboundEmailBytes);
+                    size);
 
                 outcome = MessageOutcome.PassedOver;
             }

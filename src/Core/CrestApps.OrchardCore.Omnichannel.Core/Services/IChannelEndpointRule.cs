@@ -17,4 +17,14 @@ public interface IChannelEndpointRule
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that completes when the endpoint has been checked.</returns>
     Task ValidateAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fills in what this rule derives from the settings it owns, such as the day a warm-up starts, after the editor, a
+    /// recipe or an import has set the endpoint and before it is saved. Most rules only validate, so by default it does
+    /// nothing.
+    /// </summary>
+    /// <param name="endpoint">The endpoint about to be saved.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the endpoint has been prepared.</returns>
+    Task PrepareAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

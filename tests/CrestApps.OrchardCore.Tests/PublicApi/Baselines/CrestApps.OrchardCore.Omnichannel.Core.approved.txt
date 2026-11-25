@@ -1681,6 +1681,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public interface IChannelEndpointRule
     {
+        System.Threading.Tasks.Task PrepareAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint endpoint, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ValidateAsync(CrestApps.Core.Models.ValidatingContext<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> context, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactMethodsAccessor

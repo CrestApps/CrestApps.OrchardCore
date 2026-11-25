@@ -1,7 +1,7 @@
 ﻿using CrestApps.Core;
-using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using OrchardCore.Modules;
 
@@ -13,35 +13,30 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 /// <remarks>
 /// The warm-up counts its days from its start, and a missing start is read as today, so an address without one would
 /// stay on its first day's limit for good. The editor dates the warm-up when it is turned on, but a recipe, a deployment
-/// or an import can carry it turned on without a date, so it is dated here, where every save of an address passes. The
-/// Email feature depends on the address list, so this handler runs after the address's own handler has applied what a
-/// recipe carries.
+/// or an import can carry it turned on without a date, so it is dated here, in the step the address's own handler runs
+/// for every save once the editor, a recipe or an import has set the address.
 /// </remarks>
-internal sealed class EmailAddressWarmUpHandler : CatalogEntryHandlerBase<OmnichannelChannelEndpoint>
+internal sealed class EmailAddressWarmUpRule : IChannelEndpointRule
 {
     private readonly IClock _clock;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmailAddressWarmUpHandler"/> class.
+    /// Initializes a new instance of the <see cref="EmailAddressWarmUpRule"/> class.
     /// </summary>
     /// <param name="clock">The clock the warm-up is dated by.</param>
-    public EmailAddressWarmUpHandler(IClock clock)
+    public EmailAddressWarmUpRule(IClock clock)
     {
         _clock = clock;
     }
 
     /// <inheritdoc/>
-    public override Task CreatingAsync(CreatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
-    {
-        DateWarmUp(context.Model, _clock.UtcNow);
-
-        return Task.CompletedTask;
-    }
+    public Task ValidateAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public override Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    public Task PrepareAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken = default)
     {
-        DateWarmUp(context.Model, _clock.UtcNow);
+        DateWarmUp(endpoint, _clock.UtcNow);
 
         return Task.CompletedTask;
     }

@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Nodes;
-using CrestApps.Core;
-using CrestApps.Core.Models;
+﻿using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
@@ -13,17 +11,17 @@ namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging.Email.Deliverability
 /// An address imported with its warm-up turned on but no start date stayed on its first day's limit for good, because a
 /// missing start is read as today. Every save of an address now dates it.
 /// </summary>
-public sealed class EmailAddressWarmUpHandlerTests
+public sealed class EmailAddressWarmUpRuleTests
 {
     [Fact]
-    public async Task CreatingAsync_AWarmUpWithoutAStartDate_StartsNow()
+    public async Task PrepareAsync_AWarmUpWithoutAStartDate_StartsNow()
     {
         // Arrange
         var clock = new DeliverabilityClock();
         var endpoint = Address(new EmailSendingLimits { WarmUp = true, WarmUpFirstDayLimit = 50, MaxPerDay = 2000 });
 
         // Act
-        await new EmailAddressWarmUpHandler(clock).CreatingAsync(new CreatingContext<OmnichannelChannelEndpoint>(endpoint), TestContext.Current.CancellationToken);
+        await new EmailAddressWarmUpRule(clock).PrepareAsync(endpoint, TestContext.Current.CancellationToken);
 
         // Assert
         var limits = Limits(endpoint);
@@ -35,7 +33,7 @@ public sealed class EmailAddressWarmUpHandlerTests
     }
 
     [Fact]
-    public async Task UpdatingAsync_KeepsAWarmUpsStartDate()
+    public async Task PrepareAsync_KeepsAWarmUpsStartDate()
     {
         // Arrange
         var clock = new DeliverabilityClock();
@@ -43,20 +41,20 @@ public sealed class EmailAddressWarmUpHandlerTests
         var endpoint = Address(new EmailSendingLimits { WarmUp = true, WarmUpStartedUtc = started });
 
         // Act
-        await new EmailAddressWarmUpHandler(clock).UpdatingAsync(new UpdatingContext<OmnichannelChannelEndpoint>(endpoint, new JsonObject()), TestContext.Current.CancellationToken);
+        await new EmailAddressWarmUpRule(clock).PrepareAsync(endpoint, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(started, Limits(endpoint).WarmUpStartedUtc);
     }
 
     [Fact]
-    public async Task UpdatingAsync_LeavesAnAddressThatIsNotWarmingUpUndated()
+    public async Task PrepareAsync_LeavesAnAddressThatIsNotWarmingUpUndated()
     {
         // Arrange
         var endpoint = Address(new EmailSendingLimits { WarmUp = false });
 
         // Act
-        await new EmailAddressWarmUpHandler(new DeliverabilityClock()).UpdatingAsync(new UpdatingContext<OmnichannelChannelEndpoint>(endpoint, new JsonObject()), TestContext.Current.CancellationToken);
+        await new EmailAddressWarmUpRule(new DeliverabilityClock()).PrepareAsync(endpoint, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(Limits(endpoint).WarmUpStartedUtc);

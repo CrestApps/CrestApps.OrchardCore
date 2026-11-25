@@ -91,16 +91,28 @@ internal sealed class OmnichannelChannelEndpointHandler : AuditedCatalogEntryHan
         await base.UpdatingAsync(context, cancellationToken);
 
         Canonicalize(context.Model);
+
+        await PrepareAsync(context.Model, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public override Task CreatingAsync(CreatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    public override async Task CreatingAsync(CreatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
         // An editor builds a new endpoint before it binds the form to it, so the value is still empty when the entry is
         // initialized and only the create raises after the form has been bound.
         Canonicalize(context.Model);
 
-        return Task.CompletedTask;
+        await PrepareAsync(context.Model, cancellationToken);
+    }
+
+    // The features that extend endpoints fill in what they derive from their own settings once the editor, a recipe or
+    // an import has set the endpoint, so every way of saving one gets the same result.
+    private async Task PrepareAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
+    {
+        foreach (var rule in _rules)
+        {
+            await rule.PrepareAsync(endpoint, cancellationToken);
+        }
     }
 
     private void Canonicalize(OmnichannelChannelEndpoint endpoint)
