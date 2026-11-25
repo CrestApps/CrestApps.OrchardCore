@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Pipelines
+@model RecordExternalLearningStepViewModel
+
+<div class="mb-3">
+    <label asp-for="CreditTypeId" class="form-label">@T["Credit type"]</label>
+    <select asp-for="CreditTypeId" asp-items="Model.CreditTypeOptions" class="form-select">
+        <option value="">@T["Use the credit type field"]</option>
+    </select>
+    <span asp-validation-for="CreditTypeId"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="CreditTypeField" class="form-label">@T["Credit type field"]</label>
+    <input asp-for="CreditTypeField" class="form-control" />
+    <span class="hint">@T["Optional. The input field that holds the name or id of each row's credit type, instead of one type for every row."]</span>
+</div>
+<p class="hint">@T["Each row is recorded as accepted external learning and its credits are posted. Rows that cannot be recorded go to the Rejected output with the reason."]</p>

@@ -1,0 +1,39 @@
+@model CheckLayoutViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="SignatureFile">
+    <label asp-for="SignatureFile" class="ocat-label">@T["Signature"]</label>
+    <div class="ocat-end">
+        <input asp-for="SignatureFile" class="form-control" type="file" accept="image/png,image/jpeg" />
+        <span asp-validation-for="SignatureFile" class="text-danger"></span>
+        @if (Model.HasSignature)
+        {
+            <div class="form-check mt-1">
+                <input asp-for="RemoveSignature" class="form-check-input" />
+                <label asp-for="RemoveSignature" class="form-check-label">@T["Remove the stored signature"]</label>
+            </div>
+        }
+        <span class="hint">@(Model.HasSignature ? T["A signature is stored. Upload a PNG or JPEG to replace it."] : T["Optional. A PNG or JPEG printed above the signature line. It is kept encrypted, never in the media library."])</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="SecondSignatureAbove">
+    <label asp-for="SecondSignatureAbove" class="ocat-label">@T["Second signature above"]</label>
+    <div class="ocat-end">
+        <input asp-for="SecondSignatureAbove" class="form-control" inputmode="decimal" data-designer-threshold />
+        <span asp-validation-for="SecondSignatureAbove" class="text-danger"></span>
+        <span class="hint">@T["Checks for more than this amount print a second signature line. Leave it empty for never."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="SecondSignatureFile">
+    <label asp-for="SecondSignatureFile" class="ocat-label">@T["Second signature"]</label>
+    <div class="ocat-end">
+        <input asp-for="SecondSignatureFile" class="form-control" type="file" accept="image/png,image/jpeg" />
+        <span asp-validation-for="SecondSignatureFile" class="text-danger"></span>
+        @if (Model.HasSecondSignature)
+        {
+            <div class="form-check mt-1">
+                <input asp-for="RemoveSecondSignature" class="form-check-input" />
+                <label asp-for="RemoveSecondSignature" class="form-check-label">@T["Remove the stored second signature"]</label>
+            </div>
+        }
+    </div>
+</div>

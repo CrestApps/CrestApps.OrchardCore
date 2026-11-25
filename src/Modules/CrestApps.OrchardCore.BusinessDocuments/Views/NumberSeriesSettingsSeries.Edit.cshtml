@@ -1,0 +1,48 @@
+@using CrestApps.OrchardCore.Numbering
+@model NumberSeriesSettingsViewModel
+
+@{
+    var index = Model.Index;
+    var series = Model.Series[index];
+}
+
+<div data-number-series data-today="@Model.Today">
+    <input type="hidden" asp-for="Series[index].Name" />
+    @if (series.IsCustomized)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The site chose a format of its own for this series."]">@T["Customized"]</span>
+            </div>
+        </div>
+    }
+    <div class="ocat-wrapper" asp-validation-class-for="Series[index].Pattern">
+        <label asp-for="Series[index].Pattern" class="ocat-label ocat-label-required">@T["Pattern"]</label>
+        <div class="ocat-end">
+            <input asp-for="Series[index].Pattern" class="form-control" maxlength="@NumberSeriesFormat.MaximumPatternLength" data-number-series-pattern autocomplete="off" />
+            <span asp-validation-for="Series[index].Pattern" class="text-danger"></span>
+            <span class="hint">@T["Registered as {0}.", series.DefaultPattern]</span>
+        </div>
+    </div>
+    <div class="ocat-wrapper" asp-validation-class-for="Series[index].FirstNumber">
+        <label asp-for="Series[index].FirstNumber" class="ocat-label">@T["First number"]</label>
+        <div class="ocat-end">
+            <input asp-for="Series[index].FirstNumber" type="number" min="1" step="1" class="form-control" data-number-series-first />
+            <span asp-validation-for="Series[index].FirstNumber" class="text-danger"></span>
+            <span class="hint">@T["Where a new series starts, and where it starts again each year or month. Numbers already issued are not changed."]</span>
+        </div>
+    </div>
+    <div class="ocat-wrapper" asp-validation-class-for="Series[index].Reset">
+        <label asp-for="Series[index].Reset" class="ocat-label">@T["Start again"]</label>
+        <div class="ocat-end">
+            <select asp-for="Series[index].Reset" asp-items="Model.ResetOptions" class="form-select"></select>
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Example"]</label>
+        <div class="ocat-end">
+            <code data-number-series-example>@series.Example</code>
+            <span class="hint">@T["The first number of the series, written with today's date."]</span>
+        </div>
+    </div>
+</div>

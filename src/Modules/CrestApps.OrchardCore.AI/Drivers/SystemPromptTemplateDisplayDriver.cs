@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -13,13 +14,20 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 /// </summary>
 internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
+    internal readonly IStringLocalizer S;
+
+    public SystemPromptTemplateDisplayDriver(IStringLocalizer<SystemPromptTemplateDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
         return Initialize<SystemPromptTemplateViewModel>("SystemPromptTemplate_Edit", model =>
         {
             var metadata = template.GetOrCreate<SystemPromptTemplateMetadata>();
             model.SystemMessage = metadata.SystemMessage;
-        }).Location("Content:10")
+        }).Location(l => l.Zone("Content", "10").Card(S["System Prompt"], "20"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.SystemPrompt));
     }
 

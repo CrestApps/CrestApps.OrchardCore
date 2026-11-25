@@ -1,0 +1,24 @@
+@model RefundRequestViewModel
+
+@using CrestApps.OrchardCore.Currencies
+@using CrestApps.OrchardCore.Transactions.Core
+@inject TransactionDisplayText DisplayText
+
+@{
+    var attempt = Model.Attempt;
+    var settled = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
+}
+
+<dl class="row mb-0">
+    <dt class="col-sm-3">@T["Method"]</dt>
+    <dd class="col-sm-9">@DisplayText.PaymentMethodName(attempt.ProviderKey)</dd>
+
+    <dt class="col-sm-3">@T["Payment"]</dt>
+    <dd class="col-sm-9"><span class="text-muted small">@attempt.TransactionId</span></dd>
+
+    <dt class="col-sm-3">@T["Collected"]</dt>
+    <dd class="col-sm-9">@attempt.Currency @CurrencyScale.Format(settled, attempt.Currency)</dd>
+
+    <dt class="col-sm-3">@T["Already refunded"]</dt>
+    <dd class="col-sm-9">@attempt.Currency @CurrencyScale.Format(Model.AlreadyRefunded, attempt.Currency)</dd>
+</dl>

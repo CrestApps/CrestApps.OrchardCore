@@ -1,20 +1,15 @@
 @model LearningPackageContentHostSettingsViewModel
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Package content host"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <p class="text-muted mb-0">@T["Packages made with Articulate Rise and Storyline 360 run in several frames that must reach each other. They need a host of their own that serves only package files, such as https://packages.example.com. Point that host at this site and give it a certificate first; the documentation says how."]</p>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="BaseUrl">
-            <label asp-for="BaseUrl" class="ocat-label">@T["Package content host"]</label>
-            <div class="ocat-end">
-                <input asp-for="BaseUrl" type="url" class="form-control" placeholder="https://packages.example.com" autocomplete="off" />
-                <span asp-validation-for="BaseUrl"></span>
-                <span class="hint">@T["Use a separate domain, never a host that shares the site's sign-in cookies. Once it is set, package files open only on this host, and this host shows nothing else. Leave it empty to run every package on the site's own host, each page sandboxed on its own; packages in a single frame work that way."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted mb-0">@T["Packages made with Articulate Rise and Storyline 360 run in several frames that must reach each other. They need a host of their own that serves only package files, such as https://packages.example.com. Point that host at this site and give it a certificate first; the documentation says how."]</p>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="BaseUrl">
+    <label asp-for="BaseUrl" class="ocat-label">@T["Package content host"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseUrl" type="url" class="form-control" placeholder="https://packages.example.com" autocomplete="off" />
+        <span asp-validation-for="BaseUrl"></span>
+        <span class="hint">@T["Use a separate domain, never a host that shares the site's sign-in cookies. Once it is set, package files open only on this host, and this host shows nothing else. Leave it empty to run every package on the site's own host, each page sandboxed on its own; packages in a single frame work that way."]</span>
     </div>
 </div>

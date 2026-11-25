@@ -60,36 +60,45 @@ internal sealed class MerchantTaxRegistrationDisplayDriver : DisplayDriver<Merch
     }
 
     public override IDisplayResult Edit(MerchantTaxRegistration registration, BuildEditorContext context)
-        => Initialize<MerchantTaxRegistrationViewModel>("MerchantTaxRegistrationFields_Edit", async model =>
-        {
-            model.Name = registration.Name;
-            model.JurisdictionId = registration.JurisdictionId;
-            model.TaxType = registration.TaxType;
-            model.RegistrationNumber = registration.RegistrationNumber;
-            model.IsActive = registration.IsActive;
-            model.ThresholdAmount = registration.ThresholdAmount;
-            model.EffectiveFrom = registration.EffectiveFromUtc is { } from ? DateOnly.FromDateTime(from) : null;
-            model.EffectiveTo = registration.EffectiveToUtc is { } to ? DateOnly.FromDateTime(to) : null;
-            model.Jurisdictions =
-            [
-                new SelectListItem(S["Choose a jurisdiction"], string.Empty),
-                .. (await _jurisdictions.GetAllAsync())
-                    .OrderBy(jurisdiction => jurisdiction.Name, StringComparer.CurrentCultureIgnoreCase)
-                    .Select(jurisdiction => new SelectListItem(jurisdiction.Name, jurisdiction.ItemId)),
-            ];
-            model.TaxTypes =
-            [
-                new SelectListItem(S["Every tax type"], string.Empty),
-                .. (await _types.GetAllAsync())
-                    .OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase)
-                    .Select(type => new SelectListItem(type.Name, type.Name)),
-            ];
-
-            if (!string.IsNullOrEmpty(registration.TaxType) && !model.TaxTypes.Any(item => string.Equals(item.Value, registration.TaxType, StringComparison.OrdinalIgnoreCase)))
+        => Combine(
+            Initialize<MerchantTaxRegistrationViewModel>("MerchantTaxRegistrationFields_Edit", async model =>
             {
-                model.TaxTypes.Add(new SelectListItem(registration.TaxType, registration.TaxType));
-            }
-        }).Location("Content:1");
+                Populate(model, registration);
+
+                model.Jurisdictions =
+                [
+                    new SelectListItem(S["Choose a jurisdiction"], string.Empty),
+                    .. (await _jurisdictions.GetAllAsync())
+                        .OrderBy(jurisdiction => jurisdiction.Name, StringComparer.CurrentCultureIgnoreCase)
+                        .Select(jurisdiction => new SelectListItem(jurisdiction.Name, jurisdiction.ItemId)),
+                ];
+                model.TaxTypes =
+                [
+                    new SelectListItem(S["Every tax type"], string.Empty),
+                    .. (await _types.GetAllAsync())
+                        .OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase)
+                        .Select(type => new SelectListItem(type.Name, type.Name)),
+                ];
+
+                if (!string.IsNullOrEmpty(registration.TaxType) && !model.TaxTypes.Any(item => string.Equals(item.Value, registration.TaxType, StringComparison.OrdinalIgnoreCase)))
+                {
+                    model.TaxTypes.Add(new SelectListItem(registration.TaxType, registration.TaxType));
+                }
+            }).Location(l => l.Zone("Content", "1").Card(S["Registration"], "10")),
+            Initialize<MerchantTaxRegistrationViewModel>("MerchantTaxRegistrationDates_Edit", model => Populate(model, registration))
+                .Location(l => l.Zone("Content", "2").Card(S["When It Applies"], "20")));
+
+    private static void Populate(MerchantTaxRegistrationViewModel model, MerchantTaxRegistration registration)
+    {
+        model.Name = registration.Name;
+        model.JurisdictionId = registration.JurisdictionId;
+        model.TaxType = registration.TaxType;
+        model.RegistrationNumber = registration.RegistrationNumber;
+        model.IsActive = registration.IsActive;
+        model.ThresholdAmount = registration.ThresholdAmount;
+        model.EffectiveFrom = registration.EffectiveFromUtc is { } from ? DateOnly.FromDateTime(from) : null;
+        model.EffectiveTo = registration.EffectiveToUtc is { } to ? DateOnly.FromDateTime(to) : null;
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(MerchantTaxRegistration registration, UpdateEditorContext context)
     {

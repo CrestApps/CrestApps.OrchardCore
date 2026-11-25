@@ -38,6 +38,7 @@ public sealed class ApprovalRequestsController : Controller
     private readonly ISourceAccessService _access;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<ApprovalRequest> _displayManager;
+    private readonly IDisplayManager<ApprovalDecideViewModel> _decideDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IStringLocalizerFactory _localizerFactory;
     private readonly INotifier _notifier;
@@ -58,6 +59,7 @@ public sealed class ApprovalRequestsController : Controller
         ISourceAccessService access,
         IAuthorizationService authorizationService,
         IDisplayManager<ApprovalRequest> displayManager,
+        IDisplayManager<ApprovalDecideViewModel> decideDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IStringLocalizerFactory localizerFactory,
         INotifier notifier,
@@ -73,6 +75,7 @@ public sealed class ApprovalRequestsController : Controller
         _access = access;
         _authorizationService = authorizationService;
         _displayManager = displayManager;
+        _decideDisplayManager = decideDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _localizerFactory = localizerFactory;
         _notifier = notifier;
@@ -159,7 +162,10 @@ public sealed class ApprovalRequestsController : Controller
             return NotFound();
         }
 
-        return View(await BuildAsync(new ApprovalDecideViewModel(), request));
+        var model = await BuildAsync(new ApprovalDecideViewModel(), request);
+        model.Editor = await _decideDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -179,6 +185,8 @@ public sealed class ApprovalRequestsController : Controller
         {
             return BadRequest();
         }
+
+        model.Editor = await _decideDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         var result = await _approvalService.DecideAsync(request, User, kind, model.Note, HttpContext.RequestAborted);
 

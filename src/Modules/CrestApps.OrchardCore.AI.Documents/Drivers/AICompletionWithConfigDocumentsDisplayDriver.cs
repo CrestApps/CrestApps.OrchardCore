@@ -120,7 +120,7 @@ public sealed class AICompletionWithConfigDocumentsDisplayDriver : DisplayDriver
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:5#Knowledge;2");
+        }).Location(l => l.Zone("Content", "5").Tab(S["Knowledge"], "2").Card(S["Documents"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

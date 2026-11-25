@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
 using YesSql;
 
@@ -26,9 +29,20 @@ public sealed class CourseworkEventDisplayDriver<TActivity> : ActivityDisplayDri
 {
     private readonly ISession _session;
 
-    public CourseworkEventDisplayDriver(ISession session)
+    internal readonly IStringLocalizer S;
+
+    public CourseworkEventDisplayDriver(
+        ISession session,
+        IStringLocalizer<CourseworkEventDisplayDriver<TActivity>> stringLocalizer)
     {
         _session = session;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+    {
+        return Initialize<CourseworkEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Trigger"], "10"));
     }
 
     protected override async ValueTask EditActivityAsync(TActivity activity, CourseworkEventViewModel model)
@@ -48,6 +62,19 @@ public sealed class CourseworkEventDisplayDriver<TActivity> : ActivityDisplayDri
 
 public sealed class ReturnCourseworkTaskDisplayDriver : ActivityDisplayDriver<ReturnCourseworkTask, ReturnCourseworkTaskViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    public ReturnCourseworkTaskDisplayDriver(IStringLocalizer<ReturnCourseworkTaskDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(ReturnCourseworkTask activity, BuildEditorContext context)
+    {
+        return Initialize<ReturnCourseworkTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Task"], "10"));
+    }
+
     protected override void EditActivity(ReturnCourseworkTask activity, ReturnCourseworkTaskViewModel model)
     {
         model.SubmissionId = activity.SubmissionId;

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -22,20 +23,25 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIDataSourceSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="optionsUpdateNotifier">The options update notifier.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IOptionsUpdateNotifier optionsUpdateNotifier)
+        IOptionsUpdateNotifier optionsUpdateNotifier,
+        IStringLocalizer<AIDataSourceSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _optionsUpdateNotifier = optionsUpdateNotifier;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, AIDataSourceSettings settings, BuildEditorContext context)
@@ -44,7 +50,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
         {
             model.DefaultStrictness = settings.DefaultStrictness;
             model.DefaultTopNDocuments = settings.DefaultTopNDocuments;
-        }).Location("Content:4%Data Sources;1")
+        }).Location(l => l.Zone("Content", "4").Card(S["Data Sources"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

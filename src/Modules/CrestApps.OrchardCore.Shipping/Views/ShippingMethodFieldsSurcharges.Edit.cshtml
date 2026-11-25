@@ -1,0 +1,21 @@
+@model ShippingMethodViewModel
+
+@if (Model.Surcharges.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Surcharge per unit, by shipping class"]</span>
+        <div class="ocat-end">
+            <ul class="list-group">
+                @for (var i = 0; i < Model.Surcharges.Count; i++)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                        <label for="@Html.IdFor(m => m.Surcharges[i].Amount)" class="mb-0">@Model.Surcharges[i].ShippingClass</label>
+                        <input type="hidden" asp-for="Surcharges[i].ShippingClass" />
+                        <input asp-for="Surcharges[i].Amount" type="number" min="0" step="any" class="form-control form-control-sm w-auto" />
+                    </li>
+                }
+            </ul>
+            <span class="hint">@T["Added to the rate for each unit of a product in the class, such as 15 for each bulky item."]</span>
+        </div>
+    </div>
+}

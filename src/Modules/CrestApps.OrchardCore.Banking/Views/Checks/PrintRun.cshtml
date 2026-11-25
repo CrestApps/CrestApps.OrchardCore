@@ -1,4 +1,3 @@
-@using CrestApps.OrchardCore.Currencies
 @model CheckPrintRunViewModel
 
 <zone Name="Title">
@@ -11,19 +10,14 @@
 
 @* Choosing the account reloads the page with its checks: a filter, so its button stays inline. *@
 <form method="get" asp-action="PrintRun" class="mb-3">
-    <div class="card mb-3">
-        <div class="card-header">@T["Bank account"]</div>
-        <div class="card-body">
-            <div class="ocat-wrapper">
-                <label for="print-run-account" class="ocat-label ocat-label-required">@T["Bank account"]</label>
-                <div class="ocat-end">
-                    <div class="input-group">
-                        <select id="print-run-account" name="bankAccountId" asp-items="Model.BankAccountOptions" class="form-select"></select>
-                        <button type="submit" class="btn btn-outline-secondary">@T["Show its checks"]</button>
-                    </div>
-                    <span class="hint">@T["A print run prints the checks of one bank account: pre-printed stock carries the account and its numbers."]</span>
-                </div>
+    <div class="ocat-wrapper">
+        <label for="print-run-account" class="ocat-label ocat-label-required">@T["Bank account"]</label>
+        <div class="ocat-end">
+            <div class="input-group">
+                <select id="print-run-account" name="bankAccountId" asp-items="Model.BankAccountOptions" class="form-select"></select>
+                <button type="submit" class="btn btn-outline-secondary">@T["Show its checks"]</button>
             </div>
+            <span class="hint">@T["A print run prints the checks of one bank account: pre-printed stock carries the account and its numbers."]</span>
         </div>
     </div>
 </form>
@@ -34,48 +28,7 @@
         @Html.ValidationSummary()
         <input type="hidden" asp-for="BankAccountId" />
 
-        <div class="card mb-3">
-            <div class="card-header">@T["Checks waiting to print"]</div>
-            <div class="card-body">
-                @if (Model.Checks.Count == 0)
-                {
-                    <p class="mb-0">@T["No check of {0} waits to print.", Model.BankAccountName]</p>
-                }
-                else
-                {
-                    <p class="hint">@T["They print in this order, oldest first. Clear a check to leave it for another run."]</p>
-                    @foreach (var check in Model.Checks)
-                    {
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="CheckIds" value="@check.ItemId" id="check-@check.ItemId" checked="@Model.CheckIds.Contains(check.ItemId)" />
-                            <label class="form-check-label" for="check-@check.ItemId">@T["{0}, {1} {2}, dated {3}", check.PayeeName, CurrencyScale.FormatForDisplay(check.Amount, check.Currency), check.Currency, check.CheckDate.ToString("d")]</label>
-                        </div>
-                    }
-                }
-            </div>
-        </div>
-
-        <div class="card mb-3">
-            <div class="card-header">@T["Check stock"]</div>
-            <div class="card-body">
-                <div class="ocat-wrapper" asp-validation-class-for="LayoutId">
-                    <label asp-for="LayoutId" class="ocat-label ocat-label-required">@T["Check layout"]</label>
-                    <div class="ocat-end">
-                        <select asp-for="LayoutId" asp-items="Model.LayoutOptions" class="form-select"></select>
-                        <span asp-validation-for="LayoutId" class="text-danger"></span>
-                        <span class="hint">@T["The account's default layout is chosen for you when it has one."]</span>
-                    </div>
-                </div>
-                <div class="ocat-wrapper" asp-validation-class-for="FirstNumber">
-                    <label asp-for="FirstNumber" class="ocat-label ocat-label-required">@T["Number on the first sheet"]</label>
-                    <div class="ocat-end">
-                        <input asp-for="FirstNumber" class="form-control" inputmode="numeric" />
-                        <span asp-validation-for="FirstNumber" class="text-danger"></span>
-                        <span class="hint">@T["The number printed on the top sheet in the printer. The next sheets get the next numbers. A number another check of the account has is refused."]</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @await DisplayAsync(Model.Editor)
 
         <div class="action-bar-bottom">
             <button class="btn btn-primary" type="submit" disabled="@(Model.Checks.Count == 0)">@T["Continue"]</button>

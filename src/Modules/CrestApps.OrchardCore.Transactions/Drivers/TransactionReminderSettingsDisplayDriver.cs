@@ -44,20 +44,26 @@ public sealed class TransactionReminderSettingsDisplayDriver : SiteDisplayDriver
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, TransactionReminderSettings settings, BuildEditorContext context)
     {
-        return Initialize<TransactionReminderSettingsViewModel>("TransactionReminderSettings_Edit", model =>
-        {
-            model.Enabled = settings.Enabled;
-            model.FirstReminderDelayDays = settings.FirstReminderDelayDays;
-            model.ReminderIntervalDays = settings.ReminderIntervalDays;
-            model.MaxReminders = settings.MaxReminders;
-            model.UpcomingReminderDays = settings.UpcomingReminderDays;
-            model.Steps = string.Join(", ", (settings.Steps ?? []).Select(day => day.ToString(CultureInfo.InvariantCulture)));
-            model.SendFromHour = settings.SendFromHour;
-            model.SendUntilHour = settings.SendUntilHour;
-            model.ChargeRetryDays = string.Join(", ", (settings.ChargeRetryDays ?? []).Select(day => day.ToString(CultureInfo.InvariantCulture)));
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
-        .OnGroup(SettingsGroupId);
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<TransactionReminderSettingsViewModel>(shapeType, model =>
+            {
+                model.Enabled = settings.Enabled;
+                model.FirstReminderDelayDays = settings.FirstReminderDelayDays;
+                model.ReminderIntervalDays = settings.ReminderIntervalDays;
+                model.MaxReminders = settings.MaxReminders;
+                model.UpcomingReminderDays = settings.UpcomingReminderDays;
+                model.Steps = string.Join(", ", (settings.Steps ?? []).Select(day => day.ToString(CultureInfo.InvariantCulture)));
+                model.SendFromHour = settings.SendFromHour;
+                model.SendUntilHour = settings.SendUntilHour;
+                model.ChargeRetryDays = string.Join(", ", (settings.ChargeRetryDays ?? []).Select(day => day.ToString(CultureInfo.InvariantCulture)));
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
+            .OnGroup(SettingsGroupId);
+
+        return Combine(
+            Card("TransactionReminderSettingsReminders_Edit", "1", S["Reminders"], "10"),
+            Card("TransactionReminderSettingsHours_Edit", "1.1", S["Sending Hours"], "20"),
+            Card("TransactionReminderSettingsRetries_Edit", "1.2", S["Card Retries"], "30"));
     }
 
     /// <inheritdoc/>

@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -36,7 +37,11 @@ public abstract class AIToolInstancesDisplayDriverBase<TModel> : DisplayDriver<T
     /// Gets the shape location used to place the tool instances editor. Override this to place the editor
     /// on a host model that uses a different zone or tab layout.
     /// </summary>
-    protected virtual string EditorLocation => "Content:7#Capabilities;9";
+    protected virtual string EditorLocation => new PlacementLocationBuilder()
+        .Zone("Content", "7")
+        .Tab("Capabilities", "9")
+        .Card("Agents & Tools", "10")
+        .ToString();
 
     /// <summary>
     /// Determines whether the tool instances editor applies to the given model.

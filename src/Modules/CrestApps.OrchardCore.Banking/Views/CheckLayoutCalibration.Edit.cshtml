@@ -1,0 +1,19 @@
+@model CheckLayoutViewModel
+
+<p class="hint">@T["Print a check on plain paper and hold it against the stock. Measures are in points: 72 points make an inch."]</p>
+<div class="ocat-wrapper" asp-validation-class-for="OffsetX">
+    <label asp-for="OffsetX" class="ocat-label">@T["Move right"]</label>
+    <div class="ocat-end">
+        <input asp-for="OffsetX" class="form-control" inputmode="decimal" data-designer-offset="x" />
+        <span asp-validation-for="OffsetX" class="text-danger"></span>
+        <span class="hint">@T["Negative moves left."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="OffsetY">
+    <label asp-for="OffsetY" class="ocat-label">@T["Move down"]</label>
+    <div class="ocat-end">
+        <input asp-for="OffsetY" class="form-control" inputmode="decimal" data-designer-offset="y" />
+        <span asp-validation-for="OffsetY" class="text-danger"></span>
+        <span class="hint">@T["Negative moves up."]</span>
+    </div>
+</div>

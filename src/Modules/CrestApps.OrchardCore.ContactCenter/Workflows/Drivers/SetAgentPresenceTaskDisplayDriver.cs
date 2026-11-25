@@ -34,6 +34,13 @@ public sealed class SetAgentPresenceTaskDisplayDriver : ActivityDisplayDriver<Se
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(SetAgentPresenceTask activity, BuildEditorContext context)
+    {
+        return Initialize<SetAgentPresenceTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(SetAgentPresenceTask activity, SetAgentPresenceTaskViewModel model)
     {
         model.UserId = activity.UserId;

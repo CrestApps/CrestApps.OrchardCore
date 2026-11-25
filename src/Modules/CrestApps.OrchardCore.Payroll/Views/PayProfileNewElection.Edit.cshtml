@@ -1,0 +1,55 @@
+@model PayProfileElectionsViewModel
+@using OrchardCore.Localization
+@using Microsoft.Extensions.Localization
+@inject Microsoft.Extensions.Localization.IStringLocalizerFactory LocalizerFactory
+
+<p class="hint">@T["An election applies from its day on; earlier ones are kept as history."]</p>
+<div class="ocat-wrapper" asp-validation-class-for="NewEffectiveFrom">
+    <label asp-for="NewJurisdiction" class="ocat-label">@T["Jurisdiction and day"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="NewJurisdiction" class="form-control text-uppercase" style="max-width: 10rem" list="election-jurisdictions" placeholder="US" />
+            <datalist id="election-jurisdictions">
+                @foreach (var jurisdiction in Model.Jurisdictions)
+                {
+                    <option value="@jurisdiction"></option>
+                }
+            </datalist>
+            <input asp-for="NewEffectiveFrom" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["From"]" />
+        </div>
+        <span asp-validation-for="NewEffectiveFrom" class="text-danger"></span>
+        <span asp-validation-for="NewValues" class="text-danger"></span>
+    </div>
+</div>
+@foreach (var field in Model.Fields)
+{
+    var name = Html.NameFor(m => m.NewValues) + "[" + field.Name + "]";
+    var value = Model.NewValues.GetValueOrDefault(field.Name);
+    var label = LocalizerFactory.Localize(field.Label).Value;
+
+    <div class="ocat-wrapper">
+        <label class="ocat-label" for="election-@field.Name">@label</label>
+        <div class="ocat-end">
+            @switch (field.Kind)
+            {
+                case CrestApps.OrchardCore.Taxation.Services.ElectionFieldKind.Boolean:
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="election-@field.Name" name="@name" value="true" checked="@(value == "true")" />
+                    </div>
+                    break;
+                case CrestApps.OrchardCore.Taxation.Services.ElectionFieldKind.Choice:
+                    <select class="form-select" id="election-@field.Name" name="@name" style="max-width: 18rem">
+                        <option value="">@T["Choose…"]</option>
+                        @foreach (var choice in field.Choices)
+                        {
+                            <option value="@choice.Value" selected="@(choice.Value == value)">@LocalizerFactory.Localize(choice.Label).Value</option>
+                        }
+                    </select>
+                    break;
+                default:
+                    <input class="form-control" id="election-@field.Name" name="@name" value="@value" style="max-width: 14rem" inputmode="@(field.Kind == CrestApps.OrchardCore.Taxation.Services.ElectionFieldKind.Text ? "text" : "decimal")" />
+                    break;
+            }
+        </div>
+    </div>
+}

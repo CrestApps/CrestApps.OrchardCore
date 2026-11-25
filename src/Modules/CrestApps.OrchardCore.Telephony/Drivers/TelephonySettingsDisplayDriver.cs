@@ -57,7 +57,7 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
                 .Select(entry => new SelectListItem(entry.Key, entry.Key))
                 .OrderBy(item => item.Text)
                 .ToArray();
-        }).Location("Content:1#Soft Phone")
+        }).Location(l => l.Zone("Content", "1").Tab(S["Soft Phone"]).Card(S["General"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
     }

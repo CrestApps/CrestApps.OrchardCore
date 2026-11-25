@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
@@ -16,12 +17,18 @@ internal sealed class LeadExportOptionsDisplayDriver : DisplayDriver<ExportReque
 {
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadExportOptionsDisplayDriver"/> class.
     /// </summary>
     /// <param name="contentTypeProvider">The CRM content type provider.</param>
-    public LeadExportOptionsDisplayDriver(OmnichannelContentTypeProvider contentTypeProvider)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public LeadExportOptionsDisplayDriver(
+        OmnichannelContentTypeProvider contentTypeProvider,
+        IStringLocalizer<LeadExportOptionsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _contentTypeProvider = contentTypeProvider;
     }
 
@@ -39,7 +46,7 @@ internal sealed class LeadExportOptionsDisplayDriver : DisplayDriver<ExportReque
         {
             viewModel.ExcludeConvertedLeads = model.Entry?.TryGet<LeadExportOptionsPart>(out var part) != true || part.ExcludeConvertedLeads;
             viewModel.LeadContentTypes = (await _contentTypeProvider.GetLeadContentTypesAsync()).ToArray();
-        }).Location("Content:21");
+        }).Location(l => l.Zone("Content", "21").Card(S["Leads"], "21"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ExportRequest model, UpdateEditorContext context)

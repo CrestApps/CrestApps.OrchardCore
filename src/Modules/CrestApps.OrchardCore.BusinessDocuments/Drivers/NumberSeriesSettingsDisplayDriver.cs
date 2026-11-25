@@ -64,41 +64,73 @@ public sealed class NumberSeriesSettingsDisplayDriver : SiteDisplayDriver<Number
 
     /// <inheritdoc />
     public override IDisplayResult Edit(ISite site, NumberSeriesSettings settings, BuildEditorContext context)
-        => Initialize<NumberSeriesSettingsViewModel>("NumberSeriesSettings_Edit", async model =>
+    {
+        // The page is a card on how the numbers are written, then a card for each registered series. Every shape is a
+        // copy of the page's values, and a series shape shows the series at its index, so the fields keep posting as
+        // the list of series.
+        var results = new List<IDisplayResult>
         {
-            var today = await GetTodayAsync();
+            Initialize<NumberSeriesSettingsViewModel>("NumberSeriesSettingsHelp_Edit", model => PopulateAsync(model, settings))
+                .Location(l => l.Zone("Content", "1").Card(S["How Numbers Are Written"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, BusinessDocumentsPermissions.ManageNumberSeries))
+                .OnGroup(SettingsGroupId),
+        };
 
-            model.Today = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-            model.ResetOptions =
-            [
-                new SelectListItem(S["Never"], nameof(NumberSeriesReset.Never)),
-                new SelectListItem(S["Each year"], nameof(NumberSeriesReset.Yearly)),
-                new SelectListItem(S["Each month"], nameof(NumberSeriesReset.Monthly)),
-            ];
+        var index = 0;
 
-            foreach (var series in GetRegisteredSeries())
+        foreach (var series in GetRegisteredSeries())
+        {
+            var current = index++;
+
+            results.Add(Initialize<NumberSeriesSettingsViewModel>("NumberSeriesSettingsSeries_Edit", async model =>
             {
-                var registered = series.DefaultFormat ?? new NumberSeriesFormat();
-                var chosen = settings.Formats is not null && settings.Formats.TryGetValue(series.Name, out var stored) ? stored : null;
-                var customized = chosen is not null;
-                var format = chosen ?? registered;
+                await PopulateAsync(model, settings);
+                model.Index = current;
+            })
+                .Differentiator(series.Name)
+                .Location(l => l.Zone("Content", (current + 2).ToString(CultureInfo.InvariantCulture)).Card(GetTitle(series), (current + 20).ToString(CultureInfo.InvariantCulture)))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, BusinessDocumentsPermissions.ManageNumberSeries))
+                .OnGroup(SettingsGroupId));
+        }
 
-                model.Series.Add(new NumberSeriesViewModel
-                {
-                    Name = series.Name,
-                    Title = series.Title is null ? series.Name : _localizerFactory.Localize(series.Title).Value,
-                    Pattern = format.Pattern,
-                    FirstNumber = format.FirstNumber,
-                    Reset = format.Reset,
-                    DefaultPattern = registered.Pattern,
-                    Example = format.Format(Math.Max(1, format.FirstNumber), today),
-                    IsCustomized = customized,
-                });
-            }
-        })
-            .Location("Content:1")
-            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, BusinessDocumentsPermissions.ManageNumberSeries))
-            .OnGroup(SettingsGroupId);
+        return Combine([.. results]);
+    }
+
+    private async ValueTask PopulateAsync(NumberSeriesSettingsViewModel model, NumberSeriesSettings settings)
+    {
+        var today = await GetTodayAsync();
+
+        model.Today = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        model.ResetOptions =
+        [
+            new SelectListItem(S["Never"], nameof(NumberSeriesReset.Never)),
+            new SelectListItem(S["Each year"], nameof(NumberSeriesReset.Yearly)),
+            new SelectListItem(S["Each month"], nameof(NumberSeriesReset.Monthly)),
+        ];
+
+        foreach (var series in GetRegisteredSeries())
+        {
+            var registered = series.DefaultFormat ?? new NumberSeriesFormat();
+            var chosen = settings.Formats is not null && settings.Formats.TryGetValue(series.Name, out var stored) ? stored : null;
+            var customized = chosen is not null;
+            var format = chosen ?? registered;
+
+            model.Series.Add(new NumberSeriesViewModel
+            {
+                Name = series.Name,
+                Title = GetTitle(series),
+                Pattern = format.Pattern,
+                FirstNumber = format.FirstNumber,
+                Reset = format.Reset,
+                DefaultPattern = registered.Pattern,
+                Example = format.Format(Math.Max(1, format.FirstNumber), today),
+                IsCustomized = customized,
+            });
+        }
+    }
+
+    private string GetTitle(NumberSeries series)
+        => series.Title is null ? series.Name : _localizerFactory.Localize(series.Title).Value;
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(ISite site, NumberSeriesSettings settings, UpdateEditorContext context)
@@ -182,7 +214,7 @@ public sealed class NumberSeriesSettingsDisplayDriver : SiteDisplayDriver<Number
 
     private string GetMessage(NumberSeriesFormatError error, NumberSeries series)
     {
-        var title = series.Title is null ? series.Name : _localizerFactory.Localize(series.Title).Value;
+        var title = GetTitle(series);
 
         return error switch
         {

@@ -1,0 +1,44 @@
+@model TimeClockPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Holidays" class="ocat-label">@T["Holidays"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Holidays" rows="4" class="form-control font-monospace" style="max-width: 16rem" placeholder="2026-12-25"></textarea>
+        <span asp-validation-for="Holidays" class="text-danger"></span>
+        <span class="hint">@T["One date a line, such as 2026-12-25. Regular hours worked on them are paid with the Holiday pay code; overtime stays overtime."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Weekend days"]</label>
+    <div class="ocat-end">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="WeekendDays" value="Monday" id="weekend-Monday" checked="@Model.WeekendDays.Contains("Monday")" />
+            <label class="form-check-label" for="weekend-Monday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Monday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="WeekendDays" value="Tuesday" id="weekend-Tuesday" checked="@Model.WeekendDays.Contains("Tuesday")" />
+            <label class="form-check-label" for="weekend-Tuesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Tuesday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="WeekendDays" value="Wednesday" id="weekend-Wednesday" checked="@Model.WeekendDays.Contains("Wednesday")" />
+            <label class="form-check-label" for="weekend-Wednesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Wednesday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="WeekendDays" value="Thursday" id="weekend-Thursday" checked="@Model.WeekendDays.Contains("Thursday")" />
+            <label class="form-check-label" for="weekend-Thursday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Thursday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="WeekendDays" value="Friday" id="weekend-Friday" checked="@Model.WeekendDays.Contains("Friday")" />
+            <label class="form-check-label" for="weekend-Friday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Friday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="WeekendDays" value="Saturday" id="weekend-Saturday" checked="@Model.WeekendDays.Contains("Saturday")" />
+            <label class="form-check-label" for="weekend-Saturday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Saturday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="WeekendDays" value="Sunday" id="weekend-Sunday" checked="@Model.WeekendDays.Contains("Sunday")" />
+            <label class="form-check-label" for="weekend-Sunday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Sunday)</label>
+        </div>
+        <span class="hint d-block">@T["Regular hours worked on these days are paid with the Weekend pay code instead of the regular one. Tick none for no weekend pay."]</span>
+    </div>
+</div>

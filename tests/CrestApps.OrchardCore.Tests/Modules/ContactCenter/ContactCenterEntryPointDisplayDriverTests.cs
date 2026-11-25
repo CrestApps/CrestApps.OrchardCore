@@ -125,11 +125,13 @@ public sealed class ContactCenterEntryPointDisplayDriverTests
             addresses.Object,
             Options.Create(new EntryPointChannelOptions()),
             [],
-            Options.Create(new EntryPointAIAgentOptions()));
+            Options.Create(new EntryPointAIAgentOptions()),
+            RecipeRoundTrip.Localizer<ContactCenterEntryPointDisplayDriver>());
     }
 
     private static ContactCenterEntryPointVoiceDisplayDriver CreateVoiceDriver()
         => new(
             AdminFormOptionsProviderFactory.Create(),
-            SiteServiceFactory.Create(new ContactCenterExternalTransferSettings()));
+            SiteServiceFactory.Create(new ContactCenterExternalTransferSettings()),
+            RecipeRoundTrip.Localizer<ContactCenterEntryPointVoiceDisplayDriver>());
 }

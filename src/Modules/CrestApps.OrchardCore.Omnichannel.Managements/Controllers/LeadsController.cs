@@ -12,6 +12,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using YesSql;
 
@@ -37,6 +40,8 @@ public sealed class LeadsController : Controller
     private readonly LeadMatchFinder _matchFinder;
     private readonly ISession _session;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ConvertLeadViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -51,6 +56,8 @@ public sealed class LeadsController : Controller
         LeadMatchFinder matchFinder,
         ISession session,
         INotifier notifier,
+        IDisplayManager<ConvertLeadViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<LeadsController> htmlLocalizer)
     {
         _contentManager = contentManager;
@@ -60,6 +67,8 @@ public sealed class LeadsController : Controller
         _matchFinder = matchFinder;
         _session = session;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -92,6 +101,8 @@ public sealed class LeadsController : Controller
         var model = new ConvertLeadViewModel();
 
         await PopulateAsync(model, lead, leadPart, isPost: false);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }
@@ -144,6 +155,8 @@ public sealed class LeadsController : Controller
             }
 
             await PopulateAsync(model, lead, leadPart, isPost: true);
+
+            model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
             return View(model);
         }

@@ -28,18 +28,7 @@
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
-    <div class="card mb-3">
-        <div class="card-header">@T["Return and change file"]</div>
-        <div class="card-body">
-            <div class="ocat-wrapper">
-                <label for="file" class="ocat-label ocat-label-required">@T["File"]</label>
-                <div class="ocat-end">
-                    <input type="file" id="file" name="file" class="form-control" accept=".txt,.ach,text/plain" />
-                    <span class="hint">@T["The file your bank sends with returned entries and notices of change, in the Nacha format. Each return marks its disbursement returned; each notice of change corrects the payee's bank account, which then waits to be verified again."]</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Import"]</button>

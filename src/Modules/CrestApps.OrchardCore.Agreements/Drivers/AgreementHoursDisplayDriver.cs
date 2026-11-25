@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Agreements.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Agreements.Drivers;
 
@@ -13,9 +14,12 @@ internal sealed class AgreementHoursDisplayDriver : DisplayDriver<Agreement>
 {
     private readonly IAgreementBalanceService _balances;
 
-    public AgreementHoursDisplayDriver(IAgreementBalanceService balances)
+    internal readonly IStringLocalizer S;
+
+    public AgreementHoursDisplayDriver(IAgreementBalanceService balances, IStringLocalizer<AgreementHoursDisplayDriver> stringLocalizer)
     {
         _balances = balances;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -32,7 +36,7 @@ internal sealed class AgreementHoursDisplayDriver : DisplayDriver<Agreement>
             {
                 model.Balance = await _balances.GetBalanceAsync(agreement);
             }
-        }).Location("Content:2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Covered Hours"], "20"));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(Agreement agreement, UpdateEditorContext context)

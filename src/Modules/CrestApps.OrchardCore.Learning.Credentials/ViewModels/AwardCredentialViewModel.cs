@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Credentials.ViewModels;
 
@@ -28,4 +29,10 @@ public class AwardCredentialViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Definitions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

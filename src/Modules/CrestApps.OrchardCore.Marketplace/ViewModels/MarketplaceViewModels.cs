@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Marketplace.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Marketplace.ViewModels;
 
@@ -57,6 +58,12 @@ public class VendorEditViewModel
     public string Country { get; set; }
 
     public VendorStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the vendor, built by the display drivers of <see cref="VendorEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

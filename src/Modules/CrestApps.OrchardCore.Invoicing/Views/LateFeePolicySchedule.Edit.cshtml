@@ -1,0 +1,49 @@
+@model LateFeePolicyViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="GraceDays">
+    <label asp-for="GraceDays" class="ocat-label">@T["Grace days"]</label>
+    <div class="ocat-limited">
+        <input asp-for="GraceDays" type="number" min="0" max="365" class="form-control" />
+        <span asp-validation-for="GraceDays" class="text-danger"></span>
+        <span class="hint">@T["How many days after the due date pass before the first fee. 0 charges it the day after the due date."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="RepeatEveryDays">
+    <label asp-for="RepeatEveryDays" class="ocat-label">@T["Repeat every (days)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="RepeatEveryDays" type="number" min="1" class="form-control" />
+        <span class="hint">@T["Optional. Charges another fee this many days after each one while the invoice is unpaid, such as 30 for a monthly fee. Empty charges one fee only."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxFees">
+    <label asp-for="MaxFees" class="ocat-label">@T["Most fees"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxFees" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxFees" class="text-danger"></span>
+        <span class="hint">@T["Optional, for a repeating fee. The most fees charged on one invoice."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="CapAmount">
+    <label asp-for="CapAmount" class="ocat-label">@T["Cap"]</label>
+    <div class="ocat-limited">
+        <input asp-for="CapAmount" type="number" step="any" min="0" class="form-control" />
+        <span asp-validation-for="CapAmount" class="text-danger"></span>
+        <span class="hint">@T["Optional. The most charged in late fees on one invoice; the last fee is lowered to stay within it."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumBalance">
+    <label asp-for="MinimumBalance" class="ocat-label">@T["Minimum balance"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumBalance" type="number" step="any" min="0" class="form-control" />
+        <span class="hint">@T["Optional. No fee is charged while less than this is still due."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SendDebitNote" class="form-check-input" />
+            <label asp-for="SendDebitNote" class="form-check-label">@T["E-mail each fee to the customer"]</label>
+            <span class="hint dashed">@T["Each fee is a debit note, numbered like an invoice and linked to the overdue invoice. On, it is e-mailed to the customer with its PDF and pay link once issued."]</span>
+        </div>
+    </div>
+</div>

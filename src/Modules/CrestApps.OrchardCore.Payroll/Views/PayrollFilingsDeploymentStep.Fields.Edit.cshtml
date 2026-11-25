@@ -1,13 +1,18 @@
 @model CrestApps.OrchardCore.Payroll.Deployments.PayrollFilingsDeploymentStepViewModel
 
-<h5>@T["Tax deposits and filings"]</h5>
-<p class="hint">@T["The deposits recorded and the filings prepared for the employers you may export."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["The deposits recorded and the filings prepared for the employers you may export."]</span>
+    </div>
+</div>
 
-<div class="mb-3" asp-validation-class-for="IncludeSensitiveData">
-    <div class="form-check">
-        <input asp-for="IncludeSensitiveData" class="form-check-input" />
-        <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include people's wage statements"]</label>
-        <span asp-validation-for="IncludeSensitiveData" class="text-danger"></span>
-        <span class="hint dashed">@T["Each filing's people, with their names, addresses and boxes, are written only for a user who may see full tax ids. Without it, the filings keep their totals only."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="IncludeSensitiveData">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeSensitiveData" class="form-check-input" />
+            <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include people's wage statements"]</label>
+            <span asp-validation-for="IncludeSensitiveData" class="text-danger"></span>
+            <span class="hint dashed">@T["Each filing's people, with their names, addresses and boxes, are written only for a user who may see full tax ids. Without it, the filings keep their totals only."]</span>
+        </div>
     </div>
 </div>

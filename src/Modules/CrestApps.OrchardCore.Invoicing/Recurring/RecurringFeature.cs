@@ -45,6 +45,7 @@ using OrchardCore.Recipes;
 using OrchardCore.Workflows.Helpers;
 using OrchardCore.Workflows.Services;
 using ISession = YesSql.ISession;
+using CrestApps.OrchardCore.Invoicing.Drivers;
 
 namespace CrestApps.OrchardCore.Invoicing.Recurring;
 
@@ -64,6 +65,7 @@ public sealed class RecurringStartup : StartupBase
             .AddDataMigration<RecurringPlansMigrations>()
             .AddRecipeExecutionStep<RecurringPlansStep>()
             .AddDisplayDriver<RecurringPlan, RecurringPlanDisplayDriver>()
+            .AddDisplayDriver<RecurringPlanEditViewModel, RecurringPlanEditDisplayDriver>()
             .AddNavigationProvider<RecurringPlansAdminMenu>();
 
         // With the recipe step, so an imported plan gets the editor's rules.

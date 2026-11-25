@@ -43,16 +43,19 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
     protected override string SettingsGroupId
         => ShippingConstants.SettingsGroupId;
 
-    // The settings in three tabs, after the carrier providers': General, Store pickup and Sending parcels. One model
-    // binds them all, so each tab's shape is filled the same way.
+    // The settings in three tabs, after the carrier providers': General, Store Pickup and Sending Parcels, each with
+    // its cards. One model binds them all, so each shape is filled the same way.
     public override IDisplayResult Edit(ISite site, ShippingSettings settings, BuildEditorContext context)
         => Combine(
-            Tab("ShippingSettings_Edit", "Content:10#General", settings),
-            Tab("ShippingPickupSettings_Edit", "Content:20#Store pickup", settings),
-            Tab("ShippingSenderSettings_Edit", "Content:30#Sending parcels", settings));
+            Section("ShippingSettings_Edit", "10", S["General"], "10", S["Units and Classes"], "10", settings),
+            Section("ShippingSettingsTracking_Edit", "11", S["General"], "10", S["Tracking"], "20", settings),
+            Section("ShippingPickupSettings_Edit", "20", S["Store Pickup"], "20", S["Pickup Locations"], "10", settings),
+            Section("ShippingSenderSettings_Edit", "30", S["Sending Parcels"], "30", S["Ship From"], "10", settings),
+            Section("ShippingSenderSettingsBox_Edit", "31", S["Sending Parcels"], "30", S["Default Box"], "20", settings));
 
-    private ShapeResult Tab(string shapeType, string location, ShippingSettings settings)
-        => Initialize<ShippingSettingsViewModel>(shapeType, model => PopulateAsync(model, settings)).Location(location)
+    private ShapeResult Section(string shapeType, string zonePosition, LocalizedString tab, string tabPosition, LocalizedString card, string cardPosition, ShippingSettings settings)
+        => Initialize<ShippingSettingsViewModel>(shapeType, model => PopulateAsync(model, settings))
+            .Location(l => l.Zone("Content", zonePosition).Tab(tab, tabPosition).Card(card, cardPosition))
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ShippingPermissions.ManageShipping))
             .OnGroup(SettingsGroupId);
 

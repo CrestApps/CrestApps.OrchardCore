@@ -1,79 +1,45 @@
 @model MerchantTaxRegistrationViewModel
-@using System.Globalization
 
-<div class="card mb-3">
-    <div class="card-header">@T["Registration"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
-            <div class="ocat-end">
-                <input asp-for="Name" class="form-control" />
-                <span class="hint">@T["Such as Michigan sales, use and withholding tax."]</span>
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper">
-            <label asp-for="JurisdictionId" class="ocat-label ocat-label-required">@T["Jurisdiction"]</label>
-            <div class="ocat-end">
-                <select asp-for="JurisdictionId" asp-items="Model.Jurisdictions" class="form-select"></select>
-                <span class="hint">@T["Where the business is registered. Jurisdictions are under Commerce &gt; Taxation &gt; Jurisdictions."]</span>
-                <span asp-validation-for="JurisdictionId" class="text-danger"></span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper">
-            <label asp-for="TaxType" class="ocat-label">@T["Tax type"]</label>
-            <div class="ocat-end">
-                <select asp-for="TaxType" asp-items="Model.TaxTypes" class="form-select"></select>
-                <span class="hint">@T["The tax the registration covers, or every tax type, such as a return with both sales and use tax."]</span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper">
-            <label asp-for="RegistrationNumber" class="ocat-label">@T["Registration number"]</label>
-            <div class="ocat-end">
-                <input asp-for="RegistrationNumber" class="form-control" />
-                <span class="hint">@T["The number or account the tax authority gave the business."]</span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="IsActive" type="checkbox" class="form-check-input" />
-                    <label asp-for="IsActive" class="form-check-label">@T["Active"]</label>
-                    <span class="hint dashed">@T["The business collects the tax and files returns under this registration."]</span>
-                </div>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span class="hint">@T["Such as Michigan sales, use and withholding tax."]</span>
+        <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-header">@T["When it applies"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="EffectiveFrom" class="ocat-label">@T["Effective from"]</label>
-            <div class="ocat-end">
-                <input asp-for="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" value="@Model.EffectiveFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="JurisdictionId" class="ocat-label ocat-label-required">@T["Jurisdiction"]</label>
+    <div class="ocat-end">
+        <select asp-for="JurisdictionId" asp-items="Model.Jurisdictions" class="form-select"></select>
+        <span class="hint">@T["Where the business is registered. Jurisdictions are under Commerce &gt; Taxation &gt; Jurisdictions."]</span>
+        <span asp-validation-for="JurisdictionId" class="text-danger"></span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="EffectiveTo" class="ocat-label">@T["Effective to"]</label>
-            <div class="ocat-end">
-                <input asp-for="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" value="@Model.EffectiveTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
-                <span asp-validation-for="EffectiveTo" class="text-danger"></span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="TaxType" class="ocat-label">@T["Tax type"]</label>
+    <div class="ocat-end">
+        <select asp-for="TaxType" asp-items="Model.TaxTypes" class="form-select"></select>
+        <span class="hint">@T["The tax the registration covers, or every tax type, such as a return with both sales and use tax."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="ThresholdAmount" class="ocat-label">@T["Sales threshold"]</label>
-            <div class="ocat-end">
-                <input asp-for="ThresholdAmount" type="number" step="any" min="0" class="form-control" style="max-width: 12rem" />
-                <span class="hint">@T["The sales into the jurisdiction above which the business must collect the tax (economic nexus), or empty to collect from the first sale."]</span>
-            </div>
+<div class="ocat-wrapper">
+    <label asp-for="RegistrationNumber" class="ocat-label">@T["Registration number"]</label>
+    <div class="ocat-end">
+        <input asp-for="RegistrationNumber" class="form-control" />
+        <span class="hint">@T["The number or account the tax authority gave the business."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsActive" type="checkbox" class="form-check-input" />
+            <label asp-for="IsActive" class="form-check-label">@T["Active"]</label>
+            <span class="hint dashed">@T["The business collects the tax and files returns under this registration."]</span>
         </div>
     </div>
 </div>

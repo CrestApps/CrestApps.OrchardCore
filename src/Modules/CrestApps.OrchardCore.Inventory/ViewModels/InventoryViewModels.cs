@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Inventory.Core.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Inventory.ViewModels;
 
@@ -254,6 +255,12 @@ public class PurchaseOrderEditViewModel
 
     [BindNever]
     public string SearchEndpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the purchase order, built by the display drivers of <see cref="PurchaseOrderEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 public class PurchaseOrderLineViewModel

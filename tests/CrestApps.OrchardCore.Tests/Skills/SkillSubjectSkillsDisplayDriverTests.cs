@@ -129,6 +129,7 @@ public sealed class SkillSubjectSkillsDisplayDriverTests
             services.GetRequiredService<ISkillManager>(),
             services.GetRequiredService<ISkillAssignmentService>(),
             httpContextAccessor,
-            authorizationService.Object);
+            authorizationService.Object,
+            RecipeRoundTrip.Localizer<UserSkillsDisplayDriver>());
     }
 }

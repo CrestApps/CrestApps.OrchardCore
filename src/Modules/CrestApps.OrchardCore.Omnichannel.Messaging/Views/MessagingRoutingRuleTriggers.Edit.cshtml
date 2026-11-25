@@ -1,0 +1,50 @@
+@model MessagingRoutingRuleViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnContactReplied" />
+            <label class="form-check-label" asp-for="OnContactReplied">@T["A contact replies to a conversation nobody owns"]</label>
+            <span class="hint dashed">@T["Such as a text a workflow or a broadcast sent without an agent, or a conversation waiting in a queue's shared inbox."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnNewConversation" />
+            <label class="form-check-label" asp-for="OnNewConversation">@T["A contact starts a new conversation"]</label>
+            <span class="hint dashed">@T["Only when the number's entry point sends it to a queue or to nobody, not to one agent."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnStartedWithoutAgent" />
+            <label class="form-check-label" asp-for="OnStartedWithoutAgent">@T["A workflow or broadcast starts a conversation without an agent"]</label>
+            <span class="hint dashed">@T["The conversation is assigned as soon as the message is sent, before the contact replies. Leave this off to assign only the conversations the contact answers."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnWaiting" data-routing-rule-waiting />
+            <label class="form-check-label" asp-for="OnWaiting">@T["A contact's message is still waiting for a person"]</label>
+            <span class="hint dashed">@T["Tries the rule again every minute on conversations nobody owns, so one that found no agent available goes to an agent as soon as one is."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="WaitingMinutes" data-routing-rule-waiting-minutes>
+    <label asp-for="WaitingMinutes" class="ocat-label">@T["Wait (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="WaitingMinutes" type="number" min="1" step="1" class="form-control" />
+        <span asp-validation-for="WaitingMinutes" class="text-danger"></span>
+        <span class="hint">@T["How long the contact's message waits before the rule is tried again."]</span>
+    </div>
+</div>

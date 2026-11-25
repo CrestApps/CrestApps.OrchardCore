@@ -3,6 +3,7 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
@@ -11,6 +12,13 @@ namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 /// </summary>
 public sealed class SubscriptionPartSettingsDisplayDriver : ContentTypePartDefinitionDisplayDriver<SubscriptionPart>
 {
+    internal readonly IStringLocalizer S;
+
+    public SubscriptionPartSettingsDisplayDriver(IStringLocalizer<SubscriptionPartSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <summary>
     /// Builds the subscription part settings editor for a content type part definition.
     /// </summary>
@@ -24,7 +32,7 @@ public sealed class SubscriptionPartSettingsDisplayDriver : ContentTypePartDefin
             var settings = contentTypePartDefinition.GetSettings<SubscriptionPartSettings>();
 
             model.ContentTypes = settings.ContentTypes;
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Settings"], "20"));
     }
 
     /// <summary>

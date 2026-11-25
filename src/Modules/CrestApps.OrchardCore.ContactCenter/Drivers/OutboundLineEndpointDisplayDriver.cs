@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -15,6 +16,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 /// </summary>
 public sealed class OutboundLineEndpointDisplayDriver : DisplayDriver<OmnichannelChannelEndpoint>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OutboundLineEndpointDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OutboundLineEndpointDisplayDriver(IStringLocalizer<OutboundLineEndpointDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     public override IDisplayResult Edit(OmnichannelChannelEndpoint endpoint, BuildEditorContext context)
     {
@@ -26,7 +38,7 @@ public sealed class OutboundLineEndpointDisplayDriver : DisplayDriver<Omnichanne
         return Initialize<OutboundLineEndpointViewModel>("OutboundLineEndpoint_Edit", model =>
         {
             model.UserIds = [.. ChannelEndpointOutboundLineResolver.GetUserIds(endpoint)];
-        }).Location("Content:2%Voice calls;2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Voice Calls"], "2"));
     }
 
     /// <inheritdoc/>

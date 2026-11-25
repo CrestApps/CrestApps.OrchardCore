@@ -1,9 +1,9 @@
 @model EmployerAddressViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Address"]</div>
-    <div class="card-body">
-        <p class="hint">@T["Printed on statements and checks."]</p>
-        @await DisplayAsync(Model.AddressEditor)
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Printed on statements and checks."]</span>
     </div>
 </div>
+
+@await DisplayAsync(Model.AddressEditor)

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -22,17 +23,22 @@ public sealed class NationalDoNotCallRegistryImportOptionsDisplayDriver : Displa
     private readonly IEnumerable<INationalDoNotCallRegistry> _registries;
     private readonly ISiteService _siteService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NationalDoNotCallRegistryImportOptionsDisplayDriver"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="registries">The available do-not-call registries.</param>
     /// <param name="siteService">The site service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public NationalDoNotCallRegistryImportOptionsDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
         IEnumerable<INationalDoNotCallRegistry> registries,
-        ISiteService siteService)
+        ISiteService siteService,
+        IStringLocalizer<NationalDoNotCallRegistryImportOptionsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _contentDefinitionManager = contentDefinitionManager;
         _registries = registries;
         _siteService = siteService;
@@ -61,7 +67,7 @@ public sealed class NationalDoNotCallRegistryImportOptionsDisplayDriver : Displa
                 Description = r.Description,
                 IsEnforced = settings.EnforcedRegistryKeys?.Contains(r.Key) == true,
             }).ToArray();
-        }).Location("Content:6");
+        }).Location(l => l.Zone("Content", "6").Card(S["Do-Not-Call Registry"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ImportContent model, UpdateEditorContext context)

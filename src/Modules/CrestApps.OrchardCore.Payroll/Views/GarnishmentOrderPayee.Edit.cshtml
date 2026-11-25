@@ -1,0 +1,38 @@
+@model GarnishmentOrderViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="PayeeName">
+    <label asp-for="PayeeName" class="ocat-label">@T["Payee"]</label>
+    <div class="ocat-end">
+        <input asp-for="PayeeName" class="form-control" maxlength="255" />
+        <span asp-validation-for="PayeeName" class="text-danger"></span>
+        <span class="hint">@T["Who the withholding is sent to, such as a state disbursement unit; printed on checks."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="PaymentMethod">
+    <label asp-for="PaymentMethod" class="ocat-label">@T["Paid by"]</label>
+    <div class="ocat-end">
+        <select asp-for="PaymentMethod" class="form-select" style="max-width: 20rem">
+            <option value="Check">@T["Check"]</option>
+            <option value="BankAccount">@T["Deposit to the payee's bank account"]</option>
+            <option value="Outside">@T["Outside payroll (only recorded)"]</option>
+        </select>
+        <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+        <span class="hint">@T["A check or a deposit is made from the employer's funding account when the pay statement is processed, and stopped if the statement is voided before it goes out."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="PayeeBankAccountId">
+    <label asp-for="PayeeBankAccountId" class="ocat-label">@T["Payee's bank account"]</label>
+    <div class="ocat-end">
+        <select asp-for="PayeeBankAccountId" asp-items="Model.BankAccounts" class="form-select" style="max-width: 24rem">
+            <option value="">@T["None"]</option>
+        </select>
+        <span asp-validation-for="PayeeBankAccountId" class="text-danger"></span>
+        <span class="hint">@T["For a deposit: an account under Banking owned by the payee (not a staff member, not the business)."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+    </div>
+</div>

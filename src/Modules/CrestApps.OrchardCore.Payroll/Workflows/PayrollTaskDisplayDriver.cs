@@ -1,4 +1,7 @@
 using System.Reflection;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
 
@@ -12,6 +15,22 @@ public sealed class PayrollTaskDisplayDriver<TActivity> : ActivityDisplayDriver<
     where TActivity : TaskActivity
 {
     private static readonly PropertyInfo[] _modelProperties = typeof(PayrollTaskViewModel).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PayrollTaskDisplayDriver{TActivity}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The localizer.</param>
+    public PayrollTaskDisplayDriver(IStringLocalizer<PayrollTaskDisplayDriver<TActivity>> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<PayrollTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivity(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override void EditActivity(TActivity activity, PayrollTaskViewModel model)

@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,9 +17,14 @@ internal sealed class TicketApprovalSettingsDisplayDriver : ContentTypePartDefin
 {
     private readonly ICatalog<TicketStatus> _statuses;
 
-    public TicketApprovalSettingsDisplayDriver(ICatalog<TicketStatus> statuses)
+    internal readonly IStringLocalizer S;
+
+    public TicketApprovalSettingsDisplayDriver(
+        ICatalog<TicketStatus> statuses,
+        IStringLocalizer<TicketApprovalSettingsDisplayDriver> stringLocalizer)
     {
         _statuses = statuses;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -48,7 +54,7 @@ internal sealed class TicketApprovalSettingsDisplayDriver : ContentTypePartDefin
             {
                 model.Steps.Add(new TicketApprovalStepViewModel());
             }
-        }).Location("Content:6");
+        }).Location(l => l.Zone("Content", "6").Card(S["Approval"], "60"));
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)
     {

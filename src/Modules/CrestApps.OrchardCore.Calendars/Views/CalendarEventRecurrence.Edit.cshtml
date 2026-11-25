@@ -6,7 +6,11 @@
 
 @if (Model.IsOccurrence)
 {
-    <p class="text-muted">@T["You are changing occurrences of a repeating event. To change how it repeats, edit the whole series from its first occurrence."]</p>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <span class="hint">@T["You are changing occurrences of a repeating event. To change how it repeats, edit the whole series from its first occurrence."]</span>
+        </div>
+    </div>
 }
 else
 {

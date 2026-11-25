@@ -63,7 +63,7 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
             {
                 Selected = step.PromptIds is not null && step.PromptIds.Contains(prompt.ItemId),
             }).ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["MCP Prompts"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpPromptDeploymentStep step, UpdateEditorContext context)

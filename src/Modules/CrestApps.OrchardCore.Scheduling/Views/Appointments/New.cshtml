@@ -26,4 +26,22 @@
     </div>
 </form>
 
-<partial name="_BookingForm" model="Model" />
+@foreach (var error in Model.Errors)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<form method="post" class="no-multisubmit">
+    <input type="hidden" name="AppointmentTypeId" value="@Model.AppointmentTypeId" />
+    <input type="hidden" name="Date" value="@Model.Date" />
+
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        @if (Model.Slots.Count > 0)
+        {
+            <button type="submit" class="btn btn-primary">@T["Book"]</button>
+        }
+    </div>
+</form>

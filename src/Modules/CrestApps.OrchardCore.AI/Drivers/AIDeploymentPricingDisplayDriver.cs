@@ -30,7 +30,7 @@ internal sealed class AIDeploymentPricingDisplayDriver : DisplayDriver<AIDeploym
                 model.Currency = pricing.Currency;
                 model.Prices = pricing.Prices ?? [];
             }
-        }).Location("Content:11");
+        }).Location(l => l.Zone("Content", "11").Card(S["Pricing"], "40"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)

@@ -1,0 +1,23 @@
+@model RotationEditViewModel
+@{
+    var days = new[] { T["Mon"], T["Tue"], T["Wed"], T["Thu"], T["Fri"], T["Sat"], T["Sun"] };
+}
+
+<div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label>
+    <div class="ocat-end">
+        <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem" data-reload-param="teamId" disabled="@(!string.IsNullOrEmpty(Model.Id) ? "disabled" : null)">
+            <option value="">@T["Choose a team"]</option>
+        </select>
+        @if (!string.IsNullOrEmpty(Model.Id))
+        {
+            <input type="hidden" asp-for="TeamId" />
+        }
+        else
+        {
+            <span class="hint">@T["Choosing a team reloads the page with its workers and templates."]</span>
+        }
+    </div>
+</div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div></div></div>

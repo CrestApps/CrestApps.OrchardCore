@@ -48,7 +48,7 @@ public sealed class AIProfileGuardrailDisplayDriver : DisplayDriver<AIProfile>
             model.AvailableTopics = await _templateService.ListOptionsByCategoryAsync(AIGuardrailTopics.Category);
             model.OtherTopics = settings.OtherTopics;
             model.PlaceholderReply = settings.PlaceholderReply;
-        }).Location("Content:1%Guardrails;100.5");
+        }).Location(l => l.Zone("Content", "1").Card(S["Guardrails"], "100.5"));
     }
 
     /// <inheritdoc/>

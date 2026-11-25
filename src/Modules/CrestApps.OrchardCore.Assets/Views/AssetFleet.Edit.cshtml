@@ -1,0 +1,47 @@
+@model AssetEditViewModel
+
+@if (Model.ShowFleet)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="Schedulable" type="checkbox" class="form-check-input" />
+                <label asp-for="Schedulable" class="form-check-label">@T["Book it for visits"]</label>
+                <span class="hint dashed">@T["It gets its own Equipment calendar, which refuses two bookings at once."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="CarriesStock" type="checkbox" class="form-check-input" />
+                <label asp-for="CarriesStock" class="form-check-label">@T["It carries stock"]</label>
+                <span class="hint dashed">@T["Its parts are kept at its own Inventory location, so parts used on a job come off it."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="Plate" class="ocat-label">@T["Plate"]</label>
+        <div class="ocat-end">
+            <input asp-for="Plate" class="form-control" />
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="Vin" class="ocat-label">@T["VIN"]</label>
+        <div class="ocat-end">
+            <input asp-for="Vin" class="form-control" />
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="Capacity" class="ocat-label">@T["Capacity"]</label>
+        <div class="ocat-end">
+            <input asp-for="Capacity" class="form-control" placeholder="@T["2 seats, 800 kg"]" />
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="FuelType" class="ocat-label">@T["Fuel"]</label>
+        <div class="ocat-end">
+            <input asp-for="FuelType" class="form-control" />
+        </div>
+    </div>
+}

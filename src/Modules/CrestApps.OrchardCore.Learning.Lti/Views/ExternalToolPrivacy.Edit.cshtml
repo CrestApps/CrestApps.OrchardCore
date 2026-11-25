@@ -1,0 +1,31 @@
+@model ExternalToolViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="PrivacyLevel">
+    <label asp-for="PrivacyLevel" class="ocat-label">@T["What the tool learns"]</label>
+    <div class="ocat-end">
+        <select asp-for="PrivacyLevel" class="form-select">
+            <option value="@LtiPrivacyLevel.Anonymous">@T["An anonymous id only"]</option>
+            <option value="@LtiPrivacyLevel.Name">@T["The id and the person's name"]</option>
+            <option value="@LtiPrivacyLevel.NameAndEmail">@T["The id, the name and the e-mail address"]</option>
+        </select>
+        <span class="hint">@T["The tool always gets an id made for it, never the person's user id. It applies to launches, custom parameters and the roster."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="AllowNamesAndRoles">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AllowNamesAndRoles" class="form-check-input" />
+            <label asp-for="AllowNamesAndRoles" class="form-check-label">@T["May read the course roster"]</label>
+            <span class="hint dashed">@T["Names and Role Provisioning Services: the learners and staff of the courses the tool is used in, within the privacy level."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="AllowGrades">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AllowGrades" class="form-check-input" />
+            <label asp-for="AllowGrades" class="form-check-label">@T["May post grades"]</label>
+            <span class="hint dashed">@T["Assignment and Grade Services: the tool manages line items and posts scores; a fully graded score counts in the learner's progress."]</span>
+        </div>
+    </div>
+</div>

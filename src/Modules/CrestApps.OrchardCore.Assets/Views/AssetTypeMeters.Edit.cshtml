@@ -1,0 +1,22 @@
+@model AssetTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="hint">@T["Readings taken on assets of this type, such as hours run or miles. A meter that only goes up refuses a lower reading."]</p>
+        <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+                <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Unit"]</th><th scope="col">@T["Only goes up"]</th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Meters.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="Meters[i].Name" class="form-control form-control-sm" aria-label="@T["Meter name"]" /></td>
+                            <td><input asp-for="Meters[i].Unit" class="form-control form-control-sm" aria-label="@T["Unit"]" /></td>
+                            <td><input asp-for="Meters[i].Cumulative" type="checkbox" class="form-check-input" aria-label="@T["Only goes up"]" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

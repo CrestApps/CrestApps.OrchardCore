@@ -1,0 +1,82 @@
+@using CrestApps.OrchardCore.Telnyx.Services
+@model TelnyxSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["These already have working defaults. Change them only if Telnyx support tells you to, or your network needs a TURN relay."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CredentialLifetimeMinutes">
+    <label asp-for="CredentialLifetimeMinutes" class="ocat-label">@T["Credential lifetime (minutes)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="@TelnyxCredentialLifetime.MinimumMinutes" class="form-control" asp-for="CredentialLifetimeMinutes" />
+        <span class="hint">@T["How long each soft phone's credential lasts before it is renewed; at least {0} minutes. The default, {1}, suits almost everyone: renewing too often makes calls ring a credential that is being replaced.", TelnyxCredentialLifetime.MinimumMinutes, TelnyxCredentialLifetime.DefaultMinutes]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SipWebSocketUrl">
+    <label asp-for="SipWebSocketUrl" class="ocat-label">@T["SIP WebSocket URL"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="SipWebSocketUrl" placeholder="wss://sip.telnyx.com" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SipDomain">
+    <label asp-for="SipDomain" class="ocat-label">@T["SIP domain"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="SipDomain" placeholder="sip.telnyx.com" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="WebRtcCodecs">
+    <label asp-for="WebRtcCodecs" class="ocat-label">@T["Preferred audio codecs"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="WebRtcCodecs" placeholder="opus, PCMU, PCMA" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="WebRtcRegion">
+    <label asp-for="WebRtcRegion" class="ocat-label">@T["Soft phone region"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="WebRtcRegion">
+            <option value="">@T["Automatic (chosen by Telnyx)"]</option>
+            <option value="us-west">@T["US West"]</option>
+            <option value="us-central">@T["US Central"]</option>
+            <option value="us-east">@T["US East"]</option>
+            <option value="ca-central">@T["Canada Central"]</option>
+            <option value="eu">@T["Europe"]</option>
+            <option value="apac">@T["Asia Pacific"]</option>
+            <option value="south-asia">@T["South Asia"]</option>
+        </select>
+        <span class="hint">@T["The Telnyx location agents' soft phones connect to. Telnyx normally picks this by looking up where the browser is, and documents that the answer can be wrong. Set it when your team is in one place; agents can still choose a nearer location for themselves in the soft phone."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IceUrls">
+    <label asp-for="IceUrls" class="ocat-label">@T["ICE (STUN/TURN) URLs"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="IceUrls" placeholder="stun:stun.telnyx.com:3478" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TurnUsername">
+    <label asp-for="TurnUsername" class="ocat-label">@T["TURN username"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="TurnUsername" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TurnCredential">
+    <label asp-for="TurnCredential" class="ocat-label">@T["TURN credential"]</label>
+    <div class="ocat-end">
+        <input type="password" class="form-control" asp-for="TurnCredential" autocomplete="new-password" placeholder="@(Model.HasTurnCredential ? T["A value is already stored. Enter a new value to replace it."].Value : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IceTransportPolicy">
+    <label asp-for="IceTransportPolicy" class="ocat-label">@T["ICE transport policy"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="IceTransportPolicy" placeholder="all" />
+    </div>
+</div>

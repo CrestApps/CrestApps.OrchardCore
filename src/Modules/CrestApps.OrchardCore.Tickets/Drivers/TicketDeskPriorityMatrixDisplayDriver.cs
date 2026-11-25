@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -15,9 +16,14 @@ internal sealed class TicketDeskPriorityMatrixDisplayDriver : DisplayDriver<Tick
 {
     private readonly ICatalog<TicketPriority> _priorities;
 
-    public TicketDeskPriorityMatrixDisplayDriver(ICatalog<TicketPriority> priorities)
+    internal readonly IStringLocalizer S;
+
+    public TicketDeskPriorityMatrixDisplayDriver(
+        ICatalog<TicketPriority> priorities,
+        IStringLocalizer<TicketDeskPriorityMatrixDisplayDriver> stringLocalizer)
     {
         _priorities = priorities;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -38,7 +44,7 @@ internal sealed class TicketDeskPriorityMatrixDisplayDriver : DisplayDriver<Tick
             model.Priorities = [.. (await _priorities.GetAllAsync())
                 .OrderByDescending(priority => priority.Rank)
                 .Select(priority => new SelectListItem(priority.Name, priority.ItemId))];
-        }).Location("Content:2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Priority Matrix"], "60"));
 
     public override async Task<IDisplayResult> UpdateAsync(TicketDesk desk, UpdateEditorContext context)
     {

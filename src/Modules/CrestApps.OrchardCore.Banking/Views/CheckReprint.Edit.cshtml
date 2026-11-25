@@ -1,0 +1,17 @@
+@model CheckReprintViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="LayoutId">
+    <label asp-for="LayoutId" class="ocat-label ocat-label-required">@T["Check layout"]</label>
+    <div class="ocat-end">
+        <select asp-for="LayoutId" asp-items="Model.LayoutOptions" class="form-select"></select>
+        <span asp-validation-for="LayoutId" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label ocat-label-required">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reason" class="form-control" maxlength="500" />
+        <span asp-validation-for="Reason" class="text-danger"></span>
+        <span class="hint">@T["Such as a printer jam or a misaligned sheet."]</span>
+    </div>
+</div>

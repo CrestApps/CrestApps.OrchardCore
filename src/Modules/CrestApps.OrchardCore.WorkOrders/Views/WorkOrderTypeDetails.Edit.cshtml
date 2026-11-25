@@ -1,0 +1,41 @@
+@model WorkOrderTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" required />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+    <div class="ocat-end">
+        <input asp-for="Color" type="color" class="form-control form-control-color" />
+        <span class="hint">@T["Shown on the dispatch board."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="DefaultDurationMinutes" class="ocat-label">@T["Usual duration (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultDurationMinutes" type="number" min="0" step="5" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="CrewSize" class="ocat-label">@T["People needed"]</label>
+    <div class="ocat-end">
+        <input asp-for="CrewSize" type="number" min="1" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="DefaultPriority" class="ocat-label">@T["Usual priority"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultPriority" asp-items="Html.GetEnumSelectList<WorkOrderPriority>()" class="form-select"></select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ServiceLevelPolicyId" class="ocat-label">@T["Service level"]</label>
+    <div class="ocat-end">
+        <select asp-for="ServiceLevelPolicyId" asp-items="Model.PolicyOptions" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+    </div>
+</div>

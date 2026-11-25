@@ -1,0 +1,41 @@
+@model ExternalToolViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DeploymentId">
+    <label asp-for="DeploymentId" class="ocat-label ocat-label-required">@T["Deployment ID"]</label>
+    <div class="ocat-end">
+        <input asp-for="DeploymentId" class="form-control" maxlength="255" />
+        <span asp-validation-for="DeploymentId" class="text-danger"></span>
+        <span class="hint">@T["The id of this deployment of the tool, sent with every launch. Give it to the tool."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="LoginInitiationUrl">
+    <label asp-for="LoginInitiationUrl" class="ocat-label ocat-label-required">@T["Login initiation URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="LoginInitiationUrl" class="form-control" maxlength="1000" placeholder="https://tool.example.com/lti/login" />
+        <span asp-validation-for="LoginInitiationUrl" class="text-danger"></span>
+        <span class="hint">@T["The tool's OIDC login initiation URL, where every launch starts."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="TargetLinkUri">
+    <label asp-for="TargetLinkUri" class="ocat-label ocat-label-required">@T["Target link URI"]</label>
+    <div class="ocat-end">
+        <input asp-for="TargetLinkUri" class="form-control" maxlength="1000" placeholder="https://tool.example.com/lti/launch" />
+        <span asp-validation-for="TargetLinkUri" class="text-danger"></span>
+        <span class="hint">@T["The tool's default launch URL. A course item can name another one."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="DeepLinkingUrl">
+    <label asp-for="DeepLinkingUrl" class="ocat-label">@T["Deep Linking URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="DeepLinkingUrl" class="form-control" maxlength="1000" placeholder="https://tool.example.com/lti/deep-link" />
+        <span asp-validation-for="DeepLinkingUrl" class="text-danger"></span>
+        <span class="hint">@T["Where course staff pick content from the tool. Empty when the tool does not offer Deep Linking."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="CustomParameters">
+    <label asp-for="CustomParameters" class="ocat-label">@T["Custom parameters"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="CustomParameters" class="form-control font-monospace" rows="3" placeholder="level=beginner"></textarea>
+        <span class="hint">@T["Sent with every launch, one name=value per line. A value can be one of these variables: {0}. A variable the privacy level withholds is sent as written.", string.Join(", ", Model.SupportedVariables)]</span>
+    </div>
+</div>

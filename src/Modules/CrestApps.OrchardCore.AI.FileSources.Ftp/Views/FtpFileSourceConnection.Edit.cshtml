@@ -1,0 +1,58 @@
+@using CrestApps.OrchardCore.AI.FileSources.Ftp.ViewModels
+
+@model FtpFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="EncryptionMode" class="ocat-label">@T["Encryption mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="EncryptionMode" class="form-select">
+            <option value="">@T["Automatic"]</option>
+            <option value="None">@T["None (plain FTP)"]</option>
+            <option value="Explicit">@T["Explicit FTPS"]</option>
+            <option value="Implicit">@T["Implicit FTPS"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DataConnectionType" class="ocat-label">@T["Data connection"]</label>
+    <div class="ocat-end">
+        <select asp-for="DataConnectionType" class="form-select">
+            <option value="">@T["Automatic"]</option>
+            <option value="AutoPassive">@T["Passive"]</option>
+            <option value="AutoActive">@T["Active"]</option>
+        </select>
+        <span class="hint">@T["Passive is usually the one that works through a firewall."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="ValidateAnyCertificate" class="form-check-input" type="checkbox" />
+            <label asp-for="ValidateAnyCertificate" class="form-check-label">@T["Accept any TLS certificate"]</label>
+            <span class="hint dashed">@T["Accepts a certificate that does not validate, including one an attacker presents. Only for a server with a self-signed certificate on a network you control."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ConnectTimeout" class="ocat-label">@T["Connect timeout (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ConnectTimeout" class="form-control" type="number" min="1" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ReadTimeout" class="ocat-label">@T["Read timeout (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReadTimeout" class="form-control" type="number" min="1" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RetryAttempts" class="ocat-label">@T["Retry attempts"]</label>
+    <div class="ocat-end">
+        <input asp-for="RetryAttempts" class="form-control" type="number" min="0" />
+    </div>
+</div>

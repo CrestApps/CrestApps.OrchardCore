@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
@@ -24,6 +25,8 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly OrchestratorOptions _orchestratorOptions;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatInteractionDisplayDriver"/> class.
     /// </summary>
@@ -31,16 +34,19 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="promptStore">The prompt store.</param>
     /// <param name="orchestratorOptions">The orchestrator options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IChatInteractionPromptStore promptStore,
-        IOptions<OrchestratorOptions> orchestratorOptions)
+        IOptions<OrchestratorOptions> orchestratorOptions,
+        IStringLocalizer<ChatInteractionDisplayDriver> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _promptStore = promptStore;
         _orchestratorOptions = orchestratorOptions.Value;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Display(ChatInteraction interaction, BuildDisplayContext context)
@@ -97,7 +103,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
             model.IsNew = context.IsNew;
-        }).Location("Parameters:1#Settings;1");
+        }).Location(l => l.Zone("Parameters", "1").Tab(S["Settings"], "1").Card(S["General"], "1"));
 
         // Orchestrator selection comes after title.
         var orchestratorResult = Initialize<OrchestratorViewModel>("OrchestratorSelection_Edit", model =>
@@ -112,7 +118,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
                 .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
                 .ToArray();
             }
-        }).Location("Parameters:2#Settings;1");
+        }).Location(l => l.Zone("Parameters", "2").Tab(S["Settings"], "1").Card(S["General"], "1"));
 
         // Connection/Deployment at position 3 - handled by ChatInteractionConnectionDisplayDriver.
         // Copilot config at position 4 - handled by ChatInteractionCopilotDisplayDriver.
@@ -126,7 +132,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ConnectionName = interaction.ConnectionName;
             model.SystemMessage = interaction.SystemMessage;
             model.IsNew = context.IsNew;
-        }).Location("Parameters:8#Settings;1");
+        }).Location(l => l.Zone("Parameters", "8").Tab(S["Settings"], "1").Card(S["Instructions"], "4"));
 
         // General parameters come after system instructions and prompt templates in the Settings tab.
         var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
@@ -144,7 +150,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ToolNames = interaction.ToolNames?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
-        }).Location("Parameters:10#Settings;1");
+        }).Location(l => l.Zone("Parameters", "10").Tab(S["Settings"], "1").Card(S["Parameters"], "5"));
 
         return Combine(headerResult, contentResult, titleResult, orchestratorResult, systemInstructionsResult, parametersResult);
     }

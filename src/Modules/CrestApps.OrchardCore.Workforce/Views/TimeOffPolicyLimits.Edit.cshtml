@@ -1,0 +1,29 @@
+@model TimeOffPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxBalance" class="ocat-label">@T["Most the balance can reach"]</label>
+    <div class="ocat-end"><input asp-for="MaxBalance" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Optional. Accrual stops while the balance is at this amount."]</span></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ResetMonth" class="ocat-label">@T["Reset date"]</label>
+    <div class="ocat-end">
+        <div class="d-flex align-items-center gap-2">
+            <select asp-for="ResetMonth" class="form-select" style="max-width: 12rem">
+                @for (var month = 1; month <= 12; month++)
+                {
+                    <option value="@month">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
+                }
+            </select>
+            <input asp-for="ResetDay" type="number" min="1" max="31" class="form-control" style="max-width: 6rem" aria-label="@T["Day"]" />
+        </div>
+        <span class="hint">@T["The start of the policy's year: the yearly amount is given and what is above the carryover limit expires."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="CarryoverMax" class="ocat-label">@T["Most that carries over"]</label>
+    <div class="ocat-end"><input asp-for="CarryoverMax" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["Optional. Leave empty to carry everything over to the next year."]</span></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="NegativeBalanceLimit" class="ocat-label">@T["Can go below zero by"]</label>
+    <div class="ocat-end"><input asp-for="NegativeBalanceLimit" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["How much a worker may borrow against future accrual."]</span></div>
+</div>

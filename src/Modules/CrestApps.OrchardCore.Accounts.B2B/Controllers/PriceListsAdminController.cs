@@ -13,6 +13,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -34,6 +36,8 @@ public sealed class PriceListsAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<PriceListEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -45,6 +49,8 @@ public sealed class PriceListsAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<PriceListEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<PriceListsAdminController> htmlLocalizer,
         IStringLocalizer<PriceListsAdminController> stringLocalizer)
     {
@@ -54,6 +60,8 @@ public sealed class PriceListsAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -95,7 +103,7 @@ public sealed class PriceListsAdminController : Controller
             return Forbid();
         }
 
-        return View("Edit", await PopulateAsync(new PriceListEditViewModel()));
+        return View("Edit", await PopulateAsync(new PriceListEditViewModel(), isNew: true));
     }
 
     [HttpPost]
@@ -109,9 +117,12 @@ public sealed class PriceListsAdminController : Controller
 
         var list = new PriceList { ItemId = IdGenerator.GenerateId(), CreatedUtc = _clock.UtcNow };
 
+        await PrepareAsync(model);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         if (!await ApplyAsync(model, list))
         {
-            return View("Edit", await PopulateAsync(model));
+            return View("Edit", model);
         }
 
         await _priceLists.CreateAsync(list);
@@ -154,9 +165,12 @@ public sealed class PriceListsAdminController : Controller
             return NotFound();
         }
 
+        await PrepareAsync(model, list.ItemId);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         if (!await ApplyAsync(model, list))
         {
-            return View(await PopulateAsync(model, list.ItemId));
+            return View(model);
         }
 
         list.ModifiedUtc = _clock.UtcNow;
@@ -301,11 +315,17 @@ public sealed class PriceListsAdminController : Controller
         return true;
     }
 
-    private async Task<PriceListEditViewModel> PopulateAsync(PriceListEditViewModel model, string itemId = null)
+    private async Task<PriceListEditViewModel> PopulateAsync(PriceListEditViewModel model, string itemId = null, bool isNew = false)
+    {
+        await PrepareAsync(model, itemId);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
+
+        return model;
+    }
+
+    private async Task PrepareAsync(PriceListEditViewModel model, string itemId = null)
     {
         model.ItemId = itemId;
         model.StoreCurrency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
-
-        return model;
     }
 }

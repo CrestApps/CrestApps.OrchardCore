@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting;
 using Json.Schema;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -64,13 +65,20 @@ internal sealed class WorkforceAdherenceDeploymentSource : DeploymentSourceBase<
 
 internal sealed class WorkforceAdherenceDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, WorkforceAdherenceDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public WorkforceAdherenceDeploymentStepDisplayDriver(IStringLocalizer<WorkforceAdherenceDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(WorkforceAdherenceDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("WorkforceAdherenceDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("WorkforceAdherenceDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(WorkforceAdherenceDeploymentStep step, BuildEditorContext context)
-        => View("WorkforceAdherenceDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("WorkforceAdherenceDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Adherence Rule Sets"], "10"));
 }
 
 /// <summary>
@@ -137,13 +145,20 @@ internal sealed class WorkforceForecastingDeploymentSource : DeploymentSourceBas
 
 internal sealed class WorkforceForecastingDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, WorkforceForecastingDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public WorkforceForecastingDeploymentStepDisplayDriver(IStringLocalizer<WorkforceForecastingDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(WorkforceForecastingDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("WorkforceForecastingDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("WorkforceForecastingDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(WorkforceForecastingDeploymentStep step, BuildEditorContext context)
-        => View("WorkforceForecastingDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("WorkforceForecastingDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Forecasting Setup"], "10"));
 }
 
 /// <summary>

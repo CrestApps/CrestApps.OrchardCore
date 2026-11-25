@@ -1,0 +1,9 @@
+@model VendorEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="CommissionPercent">
+    <label asp-for="CommissionPercent" class="ocat-label">@T["Commission (%)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="CommissionPercent" inputmode="decimal" class="form-control" placeholder="@T["The store's"]" />
+        <span asp-validation-for="CommissionPercent" class="text-danger"></span>
+    </div>
+</div>

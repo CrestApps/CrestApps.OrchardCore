@@ -15,6 +15,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -40,6 +42,8 @@ public sealed class RegistersAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<RegisterEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -54,6 +58,8 @@ public sealed class RegistersAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<RegisterEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<RegistersAdminController> htmlLocalizer,
         IStringLocalizer<RegistersAdminController> stringLocalizer)
     {
@@ -66,6 +72,8 @@ public sealed class RegistersAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -99,7 +107,10 @@ public sealed class RegistersAdminController : Controller
             return Forbid();
         }
 
-        return View("Edit", await PopulateAsync(new RegisterEditViewModel()));
+        var model = await PopulateAsync(new RegisterEditViewModel());
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -111,11 +122,14 @@ public sealed class RegistersAdminController : Controller
             return Forbid();
         }
 
+        await PopulateAsync(model);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         await ValidateAsync(model);
 
         if (!ModelState.IsValid)
         {
-            return View("Edit", await PopulateAsync(model));
+            return View("Edit", model);
         }
 
         var register = new Register { ItemId = IdGenerator.GenerateId(), CreatedUtc = _clock.UtcNow };
@@ -139,7 +153,7 @@ public sealed class RegistersAdminController : Controller
             return NotFound();
         }
 
-        return View(await PopulateAsync(new RegisterEditViewModel
+        var model = await PopulateAsync(new RegisterEditViewModel
         {
             Name = register.Name,
             LocationId = register.LocationId,
@@ -158,7 +172,11 @@ public sealed class RegistersAdminController : Controller
             Region = register.Address?.Region,
             PostalCode = register.Address?.PostalCode,
             Country = register.Address?.Country,
-        }, register.ItemId));
+        }, register.ItemId);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -175,11 +193,14 @@ public sealed class RegistersAdminController : Controller
             return NotFound();
         }
 
+        await PopulateAsync(model, register.ItemId);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         await ValidateAsync(model);
 
         if (!ModelState.IsValid)
         {
-            return View(await PopulateAsync(model, register.ItemId));
+            return View(model);
         }
 
         Apply(model, register);

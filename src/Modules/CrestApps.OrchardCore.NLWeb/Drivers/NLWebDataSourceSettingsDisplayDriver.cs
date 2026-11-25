@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.NLWeb.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -22,20 +23,25 @@ internal sealed class NLWebDataSourceSettingsDisplayDriver : SiteDisplayDriver<N
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDataSourceStore _dataSourceStore;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NLWebDataSourceSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataSourceStore">The AI data source store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public NLWebDataSourceSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IAIDataSourceStore dataSourceStore)
+        IAIDataSourceStore dataSourceStore,
+        IStringLocalizer<NLWebDataSourceSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataSourceStore = dataSourceStore;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -59,7 +65,7 @@ internal sealed class NLWebDataSourceSettingsDisplayDriver : SiteDisplayDriver<N
                 .OrderBy(dataSource => dataSource.DisplayText, StringComparer.CurrentCultureIgnoreCase)
                 .Select(dataSource => new SelectListItem(dataSource.DisplayText, dataSource.ItemId))
                 .ToList();
-        }).Location("Content:3")
+        }).Location(l => l.Zone("Content", "3").Card(S["Data Source"], "20"))
         .OnGroup(SettingsGroupId);
     }
 

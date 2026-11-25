@@ -57,7 +57,7 @@ public sealed class AIVisitorIdentityOptionsDisplayDriver : SiteDisplayDriver<AI
             model.UsePartitionedCookie = settings.UsePartitionedCookie;
             model.RemoteAddressMode = settings.RemoteAddressMode;
             model.RemoteAddressHashSalt = settings.RemoteAddressHashSalt;
-        }).Location("Content:2.1%Visitor Identity;1")
+        }).Location(l => l.Zone("Content", "2.1").Card(S["Visitor Identity"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

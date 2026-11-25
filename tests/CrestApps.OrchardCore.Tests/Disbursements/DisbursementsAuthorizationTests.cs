@@ -245,6 +245,8 @@ public sealed class DisbursementsAuthorizationTests
             features.Object,
             new RecordingNotifier(),
             new global::CrestApps.OrchardCore.Banking.Disbursements.Services.DisbursementFileRecorder(new ServiceCollection().BuildServiceProvider(), Microsoft.Extensions.Logging.Abstractions.NullLogger<global::CrestApps.OrchardCore.Banking.Disbursements.Services.DisbursementFileRecorder>.Instance),
+            Mock.Of<IDisplayManager<DisbursementReturnsViewModel>>(),
+            Mock.Of<IUpdateModelAccessor>(),
             new EchoHtmlLocalizer<DisbursementBatchesController>());
 
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = TestSecurity.User(userName) } };

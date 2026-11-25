@@ -26,9 +26,9 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
     {
         return Combine(
             Initialize<SubjectActionViewModel>("SubjectActionFields_Edit", async model => await PopulateAsync(model, action))
-                .Location("Content:1"),
+                .Location(l => l.Zone("Content", "1").Card(S["Disposition"], "10")),
             Initialize<SubjectActionViewModel>("SubjectActionCommunicationPreferences_Edit", async model => await PopulateAsync(model, action))
-                .Location("Content:100"));
+                .Location(l => l.Zone("Content", "100").Card(S["Communication Preferences"], "90")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SubjectAction action, UpdateEditorContext context)

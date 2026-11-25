@@ -50,7 +50,7 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
                 IsSelected = step.ConnectionIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
         .ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Provider Connections"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnectionDeploymentStep step, UpdateEditorContext context)

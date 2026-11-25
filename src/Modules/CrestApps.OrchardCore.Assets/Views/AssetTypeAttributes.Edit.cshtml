@@ -1,0 +1,21 @@
+@model AssetTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="hint">@T["Values every asset of this type records, such as a refrigerant or a capacity. Leave a row empty to skip it."]</p>
+        <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+                <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Kind"]</th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Attributes.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="Attributes[i].Name" class="form-control form-control-sm" aria-label="@T["Attribute name"]" /></td>
+                            <td><select asp-for="Attributes[i].Kind" asp-items="Html.GetEnumSelectList<AssetAttributeKind>()" class="form-select form-select-sm" aria-label="@T["Kind"]"></select></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

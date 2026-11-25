@@ -123,7 +123,7 @@ internal sealed class PayHistoryDeploymentStepDisplayDriver : DisplayDriver<Depl
             View("PayHistoryDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(PayHistoryDeploymentStep step, BuildEditorContext context)
-        => View("PayHistoryDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("PayHistoryDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Pay History"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(PayHistoryDeploymentStep step, UpdateEditorContext context)
     {

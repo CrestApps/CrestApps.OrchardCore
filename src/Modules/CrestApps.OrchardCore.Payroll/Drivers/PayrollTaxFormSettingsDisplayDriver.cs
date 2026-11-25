@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Taxation.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -13,6 +14,13 @@ namespace CrestApps.OrchardCore.Payroll.Drivers;
 /// </summary>
 internal sealed class PayrollTaxFormSettingsDisplayDriver : DisplayDriver<TaxForm>
 {
+    internal readonly IStringLocalizer S;
+
+    public PayrollTaxFormSettingsDisplayDriver(IStringLocalizer<PayrollTaxFormSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(TaxForm form, BuildEditorContext context)
         => Initialize<PayrollTaxFormSettingsViewModel>("PayrollTaxFormSettings_Edit", model =>
         {
@@ -22,7 +30,7 @@ internal sealed class PayrollTaxFormSettingsDisplayDriver : DisplayDriver<TaxFor
             model.PeopleJurisdiction = settings.PeopleJurisdiction;
             model.ListJurisdictionAmounts = settings.ListJurisdictionAmounts;
             model.PayCodeFieldPrefix = settings.PayCodeFieldPrefix;
-        }).Location("Content:2")
+        }).Location(l => l.Zone("Content", "2").Card(S["Payroll"], "20"))
         .RenderWhen(() => Task.FromResult(IsPayroll(form)));
 
     public override async Task<IDisplayResult> UpdateAsync(TaxForm form, UpdateEditorContext context)

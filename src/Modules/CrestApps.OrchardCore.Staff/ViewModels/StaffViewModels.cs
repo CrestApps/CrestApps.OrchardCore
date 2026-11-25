@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Staff.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Staff.ViewModels;
 
@@ -347,6 +348,9 @@ public class StaffCapabilitiesListViewModel
 
 public class StaffCapabilityEditViewModel
 {
+    [BindNever]
+    public IShape Editor { get; set; }
+
     public string Name { get; set; }
 
     public string DisplayName { get; set; }

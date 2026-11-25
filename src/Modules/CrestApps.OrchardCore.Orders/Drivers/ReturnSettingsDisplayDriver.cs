@@ -39,15 +39,22 @@ public sealed class ReturnSettingsDisplayDriver : SiteDisplayDriver<ReturnSettin
         => OrderConstants.ReturnsSettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, ReturnSettings settings, BuildEditorContext context)
-        => Initialize<ReturnSettingsViewModel>("ReturnSettings_Edit", model =>
-        {
-            model.WindowDays = settings.WindowDays;
-            model.Reasons = string.Join(Environment.NewLine, settings.GetReasons());
-            model.AllowExchanges = settings.AllowExchanges;
-            model.Instructions = settings.Instructions;
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
-        .OnGroup(SettingsGroupId);
+    {
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<ReturnSettingsViewModel>(shapeType, model =>
+            {
+                model.WindowDays = settings.WindowDays;
+                model.Reasons = string.Join(Environment.NewLine, settings.GetReasons());
+                model.AllowExchanges = settings.AllowExchanges;
+                model.Instructions = settings.Instructions;
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
+            .OnGroup(SettingsGroupId);
+
+        return Combine(
+            Card("ReturnSettingsPolicy_Edit", "1", S["Policy"], "10"),
+            Card("ReturnSettingsInstructions_Edit", "1.1", S["Instructions"], "20"));
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, ReturnSettings settings, UpdateEditorContext context)
     {

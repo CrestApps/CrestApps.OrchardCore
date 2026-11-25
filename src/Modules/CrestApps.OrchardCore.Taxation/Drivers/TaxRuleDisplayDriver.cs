@@ -62,69 +62,85 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
 
     public override IDisplayResult Edit(TaxRule rule, BuildEditorContext context)
     {
-        return Initialize<TaxRuleViewModel>("TaxRuleFields_Edit", async model =>
-        {
-            model.IsNew = context.IsNew;
-            model.Name = rule.Name;
-            model.Enabled = rule.Enabled;
-            model.Priority = rule.Priority;
-            model.TaxType = rule.TaxType;
-            model.TaxName = rule.TaxName;
-            model.TaxCode = rule.TaxCode;
-            model.JurisdictionId = rule.JurisdictionId;
-            model.CategoryCode = rule.CategoryCode;
-            model.CustomerType = rule.CustomerType;
-            model.IncludedInPrice = rule.IncludedInPrice;
-            model.IsCompound = rule.IsCompound;
-            model.ReverseCharge = rule.ReverseCharge;
-            model.AppliesToShipping = rule.AppliesToShipping;
-            model.MinimumAmount = rule.MinimumAmount;
-            model.ThresholdBasis = rule.ThresholdBasis;
-            model.MaximumAmount = rule.MaximumAmount;
-            model.EffectiveFromUtc = rule.EffectiveFromUtc;
-            model.EffectiveToUtc = rule.EffectiveToUtc;
-
-            var taxTypes = await _typeStore.GetAllAsync();
-
-            model.TaxTypes = taxTypes
-                .OrderBy(type => type.Name)
-                .Select(type => new SelectListItem(type.Name, type.Name))
-                .ToList();
-
-            if (!string.IsNullOrEmpty(rule.TaxType) &&
-                !model.TaxTypes.Any(item => string.Equals(item.Value, rule.TaxType, StringComparison.OrdinalIgnoreCase)))
+        return Combine(
+            Initialize<TaxRuleViewModel>("TaxRuleFields_Edit", model => Populate(model, rule, context))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<TaxRuleViewModel>("TaxRuleTax_Edit", async model =>
             {
-                model.TaxTypes.Insert(0, new SelectListItem(rule.TaxType, rule.TaxType));
-            }
+                Populate(model, rule, context);
 
-            model.CustomerTypes =
-            [
-                new SelectListItem(S["Any customer"], string.Empty),
-                new SelectListItem(S["Consumer (B2C)"], nameof(CustomerTaxType.B2C)),
-                new SelectListItem(S["Business (B2B)"], nameof(CustomerTaxType.B2B)),
-            ];
+                var taxTypes = await _typeStore.GetAllAsync();
 
-            var jurisdictions = await _jurisdictionStore.GetAllAsync();
+                model.TaxTypes = taxTypes
+                    .OrderBy(type => type.Name)
+                    .Select(type => new SelectListItem(type.Name, type.Name))
+                    .ToList();
 
-            model.Jurisdictions =
-            [
-                new SelectListItem(S["Any jurisdiction"], string.Empty),
-                .. jurisdictions
-                    .OrderBy(j => j.Name)
-                    .Select(j => new SelectListItem(j.Name, j.ItemId)),
-            ];
+                if (!string.IsNullOrEmpty(rule.TaxType) &&
+                    !model.TaxTypes.Any(item => string.Equals(item.Value, rule.TaxType, StringComparison.OrdinalIgnoreCase)))
+                {
+                    model.TaxTypes.Insert(0, new SelectListItem(rule.TaxType, rule.TaxType));
+                }
+            }).Location(l => l.Zone("Content", "2").Card(S["Tax"], "20")),
+            Initialize<TaxRuleViewModel>("TaxRuleScope_Edit", async model =>
+            {
+                Populate(model, rule, context);
 
-            var categories = await _categoryStore.GetAllAsync();
+                model.CustomerTypes =
+                [
+                    new SelectListItem(S["Any customer"], string.Empty),
+                    new SelectListItem(S["Consumer (B2C)"], nameof(CustomerTaxType.B2C)),
+                    new SelectListItem(S["Business (B2B)"], nameof(CustomerTaxType.B2B)),
+                ];
 
-            model.Categories =
-            [
-                new SelectListItem(S["Any category"], string.Empty),
-                .. categories
-                    .Where(c => !string.IsNullOrEmpty(c.Code))
-                    .OrderBy(c => c.Name)
-                    .Select(c => new SelectListItem($"{c.Name} ({c.Code})", c.Code)),
-            ];
-        }).Location("Content:1");
+                var jurisdictions = await _jurisdictionStore.GetAllAsync();
+
+                model.Jurisdictions =
+                [
+                    new SelectListItem(S["Any jurisdiction"], string.Empty),
+                    .. jurisdictions
+                        .OrderBy(j => j.Name)
+                        .Select(j => new SelectListItem(j.Name, j.ItemId)),
+                ];
+
+                var categories = await _categoryStore.GetAllAsync();
+
+                model.Categories =
+                [
+                    new SelectListItem(S["Any category"], string.Empty),
+                    .. categories
+                        .Where(c => !string.IsNullOrEmpty(c.Code))
+                        .OrderBy(c => c.Name)
+                        .Select(c => new SelectListItem($"{c.Name} ({c.Code})", c.Code)),
+                ];
+            }).Location(l => l.Zone("Content", "3").Card(S["Applies To"], "30")),
+            Initialize<TaxRuleViewModel>("TaxRuleCalculation_Edit", model => Populate(model, rule, context))
+                .Location(l => l.Zone("Content", "6").Card(S["Calculation"], "40")),
+            Initialize<TaxRuleViewModel>("TaxRuleDates_Edit", model => Populate(model, rule, context))
+                .Location(l => l.Zone("Content", "7").Card(S["Effective Dates"], "50")));
+    }
+
+    private static void Populate(TaxRuleViewModel model, TaxRule rule, BuildEditorContext context)
+    {
+        model.IsNew = context.IsNew;
+        model.Name = rule.Name;
+        model.Enabled = rule.Enabled;
+        model.Priority = rule.Priority;
+        model.TaxType = rule.TaxType;
+        model.TaxName = rule.TaxName;
+        model.TaxCode = rule.TaxCode;
+        model.JurisdictionId = rule.JurisdictionId;
+        model.CategoryCode = rule.CategoryCode;
+        model.CustomerType = rule.CustomerType;
+        model.IncludedInPrice = rule.IncludedInPrice;
+        model.IsCompound = rule.IsCompound;
+        model.ReverseCharge = rule.ReverseCharge;
+        model.AppliesToShipping = rule.AppliesToShipping;
+        model.MinimumAmount = rule.MinimumAmount;
+        model.ThresholdBasis = rule.ThresholdBasis;
+        model.MaximumAmount = rule.MaximumAmount;
+        model.EffectiveFromUtc = rule.EffectiveFromUtc;
+        model.EffectiveToUtc = rule.EffectiveToUtc;
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TaxRule rule, UpdateEditorContext context)

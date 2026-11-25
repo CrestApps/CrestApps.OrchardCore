@@ -248,7 +248,7 @@ internal sealed class ReportDesignsDeploymentStepDisplayDriver : DisplayDriver<D
             model.IncludeAll = step.IncludeAll;
             model.Reports = Entries(await _designs.GetAllAsync(), step.ReportIds);
             model.Views = Entries(await _views.GetAllAsync(), step.ViewIds);
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Designed Reports and Views"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ReportDesignsDeploymentStep step, UpdateEditorContext context)

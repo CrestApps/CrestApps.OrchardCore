@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -23,47 +24,59 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultAIDeploymentSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="deploymentManager">The AI deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultAIDeploymentSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IAIDeploymentManager deploymentManager)
+        IAIDeploymentManager deploymentManager,
+        IStringLocalizer<DefaultAIDeploymentSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _deploymentManager = deploymentManager;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, DefaultAIDeploymentSettings settings, BuildEditorContext context)
     {
-        return Initialize<DefaultAIDeploymentSettingsViewModel>("DefaultAIDeploymentSettings_Edit", async model =>
-        {
-            model.DefaultChatDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultChatDeploymentName);
-            model.DefaultUtilityDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultUtilityDeploymentName);
-            model.DefaultEmbeddingDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultEmbeddingDeploymentName);
-            model.DefaultImageDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultImageDeploymentName);
-            model.DefaultVisionDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultVisionDeploymentName);
-            model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultSpeechToTextDeploymentName);
-            model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
-            model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
-            model.DefaultRealtimeDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultRealtimeDeploymentName);
+        return Combine(
+            Initialize<DefaultAIDeploymentSettingsViewModel>("DefaultAIDeploymentSettings_Edit", async model =>
+            {
+                model.DefaultChatDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultChatDeploymentName);
+                model.DefaultUtilityDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultUtilityDeploymentName);
+                model.DefaultEmbeddingDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultEmbeddingDeploymentName);
+                model.DefaultImageDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultImageDeploymentName);
+                model.DefaultVisionDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultVisionDeploymentName);
 
-            model.ChatDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Chat);
-            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
-            model.EmbeddingDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Embedding);
-            model.ImageDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Image);
-            model.VisionDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Vision);
-            model.SpeechToTextDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.SpeechToText);
-            model.TextToSpeechDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.TextToSpeech);
-            model.RealtimeDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Realtime);
-        }).Location("Content:2%Default Deployments;1")
-        .OnGroup(SettingsGroupId)
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
+                model.ChatDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Chat);
+                model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
+                model.EmbeddingDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Embedding);
+                model.ImageDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Image);
+                model.VisionDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Vision);
+            }).Location(l => l.Zone("Content", "2").Card(S["Default Deployments"], "1"))
+            .OnGroup(SettingsGroupId)
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles)),
+            Initialize<DefaultAIDeploymentSettingsViewModel>("DefaultAISpeechDeploymentSettings_Edit", async model =>
+            {
+                model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultSpeechToTextDeploymentName);
+                model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
+                model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
+                model.DefaultRealtimeDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultRealtimeDeploymentName);
+
+                model.SpeechToTextDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.SpeechToText);
+                model.TextToSpeechDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.TextToSpeech);
+                model.RealtimeDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Realtime);
+            }).Location(l => l.Zone("Content", "3").Card(S["Default Speech Deployments"], "2"))
+            .OnGroup(SettingsGroupId)
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles)));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, DefaultAIDeploymentSettings settings, UpdateEditorContext context)

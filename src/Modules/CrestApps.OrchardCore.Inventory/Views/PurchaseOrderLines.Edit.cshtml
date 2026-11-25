@@ -1,0 +1,146 @@
+@model PurchaseOrderEditViewModel
+@using CrestApps.OrchardCore.Products.Core.Services
+@{
+    var order = Model.Order;
+    var readOnly = !Model.CanManage || order.Status is PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled;
+    var canReceive = Model.CanManage && order.CanReceive;
+    var currency = order.Currency ?? Model.Currency;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="text-body-secondary">@T.Plural(order.Lines.Count, "1 item", "{0} items")</span>
+    @if (canReceive)
+    {
+        <span class="small text-body-secondary">@T["Receiving at {0}", Model.LocationName]</span>
+    }
+</div>
+
+@if (order.Lines.Count == 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <span class="text-muted">@T["No items yet. Find them below by SKU or name, then save."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Item"]</th>
+                    <th scope="col" class="text-end">@T["Ordered"]</th>
+                    <th scope="col" class="text-end">@T["Received"]</th>
+                    <th scope="col" class="text-end">@T["Unit cost"]</th>
+                    <th scope="col" class="text-end">@T["Total"]</th>
+                    @if (canReceive)
+                    {
+                        <th scope="col" class="text-end">@T["Arrived now"]</th>
+                    }
+                    @if (Model.CanManage && order.IsDraft)
+                    {
+                        <th scope="col" class="text-center">@T["Remove"]</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < order.Lines.Count; i++)
+                {
+                    var line = order.Lines[i];
+
+                    <tr>
+                        <td>
+                            <input type="hidden" name="Lines[@i].LineId" value="@line.LineId" />
+                            <a asp-controller="InventoryAdmin" asp-action="Item" asp-route-stockItemId="@line.StockItemId">@line.Title</a>
+                            @if (!string.IsNullOrEmpty(line.Sku))
+                            {
+                                <div class="small text-muted">@T["SKU {0}", line.Sku]</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (Model.CanManage && order.IsDraft)
+                            {
+                                <input type="number" name="Lines[@i].Ordered" value="@line.Ordered" min="1" class="form-control form-control-sm d-inline-block text-end" style="width: 6rem;" aria-label="@T["Ordered of {0}", line.Title]" />
+                            }
+                            else
+                            {
+                                <input type="hidden" name="Lines[@i].Ordered" value="@line.Ordered" />
+                                @line.Ordered
+                            }
+                        </td>
+                        <td class="text-end">@line.Received</td>
+                        <td class="text-end">
+                            @if (!readOnly)
+                            {
+                                <input type="number" name="Lines[@i].UnitCost" value="@line.UnitCost.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="any" class="form-control form-control-sm d-inline-block text-end" style="width: 7rem;" aria-label="@T["Unit cost of {0}", line.Title]" />
+                            }
+                            else
+                            {
+                                @ProductPriceFormatter.Format(line.UnitCost, currency)
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">@ProductPriceFormatter.Format(line.UnitCost * line.Ordered, currency)</td>
+                        @if (canReceive)
+                        {
+                            <td class="text-end">
+                                @if (line.Outstanding > 0)
+                                {
+                                    <input type="number" name="Lines[@i].Receive" min="0" max="@line.Outstanding" placeholder="@line.Outstanding" class="form-control form-control-sm d-inline-block text-end" style="width: 6rem;" aria-label="@T["Arrived of {0}", line.Title]" />
+                                }
+                                else
+                                {
+                                    <span class="text-success"><i class="fa-solid fa-check" aria-hidden="true"></i><span class="visually-hidden">@T["All received"]</span></span>
+                                }
+                            </td>
+                        }
+                        @if (Model.CanManage && order.IsDraft)
+                        {
+                            <td class="text-center">
+                                <input type="checkbox" name="Lines[@i].Remove" value="true" class="form-check-input" aria-label="@T["Remove {0}", line.Title]" />
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" colspan="4" class="text-end">@T["Total"]</th>
+                    <th class="text-end text-nowrap">@ProductPriceFormatter.Format(order.Total, currency)</th>
+                    @if (canReceive)
+                    {
+                        <td></td>
+                    }
+                    @if (Model.CanManage && order.IsDraft)
+                    {
+                        <td></td>
+                    }
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+@if (Model.CanManage && order.IsDraft)
+{
+    <div class="ocat-wrapper">
+        <label class="ocat-label" for="purchase-order-add-items">@T["Add items"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = "purchase-order-add-items",
+                inputName = "AddStockItemIds",
+                endpoint = Model.SearchEndpoint,
+                initialItemsJson = "[]",
+                multiple = true,
+                enableSearch = true,
+                buttonText = T["Find items to order"].Value,
+                searchPlaceholder = T["Search by SKU or name"].Value,
+                emptyResultsText = T["No stock items found."].Value,
+                noSelectionText = T["None chosen."].Value,
+                selectedItemsLabel = T["To add"].Value,
+            })
+            <span class="hint">@T["They're added with a quantity of 1 when you save."]</span>
+        </div>
+    </div>
+}

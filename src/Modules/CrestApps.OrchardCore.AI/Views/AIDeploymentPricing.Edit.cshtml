@@ -51,51 +51,47 @@
     };
 }
 
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="card mb-3" id="deploymentPricing" data-meters="@metersJson" data-prices="@pricesJson" data-name-prefix="@namePrefix" data-text="@JsonSerializer.Serialize(text)">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="card-title mb-0"><i class="fa-solid fa-coins"></i> @T["Pricing"]</h6>
-                <div class="dropdown">
-                    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fa-solid fa-plus"></i> @T["Add price"]
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        @foreach (var meter in meters)
-                        {
-                            <li><button type="button" class="dropdown-item" data-price-add="@meter.Name">@T[meter.DisplayName]</button></li>
-                        }
-                    </ul>
-                </div>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small">
-                    @T["Optional. What this deployment costs with its provider, used to estimate the cost of its usage in the AI usage reports. Add one price per billed unit; a model billed per request and per token gets one of each. Cached, cache-write, audio, and image tokens are taken out of the input and output tokens when they have their own price. Use the sliders button for long-context prices and billing increments."]
-                </p>
-
-                @if (priceErrors.Count > 0)
+<div id="deploymentPricing" data-meters="@metersJson" data-prices="@pricesJson" data-name-prefix="@namePrefix" data-text="@JsonSerializer.Serialize(text)">
+    <div class="d-flex justify-content-end mb-3">
+        <div class="dropdown">
+            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa-solid fa-plus"></i> @T["Add price"]
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                @foreach (var meter in meters)
                 {
-                    <div class="alert alert-danger py-2">
-                        @foreach (var error in priceErrors)
-                        {
-                            <div>@error</div>
-                        }
-                    </div>
+                    <li><button type="button" class="dropdown-item" data-price-add="@meter.Name">@T[meter.DisplayName]</button></li>
                 }
-
-                <div class="mb-3">
-                    <label asp-for="Currency" class="form-label">@T["Currency"]</label>
-                    <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" data-price-currency-input />
-                    <span class="hint">@T["The currency the prices below are in, such as USD."]</span>
-                </div>
-
-                <div data-price-rows></div>
-
-                <div class="text-muted small fst-italic" data-price-empty>
-                    @T["No prices. Usage of this deployment is reported without a cost."]
-                </div>
-            </div>
+            </ul>
         </div>
+    </div>
+
+    <p class="text-muted small">
+        @T["Optional. What this deployment costs with its provider, used to estimate the cost of its usage in the AI usage reports. Add one price per billed unit; a model billed per request and per token gets one of each. Cached, cache-write, audio, and image tokens are taken out of the input and output tokens when they have their own price. Use the sliders button for long-context prices and billing increments."]
+    </p>
+
+    @if (priceErrors.Count > 0)
+    {
+        <div class="alert alert-danger py-2">
+            @foreach (var error in priceErrors)
+            {
+                <div>@error</div>
+            }
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+        <div class="ocat-end">
+            <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" data-price-currency-input />
+            <span class="hint">@T["The currency the prices below are in, such as USD."]</span>
+        </div>
+    </div>
+
+    <div data-price-rows></div>
+
+    <div class="text-muted small fst-italic" data-price-empty>
+        @T["No prices. Usage of this deployment is reported without a cost."]
     </div>
 </div>
 

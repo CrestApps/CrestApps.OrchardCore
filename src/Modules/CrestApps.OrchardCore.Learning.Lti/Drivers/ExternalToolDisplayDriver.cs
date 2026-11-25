@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
 using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Lti.Services;
 using CrestApps.OrchardCore.Learning.Lti.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -18,12 +19,16 @@ internal sealed class ExternalToolDisplayDriver : DisplayDriver<ExternalTool>
     private readonly ExternalToolClients _clients;
     private readonly ILtiPlatform _platform;
 
+    internal readonly IStringLocalizer S;
+
     public ExternalToolDisplayDriver(
         ExternalToolClients clients,
-        ILtiPlatform platform)
+        ILtiPlatform platform,
+        IStringLocalizer<ExternalToolDisplayDriver> stringLocalizer)
     {
         _clients = clients;
         _platform = platform;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(ExternalTool tool, BuildDisplayContext context)
@@ -50,34 +55,22 @@ internal sealed class ExternalToolDisplayDriver : DisplayDriver<ExternalTool>
     }
 
     public override IDisplayResult Edit(ExternalTool tool, BuildEditorContext context)
-        => Initialize<ExternalToolViewModel>("ExternalToolFields_Edit", async model =>
-        {
-            var (redirectUris, keySet) = await _clients.ReadAsync(tool.ClientId);
-            var platform = await _platform.GetAsync();
+    {
+        // The cards share one read of the tool's OpenID application and of the platform details.
+        var source = new Lazy<Task<ExternalToolViewModel>>(() => BuildAsync(tool, context.IsNew));
 
-            model.IsNew = context.IsNew;
-            model.Name = tool.Name;
-            model.Description = tool.Description;
-            model.ClientId = tool.ClientId;
-            model.DeploymentId = string.IsNullOrEmpty(tool.DeploymentId) && context.IsNew ? IdGenerator.GenerateId() : tool.DeploymentId;
-            model.LoginInitiationUrl = tool.LoginInitiationUrl;
-            model.TargetLinkUri = tool.TargetLinkUri;
-            model.DeepLinkingUrl = tool.DeepLinkingUrl;
-            model.JwksUrl = tool.JwksUrl;
-            model.KeySet = string.IsNullOrWhiteSpace(tool.JwksUrl) ? keySet : null;
-            model.RedirectUris = string.Join(Environment.NewLine, redirectUris);
-            model.CustomParameters = tool.CustomParameters;
-            model.PrivacyLevel = tool.PrivacyLevel;
-            model.AllowNamesAndRoles = tool.AllowNamesAndRoles;
-            model.AllowGrades = tool.AllowGrades;
-            model.Enabled = context.IsNew || tool.Enabled;
-            model.Issuer = platform.Issuer;
-            model.AuthorizationEndpoint = platform.AuthorizationEndpoint;
-            model.TokenEndpoint = platform.TokenEndpoint;
-            model.PlatformJwksUrl = platform.JwksUrl;
-            model.DeepLinkingReturnUrl = platform.DeepLinkingReturnUrl;
-            model.SupportedVariables = LtiCustomParameters.SupportedVariables;
-        }).Location("Content:1");
+        return Combine(
+            Initialize<ExternalToolViewModel>("ExternalToolFields_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Tool"], "10")),
+            Initialize<ExternalToolViewModel>("ExternalToolClient_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Client"], "20")),
+            Initialize<ExternalToolViewModel>("ExternalToolLaunch_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "3").Card(S["Launch"], "30")),
+            Initialize<ExternalToolViewModel>("ExternalToolPrivacy_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "4").Card(S["Privacy and Services"], "40")),
+            Initialize<ExternalToolViewModel>("ExternalToolPlatform_Edit", async model => Populate(await source.Value, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Platform Details"], "50")));
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ExternalTool tool, UpdateEditorContext context)
     {
@@ -109,6 +102,64 @@ internal sealed class ExternalToolDisplayDriver : DisplayDriver<ExternalTool>
         _clients.SetPending(tool, redirectUris, model.KeySet);
 
         return Edit(tool, context);
+    }
+
+    private async Task<ExternalToolViewModel> BuildAsync(ExternalTool tool, bool isNew)
+    {
+        var model = new ExternalToolViewModel();
+        var (redirectUris, keySet) = await _clients.ReadAsync(tool.ClientId);
+        var platform = await _platform.GetAsync();
+
+        model.IsNew = isNew;
+        model.Name = tool.Name;
+        model.Description = tool.Description;
+        model.ClientId = tool.ClientId;
+        model.DeploymentId = string.IsNullOrEmpty(tool.DeploymentId) && isNew ? IdGenerator.GenerateId() : tool.DeploymentId;
+        model.LoginInitiationUrl = tool.LoginInitiationUrl;
+        model.TargetLinkUri = tool.TargetLinkUri;
+        model.DeepLinkingUrl = tool.DeepLinkingUrl;
+        model.JwksUrl = tool.JwksUrl;
+        model.KeySet = string.IsNullOrWhiteSpace(tool.JwksUrl) ? keySet : null;
+        model.RedirectUris = string.Join(Environment.NewLine, redirectUris);
+        model.CustomParameters = tool.CustomParameters;
+        model.PrivacyLevel = tool.PrivacyLevel;
+        model.AllowNamesAndRoles = tool.AllowNamesAndRoles;
+        model.AllowGrades = tool.AllowGrades;
+        model.Enabled = isNew || tool.Enabled;
+        model.Issuer = platform.Issuer;
+        model.AuthorizationEndpoint = platform.AuthorizationEndpoint;
+        model.TokenEndpoint = platform.TokenEndpoint;
+        model.PlatformJwksUrl = platform.JwksUrl;
+        model.DeepLinkingReturnUrl = platform.DeepLinkingReturnUrl;
+        model.SupportedVariables = LtiCustomParameters.SupportedVariables;
+
+        return model;
+    }
+
+    private static void Populate(ExternalToolViewModel source, ExternalToolViewModel model)
+    {
+        model.IsNew = source.IsNew;
+        model.Name = source.Name;
+        model.Description = source.Description;
+        model.ClientId = source.ClientId;
+        model.DeploymentId = source.DeploymentId;
+        model.LoginInitiationUrl = source.LoginInitiationUrl;
+        model.TargetLinkUri = source.TargetLinkUri;
+        model.DeepLinkingUrl = source.DeepLinkingUrl;
+        model.JwksUrl = source.JwksUrl;
+        model.KeySet = source.KeySet;
+        model.RedirectUris = source.RedirectUris;
+        model.CustomParameters = source.CustomParameters;
+        model.PrivacyLevel = source.PrivacyLevel;
+        model.AllowNamesAndRoles = source.AllowNamesAndRoles;
+        model.AllowGrades = source.AllowGrades;
+        model.Enabled = source.Enabled;
+        model.Issuer = source.Issuer;
+        model.AuthorizationEndpoint = source.AuthorizationEndpoint;
+        model.TokenEndpoint = source.TokenEndpoint;
+        model.PlatformJwksUrl = source.PlatformJwksUrl;
+        model.DeepLinkingReturnUrl = source.DeepLinkingReturnUrl;
+        model.SupportedVariables = source.SupportedVariables;
     }
 
     private static string Clean(string value)

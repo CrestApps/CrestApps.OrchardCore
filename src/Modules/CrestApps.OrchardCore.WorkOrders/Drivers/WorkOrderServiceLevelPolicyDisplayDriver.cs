@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -21,6 +22,13 @@ internal sealed class WorkOrderServiceLevelPolicyDisplayDriver : DisplayDriver<S
         WorkOrderStatus.OnHold,
     ];
 
+    internal readonly IStringLocalizer S;
+
+    public WorkOrderServiceLevelPolicyDisplayDriver(IStringLocalizer<WorkOrderServiceLevelPolicyDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(ServiceLevelPolicy policy, BuildEditorContext context)
     {
         if (!IsForWorkOrders(policy))
@@ -36,7 +44,7 @@ internal sealed class WorkOrderServiceLevelPolicyDisplayDriver : DisplayDriver<S
 
             model.Statuses = [.. _pausable];
             model.PauseStatuses = [.. settings.PauseStatuses];
-        }).Location("Content:5%Work orders;5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Work Orders"], "5"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ServiceLevelPolicy policy, UpdateEditorContext context)

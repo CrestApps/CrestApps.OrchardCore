@@ -50,7 +50,7 @@ public sealed class ExchangeRateSettingsDisplayDriver : SiteDisplayDriver<Exchan
             model.Currencies = string.Join(", ", settings.Currencies ?? []);
             model.ProviderName = settings.ProviderName;
             model.Providers = [.. _providers.Select(provider => new SelectListItem(provider.DisplayName, provider.Name))];
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Exchange Rates"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ExchangeRatesPermissions.ManageExchangeRates))
         .OnGroup(SettingsGroupId);
 

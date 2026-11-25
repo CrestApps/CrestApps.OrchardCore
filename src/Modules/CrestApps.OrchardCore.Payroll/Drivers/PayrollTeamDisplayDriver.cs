@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Teams.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -18,10 +19,16 @@ internal sealed class PayrollTeamDisplayDriver : DisplayDriver<Team>
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    public PayrollTeamDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    internal readonly IStringLocalizer S;
+
+    public PayrollTeamDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<PayrollTeamDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(Team team, BuildEditorContext context)
@@ -31,7 +38,7 @@ internal sealed class PayrollTeamDisplayDriver : DisplayDriver<Team>
 
             model.LedgerCode = settings.LedgerCode;
             model.Jurisdictions = string.Join(", ", settings.Jurisdictions);
-        }).Location("Content:8")
+        }).Location(l => l.Zone("Content", "8").Card(S["Payroll"], "80"))
         .RenderWhen(() => CanManageAsync());
 
     public override async Task<IDisplayResult> UpdateAsync(Team team, UpdateEditorContext context)

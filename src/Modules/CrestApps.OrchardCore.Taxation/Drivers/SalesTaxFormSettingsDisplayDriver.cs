@@ -1,17 +1,25 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Taxation.Drivers;
 
 /// <summary>
-/// With Tax Returns: the Sales tax return card of the tax form editor, for a form whose source is sales tax returns:
+/// With Tax Returns: the Sales Tax Return card of the tax form editor, for a form whose source is sales tax returns:
 /// which of its fields is the amount the return says is due.
 /// </summary>
 internal sealed class SalesTaxFormSettingsDisplayDriver : DisplayDriver<TaxForm>
 {
+    internal readonly IStringLocalizer S;
+
+    public SalesTaxFormSettingsDisplayDriver(IStringLocalizer<SalesTaxFormSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(TaxForm form, BuildEditorContext context)
         => Initialize<SalesTaxFormSettingsViewModel>("SalesTaxFormSettings_Edit", model =>
         {
@@ -19,7 +27,7 @@ internal sealed class SalesTaxFormSettingsDisplayDriver : DisplayDriver<TaxForm>
             model.FilingFields = [.. form.Fields
                 .Where(field => field.Level == TaxFormFieldLevel.Filing && !string.IsNullOrWhiteSpace(field.Number))
                 .Select(field => field.Number)];
-        }).Location("Content:2")
+        }).Location(l => l.Zone("Content", "2").Card(S["Sales Tax Return"], "70"))
         .RenderWhen(() => Task.FromResult(IsSalesTax(form.Source)));
 
     public override async Task<IDisplayResult> UpdateAsync(TaxForm form, UpdateEditorContext context)

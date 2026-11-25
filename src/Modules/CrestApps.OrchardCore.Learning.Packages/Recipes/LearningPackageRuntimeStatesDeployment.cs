@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -130,13 +131,20 @@ internal sealed class LearningPackageRuntimeStatesDeploymentSource : DeploymentS
 
 internal sealed class LearningPackageRuntimeStatesDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, LearningPackageRuntimeStatesDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public LearningPackageRuntimeStatesDeploymentStepDisplayDriver(IStringLocalizer<LearningPackageRuntimeStatesDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(LearningPackageRuntimeStatesDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("LearningPackageRuntimeStatesDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("LearningPackageRuntimeStatesDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(LearningPackageRuntimeStatesDeploymentStep step, BuildEditorContext context)
-        => View("LearningPackageRuntimeStatesDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("LearningPackageRuntimeStatesDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Runtime States"], "10"));
 }
 
 internal sealed class LearningPackageRuntimeStatesDeploymentStepSchema : DeploymentStepSchemaDefinitionBase

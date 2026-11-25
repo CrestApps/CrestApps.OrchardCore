@@ -1,0 +1,20 @@
+@model StaffEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="JobTitle" class="ocat-label">@T["Job title"]</label><div class="ocat-end"><input asp-for="JobTitle" class="form-control" /></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="ManagerId" class="ocat-label">@T["Manager"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.ManagerId).ToString(), selectedValues = new[] { Model.ManagerId }, excludeId = Model.StaffMemberId, buttonText = T["Choose a manager"].Value })
+        <span class="hint">@T["The person they report to. Managers can see and change the people who report to them."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper"><label asp-for="EmploymentType" class="ocat-label">@T["Employment"]</label><div class="ocat-end"><select asp-for="EmploymentType" asp-items="Model.EmploymentTypeOptions" class="form-select" style="max-width: 18rem"></select></div></div>
+<div class="ocat-wrapper"><label asp-for="Status" class="ocat-label">@T["Status"]</label><div class="ocat-end"><select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" style="max-width: 18rem"></select><span class="hint">@T["Only active people are scheduled and assigned work. Terminating someone signs them out of the modules that use staff."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="HireDate" class="ocat-label">@T["Hire date"]</label><div class="ocat-end"><input asp-for="HireDate" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+<div class="ocat-wrapper"><label asp-for="SeniorityDate" class="ocat-label">@T["Seniority date"]</label><div class="ocat-end"><input asp-for="SeniorityDate" type="date" class="form-control" style="max-width: 12rem" /><span class="hint">@T["When seniority counts from, if not the hire date."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="TerminationDate" class="ocat-label">@T["Last day worked"]</label><div class="ocat-end"><input asp-for="TerminationDate" type="date" class="form-control" style="max-width: 12rem" /><span class="hint">@T["They are terminated the day after, on their own."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="ContractedHoursPerWeek" class="ocat-label">@T["Contracted hours a week"]</label><div class="ocat-end"><input asp-for="ContractedHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+@if (Model.CanSeeSensitive)
+{
+    <div class="ocat-wrapper"><label asp-for="DateOfBirth" class="ocat-label">@T["Date of birth"]</label><div class="ocat-end"><input asp-for="DateOfBirth" type="date" class="form-control" style="max-width: 12rem" /><span class="hint">@T["Sensitive. Only used for the rules about young workers."]</span></div></div>
+}

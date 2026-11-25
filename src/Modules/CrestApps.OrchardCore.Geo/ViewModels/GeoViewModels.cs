@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Geo.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Geo.ViewModels;
 
@@ -265,6 +266,12 @@ public class TerritoryEditViewModel
     /// </summary>
     [BindNever]
     public IList<TerritoryMemberGroup> MemberGroups { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, the fields of the territory in their cards, built by the display drivers.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

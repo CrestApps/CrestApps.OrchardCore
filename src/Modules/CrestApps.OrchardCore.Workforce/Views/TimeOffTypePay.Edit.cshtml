@@ -1,0 +1,4 @@
+@model TimeOffTypeEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="PayCode" class="ocat-label">@T["Pay code"]</label><div class="ocat-end"><input asp-for="PayCode" class="form-control" style="max-width: 12rem" /><span class="hint">@T["Optional. The code payroll pays this time off under."]</span></div></div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="IsPaid" class="form-check-input" /><label asp-for="IsPaid" class="form-check-label">@T["Paid"]</label><span class="hint dashed">@T["Paid time off is counted as paid hours."]</span></div></div></div>

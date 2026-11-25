@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 
@@ -145,6 +146,12 @@ public class ParentPolicyEditViewModel
     /// </summary>
     [BindNever]
     public List<SelectListItem> DatabasePools { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of the view model: one card per section.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 
     /// <summary>
     /// Builds a policy from the model.

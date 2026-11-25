@@ -1,52 +1,47 @@
 @model PayProfileDistributionViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Net pay"]</div>
-    <div class="card-body">
-        <p class="hint">@T["How net pay is paid, in order: a deposit to one of the person's bank accounts or a check, for an amount, a percent, or what is left. The last row takes what is left. Leave a row empty to drop it."]</p>
-        <span asp-validation-for="Rows" class="text-danger"></span>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle">
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Paid by"]</th>
-                        <th scope="col">@T["Bank account"]</th>
-                        <th scope="col">@T["Takes"]</th>
-                        <th scope="col">@T["Amount or %"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (var i = 0; i < Model.Rows.Count; i++)
-                    {
-                        <tr>
-                            <td>
-                                <select asp-for="Rows[i].Method" class="form-select form-select-sm" aria-label="@T["Paid by"]">
-                                    <option value="">@T["(none)"]</option>
-                                    <option value="BankAccount">@T["Deposit"]</option>
-                                    <option value="Check">@T["Check"]</option>
-                                </select>
-                            </td>
-                            <td>
-                                <select asp-for="Rows[i].BankAccountId" asp-items="Model.BankAccounts.Select(account => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(account.Text, account.Value, account.Value == Model.Rows[i].BankAccountId))" class="form-select form-select-sm" aria-label="@T["Bank account"]">
-                                    <option value="">@T["—"]</option>
-                                </select>
-                            </td>
-                            <td>
-                                <select asp-for="Rows[i].Split" class="form-select form-select-sm" aria-label="@T["Takes"]">
-                                    <option value="Remainder">@T["What is left"]</option>
-                                    <option value="Amount">@T["An amount"]</option>
-                                    <option value="Percent">@T["A percent"]</option>
-                                </select>
-                            </td>
-                            <td><input asp-for="Rows[i].Value" class="form-control form-control-sm" inputmode="decimal" style="max-width: 8rem" aria-label="@T["Amount or %"]" /></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        @if (Model.BankAccounts.Count == 0)
-        {
-            <p class="hint">@T["The person has no bank account yet: add one under Banking with the staff member as its owner."]</p>
-        }
-    </div>
+<p class="hint">@T["How net pay is paid, in order: a deposit to one of the person's bank accounts or a check, for an amount, a percent, or what is left. The last row takes what is left. Leave a row empty to drop it."]</p>
+<span asp-validation-for="Rows" class="text-danger"></span>
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["Paid by"]</th>
+                <th scope="col">@T["Bank account"]</th>
+                <th scope="col">@T["Takes"]</th>
+                <th scope="col">@T["Amount or %"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (var i = 0; i < Model.Rows.Count; i++)
+            {
+                <tr>
+                    <td>
+                        <select asp-for="Rows[i].Method" class="form-select form-select-sm" aria-label="@T["Paid by"]">
+                            <option value="">@T["(none)"]</option>
+                            <option value="BankAccount">@T["Deposit"]</option>
+                            <option value="Check">@T["Check"]</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select asp-for="Rows[i].BankAccountId" asp-items="Model.BankAccounts.Select(account => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(account.Text, account.Value, account.Value == Model.Rows[i].BankAccountId))" class="form-select form-select-sm" aria-label="@T["Bank account"]">
+                            <option value="">@T["—"]</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select asp-for="Rows[i].Split" class="form-select form-select-sm" aria-label="@T["Takes"]">
+                            <option value="Remainder">@T["What is left"]</option>
+                            <option value="Amount">@T["An amount"]</option>
+                            <option value="Percent">@T["A percent"]</option>
+                        </select>
+                    </td>
+                    <td><input asp-for="Rows[i].Value" class="form-control form-control-sm" inputmode="decimal" style="max-width: 8rem" aria-label="@T["Amount or %"]" /></td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>
+@if (Model.BankAccounts.Count == 0)
+{
+    <p class="hint">@T["The person has no bank account yet: add one under Banking with the staff member as its owner."]</p>
+}

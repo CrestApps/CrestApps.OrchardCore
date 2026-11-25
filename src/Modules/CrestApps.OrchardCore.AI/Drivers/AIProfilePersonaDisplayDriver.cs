@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -14,13 +15,19 @@ internal sealed class AIProfilePersonaDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIPersonaManager _personaManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfilePersonaDisplayDriver"/> class.
     /// </summary>
     /// <param name="personaManager">The persona manager, which lists the personas to pick from.</param>
-    public AIProfilePersonaDisplayDriver(IAIPersonaManager personaManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfilePersonaDisplayDriver(
+        IAIPersonaManager personaManager,
+        IStringLocalizer<AIProfilePersonaDisplayDriver> stringLocalizer)
     {
         _personaManager = personaManager;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -28,7 +35,7 @@ internal sealed class AIProfilePersonaDisplayDriver : DisplayDriver<AIProfile>
     {
         // Above the system instructions: the persona says who the assistant is before they say what it does.
         return Initialize<AIPersonaPickerViewModel>("AIPersonaPicker_Edit", model => _personaManager.PopulatePersonaPickerAsync(model, profile))
-            .Location("Content:3%Instructions;4");
+            .Location(l => l.Zone("Content", "3").Card(S["Instructions"], "4"));
     }
 
     /// <inheritdoc />

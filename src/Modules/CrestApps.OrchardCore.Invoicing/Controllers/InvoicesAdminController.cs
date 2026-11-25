@@ -52,6 +52,8 @@ public sealed class InvoicesAdminController : Controller
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<Invoice> _displayManager;
+    private readonly IDisplayManager<InvoiceEditViewModel> _editorManager;
+    private readonly IDisplayManager<InvoiceSendViewModel> _sendEditorManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ISession _session;
     private readonly INotifier _notifier;
@@ -69,6 +71,8 @@ public sealed class InvoicesAdminController : Controller
         ISiteService siteService,
         IAuthorizationService authorizationService,
         IDisplayManager<Invoice> displayManager,
+        IDisplayManager<InvoiceEditViewModel> editorManager,
+        IDisplayManager<InvoiceSendViewModel> sendEditorManager,
         IUpdateModelAccessor updateModelAccessor,
         ISession session,
         INotifier notifier,
@@ -84,6 +88,8 @@ public sealed class InvoicesAdminController : Controller
         _siteService = siteService;
         _authorizationService = authorizationService;
         _displayManager = displayManager;
+        _editorManager = editorManager;
+        _sendEditorManager = sendEditorManager;
         _updateModelAccessor = updateModelAccessor;
         _session = session;
         _notifier = notifier;
@@ -383,6 +389,8 @@ public sealed class InvoicesAdminController : Controller
             return Forbid();
         }
 
+        model.Editor = await _sendEditorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         var invoice = await FindAsync(model.ItemId);
 
         if (invoice is null)
@@ -589,6 +597,8 @@ public sealed class InvoicesAdminController : Controller
             return Forbid();
         }
 
+        model.Editor = await _editorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
+
         InvoiceDraftEditor.Apply(model, invoice);
 
         if (!string.IsNullOrEmpty(invoice.Currency) && invoice.Currency.Length != 3)
@@ -674,6 +684,8 @@ public sealed class InvoicesAdminController : Controller
             model.BillToName = await _parties.GetNameAsync(party) ?? model.BillTo;
         }
 
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(model.ItemId));
+
         return model;
     }
 
@@ -707,6 +719,7 @@ public sealed class InvoicesAdminController : Controller
         model.Number = invoice.Number;
         model.CanSend = emailSender.CanSend;
         model.IssuesFirst = invoice.Status == InvoiceStatus.Draft && (await GetSettingsAsync()).IssueOnSend;
+        model.Editor = await _sendEditorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return model;
     }

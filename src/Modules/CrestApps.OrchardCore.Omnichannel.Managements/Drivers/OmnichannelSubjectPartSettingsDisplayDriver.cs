@@ -73,7 +73,7 @@ internal sealed class OmnichannelSubjectPartSettingsDisplayDriver : ContentTypeP
             model.Campaigns = (await _campaignCatalog.GetAllAsync())
                 .Select(campaign => new SelectListItem(campaign.DisplayText, campaign.ItemId))
                 .OrderBy(item => item.Text);
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Settings"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

@@ -1,0 +1,19 @@
+@model TicketCreateViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Body" class="ocat-label">@T["What it is about"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Body" class="form-control" rows="6"></textarea>
+        <span class="hint">@T["The first message of the ticket, as the requester would write it. The requester sees it."]</span>
+    </div>
+</div>
+
+@if (Model.CanAttach)
+{
+    <div class="ocat-wrapper">
+        <label for="ticket-files" class="ocat-label">@T["Files"]</label>
+        <div class="ocat-end">
+            @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "ticket-files", Target: "form"))
+        </div>
+    </div>
+}

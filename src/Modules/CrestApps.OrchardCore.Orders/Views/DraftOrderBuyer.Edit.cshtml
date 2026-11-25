@@ -1,0 +1,16 @@
+@model DraftOrderEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="CustomerEmail">
+    <label asp-for="CustomerEmail" class="ocat-label ocat-label-required">@T["Email"]</label>
+    <div class="ocat-end">
+        <input asp-for="CustomerEmail" type="email" class="form-control" autocomplete="off" required />
+        <span class="hint">@T["The invoice goes here. Someone with an account under this email gets their own prices and sees the order in their account."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CustomerName">
+    <label asp-for="CustomerName" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="CustomerName" class="form-control" autocomplete="off" />
+    </div>
+</div>

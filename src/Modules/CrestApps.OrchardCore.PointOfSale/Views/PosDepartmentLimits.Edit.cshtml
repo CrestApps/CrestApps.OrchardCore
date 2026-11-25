@@ -1,0 +1,28 @@
+@model PosDepartmentEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Color">
+    <label asp-for="Color" class="ocat-label">@T["Key color"]</label>
+    <div class="ocat-limited">
+        <div class="input-group">
+            <input type="color" class="form-control form-control-color" id="department-color-picker" value="@(Model.Color ?? "#6C757D")" aria-label="@T["Pick a color"]" />
+            <input asp-for="Color" class="form-control" maxlength="7" placeholder="#6C757D" />
+        </div>
+        <span class="hint">@T["The color of its key on the register; blank shows a plain key."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumAmount">
+    <label asp-for="MinimumAmount" class="ocat-label">@T["Least amount"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumAmount" type="number" min="0.01" step="0.01" class="form-control" />
+        <span class="hint">@T["The least one ring-up can be; blank allows any amount."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaximumAmount">
+    <label asp-for="MaximumAmount" class="ocat-label">@T["Most amount"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaximumAmount" type="number" min="0.01" step="0.01" class="form-control" />
+        <span class="hint">@T["The most one ring-up can be, so a mistyped amount such as 1000.00 for 10.00 is caught; blank has no limit."]</span>
+    </div>
+</div>

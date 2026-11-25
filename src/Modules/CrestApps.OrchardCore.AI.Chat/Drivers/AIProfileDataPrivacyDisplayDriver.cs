@@ -43,7 +43,7 @@ public sealed class AIProfileDataPrivacyDisplayDriver : DisplayDriver<AIProfile>
             model.StorageMode = settings.StorageMode;
             model.RetentionDays = settings.RetentionDays;
             model.NamesToKeep = string.Join(Environment.NewLine, settings.NamesToKeep ?? []);
-        }).Location("Content:20#Data Processing & Metrics;12");
+        }).Location(l => l.Zone("Content", "20").Tab(S["Data Processing & Metrics"], "12").Card(S["Privacy"], "20"));
     }
 
     /// <inheritdoc/>

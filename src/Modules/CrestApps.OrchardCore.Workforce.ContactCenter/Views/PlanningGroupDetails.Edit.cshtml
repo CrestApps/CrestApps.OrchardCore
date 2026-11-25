@@ -1,0 +1,37 @@
+@model PlanningGroupEditViewModel
+@using CrestApps.OrchardCore.ContactCenter.Models
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" required />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="QueueIds" class="ocat-label">@T["Queues"]</label>
+    <div class="ocat-end">
+        <select asp-for="QueueIds" asp-items="Model.QueueOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+        <span class="hint">@T["Their work is forecast together, from their interval statistics."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+    <div class="ocat-end">
+        <select asp-for="Channel" class="form-select">
+            <option value="">@T["Every channel"]</option>
+            @foreach (var channel in Enum.GetValues<InteractionChannel>())
+            {
+                <option value="@channel" selected="@(Model.Channel == channel.ToString())">@channel</option>
+            }
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="TeamId" class="ocat-label">@T["Team that staffs it"]</label>
+    <div class="ocat-end">
+        <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select">
+            <option value="">@T["Choose a team"]</option>
+        </select>
+        <span class="hint">@T["The active forecast becomes this team's coverage, in its time zone."]</span>
+    </div>
+</div>

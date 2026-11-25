@@ -48,21 +48,19 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         => PayrollConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, PayrollSettings settings, BuildEditorContext context)
-        => Initialize<PayrollSettingsViewModel>("PayrollSettings_Edit", model =>
-        {
-            model.AllowPreparerToApprove = settings.AllowPreparerToApprove;
-            model.AllowChangingOwnPay = settings.AllowChangingOwnPay;
-            model.EmployeeReview = settings.EmployeeReview;
-            model.DefaultCountryPack = settings.DefaultCountryPack;
-            model.DefaultCurrency = settings.DefaultCurrency;
-            model.TaxProvider = settings.TaxProvider;
-            model.MinimumNetPay = settings.MinimumNetPay == 0 ? null : settings.MinimumNetPay.ToString("0.##", CultureInfo.InvariantCulture);
-            model.MinimumHourlyWage = settings.MinimumHourlyWage?.ToString("0.####", CultureInfo.InvariantCulture);
-            model.MaximumTipCredit = settings.MaximumTipCredit?.ToString("0.####", CultureInfo.InvariantCulture);
-            model.TaxProviders = [.. _taxProviders.Select(provider => new SelectListItem(_localizerFactory.Localize(provider.DisplayName).Value, provider.Name, provider.Name == settings.TaxProvider))];
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
-        .OnGroup(SettingsGroupId);
+        => Combine(
+            Initialize<PayrollSettingsViewModel>("PayrollSettings_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Separation of Duties"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<PayrollSettingsViewModel>("PayrollSettingsCalculation_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Calculation"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<PayrollSettingsViewModel>("PayrollSettingsNewEmployer_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "1").Card(S["New Employers"], "30"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
+                .OnGroup(SettingsGroupId));
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, PayrollSettings settings, UpdateEditorContext context)
     {
@@ -104,6 +102,20 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         settings.MaximumTipCredit = Amount(model.MaximumTipCredit, nameof(model.MaximumTipCredit), context);
 
         return Edit(site, settings, context);
+    }
+
+    private void Populate(PayrollSettings settings, PayrollSettingsViewModel model)
+    {
+        model.AllowPreparerToApprove = settings.AllowPreparerToApprove;
+        model.AllowChangingOwnPay = settings.AllowChangingOwnPay;
+        model.EmployeeReview = settings.EmployeeReview;
+        model.DefaultCountryPack = settings.DefaultCountryPack;
+        model.DefaultCurrency = settings.DefaultCurrency;
+        model.TaxProvider = settings.TaxProvider;
+        model.MinimumNetPay = settings.MinimumNetPay == 0 ? null : settings.MinimumNetPay.ToString("0.##", CultureInfo.InvariantCulture);
+        model.MinimumHourlyWage = settings.MinimumHourlyWage?.ToString("0.####", CultureInfo.InvariantCulture);
+        model.MaximumTipCredit = settings.MaximumTipCredit?.ToString("0.####", CultureInfo.InvariantCulture);
+        model.TaxProviders = [.. _taxProviders.Select(provider => new SelectListItem(_localizerFactory.Localize(provider.DisplayName).Value, provider.Name, provider.Name == settings.TaxProvider))];
     }
 
     private decimal? Amount(string text, string field, UpdateEditorContext context)

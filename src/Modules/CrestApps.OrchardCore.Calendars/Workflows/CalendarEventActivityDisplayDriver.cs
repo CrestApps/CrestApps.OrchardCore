@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Calendars.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Localization;
 using OrchardCore.Workflows.Display;
 
@@ -17,21 +19,31 @@ public sealed class CalendarEventActivityDisplayDriver<TActivity> : ActivityDisp
     private readonly ICalendarTypeManager _typeManager;
     private readonly IStringLocalizerFactory _localizerFactory;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CalendarEventActivityDisplayDriver{TActivity}"/> class.
     /// </summary>
     /// <param name="calendarService">The calendar service.</param>
     /// <param name="typeManager">The calendar type manager.</param>
     /// <param name="localizerFactory">The localizer factory.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public CalendarEventActivityDisplayDriver(
         ICalendarService calendarService,
         ICalendarTypeManager typeManager,
-        IStringLocalizerFactory localizerFactory)
+        IStringLocalizerFactory localizerFactory,
+        IStringLocalizer<CalendarEventActivityDisplayDriver<TActivity>> stringLocalizer)
     {
         _calendarService = calendarService;
         _typeManager = typeManager;
         _localizerFactory = localizerFactory;
+        S = stringLocalizer;
     }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<CalendarEventActivityViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override async ValueTask EditActivityAsync(TActivity activity, CalendarEventActivityViewModel model)

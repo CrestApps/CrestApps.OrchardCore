@@ -1,0 +1,200 @@
+@using System.Text.Json
+@model TelnyxSettingsViewModel
+
+<div data-telnyx-connect
+     data-connect-url="@Url.RouteUrl("TelnyxConnect")"
+     data-disconnect-url="@Url.RouteUrl("TelnyxConnectDisconnect")">
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info mb-0" role="alert">
+                <h6 class="alert-heading">@T["Connect to Telnyx in a few clicks"]</h6>
+                <ol class="mb-2">
+                    <li>@T["Create an"] <a href="https://portal.telnyx.com/#/app/api-keys" target="_blank" rel="noopener">@T["API key (V2)"]</a> @T["in the Telnyx portal under Account → Keys & Credentials → API Keys, and paste it into API key below."] <strong>@T["Sign in as an account Owner or Admin when you create it — a restricted member's key can read your account but cannot create the resources Connect needs."]</strong></li>
+                    <li>@T["Save these settings."]</li>
+                    <li>@T["Click Connect Telnyx — the app uses the API key to create the Call Control application, the SIP connection, the outbound voice profile, and the webhook automatically."]</li>
+                    <li>@T["Paste the Ed25519 Webhook public key (same Keys & Credentials page) so inbound call events can be verified."]</li>
+                </ol>
+                <p class="mb-0">@T["Full walkthrough:"] <a href="https://orchardcore.crestapps.com/telephony/telnyx#getting-your-telnyx-credentials" target="_blank" rel="noopener">@T["Telnyx documentation"]</a>.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="IsEnabled" />
+                <label class="form-check-label" asp-for="IsEnabled">@T["Enable Telnyx provider"]</label>
+                <span class="hint dashed">@T["Turns the provider on and makes it selectable as the default telephony provider."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="ApiKey">
+        <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+        <div class="ocat-end">
+            <input type="password" class="form-control" asp-for="ApiKey" autocomplete="new-password" placeholder="@(Model.HasApiKey ? T["A key is already stored. Enter a new value to replace it."].Value : T["Enter the Telnyx API key."].Value)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+            <span asp-validation-for="ApiKey" class="text-danger"></span>
+            <span class="hint">@T["Telnyx portal → Account → Keys & Credentials → API Keys → Create API key (V2). Stored encrypted; leave blank to keep the stored value."]</span>
+        </div>
+    </div>
+
+    @if (!Model.IsConnected)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-secondary mb-0" role="alert">
+                    <h6 class="alert-heading">@T["Connect Telnyx"]</h6>
+                    @if (Model.HasApiKey)
+                    {
+                        <p>@T["Your API key is saved. Click Connect and the app will provision and configure everything it needs. The remaining options appear once you are connected."]</p>
+                        <button type="button" class="btn btn-primary" data-telnyx-connect-button>@T["Connect Telnyx"]</button>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">@T["Enter your API key above and click Save. The Connect Telnyx button appears once the key is stored."]</p>
+                    }
+                    <span class="d-block mt-2" data-telnyx-connect-status aria-live="polite"></span>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-success d-flex justify-content-between align-items-start mb-0" role="alert">
+                    <div>
+                        <h6 class="alert-heading">@T["Connected to Telnyx"]</h6>
+                        <div class="small">
+                            <div><strong>@T["Call Control connection id:"]</strong> <code>@Model.ConnectionId</code></div>
+                            <div><strong>@T["SIP connection id:"]</strong> <code>@Model.SipConnectionId</code></div>
+                            @if (!string.IsNullOrWhiteSpace(Model.OutboundVoiceProfileId))
+                            {
+                                <div><strong>@T["Outbound voice profile id:"]</strong> <code>@Model.OutboundVoiceProfileId</code></div>
+                            }
+                        </div>
+                        <span class="d-block mt-2" data-telnyx-connect-status aria-live="polite"></span>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-telnyx-disconnect-button data-confirm-message="@T["Disconnect from Telnyx and delete the provisioned Call Control application, SIP connection, and outbound voice profile?"]">@T["Disconnect"]</button>
+                </div>
+            </div>
+        </div>
+
+        @if (!Model.HasWebhookPublicKey)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="alert alert-warning mb-0" role="alert">
+                        <h6 class="alert-heading">@T["Add the webhook public key to finish setup"]</h6>
+                        <p class="mb-0 small">@T["Until the Webhook public key below is set, Telnyx call events cannot be verified and are all rejected. Calls will not connect, browser audio will not bridge, and inbound routing will not work. Copy it from the Telnyx portal → Account → Keys & Credentials → Public Key, paste it below, and Save."]</p>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<script at="Foot">
+    (function () {
+        var messages = {
+            connecting: @Html.Raw(JsonSerializer.Serialize(T["Connecting to Telnyx and provisioning resources..."].Value)),
+            connectFailed: @Html.Raw(JsonSerializer.Serialize(T["Telnyx connect failed."].Value)),
+            disconnecting: @Html.Raw(JsonSerializer.Serialize(T["Disconnecting from Telnyx..."].Value)),
+            disconnectFailed: @Html.Raw(JsonSerializer.Serialize(T["Telnyx disconnect failed."].Value))
+        };
+
+        var container = document.querySelector('[data-telnyx-connect]');
+
+        if (!container) {
+            return;
+        }
+
+        function status(message, isError) {
+            var el = container.querySelector('[data-telnyx-connect-status]');
+
+            if (!el) {
+                return;
+            }
+
+            el.textContent = message || '';
+            el.classList.toggle('text-danger', !!isError);
+            el.classList.toggle('text-success', !isError && !!message);
+        }
+
+        function token() {
+            var input = document.querySelector('input[name="__RequestVerificationToken"]');
+
+            return input ? input.value : null;
+        }
+
+        function post(url, onFailMessage, inProgressMessage, button) {
+            var verificationToken = token();
+
+            if (!url || !verificationToken) {
+                status(onFailMessage, true);
+
+                return;
+            }
+
+            if (button) {
+                button.disabled = true;
+            }
+
+            status(inProgressMessage, false);
+
+            fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'RequestVerificationToken': verificationToken
+                }
+            })
+                .then(function (response) {
+                    return response.json().catch(function () {
+                        return { message: onFailMessage };
+                    }).then(function (body) {
+                        if (!response.ok || !body.success) {
+                            throw new Error(body.message || onFailMessage);
+                        }
+
+                        return body;
+                    });
+                })
+                .then(function (body) {
+                    status(body.message, false);
+                    window.location.reload();
+                })
+                .catch(function (error) {
+                    status(error.message || onFailMessage, true);
+
+                    if (button) {
+                        button.disabled = false;
+                    }
+                });
+        }
+
+        container.addEventListener('click', function (event) {
+            var connectButton = event.target.closest('[data-telnyx-connect-button]');
+
+            if (connectButton) {
+                post(container.getAttribute('data-connect-url'), messages.connectFailed, messages.connecting, connectButton);
+
+                return;
+            }
+
+            var disconnectButton = event.target.closest('[data-telnyx-disconnect-button]');
+
+            if (disconnectButton) {
+                var confirmMessage = disconnectButton.getAttribute('data-confirm-message');
+
+                if (confirmMessage && !window.confirm(confirmMessage)) {
+                    return;
+                }
+
+                post(container.getAttribute('data-disconnect-url'), messages.disconnectFailed, messages.disconnecting, disconnectButton);
+            }
+        });
+    })();
+</script>

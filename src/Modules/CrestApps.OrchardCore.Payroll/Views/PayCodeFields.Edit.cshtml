@@ -1,67 +1,62 @@
 @model PayCodeViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["The pay code"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="Code">
-            <label asp-for="Code" class="ocat-label ocat-label-required">@T["Code"]</label>
-            <div class="ocat-end">
-                <input asp-for="Code" class="form-control text-uppercase" maxlength="50" style="max-width: 12rem" />
-                <span asp-validation-for="Code" class="text-danger"></span>
-                <span class="hint">@T["Short and unique, such as REG or NIGHT."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
-        <div class="ocat-wrapper">
-            <label asp-for="Class" class="ocat-label">@T["Class"]</label>
-            <div class="ocat-end">
-                <select asp-for="Class" class="form-select" style="max-width: 22rem">
-                    <option value="Earning">@T["Earning"]</option>
-                    <option value="Deduction">@T["Deduction"]</option>
-                    <option value="EmployerContribution">@T["Employer contribution"]</option>
-                    <option value="ImputedIncome">@T["Imputed income (taxed, not paid)"]</option>
-                    <option value="Reimbursement">@T["Reimbursement (paid, not taxed)"]</option>
-                    <option value="Memo">@T["Memo (shown only)"]</option>
-                </select>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Kind" class="ocat-label">@T["Pays for"]</label>
-            <div class="ocat-end">
-                <select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" style="max-width: 22rem"></select>
-                <span class="hint">@T["Worked hours use the codes in use of regular, overtime and double time; holiday and weekend codes replace the regular one on those days."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Multiplier">
-            <label asp-for="Multiplier" class="ocat-label">@T["Multiplier"]</label>
-            <div class="ocat-end">
-                <input asp-for="Multiplier" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="1.5" />
-                <span asp-validation-for="Multiplier" class="text-danger"></span>
-                <span class="hint">@T["What the hourly rate is multiplied by, such as 1.5 for overtime. A dot for decimals."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="PremiumPerHour">
-            <label asp-for="PremiumPerHour" class="ocat-label">@T["Premium an hour"]</label>
-            <div class="ocat-end">
-                <input asp-for="PremiumPerHour" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="2.50" />
-                <span asp-validation-for="PremiumPerHour" class="text-danger"></span>
-                <span class="hint">@T["Paid on top of the hours, such as for a shift differential. Leave empty to pay the rate times the multiplier."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="ExportCode" class="ocat-label">@T["Export code"]</label>
-            <div class="ocat-end">
-                <input asp-for="ExportCode" class="form-control" style="max-width: 12rem" />
-                <span class="hint">@T["The code an outside payroll system knows it by. Empty for the code."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="Enabled" type="checkbox" class="form-check-input" />
-                    <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
-                </div>
-            </div>
+<div class="ocat-wrapper" asp-validation-class-for="Code">
+    <label asp-for="Code" class="ocat-label ocat-label-required">@T["Code"]</label>
+    <div class="ocat-end">
+        <input asp-for="Code" class="form-control text-uppercase" maxlength="50" style="max-width: 12rem" />
+        <span asp-validation-for="Code" class="text-danger"></span>
+        <span class="hint">@T["Short and unique, such as REG or NIGHT."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper"><label asp-for="Name" class="ocat-label">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="Class" class="ocat-label">@T["Class"]</label>
+    <div class="ocat-end">
+        <select asp-for="Class" class="form-select" style="max-width: 22rem">
+            <option value="Earning">@T["Earning"]</option>
+            <option value="Deduction">@T["Deduction"]</option>
+            <option value="EmployerContribution">@T["Employer contribution"]</option>
+            <option value="ImputedIncome">@T["Imputed income (taxed, not paid)"]</option>
+            <option value="Reimbursement">@T["Reimbursement (paid, not taxed)"]</option>
+            <option value="Memo">@T["Memo (shown only)"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Kind" class="ocat-label">@T["Pays for"]</label>
+    <div class="ocat-end">
+        <select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" style="max-width: 22rem"></select>
+        <span class="hint">@T["Worked hours use the codes in use of regular, overtime and double time; holiday and weekend codes replace the regular one on those days."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Multiplier">
+    <label asp-for="Multiplier" class="ocat-label">@T["Multiplier"]</label>
+    <div class="ocat-end">
+        <input asp-for="Multiplier" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="1.5" />
+        <span asp-validation-for="Multiplier" class="text-danger"></span>
+        <span class="hint">@T["What the hourly rate is multiplied by, such as 1.5 for overtime. A dot for decimals."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="PremiumPerHour">
+    <label asp-for="PremiumPerHour" class="ocat-label">@T["Premium an hour"]</label>
+    <div class="ocat-end">
+        <input asp-for="PremiumPerHour" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="2.50" />
+        <span asp-validation-for="PremiumPerHour" class="text-danger"></span>
+        <span class="hint">@T["Paid on top of the hours, such as for a shift differential. Leave empty to pay the rate times the multiplier."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ExportCode" class="ocat-label">@T["Export code"]</label>
+    <div class="ocat-end">
+        <input asp-for="ExportCode" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["The code an outside payroll system knows it by. Empty for the code."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
         </div>
     </div>
 </div>

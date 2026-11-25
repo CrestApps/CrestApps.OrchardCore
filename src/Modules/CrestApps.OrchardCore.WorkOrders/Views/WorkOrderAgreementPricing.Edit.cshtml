@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@model WorkOrderAgreementTermsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Pricing" class="ocat-label">@T["Visits are"]</label>
+    <div class="ocat-end">
+        <select asp-for="Pricing" class="form-select">
+            <option value="@AgreementPricing.Included">@T["Included: their work orders aren't invoiced"]</option>
+            <option value="@AgreementPricing.PerVisit">@T["Invoiced at a price per visit"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="PricePerVisit" class="ocat-label">@T["Price per visit"]</label>
+    <div class="ocat-end">
+        <input asp-for="PricePerVisit" type="number" min="0" step="0.01" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>

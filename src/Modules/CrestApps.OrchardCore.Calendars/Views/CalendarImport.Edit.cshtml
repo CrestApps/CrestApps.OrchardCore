@@ -1,0 +1,9 @@
+@model CalendarFeedViewModel
+
+<div class="ocat-wrapper">
+    <label for="calendar-import-file" class="ocat-label ocat-label-required">@T["File"]</label>
+    <div class="ocat-end">
+        <input id="calendar-import-file" type="file" name="file" accept=".ics,text/calendar" class="form-control" required />
+        <span class="hint">@T["Choose an iCalendar (.ics) file, such as one exported from Google Calendar or Outlook. Events already in the calendar with the same UID are updated instead of added again."]</span>
+    </div>
+</div>

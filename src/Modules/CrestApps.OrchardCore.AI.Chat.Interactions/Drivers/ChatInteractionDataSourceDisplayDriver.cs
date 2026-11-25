@@ -59,7 +59,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.Filter = ragMetadata.Filter;
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Parameters:4#Knowledge;2");
+        }).Location(l => l.Zone("Parameters", "4").Tab(S["Knowledge"], "2").Card(S["Data Source"], "10"));
 
         var retrievalResult = Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSourceRetrieval_Edit", async model =>
         {
@@ -76,7 +76,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.Filter = ragMetadata.Filter;
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Parameters:5#Knowledge;2");
+        }).Location(l => l.Zone("Parameters", "5").Tab(S["Knowledge"], "2").Card(S["Data Source"], "10"));
 
         return Combine(selectorAndBehaviorResult, retrievalResult);
     }

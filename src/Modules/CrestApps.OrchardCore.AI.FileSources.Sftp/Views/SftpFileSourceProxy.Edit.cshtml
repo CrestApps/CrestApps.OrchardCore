@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.AI.FileSources.Sftp.ViewModels
+
+@model SftpFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyType" class="ocat-label">@T["Proxy"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProxyType" class="form-select">
+            <option value="">@T["No proxy"]</option>
+            <option value="Http">@T["HTTP"]</option>
+            <option value="Socks4">@T["SOCKS4"]</option>
+            <option value="Socks5">@T["SOCKS5"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyHost" class="ocat-label">@T["Proxy host"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyHost" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyPort" class="ocat-label">@T["Proxy port"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyPort" class="form-control" type="number" min="1" max="65535" />
+        <span asp-validation-for="ProxyPort" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyUsername" class="ocat-label">@T["Proxy username"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyUsername" class="form-control" autocomplete="off" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyPassword" class="ocat-label">@T["Proxy password"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyPassword" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+        <span class="hint">
+            @if (Model.HasProxyPassword)
+            {
+                @T["A proxy password is stored. Leave this empty to keep it."]
+            }
+        </span>
+    </div>
+</div>

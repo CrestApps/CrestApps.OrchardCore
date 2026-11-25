@@ -92,7 +92,7 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
             model.IsListable = template.IsListable;
             model.IsNew = context.IsNew;
             model.IsProfileTemplate = string.Equals(template.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase);
-        }).Location(template.Source == AITemplateSources.Profile ? "Content:1%General;1" : "Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)

@@ -56,7 +56,11 @@
     var isEditor = string.Equals(Model.Metadata.DisplayType, "Edit", StringComparison.Ordinal);
 }
 
-<div class="@(isEditor ? "alert alert-secondary mb-3" : "admin-list-secondary")" role="status">
+@if (isEditor)
+{
+    @:<div class="ocat-wrapper"><div class="ocat-end-offset">
+}
+<div class="@(isEditor ? "alert alert-secondary mb-0" : "admin-list-secondary")" role="status">
     @if (matched == 0)
     {
         <span>@T["No records matched the filters, so nothing was loaded."]</span>
@@ -71,3 +75,7 @@
         <span>@reason</span>
     }
 </div>
+@if (isEditor)
+{
+    @:</div></div>
+}

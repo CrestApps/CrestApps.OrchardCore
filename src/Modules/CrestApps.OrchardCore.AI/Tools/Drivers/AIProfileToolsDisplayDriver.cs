@@ -81,7 +81,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
                 Description = entry.Value.Description,
                 IsSelected = selectedNames?.Contains(entry.Key) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray());
-        }).Location("Content:7#Capabilities;8");
+        }).Location(l => l.Zone("Content", "7").Tab(S["Capabilities"], "8").Card(S["Agents & Tools"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

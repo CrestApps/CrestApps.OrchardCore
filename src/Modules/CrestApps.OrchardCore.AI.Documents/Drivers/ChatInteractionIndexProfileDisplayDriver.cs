@@ -51,7 +51,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
             model.EmbeddingDeploymentName = selectedDeployment?.Name ?? embeddingDeploymentName;
             model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentName);
-        }).Location("Content:3");
+        }).Location(l => l.Zone("Content", "3").Card(S["Embedding"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(IndexProfile indexProfile, UpdateEditorContext context)

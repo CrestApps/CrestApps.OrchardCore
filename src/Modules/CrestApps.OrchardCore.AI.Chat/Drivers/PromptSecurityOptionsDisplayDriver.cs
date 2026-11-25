@@ -50,24 +50,32 @@ public sealed class PromptSecurityOptionsDisplayDriver : SiteDisplayDriver<Promp
     {
         context.AddTenantReloadWarningWrapper();
 
-        return Initialize<PromptSecurityOptionsViewModel>("PromptSecurityOptions_Edit", model =>
-        {
-            model.EnableInjectionDetection = settings.EnableInjectionDetection;
-            model.EnableOutputFiltering = settings.EnableOutputFiltering;
-            model.EnableSecurityPreamble = settings.EnableSecurityPreamble;
-            model.EnableInputDelimiters = settings.EnableInputDelimiters;
-            model.EnableAuditLogging = settings.EnableAuditLogging;
-            model.MaxPromptLength = settings.MaxPromptLength;
-            model.BlockingThreshold = settings.BlockingThreshold;
-            model.MaxMessagesPerWindow = settings.MaxMessagesPerWindow;
-            model.RateLimitWindowSeconds = (int)Math.Round(settings.RateLimitWindow.TotalSeconds);
-            model.AnonymousMessageRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousMessageRateLimitTiers);
-            model.MaxAnonymousSessionsPerWindow = settings.MaxAnonymousSessionsPerWindow;
-            model.AnonymousSessionRateLimitWindowSeconds = (int)Math.Round(settings.AnonymousSessionRateLimitWindow.TotalSeconds);
-            model.AnonymousSessionStartRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousSessionStartRateLimitTiers);
-        }).Location("Content:2%Prompt Security;1")
-        .OnGroup(SettingsGroupId)
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
+        return Combine(
+            Initialize<PromptSecurityOptionsViewModel>("PromptSecurityOptions_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Prompt Security"], "1"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles)),
+            Initialize<PromptSecurityOptionsViewModel>("PromptSecurityRateLimits_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "2.1").Card(S["Rate Limits"], "1.1"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles)));
+    }
+
+    private static void Populate(PromptSecurityOptions settings, PromptSecurityOptionsViewModel model)
+    {
+        model.EnableInjectionDetection = settings.EnableInjectionDetection;
+        model.EnableOutputFiltering = settings.EnableOutputFiltering;
+        model.EnableSecurityPreamble = settings.EnableSecurityPreamble;
+        model.EnableInputDelimiters = settings.EnableInputDelimiters;
+        model.EnableAuditLogging = settings.EnableAuditLogging;
+        model.MaxPromptLength = settings.MaxPromptLength;
+        model.BlockingThreshold = settings.BlockingThreshold;
+        model.MaxMessagesPerWindow = settings.MaxMessagesPerWindow;
+        model.RateLimitWindowSeconds = (int)Math.Round(settings.RateLimitWindow.TotalSeconds);
+        model.AnonymousMessageRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousMessageRateLimitTiers);
+        model.MaxAnonymousSessionsPerWindow = settings.MaxAnonymousSessionsPerWindow;
+        model.AnonymousSessionRateLimitWindowSeconds = (int)Math.Round(settings.AnonymousSessionRateLimitWindow.TotalSeconds);
+        model.AnonymousSessionStartRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousSessionStartRateLimitTiers);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, PromptSecurityOptions settings, UpdateEditorContext context)

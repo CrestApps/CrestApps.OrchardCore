@@ -1,13 +1,14 @@
 using CrestApps.OrchardCore.Checkout.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Checkout.ViewModels;
 
 /// <summary>
 /// The coupon editor.
 /// </summary>
-public sealed class CouponEditViewModel
+public class CouponEditViewModel
 {
     /// <summary>
     /// Gets or sets the coupon identifier, when editing an existing one.
@@ -129,10 +130,16 @@ public sealed class CouponEditViewModel
     public bool CombinesWithShippingDiscounts { get; set; }
 
     /// <summary>
+    /// Gets or sets the editor of the coupon's fields, built by the display drivers of <see cref="CouponEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
+    /// <summary>
     /// Gets or sets what other modules add to the editor, such as the products a coupon is limited to.
     /// </summary>
     [BindNever]
-    public object Editor { get; set; }
+    public object Extensions { get; set; }
 
     /// <summary>
     /// Gets or sets the latest uses of the coupon.

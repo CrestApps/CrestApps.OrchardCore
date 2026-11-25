@@ -45,19 +45,19 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         var dataSourceResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
-        }).Location("Content:4#Knowledge;2")
+        }).Location(l => l.Zone("Content", "4").Tab(S["Knowledge"], "2").Card(S["Data Source"], "10"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var parametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceParameters_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
-        }).Location("Content:5#Knowledge;2")
+        }).Location(l => l.Zone("Content", "5").Tab(S["Knowledge"], "2").Card(S["Data Source"], "10"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var retrievalParametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceRetrieval_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
-        }).Location("Content:6#Knowledge;2")
+        }).Location(l => l.Zone("Content", "6").Tab(S["Knowledge"], "2").Card(S["Data Source"], "10"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         return Combine(dataSourceResult, parametersResult, retrievalParametersResult);

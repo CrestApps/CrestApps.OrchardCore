@@ -92,29 +92,35 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         var live = _configurationOptions.GetKeys(isLive: true);
         var test = _configurationOptions.GetKeys(isLive: false);
 
-        return Initialize<StripeSettingsViewModel>("StripeSettings_Edit", model =>
-        {
-            // A configured value is shown as the one in effect; a configured secret is never shown, only reported.
-            model.IsLive = _configurationOptions.IsLive ?? settings.IsLive;
-            model.IsLiveFromConfiguration = _configurationOptions.IsLive.HasValue;
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<StripeSettingsViewModel>(shapeType, model =>
+            {
+                // A configured value is shown as the one in effect; a configured secret is never shown, only reported.
+                model.IsLive = _configurationOptions.IsLive ?? settings.IsLive;
+                model.IsLiveFromConfiguration = _configurationOptions.IsLive.HasValue;
 
-            model.LivePublishableKey = live.HasPublishableKey ? live.PublishableKey.Trim() : settings.LivePublishableKey;
-            model.LivePublishableKeyFromConfiguration = live.HasPublishableKey;
-            model.HasLivePrivateSecret = live.HasSecretKey || !string.IsNullOrEmpty(settings.LivePrivateSecret);
-            model.LivePrivateSecretFromConfiguration = live.HasSecretKey;
-            model.HasLiveWebhookSecret = live.HasWebhookSecret || !string.IsNullOrEmpty(settings.LiveWebhookSecret);
-            model.LiveWebhookSecretFromConfiguration = live.HasWebhookSecret;
-            model.LiveAccountId = settings.LiveAccountId;
+                model.LivePublishableKey = live.HasPublishableKey ? live.PublishableKey.Trim() : settings.LivePublishableKey;
+                model.LivePublishableKeyFromConfiguration = live.HasPublishableKey;
+                model.HasLivePrivateSecret = live.HasSecretKey || !string.IsNullOrEmpty(settings.LivePrivateSecret);
+                model.LivePrivateSecretFromConfiguration = live.HasSecretKey;
+                model.HasLiveWebhookSecret = live.HasWebhookSecret || !string.IsNullOrEmpty(settings.LiveWebhookSecret);
+                model.LiveWebhookSecretFromConfiguration = live.HasWebhookSecret;
+                model.LiveAccountId = settings.LiveAccountId;
 
-            model.TestPublishableKey = test.HasPublishableKey ? test.PublishableKey.Trim() : settings.TestPublishableKey;
-            model.TestPublishableKeyFromConfiguration = test.HasPublishableKey;
-            model.HasTestPrivateSecret = test.HasSecretKey || !string.IsNullOrEmpty(settings.TestPrivateSecret);
-            model.TestPrivateSecretFromConfiguration = test.HasSecretKey;
-            model.HasTestWebhookSecret = test.HasWebhookSecret || !string.IsNullOrEmpty(settings.TestWebhookSecret);
-            model.TestWebhookSecretFromConfiguration = test.HasWebhookSecret;
-            model.TestAccountId = settings.TestAccountId;
-        }).Location("Content:5")
-        .OnGroup(SettingsGroupId);
+                model.TestPublishableKey = test.HasPublishableKey ? test.PublishableKey.Trim() : settings.TestPublishableKey;
+                model.TestPublishableKeyFromConfiguration = test.HasPublishableKey;
+                model.HasTestPrivateSecret = test.HasSecretKey || !string.IsNullOrEmpty(settings.TestPrivateSecret);
+                model.TestPrivateSecretFromConfiguration = test.HasSecretKey;
+                model.HasTestWebhookSecret = test.HasWebhookSecret || !string.IsNullOrEmpty(settings.TestWebhookSecret);
+                model.TestWebhookSecretFromConfiguration = test.HasWebhookSecret;
+                model.TestAccountId = settings.TestAccountId;
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
+            .OnGroup(SettingsGroupId);
+
+        return Combine(
+            Card("StripeSettingsEnvironment_Edit", "5", S["Environment"], "10"),
+            Card("StripeSettingsProduction_Edit", "5.1", S["Production"], "20"),
+            Card("StripeSettingsTest_Edit", "5.2", S["Test"], "30"));
     }
 
     /// <summary>

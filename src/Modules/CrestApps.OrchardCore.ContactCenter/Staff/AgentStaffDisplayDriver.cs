@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Staff.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -13,9 +14,14 @@ internal sealed class AgentStaffDisplayDriver : DisplayDriver<StaffMember>
 {
     private readonly IAgentProfileManager _agentManager;
 
-    public AgentStaffDisplayDriver(IAgentProfileManager agentManager)
+    internal readonly IStringLocalizer S;
+
+    public AgentStaffDisplayDriver(
+        IAgentProfileManager agentManager,
+        IStringLocalizer<AgentStaffDisplayDriver> stringLocalizer)
     {
         _agentManager = agentManager;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(StaffMember staff, BuildEditorContext context)
@@ -35,7 +41,7 @@ internal sealed class AgentStaffDisplayDriver : DisplayDriver<StaffMember>
             model.AllowedCampaignCount = agent?.AllowedCampaignIds?.Count ?? 0;
             model.Skills = agent?.SkillProficiencies?.Select(skill => $"{skill.SkillId} ({skill.Proficiency})").ToList() ?? [];
             model.MaxConcurrentInteractions = agent?.MaxConcurrentInteractions ?? 0;
-        }).Location("Content:8");
+        }).Location(l => l.Zone("Content", "8").Card(S["Contact Center"], "8"));
     }
 }
 

@@ -1,0 +1,34 @@
+@model ExternalToolViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ClientId">
+    <label asp-for="ClientId" class="ocat-label ocat-label-required">@T["Client ID"]</label>
+    <div class="ocat-end">
+        <input asp-for="ClientId" class="form-control" maxlength="255" />
+        <span asp-validation-for="ClientId" class="text-danger"></span>
+        <span class="hint">@T["The tool's client id on this platform. The site keeps it as an OpenID application with the same id; give it to the tool."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="RedirectUris">
+    <label asp-for="RedirectUris" class="ocat-label ocat-label-required">@T["Redirect URIs"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="RedirectUris" class="form-control font-monospace" rows="2" placeholder="https://tool.example.com/lti/launch"></textarea>
+        <span asp-validation-for="RedirectUris" class="text-danger"></span>
+        <span class="hint">@T["Where the tool receives its launches, one per line. A launch to any other address is refused."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="JwksUrl">
+    <label asp-for="JwksUrl" class="ocat-label">@T["Tool's JWKS URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="JwksUrl" class="form-control" maxlength="1000" placeholder="https://tool.example.com/.well-known/jwks.json" />
+        <span asp-validation-for="JwksUrl" class="text-danger"></span>
+        <span class="hint">@T["The address of the tool's public key set. It is read when you save and again when the tool signs with a new key."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="KeySet">
+    <label asp-for="KeySet" class="ocat-label">@T["Or the tool's key set"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="KeySet" class="form-control font-monospace" rows="4" placeholder='{"keys":[{"kty":"RSA","kid":"…","n":"…","e":"AQAB"}]}'></textarea>
+        <span asp-validation-for="KeySet" class="text-danger"></span>
+        <span class="hint">@T["When the tool has no JWKS URL, paste its public keys as a JSON Web Key Set. Never paste a private key."]</span>
+    </div>
+</div>

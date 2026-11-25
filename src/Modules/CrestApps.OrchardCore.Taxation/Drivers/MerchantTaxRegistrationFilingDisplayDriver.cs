@@ -73,7 +73,7 @@ internal sealed class MerchantTaxRegistrationFilingDisplayDriver : DisplayDriver
                     .Select(candidate => new SelectListItem(_localizerFactory.Localize(candidate.DisplayName).Value, candidate.Name))
                     .OrderBy(item => item.Text, StringComparer.CurrentCultureIgnoreCase),
             ];
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Returns"], "30"));
 
     public override async Task<IDisplayResult> UpdateAsync(MerchantTaxRegistration registration, UpdateEditorContext context)
     {

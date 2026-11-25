@@ -54,7 +54,7 @@ internal sealed class PayItemDisplayDriver : DisplayDriver<EmployeePayItem>
     {
         var codes = await _codes.GetAllAsync();
 
-        return Initialize<PayItemViewModel>("PayItemFields_Edit", model =>
+        void Fill(PayItemViewModel model)
         {
             model.PayCodeId = item.PayCodeId;
             model.Amount = Text(item.Amount);
@@ -69,12 +69,20 @@ internal sealed class PayItemDisplayDriver : DisplayDriver<EmployeePayItem>
             model.Note = item.Note;
             model.PaidTowardGoal = Text(item.PaidTowardGoal);
             model.ArrearsBalance = Text(item.ArrearsBalance);
-            model.Codes = [.. codes
-                .Where(code => code.Enabled || code.ItemId == item.PayCodeId)
-                .OrderBy(code => code.Class)
-                .ThenBy(code => code.Code, StringComparer.Ordinal)
-                .Select(code => new SelectListItem($"{code.Code} · {code.Name} ({code.Class})", code.ItemId, code.ItemId == item.PayCodeId))];
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<PayItemViewModel>("PayItemFields_Edit", model =>
+            {
+                Fill(model);
+                model.Codes = [.. codes
+                    .Where(code => code.Enabled || code.ItemId == item.PayCodeId)
+                    .OrderBy(code => code.Class)
+                    .ThenBy(code => code.Code, StringComparer.Ordinal)
+                    .Select(code => new SelectListItem($"{code.Code} · {code.Name} ({code.Class})", code.ItemId, code.ItemId == item.PayCodeId))];
+            }).Location(l => l.Zone("Content", "1").Card(S["Pay Item"], "10")),
+            Initialize<PayItemViewModel>("PayItemLimits_Edit", Fill)
+                .Location(l => l.Zone("Content", "1").Card(S["Limits and Match"], "20")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(EmployeePayItem item, UpdateEditorContext context)

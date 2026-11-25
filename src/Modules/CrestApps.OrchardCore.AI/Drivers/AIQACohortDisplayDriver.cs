@@ -68,27 +68,34 @@ public sealed class AIQACohortDisplayDriver : DisplayDriver<AIQACohort>
     /// <inheritdoc/>
     public override IDisplayResult Edit(AIQACohort cohort, BuildEditorContext context)
     {
-        return Initialize<AIQACohortViewModel>("AIQACohortFields_Edit", async model =>
-        {
-            model.Name = cohort.Name;
-            model.Enabled = cohort.Enabled;
-            model.ProfileIds = cohort.ProfileIds?.ToArray() ?? [];
-            model.SamplePercent = cohort.SamplePercent;
-            model.Criteria = cohort.Criteria;
-            model.PassingScore = cohort.PassingScore;
-            model.CheckKnowledge = cohort.CheckKnowledge;
-            model.JudgeDeploymentName = cohort.JudgeDeploymentName;
-            model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
-                .Where(profile => !profile.Has<AIProfileVersionCopy>())
-                .OrderBy(profile => profile.DisplayText, StringComparer.CurrentCultureIgnoreCase)
-                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, model.ProfileIds.Contains(profile.ItemId)))
-                .ToList();
-            model.Deployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat))
-                .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
-                .OrderBy(deployment => deployment.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
-                .ToList();
-        }).Location("Content:1");
+        return Combine(
+            Initialize<AIQACohortViewModel>("AIQACohortFields_Edit", model =>
+            {
+                model.Name = cohort.Name;
+                model.Enabled = cohort.Enabled;
+            }).Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<AIQACohortViewModel>("AIQACohortSampling_Edit", async model =>
+            {
+                model.ProfileIds = cohort.ProfileIds?.ToArray() ?? [];
+                model.SamplePercent = cohort.SamplePercent;
+                model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
+                    .Where(profile => !profile.Has<AIProfileVersionCopy>())
+                    .OrderBy(profile => profile.DisplayText, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, model.ProfileIds.Contains(profile.ItemId)))
+                    .ToList();
+            }).Location(l => l.Zone("Content", "1").Card(S["Sampling"], "20")),
+            Initialize<AIQACohortViewModel>("AIQACohortScoring_Edit", async model =>
+            {
+                model.Criteria = cohort.Criteria;
+                model.PassingScore = cohort.PassingScore;
+                model.CheckKnowledge = cohort.CheckKnowledge;
+                model.JudgeDeploymentName = cohort.JudgeDeploymentName;
+                model.Deployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat))
+                    .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
+                    .OrderBy(deployment => deployment.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
+                    .ToList();
+            }).Location(l => l.Zone("Content", "1").Card(S["Scoring"], "30")));
     }
 
     /// <inheritdoc/>

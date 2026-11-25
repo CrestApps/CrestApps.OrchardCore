@@ -1,0 +1,15 @@
+@model WorkOrderTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Made from bookings of"]</span>
+    <div class="ocat-end">
+        @foreach (var option in Model.AppointmentTypeOptions)
+        {
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" name="AppointmentTypeIds" value="@option.Value" id="appointment-type-@option.Value" checked="@option.Selected" />
+                <label class="form-check-label" for="appointment-type-@option.Value">@option.Text</label>
+            </div>
+        }
+        <span class="hint">@T["A confirmed booking of these appointment types makes a work order of this type, at the booked time, for the customer who booked; rescheduling moves it and canceling cancels it."]</span>
+    </div>
+</div>

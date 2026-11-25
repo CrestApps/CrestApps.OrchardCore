@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.Workforce.Workflows;
@@ -13,14 +16,23 @@ public sealed class WorkforceEventActivityDisplayDriver<TActivity> : ActivityDis
 {
     private readonly ITeamManager _teamManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkforceEventActivityDisplayDriver{TActivity}"/> class.
     /// </summary>
     /// <param name="teamManager">The team manager.</param>
-    public WorkforceEventActivityDisplayDriver(ITeamManager teamManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public WorkforceEventActivityDisplayDriver(ITeamManager teamManager, IStringLocalizer<WorkforceEventActivityDisplayDriver<TActivity>> stringLocalizer)
     {
         _teamManager = teamManager;
+        S = stringLocalizer;
     }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<WorkforceEventActivityViewModel>($"{typeof(TActivity).Name}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Event"], "10"));
 
     /// <inheritdoc />
     protected override async ValueTask EditActivityAsync(TActivity activity, WorkforceEventActivityViewModel model)

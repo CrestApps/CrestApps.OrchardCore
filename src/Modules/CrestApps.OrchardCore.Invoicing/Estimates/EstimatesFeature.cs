@@ -27,6 +27,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using CrestApps.OrchardCore.Invoicing.Drivers;
 
 namespace CrestApps.OrchardCore.Invoicing.Estimates;
 
@@ -48,6 +49,7 @@ public sealed class EstimatesStartup : StartupBase
             .AddDataMigration<EstimatesMigrations>()
             .AddRecipeExecutionStep<EstimatesStep>()
             .AddDisplayDriver<Estimate, EstimateDisplayDriver>()
+            .AddDisplayDriver<EstimateEditViewModel, EstimateEditDisplayDriver>()
             .AddNavigationProvider<EstimatesAdminMenu>()
             .AddBusinessDocumentKind(InvoicingConstants.BusinessDocumentKinds.Estimate, _kindTitle)
             .AddCommerceEmailKind(
