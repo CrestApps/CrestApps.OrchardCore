@@ -7,6 +7,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 /// <summary>
 /// Adds Routing Rules under the Messaging menu.
 /// </summary>
+/// <remarks>
+/// Orchard merges every menu item with the same caption into the first one it meets and keeps that item's id and
+/// classes. This provider can run before <see cref="MessagingAdminMenu"/>, so it names the Messaging item the same
+/// way; otherwise the merged item has no id and the menu's icon (the <c>NavigationItemText-messaging.Id</c> shape) is lost.
+/// </remarks>
 internal sealed class MessagingRoutingRulesAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
@@ -25,6 +30,8 @@ internal sealed class MessagingRoutingRulesAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Messaging"], S["Messaging"].PrefixPosition(), messaging => messaging
+                .AddClass("messaging")
+                .Id("messaging")
                 .Add(S["Routing Rules"], S["Routing Rules"].PrefixPosition(), rules => rules
                     .Action("Index", "RoutingRules", MessagingConstants.Feature.Workspace)
                     .Permission(MessagingPermissions.ManageRoutingRules)

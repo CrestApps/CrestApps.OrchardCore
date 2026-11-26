@@ -20,7 +20,7 @@
             <select asp-for="CandidateQueueId" asp-items="Model.AvailableQueues.Select(queue => new SelectListItem(queue.Text, queue.Value, queue.Value == Model.CandidateQueueId))" class="form-select">
                 <option value="">@T["The conversation's own queue"]</option>
             </select>
-            <span class="hint">@T["A conversation that belongs to no queue is skipped when the rule uses its own queue."]</span>
+            <span class="hint">@T["A conversation that belongs to no queue, such as a text a workflow or a dialer sent, takes the agents of any queue."]</span>
         </div>
     </div>
 
@@ -78,7 +78,7 @@
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" asp-for="OnlyAvailableAgents" />
                 <label class="form-check-label" asp-for="OnlyAvailableAgents">@T["Only agents available for messaging"]</label>
-                <span class="hint dashed">@T["Agents who turned messaging on and have the messaging workspace open."]</span>
+                <span class="hint dashed">@T["Agents whose Available switch, at the top of their Messaging inbox, is on (it is on until they turn it off) and who have the inbox open now. Clear this to also give conversations to agents who are not in the inbox."]</span>
             </div>
         </div>
     </div>
