@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Learning.Programs.Services;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -63,13 +64,20 @@ internal sealed class LearningRequirementsDeploymentSource : DeploymentSourceBas
 
 internal sealed class LearningRequirementsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, LearningRequirementsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public LearningRequirementsDeploymentStepDisplayDriver(IStringLocalizer<LearningRequirementsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(LearningRequirementsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("LearningRequirementsDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("LearningRequirementsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(LearningRequirementsDeploymentStep step, BuildEditorContext context)
-        => View("LearningRequirementsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("LearningRequirementsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Required Learning"], "10"));
 }
 
 internal sealed class LearningRequirementsDeploymentStepSchema : DeploymentStepSchemaDefinitionBase

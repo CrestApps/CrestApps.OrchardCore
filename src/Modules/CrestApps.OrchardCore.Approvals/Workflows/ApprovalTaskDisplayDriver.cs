@@ -1,4 +1,7 @@
 using System.Reflection;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
 
@@ -12,6 +15,22 @@ public sealed class ApprovalTaskDisplayDriver<TActivity> : ActivityDisplayDriver
     where TActivity : TaskActivity
 {
     private static readonly PropertyInfo[] _modelProperties = typeof(ApprovalTaskViewModel).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApprovalTaskDisplayDriver{TActivity}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ApprovalTaskDisplayDriver(IStringLocalizer<ApprovalTaskDisplayDriver<TActivity>> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<ApprovalTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override void EditActivity(TActivity activity, ApprovalTaskViewModel model)

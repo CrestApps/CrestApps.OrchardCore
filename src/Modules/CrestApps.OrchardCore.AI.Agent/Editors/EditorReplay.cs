@@ -277,6 +277,18 @@ internal static class EditorReplay
 
             AddFields(section.Name, metadata, shape, section.Fields, section.Values, editor.Unsupported, options, 0);
         }
+        else
+        {
+            // A driver that puts one view model in several cards may fill only each card's own fields, so a field the
+            // earlier cards left at the view model's default takes its value from the card that fills it.
+            var metadata = metadataProvider.GetMetadataForType(modelType);
+            var cardValues = new JsonObject();
+            var defaults = new JsonObject();
+
+            AddFields(section.Name, metadata, shape, [], cardValues, [], options, 0);
+            AddFields(section.Name, metadata, CreateDefault(modelType), [], defaults, [], options, 0);
+            FillFromCard(section.Values, cardValues, defaults);
+        }
 
         foreach (var item in shape.Items ?? [])
         {
@@ -286,6 +298,34 @@ internal static class EditorReplay
             }
         }
     }
+
+    private static void FillFromCard(JsonObject target, JsonObject card, JsonObject defaults)
+    {
+        foreach (var (name, value) in card)
+        {
+            var fallback = defaults?[name];
+
+            // The card left the field at its default: another card fills it, or nobody does.
+            if (JsonNode.DeepEquals(value, fallback))
+            {
+                continue;
+            }
+
+            if (!target.TryGetPropertyValue(name, out var existing) || JsonNode.DeepEquals(existing, fallback))
+            {
+                target[name] = value?.DeepClone();
+            }
+            else if (existing is JsonObject existingObject && value is JsonObject cardObject)
+            {
+                FillFromCard(existingObject, cardObject, fallback as JsonObject);
+            }
+        }
+    }
+
+    private static object CreateDefault(Type type)
+        => type.IsAbstract || type.GetConstructor(Type.EmptyTypes) is null
+            ? null
+            : Activator.CreateInstance(type);
 
     private static Type GetViewModelType(IShape shape)
     {

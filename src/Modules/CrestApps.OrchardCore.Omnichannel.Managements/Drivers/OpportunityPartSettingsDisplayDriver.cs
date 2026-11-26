@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
@@ -13,12 +14,18 @@ internal sealed class OpportunityPartSettingsDisplayDriver : ContentTypePartDefi
 {
     private readonly INamedCatalog<OpportunityStage> _stages;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OpportunityPartSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="stages">The opportunity stage catalog.</param>
-    public OpportunityPartSettingsDisplayDriver(INamedCatalog<OpportunityStage> stages)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OpportunityPartSettingsDisplayDriver(
+        INamedCatalog<OpportunityStage> stages,
+        IStringLocalizer<OpportunityPartSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _stages = stages;
     }
 
@@ -35,7 +42,7 @@ internal sealed class OpportunityPartSettingsDisplayDriver : ContentTypePartDefi
                 .ThenBy(stage => stage.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(stage => new SelectListItem(stage.Name, stage.ItemId, selected.Contains(stage.ItemId)))
                 .ToList();
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Settings"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

@@ -144,7 +144,7 @@ internal sealed class GarnishmentsDeploymentStepDisplayDriver : DisplayDriver<De
             View("GarnishmentsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(GarnishmentsDeploymentStep step, BuildEditorContext context)
-        => Initialize<GarnishmentsDeploymentStepViewModel>("GarnishmentsDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location("Content");
+        => Initialize<GarnishmentsDeploymentStepViewModel>("GarnishmentsDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location(l => l.Zone("Content", "1").Card(S["Garnishment Orders"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(GarnishmentsDeploymentStep step, UpdateEditorContext context)
     {

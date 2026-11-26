@@ -1,0 +1,11 @@
+@model CalendarCategoryEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Shared" class="form-check-input" />
+            <label asp-for="Shared" class="form-check-label">@T["Everyone can use it"]</label>
+        </div>
+        <span class="hint dashed">@T["Otherwise only you see and use it."]</span>
+    </div>
+</div>

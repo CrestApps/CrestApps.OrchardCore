@@ -66,7 +66,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
             model.EnableOpenTelemetry = settings.OverrideEnableOpenTelemetry
                 ? settings.EnableOpenTelemetry
                 : _defaultAIOptions.EnableOpenTelemetry;
-        }).Location("Content:1%General;1")
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

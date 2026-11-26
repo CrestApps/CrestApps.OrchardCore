@@ -131,6 +131,6 @@ internal sealed class StaffTeamsDisplayDriver : DisplayDriver<StaffMember>
         {
             model.Memberships = memberships;
             model.TeamOptions = teamOptions;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Teams"], "30"));
     }
 }

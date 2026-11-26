@@ -2,7 +2,11 @@
 
 @if (!Model.HasCarrierAccount)
 {
-    <div class="alert alert-warning">@T["No carrier provider is chosen yet. Turn on a carrier provider feature, such as EasyPost, enable it in Settings › Commerce › Shipping and choose it on the Providers tab; until then this method offers only its fallback amount."]</div>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning">@T["No carrier provider is chosen yet. Turn on a carrier provider feature, such as EasyPost, enable it in Settings › Commerce › Shipping and choose it on the Providers tab; until then this method offers only its fallback amount."]</div>
+        </div>
+    </div>
 }
 
 <div class="ocat-wrapper">

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Staff.Recipes;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Users;
 using Json.Schema;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -122,6 +123,13 @@ internal sealed class StaffDeploymentSource : DeploymentSourceBase<StaffDeployme
 
 internal sealed class StaffDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, StaffDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public StaffDeploymentStepDisplayDriver(IStringLocalizer<StaffDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(StaffDeploymentStep step, BuildDisplayContext context)
     {
         return CombineAsync(
@@ -131,7 +139,8 @@ internal sealed class StaffDeploymentStepDisplayDriver : DisplayDriver<Deploymen
 
     public override IDisplayResult Edit(StaffDeploymentStep step, BuildEditorContext context)
     {
-        return Initialize<StaffDeploymentStepViewModel>("StaffDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location("Content");
+        return Initialize<StaffDeploymentStepViewModel>("StaffDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData)
+            .Location(l => l.Zone("Content").Card(S["Staff"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(StaffDeploymentStep step, UpdateEditorContext context)

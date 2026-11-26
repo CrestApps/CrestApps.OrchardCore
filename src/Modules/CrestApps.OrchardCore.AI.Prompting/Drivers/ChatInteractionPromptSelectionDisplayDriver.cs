@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -14,13 +15,19 @@ public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatInteractionPromptSelectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
-    public ChatInteractionPromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ChatInteractionPromptSelectionDisplayDriver(
+        PromptTemplateSelectionService promptTemplateSelectionService,
+        IStringLocalizer<ChatInteractionPromptSelectionDisplayDriver> stringLocalizer)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
@@ -39,7 +46,7 @@ public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<
         {
             promptSelectionModel.PromptTemplates = model.PromptTemplates;
             promptSelectionModel.AvailablePrompts = model.AvailablePrompts;
-        }).Location("Parameters:9#Settings;1");
+        }).Location(l => l.Zone("Parameters", "9").Tab(S["Settings"], "1").Card(S["Instructions"], "4"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

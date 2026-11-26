@@ -14,6 +14,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -44,6 +45,8 @@ public sealed class ChildTenantsController : Controller
     private readonly ShellSettings _shellSettings;
     private readonly TenantHierarchyOptions _options;
     private readonly IWebHostEnvironment _environment;
+    private readonly IDisplayManager<ChildTenantEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -60,6 +63,8 @@ public sealed class ChildTenantsController : Controller
     /// <param name="shellSettings">The settings of the parent tenant.</param>
     /// <param name="options">The tenant hierarchy options.</param>
     /// <param name="environment">The host environment.</param>
+    /// <param name="displayManager">The display manager of the child tenant editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChildTenantsController(
@@ -72,6 +77,8 @@ public sealed class ChildTenantsController : Controller
         ShellSettings shellSettings,
         IOptions<TenantHierarchyOptions> options,
         IWebHostEnvironment environment,
+        IDisplayManager<ChildTenantEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<ChildTenantsController> htmlLocalizer,
         IStringLocalizer<ChildTenantsController> stringLocalizer)
     {
@@ -84,6 +91,8 @@ public sealed class ChildTenantsController : Controller
         _shellSettings = shellSettings;
         _options = options.Value;
         _environment = environment;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -327,6 +336,8 @@ public sealed class ChildTenantsController : Controller
             model.RecipeName = model.Recipes[0].Value;
         }
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -343,6 +354,8 @@ public sealed class ChildTenantsController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         var request = new CreateChildTenantRequest
         {
@@ -406,6 +419,7 @@ public sealed class ChildTenantsController : Controller
         };
 
         await PopulateEditorAsync(model, isNew: false);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }
@@ -432,6 +446,10 @@ public sealed class ChildTenantsController : Controller
             return NotFound();
         }
 
+        model.EntryId = id;
+        model.Info = info;
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         var (result, errors) = await _manager.UpdateAsync(id, model.DisplayName, model.Slug, model.Description);
 
         if (result.Succeeded)
@@ -451,8 +469,6 @@ public sealed class ChildTenantsController : Controller
             ModelState.AddModelError(string.Empty, result.Error);
         }
 
-        model.EntryId = id;
-        model.Info = info;
         await PopulateEditorAsync(model, isNew: false);
 
         return View(model);

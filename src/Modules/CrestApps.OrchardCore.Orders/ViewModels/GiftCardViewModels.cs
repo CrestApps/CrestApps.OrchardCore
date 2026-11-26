@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Orders.ViewModels;
 
@@ -30,6 +31,12 @@ public class GiftCardsIndexViewModel
 
 public class GiftCardCreateViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor of the page, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     public decimal? Value { get; set; }
 
     public string Currency { get; set; }
@@ -53,6 +60,12 @@ public class GiftCardCreateViewModel
 
 public class GiftCardEditViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor of the page, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     [BindNever]
     public string ItemId { get; set; }
 

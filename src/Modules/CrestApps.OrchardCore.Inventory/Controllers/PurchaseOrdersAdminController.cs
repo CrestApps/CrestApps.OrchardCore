@@ -19,6 +19,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -42,6 +43,8 @@ public sealed class PurchaseOrdersAdminController : Controller
     private readonly IClock _clock;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
+    private readonly IDisplayManager<PurchaseOrderEditViewModel> _editorDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
     private readonly ISession _session;
     private readonly PagerOptions _pagerOptions;
@@ -59,6 +62,8 @@ public sealed class PurchaseOrdersAdminController : Controller
         IClock clock,
         IAuthorizationService authorizationService,
         IShapeFactory shapeFactory,
+        IDisplayManager<PurchaseOrderEditViewModel> editorDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
         ISession session,
         IOptions<PagerOptions> pagerOptions,
@@ -74,6 +79,8 @@ public sealed class PurchaseOrdersAdminController : Controller
         _clock = clock;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
+        _editorDisplayManager = editorDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
         _session = session;
         _pagerOptions = pagerOptions.Value;
@@ -164,6 +171,8 @@ public sealed class PurchaseOrdersAdminController : Controller
 
         await PopulateAsync(model, order: null);
 
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -194,6 +203,9 @@ public sealed class PurchaseOrdersAdminController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateAsync(model, order: null);
+
+            // The editor shows the lists PopulateAsync fills, so it is built once they are there.
+            model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
             return View(model);
         }
@@ -231,6 +243,8 @@ public sealed class PurchaseOrdersAdminController : Controller
 
         await PopulateAsync(model, order);
 
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         return View(model);
     }
 
@@ -264,6 +278,9 @@ public sealed class PurchaseOrdersAdminController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateAsync(model, order, keepPosted: true);
+
+            // The editor shows the lists PopulateAsync fills, so it is built once they are there.
+            model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
             return View(model);
         }

@@ -146,7 +146,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             ];
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Activity"], "20"))
         .RenderWhen(() => Task.FromResult(activity.Status == ActivityStatus.NotStated && !isCompletingActivity));
 
         var completing = Initialize<OmnichannelActivityViewModel>("OmnichannelActivityComplete_Edit", async model =>
@@ -252,7 +252,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                     : await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.CompletedById));
                 model.DispositionedByName = await _handlerDescriber.GetDispositionedByNameAsync(activity, model.CompletedByName);
             }
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Activity Information"], "20"))
         .OnGroup(OmnichannelConstants.CompleteActivityGroup);
 
         if (activity.Status == ActivityStatus.Completed)

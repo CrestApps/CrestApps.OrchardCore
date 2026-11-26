@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -12,13 +13,19 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
 {
     private readonly IAIProfileManager _profileManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileTemplateAgentsDisplayDriver"/> class.
     /// </summary>
     /// <param name="profileManager">The profile manager.</param>
-    public AIProfileTemplateAgentsDisplayDriver(IAIProfileManager profileManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileTemplateAgentsDisplayDriver(
+        IAIProfileManager profileManager,
+        IStringLocalizer<AIProfileTemplateAgentsDisplayDriver> stringLocalizer)
     {
         _profileManager = profileManager;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(AIProfileTemplate template, BuildEditorContext context)
@@ -44,7 +51,7 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
                 Description = agent.Description,
                 IsSelected = selectedNames.Contains(agent.Name),
             }).OrderBy(entry => entry.DisplayText).ToArray();
-        }).Location("Content:5#Capabilities;8")
+        }).Location(l => l.Zone("Content", "5").Tab(S["Capabilities"], "8").Card(S["Agents & Tools"], "10"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

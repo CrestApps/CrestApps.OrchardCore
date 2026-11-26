@@ -50,7 +50,7 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
                 ContactFieldMode = mapping?.Mode ?? AIContactFieldMappingMode.Overwrite,
             })
         .ToList();
-        }).Location("Content:5#Data Processing & Metrics;10");
+        }).Location(l => l.Zone("Content", "5").Tab(S["Data Processing & Metrics"], "10").Card(S["Data Extraction"], "5"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

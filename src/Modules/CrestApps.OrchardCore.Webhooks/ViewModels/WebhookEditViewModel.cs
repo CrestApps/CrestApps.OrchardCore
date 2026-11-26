@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Webhooks.ViewModels;
 
@@ -30,4 +31,10 @@ public class WebhookEditViewModel
     [BindNever]
     public bool IsNew
         => string.IsNullOrEmpty(ItemId);
+
+    /// <summary>
+    /// The editor shape, built by the display drivers of the view model: one card per section.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

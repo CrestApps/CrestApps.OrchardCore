@@ -1,59 +1,54 @@
 @model IncomeTaxFlatRateViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Rate"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="Rate">
-            <label asp-for="Rate" class="ocat-label">@T["Rate (%)"]</label>
-            <div class="ocat-end">
-                <input asp-for="Rate" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="6.2" />
-                <span asp-validation-for="Rate" class="text-danger"></span>
-                <div class="form-check mt-2">
-                    <input asp-for="RateFromRegistration" type="checkbox" class="form-check-input" />
-                    <label asp-for="RateFromRegistration" class="form-check-label">@T["Use the payer's own rate"]</label>
-                    <span class="hint dashed">@T["The rate on the payer's registration with the jurisdiction on the pay date, such as an unemployment insurance rate; the rate above applies when it has none."]</span>
-                </div>
-            </div>
+<div class="ocat-wrapper" asp-validation-class-for="Rate">
+    <label asp-for="Rate" class="ocat-label">@T["Rate (%)"]</label>
+    <div class="ocat-end">
+        <input asp-for="Rate" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="6.2" />
+        <span asp-validation-for="Rate" class="text-danger"></span>
+        <div class="form-check mt-2">
+            <input asp-for="RateFromRegistration" type="checkbox" class="form-check-input" />
+            <label asp-for="RateFromRegistration" class="form-check-label">@T["Use the payer's own rate"]</label>
+            <span class="hint dashed">@T["The rate on the payer's registration with the jurisdiction on the pay date, such as an unemployment insurance rate; the rate above applies when it has none."]</span>
         </div>
-        <div class="ocat-wrapper" asp-validation-class-for="WageBase">
-            <label asp-for="WageBase" class="ocat-label">@T["Wage base"]</label>
-            <div class="ocat-end">
-                <input asp-for="WageBase" class="form-control" inputmode="decimal" style="max-width: 10rem" />
-                <span asp-validation-for="WageBase" class="text-danger"></span>
-                <span class="hint">@T["The most income taxed in a calendar year, such as Social Security's wage base; empty for no limit."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="WageThreshold">
-            <label asp-for="WageThreshold" class="ocat-label">@T["Wage threshold"]</label>
-            <div class="ocat-end">
-                <input asp-for="WageThreshold" class="form-control" inputmode="decimal" style="max-width: 10rem" />
-                <span asp-validation-for="WageThreshold" class="text-danger"></span>
-                <span class="hint">@T["Only the part of a calendar year's income above it is taxed, such as an additional rate on high earners or a pension plan's second tier; empty to tax all of it."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="YearlyExemption">
-            <label asp-for="YearlyExemption" class="ocat-label">@T["Yearly exemption"]</label>
-            <div class="ocat-end">
-                <input asp-for="YearlyExemption" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="3500" />
-                <span asp-validation-for="YearlyExemption" class="text-danger"></span>
-                <span class="hint">@T["An amount of a year's income never taxed, taken off each pay in proportion to the pay periods of a year, such as the CPP basic exemption; empty for none."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="YearlyMaximum">
-            <label asp-for="YearlyMaximum" class="ocat-label">@T["Yearly maximum"]</label>
-            <div class="ocat-end">
-                <input asp-for="YearlyMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" />
-                <span asp-validation-for="YearlyMaximum" class="text-danger"></span>
-                <span class="hint">@T["The most tax taken in a calendar year, such as a contribution's maximum; empty for no limit. Amounts take a dot for decimals."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="ExemptionAllowance">
-            <label asp-for="ExemptionAllowance" class="ocat-label">@T["Each exemption"]</label>
-            <div class="ocat-end">
-                <input asp-for="ExemptionAllowance" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="600" />
-                <span asp-validation-for="ExemptionAllowance" class="text-danger"></span>
-                <span class="hint">@T["What each exemption on the person's election (of this jurisdiction or the one the rule reads its election from) lowers a year's income by, such as a city's 600; empty for none."]</span>
-            </div>
-        </div>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="WageBase">
+    <label asp-for="WageBase" class="ocat-label">@T["Wage base"]</label>
+    <div class="ocat-end">
+        <input asp-for="WageBase" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="WageBase" class="text-danger"></span>
+        <span class="hint">@T["The most income taxed in a calendar year, such as Social Security's wage base; empty for no limit."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="WageThreshold">
+    <label asp-for="WageThreshold" class="ocat-label">@T["Wage threshold"]</label>
+    <div class="ocat-end">
+        <input asp-for="WageThreshold" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="WageThreshold" class="text-danger"></span>
+        <span class="hint">@T["Only the part of a calendar year's income above it is taxed, such as an additional rate on high earners or a pension plan's second tier; empty to tax all of it."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="YearlyExemption">
+    <label asp-for="YearlyExemption" class="ocat-label">@T["Yearly exemption"]</label>
+    <div class="ocat-end">
+        <input asp-for="YearlyExemption" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="3500" />
+        <span asp-validation-for="YearlyExemption" class="text-danger"></span>
+        <span class="hint">@T["An amount of a year's income never taxed, taken off each pay in proportion to the pay periods of a year, such as the CPP basic exemption; empty for none."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="YearlyMaximum">
+    <label asp-for="YearlyMaximum" class="ocat-label">@T["Yearly maximum"]</label>
+    <div class="ocat-end">
+        <input asp-for="YearlyMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="YearlyMaximum" class="text-danger"></span>
+        <span class="hint">@T["The most tax taken in a calendar year, such as a contribution's maximum; empty for no limit. Amounts take a dot for decimals."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="ExemptionAllowance">
+    <label asp-for="ExemptionAllowance" class="ocat-label">@T["Each exemption"]</label>
+    <div class="ocat-end">
+        <input asp-for="ExemptionAllowance" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="600" />
+        <span asp-validation-for="ExemptionAllowance" class="text-danger"></span>
+        <span class="hint">@T["What each exemption on the person's election (of this jurisdiction or the one the rule reads its election from) lowers a year's income by, such as a city's 600; empty for none."]</span>
     </div>
 </div>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -28,22 +29,30 @@ public abstract class SkillSubjectSkillsDisplayDriverBase<TModel> : DisplayDrive
     private readonly IAuthorizationService _authorizationService;
 
     /// <summary>
+    /// Gets the localizer of the card's title.
+    /// </summary>
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="SkillSubjectSkillsDisplayDriverBase{TModel}"/> class.
     /// </summary>
     /// <param name="skillManager">The skill manager.</param>
     /// <param name="assignmentService">The skill assignment service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, for the signed-in user.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="stringLocalizer">The localizer of the card's title.</param>
     protected SkillSubjectSkillsDisplayDriverBase(
         ISkillManager skillManager,
         ISkillAssignmentService assignmentService,
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer stringLocalizer)
     {
         _skillManager = skillManager;
         _assignmentService = assignmentService;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -52,9 +61,15 @@ public abstract class SkillSubjectSkillsDisplayDriverBase<TModel> : DisplayDrive
     protected abstract string ShapeType { get; }
 
     /// <summary>
-    /// Gets where the section is placed in the editor.
+    /// Gets where the section is placed in the editor: a zone and the position in it, such as <c>Content:10</c>. The
+    /// section is a card of that zone, ordered by the same position.
     /// </summary>
     protected virtual string Location => "Content:10";
+
+    /// <summary>
+    /// Gets the position of the card among the cards of the editor, the position in <see cref="Location"/> by default.
+    /// </summary>
+    protected virtual string CardPosition => Position();
 
     /// <summary>
     /// Says who holds the skills of the edited record, or returns an empty subject when the record can't hold skills
@@ -95,7 +110,7 @@ public abstract class SkillSubjectSkillsDisplayDriverBase<TModel> : DisplayDrive
                 Category = skill.Category,
                 Proficiency = held.TryGetValue(skill.ItemId, out var assignment) ? assignment.Proficiency : 0,
             }).ToList();
-        }).Location(Location);
+        }).Location(l => l.Zone(Zone(), Position()).Card(S["Skills"], CardPosition));
     }
 
     /// <inheritdoc/>
@@ -146,6 +161,12 @@ public abstract class SkillSubjectSkillsDisplayDriverBase<TModel> : DisplayDrive
 
         return await EditAsync(model, context);
     }
+
+    private string Zone()
+        => Location.Split(':', 2)[0];
+
+    private string Position()
+        => Location.Contains(':') ? Location.Split(':', 2)[1] : null;
 
     private async Task<bool> CanAssignAsync()
     {

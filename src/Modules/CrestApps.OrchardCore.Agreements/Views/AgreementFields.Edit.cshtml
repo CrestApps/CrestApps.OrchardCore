@@ -16,73 +16,96 @@
     };
 }
 
-<div class="card mb-3">
-    <div class="card-body">
-        @if (!string.IsNullOrEmpty(Model.Number))
-        {
-            <p class="text-body-secondary mb-3">@T["Agreement {0}", Model.Number]</p>
-        }
-        <div class="row">
-            <div class="col-md-8 mb-3">
-                <label asp-for="Name" class="form-label">@T["Name"]</label>
-                <input asp-for="Name" class="form-control" required />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="Status" class="form-label">@T["Status"]</label>
-                <select asp-for="Status" class="form-select">
-                    @foreach (var (value, text) in statuses)
-                    {
-                        <option value="@value" selected="@(Model.Status == value)">@text</option>
-                    }
-                </select>
-                <span class="hint">@T["Only an active agreement is used for new work."]</span>
-            </div>
+@if (!string.IsNullOrEmpty(Model.Number))
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <p class="text-body-secondary mb-0">@T["Agreement {0}", Model.Number]</p>
         </div>
-        <div class="mb-3">
-            <label class="form-label">@T["Account"]</label>
-            @await Component.InvokeAsync("ItemSelector", new
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Status">
+    <label asp-for="Status" class="ocat-label">@T["Status"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Status" class="form-select">
+            @foreach (var (value, text) in statuses)
             {
-                id = Html.IdFor(m => m.AccountId).ToString() + "-selector",
-                inputName = Html.NameFor(m => m.AccountId).ToString(),
-                endpoint,
-                initialItemsJson = initialJson,
-                multiple = false,
-                enableSearch = true,
-                buttonText = T["Select an account"].Value,
-                searchPlaceholder = T["Search accounts"].Value,
-                emptyResultsText = T["No accounts found."].Value,
-                noSelectionText = T["No account."].Value,
-                selectedItemsLabel = T["Account"].Value,
-                availableItemsLabel = T["Accounts"].Value,
-                smallButton = false,
-            })
-            <span class="hint">@T["The account the agreement is with."]</span>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label asp-for="StartDate" class="form-label">@T["Starts"]</label>
-                <input asp-for="StartDate" type="date" class="form-control" />
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="EndDate" class="form-label">@T["Ends"]</label>
-                <input asp-for="EndDate" type="date" class="form-control" />
-                <span asp-validation-for="EndDate" class="text-danger"></span>
-                <span class="hint">@T["Leave it empty when it runs until it is canceled."]</span>
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="ExpiringNoticeDays" class="form-label">@T["Notice before the end (days)"]</label>
-                <input asp-for="ExpiringNoticeDays" type="number" min="0" max="365" class="form-control" />
-            </div>
-        </div>
-        <div class="mb-3">
-            <label asp-for="TimeZoneId" class="form-label">@T["Time zone"]</label>
-            <select asp-for="TimeZoneId" asp-items="Model.TimeZones" class="form-select"></select>
-            <span class="hint">@T["The days and months of the agreement are counted in this time zone."]</span>
-        </div>
-        <div class="mb-0">
-            <label asp-for="Notes" class="form-label">@T["Notes"]</label>
-            <textarea asp-for="Notes" rows="3" class="form-control"></textarea>
-        </div>
+                <option value="@value" selected="@(Model.Status == value)">@text</option>
+            }
+        </select>
+        <span class="hint">@T["Only an active agreement is used for new work."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Account"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(m => m.AccountId).ToString() + "-selector",
+            inputName = Html.NameFor(m => m.AccountId).ToString(),
+            endpoint,
+            initialItemsJson = initialJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Select an account"].Value,
+            searchPlaceholder = T["Search accounts"].Value,
+            emptyResultsText = T["No accounts found."].Value,
+            noSelectionText = T["No account."].Value,
+            selectedItemsLabel = T["Account"].Value,
+            availableItemsLabel = T["Accounts"].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["The account the agreement is with."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="StartDate">
+    <label asp-for="StartDate" class="ocat-label">@T["Starts"]</label>
+    <div class="ocat-limited">
+        <input asp-for="StartDate" type="date" class="form-control" />
+        <span asp-validation-for="StartDate" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="EndDate">
+    <label asp-for="EndDate" class="ocat-label">@T["Ends"]</label>
+    <div class="ocat-limited">
+        <input asp-for="EndDate" type="date" class="form-control" />
+        <span asp-validation-for="EndDate" class="text-danger"></span>
+        <span class="hint">@T["Leave it empty when it runs until it is canceled."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="ExpiringNoticeDays">
+    <label asp-for="ExpiringNoticeDays" class="ocat-label">@T["Notice before the end (days)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="ExpiringNoticeDays" type="number" min="0" max="365" class="form-control" />
+        <span asp-validation-for="ExpiringNoticeDays" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="TimeZoneId">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-limited">
+        <select asp-for="TimeZoneId" asp-items="Model.TimeZones" class="form-select"></select>
+        <span class="hint">@T["The days and months of the agreement are counted in this time zone."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Notes">
+    <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Notes" rows="3" class="form-control"></textarea>
+        <span asp-validation-for="Notes" class="text-danger"></span>
     </div>
 </div>

@@ -1,96 +1,37 @@
 @model PayItemViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Pay item"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="PayCodeId">
-            <label asp-for="PayCodeId" class="ocat-label ocat-label-required">@T["Pay code"]</label>
-            <div class="ocat-end">
-                <select asp-for="PayCodeId" asp-items="Model.Codes" class="form-select" style="max-width: 28rem">
-                    <option value="">@T["Choose…"]</option>
-                </select>
-                <span asp-validation-for="PayCodeId" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Amount">
-            <label asp-for="Amount" class="ocat-label">@T["Each period"]</label>
-            <div class="ocat-end">
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <input asp-for="Amount" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="@T["Amount"]" />
-                    <span>@T["or"]</span>
-                    <div class="input-group" style="max-width: 10rem">
-                        <input asp-for="Percent" class="form-control" inputmode="decimal" placeholder="@T["Percent"]" aria-label="@T["Percent"]" />
-                        <span class="input-group-text">%</span>
-                    </div>
-                </div>
-                <span asp-validation-for="Amount" class="text-danger"></span>
-                <span class="hint">@T["An amount each pay period, or a percent of gross pay. A dot for decimals."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="StartDate">
-            <label asp-for="StartDate" class="ocat-label ocat-label-required">@T["From and to"]</label>
-            <div class="ocat-end">
-                <div class="d-flex flex-wrap gap-2">
-                    <input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" />
-                    <input asp-for="EndDate" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
-                </div>
-                <span asp-validation-for="StartDate" class="text-danger"></span>
-                <span class="hint">@T["Leave the last day empty for no end."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="PayCodeId">
+    <label asp-for="PayCodeId" class="ocat-label ocat-label-required">@T["Pay code"]</label>
+    <div class="ocat-end">
+        <select asp-for="PayCodeId" asp-items="Model.Codes" class="form-select" style="max-width: 28rem">
+            <option value="">@T["Choose…"]</option>
+        </select>
+        <span asp-validation-for="PayCodeId" class="text-danger"></span>
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Limits and match"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="PeriodMaximum" class="ocat-label">@T["Most taken"]</label>
-            <div class="ocat-end">
-                <div class="d-flex flex-wrap gap-2">
-                    <input asp-for="PeriodMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="@T["A period"]" />
-                    <input asp-for="YearMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="@T["A year"]" aria-label="@T["A year"]" />
-                </div>
+<div class="ocat-wrapper" asp-validation-class-for="Amount">
+    <label asp-for="Amount" class="ocat-label">@T["Each period"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <input asp-for="Amount" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="@T["Amount"]" />
+            <span>@T["or"]</span>
+            <div class="input-group" style="max-width: 10rem">
+                <input asp-for="Percent" class="form-control" inputmode="decimal" placeholder="@T["Percent"]" aria-label="@T["Percent"]" />
+                <span class="input-group-text">%</span>
             </div>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Goal" class="ocat-label">@T["Goal"]</label>
-            <div class="ocat-end">
-                <input asp-for="Goal" class="form-control" inputmode="decimal" style="max-width: 10rem" />
-                <span class="hint">@T["A total to reach, such as a loan; the item stops once it is reached."]</span>
-                @if (!string.IsNullOrEmpty(Model.PaidTowardGoal) && Model.PaidTowardGoal != "0")
-                {
-                    <span class="hint d-block">@T["Paid so far: {0}", Model.PaidTowardGoal]</span>
-                }
-            </div>
+        <span asp-validation-for="Amount" class="text-danger"></span>
+        <span class="hint">@T["An amount each pay period, or a percent of gross pay. A dot for decimals."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="StartDate">
+    <label asp-for="StartDate" class="ocat-label ocat-label-required">@T["From and to"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" />
+            <input asp-for="EndDate" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="EmployerMatchPercent" class="ocat-label">@T["Employer match"]</label>
-            <div class="ocat-end">
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <div class="input-group" style="max-width: 10rem">
-                        <input asp-for="EmployerMatchPercent" class="form-control" inputmode="decimal" />
-                        <span class="input-group-text">%</span>
-                    </div>
-                    <span>@T["up to"]</span>
-                    <div class="input-group" style="max-width: 10rem">
-                        <input asp-for="EmployerMatchLimitPercent" class="form-control" inputmode="decimal" aria-label="@T["Up to"]" />
-                        <span class="input-group-text">%</span>
-                    </div>
-                </div>
-                <span class="hint">@T["The employer adds this share of the item, up to a percent of gross pay."]</span>
-            </div>
-        </div>
-        @if (!string.IsNullOrEmpty(Model.ArrearsBalance) && Model.ArrearsBalance != "0")
-        {
-            <div class="ocat-wrapper">
-                <span class="ocat-label">@T["In arrears"]</span>
-                <div class="ocat-end"><span class="form-control-plaintext">@Model.ArrearsBalance</span></div>
-            </div>
-        }
-        <div class="ocat-wrapper">
-            <label asp-for="Note" class="ocat-label">@T["Note"]</label>
-            <div class="ocat-end"><input asp-for="Note" class="form-control" /></div>
-        </div>
+        <span asp-validation-for="StartDate" class="text-danger"></span>
+        <span class="hint">@T["Leave the last day empty for no end."]</span>
     </div>
 </div>

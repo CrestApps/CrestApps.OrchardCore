@@ -97,7 +97,7 @@ internal sealed class WebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
                 .ToArray();
 
             model.HasDataSources = model.DataSources.Any();
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(WebCrawler crawler, UpdateEditorContext context)

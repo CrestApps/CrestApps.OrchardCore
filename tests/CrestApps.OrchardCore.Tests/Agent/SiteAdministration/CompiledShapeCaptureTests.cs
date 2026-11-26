@@ -49,6 +49,51 @@ public sealed class CompiledShapeCaptureTests
         Assert.Empty(editor.Unsupported);
     }
 
+    [Fact]
+    public async Task Capture_WhenOneViewModelIsSplitOverCards_ReadsEachFieldFromTheCardThatFillsIt()
+    {
+        // Arrange
+        using var services = new ServiceCollection()
+            .AddMvcCore()
+            .AddDataAnnotations()
+            .Services
+            .BuildServiceProvider();
+
+        // Each card fills only its own fields and leaves the others at the view model's defaults.
+        var generalCard = new CompiledTestSettingsShape
+        {
+            Title = "Contoso",
+        };
+        generalCard.Metadata.Type = "TestSettings_Edit";
+        generalCard.Metadata.Prefix = "ISite.TestSettings";
+
+        var displayCard = new CompiledTestSettingsShape
+        {
+            ShowBanner = true,
+            PageSize = 10,
+        };
+        displayCard.Metadata.Type = "TestSettingsDisplay_Edit";
+        displayCard.Metadata.Prefix = "ISite.TestSettings";
+
+        var zone = new Shape();
+        await zone.AddAsync(generalCard, "1");
+        await zone.AddAsync(displayCard, "2");
+
+        var root = new ZoneHolding(() => ValueTask.FromResult<IShape>(new Shape()));
+        root.Properties["Content"] = zone;
+
+        // Act
+        var editor = SiteSettingsEditor.Capture(services, root);
+
+        // Assert
+        var section = Assert.Single(editor.Sections);
+
+        Assert.Equal("Contoso", section.Values["Title"].GetValue<string>());
+        Assert.True(section.Values["ShowBanner"].GetValue<bool>());
+        Assert.Equal(10, section.Values["PageSize"].GetValue<int>());
+        Assert.Empty(editor.Unsupported);
+    }
+
     /// <summary>
     /// A shape type as Orchard Core's shape source generator writes it: sealed, derived from the view model, with
     /// <see cref="IShape"/> added.

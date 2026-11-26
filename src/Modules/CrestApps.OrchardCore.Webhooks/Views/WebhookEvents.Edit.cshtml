@@ -1,0 +1,26 @@
+@model WebhookEditViewModel
+
+<div class="ocat-wrapper" role="group" aria-labelledby="webhook-events-label" asp-validation-class-for="Events">
+    <span class="ocat-label ocat-label-required" id="webhook-events-label">@T["Events"]</span>
+    <div class="ocat-end">
+        <span asp-validation-for="Events"></span>
+        <div class="form-check mb-2">
+            <input asp-for="AllEvents" type="checkbox" class="form-check-input" />
+            <label asp-for="AllEvents" class="form-check-label">@T["Every event, those added later too"]</label>
+        </div>
+        @foreach (var group in Model.AvailableEvents)
+        {
+            <div class="mb-2">
+                <div class="fw-semibold small text-body-secondary mb-1">@group.Key</div>
+                @foreach (var webhookEvent in group)
+                {
+                    var id = "event-" + webhookEvent.Name.Replace('.', '-');
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="Events" value="@webhookEvent.Name" id="@id" checked="@Model.Events.Contains(webhookEvent.Name)" />
+                        <label class="form-check-label" for="@id">@webhookEvent.DisplayName <span class="font-monospace small text-body-secondary">@webhookEvent.Name</span></label>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

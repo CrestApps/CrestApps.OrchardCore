@@ -41,7 +41,7 @@ internal sealed class SitemapDocumentationToolInstanceDisplayDriver : DisplayDri
             model.SitemapUrl = settings.SitemapUrl;
             model.MaxResults = settings.MaxResults;
             model.MaxPages = settings.MaxPages;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Sitemap"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)

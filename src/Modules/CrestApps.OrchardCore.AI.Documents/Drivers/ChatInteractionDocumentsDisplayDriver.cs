@@ -80,7 +80,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Parameters:6#Knowledge;3");
+        }).Location(l => l.Zone("Parameters", "6").Tab(S["Knowledge"], "3").Card(S["Documents"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

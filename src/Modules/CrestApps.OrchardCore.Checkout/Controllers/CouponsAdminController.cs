@@ -50,6 +50,7 @@ public sealed class CouponsAdminController : Controller
     private readonly CouponEditor _editor;
     private readonly ICouponRedemptionService _redemptions;
     private readonly IDisplayManager<Coupon> _couponDisplayManager;
+    private readonly IDisplayManager<CouponEditViewModel> _editorDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -70,6 +71,7 @@ public sealed class CouponsAdminController : Controller
         CouponEditor editor,
         ICouponRedemptionService redemptions,
         IDisplayManager<Coupon> couponDisplayManager,
+        IDisplayManager<CouponEditViewModel> editorDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IAuthorizationService authorizationService,
         INotifier notifier,
@@ -80,6 +82,7 @@ public sealed class CouponsAdminController : Controller
         _editor = editor;
         _redemptions = redemptions;
         _couponDisplayManager = couponDisplayManager;
+        _editorDisplayManager = editorDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _authorizationService = authorizationService;
         _notifier = notifier;
@@ -226,7 +229,8 @@ public sealed class CouponsAdminController : Controller
 
         await PopulateCurrenciesAsync(model);
         PopulateSources(model);
-        model.Editor = await _couponDisplayManager.BuildEditorAsync(new Coupon(), _updateModelAccessor.ModelUpdater, isNew: true);
+        model.Extensions = await _couponDisplayManager.BuildEditorAsync(new Coupon(), _updateModelAccessor.ModelUpdater, isNew: true);
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }
@@ -249,16 +253,18 @@ public sealed class CouponsAdminController : Controller
 
         // What other modules add, such as the products the coupon is for, is read into the coupon first; the
         // fields of this form are applied after, once everything is valid.
-        var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: true);
+        var extensions = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        await PopulateCurrenciesAsync(model);
+        PopulateSources(model);
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         await SetUtcDatesAsync(model, localClock);
         await _editor.ValidateAsync(model, existingItemId: null, ModelState);
 
         if (!ModelState.IsValid)
         {
-            await PopulateCurrenciesAsync(model);
-            PopulateSources(model);
-            model.Editor = editor;
+            model.Extensions = extensions;
 
             return View(model);
         }
@@ -299,7 +305,8 @@ public sealed class CouponsAdminController : Controller
         await PopulateCurrenciesAsync(model);
         PopulateSources(model);
         await PopulateUsesAsync(model, coupon);
-        model.Editor = await _couponDisplayManager.BuildEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
+        model.Extensions = await _couponDisplayManager.BuildEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }
@@ -326,7 +333,11 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
-        var editor = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
+        var extensions = await _couponDisplayManager.UpdateEditorAsync(coupon, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        await PopulateCurrenciesAsync(model);
+        PopulateSources(model);
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         await SetUtcDatesAsync(model, localClock);
         await _editor.ValidateAsync(model, coupon.ItemId, ModelState);
@@ -336,10 +347,8 @@ public sealed class CouponsAdminController : Controller
             model.ItemId = coupon.ItemId;
             model.RedemptionCount = coupon.RedemptionCount;
 
-            await PopulateCurrenciesAsync(model);
-            PopulateSources(model);
             await PopulateUsesAsync(model, coupon);
-            model.Editor = editor;
+            model.Extensions = extensions;
 
             return View(model);
         }

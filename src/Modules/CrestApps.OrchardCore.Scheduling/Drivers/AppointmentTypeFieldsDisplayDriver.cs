@@ -33,12 +33,12 @@ internal sealed class AppointmentTypeFieldsDisplayDriver : DisplayDriver<Appoint
 
     public override IDisplayResult Edit(AppointmentType type, BuildEditorContext context)
     {
-        return Initialize<AppointmentTypeViewModel>("AppointmentTypeFields_Edit", async model =>
+        return Build(async model =>
         {
             AppointmentTypeEditorRules.Fill(model, type);
 
             await FillAsync(model);
-        }).Location("Content:1");
+        });
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AppointmentType type, UpdateEditorContext context)
@@ -53,7 +53,7 @@ internal sealed class AppointmentTypeFieldsDisplayDriver : DisplayDriver<Appoint
         }
 
         // The form shows what was posted, as typed.
-        return Initialize<AppointmentTypeViewModel>("AppointmentTypeFields_Edit", async model =>
+        return Build(async model =>
         {
             model.Name = posted.Name;
             model.Description = posted.Description;
@@ -79,7 +79,21 @@ internal sealed class AppointmentTypeFieldsDisplayDriver : DisplayDriver<Appoint
             model.Enabled = posted.Enabled;
 
             await FillAsync(model);
-        }).Location("Content:1");
+        });
+    }
+
+    // One shape per card, each a copy of the same view model so the fields bind once.
+    private CombinedResult Build(Func<AppointmentTypeViewModel, ValueTask> populate)
+    {
+        return Combine(
+            Initialize<AppointmentTypeViewModel>("AppointmentTypeFields_Edit", populate)
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<AppointmentTypeViewModel>("AppointmentTypeTime_Edit", populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Time"], "20")),
+            Initialize<AppointmentTypeViewModel>("AppointmentTypeWho_Edit", populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Who"], "30")),
+            Initialize<AppointmentTypeViewModel>("AppointmentTypeRules_Edit", populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Booking Rules"], "40")));
     }
 
     private string Key(string name)

@@ -1,0 +1,60 @@
+@model PayrollPayCodeViewModel
+
+@{
+    var defaultText = Model.ClassDefault == "Exempt" ? T["Not taxed"] : T["Taxed"];
+}
+
+<p class="hint">@T["Whether the amount counts for each tax. A taxed earning adds to that tax's wages; a deduction not taxed is taken before that tax and lowers its wages. Left on the default, the class decides ({0}).", defaultText]</p>
+<div class="table-responsive">
+    <table class="table table-sm align-middle" style="max-width: 40rem">
+        <thead>
+            <tr>
+                <th scope="col">@T["Tax"]</th>
+                <th scope="col">@T["Treatment"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var category in Model.Categories)
+            {
+                var current = Model.Treatments.TryGetValue(category.Value, out var chosen) ? chosen : string.Empty;
+                var name = Html.NameFor(m => m.Treatments) + "[" + category.Value + "]";
+
+                <tr>
+                    <td>@category.Text</td>
+                    <td>
+                        <select class="form-select form-select-sm" name="@name" aria-label="@T["Treatment for {0}", category.Text]">
+                            <option value="" selected="@(current == string.Empty)">@T["Default ({0})", defaultText]</option>
+                            <option value="Taxed" selected="@(current == "Taxed")">@T["Taxed"]</option>
+                            <option value="Exempt" selected="@(current == "Exempt")">@T["Not taxed"]</option>
+                        </select>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Supplemental" type="checkbox" class="form-check-input" />
+            <label asp-for="Supplemental" class="form-check-label">@T["Supplemental pay"]</label>
+            <span class="hint dashed">@T["Paid apart from regular wages, such as a bonus or a commission; a tax may withhold it at its supplemental rate."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="CountsInRegularRate" type="checkbox" class="form-check-input" />
+            <label asp-for="CountsInRegularRate" class="form-check-label">@T["Counts in the regular rate"]</label>
+            <span class="hint dashed">@T["The overtime premium is priced on the regular rate: pay for hours worked and promised bonuses count, pay for hours not worked does not."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="CountsAsHoursWorked" type="checkbox" class="form-check-input" />
+            <label asp-for="CountsAsHoursWorked" class="form-check-label">@T["Counts as hours worked"]</label>
+            <span class="hint dashed">@T["For overtime and for benefits that depend on hours worked."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="InRetroPay" type="checkbox" class="form-check-input" />
+            <label asp-for="InRetroPay" class="form-check-label">@T["Recalculated by retro pay"]</label>
+            <span class="hint dashed">@T["When a rate changes from a past day, retro pay pays the difference on this code for the past periods."]</span>
+        </div>
+    </div>
+</div>

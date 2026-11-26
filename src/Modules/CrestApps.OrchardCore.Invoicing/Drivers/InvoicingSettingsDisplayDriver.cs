@@ -51,7 +51,16 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, InvoicingSettings settings, BuildEditorContext context)
     {
-        return Initialize<InvoicingSettingsViewModel>("InvoicingSettings_Edit", async model =>
+        return Combine(
+            CardShape("InvoicingSettingsGeneral_Edit", settings, "1", S["General"], "10"),
+            CardShape("InvoicingSettingsBehavior_Edit", settings, "2", S["Behavior"], "15"),
+            CardShape("InvoicingSettingsLinks_Edit", settings, "3", S["Links and Validity"], "20"),
+            CardShape("InvoicingSettingsText_Edit", settings, "4", S["Printed Text"], "30"));
+    }
+
+    private ShapeResult CardShape(string shapeType, InvoicingSettings settings, string position, LocalizedString card, string cardPosition)
+    {
+        return Initialize<InvoicingSettingsViewModel>(shapeType, async model =>
         {
             model.DefaultPaymentTermId = settings.DefaultPaymentTermId;
             model.DefaultCurrency = settings.DefaultCurrency;
@@ -68,7 +77,7 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
             model.ShareLinkDays = settings.ShareLinkDays;
             model.EstimateValidDays = settings.EstimateValidDays;
             model.PaymentTerms = [.. (await _paymentTerms.GetEnabledAsync()).Select(term => new SelectListItem(term.Name, term.ItemId))];
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InvoicingPermissions.ManageInvoicingSettings))
         .OnGroup(SettingsGroupId);
     }

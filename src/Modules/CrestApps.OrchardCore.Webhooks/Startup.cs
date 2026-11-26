@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Deployments;
 using CrestApps.OrchardCore.Webhooks.Drivers;
 using CrestApps.OrchardCore.Webhooks.Navigation;
+using CrestApps.OrchardCore.Webhooks.ViewModels;
 using CrestApps.OrchardCore.Webhooks.Recipes;
 using CrestApps.OrchardCore.Webhooks.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +48,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<WebhooksAdminMenu>();
         services.AddDisplayDriver<WebhookSubscription, WebhookSubscriptionDisplayDriver>();
         services.AddDisplayDriver<WebhookDelivery, WebhookDeliveryDisplayDriver>();
+        services.AddDisplayDriver<WebhookEditViewModel, WebhookEditDisplayDriver>();
     }
 }
 

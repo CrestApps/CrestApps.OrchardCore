@@ -51,7 +51,7 @@ internal sealed class WorkflowToolInstanceDisplayDriver : DisplayDriver<AIToolIn
                 .OrderBy(type => type.Name)
                 .Select(type => new SelectListItem(type.Name, type.WorkflowTypeId))
                 .ToList();
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Workflow"], "20"));
     }
 
     /// <inheritdoc/>

@@ -15,6 +15,13 @@ public sealed class MessagingRecipientPickerViewsTests
         // Arrange
         var view = File.ReadAllText(Path.Combine(GetModuleRoot(), "Views", folder, fileName));
 
+        // The broadcast page renders its recipients card from a shape of its own (placed in a card), so the picker's
+        // markup sits in that view and the page keeps the scripts and styles.
+        if (folder == "Broadcasts")
+        {
+            view += File.ReadAllText(Path.Combine(GetModuleRoot(), "Views", "BroadcastRecipients.Edit.cshtml"));
+        }
+
         // Assert
         Assert.Contains("data-messaging-contact-picker", view, StringComparison.Ordinal);
         Assert.Contains("data-endpoint-select=\"#endpoint-select\"", view, StringComparison.Ordinal);

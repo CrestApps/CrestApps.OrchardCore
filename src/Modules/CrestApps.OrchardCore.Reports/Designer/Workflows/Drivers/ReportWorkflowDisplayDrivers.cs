@@ -22,13 +22,24 @@ public sealed class ReportEventDisplayDriver<TEvent> : ActivityDisplayDriver<TEv
 {
     private readonly ReportDesignService _designService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportEventDisplayDriver{TEvent}"/> class.
     /// </summary>
     /// <param name="designService">The designed reports.</param>
-    public ReportEventDisplayDriver(ReportDesignService designService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ReportEventDisplayDriver(ReportDesignService designService, IStringLocalizer<ReportEventDisplayDriver<TEvent>> stringLocalizer)
     {
         _designService = designService;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(TEvent activity, BuildEditorContext context)
+    {
+        return Initialize<ReportEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
     }
 
     /// <inheritdoc/>
@@ -89,6 +100,22 @@ public abstract class ReportTaskDisplayDriver<TTask, TModel> : ActivityDisplayDr
     /// Gets the output name the task uses when none is set.
     /// </summary>
     protected abstract string DefaultOutputName { get; }
+
+    /// <summary>
+    /// Gets the title of the card holding the task's own fields.
+    /// </summary>
+    protected virtual LocalizedString SettingsCardTitle
+        => S["Settings"];
+
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(TTask activity, BuildEditorContext context)
+    {
+        return Combine(
+            Initialize<TModel>("ReportTaskReport_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Report"], "10")),
+            Initialize<TModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "2").Card(SettingsCardTitle, "20")));
+    }
 
     /// <inheritdoc/>
     protected override async ValueTask EditActivityAsync(TTask activity, TModel model)
@@ -181,6 +208,10 @@ public sealed class RunReportTaskDisplayDriver : ReportTaskDisplayDriver<RunRepo
 
     /// <inheritdoc/>
     protected override string DefaultOutputName => RunReportTask.DefaultOutputName;
+
+    /// <inheritdoc/>
+    protected override LocalizedString SettingsCardTitle
+        => S["Output"];
 
     /// <inheritdoc/>
     protected override ValueTask EditTaskAsync(RunReportTask activity, RunReportTaskViewModel model) => ValueTask.CompletedTask;

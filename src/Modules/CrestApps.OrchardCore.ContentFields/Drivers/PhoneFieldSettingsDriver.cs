@@ -42,17 +42,25 @@ public sealed class PhoneFieldSettingsDriver : ContentPartFieldDefinitionDisplay
     /// <returns>The display result.</returns>
     public override IDisplayResult Edit(ContentPartFieldDefinition model, BuildEditorContext context)
     {
-        return Initialize<PhoneFieldSettingsViewModel>("PhoneFieldSettings_Edit", viewModel =>
-        {
-            var settings = model.GetSettings<PhoneFieldSettings>();
+        return Combine(
+            Initialize<PhoneFieldSettingsViewModel>("PhoneFieldSettingsBehavior_Edit", viewModel => FillValues(viewModel, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Behavior"], "15")),
+            Initialize<PhoneFieldSettingsViewModel>("PhoneFieldSettings_Edit", viewModel =>
+            {
+                FillValues(viewModel, model);
+                viewModel.InitialCountryModeOptions = GetInitialCountryModeOptions(viewModel.InitialCountryMode);
+                viewModel.CountryOptions = GetCountryOptions(viewModel.SpecificCountryCode);
+            }).Location(l => l.Zone("Content", "2").Card(S["Settings"], "20")));
+    }
 
-            viewModel.Hint = settings.Hint;
-            viewModel.Required = settings.Required;
-            viewModel.InitialCountryMode = settings.InitialCountryMode;
-            viewModel.SpecificCountryCode = settings.SpecificCountryCode;
-            viewModel.InitialCountryModeOptions = GetInitialCountryModeOptions(settings.InitialCountryMode);
-            viewModel.CountryOptions = GetCountryOptions(settings.SpecificCountryCode);
-        }).Location("Content");
+    private static void FillValues(PhoneFieldSettingsViewModel viewModel, ContentPartFieldDefinition model)
+    {
+        var settings = model.GetSettings<PhoneFieldSettings>();
+
+        viewModel.Hint = settings.Hint;
+        viewModel.Required = settings.Required;
+        viewModel.InitialCountryMode = settings.InitialCountryMode;
+        viewModel.SpecificCountryCode = settings.SpecificCountryCode;
     }
 
     /// <summary>

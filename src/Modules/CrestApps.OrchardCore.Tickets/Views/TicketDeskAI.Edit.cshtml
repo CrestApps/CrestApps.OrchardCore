@@ -1,32 +1,27 @@
 @model TicketDeskAIViewModel
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["AI assistant"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="ProfileId" class="ocat-label">@T["AI profile"]</label>
-            <div class="ocat-end">
-                <select asp-for="ProfileId" class="form-select">
-                    <option value="">@(string.IsNullOrEmpty(Model.SiteProfileName) ? T["The service desk's profile (none chosen)"] : T["The service desk's profile ({0})", Model.SiteProfileName])</option>
-                    <option value="@TicketDeskAIViewModel.Off" selected="@(Model.ProfileId == TicketDeskAIViewModel.Off)">@T["No AI assistant on this desk"]</option>
-                    @foreach (var profile in Model.Profiles)
-                    {
-                        <option value="@profile.Value" selected="@profile.Selected">@profile.Text</option>
-                    }
-                </select>
-                <span asp-validation-for="ProfileId" class="text-danger"></span>
-                <span class="hint">@T["A chat AI profile that suggests replies to agents and triages tickets, with its instructions, knowledge and model; the service desk's profile is chosen under Settings › Service Desk. It sends the ticket's conversation, internal notes and the requester's name included, to the profile's AI provider; agents send what it writes."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="ProfileId" class="ocat-label">@T["AI profile"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProfileId" class="form-select">
+            <option value="">@(string.IsNullOrEmpty(Model.SiteProfileName) ? T["The service desk's profile (none chosen)"] : T["The service desk's profile ({0})", Model.SiteProfileName])</option>
+            <option value="@TicketDeskAIViewModel.Off" selected="@(Model.ProfileId == TicketDeskAIViewModel.Off)">@T["No AI assistant on this desk"]</option>
+            @foreach (var profile in Model.Profiles)
+            {
+                <option value="@profile.Value" selected="@profile.Selected">@profile.Text</option>
+            }
+        </select>
+        <span asp-validation-for="ProfileId" class="text-danger"></span>
+        <span class="hint">@T["A chat AI profile that suggests replies to agents and triages tickets, with its instructions, knowledge and model; the service desk's profile is chosen under Settings › Service Desk. It sends the ticket's conversation, internal notes and the requester's name included, to the profile's AI provider; agents send what it writes."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="ApplyPriority" />
-                    <label class="form-check-label" asp-for="ApplyPriority">@T["A triage sets the priority it suggests"]</label>
-                    <span class="hint dashed">@T["It may lower the priority, or raise it at most one step above the ticket type's default; anything higher it only notes, for an agent to decide, so a requester's own words can't make their ticket the most urgent. Otherwise the triage only notes the priority."]</span>
-                </div>
-            </div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ApplyPriority" />
+            <label class="form-check-label" asp-for="ApplyPriority">@T["A triage sets the priority it suggests"]</label>
+            <span class="hint dashed">@T["It may lower the priority, or raise it at most one step above the ticket type's default; anything higher it only notes, for an agent to decide, so a requester's own words can't make their ticket the most urgent. Otherwise the triage only notes the priority."]</span>
         </div>
     </div>
 </div>

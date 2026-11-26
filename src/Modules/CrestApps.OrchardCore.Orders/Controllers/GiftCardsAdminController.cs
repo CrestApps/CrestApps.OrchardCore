@@ -24,6 +24,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Settings;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Orders.Controllers;
 
@@ -45,6 +46,9 @@ public sealed class GiftCardsAdminController : Controller
     private readonly INotifier _notifier;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
+    private readonly IDisplayManager<GiftCardCreateViewModel> _createEditorManager;
+    private readonly IDisplayManager<GiftCardEditViewModel> _editEditorManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -58,6 +62,9 @@ public sealed class GiftCardsAdminController : Controller
         INotifier notifier,
         IClock clock,
         ILocalClock localClock,
+        IDisplayManager<GiftCardCreateViewModel> createEditorManager,
+        IDisplayManager<GiftCardEditViewModel> editEditorManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<GiftCardsAdminController> htmlLocalizer,
         IStringLocalizer<GiftCardsAdminController> stringLocalizer)
     {
@@ -69,6 +76,9 @@ public sealed class GiftCardsAdminController : Controller
         _notifier = notifier;
         _clock = clock;
         _localClock = localClock;
+        _createEditorManager = createEditorManager;
+        _editEditorManager = editEditorManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -168,7 +178,10 @@ public sealed class GiftCardsAdminController : Controller
 
         var settings = await _siteService.GetSettingsAsync<CheckoutSettings>();
 
-        return View(new GiftCardCreateViewModel { Currency = settings.Currency });
+        var model = new GiftCardCreateViewModel { Currency = settings.Currency };
+        model.Editor = await _createEditorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -179,6 +192,8 @@ public sealed class GiftCardsAdminController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _createEditorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         var expiresUtc = await ToUtcAsync(model.Expires);
 
@@ -247,7 +262,10 @@ public sealed class GiftCardsAdminController : Controller
             return NotFound();
         }
 
-        return View(await ToModelAsync(card));
+        var model = await ToModelAsync(card);
+        model.Editor = await _editEditorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -266,6 +284,8 @@ public sealed class GiftCardsAdminController : Controller
             return NotFound();
         }
 
+        model.Editor = await _editEditorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         if (!ModelState.IsValid)
         {
             var invalid = await ToModelAsync(card);
@@ -274,6 +294,7 @@ public sealed class GiftCardsAdminController : Controller
             invalid.RecipientName = model.RecipientName;
             invalid.RecipientEmail = model.RecipientEmail;
             invalid.Note = model.Note;
+            invalid.Editor = await _editEditorManager.BuildEditorAsync(invalid, _updateModelAccessor.ModelUpdater, isNew: false);
 
             return View(invalid);
         }

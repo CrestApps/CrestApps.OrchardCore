@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -19,15 +20,20 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly OmnichannelAddressOptions _addressOptions;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MessagingLineEndpointDisplayDriver"/> class.
     /// </summary>
     /// <param name="channelResolver">The enabled messaging channels.</param>
     /// <param name="addressOptions">The address types and capabilities.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public MessagingLineEndpointDisplayDriver(
         IMessagingChannelResolver channelResolver,
-        IOptions<OmnichannelAddressOptions> addressOptions)
+        IOptions<OmnichannelAddressOptions> addressOptions,
+        IStringLocalizer<MessagingLineEndpointDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _channelResolver = channelResolver;
         _addressOptions = addressOptions.Value;
     }
@@ -46,7 +52,7 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
         {
             model.TextingUserIds = [.. MessagingLines.GetUserIds(endpoint)];
             model.ServedCapabilities = string.Join(",", channels);
-        }).Location("Content:2%Text messages;3");
+        }).Location(l => l.Zone("Content", "2").Card(S["Text Messages"], "3"));
     }
 
     /// <inheritdoc/>

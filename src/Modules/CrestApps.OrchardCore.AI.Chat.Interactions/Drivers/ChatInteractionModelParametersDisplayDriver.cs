@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -16,9 +17,14 @@ public sealed class ChatInteractionModelParametersDisplayDriver : DisplayDriver<
 {
     private readonly AIModelParameterViewService _viewService;
 
-    public ChatInteractionModelParametersDisplayDriver(AIModelParameterViewService viewService)
+    internal readonly IStringLocalizer S;
+
+    public ChatInteractionModelParametersDisplayDriver(
+        AIModelParameterViewService viewService,
+        IStringLocalizer<ChatInteractionModelParametersDisplayDriver> stringLocalizer)
     {
         _viewService = viewService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
@@ -39,7 +45,7 @@ public sealed class ChatInteractionModelParametersDisplayDriver : DisplayDriver<
             model.SettingKeyPrefix = ChatInteractionModelParameterSettingKeys.ChatDeployment;
             // The settings panel stacks each label above its input.
             model.UseStackedLayout = true;
-        }).Location("Parameters:3.5#Settings;1");
+        }).Location(l => l.Zone("Parameters", "3.5").Tab(S["Settings"], "1").Card(S["Deployments & Interactions"], "2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

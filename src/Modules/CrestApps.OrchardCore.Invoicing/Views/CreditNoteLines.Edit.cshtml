@@ -1,0 +1,10 @@
+@model CreditNoteEditViewModel
+
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@{
+    var currency = Model.Currency;
+    string Money(decimal amount) => string.IsNullOrEmpty(currency) ? amount.ToString("0.00") : MoneyFormatter.Format(amount, currency);
+}
+
+<partial name="_DocumentLinesEditor" model='DocumentLinesEditorViewModel.For(Model, string.Format(System.Globalization.CultureInfo.CurrentCulture, T["Lower a quantity or price to credit part of a line, or remove a line to leave it out. At most {0} can still be credited on this invoice."].Value, Money(Model.Creditable)), T["Total credited"].Value)' />

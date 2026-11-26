@@ -44,6 +44,13 @@ public sealed class AIConversationStartingEventDisplayDriver : ActivityDisplayDr
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(AIConversationStartingEvent activity, BuildEditorContext context)
+    {
+        return Initialize<AIConversationStartingEventViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Filter"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(AIConversationStartingEvent activity, UpdateEditorContext context)
     {
         var model = new AIConversationStartingEventViewModel();

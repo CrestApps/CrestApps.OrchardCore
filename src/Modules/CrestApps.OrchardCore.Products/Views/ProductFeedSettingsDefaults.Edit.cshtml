@@ -1,0 +1,38 @@
+@model CrestApps.OrchardCore.Products.Feeds.ProductFeedSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultBrand" class="ocat-label">@T["Brand"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultBrand" class="form-control" maxlength="70" />
+        <span class="hint">@T["For products that name none, such as your own brand. A term from a taxonomy whose name starts with Brand is the product's brand too."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="DefaultCondition" class="ocat-label">@T["Condition"]</label>
+    <div class="ocat-limited">
+        <select asp-for="DefaultCondition" class="form-select">
+            <option value="new">@T["New"]</option>
+            <option value="refurbished">@T["Refurbished"]</option>
+            <option value="used">@T["Used"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultGoogleProductCategory" class="ocat-label">@T["Google product category"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultGoogleProductCategory" class="form-control" maxlength="250" placeholder="@T["Such as Apparel & Accessories > Clothing, or its number"]" />
+        <span class="hint">@T["Optional. For products that name none."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeOutOfStock" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeOutOfStock" class="form-check-label">@T["Keep products that are out of stock, marked so"]</label>
+        </div>
+        <span class="hint dashed">@T["Untick it to leave them out until they're back."]</span>
+    </div>
+</div>

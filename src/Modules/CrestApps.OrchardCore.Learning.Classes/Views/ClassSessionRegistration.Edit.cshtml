@@ -1,0 +1,33 @@
+@model ClassSessionEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="RegistrationOpens">
+    <label asp-for="RegistrationOpens" class="ocat-label">@T["Opens"]</label>
+    <div class="ocat-end">
+        <input asp-for="RegistrationOpens" type="datetime-local" class="form-control" />
+        <span class="hint">@T["Empty opens registration at once."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RegistrationCloses">
+    <label asp-for="RegistrationCloses" class="ocat-label">@T["Closes"]</label>
+    <div class="ocat-end">
+        <input asp-for="RegistrationCloses" type="datetime-local" class="form-control" />
+        <span asp-validation-for="RegistrationCloses"></span>
+        <span class="hint">@T["Empty closes registration when the first meeting starts."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="WaitlistMode">
+    <label asp-for="WaitlistMode" class="ocat-label">@T["When it is full"]</label>
+    <div class="ocat-end">
+        <select asp-for="WaitlistMode" asp-items="Model.WaitlistModeOptions" class="form-select"></select>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OfferHours">
+    <label asp-for="OfferHours" class="ocat-label">@T["Offer held for (hours)"]</label>
+    <div class="ocat-end">
+        <input asp-for="OfferHours" type="number" min="1" class="form-control" />
+        <span class="hint">@T["How long a place offered from the waitlist is held before it passes to the next person."]</span>
+    </div>
+</div>

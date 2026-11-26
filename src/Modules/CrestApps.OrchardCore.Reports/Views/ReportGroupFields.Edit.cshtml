@@ -1,0 +1,28 @@
+@model ReportGroupEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DisplayText">
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" maxlength="200" required autofocus />
+        <span asp-validation-for="DisplayText"></span>
+        <span class="hint">@T["Shown in the admin menu, under Reports, with the reports placed in the group."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ParentId">
+    <label asp-for="ParentId" class="ocat-label">@T["Parent group"]</label>
+    <div class="ocat-end">
+        <select asp-for="ParentId" asp-items="Model.Parents" class="form-select"><option value="">@T["None (top level)"]</option></select>
+        <span asp-validation-for="ParentId"></span>
+        <span class="hint">@T["Nests this group inside another one. A group cannot be placed in itself or in a group nested in it."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Order">
+    <label asp-for="Order" class="ocat-label">@T["Display order"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Order" type="number" class="form-control" />
+        <span asp-validation-for="Order"></span>
+        <span class="hint">@T["Lower numbers come first among the groups that share a parent; groups with the same number are sorted by name."]</span>
+    </div>
+</div>

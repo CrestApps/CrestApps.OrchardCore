@@ -4,11 +4,19 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Drivers;
 
 public sealed class ContentTypeTransferSettingsDisplayDriver : ContentTypeDefinitionDisplayDriver
 {
+    internal readonly IStringLocalizer S;
+
+    public ContentTypeTransferSettingsDisplayDriver(IStringLocalizer<ContentTypeTransferSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(ContentTypeDefinition contentTypeDefinition, BuildEditorContext context)
     {
         return Initialize<ContentTypeTransferSettingsViewModels>("ContentTypeTransferSettings_Edit", model =>
@@ -16,7 +24,7 @@ public sealed class ContentTypeTransferSettingsDisplayDriver : ContentTypeDefini
             var settings = contentTypeDefinition.GetSettings<ContentTypeTransferSettings>();
             model.AllowBulkImport = settings.AllowBulkImport;
             model.AllowBulkExport = settings.AllowBulkExport;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Bulk Import and Export"], "50"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypeDefinition contentTypeDefinition, UpdateTypeEditorContext context)

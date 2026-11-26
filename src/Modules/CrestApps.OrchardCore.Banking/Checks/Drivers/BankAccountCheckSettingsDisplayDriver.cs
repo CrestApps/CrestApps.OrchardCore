@@ -55,7 +55,7 @@ internal sealed class BankAccountCheckSettingsDisplayDriver : DisplayDriver<Bank
                     .OrderBy(layout => layout.Name, StringComparer.OrdinalIgnoreCase)
                     .Select(layout => new SelectListItem(layout.Name, layout.ItemId, layout.ItemId == settings.DefaultLayoutId)),
             ];
-        }).Location("Content:25");
+        }).Location(l => l.Zone("Content", "25").Card(S["Checks"], "40"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(BankAccount account, UpdateEditorContext context)

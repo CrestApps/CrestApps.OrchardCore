@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
 
@@ -45,6 +46,12 @@ public class BroadcastCreateViewModel
     /// </summary>
     [BindNever]
     public IReadOnlyDictionary<string, string> EndpointChannels { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of this view model, which groups the fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

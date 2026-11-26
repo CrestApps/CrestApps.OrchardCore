@@ -1,24 +1,32 @@
 @model TicketMacroViewModel
 
-<fieldset class="mb-3 border-top pt-3">
-    <legend class="h6">@T["On a ticket, also"]</legend>
-    <p class="hint">@T["For a template used on tickets: what using it changes on the ticket, besides inserting the text. Leave a choice empty to change nothing."]</p>
-    <div class="row">
-        <div class="col-12 col-md-4 mb-2">
-            <label asp-for="StatusId" class="form-label">@T["Set the status"]</label>
-            <select asp-for="StatusId" asp-items="Model.Statuses" class="form-select">
-                <option value="">@T["Keep the status"]</option>
-            </select>
-        </div>
-        <div class="col-12 col-md-4 mb-2">
-            <label asp-for="PriorityId" class="form-label">@T["Set the priority"]</label>
-            <select asp-for="PriorityId" asp-items="Model.Priorities" class="form-select">
-                <option value="">@T["Keep the priority"]</option>
-            </select>
-        </div>
-        <div class="col-12 col-md-4 mb-2">
-            <label class="form-label">@T["Move to the team"]</label>
-            @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.TeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.TeamId) ? Array.Empty<string>() : new[] { Model.TeamId } })
-        </div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["For a template used on tickets: what using it changes on the ticket, besides inserting the text. Leave a choice empty to change nothing."]</span>
     </div>
-</fieldset>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="StatusId" class="ocat-label">@T["Set the status"]</label>
+    <div class="ocat-end">
+        <select asp-for="StatusId" asp-items="Model.Statuses" class="form-select">
+            <option value="">@T["Keep the status"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PriorityId" class="ocat-label">@T["Set the priority"]</label>
+    <div class="ocat-end">
+        <select asp-for="PriorityId" asp-items="Model.Priorities" class="form-select">
+            <option value="">@T["Keep the priority"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Move to the team"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.TeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.TeamId) ? Array.Empty<string>() : new[] { Model.TeamId } })
+    </div>
+</div>

@@ -152,7 +152,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.Name = profile.Name;
             model.DisplayText = profile.DisplayText;
             model.IsNew = context.IsNew;
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
 
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
@@ -165,22 +165,22 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
                 .ToArray();
             }
-        }).Location("Content:2%General;1");
+        }).Location(l => l.Zone("Content", "2").Card(S["General"], "1"));
 
         var generalFieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", PopulateProfileFields)
-            .Location("Content:5%General;1");
+            .Location(l => l.Zone("Content", "5").Card(S["General"], "1"));
 
         var interactionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInteractionFields_Edit", PopulateProfileFields)
-            .Location("Content:6%General;1");
+            .Location(l => l.Zone("Content", "6").Card(S["General"], "1"));
 
         var instructionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInstructionFields_Edit", PopulateProfileFields)
-            .Location("Content:1%Instructions;4");
+            .Location(l => l.Zone("Content", "1").Card(S["Instructions"], "4"));
 
         var systemInstructionsResult = Initialize<ProfileMetadataViewModel>("AIProfileSystemInstructions_Edit", PopulateParameters)
-            .Location("Content:5%Instructions;4");
+            .Location(l => l.Zone("Content", "5").Card(S["Instructions"], "4"));
 
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", PopulateParameters)
-            .Location("Content:1%Parameters;5");
+            .Location(l => l.Zone("Content", "1").Card(S["Parameters"], "5"));
 
         return Combine(
             mainFieldsResult,

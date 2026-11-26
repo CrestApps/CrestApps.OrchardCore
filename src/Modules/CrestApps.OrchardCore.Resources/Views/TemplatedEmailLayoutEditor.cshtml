@@ -1,0 +1,22 @@
+@model CrestApps.OrchardCore.Core.Emails.TemplatedEmailTemplatesEditorViewModel
+
+@* The layout card of a module's templated e-mails (TemplatedEmailTemplatesEditor in CrestApps.OrchardCore.Core). The
+   module's settings driver fills it and reads it back; the field names are relative to the driver's prefix. *@
+
+@if (!string.IsNullOrEmpty(Model.Introduction))
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <p class="text-body-secondary mb-0">@Model.Introduction</p>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Layout">
+    <label asp-for="Layout" class="ocat-label">@T["Layout"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Layout" class="form-control font-monospace" rows="6" placeholder="@T["<img src=&quot;...&quot; alt=&quot;Logo&quot;> {{{{ Content }}}} <p>Our address</p>"]"></textarea>
+        <span asp-validation-for="Layout" class="text-danger"></span>
+        <span class="hint">@T["Optional. HTML around every e-mail listed here, such as your logo and address, with {{{{ Content }}}} where the e-mail goes."]</span>
+    </div>
+</div>

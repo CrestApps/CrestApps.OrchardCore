@@ -10,6 +10,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Users;
@@ -25,6 +26,8 @@ public sealed class UserAudiencesController : Controller
     private readonly IUserAudienceService _audiences;
     private readonly IEnumerable<IUserAudienceRuleSource> _sources;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<UserAudienceEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -37,6 +40,8 @@ public sealed class UserAudiencesController : Controller
         IUserAudienceService audiences,
         IEnumerable<IUserAudienceRuleSource> sources,
         INotifier notifier,
+        IDisplayManager<UserAudienceEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<UserAudiencesController> htmlLocalizer,
         IStringLocalizer<UserAudiencesController> stringLocalizer)
     {
@@ -44,6 +49,8 @@ public sealed class UserAudiencesController : Controller
         _audiences = audiences;
         _sources = sources;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -127,6 +134,7 @@ public sealed class UserAudiencesController : Controller
         }
 
         await PopulateAsync(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, model.IsNew);
 
         return View(model);
     }
@@ -145,6 +153,8 @@ public sealed class UserAudiencesController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, model.IsNew);
 
         if (!model.IsNew && await _audiences.FindDefinitionAsync(model.Name, HttpContext.RequestAborted) is null)
         {

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -40,6 +41,8 @@ public sealed class EnrollmentsController : Controller
     private readonly INotifier _notifier;
     private readonly EnrollmentSourceOptions _sourceOptions;
     private readonly LearningRefusalText _refusalText;
+    private readonly IDisplayManager<EnrollViewModel> _enrollDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -58,6 +61,8 @@ public sealed class EnrollmentsController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="sourceOptions">The registered enrollment sources.</param>
     /// <param name="refusalText">The text of refusal codes.</param>
+    /// <param name="enrollDisplayManager">The display manager of the form that enrolls a learner.</param>
+    /// <param name="updateModelAccessor">The model updater accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public EnrollmentsController(
@@ -73,9 +78,13 @@ public sealed class EnrollmentsController : Controller
         IOptions<EnrollmentSourceOptions> sourceOptions,
         IHtmlLocalizer<EnrollmentsController> htmlLocalizer,
         LearningRefusalText refusalText,
+        IDisplayManager<EnrollViewModel> enrollDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IStringLocalizer<EnrollmentsController> stringLocalizer)
     {
         _refusalText = refusalText;
+        _enrollDisplayManager = enrollDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _authorizationService = authorizationService;
         _enrollmentService = enrollmentService;
         _enrollmentStore = enrollmentStore;
@@ -175,6 +184,7 @@ public sealed class EnrollmentsController : Controller
         var model = new EnrollViewModel { CourseId = courseId };
 
         model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [courseId], enrollable);
+        model.Editor = await _enrollDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }
@@ -195,6 +205,9 @@ public sealed class EnrollmentsController : Controller
         {
             return Forbid();
         }
+
+        model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [model.CourseId], enrollable);
+        model.Editor = await _enrollDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         if (string.IsNullOrWhiteSpace(model.UserId))
         {
@@ -237,8 +250,6 @@ public sealed class EnrollmentsController : Controller
 
             ModelState.AddModelError(string.Empty, ErrorText(result.ErrorCode));
         }
-
-        model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [model.CourseId], enrollable);
 
         return View(model);
     }

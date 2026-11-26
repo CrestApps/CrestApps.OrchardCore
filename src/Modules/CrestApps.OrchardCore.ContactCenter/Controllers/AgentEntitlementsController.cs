@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -31,6 +34,8 @@ public sealed class AgentEntitlementsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<AgentEntitlementViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -46,6 +51,8 @@ public sealed class AgentEntitlementsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The admin notifier.</param>
     /// <param name="clock">The clock used to stamp new agent profiles.</param>
+    /// <param name="displayManager">The display manager that builds the entitlements editor.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater the editor binds with.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AgentEntitlementsController(
@@ -57,6 +64,8 @@ public sealed class AgentEntitlementsController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<AgentEntitlementViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<AgentEntitlementsController> htmlLocalizer,
         IStringLocalizer<AgentEntitlementsController> stringLocalizer)
     {
@@ -68,6 +77,8 @@ public sealed class AgentEntitlementsController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -116,6 +127,7 @@ public sealed class AgentEntitlementsController : Controller
         };
 
         await _optionsProvider.PopulateAgentEntitlementEditorAsync(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }
@@ -133,6 +145,9 @@ public sealed class AgentEntitlementsController : Controller
         {
             return Forbid();
         }
+
+        // The editor's drivers bind their fields first, so the checks below see what the form sent.
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         var user = string.IsNullOrWhiteSpace(model.UserName)
             ? null
@@ -176,6 +191,9 @@ public sealed class AgentEntitlementsController : Controller
         model.UserSearchEndpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=userName&audience=Staff");
         await _optionsProvider.PopulateAgentEntitlementEditorAsync(model);
 
+        // The cards copy the model when they are built, so they are built again now that its options are known.
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -201,6 +219,7 @@ public sealed class AgentEntitlementsController : Controller
 
         var model = await CreateViewModelAsync(agent);
         await _optionsProvider.PopulateAgentEntitlementEditorAsync(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }
@@ -227,6 +246,9 @@ public sealed class AgentEntitlementsController : Controller
             return NotFound();
         }
 
+        // The editor's drivers bind their fields first, so the checks below see what the form sent.
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         model.Id = agent.ItemId;
         model.UserName = agent.UserName;
         model.UserDisplayName = await ResolveDisplayNameAsync(agent);
@@ -242,6 +264,9 @@ public sealed class AgentEntitlementsController : Controller
         }
 
         await _optionsProvider.PopulateAgentEntitlementEditorAsync(model);
+
+        // The cards copy the model when they are built, so they are built again now that its options are known.
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }

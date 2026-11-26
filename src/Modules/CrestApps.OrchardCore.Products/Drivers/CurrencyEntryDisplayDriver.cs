@@ -51,7 +51,7 @@ internal sealed class CurrencyEntryDisplayDriver : DisplayDriver<CurrencyEntry>
             viewModel.IsNew = context.IsNew;
             viewModel.Name = model.Name;
             viewModel.DisplayName = model.DisplayName;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Currency"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CurrencyEntry model, UpdateEditorContext context)

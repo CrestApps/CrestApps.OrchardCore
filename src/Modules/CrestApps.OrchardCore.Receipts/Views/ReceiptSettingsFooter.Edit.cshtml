@@ -1,0 +1,21 @@
+@model ReceiptSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="FooterText">
+    <label asp-for="FooterText" class="ocat-label">@T["Footer text"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="FooterText" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="FooterText"></span>
+        <span class="hint">@T["Free-form text printed at the bottom of every receipt, such as a thank-you note or return policy."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="ShowTestPaymentBadge" class="form-check-input" />
+            <label asp-for="ShowTestPaymentBadge" class="form-check-label">@T["Show a test-payment badge for test-mode payments"]</label>
+            <span class="hint">@T["When enabled, receipts generated from a payment gateway running in test mode display a visible test-payment badge."]</span>
+        </div>
+    </div>
+</div>

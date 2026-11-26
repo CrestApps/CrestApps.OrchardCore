@@ -1,0 +1,25 @@
+@model InvoicingSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultNotes">
+    <label asp-for="DefaultNotes" class="ocat-label">@T["Default notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="DefaultNotes" rows="3" class="form-control"></textarea>
+        <span class="hint">@T["Printed on every invoice that has no notes of its own, such as a thank-you."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultTerms">
+    <label asp-for="DefaultTerms" class="ocat-label">@T["Default terms"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="DefaultTerms" rows="3" class="form-control"></textarea>
+        <span class="hint">@T["Printed on every invoice that has no terms of its own, such as how to pay by bank transfer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultFooter">
+    <label asp-for="DefaultFooter" class="ocat-label">@T["Default footer"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="DefaultFooter" rows="2" class="form-control"></textarea>
+        <span class="hint">@T["Printed at the bottom of every invoice that has no footer of its own."]</span>
+    </div>
+</div>

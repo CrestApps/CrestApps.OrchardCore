@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Wizard.Core.Models
+@model CrestApps.OrchardCore.Wizard.ViewModels.WizardPartSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="RequiresAuthenticatedUser">
+            <label class="form-check-label" asp-for="RequiresAuthenticatedUser">@T["Requires an authenticated user"]</label>
+            <span class="hint">@T["When checked, a visitor must be signed in to start the wizard."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CompletionPolicy" class="ocat-label">@T["Completion policy"]</label>
+    <div class="ocat-end w-sm-50">
+        <select asp-for="CompletionPolicy" class="form-select">
+            <option value="@((int)WizardCompletionPolicy.Publish)">@T["Create and publish the collected content items"]</option>
+            <option value="@((int)WizardCompletionPolicy.Draft)">@T["Create the collected content items as drafts"]</option>
+            <option value="@((int)WizardCompletionPolicy.None)">@T["Do not persist the collected content items"]</option>
+        </select>
+        <span class="hint">@T["What to do with the content items a visitor fills in when the wizard completes. Choose to not persist them when a workflow or custom handler consumes the collected data instead."]</span>
+    </div>
+</div>

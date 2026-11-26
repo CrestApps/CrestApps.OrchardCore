@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 
@@ -94,6 +95,12 @@ public class UserAudienceEditViewModel
     /// Gets or sets the kinds of rules to choose from.
     /// </summary>
     public IReadOnlyList<UserAudienceSourceViewModel> Sources { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of the view model: one card per section.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

@@ -44,7 +44,7 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
             model.IncludeAll = step.IncludeAll;
             model.ProfileNames = step.ProfileNames;
             model.AllProfileNames = (await _profileStore.GetAllAsync()).Select(x => x.Name).Order().ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Profiles"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileDeploymentStep step, UpdateEditorContext context)

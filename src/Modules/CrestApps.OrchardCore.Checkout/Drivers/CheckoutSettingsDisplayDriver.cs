@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -18,15 +19,22 @@ public sealed class CheckoutSettingsDisplayDriver : SiteDisplayDriver<CheckoutSe
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CheckoutSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    public CheckoutSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public CheckoutSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<CheckoutSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -38,7 +46,7 @@ public sealed class CheckoutSettingsDisplayDriver : SiteDisplayDriver<CheckoutSe
         => Initialize<CheckoutSettingsViewModel>("CheckoutSettings_Edit", model =>
         {
             model.Layout = settings.Layout;
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Checkout"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CheckoutPermissions.ManageCheckoutSettings))
         .OnGroup(SettingsGroupId);
 

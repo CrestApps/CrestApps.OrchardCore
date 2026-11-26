@@ -1,0 +1,16 @@
+@model PayrollJournalSettingsViewModel
+
+<p class="hint">@T["The code of a pay code (such as REG) or a tax (such as US-FIT), and the accounts it uses instead of the ones above; leave a side empty to keep the default. Clear the code to remove a row."]</p>
+<table class="table table-sm">
+    <thead><tr><th>@T["Pay code or tax"]</th><th>@T["Debit account"]</th><th>@T["Credit account"]</th></tr></thead>
+    <tbody>
+        @for (var i = 0; i < Model.Mappings.Count; i++)
+        {
+            <tr>
+                <td><input asp-for="Mappings[i].Key" class="form-control form-control-sm text-uppercase" /></td>
+                <td><input asp-for="Mappings[i].DebitAccount" class="form-control form-control-sm" /></td>
+                <td><input asp-for="Mappings[i].CreditAccount" class="form-control form-control-sm" /></td>
+            </tr>
+        }
+    </tbody>
+</table>

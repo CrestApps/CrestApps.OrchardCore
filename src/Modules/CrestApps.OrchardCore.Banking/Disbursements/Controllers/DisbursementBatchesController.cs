@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -39,6 +40,8 @@ public sealed class DisbursementBatchesController : Controller
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly INotifier _notifier;
     private readonly DisbursementFileRecorder _fileRecorder;
+    private readonly IDisplayManager<DisbursementReturnsViewModel> _returnsDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -52,9 +55,13 @@ public sealed class DisbursementBatchesController : Controller
         IShellFeaturesManager shellFeaturesManager,
         INotifier notifier,
         DisbursementFileRecorder fileRecorder,
+        IDisplayManager<DisbursementReturnsViewModel> returnsDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<DisbursementBatchesController> htmlLocalizer)
     {
         _fileRecorder = fileRecorder;
+        _returnsDisplayManager = returnsDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _batches = batches;
         _batchStore = batchStore;
         _disbursementService = disbursementService;
@@ -214,7 +221,7 @@ public sealed class DisbursementBatchesController : Controller
             return Forbid();
         }
 
-        return View(new DisbursementReturnsViewModel());
+        return View(await ReturnsEditorAsync(new DisbursementReturnsViewModel()));
     }
 
     [HttpPost]
@@ -231,7 +238,7 @@ public sealed class DisbursementBatchesController : Controller
         {
             ModelState.AddModelError(nameof(file), H["Choose the bank's return file, 5 MB at most."].Value);
 
-            return View(new DisbursementReturnsViewModel());
+            return View(await ReturnsEditorAsync(new DisbursementReturnsViewModel()));
         }
 
         string text;
@@ -253,7 +260,14 @@ public sealed class DisbursementBatchesController : Controller
         result.Problems.AddRange(problems);
         result.Problems.AddRange(corrections.Problems);
 
-        return View(new DisbursementReturnsViewModel { Result = result });
+        return View(await ReturnsEditorAsync(new DisbursementReturnsViewModel { Result = result }));
+    }
+
+    private async Task<DisbursementReturnsViewModel> ReturnsEditorAsync(DisbursementReturnsViewModel model)
+    {
+        model.Editor = await _returnsDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return model;
     }
 
     [HttpPost]

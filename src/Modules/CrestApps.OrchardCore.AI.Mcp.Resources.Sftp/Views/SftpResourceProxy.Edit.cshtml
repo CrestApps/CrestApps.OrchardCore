@@ -1,0 +1,58 @@
+@using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels
+
+@model SftpConnectionFieldsViewModel
+
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyType" class="ocat-label">@T["Proxy Type"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProxyType" class="form-select">
+            <option value="">@T["None"]</option>
+            <option value="Http">@T["HTTP"]</option>
+            <option value="Socks4">@T["SOCKS4"]</option>
+            <option value="Socks5">@T["SOCKS5"]</option>
+        </select>
+        <span asp-validation-for="ProxyType" class="text-danger"></span>
+        <span class="hint">@T["The type of proxy to use for the SFTP connection."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyHost" class="ocat-label">@T["Proxy Host"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyHost" class="form-control" />
+        <span asp-validation-for="ProxyHost" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyPort" class="ocat-label">@T["Proxy Port"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyPort" type="number" class="form-control" placeholder="1080" />
+        <span asp-validation-for="ProxyPort" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyUsername" class="ocat-label">@T["Proxy Username"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyUsername" class="form-control" />
+        <span asp-validation-for="ProxyUsername" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyPassword" class="ocat-label">@T["Proxy Password"]</label>
+    <div class="ocat-end">
+        @if (Model.HasProxyPassword)
+        {
+            <input asp-for="ProxyPassword" type="password" class="form-control" placeholder="@T["Keep current password"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+            <span class="hint">@T["Leave empty to keep the current proxy password."]</span>
+        }
+        else
+        {
+            <input asp-for="ProxyPassword" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+        }
+        <span asp-validation-for="ProxyPassword" class="text-danger"></span>
+    </div>
+</div>

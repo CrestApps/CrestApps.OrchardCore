@@ -37,7 +37,7 @@ internal sealed class EmployerFundingDisplayDriver : DisplayDriver<Employer>
         {
             model.FundingBankAccountId = employer.FundingBankAccountId;
             model.Accounts = [.. owned.Select(account => new SelectListItem(account.Name, account.ItemId, account.ItemId == employer.FundingBankAccountId))];
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Funding Account"], "50"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Employer employer, UpdateEditorContext context)

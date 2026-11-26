@@ -15,6 +15,8 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Settings;
 using YesSql;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Invoicing.Controllers;
 
@@ -34,6 +36,8 @@ public sealed class CreditNotesAdminController : Controller
     private readonly IDocumentCalculator _calculator;
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IDisplayManager<CreditNoteEditViewModel> _editorManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ISession _session;
     private readonly INotifier _notifier;
 
@@ -47,6 +51,8 @@ public sealed class CreditNotesAdminController : Controller
         IDocumentCalculator calculator,
         ISiteService siteService,
         IAuthorizationService authorizationService,
+        IDisplayManager<CreditNoteEditViewModel> editorManager,
+        IUpdateModelAccessor updateModelAccessor,
         ISession session,
         INotifier notifier,
         IHtmlLocalizer<CreditNotesAdminController> htmlLocalizer,
@@ -58,6 +64,8 @@ public sealed class CreditNotesAdminController : Controller
         _calculator = calculator;
         _siteService = siteService;
         _authorizationService = authorizationService;
+        _editorManager = editorManager;
+        _updateModelAccessor = updateModelAccessor;
         _session = session;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -138,6 +146,8 @@ public sealed class CreditNotesAdminController : Controller
         {
             return RedirectToAction(nameof(Detail), new { itemId });
         }
+
+        model.Editor = await _editorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         InvoiceDraftEditor.Apply(model, creditNote);
 
@@ -335,6 +345,8 @@ public sealed class CreditNotesAdminController : Controller
 
             model.Creditable = CreditNoteRules.GetCreditable(invoice, others.Where(note => !string.Equals(note.ItemId, creditNote.ItemId, StringComparison.Ordinal))).Total;
         }
+
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return model;
     }

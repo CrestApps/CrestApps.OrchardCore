@@ -74,30 +74,13 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
     /// <inheritdoc/>
     public override IDisplayResult Edit(AIApiKey key, BuildEditorContext context)
     {
-        return Initialize<AIApiKeyViewModel>("AIApiKeyFields_Edit", async model =>
-        {
-            model.Name = key.Name;
-            model.Kind = key.Kind;
-            model.IsNew = context.IsNew;
-            model.Scopes = key.Scopes?.ToArray() ?? [];
-            model.Roles = key.Roles?.ToArray() ?? [];
-            model.AllowedOrigins = string.Join(Environment.NewLine, key.AllowedOrigins ?? []);
-            model.AllowedProfileIds = key.AllowedProfileIds?.ToArray() ?? [];
-            model.Expires = key.ExpiresUtc is { } expiresUtc
-                ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(expiresUtc, DateTimeKind.Utc))).DateTime
-                : null;
-            model.Enabled = key.Enabled;
-            model.PublicKey = key.PublicKey;
-            model.AvailableRoles = (await _roleService.GetRoleNamesAsync())
-                .Where(role => !string.Equals(role, OrchardCoreConstants.Roles.Anonymous, StringComparison.OrdinalIgnoreCase))
-                .Order(StringComparer.OrdinalIgnoreCase)
-                .Select(role => new SelectListItem(role, role, model.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)))
-                .ToList();
-            model.AvailableProfiles = (await _profileManager.GetAllAsync())
-                .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, model.AllowedProfileIds.Contains(profile.ItemId)))
-                .ToList();
-        }).Location("Content:1");
+        return Combine(
+            Initialize<AIApiKeyViewModel>("AIApiKeyFields_Edit", model => Populate(key, context, model))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<AIApiKeyViewModel>("AIApiKeyAccess_Edit", model => PopulateAccessAsync(key, context, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Access"], "20")),
+            Initialize<AIApiKeyViewModel>("AIApiKeyAvailability_Edit", model => PopulateAvailabilityAsync(key, context, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Availability"], "30")));
     }
 
     /// <inheritdoc/>
@@ -129,5 +112,42 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
         }
 
         return Edit(key, context);
+    }
+
+    private static void Populate(AIApiKey key, BuildEditorContext context, AIApiKeyViewModel model)
+    {
+        model.Name = key.Name;
+        model.Kind = key.Kind;
+        model.IsNew = context.IsNew;
+        model.PublicKey = key.PublicKey;
+    }
+
+    private async ValueTask PopulateAccessAsync(AIApiKey key, BuildEditorContext context, AIApiKeyViewModel model)
+    {
+        Populate(key, context, model);
+
+        model.Scopes = key.Scopes?.ToArray() ?? [];
+        model.Roles = key.Roles?.ToArray() ?? [];
+        model.AllowedOrigins = string.Join(Environment.NewLine, key.AllowedOrigins ?? []);
+        model.AllowedProfileIds = key.AllowedProfileIds?.ToArray() ?? [];
+        model.AvailableRoles = (await _roleService.GetRoleNamesAsync())
+            .Where(role => !string.Equals(role, OrchardCoreConstants.Roles.Anonymous, StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .Select(role => new SelectListItem(role, role, model.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+        model.AvailableProfiles = (await _profileManager.GetAllAsync())
+            .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, model.AllowedProfileIds.Contains(profile.ItemId)))
+            .ToList();
+    }
+
+    private async ValueTask PopulateAvailabilityAsync(AIApiKey key, BuildEditorContext context, AIApiKeyViewModel model)
+    {
+        Populate(key, context, model);
+
+        model.Expires = key.ExpiresUtc is { } expiresUtc
+            ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(expiresUtc, DateTimeKind.Utc))).DateTime
+            : null;
+        model.Enabled = key.Enabled;
     }
 }

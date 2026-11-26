@@ -41,26 +41,40 @@ public sealed class AgenticCommerceSettingsDisplayDriver : SiteDisplayDriver<Age
         => GroupId;
 
     public override IDisplayResult Edit(ISite site, AgenticCommerceSettings settings, BuildEditorContext context)
-        => Initialize<AgenticCommerceSettingsViewModel>("AgenticCommerceSettings_Edit", model =>
-        {
-            model.CheckoutLifetimeHours = settings.CheckoutLifetimeHours;
-            model.MaxOpenCheckoutsPerPlatform = settings.MaxOpenCheckoutsPerPlatform;
-            model.AllowUnregisteredUcpPlatforms = settings.AllowUnregisteredUcpPlatforms;
-            model.AllowEmbeddedCheckout = settings.AllowEmbeddedCheckout;
-            model.StripeBusinessProfileId = settings.StripeBusinessProfileId;
-            model.EnableGooglePay = settings.EnableGooglePay;
-            model.GooglePayMerchantId = settings.GooglePayMerchantId;
-            model.GooglePayMerchantName = settings.GooglePayMerchantName;
-            model.GooglePayTestEnvironment = settings.GooglePayTestEnvironment;
-            model.EnableDelegatedAuthentication = settings.EnableDelegatedAuthentication;
-            model.AcquirerBin = settings.AcquirerBin;
-            model.AcquirerCountry = settings.AcquirerCountry;
-            model.AcquirerMerchantId = settings.AcquirerMerchantId;
-            model.AuthenticationMerchantName = settings.AuthenticationMerchantName;
-            model.ThreeDSecureRequestorId = settings.ThreeDSecureRequestorId;
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgenticCommercePermissions.ManageAgenticCommerceSettings))
-        .OnGroup(SettingsGroupId);
+    {
+        return Combine(
+            Initialize<AgenticCommerceSettingsViewModel>("AgenticCommerceSettings_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "1").Card(S["Agent Checkouts"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgenticCommercePermissions.ManageAgenticCommerceSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<AgenticCommerceSettingsViewModel>("AgenticCommerceSettingsPayments_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "2").Card(S["How Agents Pay"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgenticCommercePermissions.ManageAgenticCommerceSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<AgenticCommerceSettingsViewModel>("AgenticCommerceSettingsAuthentication_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "3").Card(S["3-D Secure by Agents"], "30"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgenticCommercePermissions.ManageAgenticCommerceSettings))
+                .OnGroup(SettingsGroupId));
+    }
+
+    private static void Fill(AgenticCommerceSettingsViewModel model, AgenticCommerceSettings settings)
+    {
+        model.CheckoutLifetimeHours = settings.CheckoutLifetimeHours;
+        model.MaxOpenCheckoutsPerPlatform = settings.MaxOpenCheckoutsPerPlatform;
+        model.AllowUnregisteredUcpPlatforms = settings.AllowUnregisteredUcpPlatforms;
+        model.AllowEmbeddedCheckout = settings.AllowEmbeddedCheckout;
+        model.StripeBusinessProfileId = settings.StripeBusinessProfileId;
+        model.EnableGooglePay = settings.EnableGooglePay;
+        model.GooglePayMerchantId = settings.GooglePayMerchantId;
+        model.GooglePayMerchantName = settings.GooglePayMerchantName;
+        model.GooglePayTestEnvironment = settings.GooglePayTestEnvironment;
+        model.EnableDelegatedAuthentication = settings.EnableDelegatedAuthentication;
+        model.AcquirerBin = settings.AcquirerBin;
+        model.AcquirerCountry = settings.AcquirerCountry;
+        model.AcquirerMerchantId = settings.AcquirerMerchantId;
+        model.AuthenticationMerchantName = settings.AuthenticationMerchantName;
+        model.ThreeDSecureRequestorId = settings.ThreeDSecureRequestorId;
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, AgenticCommerceSettings settings, UpdateEditorContext context)
     {

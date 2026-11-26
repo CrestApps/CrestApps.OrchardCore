@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -24,6 +25,8 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatInteractionMemorySettingsDisplayDriver"/> class.
     /// </summary>
@@ -31,16 +34,19 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="optionsUpdateNotifier">The options update notifier.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionMemorySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         ISiteService siteService,
-        IOptionsUpdateNotifier optionsUpdateNotifier)
+        IOptionsUpdateNotifier optionsUpdateNotifier,
+        IStringLocalizer<ChatInteractionMemorySettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _siteService = siteService;
         _optionsUpdateNotifier = optionsUpdateNotifier;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, MemoryMetadata settings, BuildEditorContext context)
@@ -49,7 +55,7 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
         {
             model.EnableUserMemory = settings.EnableUserMemory ?? true;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
-        }).Location("Content:6%Memory;2")
+        }).Location(l => l.Zone("Content", "6").Card(S["Memory"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageChatInteractionSettings));
     }

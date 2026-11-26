@@ -346,6 +346,7 @@ public sealed class TicketsControllerTests
                 new Mock<IContentManager>().Object,
                 Definitions(types).Object,
                 DisplayManager().Object,
+                new Mock<IDisplayManager<TicketCreateViewModel>>().Object,
                 new Mock<IUpdateModelAccessor>().Object,
                 new Mock<IPartyDirectory>().Object,
                 new Mock<IShapeFactory>().Object,

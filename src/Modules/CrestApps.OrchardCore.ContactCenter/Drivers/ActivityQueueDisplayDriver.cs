@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -15,19 +16,24 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
     private readonly IActivityQueueGroupManager _queueGroupManager;
     private readonly bool _routesFromEntryPoints;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityQueueDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
     /// <param name="queueGroupManager">The queue-group manager.</param>
     /// <param name="entryPointManagers">The entry point catalog, present only while inbound entry points are enabled.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityQueueDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
         IActivityQueueGroupManager queueGroupManager,
-        IEnumerable<IContactCenterEntryPointManager> entryPointManagers)
+        IEnumerable<IContactCenterEntryPointManager> entryPointManagers,
+        IStringLocalizer<ActivityQueueDisplayDriver> stringLocalizer)
     {
         _optionsProvider = optionsProvider;
         _queueGroupManager = queueGroupManager;
+        S = stringLocalizer;
 
         // With inbound entry points, a number is routed from its entry point; the queue's own number would be a second
         // place to route it from, so it is not offered.
@@ -120,14 +126,14 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         }
 
         return Combine(
-            Initialize<QueueViewModel>("ActivityQueueGeneral_Edit", Populate).Location("Content:1%General;1"),
-            Initialize<QueueViewModel>("ActivityQueueRouting_Edit", Populate).Location("Content:1%Routing;2"),
-            Initialize<QueueViewModel>("ActivityQueueServiceLevels_Edit", Populate).Location("Content:1%Service levels;3"),
-            Initialize<QueueViewModel>("ActivityQueueSkills_Edit", Populate).Location("Content:1%Skills;4"),
-            Initialize<QueueViewModel>("ActivityQueueHoursAndOverflow_Edit", Populate).Location("Content:1%Hours and overflow;5"),
-            Initialize<QueueViewModel>("ActivityQueueLimits_Edit", Populate).Location("Content:1%Limits;6"),
-            Initialize<QueueViewModel>("ActivityQueueWaiting_Edit", Populate).Location("Content:1%While callers wait;7"),
-            Initialize<QueueViewModel>("ActivityQueueCallback_Edit", Populate).Location("Content:1%Callback;8"));
+            Initialize<QueueViewModel>("ActivityQueueGeneral_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["General"], "1")),
+            Initialize<QueueViewModel>("ActivityQueueRouting_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Routing"], "2")),
+            Initialize<QueueViewModel>("ActivityQueueServiceLevels_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Service Levels"], "3")),
+            Initialize<QueueViewModel>("ActivityQueueSkills_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Skills"], "4")),
+            Initialize<QueueViewModel>("ActivityQueueHoursAndOverflow_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Hours and Overflow"], "5")),
+            Initialize<QueueViewModel>("ActivityQueueLimits_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Limits"], "6")),
+            Initialize<QueueViewModel>("ActivityQueueWaiting_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["While Callers Wait"], "7")),
+            Initialize<QueueViewModel>("ActivityQueueCallback_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Callback"], "8")));
     }
 
     /// <inheritdoc/>

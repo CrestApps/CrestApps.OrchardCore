@@ -7,12 +7,8 @@
 </zone>
 
 <form method="post" asp-action="Import" asp-route-id="@Model.Id" enctype="multipart/form-data" class="no-multisubmit">
-    <div class="card text-bg-theme mb-3">
-        <div class="card-body">
-            <p>@T["Choose an iCalendar (.ics) file, such as one exported from Google Calendar or Outlook. Events already in the calendar with the same UID are updated instead of added again."]</p>
-            <input type="file" name="file" accept=".ics,text/calendar" class="form-control" required />
-        </div>
-    </div>
+    @await DisplayAsync(Model.Editor)
+
     <div class="action-bar-bottom">
         <button type="submit" class="btn btn-primary">@T["Import"]</button>
         <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Cancel"]</a>

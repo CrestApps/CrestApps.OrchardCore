@@ -95,7 +95,8 @@ public sealed class DesignerStartup : StartupBase
         services
             .AddDisplayDriver<ReportDesignListEntry, ReportDesignListEntryDisplayDriver>()
             .AddDisplayDriver<ReportViewListEntry, ReportViewListEntryDisplayDriver>()
-            .AddDisplayDriver<ReportGroupListEntry, ReportGroupListEntryDisplayDriver>();
+            .AddDisplayDriver<ReportGroupListEntry, ReportGroupListEntryDisplayDriver>()
+            .AddDisplayDriver<ReportGroupEditViewModel, ReportGroupEditDisplayDriver>();
     }
 }
 

@@ -73,7 +73,7 @@ internal sealed class AIDeploymentModelCapabilitiesDisplayDriver : DisplayDriver
                     };
                 })
                 .ToList();
-        }).Location("Content:10");
+        }).Location(l => l.Zone("Content", "10").Card(S["Model Capabilities"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)

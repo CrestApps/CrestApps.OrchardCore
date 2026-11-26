@@ -1,7 +1,10 @@
 @model CrestApps.OrchardCore.DncRegistry.ViewModels.UsaFtcDncRegistrySettingsViewModel
 
-<h4 class="card-title">@T["USA FTC Do Not Call Registry"]</h4>
-<p class="hint">@T["Configure the connection to the United States Federal Trade Commission (FTC) National Do Not Call Registry API at telemarketing.donotcall.gov."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Configure the connection to the United States Federal Trade Commission (FTC) National Do Not Call Registry API at telemarketing.donotcall.gov."]</span>
+    </div>
+</div>
 
 <div class="ocat-wrapper" asp-validation-class-for="OrganizationId">
     <label class="ocat-label ocat-label-required" asp-for="OrganizationId">@T["Organization ID"]</label>

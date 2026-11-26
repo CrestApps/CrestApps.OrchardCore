@@ -355,7 +355,8 @@ namespace CrestApps.OrchardCore.Accounts.Workflows
     }
     public sealed class InviteToAccountTaskDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask, CrestApps.OrchardCore.Accounts.ViewModels.InviteToAccountTaskViewModel>
     {
-        public InviteToAccountTaskDisplayDriver() { }
+        public InviteToAccountTaskDisplayDriver(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTaskDisplayDriver> stringLocalizer) { }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask activity, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         protected override void EditActivity(CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask activity, CrestApps.OrchardCore.Accounts.ViewModels.InviteToAccountTaskViewModel model) { }
         protected override void UpdateActivity(CrestApps.OrchardCore.Accounts.ViewModels.InviteToAccountTaskViewModel model, CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask activity) { }
     }

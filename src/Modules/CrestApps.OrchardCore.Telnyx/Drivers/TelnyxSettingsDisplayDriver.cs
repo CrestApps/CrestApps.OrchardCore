@@ -66,45 +66,69 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
 
     public override IDisplayResult Edit(ISite site, TelnyxSettings settings, BuildEditorContext context)
     {
-        Task<bool> CanManageAsync()
-            => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings);
+        var isConnected = !string.IsNullOrWhiteSpace(settings.ConnectionId) && !string.IsNullOrWhiteSpace(settings.SipConnectionId);
 
-        return Initialize<TelnyxSettingsViewModel>("TelnyxSettings_Edit", async model =>
+        // The connection options appear only once the provider is connected, so their cards do too.
+        if (!isConnected)
         {
-            model.IsEnabled = settings.IsEnabled;
-            model.IsConnected = !string.IsNullOrWhiteSpace(settings.ConnectionId) && !string.IsNullOrWhiteSpace(settings.SipConnectionId);
-            model.ConnectionId = settings.ConnectionId;
-            model.SipConnectionId = settings.SipConnectionId;
-            model.OutboundVoiceProfileId = settings.OutboundVoiceProfileId;
-            model.DefaultOutboundCallerId = settings.DefaultOutboundCallerId;
+            return BuildCard("TelnyxSettingsProvider_Edit", settings, S["Provider"], "10");
+        }
+
+        return Combine(
+            BuildCard("TelnyxSettingsProvider_Edit", settings, S["Provider"], "10"),
+            BuildCard("TelnyxSettingsWebhook_Edit", settings, S["Webhook"], "20"),
+            BuildCard("TelnyxSettingsCalls_Edit", settings, S["Calls"], "30"),
+            BuildCard("TelnyxSettingsNoiseSuppression_Edit", settings, S["Noise Suppression"], "40"),
+            BuildCard("TelnyxSettingsBrowserWebRtc_Edit", settings, S["Browser WebRTC"], "50"),
+            BuildCard("TelnyxSettingsAdvanced_Edit", settings, S["Advanced"], "60"));
+    }
+
+    private ShapeResult BuildCard(string shapeType, TelnyxSettings settings, string cardName, string cardPosition)
+    {
+        return Initialize<TelnyxSettingsViewModel>(shapeType, model => PopulateAsync(settings, model, loadCallerIds: shapeType == "TelnyxSettingsCalls_Edit"))
+            .Location(l => l.Zone("Content", "10").Tab(S["Telnyx"], "1").Card(cardName, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
+            .OnGroup(SettingsGroupId);
+    }
+
+    private async ValueTask PopulateAsync(TelnyxSettings settings, TelnyxSettingsViewModel model, bool loadCallerIds)
+    {
+        model.IsEnabled = settings.IsEnabled;
+        model.IsConnected = !string.IsNullOrWhiteSpace(settings.ConnectionId) && !string.IsNullOrWhiteSpace(settings.SipConnectionId);
+        model.ConnectionId = settings.ConnectionId;
+        model.SipConnectionId = settings.SipConnectionId;
+        model.OutboundVoiceProfileId = settings.OutboundVoiceProfileId;
+        model.DefaultOutboundCallerId = settings.DefaultOutboundCallerId;
+        // Only the shape that shows the caller ID list needs its options.
+        if (loadCallerIds)
+        {
             model.CallerIdOptions = _addressManager is null
                 ? string.IsNullOrWhiteSpace(settings.DefaultOutboundCallerId) ? [] : [new SelectListItem(settings.DefaultOutboundCallerId, settings.DefaultOutboundCallerId, true)]
                 : await _addressManager.GetCallerIdOptionsAsync(settings.DefaultOutboundCallerId);
-            model.CredentialLifetimeMinutes = TelnyxCredentialLifetime.Normalize(settings.CredentialLifetimeMinutes);
-            model.SipWebSocketUrl = settings.SipWebSocketUrl;
-            model.SipDomain = settings.SipDomain;
-            model.WebRtcCodecs = settings.WebRtcCodecs;
-            model.WebRtcRegion = settings.WebRtcRegion;
-            model.IceUrls = settings.IceUrls;
-            model.TurnUsername = settings.TurnUsername;
-            model.IceTransportPolicy = settings.IceTransportPolicy;
-            model.EchoTestDestination = settings.EchoTestDestination;
-            model.OrphanedCallHandling = settings.OrphanedCallHandling;
-            model.AnsweringMachineDetection = settings.AnsweringMachineDetection;
-            model.NoiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(settings.NoiseSuppressionEngine).ToString();
-            model.NoiseSuppressionAgentVoice = settings.NoiseSuppressionAgentVoice;
-            model.NoiseSuppressionCallerVoice = settings.NoiseSuppressionCallerVoice;
-            model.NoiseSuppressionStrength = TelnyxNoiseSuppressionService.NormalizeStrength(settings.NoiseSuppressionStrength).ToString();
-            model.TtsVoice = settings.TtsVoice;
-            model.TtsLanguage = settings.TtsLanguage;
-            model.ApiBaseUrl = settings.ApiBaseUrl;
-            model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ApiKey);
-            model.HasWebhookPublicKey = ProtectedSettingExtensions.HasSecret(settings.WebhookPublicKey);
-            model.HasTurnCredential = ProtectedSettingExtensions.HasSecret(settings.TurnCredential);
-            model.WebhookPath = "/" + TelnyxConstants.WebhookPath;
-        }).Location("Content:10#Telnyx;1")
-        .RenderWhen(CanManageAsync)
-        .OnGroup(SettingsGroupId);
+        }
+
+        model.CredentialLifetimeMinutes = TelnyxCredentialLifetime.Normalize(settings.CredentialLifetimeMinutes);
+        model.SipWebSocketUrl = settings.SipWebSocketUrl;
+        model.SipDomain = settings.SipDomain;
+        model.WebRtcCodecs = settings.WebRtcCodecs;
+        model.WebRtcRegion = settings.WebRtcRegion;
+        model.IceUrls = settings.IceUrls;
+        model.TurnUsername = settings.TurnUsername;
+        model.IceTransportPolicy = settings.IceTransportPolicy;
+        model.EchoTestDestination = settings.EchoTestDestination;
+        model.OrphanedCallHandling = settings.OrphanedCallHandling;
+        model.AnsweringMachineDetection = settings.AnsweringMachineDetection;
+        model.NoiseSuppressionEngine = TelnyxNoiseSuppressionService.NormalizeEngine(settings.NoiseSuppressionEngine).ToString();
+        model.NoiseSuppressionAgentVoice = settings.NoiseSuppressionAgentVoice;
+        model.NoiseSuppressionCallerVoice = settings.NoiseSuppressionCallerVoice;
+        model.NoiseSuppressionStrength = TelnyxNoiseSuppressionService.NormalizeStrength(settings.NoiseSuppressionStrength).ToString();
+        model.TtsVoice = settings.TtsVoice;
+        model.TtsLanguage = settings.TtsLanguage;
+        model.ApiBaseUrl = settings.ApiBaseUrl;
+        model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ApiKey);
+        model.HasWebhookPublicKey = ProtectedSettingExtensions.HasSecret(settings.WebhookPublicKey);
+        model.HasTurnCredential = ProtectedSettingExtensions.HasSecret(settings.TurnCredential);
+        model.WebhookPath = "/" + TelnyxConstants.WebhookPath;
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, TelnyxSettings settings, UpdateEditorContext context)

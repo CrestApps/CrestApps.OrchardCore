@@ -44,6 +44,7 @@ using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.Invoicing.ViewModels;
 
 namespace CrestApps.OrchardCore.Invoicing;
 
@@ -79,6 +80,9 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<InvoicesAccountMenu>()
             .AddDisplayDriver<Invoice, InvoiceDisplayDriver>()
             .AddDisplayDriver<Invoice, InvoiceDepositsDisplayDriver>()
+            .AddDisplayDriver<InvoiceEditViewModel, InvoiceEditDisplayDriver>()
+            .AddDisplayDriver<InvoiceSendViewModel, InvoiceSendDisplayDriver>()
+            .AddDisplayDriver<CreditNoteEditViewModel, CreditNoteEditDisplayDriver>()
             .AddMoneyFormatter();
 
         services.AddScoped<ICheckoutReferenceDescriber, InvoiceCheckoutReferenceDescriber>();
@@ -306,4 +310,3 @@ public sealed class WorkOrdersStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<IWorkOrderBilling, InvoicingWorkOrderBilling>();
 }
-

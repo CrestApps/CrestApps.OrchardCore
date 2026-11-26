@@ -11,6 +11,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -29,6 +31,8 @@ public sealed class TimeOffPoliciesController : Controller
     private readonly ITimeOffTypeManager _typeManager;
     private readonly ITeamManager _teamManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<TimeOffPolicyEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -43,6 +47,8 @@ public sealed class TimeOffPoliciesController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public TimeOffPoliciesController(
         IAuthorizationService authorizationService,
         ITimeOffPolicyManager policyManager,
@@ -50,7 +56,9 @@ public sealed class TimeOffPoliciesController : Controller
         ITeamManager teamManager,
         INotifier notifier,
         IHtmlLocalizer<TimeOffPoliciesController> htmlLocalizer,
-        IStringLocalizer<TimeOffPoliciesController> stringLocalizer)
+        IStringLocalizer<TimeOffPoliciesController> stringLocalizer,
+        IDisplayManager<TimeOffPolicyEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _authorizationService = authorizationService;
         _policyManager = policyManager;
@@ -59,6 +67,8 @@ public sealed class TimeOffPoliciesController : Controller
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
     }
 
     /// <summary>
@@ -137,6 +147,8 @@ public sealed class TimeOffPoliciesController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -154,6 +166,8 @@ public sealed class TimeOffPoliciesController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
         var isNew = string.IsNullOrEmpty(model.Id);
         var item = isNew ? await _policyManager.NewAsync() : await _policyManager.FindByIdAsync(model.Id);
@@ -216,6 +230,8 @@ public sealed class TimeOffPoliciesController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateAsync(model);
+
+            model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
             return View(model);
         }

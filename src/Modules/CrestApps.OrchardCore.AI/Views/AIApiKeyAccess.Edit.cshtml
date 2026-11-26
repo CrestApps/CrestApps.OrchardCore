@@ -1,0 +1,70 @@
+@using CrestApps.OrchardCore.AI.Core.ApiKeys
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIApiKeyViewModel
+
+@{
+    var scopes = new Dictionary<string, string>
+    {
+        [AIApiKeys.Scopes.Profiles] = T["AI profiles and their versions."].Value,
+        [AIApiKeys.Scopes.Conversations] = T["Conversations, their analysis and evaluations, and simulations."].Value,
+        [AIApiKeys.Scopes.Tests] = T["Test cases and test runs."].Value,
+        [AIApiKeys.Scopes.Calls] = T["Starting, watching and controlling AI calls and texts."].Value,
+        [AIApiKeys.Scopes.Numbers] = T["Phone numbers and other channel addresses."].Value,
+        [AIApiKeys.Scopes.Knowledge] = T["Data sources, documents and file sources."].Value,
+        [AIApiKeys.Scopes.Contacts] = T["Contact memory."].Value,
+        [AIApiKeys.Scopes.Chat] = T["Chatting with a profile."].Value,
+        [AIApiKeys.Scopes.Recordings] = T["Recordings and links to them."].Value,
+    };
+}
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+
+<div data-api-key-for="@AIApiKeyKind.Server">
+    <div class="ocat-wrapper" asp-validation-class-for="Scopes">
+        <label class="ocat-label ocat-label-required">@T["Areas"]</label>
+        <div class="ocat-end">
+            @foreach (var scope in scopes)
+            {
+                var id = "scope-" + scope.Key;
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Scopes)" value="@scope.Key" id="@id" checked="@Model.Scopes.Contains(scope.Key)" />
+                    <label class="form-check-label" for="@id"><span class="font-monospace">ai.@scope.Key</span></label>
+                    <span class="hint dashed">@scope.Value</span>
+                </div>
+            }
+            <span asp-validation-for="Scopes" class="text-danger"></span>
+            <span class="hint">@T["OpenID clients can be limited the same way: add these as scopes on the OpenID server and give the client the ones it needs. A client with no ai. scope may call every area its roles allow."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Roles">
+        <label asp-for="Roles" class="ocat-label ocat-label-required">@T["Roles"]</label>
+        <div class="ocat-end">
+            <select asp-for="Roles" asp-items="Model.AvailableRoles" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+            <span asp-validation-for="Roles" class="text-danger"></span>
+            <span class="hint">@T["The key acts with these roles' permissions, as a user with them would."]</span>
+        </div>
+    </div>
+</div>
+
+<div data-api-key-for="@AIApiKeyKind.Browser">
+    <div class="ocat-wrapper" asp-validation-class-for="AllowedOrigins">
+        <label asp-for="AllowedOrigins" class="ocat-label ocat-label-required">@T["Web sites"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="AllowedOrigins" class="form-control font-monospace" rows="3" placeholder="https://www.example.com"></textarea>
+            <span asp-validation-for="AllowedOrigins" class="text-danger"></span>
+            <span class="hint">@T["One origin per line. Requests from any other site, or with no Origin header, are refused. Allow the same sites in a CORS policy so browsers may call the API."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="AllowedProfileIds">
+        <label asp-for="AllowedProfileIds" class="ocat-label ocat-label-required">@T["Profiles"]</label>
+        <div class="ocat-end">
+            <select asp-for="AllowedProfileIds" asp-items="Model.AvailableProfiles" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+            <span asp-validation-for="AllowedProfileIds" class="text-danger"></span>
+            <span class="hint">@T["The key may chat with these profiles through the chat completion endpoint, and nothing else."]</span>
+        </div>
+    </div>
+</div>

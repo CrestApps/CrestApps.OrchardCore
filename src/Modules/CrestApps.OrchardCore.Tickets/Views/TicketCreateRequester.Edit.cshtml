@@ -1,0 +1,23 @@
+@model TicketCreateViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Requester"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("PartyPicker", new { name = Html.NameFor(m => m.Requester).ToString(), selectedValues = string.IsNullOrEmpty(Model.Requester) ? Array.Empty<string>() : new[] { Model.Requester }, buttonText = T["Choose who it is for"].Value })
+        <span class="hint">@T["Someone who is not on the site yet: leave this empty and write their name and e-mail below."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RequesterName" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="RequesterName" class="form-control" autocomplete="off" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RequesterEmail" class="ocat-label">@T["E-mail"]</label>
+    <div class="ocat-end">
+        <input asp-for="RequesterEmail" type="email" class="form-control" autocomplete="off" />
+    </div>
+</div>

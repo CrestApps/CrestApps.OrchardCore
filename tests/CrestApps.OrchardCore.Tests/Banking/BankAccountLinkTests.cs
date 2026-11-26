@@ -197,7 +197,7 @@ public sealed class BankAccountLinkTests
     }
 
     private static BankAccountLinkFlow Flow(BankingTestContext context, IBankAccountLinkProvider provider)
-        => new(context.Service, context.Manager, Mock.Of<IShapeFactory>(), RecipeRoundTrip.Localizer<BankAccountLinkFlow>());
+        => new(context.Service, context.Manager, Mock.Of<IShapeFactory>(), Mock.Of<IDisplayManager<global::CrestApps.OrchardCore.Banking.ViewModels.BankAccountLinkViewModel>>(), Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(), RecipeRoundTrip.Localizer<BankAccountLinkFlow>());
 
     internal static BankAccountLinkResult Linked(string accountNumber)
         => new()

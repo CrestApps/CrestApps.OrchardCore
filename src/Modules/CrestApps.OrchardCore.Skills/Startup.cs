@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Navigation;
 using CrestApps.OrchardCore.Skills.Reports;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Skills.ViewModels;
 using CrestApps.OrchardCore.Skills.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,9 +54,11 @@ public sealed class Startup : StartupBase
 
         services.AddSkillsCore();
         services.AddDisplayDriver<Skill, SkillRowDisplayDriver>();
+        services.AddDisplayDriver<SkillEditViewModel, SkillEditDisplayDriver>();
         services.AddDisplayDriver<Certification, CertificationRowDisplayDriver>();
         services.AddDisplayDriver<Certification, CertificationDisplayDriver>();
         services.AddDisplayDriver<CertificationRecord, CertificationRecordRowDisplayDriver>();
+        services.AddDisplayDriver<CertificationRecordEditViewModel, CertificationRecordEditDisplayDriver>();
         services.AddDisplayDriver<User, UserSkillsDisplayDriver>();
         services.AddPermissionProvider<SkillsPermissionsProvider>();
         services.AddPersonalDataContributor<SkillsPersonalDataContributor>();

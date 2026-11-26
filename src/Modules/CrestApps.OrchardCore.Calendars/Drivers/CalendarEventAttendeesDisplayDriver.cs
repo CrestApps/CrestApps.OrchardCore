@@ -60,7 +60,7 @@ internal sealed class CalendarEventAttendeesDisplayDriver : DisplayDriver<Calend
                 .Select(resource => new SelectListItem(resource.Name, resource.ItemId, model.ResourceIds.Contains(resource.ItemId)))
                 .ToList();
             model.Attendees = calendarEvent.Attendees.ToList();
-        }).Location("Content:10%Attendees;3");
+        }).Location(l => l.Zone("Content", "10").Card(S["Attendees"], "3"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CalendarEvent calendarEvent, UpdateEditorContext context)

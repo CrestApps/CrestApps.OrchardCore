@@ -1,0 +1,57 @@
+@model ParentPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Sign-in"]</span>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="RequireMfa" class="form-check-input" />
+            <label asp-for="RequireMfa" class="form-check-label">@T["Require two-factor authentication"]</label>
+            <span class="hint dashed">@T["Users must have signed in to the parent with two-factor authentication before they can open a child tenant."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SessionValidationMinutes" class="ocat-label">@T["Check sessions every"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="SessionValidationMinutes" type="number" min="1" max="60" class="form-control" />
+            <span class="input-group-text">@T["minutes"]</span>
+        </div>
+        <span asp-validation-for="SessionValidationMinutes" class="text-danger"></span>
+        <span class="hint">@T["How soon a removed grant or a disabled user takes effect in an open child tenant."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SessionIdleMinutes" class="ocat-label">@T["End idle sessions after"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="SessionIdleMinutes" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["minutes"]</span>
+        </div>
+        <span asp-validation-for="SessionIdleMinutes" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SessionLifetimeHours" class="ocat-label">@T["End every session after"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="SessionLifetimeHours" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["hours"]</span>
+        </div>
+        <span asp-validation-for="SessionLifetimeHours" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SwitcherMode" class="ocat-label">@T["Tenant switcher"]</label>
+    <div class="ocat-end">
+        <select asp-for="SwitcherMode" class="form-select">
+            <option value="@SwitcherMode.Hosted">@T["Open the parent's picker page"]</option>
+            <option value="@SwitcherMode.Embedded">@T["Show the parent's picker in a panel"]</option>
+        </select>
+        <span class="hint">@T["Either way, the list of other child tenants is served by the parent and never becomes part of a child tenant's page."]</span>
+    </div>
+</div>

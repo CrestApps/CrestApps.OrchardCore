@@ -1,0 +1,14 @@
+@model TransactionReminderSettingsViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="SendFromHour">
+    <label asp-for="SendFromHour" class="ocat-label">@T["Send between"]</label>
+    <div class="ocat-limited">
+        <div class="input-group">
+            <input asp-for="SendFromHour" type="number" min="0" max="23" class="form-control" />
+            <span class="input-group-text">@T["and"]</span>
+            <input asp-for="SendUntilHour" type="number" min="1" max="24" class="form-control" />
+            <span class="input-group-text">@T["o'clock"]</span>
+        </div>
+        <span class="hint">@T["The hours of the day, in the site's time zone, scheduled reminders are sent in. Use 0 and 24 to send them at any time."]</span>
+    </div>
+</div>

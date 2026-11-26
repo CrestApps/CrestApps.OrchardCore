@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -14,11 +15,15 @@ namespace CrestApps.OrchardCore.Customers.Drivers;
 /// </summary>
 public sealed class CustomerCheckoutSettingsDisplayDriver : CustomerSettingsDisplayDriverBase<CustomerCheckoutSettings>
 {
+    internal readonly IStringLocalizer S;
+
     public CustomerCheckoutSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<CustomerCheckoutSettingsDisplayDriver> stringLocalizer)
         : base(httpContextAccessor, authorizationService)
     {
+        S = stringLocalizer;
     }
 
     protected override string SettingsGroupId
@@ -28,7 +33,7 @@ public sealed class CustomerCheckoutSettingsDisplayDriver : CustomerSettingsDisp
         => Initialize<CustomerCheckoutSettingsViewModel>("CustomerCheckoutSettings_Edit", model =>
         {
             model.BillingAddress = settings.BillingAddress;
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Checkout"], "10"))
         .RenderWhen(CanManageCustomersAsync)
         .OnGroup(SettingsGroupId);
 

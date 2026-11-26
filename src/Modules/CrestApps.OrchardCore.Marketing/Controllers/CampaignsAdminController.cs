@@ -11,6 +11,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -38,6 +40,8 @@ public sealed class CampaignsAdminController : Controller
     private readonly INotifier _notifier;
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
+    private readonly IDisplayManager<CampaignEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -51,6 +55,8 @@ public sealed class CampaignsAdminController : Controller
         INotifier notifier,
         ILocalClock localClock,
         IClock clock,
+        IDisplayManager<CampaignEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CampaignsAdminController> htmlLocalizer,
         IStringLocalizer<CampaignsAdminController> stringLocalizer)
     {
@@ -62,6 +68,8 @@ public sealed class CampaignsAdminController : Controller
         _notifier = notifier;
         _localClock = localClock;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -101,7 +109,10 @@ public sealed class CampaignsAdminController : Controller
             return Forbid();
         }
 
-        return View("Edit", await PopulateAsync(new CampaignEditViewModel { Body = DefaultBody }, campaign: null));
+        var model = await PopulateAsync(new CampaignEditViewModel { Body = DefaultBody }, campaign: null);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -115,9 +126,12 @@ public sealed class CampaignsAdminController : Controller
 
         var campaign = new Campaign { ItemId = IdGenerator.GenerateId(), CreatedUtc = _clock.UtcNow, CreatedBy = User.Identity?.Name };
 
+        await PopulateAsync(model, campaign: null);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         if (!await ApplyAsync(model, campaign))
         {
-            return View("Edit", await PopulateAsync(model, campaign: null));
+            return View("Edit", model);
         }
 
         await _campaigns.CreateAsync(campaign);
@@ -137,14 +151,18 @@ public sealed class CampaignsAdminController : Controller
             return NotFound();
         }
 
-        return View(await PopulateAsync(new CampaignEditViewModel
+        var model = await PopulateAsync(new CampaignEditViewModel
         {
             Name = campaign.Name,
             SegmentId = campaign.SegmentId,
             Subject = campaign.Subject,
             Body = campaign.Body,
             ScheduledLocal = campaign.ScheduledUtc is { } scheduled ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(scheduled, DateTimeKind.Utc))).DateTime : null,
-        }, campaign));
+        }, campaign);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -177,9 +195,12 @@ public sealed class CampaignsAdminController : Controller
             return RedirectToAction(nameof(Edit), new { itemId });
         }
 
+        await PopulateAsync(model, campaign);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         if (!await ApplyAsync(model, campaign))
         {
-            return View(await PopulateAsync(model, campaign));
+            return View(model);
         }
 
         // Saving a scheduled campaign keeps it a draft until it's sent again.

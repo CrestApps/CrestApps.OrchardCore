@@ -35,10 +35,16 @@ public sealed class FtpResourceDisplayDriver : FtpConnectionDisplayDriverBase<Mc
             return null;
         }
 
-        return Initialize<FtpConnectionFieldsViewModel>("FtpResourceConnection_Edit", model =>
-        {
-            PopulateConnectionFields(resource.GetOrCreate<FtpConnectionMetadata>(), model);
-        }).Location("Content:5");
+        return Combine(
+            Initialize<FtpConnectionFieldsViewModel>("FtpResourceServer_Edit", model => Populate(resource, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Server"], "40")),
+            Initialize<FtpConnectionFieldsViewModel>("FtpResourceConnectionOptions_Edit", model => Populate(resource, model))
+                .Location(l => l.Zone("Content", "5.2").Card(S["Connection Options"], "60")));
+    }
+
+    private static void Populate(McpResource resource, FtpConnectionFieldsViewModel model)
+    {
+        PopulateConnectionFields(resource.GetOrCreate<FtpConnectionMetadata>(), model);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpResource resource, UpdateEditorContext context)

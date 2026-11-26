@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Markets.Models;
 using CrestApps.OrchardCore.Markets.Navigation;
 using CrestApps.OrchardCore.Markets.Recipes;
 using CrestApps.OrchardCore.Markets.Services;
+using CrestApps.OrchardCore.Markets.ViewModels;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -53,6 +54,7 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<MarketsPermissionProvider>();
         services.AddNavigationProvider<MarketsAdminMenu>();
         services.AddDisplayDriver<Market, MarketDisplayDriver>();
+        services.AddDisplayDriver<MarketEditViewModel, MarketEditDisplayDriver>();
         services.AddDisplayDriver<Navbar, MarketNavbarDisplayDriver>();
 
         services.AddRecipeExecutionStep<MarketsStep>();

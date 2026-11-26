@@ -1,0 +1,18 @@
+@model CrestApps.OrchardCore.ContentFields.ViewModels.PhoneFieldSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Required" />
+            <label class="form-check-label" asp-for="Required">@T["Required"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Hint">
+    <label asp-for="Hint" class="ocat-label">@T["Hint"]</label>
+    <div class="ocat-end">
+        <input asp-for="Hint" class="form-control" />
+        <span class="hint">@T["The hint text to display below the input."]</span>
+    </div>
+</div>

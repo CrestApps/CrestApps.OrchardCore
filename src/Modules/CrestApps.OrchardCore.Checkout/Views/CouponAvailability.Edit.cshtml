@@ -1,0 +1,49 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxRedemptions">
+    <label asp-for="MaxRedemptions" class="ocat-label">@T["Usage limit"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxRedemptions" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxRedemptions"></span>
+        <span class="hint">@T["Leave blank for unlimited. A code with no limit that leaks keeps discounting."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxRedemptionsPerCustomer">
+    <label asp-for="MaxRedemptionsPerCustomer" class="ocat-label">@T["Uses per customer"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxRedemptionsPerCustomer" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxRedemptionsPerCustomer"></span>
+        <span class="hint">@T["Leave blank for no limit. A customer is their account, or the email a guest checks out with."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="StartsUtc">
+    <label asp-for="Starts" class="ocat-label">@T["Valid from"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Starts" type="datetime-local" class="form-control" />
+        <span asp-validation-for="Starts"></span>
+        <span asp-validation-for="StartsUtc"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="EndsUtc">
+    <label asp-for="Ends" class="ocat-label">@T["Valid until"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Ends" type="datetime-local" class="form-control" />
+        <span asp-validation-for="Ends"></span>
+        <span asp-validation-for="EndsUtc"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IsEnabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsEnabled" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+    </div>
+</div>

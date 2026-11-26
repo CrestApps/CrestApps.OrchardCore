@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Agreements.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -20,11 +21,18 @@ internal sealed class TicketAgreementTermsDisplayDriver : DisplayDriver<Agreemen
     private readonly IServiceLevelPolicyManager _policies;
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
-    public TicketAgreementTermsDisplayDriver(ICatalog<TicketDesk> desks, IServiceLevelPolicyManager policies, IContentDefinitionManager contentDefinitionManager)
+    internal readonly IStringLocalizer S;
+
+    public TicketAgreementTermsDisplayDriver(
+        ICatalog<TicketDesk> desks,
+        IServiceLevelPolicyManager policies,
+        IContentDefinitionManager contentDefinitionManager,
+        IStringLocalizer<TicketAgreementTermsDisplayDriver> stringLocalizer)
     {
         _desks = desks;
         _policies = policies;
         _contentDefinitionManager = contentDefinitionManager;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -45,7 +53,7 @@ internal sealed class TicketAgreementTermsDisplayDriver : DisplayDriver<Agreemen
                 .Select(type => new SelectListItem(type.DisplayName, type.Name, model.TicketTypes.Contains(type.Name, StringComparer.OrdinalIgnoreCase)))];
             model.Policies = [.. (await _policies.ListByScopeAsync(TicketsConstants.ServiceLevelScope))
                 .Select(policy => new SelectListItem(policy.Name, policy.ItemId, policy.ItemId == model.ServiceLevelPolicyId))];
-        }).Location("Content:4");
+        }).Location(l => l.Zone("Content", "4").Card(S["Tickets"], "4"));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(Agreement agreement, UpdateEditorContext context)

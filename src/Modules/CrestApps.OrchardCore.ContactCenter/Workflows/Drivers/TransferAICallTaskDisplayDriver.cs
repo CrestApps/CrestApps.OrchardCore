@@ -30,6 +30,13 @@ public sealed class TransferAICallTaskDisplayDriver : ActivityDisplayDriver<Tran
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(TransferAICallTask activity, BuildEditorContext context)
+    {
+        return Initialize<TransferAICallTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(TransferAICallTask activity, TransferAICallTaskViewModel model)
     {
         model.ActivityId = activity.ActivityId;

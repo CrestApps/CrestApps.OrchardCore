@@ -1,0 +1,34 @@
+@model WorkOrderSubStatusEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" required />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ParentStatus" class="ocat-label">@T["Under"]</label>
+    <div class="ocat-end">
+        <select asp-for="ParentStatus" class="form-select">
+            @foreach (var status in Enum.GetValues<WorkOrderStatus>())
+            {
+                <option value="@status">@T[status.Text()]</option>
+            }
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+    <div class="ocat-end">
+        <input asp-for="Color" type="color" class="form-control form-control-color" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="PausesSla" type="checkbox" class="form-check-input" />
+            <label asp-for="PausesSla" class="form-check-label">@T["Stops the service level clock"]</label>
+        </div>
+        <span class="hint dashed">@T["Such as waiting for the customer, or for parts."]</span>
+    </div>
+</div>

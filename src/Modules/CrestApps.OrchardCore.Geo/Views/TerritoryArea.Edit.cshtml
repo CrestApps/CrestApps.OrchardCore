@@ -1,0 +1,34 @@
+@model TerritoryEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="hint">@T["Draw the area with the tools on the left of the map: a polygon or a rectangle, more than one if needed. Drag a corner to change it, or cut a hole. Other territories show in grey."]</p>
+        @{
+            ViewData["MapId"] = "territory-map";
+            ViewData["MapHeight"] = "26rem";
+            ViewData["MapLabel"] = T["Map to draw the territory on"].Value;
+        }
+        <partial name="_GeoMap" model="Model.Map" />
+        <details class="mb-3" @(ViewData.ModelState.ContainsKey(nameof(Model.Shape)) && ViewData.ModelState[nameof(Model.Shape)].Errors.Count > 0 ? "open" : null)>
+            <summary class="small">@T["The shape as GeoJSON"]</summary>
+            <textarea asp-for="Shape" class="form-control font-monospace mt-2" rows="5" spellcheck="false"></textarea>
+            <span class="hint">@T["Paste a Polygon, MultiPolygon, Feature or FeatureCollection to load it on the map. Positions are longitude, then latitude."]</span>
+        </details>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="PostalCodes">
+    <label asp-for="PostalCodes" class="ocat-label">@T["Postal codes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="PostalCodes" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Separated by commas. End a code with * to take every code that starts with it, such as 021*. Places without coordinates are matched by these."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const map = window.crestappsMap.create('territory-map');
+
+        window.crestappsMap.showShapes(map, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.OtherShapes.Select(shape => new { label = shape.Label, geoJson = shape.GeoJson }))), { color: '#6c757d', fillOpacity: 0.08, weight: 1 });
+        window.crestappsMap.editShapes(map, document.getElementById('@Html.IdFor(m => m.Shape)'));
+    })();
+</script>

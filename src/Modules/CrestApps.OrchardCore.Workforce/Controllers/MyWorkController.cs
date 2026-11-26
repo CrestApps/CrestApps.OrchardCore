@@ -19,6 +19,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -50,6 +52,9 @@ public sealed class MyWorkController : Controller
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<MyTimeOffViewModel> _timeOffDisplayManager;
+    private readonly IDisplayManager<MySettingsViewModel> _settingsDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -73,6 +78,9 @@ public sealed class MyWorkController : Controller
     /// <param name="localClock">The local clock.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="timeOffDisplayManager">The display manager of the time off request form.</param>
+    /// <param name="settingsDisplayManager">The display manager of the notification settings form.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public MyWorkController(
@@ -92,6 +100,9 @@ public sealed class MyWorkController : Controller
         ILocalClock localClock,
         IClock clock,
         INotifier notifier,
+        IDisplayManager<MyTimeOffViewModel> timeOffDisplayManager,
+        IDisplayManager<MySettingsViewModel> settingsDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<MyWorkController> htmlLocalizer,
         IStringLocalizer<MyWorkController> stringLocalizer)
     {
@@ -111,6 +122,9 @@ public sealed class MyWorkController : Controller
         _localClock = localClock;
         _clock = clock;
         _notifier = notifier;
+        _timeOffDisplayManager = timeOffDisplayManager;
+        _settingsDisplayManager = settingsDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -214,6 +228,7 @@ public sealed class MyWorkController : Controller
         var model = new MyTimeOffViewModel { StartDate = tomorrow, EndDate = tomorrow, StartTime = "13:00", EndTime = "17:00" };
 
         await PopulateTimeOffAsync(model, worker);
+        model.Editor = await _timeOffDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }
@@ -234,6 +249,9 @@ public sealed class MyWorkController : Controller
         {
             return denied;
         }
+
+        // The fields of the form are read first, so what other modules add to the editor is validated with them.
+        await _timeOffDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         var requests = HttpContext.RequestServices.GetRequiredService<ITimeOffRequestService>();
         var types = HttpContext.RequestServices.GetRequiredService<ITimeOffTypeManager>();
@@ -311,6 +329,7 @@ public sealed class MyWorkController : Controller
         }
 
         await PopulateTimeOffAsync(model, worker);
+        model.Editor = await _timeOffDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(nameof(TimeOff), model);
     }
@@ -645,7 +664,7 @@ public sealed class MyWorkController : Controller
         var settings = worker.TryGet<WorkerPortalSettings>(out var stored) ? stored : new WorkerPortalSettings();
         var token = await _feedService.GetTokenAsync(worker, false, HttpContext.RequestAborted);
 
-        return View(new MySettingsViewModel
+        var model = new MySettingsViewModel
         {
             Nav = await _portal.NavAsync(User, worker, "settings", HttpContext.RequestAborted),
             Channels = _channels.Where(channel => channel.CanBeTurnedOff).Select(channel => new MyNotificationOption { Value = channel.Name, Label = channel.DisplayName, Enabled = !settings.DisabledChannels.Contains(channel.Name) }).ToList(),
@@ -656,7 +675,11 @@ public sealed class MyWorkController : Controller
             ReminderMinutes = settings.ReminderMinutes,
             QuietStart = settings.QuietStart?.ToString("HH:mm", CultureInfo.InvariantCulture),
             QuietEnd = settings.QuietEnd?.ToString("HH:mm", CultureInfo.InvariantCulture),
-        });
+        };
+
+        model.Editor = await _settingsDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>

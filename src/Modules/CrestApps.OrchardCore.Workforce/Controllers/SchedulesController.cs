@@ -21,6 +21,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -48,6 +50,9 @@ public sealed class SchedulesController : Controller
     private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ScheduleCreateViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IDisplayManager<DraftShiftEditViewModel> _shiftDisplayManager;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -68,6 +73,9 @@ public sealed class SchedulesController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="shiftDisplayManager">The display manager of the editor.</param>
     public SchedulesController(
         IAuthorizationService authorizationService,
         ISchedulePlanningService planningService,
@@ -81,7 +89,10 @@ public sealed class SchedulesController : Controller
         ILocalClock localClock,
         INotifier notifier,
         IHtmlLocalizer<SchedulesController> htmlLocalizer,
-        IStringLocalizer<SchedulesController> stringLocalizer)
+        IStringLocalizer<SchedulesController> stringLocalizer,
+        IDisplayManager<ScheduleCreateViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IDisplayManager<DraftShiftEditViewModel> shiftDisplayManager)
     {
         _authorizationService = authorizationService;
         _planningService = planningService;
@@ -96,6 +107,9 @@ public sealed class SchedulesController : Controller
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _shiftDisplayManager = shiftDisplayManager;
     }
 
     /// <summary>
@@ -155,6 +169,8 @@ public sealed class SchedulesController : Controller
 
         model.TeamOptions = await PlanningOptions.TeamsAsync(_teamManager, scope, model.TeamId, HttpContext.RequestAborted);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
+
         return View(model);
     }
 
@@ -172,6 +188,8 @@ public sealed class SchedulesController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
 
         var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
 
@@ -201,6 +219,8 @@ public sealed class SchedulesController : Controller
         }
 
         model.TeamOptions = await PlanningOptions.TeamsAsync(_teamManager, scope, model.TeamId, HttpContext.RequestAborted);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
 
         return View(model);
     }
@@ -381,6 +401,8 @@ public sealed class SchedulesController : Controller
             model.PublishedWorkerName = string.IsNullOrEmpty(published.Data.WorkerId) ? null : (await _workerManager.FindByIdAsync(published.Data.WorkerId, HttpContext.RequestAborted))?.DisplayName;
         }
 
+        model.Editor = await _shiftDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -479,6 +501,7 @@ public sealed class SchedulesController : Controller
             return denied;
         }
 
+        model.Editor = await _shiftDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
         var codes = await _activityCodeManager.GetAllAsync(HttpContext.RequestAborted);
         var template = string.IsNullOrEmpty(model.TemplateId) ? null : await _templateManager.FindByIdAsync(model.TemplateId);
 
@@ -494,6 +517,8 @@ public sealed class SchedulesController : Controller
             }
 
             await PopulateShiftAsync(model, period, team, codes);
+
+            model.Editor = await _shiftDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
             return View(model);
         }
@@ -560,6 +585,8 @@ public sealed class SchedulesController : Controller
         }
 
         await PopulateShiftAsync(model, period, team, codes);
+
+        model.Editor = await _shiftDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
         return View(model);
     }

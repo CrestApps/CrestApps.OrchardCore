@@ -1,0 +1,11 @@
+@model RequiredLearningEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["On"]</label>
+            <span class="hint dashed">@T["When off, the rule requires nobody new and the states it made stay."]</span>
+        </div>
+    </div>
+</div>

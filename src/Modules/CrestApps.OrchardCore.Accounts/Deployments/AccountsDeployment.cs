@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Accounts.Recipes;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Accounts.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Deployment;
@@ -119,6 +120,13 @@ internal sealed class AccountsDeploymentSource : DeploymentSourceBase<AccountsDe
 
 internal sealed class AccountsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AccountsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public AccountsDeploymentStepDisplayDriver(IStringLocalizer<AccountsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Display(AccountsDeploymentStep step, BuildDisplayContext context)
         => Combine(
             View("AccountsDeploymentStep_Summary", step).Location("Summary", "Content"),
@@ -126,7 +134,7 @@ internal sealed class AccountsDeploymentStepDisplayDriver : DisplayDriver<Deploy
 
     public override IDisplayResult Edit(AccountsDeploymentStep step, BuildEditorContext context)
         => Initialize<AccountsDeploymentStepViewModel>("AccountsDeploymentStep_Fields_Edit", model => model.IncludeRecords = step.IncludeRecords)
-            .Location("Content");
+            .Location(l => l.Zone("Content", "1").Card(S["Export"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(AccountsDeploymentStep step, UpdateEditorContext context)
     {

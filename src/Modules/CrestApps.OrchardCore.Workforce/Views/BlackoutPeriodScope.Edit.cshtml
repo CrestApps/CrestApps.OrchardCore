@@ -1,0 +1,11 @@
+@model BlackoutPeriodEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="TeamId" class="ocat-label">@T["Team"]</label><div class="ocat-end"><select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem"><option value="">@T["Every team"]</option></select><span class="hint">@T["The dates apply to this team and the teams under it."]</span></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="TypeIds" class="ocat-label">@T["Time-off types"]</label>
+    <div class="ocat-end">
+        <select asp-for="TypeIds" asp-items="Model.TypeOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+        <span class="hint">@T["Leave empty to block every type."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper"><label asp-for="Message" class="ocat-label">@T["Message"]</label><div class="ocat-end"><input asp-for="Message" class="form-control" /><span class="hint">@T["What a worker is told when a request falls on these dates."]</span></div></div>

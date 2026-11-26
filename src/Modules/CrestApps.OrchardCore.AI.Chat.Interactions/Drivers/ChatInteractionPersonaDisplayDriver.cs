@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -15,13 +16,19 @@ internal sealed class ChatInteractionPersonaDisplayDriver : DisplayDriver<ChatIn
 {
     private readonly IAIPersonaManager _personaManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatInteractionPersonaDisplayDriver"/> class.
     /// </summary>
     /// <param name="personaManager">The persona manager, which lists the personas to pick from.</param>
-    public ChatInteractionPersonaDisplayDriver(IAIPersonaManager personaManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ChatInteractionPersonaDisplayDriver(
+        IAIPersonaManager personaManager,
+        IStringLocalizer<ChatInteractionPersonaDisplayDriver> stringLocalizer)
     {
         _personaManager = personaManager;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -29,7 +36,7 @@ internal sealed class ChatInteractionPersonaDisplayDriver : DisplayDriver<ChatIn
     {
         // Directly above the system instructions, which the persona's instructions come before.
         return Initialize<AIPersonaPickerViewModel>("ChatInteractionPersonaPicker_Edit", model => _personaManager.PopulatePersonaPickerAsync(model, interaction))
-            .Location("Parameters:7.5#Settings;1");
+            .Location(l => l.Zone("Parameters", "7.5").Tab(S["Settings"], "1").Card(S["Instructions"], "4"));
     }
 
     /// <inheritdoc />

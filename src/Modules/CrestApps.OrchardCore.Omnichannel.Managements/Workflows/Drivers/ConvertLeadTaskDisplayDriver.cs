@@ -38,6 +38,11 @@ public sealed class ConvertLeadTaskDisplayDriver : ActivityDisplayDriver<Convert
         S = stringLocalizer;
     }
 
+    /// <inheritdoc />
+    public override IDisplayResult Edit(ConvertLeadTask activity, BuildEditorContext context)
+        => Initialize<ConvertLeadTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+
     /// <inheritdoc/>
     protected override async ValueTask EditActivityAsync(ConvertLeadTask activity, ConvertLeadTaskViewModel model)
     {

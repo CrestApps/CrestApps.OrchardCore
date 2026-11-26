@@ -57,7 +57,7 @@ public sealed class SecureCaptureSettingsDisplayDriver
                 model.LinkTimeToLiveSeconds = settings.LinkTimeToLiveSeconds;
                 model.PauseRecordingDuringCapture = settings.PauseRecordingDuringCapture;
             })
-            .Location("Content:5#Secure Data Capture")
+            .Location(l => l.Zone("Content", "5").Tab(S["Secure Data Capture"], "5").Card(S["Capture"], "1"))
             .OnGroup(SettingsGroupId)
             .RenderWhen(() => _authorizationService.AuthorizeAsync(
                 _httpContextAccessor.HttpContext?.User,

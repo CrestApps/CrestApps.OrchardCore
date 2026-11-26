@@ -41,8 +41,17 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
             return null;
         }
 
-        return Initialize<HttpConnectionViewModel>("HttpConnection_Edit", model =>
-        {
+        // The connection's own settings are two cards: where it connects, and how it signs in. Both are copies of the
+        // connection's values, so the fields keep posting under the same prefix.
+        return Combine(
+            Initialize<HttpConnectionViewModel>("HttpConnection_Edit", model => FillValues(model, connection, context))
+                .Location(l => l.Zone("Content", "5").Card(S["Connection"], "20")),
+            Initialize<HttpConnectionViewModel>("HttpConnectionAuthentication_Edit", model => FillValues(model, connection, context))
+                .Location(l => l.Zone("Content", "6").Card(S["Authentication"], "30")));
+    }
+
+    private void FillValues(HttpConnectionViewModel model, DataConnection connection, BuildEditorContext context)
+    {
             var settings = connection.GetOrCreate<HttpConnectionSettings>();
             var authentication = settings.Authentication ?? new HttpAuthenticationSettings();
             var isElasticsearch = DataConnectionEditor.IsElasticsearch(connection);
@@ -68,7 +77,6 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
             model.HasClientSecret = _secretManager.Has(connection, HttpAuthenticationSecrets.ClientSecret);
             model.IsElasticsearch = isElasticsearch;
             model.AuthenticationTypes = GetAuthenticationTypes(isElasticsearch);
-        }).Location("Content:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DataConnection connection, UpdateEditorContext context)
@@ -132,9 +140,14 @@ internal sealed class MediaFilesConnectionDisplayDriver : DisplayDriver<DataConn
 {
     private readonly DataConnectionEditor _editor;
 
-    public MediaFilesConnectionDisplayDriver(DataConnectionEditor editor)
+    internal readonly IStringLocalizer S;
+
+    public MediaFilesConnectionDisplayDriver(
+        DataConnectionEditor editor,
+        IStringLocalizer<MediaFilesConnectionDisplayDriver> stringLocalizer)
     {
         _editor = editor;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(DataConnection connection, BuildEditorContext context)
@@ -147,7 +160,7 @@ internal sealed class MediaFilesConnectionDisplayDriver : DisplayDriver<DataConn
         return Initialize<MediaFilesConnectionViewModel>("MediaFilesConnection_Edit", model =>
         {
             model.Folder = connection.GetOrCreate<MediaFilesConnectionSettings>().Folder;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Connection"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DataConnection connection, UpdateEditorContext context)

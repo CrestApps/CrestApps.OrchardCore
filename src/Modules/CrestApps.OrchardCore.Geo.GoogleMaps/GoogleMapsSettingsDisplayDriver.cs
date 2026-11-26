@@ -8,6 +8,7 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Geo.GoogleMaps;
 
@@ -20,14 +21,22 @@ public sealed class GoogleMapsSettingsDisplayDriver : SiteDisplayDriver<GoogleMa
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="GoogleMapsSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
-    public GoogleMapsSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, IDataProtectionProvider dataProtectionProvider)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public GoogleMapsSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IDataProtectionProvider dataProtectionProvider,
+        IStringLocalizer<GoogleMapsSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
@@ -39,7 +48,7 @@ public sealed class GoogleMapsSettingsDisplayDriver : SiteDisplayDriver<GoogleMa
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, GoogleMapsSettings settings, BuildEditorContext context)
         => Initialize<GoogleMapsSettingsViewModel>("GoogleMapsSettings_Edit", model => model.HasKey = ProtectedSettingExtensions.HasSecret(settings.Key))
-            .Location("Content:5")
+            .Location(l => l.Zone("Content", "5").Card(S["Google Maps"], "50"))
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
             .OnGroup(SettingsGroupId);
 

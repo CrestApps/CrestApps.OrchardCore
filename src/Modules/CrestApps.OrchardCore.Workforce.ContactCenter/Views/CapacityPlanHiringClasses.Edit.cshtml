@@ -1,0 +1,30 @@
+@model CapacityPlanEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="hint">@T["New agents answer nothing while they train, then reach full productivity evenly over their ramp-up. Leave a row empty to skip it."]</p>
+        <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["First day"]</th>
+                        <th scope="col">@T["Agents"]</th>
+                        <th scope="col">@T["Training weeks"]</th>
+                        <th scope="col">@T["Ramp-up weeks"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.HiringClasses.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="HiringClasses[i].StartDate" type="date" class="form-control form-control-sm" aria-label="@T["First day"]" style="max-width: 12rem" /></td>
+                            <td><input asp-for="HiringClasses[i].Size" type="number" min="0" step="any" class="form-control form-control-sm" aria-label="@T["Agents"]" style="max-width: 12rem" /></td>
+                            <td><input asp-for="HiringClasses[i].TrainingWeeks" type="number" min="0" class="form-control form-control-sm" aria-label="@T["Training weeks"]" style="max-width: 12rem" /></td>
+                            <td><input asp-for="HiringClasses[i].RampWeeks" type="number" min="0" class="form-control form-control-sm" aria-label="@T["Ramp-up weeks"]" style="max-width: 12rem" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -107,7 +107,7 @@ internal sealed class CalendarEventDisplayDriver : DisplayDriver<CalendarEvent>
             model.TransparencyOptions = CalendarSelectLists.Transparencies(S);
             model.ReminderOptions = CalendarSelectLists.Reminders(S, model.ReminderMinutes);
             model.VisibilityOptions = CalendarSelectLists.EventVisibilities(S);
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CalendarEvent calendarEvent, UpdateEditorContext context)

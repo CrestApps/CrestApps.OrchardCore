@@ -55,31 +55,39 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
 
     public override IDisplayResult Edit(McpPrompt entry, BuildEditorContext context)
     {
-        return Initialize<McpPromptFieldsViewModel>("McpPromptFields_Edit", model =>
+        return Combine(
+            Initialize<McpPromptFieldsViewModel>("McpPromptGeneral_Edit", model => Populate(entry, context.IsNew, model))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<McpPromptFieldsViewModel>("McpPromptArguments_Edit", model => Populate(entry, context.IsNew, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Arguments"], "20")),
+            Initialize<McpPromptFieldsViewModel>("McpPromptMessages_Edit", model => Populate(entry, context.IsNew, model))
+                .Location(l => l.Zone("Content", "3").Card(S["Messages"], "30")));
+    }
+
+    private static void Populate(McpPrompt entry, bool isNew, McpPromptFieldsViewModel model)
+    {
+        model.IsNew = isNew;
+
+        model.Name = entry.Name;
+
+        if (entry.Prompt is not null)
         {
-            model.IsNew = context.IsNew;
-
-            model.Name = entry.Name;
-
-            if (entry.Prompt is not null)
+            model.Title = entry.Prompt.Title;
+            model.Description = entry.Prompt.Description;
+            model.Arguments = entry.Prompt.Arguments?.Select(a => new McpPromptArgumentViewModel
             {
-                model.Title = entry.Prompt.Title;
-                model.Description = entry.Prompt.Description;
-                model.Arguments = entry.Prompt.Arguments?.Select(a => new McpPromptArgumentViewModel
-                {
-                    Name = a.Name,
-                    Title = a.Title,
-                    Description = a.Description,
-                    Required = a.Required ?? false,
-                }).ToList() ?? [];
-            }
-
-            model.Messages = entry.Messages?.Select(m => new McpPromptMessageViewModel
-            {
-                Role = m.Role,
-                Content = m.Content,
+                Name = a.Name,
+                Title = a.Title,
+                Description = a.Description,
+                Required = a.Required ?? false,
             }).ToList() ?? [];
-        }).Location("Content:1");
+        }
+
+        model.Messages = entry.Messages?.Select(m => new McpPromptMessageViewModel
+        {
+            Role = m.Role,
+            Content = m.Content,
+        }).ToList() ?? [];
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpPrompt entry, UpdateEditorContext context)

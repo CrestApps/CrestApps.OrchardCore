@@ -172,27 +172,43 @@ public sealed class StoreProfileSettingsDisplayDriver : SiteDisplayDriver<StoreP
         var addressEditor = await _shapeFactory.CreateAddressEditorAsync(model.Address, $"{Prefix}.{nameof(model.Address)}");
         var siteName = (site ?? await _siteService.GetSiteSettingsAsync())?.SiteName;
 
-        return Initialize<StoreProfileSettingsViewModel>("StoreProfileSettings_Edit", view =>
-        {
-            view.Name = model.Name;
-            view.LogoUrl = model.LogoUrl;
-            view.TaxId = model.TaxId;
-            view.Email = model.Email;
-            view.Phone = model.Phone;
-            view.Website = model.Website;
-            view.TermsOfService = model.TermsOfService;
-            view.PrivacyPolicy = model.PrivacyPolicy;
-            view.ReturnPolicy = model.ReturnPolicy;
-            view.ShippingPolicy = model.ShippingPolicy;
-            view.Faq = model.Faq;
-            view.Contact = model.Contact;
-            view.About = model.About;
-            view.Address = model.Address;
-            view.AddressEditor = addressEditor;
-            view.SiteName = siteName;
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StoreProfilePermissions.ManageStoreProfile))
-        .OnGroup(SettingsGroupId);
+        return Combine(
+            Initialize<StoreProfileSettingsViewModel>("StoreProfileSettings_Edit", view => Fill(view, model, addressEditor, siteName))
+                .Location(l => l.Zone("Content", "1").Card(S["The Store"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StoreProfilePermissions.ManageStoreProfile))
+                .OnGroup(SettingsGroupId),
+            Initialize<StoreProfileSettingsViewModel>("StoreProfileSettingsContact_Edit", view => Fill(view, model, addressEditor, siteName))
+                .Location(l => l.Zone("Content", "2").Card(S["How Customers Reach the Store"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StoreProfilePermissions.ManageStoreProfile))
+                .OnGroup(SettingsGroupId),
+            Initialize<StoreProfileSettingsViewModel>("StoreProfileSettingsPolicies_Edit", view => Fill(view, model, addressEditor, siteName))
+                .Location(l => l.Zone("Content", "3").Card(S["Website and Policies"], "30"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StoreProfilePermissions.ManageStoreProfile))
+                .OnGroup(SettingsGroupId),
+            Initialize<StoreProfileSettingsViewModel>("StoreProfileSettingsAddress_Edit", view => Fill(view, model, addressEditor, siteName))
+                .Location(l => l.Zone("Content", "4").Card(S["Address"], "40"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, StoreProfilePermissions.ManageStoreProfile))
+                .OnGroup(SettingsGroupId));
+    }
+
+    private static void Fill(StoreProfileSettingsViewModel view, StoreProfileSettingsViewModel model, IShape addressEditor, string siteName)
+    {
+        view.Name = model.Name;
+        view.LogoUrl = model.LogoUrl;
+        view.TaxId = model.TaxId;
+        view.Email = model.Email;
+        view.Phone = model.Phone;
+        view.Website = model.Website;
+        view.TermsOfService = model.TermsOfService;
+        view.PrivacyPolicy = model.PrivacyPolicy;
+        view.ReturnPolicy = model.ReturnPolicy;
+        view.ShippingPolicy = model.ShippingPolicy;
+        view.Faq = model.Faq;
+        view.Contact = model.Contact;
+        view.About = model.About;
+        view.Address = model.Address;
+        view.AddressEditor = addressEditor;
+        view.SiteName = siteName;
     }
 
     private static AddressEditorOptions EditorOptions(string country)

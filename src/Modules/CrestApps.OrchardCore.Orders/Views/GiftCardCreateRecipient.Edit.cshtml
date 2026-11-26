@@ -1,0 +1,34 @@
+@model GiftCardCreateViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="RecipientName">
+    <label asp-for="RecipientName" class="ocat-label">@T["Recipient's name"]</label>
+    <div class="ocat-end">
+        <input asp-for="RecipientName" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RecipientEmail">
+    <label asp-for="RecipientEmail" class="ocat-label">@T["Recipient's email"]</label>
+    <div class="ocat-end">
+        <input asp-for="RecipientEmail" type="email" class="form-control" />
+        <span asp-validation-for="RecipientEmail"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Message">
+    <label asp-for="Message" class="ocat-label">@T["Message"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Message" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Optional. Shown in the email with the card."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SendEmail">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SendEmail" class="form-check-input" />
+            <label asp-for="SendEmail" class="form-check-label">@T["Email the card"]</label>
+        </div>
+        <span class="hint dashed">@T["Sends the code to the recipient's email, with how to use it."]</span>
+    </div>
+</div>

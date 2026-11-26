@@ -171,6 +171,8 @@ public sealed class ReportExportPermissionTests
             Authorization(grants),
             Mock.Of<INotifier>(),
             Mock.Of<IClock>(),
+            Mock.Of<IDisplayManager<ReportSubscriptionEditViewModel>>(),
+            Mock.Of<IUpdateModelAccessor>(),
             Mock.Of<IHtmlLocalizer<ReportSubscriptionsController>>())
         {
             ControllerContext = new ControllerContext

@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
@@ -58,6 +60,22 @@ public abstract class ApprovalEventActivity : EventActivity
 public sealed class ApprovalEventActivityDisplayDriver<TActivity> : ActivityDisplayDriver<TActivity, ApprovalEventViewModel>
     where TActivity : ApprovalEventActivity
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApprovalEventActivityDisplayDriver{TActivity}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ApprovalEventActivityDisplayDriver(IStringLocalizer<ApprovalEventActivityDisplayDriver<TActivity>> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<ApprovalEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+
     /// <inheritdoc />
     protected override void EditActivity(TActivity activity, ApprovalEventViewModel model)
         => model.ApprovalType = activity.ApprovalType;

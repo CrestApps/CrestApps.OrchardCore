@@ -76,7 +76,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             model.HasBase64ApiKey = ProtectedSettingExtensions.HasSecret(metadata.Base64ApiKey);
             model.HasDefaultConnection = _options.HasConnection;
             model.UseDefaultConnection = _options.HasConnection && !HasStoredConnection(metadata) && model.DataConnectionId is null;
-        }).Location("Content:11");
+        }).Location(l => l.Zone("Content", "11").Card(S["Connection"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)

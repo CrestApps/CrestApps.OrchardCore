@@ -1,0 +1,52 @@
+@model ChildTenantEditViewModel
+
+@{
+    var suffix = Model.HostPattern?.Replace("{business}", string.Empty);
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayName" class="form-control" autofocus="@(Model.IsNew ? "autofocus" : null)" autocomplete="off" maxlength="100" data-th-name="@(Model.IsNew ? "" : null)" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <span class="hint">@T["The name everybody sees, for example \"Northwind Traders\"."]</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Slug" class="ocat-label ocat-label-required">@T["Address"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <span class="input-group-text">@($"{Model.Scheme}://")</span>
+            @if (Model.IsNew)
+            {
+                <input asp-for="Slug" class="form-control" autocomplete="off" spellcheck="false" maxlength="40" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" data-th-slug data-check-url="@Url.Action("CheckAddress")" />
+            }
+            else
+            {
+                <input asp-for="Slug" class="form-control" autocomplete="off" spellcheck="false" maxlength="40" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" data-th-slug data-original="@Model.Info?.Entry.Slug" data-check-url="@Url.Action("CheckAddress", new { id = Model.EntryId })" />
+            }
+            @if (!string.IsNullOrEmpty(suffix))
+            {
+                <span class="input-group-text">@suffix</span>
+            }
+        </div>
+        <span asp-validation-for="Slug" class="text-danger" data-th-slug-error></span>
+        <span class="hint" data-th-slug-status data-available-text="@T["Available:"]">@(Model.IsNew ? T["Lowercase letters, digits and hyphens, 3 to 40 characters. It is filled in from the name, and you can change it."] : T["If you change the address, the old address stops working at once. Tell the people who use it."])</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2" maxlength="500"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <span class="hint">@T["Optional. Only you see it, in this list."]</span>
+        }
+    </div>
+</div>

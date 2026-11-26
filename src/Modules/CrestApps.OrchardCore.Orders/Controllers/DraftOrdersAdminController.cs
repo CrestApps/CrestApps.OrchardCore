@@ -16,6 +16,8 @@ using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Email;
 using YesSql;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Orders.Controllers;
 
@@ -31,6 +33,8 @@ public sealed class DraftOrdersAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly ISession _session;
+    private readonly IDisplayManager<DraftOrderEditViewModel> _editorManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -41,6 +45,8 @@ public sealed class DraftOrdersAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         ISession session,
+        IDisplayManager<DraftOrderEditViewModel> editorManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<DraftOrdersAdminController> htmlLocalizer)
     {
         _orderStore = orderStore;
@@ -49,6 +55,8 @@ public sealed class DraftOrdersAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _session = session;
+        _editorManager = editorManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -172,6 +180,8 @@ public sealed class DraftOrdersAdminController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _editorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: order is null);
 
         var input = ToInput(model);
 
@@ -316,6 +326,8 @@ public sealed class DraftOrdersAdminController : Controller
             model.Subtotal = order.Subtotal;
             model.Currency = order.Currency;
         }
+
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: order is null);
     }
 
     private async Task<Order> FindDraftAsync(string orderId)

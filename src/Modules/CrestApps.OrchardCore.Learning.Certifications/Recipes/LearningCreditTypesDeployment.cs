@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -59,13 +60,20 @@ internal sealed class LearningCreditTypesDeploymentSource : DeploymentSourceBase
 
 internal sealed class LearningCreditTypesDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, LearningCreditTypesDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public LearningCreditTypesDeploymentStepDisplayDriver(IStringLocalizer<LearningCreditTypesDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(LearningCreditTypesDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("LearningCreditTypesDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("LearningCreditTypesDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(LearningCreditTypesDeploymentStep step, BuildEditorContext context)
-        => View("LearningCreditTypesDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("LearningCreditTypesDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Education Credit Types"], "10"));
 }
 
 internal sealed class LearningCreditTypesDeploymentStepSchema : DeploymentStepSchemaDefinitionBase

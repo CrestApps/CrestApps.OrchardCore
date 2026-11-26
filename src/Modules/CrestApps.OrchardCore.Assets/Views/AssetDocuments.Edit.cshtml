@@ -1,0 +1,9 @@
+@model AssetEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Documents">
+    <label asp-for="Documents" class="ocat-label">@T["Documents"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Documents" class="form-control font-monospace" rows="2" placeholder="manuals/boiler-x200.pdf"></textarea>
+        <span class="hint">@T["Paths of manuals and certificates in the media library, one a line."]</span>
+    </div>
+</div>

@@ -12,6 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers;
@@ -30,6 +33,8 @@ public sealed class BroadcastsController : Controller
     private readonly MessagingContactSearch _contactSearch;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<BroadcastCreateViewModel> _createDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     private readonly IHtmlLocalizer H;
     private readonly IStringLocalizer S;
@@ -42,6 +47,8 @@ public sealed class BroadcastsController : Controller
         MessagingContactSearch contactSearch,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        IDisplayManager<BroadcastCreateViewModel> createDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<BroadcastsController> htmlLocalizer,
         IStringLocalizer<BroadcastsController> stringLocalizer)
     {
@@ -52,6 +59,8 @@ public sealed class BroadcastsController : Controller
         _contactSearch = contactSearch;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _createDisplayManager = createDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -90,6 +99,8 @@ public sealed class BroadcastsController : Controller
 
         await PopulateEndpointsAsync(model);
 
+        model.Editor = await _createDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -102,6 +113,11 @@ public sealed class BroadcastsController : Controller
         {
             return Forbid();
         }
+
+        // The editor shapes copy the endpoint options, so they are read before the editor is built.
+        await PopulateEndpointsAsync(model);
+
+        model.Editor = await _createDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         var check = await MessagingRecipientRules.CheckAsync(
             _endpointManager, _channelResolver, _contactSearch, _workspaceBuilder, User, model.EndpointId, model.RecipientsText, model.ContactAddresses, HttpContext.RequestAborted);
@@ -156,8 +172,6 @@ public sealed class BroadcastsController : Controller
 
         if (!ModelState.IsValid)
         {
-            await PopulateEndpointsAsync(model);
-
             return View(model);
         }
 

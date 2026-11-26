@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.A2A.ViewModels
+
+@model A2AConnectionFieldsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Title"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["The display name for the A2A connection."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Endpoint" class="ocat-label ocat-label-required">@T["Endpoint"]</label>
+    <div class="ocat-end">
+        <input type="url" asp-for="Endpoint" class="form-control" placeholder="https://example.com" />
+        <span asp-validation-for="Endpoint" class="text-danger"></span>
+        <span class="hint">@T["The base URL of the A2A host (e.g., https://example.com). The agent card will be resolved at /.well-known/agent-card.json."]</span>
+    </div>
+</div>
+

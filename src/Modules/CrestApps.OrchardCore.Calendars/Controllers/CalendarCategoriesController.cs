@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Calendars.Controllers;
@@ -19,6 +21,8 @@ public sealed class CalendarCategoriesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ICalendarCategoryService _categoryService;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<CalendarCategoryEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -29,18 +33,24 @@ public sealed class CalendarCategoriesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="categoryService">The category service.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the category editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CalendarCategoriesController(
         IAuthorizationService authorizationService,
         ICalendarCategoryService categoryService,
         INotifier notifier,
+        IDisplayManager<CalendarCategoryEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CalendarCategoriesController> htmlLocalizer,
         IStringLocalizer<CalendarCategoriesController> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _categoryService = categoryService;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -94,14 +104,18 @@ public sealed class CalendarCategoriesController : Controller
             return Forbid();
         }
 
-        return View(new CalendarCategoryEditViewModel
+        var model = new CalendarCategoryEditViewModel
         {
             Id = category.ItemId,
             Name = category.Name,
             Color = category.Color,
             Shared = !string.IsNullOrEmpty(id) && category.IsShared,
             CanShare = await CanManageSharedAsync(),
-        });
+        };
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
+        return View(model);
     }
 
     /// <summary>
@@ -133,6 +147,9 @@ public sealed class CalendarCategoriesController : Controller
 
         var canShare = await CanManageSharedAsync();
 
+        model.CanShare = canShare;
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
+
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), S["The name is required."]);
@@ -145,8 +162,6 @@ public sealed class CalendarCategoriesController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.CanShare = canShare;
-
             return View(model);
         }
 

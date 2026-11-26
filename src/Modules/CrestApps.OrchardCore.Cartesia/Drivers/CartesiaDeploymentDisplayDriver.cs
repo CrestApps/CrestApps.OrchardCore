@@ -42,7 +42,7 @@ internal sealed class CartesiaDeploymentDisplayDriver : DisplayDriver<AIDeployme
         {
             model.Endpoint = GetProperty(deployment, EndpointProperty);
             model.HasApiKey = !string.IsNullOrEmpty(GetProperty(deployment, ApiKeyProperty));
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Connection"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)

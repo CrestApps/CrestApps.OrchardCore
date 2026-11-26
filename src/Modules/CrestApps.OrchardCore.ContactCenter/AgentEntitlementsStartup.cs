@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Deployment;
@@ -32,6 +33,7 @@ public sealed class AgentEntitlementsStartup : StartupBase
         services.Replace(ServiceDescriptor.Scoped<IAgentEntitlementPolicy, EnforcingAgentEntitlementPolicy>());
         services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
         services.AddDisplayDriver<AgentProfile, AgentEntitlementDisplayDriver>();
+        services.AddDisplayDriver<AgentEntitlementViewModel, AgentEntitlementEditorDisplayDriver>();
     }
 }
 

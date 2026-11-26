@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Checkout.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using CrestApps.OrchardCore.Transactions.Models;
 using OrchardCore.Admin;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Transactions.ViewModels;
 
@@ -104,8 +106,14 @@ public sealed class RefundsAdminIndexViewModel
 /// <summary>
 /// The form used to refund a settled payment attempt.
 /// </summary>
-public sealed class RefundRequestViewModel
+public class RefundRequestViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor of the page, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     /// <summary>
     /// Gets or sets the attempt being refunded.
     /// </summary>

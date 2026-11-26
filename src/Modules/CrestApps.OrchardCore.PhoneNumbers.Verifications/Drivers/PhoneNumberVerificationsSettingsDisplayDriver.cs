@@ -51,24 +51,32 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
 
     public override IDisplayResult Edit(ISite site, PhoneNumberVerificationsSettings settings, BuildEditorContext context)
     {
-        return Initialize<PhoneNumberVerificationsSettingsViewModel>("PhoneNumberVerificationsSettings_Edit", async viewModel =>
-        {
-            viewModel.RevalidationIntervalDays = settings.RevalidationIntervalDays;
-            viewModel.MaxVerificationAttempts = settings.MaxVerificationAttempts;
-            viewModel.RequestDelayMilliseconds = settings.RequestDelayMilliseconds;
-            viewModel.SelectedProvider = settings.SelectedProvider;
+        return Combine(
+            Initialize<PhoneNumberVerificationsSettingsViewModel>("PhoneNumberVerificationsSettings_Edit", async viewModel =>
+            {
+                viewModel.SelectedProvider = settings.SelectedProvider;
 
-            var enabledProviders = await _verificationManager.GetEnabledProvidersAsync();
+                var enabledProviders = await _verificationManager.GetEnabledProvidersAsync();
 
-            viewModel.Providers = enabledProviders
-                .Select(provider => new SelectListItem(provider.DisplayName?.Value ?? provider.Key, provider.Key))
-                .OrderBy(item => item.Text)
-                .ToList();
-        }).Location("Content:1#General")
-        .OnGroup(SettingsGroupId)
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(
-            _httpContextAccessor.HttpContext?.User,
-            PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings));
+                viewModel.Providers = enabledProviders
+                    .Select(provider => new SelectListItem(provider.DisplayName?.Value ?? provider.Key, provider.Key))
+                    .OrderBy(item => item.Text)
+                    .ToList();
+            }).Location(l => l.Zone("Content", "1").Tab(S["General"], "1").Card(S["Provider"], "10"))
+            .OnGroup(SettingsGroupId)
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(
+                _httpContextAccessor.HttpContext?.User,
+                PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings)),
+            Initialize<PhoneNumberVerificationsSettingsViewModel>("PhoneNumberVerificationsSettingsProcessing_Edit", viewModel =>
+            {
+                viewModel.RevalidationIntervalDays = settings.RevalidationIntervalDays;
+                viewModel.MaxVerificationAttempts = settings.MaxVerificationAttempts;
+                viewModel.RequestDelayMilliseconds = settings.RequestDelayMilliseconds;
+            }).Location(l => l.Zone("Content", "2").Tab(S["General"], "1").Card(S["Processing"], "20"))
+            .OnGroup(SettingsGroupId)
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(
+                _httpContextAccessor.HttpContext?.User,
+                PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings)));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, PhoneNumberVerificationsSettings settings, UpdateEditorContext context)

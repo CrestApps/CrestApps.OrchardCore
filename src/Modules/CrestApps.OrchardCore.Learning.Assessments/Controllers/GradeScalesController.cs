@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -24,17 +25,27 @@ public sealed class GradeScalesController : Controller
     private readonly GradeScaleStore _store;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<GradeScaleEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GradeScalesController"/> class.
     /// </summary>
-    public GradeScalesController(GradeScaleStore store, IAuthorizationService authorizationService, INotifier notifier, IHtmlLocalizer<GradeScalesController> htmlLocalizer)
+    public GradeScalesController(
+        GradeScaleStore store,
+        IAuthorizationService authorizationService,
+        INotifier notifier,
+        IDisplayManager<GradeScaleEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IHtmlLocalizer<GradeScalesController> htmlLocalizer)
     {
         _store = store;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -75,7 +86,7 @@ public sealed class GradeScalesController : Controller
             return Forbid();
         }
 
-        return View("Edit", WithEmptyRows(new GradeScaleEditViewModel
+        var model = new GradeScaleEditViewModel
         {
             Bands =
             [
@@ -85,7 +96,11 @@ public sealed class GradeScalesController : Controller
                 new GradeBandRowViewModel { MinPercent = 60, Label = "D", Passing = true },
                 new GradeBandRowViewModel { MinPercent = 0, Label = "F", Passing = false },
             ],
-        }));
+        };
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     /// <summary>
@@ -107,12 +122,16 @@ public sealed class GradeScalesController : Controller
             return NotFound();
         }
 
-        return View(WithEmptyRows(new GradeScaleEditViewModel
+        var model = new GradeScaleEditViewModel
         {
             Id = scale.ItemId,
             Name = scale.Name,
             Bands = scale.Bands.OrderByDescending(band => band.MinPercent).Select(band => new GradeBandRowViewModel { MinPercent = band.MinPercent, Label = band.Label, Passing = band.Passing }).ToList(),
-        }));
+        };
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -134,6 +153,8 @@ public sealed class GradeScalesController : Controller
         {
             return NotFound();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(model.Id));
 
         var bands = model.Bands.Where(band => band.MinPercent is not null && !string.IsNullOrWhiteSpace(band.Label))
             .Select(band => new GradeBand { MinPercent = Math.Clamp(band.MinPercent.Value, 0, 100), Label = band.Label.Trim(), Passing = band.Passing })
@@ -160,7 +181,7 @@ public sealed class GradeScalesController : Controller
 
         if (!ModelState.IsValid)
         {
-            return View("Edit", WithEmptyRows(model));
+            return View("Edit", model);
         }
 
         scale.Name = model.Name.Trim();
@@ -204,15 +225,5 @@ public sealed class GradeScalesController : Controller
         await _notifier.SuccessAsync(H["The grade scale was deleted."]);
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private static GradeScaleEditViewModel WithEmptyRows(GradeScaleEditViewModel model)
-    {
-        while (model.Bands.Count < Math.Max(6, model.Bands.Count(band => band.MinPercent is not null) + 2))
-        {
-            model.Bands.Add(new GradeBandRowViewModel());
-        }
-
-        return model;
     }
 }

@@ -1,60 +1,31 @@
 @model ApprovalPolicyViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["The policy"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <span class="ocat-label">@T["Approval type"]</span>
-            <div class="ocat-end">
-                <span class="form-control-plaintext fw-semibold">@Model.TypeDisplayName</span>
-                <span class="hint">@T["What the policy approves, chosen when it was added. It decides the conditions and fields below."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Title">
-            <label asp-for="Title" class="ocat-label ocat-label-required">@T["Title"]</label>
-            <div class="ocat-end">
-                <input asp-for="Title" class="form-control" maxlength="255" />
-                <span asp-validation-for="Title" class="text-danger"></span>
-                <span class="hint">@T["What approvers see, such as Pay run approval."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Name">
-            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Technical name"]</label>
-            <div class="ocat-end">
-                <input asp-for="Name" class="form-control" maxlength="255" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <span class="hint">@T["What modules and workflows ask for, such as PayRunApproval. Letters, digits and underscores."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Description">
-            <label asp-for="Description" class="ocat-label">@T["Description"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Approval type"]</span>
+    <div class="ocat-end">
+        <span class="form-control-plaintext fw-semibold">@Model.TypeDisplayName</span>
+        <span class="hint">@T["What the policy approves, chosen when it was added. It decides the conditions and fields below."]</span>
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["When it is used"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <div class="ocat-end">
-                <div class="form-check">
-                    <input asp-for="Enabled" type="checkbox" class="form-check-input" />
-                    <label asp-for="Enabled" class="form-check-label">@T["Choose this policy for requests that name none"]</label>
-                    <span class="hint dashed">@T["A request that names the policy uses it either way. Among the policies of the type whose conditions match, the first by order is used."]</span>
-                </div>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Order">
-            <label asp-for="Order" class="ocat-label">@T["Order"]</label>
-            <div class="ocat-end ocat-limited-wrapper">
-                <input asp-for="Order" class="form-control" inputmode="numeric" placeholder="0" />
-                <span asp-validation-for="Order" class="text-danger"></span>
-                <span class="hint">@T["Lower comes first, such as a policy for large amounts before the general one."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="Title">
+    <label asp-for="Title" class="ocat-label ocat-label-required">@T["Title"]</label>
+    <div class="ocat-end">
+        <input asp-for="Title" class="form-control" maxlength="255" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+        <span class="hint">@T["What approvers see, such as Pay run approval."]</span>
     </div>
 </div>
-
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Technical name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["What modules and workflows ask for, such as PayRunApproval. Letters, digits and underscores."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>

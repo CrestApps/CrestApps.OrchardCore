@@ -59,34 +59,44 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
         => InventoryConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, InventorySettings settings, BuildEditorContext context)
-        => Initialize<InventorySettingsViewModel>("InventorySettings_Edit", async model =>
-        {
-            model.DefaultLowStockThreshold = settings.DefaultLowStockThreshold;
-            model.HoldMinutes = settings.HoldMinutes;
-            model.LowStockNotificationRoles = settings.LowStockNotificationRoles ?? [];
-            model.Roles = (await _roleService.GetRoleNamesAsync())
-                .Where(role => !IsEveryone(role))
-                .Order(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-            // Locations owned by other records, such as vans, are managed with their owner.
-            model.Locations = StockLocationEditor.GetSiteLocations(await _locationService.GetLocationsAsync())
-                .Select(location => new InventoryLocationViewModel
-                {
-                    LocationId = location.LocationId,
-                    Name = location.Name,
-                    Address = location.Address,
-                    IsDefault = location.LocationId == InventoryConstants.DefaultLocationId,
-                })
-                .ToList();
+    {
+        return Combine(
+            Initialize<InventorySettingsViewModel>("InventorySettings_Edit", model => FillAsync(model, settings))
+                .Location(l => l.Zone("Content", "1").Card(S["Stock"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InventoryPermissions.ManageInventory))
+                .OnGroup(SettingsGroupId),
+            Initialize<InventorySettingsViewModel>("InventorySettingsLocations_Edit", model => FillAsync(model, settings))
+                .Location(l => l.Zone("Content", "2").Card(S["Locations"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InventoryPermissions.ManageInventory))
+                .OnGroup(SettingsGroupId));
+    }
 
-            // A blank row to add a location with, while there is room for one.
-            if (model.Locations.Count < StockLocationEditor.MaxLocations)
+    private async ValueTask FillAsync(InventorySettingsViewModel model, InventorySettings settings)
+    {
+        model.DefaultLowStockThreshold = settings.DefaultLowStockThreshold;
+        model.HoldMinutes = settings.HoldMinutes;
+        model.LowStockNotificationRoles = settings.LowStockNotificationRoles ?? [];
+        model.Roles = (await _roleService.GetRoleNamesAsync())
+            .Where(role => !IsEveryone(role))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        // Locations owned by other records, such as vans, are managed with their owner.
+        model.Locations = StockLocationEditor.GetSiteLocations(await _locationService.GetLocationsAsync())
+            .Select(location => new InventoryLocationViewModel
             {
-                model.Locations.Add(new InventoryLocationViewModel());
-            }
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InventoryPermissions.ManageInventory))
-        .OnGroup(SettingsGroupId);
+                LocationId = location.LocationId,
+                Name = location.Name,
+                Address = location.Address,
+                IsDefault = location.LocationId == InventoryConstants.DefaultLocationId,
+            })
+            .ToList();
+
+        // A blank row to add a location with, while there is room for one.
+        if (model.Locations.Count < StockLocationEditor.MaxLocations)
+        {
+            model.Locations.Add(new InventoryLocationViewModel());
+        }
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, InventorySettings settings, UpdateEditorContext context)
     {

@@ -63,7 +63,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
                 .OrderBy(group => group.DisplayText)
                 .Select(group => new SelectListItem(group.DisplayText ?? group.ItemId, group.ItemId))
                 .ToList();
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelCampaign campaign, UpdateEditorContext context)

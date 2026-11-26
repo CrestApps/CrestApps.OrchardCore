@@ -1,37 +1,45 @@
 @model MessageTemplateViewModel
 
-<div class="mb-3">
-    <label asp-for="Name" class="form-label ocat-label-required">@T["Name"]</label>
-    <input asp-for="Name" class="form-control" />
-    <span asp-validation-for="Name" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="Body" class="form-label ocat-label-required">@T["Body"]</label>
-    <textarea asp-for="Body" class="form-control" rows="3"></textarea>
-    <span asp-validation-for="Body" class="text-danger"></span>
-    <span class="hint">@T["Placeholders in Liquid are filled in when the template is used, such as {0} for the contact's name.", "{{ Contact.DisplayName }}"]</span>
+<div class="ocat-wrapper" asp-validation-class-for="Body">
+    <label asp-for="Body" class="ocat-label ocat-label-required">@T["Body"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Body" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Body" class="text-danger"></span>
+        <span class="hint">@T["Placeholders in Liquid are filled in when the template is used, such as {0} for the contact's name.", "{{ Contact.DisplayName }}"]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="FillsPlaceholders" type="checkbox" class="form-check-input" />
-        <label asp-for="FillsPlaceholders" class="form-check-label">@T["Fill in placeholders"]</label>
-        <span class="hint dashed">@T["Off, the body is inserted exactly as written, braces included."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="FillsPlaceholders" type="checkbox" class="form-check-input" />
+            <label asp-for="FillsPlaceholders" class="form-check-label">@T["Fill in placeholders"]</label>
+            <span class="hint dashed">@T["Off, the body is inserted exactly as written, braces included."]</span>
+        </div>
     </div>
 </div>
 
 @if (Model.Scopes.Count > 0)
 {
-    <div class="mb-3">
-        <label asp-for="Scope" class="form-label">@T["Used for"]</label>
-        <select asp-for="Scope" class="form-select">
-            <option value="">@T["Messaging"]</option>
-            @foreach (var scope in Model.Scopes)
-            {
-                <option value="@scope.Key" selected="@(string.Equals(scope.Key, Model.Scope, StringComparison.Ordinal))">@scope.Value</option>
-            }
-        </select>
-        <span class="hint">@T["Where the template is offered: the messaging workspace, or another kind of work."]</span>
+    <div class="ocat-wrapper">
+        <label asp-for="Scope" class="ocat-label">@T["Used for"]</label>
+        <div class="ocat-end">
+            <select asp-for="Scope" class="form-select">
+                <option value="">@T["Messaging"]</option>
+                @foreach (var scope in Model.Scopes)
+                {
+                    <option value="@scope.Key" selected="@(string.Equals(scope.Key, Model.Scope, StringComparison.Ordinal))">@scope.Value</option>
+                }
+            </select>
+            <span class="hint">@T["Where the template is offered: the messaging workspace, or another kind of work."]</span>
+        </div>
     </div>
 }

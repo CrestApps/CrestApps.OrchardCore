@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Learning.Programs.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Programs.ViewModels;
 
@@ -200,6 +201,12 @@ public class RequiredLearningEditViewModel
 
     [BindNever]
     public IList<SelectListItem> Audiences { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -289,6 +296,12 @@ public class RequiredLearningExemptViewModel
 
     [BindNever]
     public string RequirementId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

@@ -237,10 +237,11 @@ public sealed class StaffEditorDriverTests
         }, commit: false);
 
         // Assert
-        Assert.Equal(["StaffMemberFields_Edit", ExtraSectionDisplayDriver<StaffMember>.ShapeType, "StaffMemberSkills_Edit"], shapes.Select(shape => shape.Metadata.Type));
+        // The person's fields are one shape for each card: Person, Employment and Place.
+        Assert.Equal(["StaffMemberPerson_Edit", "StaffMemberEmployment_Edit", "StaffMemberPlace_Edit", ExtraSectionDisplayDriver<StaffMember>.ShapeType, "StaffMemberSkills_Edit"], shapes.Select(shape => shape.Metadata.Type));
         Assert.Equal("Lee Park", Assert.IsAssignableFrom<StaffEditViewModel>(shapes[0]).DisplayName);
-        Assert.Equal(nameof(StaffMember), shapes[0].Metadata.Prefix);
-        Assert.Equal(["Gas safety"], Assert.IsAssignableFrom<SubjectSkillsViewModel>(shapes[2]).Skills.Select(skill => skill.Name));
+        Assert.All(shapes.Take(3), shape => Assert.Equal(nameof(StaffMember), shape.Metadata.Prefix));
+        Assert.Equal(["Gas safety"], Assert.IsAssignableFrom<SubjectSkillsViewModel>(shapes[4]).Skills.Select(skill => skill.Name));
     }
 
     [Fact]
@@ -271,7 +272,13 @@ public sealed class StaffEditorDriverTests
     {
         var result = await driver.BuildEditorAsync(staff, PostedFormUpdateModel.CreateContext(null));
 
-        return Assert.Single(await DisplayResultModels.BuildAsync<StaffEditViewModel>(result));
+        // One shape for each card, all of the same editor values: Person, Employment and Place (and Capabilities, which has its own model).
+        var models = await DisplayResultModels.BuildAsync<StaffEditViewModel>(result);
+
+        Assert.Equal(3, models.Count);
+        Assert.All(models, card => Assert.Equal(models[0].DisplayName, card.DisplayName));
+
+        return models[0];
     }
 
     private static StaffMemberDisplayDriver CreateStaffDriver(IServiceProvider services, string[] grants)
@@ -301,7 +308,8 @@ public sealed class StaffEditorDriverTests
             services.GetRequiredService<ISkillManager>(),
             services.GetRequiredService<ISkillAssignmentService>(),
             CreateHttpContextAccessor(services),
-            Authorization(Grants.All));
+            Authorization(Grants.All),
+            services.GetRequiredService<IStringLocalizer<StaffSkillsDisplayDriver>>());
 
     private static Task<Skill> AddSkillAsync(CalendarTestHarness harness, string name)
         => harness.RunAsync(async services =>

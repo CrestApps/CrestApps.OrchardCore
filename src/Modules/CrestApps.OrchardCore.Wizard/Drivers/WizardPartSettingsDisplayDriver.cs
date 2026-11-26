@@ -37,25 +37,32 @@ public sealed class WizardPartSettingsDisplayDriver : ContentTypePartDefinitionD
     /// <inheritdoc/>
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
     {
-        return Initialize<WizardPartSettingsViewModel>("WizardPartSettings_Edit", async model =>
-        {
-            var settings = contentTypePartDefinition.GetSettings<WizardPartSettings>();
-
-            model.WizardPartSettings = settings;
-            model.ContainedContentTypes = settings.ContainedContentTypes;
-            model.DisplayType = settings.DisplayType;
-            model.ContentTypes = [];
-            model.Source = settings.ContainedStereotypes != null && settings.ContainedStereotypes.Length > 0 ? WizardPartSettingType.Stereotypes : WizardPartSettingType.ContentTypes;
-            model.Stereotypes = string.Join(',', settings.ContainedStereotypes ?? []);
-            model.CollapseContainedItems = settings.CollapseContainedItems;
-            model.RequiresAuthenticatedUser = settings.RequiresAuthenticatedUser;
-            model.CompletionPolicy = settings.CompletionPolicy;
-
-            foreach (var contentTypeDefinition in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+        return Combine(
+            Initialize<WizardPartSettingsViewModel>("WizardPartSettings_Edit", async model =>
             {
-                model.ContentTypes.Add(contentTypeDefinition.Name, contentTypeDefinition.DisplayName);
-            }
-        }).Location("Content");
+                var settings = contentTypePartDefinition.GetSettings<WizardPartSettings>();
+
+                model.WizardPartSettings = settings;
+                model.ContainedContentTypes = settings.ContainedContentTypes;
+                model.DisplayType = settings.DisplayType;
+                model.ContentTypes = [];
+                model.Source = settings.ContainedStereotypes != null && settings.ContainedStereotypes.Length > 0 ? WizardPartSettingType.Stereotypes : WizardPartSettingType.ContentTypes;
+                model.Stereotypes = string.Join(',', settings.ContainedStereotypes ?? []);
+                model.CollapseContainedItems = settings.CollapseContainedItems;
+
+                foreach (var contentTypeDefinition in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+                {
+                    model.ContentTypes.Add(contentTypeDefinition.Name, contentTypeDefinition.DisplayName);
+                }
+            }).Location(l => l.Zone("Content", "1").Card(S["Steps"], "10")),
+            Initialize<WizardPartSettingsViewModel>("WizardPartSettingsBehavior_Edit", model =>
+            {
+                var settings = contentTypePartDefinition.GetSettings<WizardPartSettings>();
+
+                model.WizardPartSettings = settings;
+                model.RequiresAuthenticatedUser = settings.RequiresAuthenticatedUser;
+                model.CompletionPolicy = settings.CompletionPolicy;
+            }).Location(l => l.Zone("Content", "2").Card(S["Behavior"], "15")));
     }
 
     /// <inheritdoc/>

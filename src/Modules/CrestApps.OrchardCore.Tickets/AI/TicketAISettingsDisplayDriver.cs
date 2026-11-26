@@ -51,7 +51,7 @@ internal sealed class TicketAISettingsDisplayDriver : SiteDisplayDriver<TicketAI
             model.Profiles = [.. (await _profiles.GetAsync(AIProfileType.Chat))
                 .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, profile.ItemId == settings.ReplyProfileId))];
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Assistant"], "1"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TicketsPermissions.ManageTicketSettings))
         .OnGroup(SettingsGroupId);
 

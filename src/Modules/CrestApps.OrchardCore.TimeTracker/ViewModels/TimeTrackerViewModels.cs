@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.TimeTracker.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.TimeTracker.ViewModels;
 
@@ -136,6 +137,12 @@ public class TimeEntriesListViewModel
 /// </summary>
 public class TimeEntryEditViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of the form.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     /// <summary>
     /// Gets or sets the entry, when it is changed.
     /// </summary>
@@ -272,6 +279,12 @@ public class TimeSettingsListViewModel
 public class TimeCategoryEditViewModel
 {
     /// <summary>
+    /// Gets or sets the editor, built by the display drivers of the form.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
+    /// <summary>
     /// Gets or sets the record, when it is changed.
     /// </summary>
     public string Id { get; set; }
@@ -312,6 +325,12 @@ public class TimeCategoryEditViewModel
 /// </summary>
 public class TimeStageEditViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of the form.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     /// <summary>
     /// Gets or sets the record, when it is changed.
     /// </summary>

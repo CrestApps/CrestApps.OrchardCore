@@ -39,6 +39,13 @@ public sealed class AICallActionTaskDisplayDriver : ActivityDisplayDriver<AICall
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(AICallActionTask activity, BuildEditorContext context)
+    {
+        return Initialize<AICallActionTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(AICallActionTask activity, AICallActionTaskViewModel model)
     {
         model.ActivityId = activity.ActivityId;

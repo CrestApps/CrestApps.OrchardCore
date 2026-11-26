@@ -1,0 +1,16 @@
+@model GiftCardEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="RecipientName">
+    <label asp-for="RecipientName" class="ocat-label">@T["Recipient's name"]</label>
+    <div class="ocat-end">
+        <input asp-for="RecipientName" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RecipientEmail">
+    <label asp-for="RecipientEmail" class="ocat-label">@T["Recipient's email"]</label>
+    <div class="ocat-end">
+        <input asp-for="RecipientEmail" type="email" class="form-control" />
+        <span asp-validation-for="RecipientEmail"></span>
+    </div>
+</div>

@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -28,6 +31,8 @@ public sealed class ContactCenterTimeStagesController : Controller
     private readonly ITimeStageManager _stageManager;
     private readonly IAgentStateReasonCodeManager _reasonCodeManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ContactCenterTimeStagesViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -41,6 +46,8 @@ public sealed class ContactCenterTimeStagesController : Controller
         ITimeStageManager stageManager,
         IAgentStateReasonCodeManager reasonCodeManager,
         INotifier notifier,
+        IDisplayManager<ContactCenterTimeStagesViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<ContactCenterTimeStagesController> htmlLocalizer,
         IStringLocalizer<ContactCenterTimeStagesController> stringLocalizer)
     {
@@ -49,6 +56,8 @@ public sealed class ContactCenterTimeStagesController : Controller
         _stageManager = stageManager;
         _reasonCodeManager = reasonCodeManager;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -67,7 +76,10 @@ public sealed class ContactCenterTimeStagesController : Controller
 
         var settings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<ContactCenterTimeStages>();
 
-        return View(await BuildAsync(settings));
+        var model = await BuildAsync(settings);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -84,6 +96,8 @@ public sealed class ContactCenterTimeStagesController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         var stageIds = (await _stageManager.GetAllAsync(HttpContext.RequestAborted)).Select(stage => stage.ItemId).ToHashSet(StringComparer.Ordinal);
         var site = await _siteService.LoadSiteSettingsAsync();

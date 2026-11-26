@@ -1,0 +1,50 @@
+@model PayItemViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="PeriodMaximum" class="ocat-label">@T["Most taken"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="PeriodMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="@T["A period"]" />
+            <input asp-for="YearMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="@T["A year"]" aria-label="@T["A year"]" />
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Goal" class="ocat-label">@T["Goal"]</label>
+    <div class="ocat-end">
+        <input asp-for="Goal" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span class="hint">@T["A total to reach, such as a loan; the item stops once it is reached."]</span>
+        @if (!string.IsNullOrEmpty(Model.PaidTowardGoal) && Model.PaidTowardGoal != "0")
+        {
+            <span class="hint d-block">@T["Paid so far: {0}", Model.PaidTowardGoal]</span>
+        }
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="EmployerMatchPercent" class="ocat-label">@T["Employer match"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="input-group" style="max-width: 10rem">
+                <input asp-for="EmployerMatchPercent" class="form-control" inputmode="decimal" />
+                <span class="input-group-text">%</span>
+            </div>
+            <span>@T["up to"]</span>
+            <div class="input-group" style="max-width: 10rem">
+                <input asp-for="EmployerMatchLimitPercent" class="form-control" inputmode="decimal" aria-label="@T["Up to"]" />
+                <span class="input-group-text">%</span>
+            </div>
+        </div>
+        <span class="hint">@T["The employer adds this share of the item, up to a percent of gross pay."]</span>
+    </div>
+</div>
+@if (!string.IsNullOrEmpty(Model.ArrearsBalance) && Model.ArrearsBalance != "0")
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["In arrears"]</span>
+        <div class="ocat-end"><span class="form-control-plaintext">@Model.ArrearsBalance</span></div>
+    </div>
+}
+<div class="ocat-wrapper">
+    <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+    <div class="ocat-end"><input asp-for="Note" class="form-control" /></div>
+</div>

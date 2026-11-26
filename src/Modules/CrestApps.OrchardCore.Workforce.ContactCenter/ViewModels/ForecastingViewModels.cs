@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 
@@ -125,6 +126,12 @@ public class PlanningGroupEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> TeamOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model, whose fields are grouped in cards by their placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -177,6 +184,12 @@ public class ForecastEventEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> PlanningGroupOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model, whose fields are grouped in cards by their placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -209,6 +222,12 @@ public class ForecastCreateViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> PlanningGroupOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model, whose fields are grouped in cards by their placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -335,6 +354,12 @@ public class CapacityPlanEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> PlanningGroupOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model, whose fields are grouped in cards by their placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

@@ -75,30 +75,37 @@ public sealed class AITestCaseDisplayDriver : DisplayDriver<AITestCase>
     /// <inheritdoc/>
     public override IDisplayResult Edit(AITestCase testCase, BuildEditorContext context)
     {
-        return Initialize<AITestCaseViewModel>("AITestCaseFields_Edit", async model =>
-        {
-            model.Name = testCase.Name;
-            model.ProfileId = testCase.ProfileId;
-            model.ProfileVersion = testCase.ProfileVersion;
-            model.Scenario = testCase.Scenario;
-            model.Criteria = testCase.Criteria;
-            model.Variables = FormatPairs(testCase.Variables);
-            model.MockedTools = FormatPairs(testCase.MockedTools);
-            model.MaxTurns = testCase.MaxTurns;
-            model.PassingScore = testCase.PassingScore;
-            model.CustomerDeploymentName = testCase.CustomerDeploymentName;
-            model.JudgeDeploymentName = testCase.JudgeDeploymentName;
-            model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
-                .Where(profile => !profile.Has<AIProfileVersionCopy>())
-                .OrderBy(profile => profile.DisplayText, StringComparer.CurrentCultureIgnoreCase)
-                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId))
-                .ToList();
-            model.Deployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat))
-                .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
-                .OrderBy(deployment => deployment.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
-                .ToList();
-        }).Location("Content:1");
+        return Combine(
+            Initialize<AITestCaseViewModel>("AITestCaseFields_Edit", async model =>
+            {
+                model.Name = testCase.Name;
+                model.ProfileId = testCase.ProfileId;
+                model.ProfileVersion = testCase.ProfileVersion;
+                model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
+                    .Where(profile => !profile.Has<AIProfileVersionCopy>())
+                    .OrderBy(profile => profile.DisplayText, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId))
+                    .ToList();
+            }).Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<AITestCaseViewModel>("AITestCaseScenario_Edit", model =>
+            {
+                model.Scenario = testCase.Scenario;
+                model.Variables = FormatPairs(testCase.Variables);
+                model.MockedTools = FormatPairs(testCase.MockedTools);
+            }).Location(l => l.Zone("Content", "1").Card(S["Scenario"], "20")),
+            Initialize<AITestCaseViewModel>("AITestCaseEvaluation_Edit", async model =>
+            {
+                model.Criteria = testCase.Criteria;
+                model.MaxTurns = testCase.MaxTurns;
+                model.PassingScore = testCase.PassingScore;
+                model.CustomerDeploymentName = testCase.CustomerDeploymentName;
+                model.JudgeDeploymentName = testCase.JudgeDeploymentName;
+                model.Deployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat))
+                    .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
+                    .OrderBy(deployment => deployment.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
+                    .ToList();
+            }).Location(l => l.Zone("Content", "1").Card(S["Evaluation"], "30")));
     }
 
     /// <inheritdoc/>

@@ -62,31 +62,39 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
 
     public override IDisplayResult Edit(ISite site, DisplayNameSettings settings, BuildEditorContext context)
     {
-        return Initialize<EditDisplayNameSettingPartViewModel>("DisplayNameSettings_Edit", model =>
-        {
-            model.Type = settings.Type;
-            model.Template = settings.Template;
-            model.DisplayName = settings.DisplayName;
-            model.FirstName = settings.FirstName;
-            model.LastName = settings.LastName;
-            model.MiddleName = settings.MiddleName;
-            model.Types =
-            [
-                new SelectListItem(S["Username"], nameof(DisplayNameType.Username)),
-                new SelectListItem(S["Display name"], nameof(DisplayNameType.DisplayName)),
-                new SelectListItem(S["First Middle Last name"], nameof(DisplayNameType.FirstThenLast)),
-                new SelectListItem(S["Last, First Middle name"], nameof(DisplayNameType.LastThenFirst)),
-                new SelectListItem(S["Custom format"], nameof(DisplayNameType.Other)),
-            ];
-            model.PropertyTypes =
-            [
-                new SelectListItem(S["Don't use"], nameof(DisplayNamePropertyType.None)),
-                new SelectListItem(S["Optional"], nameof(DisplayNamePropertyType.Optional)),
-                new SelectListItem(S["Required"], nameof(DisplayNamePropertyType.Required)),
-            ];
-        }).Location("Content:5")
-        .OnGroup(SettingsGroupId)
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageDisplaySettings));
+        return Combine(
+            Initialize<EditDisplayNameSettingPartViewModel>("DisplayNameSettings_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Display Name Format"], "10"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageDisplaySettings)),
+            Initialize<EditDisplayNameSettingPartViewModel>("DisplayNameSettingsFields_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "6").Card(S["Name Fields"], "20"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageDisplaySettings)));
+    }
+
+    private void Populate(DisplayNameSettings settings, EditDisplayNameSettingPartViewModel model)
+    {
+        model.Type = settings.Type;
+        model.Template = settings.Template;
+        model.DisplayName = settings.DisplayName;
+        model.FirstName = settings.FirstName;
+        model.LastName = settings.LastName;
+        model.MiddleName = settings.MiddleName;
+        model.Types =
+        [
+            new SelectListItem(S["Username"], nameof(DisplayNameType.Username)),
+            new SelectListItem(S["Display name"], nameof(DisplayNameType.DisplayName)),
+            new SelectListItem(S["First Middle Last name"], nameof(DisplayNameType.FirstThenLast)),
+            new SelectListItem(S["Last, First Middle name"], nameof(DisplayNameType.LastThenFirst)),
+            new SelectListItem(S["Custom format"], nameof(DisplayNameType.Other)),
+        ];
+        model.PropertyTypes =
+        [
+            new SelectListItem(S["Don't use"], nameof(DisplayNamePropertyType.None)),
+            new SelectListItem(S["Optional"], nameof(DisplayNamePropertyType.Optional)),
+            new SelectListItem(S["Required"], nameof(DisplayNamePropertyType.Required)),
+        ];
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, DisplayNameSettings settings, UpdateEditorContext context)

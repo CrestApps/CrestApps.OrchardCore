@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Agreements.Models;
 using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
+using CrestApps.OrchardCore.WorkOrders.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 using Microsoft.AspNetCore.Http;
@@ -54,55 +55,79 @@ internal sealed class WorkOrderAgreementTermsDisplayDriver : DisplayDriver<Agree
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(Agreement agreement, BuildEditorContext context)
-        => Initialize<WorkOrderAgreementTermsViewModel>("WorkOrderAgreementTerms_Edit", async model =>
+    {
+        // One shape per card, each a copy of one populated view model: the lookups run once.
+        Task<WorkOrderAgreementTermsViewModel> populated = null;
+
+        async ValueTask CopyAsync(WorkOrderAgreementTermsViewModel model)
         {
-            var terms = agreement.TryGet<WorkOrderAgreementTerms>(out var kept) && kept is not null ? kept : new WorkOrderAgreementTerms();
-            var presets = Presets(S);
-            var address = terms.ServiceAddress;
+            populated ??= PopulateAsync(agreement, context);
 
-            model.AgreementId = context.IsNew ? null : agreement.ItemId;
-            model.CustomerId = terms.CustomerId;
-            model.ContactName = terms.Contact?.Name;
-            model.ContactPhone = terms.Contact?.Phone;
-            model.ContactEmail = terms.Contact?.Email;
-            model.AddressLine1 = address?.AddressLine1;
-            model.City = address?.City;
-            model.Region = address?.Region;
-            model.PostalCode = address?.PostalCode;
-            model.Country = address?.Country;
-            model.AccessNotes = terms.AccessNotes;
-            model.AssetIds = [.. terms.AssetIds];
-            model.Pricing = terms.Pricing;
-            model.PricePerVisit = terms.PricePerVisit;
-            model.Schedules = [.. terms.Schedules.Select(schedule => new ScheduleEditModel
-            {
-                Id = schedule.Id,
-                Name = schedule.Name,
-                TypeId = schedule.TypeId,
-                Rule = presets.ContainsKey(schedule.Rule ?? string.Empty) ? schedule.Rule : string.Empty,
-                CustomRule = presets.ContainsKey(schedule.Rule ?? string.Empty) ? null : schedule.Rule,
-                LeadDays = schedule.LeadDays,
-                AssetIds = [.. schedule.AssetIds],
-            })];
+            EditorModelCopier<WorkOrderAgreementTermsViewModel>.Copy(await populated, model);
+        }
 
-            // One empty row to add a schedule.
-            model.Schedules.Add(new ScheduleEditModel { Rule = "FREQ=MONTHLY;INTERVAL=6" });
+        return Combine(
+            Initialize<WorkOrderAgreementTermsViewModel>("WorkOrderAgreementTerms_Edit", CopyAsync)
+                .Location(l => l.Zone("Content", "5").Card(S["Visits"], "50")),
+            Initialize<WorkOrderAgreementTermsViewModel>("WorkOrderAgreementPricing_Edit", CopyAsync)
+                .Location(l => l.Zone("Content", "6").Card(S["Pricing"], "60")),
+            Initialize<WorkOrderAgreementTermsViewModel>("WorkOrderAgreementWho_Edit", CopyAsync)
+                .Location(l => l.Zone("Content", "7").Card(S["Who and Where"], "70")));
+    }
 
-            var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? default;
-            var customers = _httpContextAccessor.HttpContext?.RequestServices.GetService<Integrations.WorkOrderCustomers>();
+    private async Task<WorkOrderAgreementTermsViewModel> PopulateAsync(Agreement agreement, BuildEditorContext context)
+    {
+        var model = new WorkOrderAgreementTermsViewModel();
 
-            if (customers is not null)
-            {
-                var names = await customers.NamesAsync(terms.CustomerId, null, null, pickers: true, cancellationToken);
+        var terms = agreement.TryGet<WorkOrderAgreementTerms>(out var kept) && kept is not null ? kept : new WorkOrderAgreementTerms();
+        var presets = Presets(S);
+        var address = terms.ServiceAddress;
 
-                model.CanChooseCustomer = names.ContainsKey("Customer");
-                model.CustomerName = names.GetValueOrDefault("Customer");
-            }
+        model.AgreementId = context.IsNew ? null : agreement.ItemId;
+        model.CustomerId = terms.CustomerId;
+        model.ContactName = terms.Contact?.Name;
+        model.ContactPhone = terms.Contact?.Phone;
+        model.ContactEmail = terms.Contact?.Email;
+        model.AddressLine1 = address?.AddressLine1;
+        model.City = address?.City;
+        model.Region = address?.Region;
+        model.PostalCode = address?.PostalCode;
+        model.Country = address?.Country;
+        model.AccessNotes = terms.AccessNotes;
+        model.AssetIds = [.. terms.AssetIds];
+        model.Pricing = terms.Pricing;
+        model.PricePerVisit = terms.PricePerVisit;
+        model.Schedules = [.. terms.Schedules.Select(schedule => new ScheduleEditModel
+        {
+            Id = schedule.Id,
+            Name = schedule.Name,
+            TypeId = schedule.TypeId,
+            Rule = presets.ContainsKey(schedule.Rule ?? string.Empty) ? schedule.Rule : string.Empty,
+            CustomRule = presets.ContainsKey(schedule.Rule ?? string.Empty) ? null : schedule.Rule,
+            LeadDays = schedule.LeadDays,
+            AssetIds = [.. schedule.AssetIds],
+        })];
 
-            model.TypeOptions = [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new SelectListItem(type.Name, type.ItemId))];
-            model.AssetOptions = [.. (await _lookups.AssetsAsync(cancellationToken)).Select(option => new SelectListItem(option.Text, option.Value, terms.AssetIds.Contains(option.Value)))];
-            model.RuleOptions = [.. presets.Select(preset => new SelectListItem(preset.Value, preset.Key)), new SelectListItem(S["Custom rule"], string.Empty)];
-        }).Location("Content:5");
+        // One empty row to add a schedule.
+        model.Schedules.Add(new ScheduleEditModel { Rule = "FREQ=MONTHLY;INTERVAL=6" });
+
+        var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? default;
+        var customers = _httpContextAccessor.HttpContext?.RequestServices.GetService<Integrations.WorkOrderCustomers>();
+
+        if (customers is not null)
+        {
+            var names = await customers.NamesAsync(terms.CustomerId, null, null, pickers: true, cancellationToken);
+
+            model.CanChooseCustomer = names.ContainsKey("Customer");
+            model.CustomerName = names.GetValueOrDefault("Customer");
+        }
+
+        model.TypeOptions = [.. (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).Select(type => new SelectListItem(type.Name, type.ItemId))];
+        model.AssetOptions = [.. (await _lookups.AssetsAsync(cancellationToken)).Select(option => new SelectListItem(option.Text, option.Value, terms.AssetIds.Contains(option.Value)))];
+        model.RuleOptions = [.. presets.Select(preset => new SelectListItem(preset.Value, preset.Key)), new SelectListItem(S["Custom rule"], string.Empty)];
+
+        return model;
+    }
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(Agreement agreement, UpdateEditorContext context)

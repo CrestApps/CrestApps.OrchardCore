@@ -47,6 +47,16 @@ public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDr
             .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
     }
 
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(AICompletionFromProfileTask activity, BuildEditorContext context)
+    {
+        return Combine(
+            Initialize<AICompletionFromProfileTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Profile"], "10")),
+            Initialize<AICompletionFromProfileTaskViewModel>("AICompletionFromProfileTaskPrompt_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Prompt"], "20")));
+    }
+
     public override async Task<IDisplayResult> UpdateAsync(AICompletionFromProfileTask activity, UpdateEditorContext context)
     {
         var model = new AICompletionFromProfileTaskViewModel();

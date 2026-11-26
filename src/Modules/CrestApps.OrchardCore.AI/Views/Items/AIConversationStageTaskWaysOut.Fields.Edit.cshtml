@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AIConversationStageTaskViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Outcomes" class="ocat-label">@T["Ways out"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Outcomes" rows="4" class="form-control font-monospace" placeholder="Verified: the date of birth matches&#10;Failed: the caller cannot confirm it after two tries"></textarea>
+        <span class="hint">@T["One per line: the outcome's name, a colon, and when the AI should take it. Each becomes an outcome of this activity: connect it to the next stage, or to a condition, a script, an HTTP request, a text or a transfer. A flow ends when the workflow reaches no other stage."]</span>
+    </div>
+</div>

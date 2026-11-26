@@ -46,7 +46,7 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
             model.IncludeAll = step.IncludeAll;
             model.DeploymentNames = step.DeploymentNames;
             model.AllDeploymentName = (await _deploymentCatalog.GetAllAsync()).Select(d => d.Name).Order().ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Deployments"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeploymentDeploymentStep step, UpdateEditorContext context)

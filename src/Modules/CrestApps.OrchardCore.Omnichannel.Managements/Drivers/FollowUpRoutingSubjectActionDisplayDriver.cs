@@ -118,7 +118,7 @@ internal sealed class FollowUpRoutingSubjectActionDisplayDriver : DisplayDriver<
                 .OrderBy(role => role, StringComparer.OrdinalIgnoreCase)
                 .Select(role => new SelectListItem(role, role, model.PoolRoleNames.Contains(role, StringComparer.OrdinalIgnoreCase)))
                 .ToList();
-        }).Location("Content:6");
+        }).Location(l => l.Zone("Content", "6").Card(S["Action"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SubjectAction action, UpdateEditorContext context)

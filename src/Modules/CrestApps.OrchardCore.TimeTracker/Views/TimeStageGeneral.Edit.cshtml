@@ -1,0 +1,29 @@
+@model TimeStageEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" placeholder="@T["Such as: Work"]" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+    <div class="ocat-end">
+        <input asp-for="Code" class="form-control" maxlength="32" />
+        <span class="hint">@T["A short code for exports and for mapping Contact Center states, such as WORK."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+    <div class="ocat-end">
+        <input asp-for="Color" type="color" class="form-control form-control-color" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+    <div class="ocat-end">
+        <input asp-for="Position" type="number" class="form-control" />
+        <span class="hint">@T["Lower comes first on the clock and in lists."]</span>
+    </div>
+</div>

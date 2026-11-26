@@ -13,6 +13,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -38,6 +40,8 @@ public sealed class PackagesAdminController : Controller
     private readonly LearningPackageOptions _options;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<PackageUploadViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -54,6 +58,8 @@ public sealed class PackagesAdminController : Controller
         IOptions<LearningPackageOptions> options,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<PackageUploadViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<PackagesAdminController> htmlLocalizer,
         IStringLocalizer<PackagesAdminController> stringLocalizer)
     {
@@ -65,6 +71,8 @@ public sealed class PackagesAdminController : Controller
         _options = options.Value;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -85,7 +93,11 @@ public sealed class PackagesAdminController : Controller
             return refusal;
         }
 
-        return View(await BuildModelAsync(item));
+        var model = await BuildModelAsync(item);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -112,7 +124,7 @@ public sealed class PackagesAdminController : Controller
         {
             ModelState.AddModelError(nameof(package), _options.AcceptCmi5 ? S["Choose a .zip file of a SCORM 1.2, SCORM 2004 or cmi5 package."] : S["Choose a .zip file of a SCORM 1.2 or SCORM 2004 package."]);
 
-            return View(nameof(Upload), await BuildModelAsync(item));
+            return await UploadWithEditorAsync(item);
         }
 
         PackageImportResult result;
@@ -126,7 +138,7 @@ public sealed class PackagesAdminController : Controller
         {
             ModelState.AddModelError(nameof(package), _errorText.Get(result));
 
-            return View(nameof(Upload), await BuildModelAsync(item));
+            return await UploadWithEditorAsync(item);
         }
 
         var draft = await _contentManager.GetAsync(item.ContentItemId, VersionOptions.DraftRequired);
@@ -188,6 +200,16 @@ public sealed class PackagesAdminController : Controller
         }
 
         return (item, null);
+    }
+
+    // The form again after a refusal, its editor bound from the post.
+    private async Task<IActionResult> UploadWithEditorAsync(ContentItem item)
+    {
+        var model = await BuildModelAsync(item);
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(nameof(Upload), model);
     }
 
     private async Task<PackageUploadViewModel> BuildModelAsync(ContentItem item)

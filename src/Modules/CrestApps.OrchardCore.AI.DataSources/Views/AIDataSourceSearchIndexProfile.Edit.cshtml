@@ -15,9 +15,8 @@
      data-ai-data-source-key-placeholder="@T["Use document ID (_id)"]"
      data-ai-data-source-default-suffix="@T["(Default)"]"
      hidden>
-    <fieldset class="ocat-wrapper">
-        <legend class="ocat-label">@T["Source"]</legend>
-        <div class="ocat-end">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
             <div class="mb-0">
                 <label asp-for="SourceIndexProfileName" class="form-label ocat-label-required">@T["Source index"]</label>
                 @if (Model.IsConfigurationLocked)
@@ -35,5 +34,5 @@
                 <span class="hint">@T["The Orchard Core index profile to use as the source for querying."]</span>
             </div>
         </div>
-    </fieldset>
+    </div>
 </div>

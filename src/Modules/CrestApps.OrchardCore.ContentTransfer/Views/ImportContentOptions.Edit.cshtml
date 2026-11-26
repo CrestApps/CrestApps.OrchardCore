@@ -1,0 +1,11 @@
+@model ContentImportViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="PublishImportedContent" />
+            <label class="form-check-label" asp-for="PublishImportedContent">@T["Publish imported content"]</label>
+            <span class="hint dashed">@T["When enabled, imported content items are published after they are created or updated. When disabled, the import only saves the latest draft version."]</span>
+        </div>
+    </div>
+</div>

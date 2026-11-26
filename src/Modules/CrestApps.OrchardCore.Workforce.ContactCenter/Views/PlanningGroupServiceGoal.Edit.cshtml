@@ -1,0 +1,31 @@
+@model PlanningGroupEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ServiceLevelPercent" class="ocat-label">@T["Answer % "]</label>
+    <div class="ocat-end">
+        <input asp-for="ServiceLevelPercent" type="number" min="1" max="99" step="any" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ServiceLevelSeconds" class="ocat-label">@T["within (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ServiceLevelSeconds" type="number" min="1" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="AverageSpeedOfAnswerSeconds" class="ocat-label">@T["Average answer (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="AverageSpeedOfAnswerSeconds" type="number" min="1" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="MaxOccupancyPercent" class="ocat-label">@T["Highest occupancy %"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxOccupancyPercent" type="number" min="1" max="100" step="any" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Set a service level such as 80% within 20 seconds, an average speed of answer, or both. Agents are never planned busier than the highest occupancy."]</span>
+    </div>
+</div>

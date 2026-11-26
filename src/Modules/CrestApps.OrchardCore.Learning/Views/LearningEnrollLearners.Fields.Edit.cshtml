@@ -19,16 +19,3 @@
     <input asp-for="CourseIdField" class="form-control" />
     <span class="hint">@T["Optional. The input field that holds the content item id of each row's course, instead of one course for every row."]</span>
 </div>
-<div class="mb-3">
-    <label asp-for="DueField" class="form-label">@T["Due date field"]</label>
-    <input asp-for="DueField" class="form-control" />
-</div>
-<div class="mb-3">
-    <label asp-for="AccessEndsField" class="form-label">@T["Access ends field"]</label>
-    <input asp-for="AccessEndsField" class="form-control" />
-</div>
-<div class="mb-3 form-check">
-    <input asp-for="IgnorePrerequisites" class="form-check-input" />
-    <label asp-for="IgnorePrerequisites" class="form-check-label">@T["Enroll learners who have not completed the prerequisite courses"]</label>
-</div>
-<p class="hint">@T["Rows that cannot be enrolled go to the Rejected output with the reason. Running the pipeline again adds no second enrollment."]</p>

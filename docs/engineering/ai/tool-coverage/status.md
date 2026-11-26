@@ -1650,6 +1650,13 @@ Four tools that shipped with main failed in the admin chat and are fixed in this
 - `deleteContentItem` (`Contents/DeleteContentTool.cs`) made the same lookup, so an item whose latest version is a draft (a clone, or an item with an unpublished change) could not be found. It now loads `VersionOptions.Latest`; removing it still removes every version.
 - `removeContentTypeDefinition` and `removeContentPartDefinition` (`ContentTypes/RemoveContentTypeDefinitionsTool.cs`, `RemoveContentPartDefinitionsTool.cs`) imported the DeleteContentDefinition step as a recipe through `RecipeExecutionService`, which runs in a scope and connection of its own. On SQLite that waited for the write lock the chat request already held (any earlier write, and saving the chat on every approval turn) and failed with "database is locked". They now run the step in the tool call's scope with `RecipeStepRunner`, build the step as JSON objects instead of text with the name spliced in, and return the step's own errors.
 
+## Merge of main with admin forms in cards (#1376, 2026-11-25)
+
+Main moved the admin edit forms into cards and updated Orchard Core to 4.0.0-preview-19240. The 14 files that conflicted keep our shared editor helpers (the code the record and settings tools reuse) with main's card layout.
+
+- Two Data Connectors drivers (`DataConnectionDisplayDriver`, `MediaFilesConnectionDisplayDriver`) get their string localizer back for main's card titles.
+- **Editor capture** (`Editors/EditorReplay.cs`). Some drivers now build one view model as several card shapes with one prefix, each filling only its own fields; the AI test case editor is one. Capture read the first card only, so `saveRecord` saw the other cards' fields as empty: it refused to save a test case, and on another editor it could have saved those fields blank. Now a field the earlier cards left at the view model's default takes its value from the card that fills it. Tested in `CompiledShapeCaptureTests` and `AIQualityRecordKindsTests`.
+
 ## Bugs found in main's code (reported, not fixed)
 
 - **Fulfillment.** `FulfillmentAdminController.Send` and `SendAgain` do not check that the order is paid; the card only hides its button. A posted Send for an unpaid order records requests that settle as Needs attention (not paid) and notify every shipper. The engine itself never sends an unpaid order to a partner.

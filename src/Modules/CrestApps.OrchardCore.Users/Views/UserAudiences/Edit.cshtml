@@ -1,15 +1,5 @@
-@using CrestApps.OrchardCore.Users
 @using CrestApps.OrchardCore.Users.Audiences
 @model UserAudienceEditViewModel
-
-@{
-    var rules = Model.Rules.ToList();
-
-    if (rules.Count == 0)
-    {
-        rules.Add(new UserAudienceRuleEditViewModel());
-    }
-}
 
 <zone Name="Title">
     <breadcrumb name="UserAudiencesEdit" title="@(Model.IsNew ? T["New Audience"] : T["Edit '{0}' Audience", Model.DisplayName ?? Model.Name])">
@@ -21,63 +11,7 @@
     <input type="hidden" asp-for="IsNew" />
     @Html.ValidationSummary()
 
-    <div class="ocat-limited-wrapper" asp-validation-class-for="DisplayName">
-        <label asp-for="DisplayName" class="ocat-label">@T["Name"]</label>
-        <div class="ocat-limited">
-            <input asp-for="DisplayName" class="form-control" maxlength="200" autofocus />
-            <span asp-validation-for="DisplayName" class="text-danger"></span>
-        </div>
-    </div>
-
-    <div class="ocat-limited-wrapper" asp-validation-class-for="Name">
-        <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
-        <div class="ocat-limited">
-            @if (Model.IsNew)
-            {
-                <input asp-for="Name" class="form-control" maxlength="100" pattern="[A-Za-z0-9._\-]+" required />
-                <span class="hint">@T["Other features keep this name to target the audience; it can't change later. Letters, digits, dots, dashes and underscores."]</span>
-            }
-            else
-            {
-                <input asp-for="Name" class="form-control" readonly />
-            }
-            <span asp-validation-for="Name" class="text-danger"></span>
-        </div>
-    </div>
-
-    <div class="ocat-limited-wrapper">
-        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
-        <div class="ocat-limited">
-            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-        </div>
-    </div>
-
-    <div class="ocat-limited-wrapper">
-        <label asp-for="Join" class="ocat-label">@T["Who is in it"]</label>
-        <div class="ocat-limited">
-            <select asp-for="Join" class="form-select">
-                <option value="@UserAudienceJoin.All">@T["People who match every rule"]</option>
-                <option value="@UserAudienceJoin.Any">@T["People who match any rule"]</option>
-            </select>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label class="ocat-label">@T["Rules"]</label>
-        <div class="ocat-end">
-            <div id="user-audience-rules">
-                @for (var i = 0; i < rules.Count; i++)
-                {
-                    <partial name="UserAudienceRuleRow" model="@(new UserAudienceRuleRowModel { Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), Rule = rules[i], Sources = Model.Sources })" />
-                }
-            </div>
-            <template id="user-audience-rule-template">
-                <partial name="UserAudienceRuleRow" model="@(new UserAudienceRuleRowModel { Index = "__index__", Rule = new UserAudienceRuleEditViewModel(), Sources = Model.Sources })" />
-            </template>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="user-audience-add-rule"><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add rule"]</button>
-            <span class="hint d-block mt-1">@T["Within a rule a person matches any of the values chosen."]</span>
-        </div>
-    </div>
+    @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Save"]</button>

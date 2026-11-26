@@ -287,6 +287,8 @@ public sealed class PaymentsAdminControllerTests
             notifier ?? Mock.Of<INotifier>(),
             new TransactionDisplayText(providers, Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>(), new SourceTextLocalizerFactory()),
             NullLogger<PaymentsAdminController>.Instance,
+            Mock.Of<global::OrchardCore.DisplayManagement.IDisplayManager<RefundRequestViewModel>>(),
+            Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(),
             new PassThroughHtmlLocalizer<PaymentsAdminController>(),
             new PassThroughStringLocalizer<PaymentsAdminController>());
 

@@ -77,6 +77,9 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<WorkOrderRow, WorkOrderRowDisplayDriver>();
         services.AddDisplayDriver<WorkOrder, WorkOrderDisplayDriver>();
+        services.AddDisplayDriver<WorkOrderTypeEditViewModel, WorkOrderTypeEditDisplayDriver>();
+        services.AddDisplayDriver<ChecklistTemplateEditViewModel, ChecklistTemplateEditDisplayDriver>();
+        services.AddDisplayDriver<WorkOrderSubStatusEditViewModel, WorkOrderSubStatusEditDisplayDriver>();
         services.AddDisplayDriver<WorkOrderSettingRow, WorkOrderSettingRowDisplayDriver>();
         services.AddScoped<WorkOrderLookups>();
         services.AddScoped<WorkOrderSettingDeletion>();

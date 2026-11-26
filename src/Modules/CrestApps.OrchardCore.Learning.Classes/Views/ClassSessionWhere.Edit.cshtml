@@ -1,0 +1,17 @@
+@model ClassSessionEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Location">
+    <label asp-for="Location" class="ocat-label">@T["Location"]</label>
+    <div class="ocat-end">
+        <input asp-for="Location" class="form-control" maxlength="500" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MeetingUrl">
+    <label asp-for="MeetingUrl" class="ocat-label">@T["Meeting link"]</label>
+    <div class="ocat-end">
+        <input asp-for="MeetingUrl" type="url" class="form-control" maxlength="2000" />
+        <span asp-validation-for="MeetingUrl"></span>
+        <span class="hint">@T["Only learners with a place see it."]</span>
+    </div>
+</div>

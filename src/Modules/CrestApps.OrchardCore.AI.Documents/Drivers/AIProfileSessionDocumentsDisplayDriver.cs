@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -12,13 +13,19 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
 {
     private readonly ISiteService _siteService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileSessionDocumentsDisplayDriver"/> class.
     /// </summary>
     /// <param name="siteService">The site service.</param>
-    public AIProfileSessionDocumentsDisplayDriver(ISiteService siteService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileSessionDocumentsDisplayDriver(
+        ISiteService siteService,
+        IStringLocalizer<AIProfileSessionDocumentsDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
@@ -31,7 +38,7 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
-        }).Location("Content:2#Knowledge;2");
+        }).Location(l => l.Zone("Content", "2").Tab(S["Knowledge"], "2").Card(S["Documents"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

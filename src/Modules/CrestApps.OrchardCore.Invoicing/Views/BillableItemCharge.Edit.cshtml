@@ -1,0 +1,71 @@
+@model BillableItemViewModel
+
+@{
+    var partyJson = string.IsNullOrEmpty(Model.Party)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.Party, text = Model.PartyName ?? Model.Party, selected = true } });
+}
+
+@if (Model.IsBilled)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info">
+                @T["An invoice bills this charge, so it can't be changed."]
+                <a asp-controller="InvoicesAdmin" asp-action="Detail" asp-route-itemId="@Model.InvoiceId">@T["Open the invoice"]</a>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Party">
+    <label class="ocat-label ocat-label-required">@T["Customer"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = "charge-party",
+            inputName = Html.NameFor(m => m.Party).ToString(),
+            endpoint = Model.PartySearchEndpoint,
+            initialItemsJson = partyJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Find a customer"].Value,
+            searchPlaceholder = T["Search users, customers and accounts"].Value,
+            emptyResultsText = T["No one found."].Value,
+            noSelectionText = T["No one chosen."].Value,
+            selectedItemsLabel = T["Customer"].Value,
+            availableItemsLabel = T["Found"].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["Who the charge is billed to: it is offered on their next draft invoice."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label ocat-label-required">@T["Description"]</label>
+    <div class="ocat-end">
+        <input asp-for="Description" class="form-control" maxlength="255" />
+        <span class="hint">@T["Printed on the invoice line, such as Travel to the site or Replacement parts."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Kind" class="ocat-label">@T["Kind"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Kind" class="form-select">
+            <option value="@DocumentLineKind.Expense">@T["Expense"]</option>
+            <option value="@DocumentLineKind.Time">@T["Time"]</option>
+            <option value="@DocumentLineKind.Service">@T["Service"]</option>
+            <option value="@DocumentLineKind.Item">@T["Item"]</option>
+            <option value="@DocumentLineKind.Fee">@T["Fee"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Date">
+    <label asp-for="Date" class="ocat-label">@T["Day"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Date" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+        <span class="hint">@T["When it was incurred. A recurring plan that bills charges takes those up to its run's day."]</span>
+    </div>
+</div>

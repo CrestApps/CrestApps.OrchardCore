@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -26,17 +27,22 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly ISiteService _siteService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointVoiceDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
     /// <param name="siteService">The site service, which holds the approved external destinations.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterEntryPointVoiceDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
-        ISiteService siteService)
+        ISiteService siteService,
+        IStringLocalizer<ContactCenterEntryPointVoiceDisplayDriver> stringLocalizer)
     {
         _optionsProvider = optionsProvider;
         _siteService = siteService;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -100,11 +106,11 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
         }
 
         return Combine(
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointAgentRing_Edit", Populate).Location("Content:2%Routing;2"),
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointPriority_Edit", Populate).Location("Content:3%Routing;2"),
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointClosedCalls_Edit", Populate).Location("Content:2%Hours;3"),
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointMenu_Edit", Populate).Location("Content:1%Welcome and IVR menu;4"),
-            Initialize<EntryPointViewModel>("ContactCenterEntryPointVoicemail_Edit", Populate).Location("Content:1%Voicemail;5"));
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointAgentRing_Edit", Populate).Location(l => l.Zone("Content", "2").Card(S["Routing"], "2")),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointPriority_Edit", Populate).Location(l => l.Zone("Content", "3").Card(S["Routing"], "2")),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointClosedCalls_Edit", Populate).Location(l => l.Zone("Content", "2").Card(S["Hours"], "3")),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointMenu_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Welcome and IVR Menu"], "4")),
+            Initialize<EntryPointViewModel>("ContactCenterEntryPointVoicemail_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Voicemail"], "5")));
     }
 
     /// <inheritdoc/>

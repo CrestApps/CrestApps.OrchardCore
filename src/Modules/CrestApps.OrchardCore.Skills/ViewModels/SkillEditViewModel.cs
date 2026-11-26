@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Skills.ViewModels;
 
@@ -8,6 +9,12 @@ namespace CrestApps.OrchardCore.Skills.ViewModels;
 /// </summary>
 public class SkillEditViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of the form.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     /// <summary>
     /// Gets or sets the skill id, or empty for a new skill.
     /// </summary>

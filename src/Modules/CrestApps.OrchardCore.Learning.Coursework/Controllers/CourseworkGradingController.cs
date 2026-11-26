@@ -19,6 +19,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 
@@ -42,6 +43,8 @@ public sealed class CourseworkGradingController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserSearchService _userSearchService;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<SubmissionGradingViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -58,6 +61,8 @@ public sealed class CourseworkGradingController : Controller
         IAuthorizationService authorizationService,
         IUserSearchService userSearchService,
         INotifier notifier,
+        IDisplayManager<SubmissionGradingViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CourseworkGradingController> htmlLocalizer)
     {
         _submissions = submissions;
@@ -69,6 +74,8 @@ public sealed class CourseworkGradingController : Controller
         _authorizationService = authorizationService;
         _userSearchService = userSearchService;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -186,7 +193,11 @@ public sealed class CourseworkGradingController : Controller
             return NotFound();
         }
 
-        return View(await BuildAsync(new SubmissionGradingViewModel(), submission, fill: true));
+        var model = await BuildAsync(new SubmissionGradingViewModel(), submission, fill: true);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -220,7 +231,7 @@ public sealed class CourseworkGradingController : Controller
         {
             ModelState.AddModelError(nameof(model.Points), H["The points must be a number, such as 7.5 or 7,5."].Value);
 
-            return View(nameof(Submission), await BuildAsync(model, submission, fill: false));
+            return await SubmissionWithEditorAsync(model, submission);
         }
 
         var result = await _submissions.GradeAsync(new GradeSubmissionRequest
@@ -248,7 +259,7 @@ public sealed class CourseworkGradingController : Controller
 
         ModelState.AddModelError(string.Empty, ErrorText(result.Error).Value);
 
-        return View(nameof(Submission), await BuildAsync(model, result.Submission ?? submission, fill: false));
+        return await SubmissionWithEditorAsync(model, result.Submission ?? submission);
     }
 
     /// <summary>
@@ -292,7 +303,17 @@ public sealed class CourseworkGradingController : Controller
 
         ModelState.AddModelError(string.Empty, ErrorText(result.Error).Value);
 
-        return View(nameof(Submission), await BuildAsync(model, result.Submission ?? submission, fill: false));
+        return await SubmissionWithEditorAsync(model, result.Submission ?? submission);
+    }
+
+    // The page again after a refusal: the form as it was posted, its editor bound from the post.
+    private async Task<IActionResult> SubmissionWithEditorAsync(SubmissionGradingViewModel model, Submission submission)
+    {
+        await BuildAsync(model, submission, fill: false);
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(nameof(Submission), model);
     }
 
     private async Task<SubmissionGradingViewModel> BuildAsync(SubmissionGradingViewModel model, Submission submission, bool fill)

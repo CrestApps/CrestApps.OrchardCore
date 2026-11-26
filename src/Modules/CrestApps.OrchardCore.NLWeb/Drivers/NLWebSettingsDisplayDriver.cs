@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
+using OrchardCore.Indexing.Models;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Search.Abstractions;
 using OrchardCore.Settings;
@@ -77,32 +79,39 @@ internal sealed class NLWebSettingsDisplayDriver : SiteDisplayDriver<NLWebSettin
         var contentTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
             .OrderBy(type => type.DisplayName, StringComparer.CurrentCultureIgnoreCase);
 
-        return Initialize<NLWebSettingsViewModel>("NLWebSettings_Edit", model =>
-        {
-            model.IndexProfileNames = settings.IndexProfileNames ?? [];
-            model.ContentTypes = settings.ContentTypes ?? [];
-            model.MaxResults = settings.MaxResults;
-            model.DefaultMode = settings.DefaultMode;
-            model.AllowLegacyRequests = settings.AllowLegacyRequests;
-            model.AllowCrossOrigin = settings.AllowCrossOrigin;
-            model.HasSearchProvider = _searchServices.Any();
-            model.AskUrl = httpContext is null
-                ? $"/{NLWebConstants.AskRoute}"
-                : $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{httpContext.Request.PathBase}/{NLWebConstants.AskRoute}";
-            model.AvailableIndexProfiles = indexProfiles
-                .Select(profile => new SelectListItem($"{profile.Name} ({profile.ProviderName})", profile.Name))
-                .ToList();
-            model.AvailableContentTypes = contentTypes
-                .Select(type => new SelectListItem(type.DisplayName, type.Name))
-                .ToList();
-            model.Modes =
-            [
-                new SelectListItem(S["List: the results only"], NLWebProtocol.Modes.List),
-                new SelectListItem(S["Summarize: the results and a summary of them"], NLWebProtocol.Modes.Summarize),
-                new SelectListItem(S["Generate: an answer written from the results"], NLWebProtocol.Modes.Generate),
-            ];
-        }).Location("Content:1")
-        .OnGroup(SettingsGroupId);
+        return Combine(
+            Initialize<NLWebSettingsViewModel>("NLWebSettings_Edit", model => Populate(settings, httpContext, indexProfiles, contentTypes, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Search"], "10"))
+                .OnGroup(SettingsGroupId),
+            Initialize<NLWebSettingsViewModel>("NLWebSettingsProtocol_Edit", model => Populate(settings, httpContext, indexProfiles, contentTypes, model))
+                .Location(l => l.Zone("Content", "1.1").Card(S["Protocol"], "20"))
+                .OnGroup(SettingsGroupId));
+    }
+
+    private void Populate(NLWebSettings settings, HttpContext httpContext, IEnumerable<IndexProfile> indexProfiles, IEnumerable<ContentTypeDefinition> contentTypes, NLWebSettingsViewModel model)
+    {
+        model.IndexProfileNames = settings.IndexProfileNames ?? [];
+        model.ContentTypes = settings.ContentTypes ?? [];
+        model.MaxResults = settings.MaxResults;
+        model.DefaultMode = settings.DefaultMode;
+        model.AllowLegacyRequests = settings.AllowLegacyRequests;
+        model.AllowCrossOrigin = settings.AllowCrossOrigin;
+        model.HasSearchProvider = _searchServices.Any();
+        model.AskUrl = httpContext is null
+            ? $"/{NLWebConstants.AskRoute}"
+            : $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{httpContext.Request.PathBase}/{NLWebConstants.AskRoute}";
+        model.AvailableIndexProfiles = indexProfiles
+            .Select(profile => new SelectListItem($"{profile.Name} ({profile.ProviderName})", profile.Name))
+            .ToList();
+        model.AvailableContentTypes = contentTypes
+            .Select(type => new SelectListItem(type.DisplayName, type.Name))
+            .ToList();
+        model.Modes =
+        [
+            new SelectListItem(S["List: the results only"], NLWebProtocol.Modes.List),
+            new SelectListItem(S["Summarize: the results and a summary of them"], NLWebProtocol.Modes.Summarize),
+            new SelectListItem(S["Generate: an answer written from the results"], NLWebProtocol.Modes.Generate),
+        ];
     }
 
     /// <inheritdoc/>

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -19,12 +20,16 @@ internal sealed partial class DataConnectionDisplayDriver : DisplayDriver<DataCo
     private readonly IDataConnectorManager _connectorManager;
     private readonly DataConnectionEditor _editor;
 
+    internal readonly IStringLocalizer S;
+
     public DataConnectionDisplayDriver(
         IDataConnectorManager connectorManager,
-        DataConnectionEditor editor)
+        DataConnectionEditor editor,
+        IStringLocalizer<DataConnectionDisplayDriver> stringLocalizer)
     {
         _connectorManager = connectorManager;
         _editor = editor;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(DataConnection connection, BuildDisplayContext context)
@@ -70,7 +75,7 @@ internal sealed partial class DataConnectionDisplayDriver : DisplayDriver<DataCo
             model.Description = connection.Description;
             model.ConnectorDisplayName = descriptor?.DisplayName.Value ?? connection.Connector;
             model.ConnectorDescription = descriptor?.Description.Value;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DataConnection connection, UpdateEditorContext context)

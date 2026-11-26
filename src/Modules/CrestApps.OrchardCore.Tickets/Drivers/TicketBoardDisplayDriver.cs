@@ -92,46 +92,77 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
     }
 
     /// <inheritdoc/>
-    public override IDisplayResult Edit(TicketBoard board, BuildEditorContext context)
-        => Initialize<TicketBoardViewModel>("TicketBoardFields_Edit", async model =>
+    public override async Task<IDisplayResult> EditAsync(TicketBoard board, BuildEditorContext context)
+    {
+        var model = new TicketBoardViewModel();
+
+        var query = board.Query ?? new TicketQuery();
+        var statuses = await OrderedStatusesAsync();
+
+        model.Name = board.Name;
+        model.Description = board.Description;
+        model.Order = board.Order;
+        model.SharedWithTeamId = board.SharedWithTeamId;
+        model.CanShare = User is { } user && await _boards.CanShareAsync(user);
+        model.Sharing = !string.IsNullOrEmpty(board.OwnerId) || (context.IsNew && !model.CanShare)
+            ? TicketBoardSharing.Personal
+            : string.IsNullOrEmpty(board.SharedWithTeamId) ? TicketBoardSharing.Everybody : TicketBoardSharing.Team;
+        model.DeskIds = [.. query.DeskIds];
+        model.TeamIds = [.. query.TeamIds];
+        model.ContentTypes = [.. query.ContentTypes];
+        model.Assignee = query.Assignee;
+        model.Sort = query.Sort;
+        model.Statuses = statuses;
+        model.Desks = [.. (await _desks.GetAllAsync()).OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase).Select(desk => new SelectListItem(desk.Name, desk.ItemId, query.DeskIds.Contains(desk.ItemId)))];
+        model.Types = [.. (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == TicketsConstants.PartName))
+            .OrderBy(type => type.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(type => new SelectListItem(type.DisplayName, type.Name, query.ContentTypes.Contains(type.Name)))];
+
+        // A new board starts with a column per status category, which the owner then shapes.
+        var columns = board.Columns is { Count: > 0 } || !context.IsNew
+            ? board.Columns ?? []
+            : TicketBoardDefaults.Columns(statuses, CategoryName);
+
+        model.Columns = [.. columns.Select(column => new TicketBoardColumnViewModel
         {
-            var query = board.Query ?? new TicketQuery();
-            var statuses = await OrderedStatusesAsync();
+            Id = column.Id,
+            Name = column.Name,
+            StatusIds = [.. column.StatusIds ?? []],
+            DefaultStatusId = column.DefaultStatusId,
+            Limit = column.Limit,
+        })];
 
-            model.Name = board.Name;
-            model.Description = board.Description;
-            model.Order = board.Order;
-            model.SharedWithTeamId = board.SharedWithTeamId;
-            model.CanShare = User is { } user && await _boards.CanShareAsync(user);
-            model.Sharing = !string.IsNullOrEmpty(board.OwnerId) || (context.IsNew && !model.CanShare)
-                ? TicketBoardSharing.Personal
-                : string.IsNullOrEmpty(board.SharedWithTeamId) ? TicketBoardSharing.Everybody : TicketBoardSharing.Team;
-            model.DeskIds = [.. query.DeskIds];
-            model.TeamIds = [.. query.TeamIds];
-            model.ContentTypes = [.. query.ContentTypes];
-            model.Assignee = query.Assignee;
-            model.Sort = query.Sort;
-            model.Statuses = statuses;
-            model.Desks = [.. (await _desks.GetAllAsync()).OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase).Select(desk => new SelectListItem(desk.Name, desk.ItemId, query.DeskIds.Contains(desk.ItemId)))];
-            model.Types = [.. (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-                .Where(type => type.Parts.Any(part => part.PartDefinition.Name == TicketsConstants.PartName))
-                .OrderBy(type => type.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-                .Select(type => new SelectListItem(type.DisplayName, type.Name, query.ContentTypes.Contains(type.Name)))];
+        // Every card edits a copy of the same model under the same prefix, so UpdateAsync still binds it once.
+        void Populate(TicketBoardViewModel target)
+        {
+            target.Name = model.Name;
+            target.Description = model.Description;
+            target.Sharing = model.Sharing;
+            target.SharedWithTeamId = model.SharedWithTeamId;
+            target.Order = model.Order;
+            target.DeskIds = model.DeskIds;
+            target.TeamIds = model.TeamIds;
+            target.ContentTypes = model.ContentTypes;
+            target.Assignee = model.Assignee;
+            target.Sort = model.Sort;
+            target.Columns = model.Columns;
+            target.Desks = model.Desks;
+            target.Types = model.Types;
+            target.Statuses = model.Statuses;
+            target.CanShare = model.CanShare;
+        }
 
-            // A new board starts with a column per status category, which the owner then shapes.
-            var columns = board.Columns is { Count: > 0 } || !context.IsNew
-                ? board.Columns ?? []
-                : TicketBoardDefaults.Columns(statuses, CategoryName);
-
-            model.Columns = [.. columns.Select(column => new TicketBoardColumnViewModel
-            {
-                Id = column.Id,
-                Name = column.Name,
-                StatusIds = [.. column.StatusIds ?? []],
-                DefaultStatusId = column.DefaultStatusId,
-                Limit = column.Limit,
-            })];
-        }).Location("Content:1");
+        return Combine(
+            Initialize<TicketBoardViewModel>("TicketBoardFields_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Board"], "10")),
+            Initialize<TicketBoardViewModel>("TicketBoardSharing_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Who It Is For"], "20")),
+            Initialize<TicketBoardViewModel>("TicketBoardFilters_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Which Tickets It Shows"], "30")),
+            Initialize<TicketBoardViewModel>("TicketBoardColumns_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Columns"], "40")));
+    }
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(TicketBoard board, UpdateEditorContext context)
@@ -190,7 +221,7 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
                 Limit = column.Limit,
             })];
 
-        return Edit(board, context);
+        return await EditAsync(board, context);
     }
 
     private ClaimsPrincipal User

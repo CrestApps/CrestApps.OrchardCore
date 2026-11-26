@@ -12,6 +12,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -26,6 +28,8 @@ public sealed class ActivityCodesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ActivityCodeEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -36,18 +40,24 @@ public sealed class ActivityCodesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="activityCodeManager">The activity code manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityCodesController(
         IAuthorizationService authorizationService,
         IActivityCodeManager activityCodeManager,
         INotifier notifier,
+        IDisplayManager<ActivityCodeEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<ActivityCodesController> htmlLocalizer,
         IStringLocalizer<ActivityCodesController> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _activityCodeManager = activityCodeManager;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -120,6 +130,7 @@ public sealed class ActivityCodesController : Controller
 
         model.KindOptions = KindOptions(model.Kind);
         model.StageOptions = await StageOptionsAsync(model.StageId);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
 
         return View(model);
     }
@@ -140,6 +151,9 @@ public sealed class ActivityCodesController : Controller
         }
 
         var isNew = string.IsNullOrEmpty(model.Id);
+        model.KindOptions = KindOptions(model.Kind);
+        model.StageOptions = await StageOptionsAsync(model.StageId);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
         var code = isNew
             ? await _activityCodeManager.NewAsync()
             : await _activityCodeManager.FindByIdAsync(model.Id);
@@ -174,9 +188,6 @@ public sealed class ActivityCodesController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.KindOptions = KindOptions(model.Kind);
-            model.StageOptions = await StageOptionsAsync(model.StageId);
-
             return View(model);
         }
 

@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
+
 namespace CrestApps.OrchardCore.Calendars.ViewModels;
 
 /// <summary>
@@ -19,4 +22,10 @@ public class CalendarFeedViewModel
     /// Gets or sets the subscription address, or <see langword="null"/> when the calendar has none.
     /// </summary>
     public string FeedUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the import editor, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

@@ -48,15 +48,13 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
         => PlaidConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, PlaidSettings settings, BuildEditorContext context)
-        => Initialize<PlaidSettingsViewModel>("PlaidSettings_Edit", async model =>
+        => Combine(
+            Initialize<PlaidSettingsViewModel>("PlaidSettings_Edit", async model =>
             {
-                model.WebhookUrl = await _linkSite.GetWebhookUrlAsync();
+                await PopulateStateAsync(model, settings);
 
-                if (HostSuppliesKeys(_credentialsProvider))
+                if (model.HostSuppliesKeys)
                 {
-                    model.HostSuppliesKeys = true;
-                    model.IsConfigured = await _credentialsProvider.GetAsync() is not null;
-
                     return;
                 }
 
@@ -69,11 +67,41 @@ internal sealed class PlaidSettingsDisplayDriver : SiteDisplayDriver<PlaidSettin
                     new SelectListItem(S["Production (real banks)"], nameof(PlaidEnvironment.Production)),
                 ];
                 model.Secrets = await GetTextSecretsAsync(model.SecretName);
-                model.IsConfigured = settings.IsConfigured();
             })
-            .Location("Content:5")
-            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PlaidPermissions.ManagePlaidSettings))
-            .OnGroup(SettingsGroupId);
+                .Location(l => l.Zone("Content", "5").Card(S["Credentials"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PlaidPermissions.ManagePlaidSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<PlaidSettingsViewModel>("PlaidSettingsWebhook_Edit", async model => await PopulateStateAsync(model, settings))
+                .Location(l => l.Zone("Content", "6").Card(S["Webhook"], "20"))
+                .RenderWhen(async () => !string.IsNullOrEmpty(await _linkSite.GetWebhookUrlAsync())
+                    && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PlaidPermissions.ManagePlaidSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<PlaidSettingsViewModel>("PlaidSettingsTest_Edit", async model => await PopulateStateAsync(model, settings))
+                .Location(l => l.Zone("Content", "7").Card(S["Connection Test"], "30"))
+                .RenderWhen(async () => await IsConfiguredAsync(settings)
+                    && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PlaidPermissions.ManagePlaidSettings))
+                .OnGroup(SettingsGroupId));
+
+    // What the page says about the connection, whichever card is drawn.
+    private async Task PopulateStateAsync(PlaidSettingsViewModel model, PlaidSettings settings)
+    {
+        model.WebhookUrl = await _linkSite.GetWebhookUrlAsync();
+
+        if (HostSuppliesKeys(_credentialsProvider))
+        {
+            model.HostSuppliesKeys = true;
+            model.IsConfigured = await _credentialsProvider.GetAsync() is not null;
+
+            return;
+        }
+
+        model.IsConfigured = settings.IsConfigured();
+    }
+
+    private async Task<bool> IsConfiguredAsync(PlaidSettings settings)
+        => HostSuppliesKeys(_credentialsProvider)
+            ? await _credentialsProvider.GetAsync() is not null
+            : settings.IsConfigured();
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, PlaidSettings settings, UpdateEditorContext context)
     {

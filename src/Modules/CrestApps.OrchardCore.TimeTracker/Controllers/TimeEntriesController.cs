@@ -13,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Users;
@@ -32,13 +34,15 @@ public sealed class TimeEntriesController : Controller
     private readonly UserManager<IUser> _userManager;
     private readonly ISession _session;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<TimeEntryEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeEntriesController"/> class.
     /// </summary>
-    public TimeEntriesController(IAuthorizationService authorizationService, ITimeTrackerService tracker, TimeStageStore stages, TimeTrackerTimeZone timeZone, UserManager<IUser> userManager, ISession session, INotifier notifier, IHtmlLocalizer<TimeEntriesController> htmlLocalizer)
+    public TimeEntriesController(IAuthorizationService authorizationService, ITimeTrackerService tracker, TimeStageStore stages, TimeTrackerTimeZone timeZone, UserManager<IUser> userManager, ISession session, INotifier notifier, IDisplayManager<TimeEntryEditViewModel> displayManager, IUpdateModelAccessor updateModelAccessor, IHtmlLocalizer<TimeEntriesController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _tracker = tracker;
@@ -47,6 +51,8 @@ public sealed class TimeEntriesController : Controller
         _userManager = userManager;
         _session = session;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -139,6 +145,7 @@ public sealed class TimeEntriesController : Controller
         }
 
         await PopulateAsync(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
 
         return View(model);
     }
@@ -159,6 +166,17 @@ public sealed class TimeEntriesController : Controller
         var zone = await _timeZone.GetAsync();
 
         form.TimeZoneId = zone;
+
+        // What the form shows about the entry that is changed, which the editor needs before it binds the fields.
+        if (!string.IsNullOrEmpty(form.Id) && await _tracker.FindAsync(form.Id, HttpContext.RequestAborted) is { } existing)
+        {
+            form.UserName = existing.UserName;
+            form.IsOpen = existing.IsOpen;
+            form.Changes = [.. existing.Changes];
+        }
+
+        await PopulateAsync(form);
+        form.Editor = await _displayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(form.Id));
 
         if (form.Start is null)
         {
@@ -198,15 +216,6 @@ public sealed class TimeEntriesController : Controller
 
         if (!ModelState.IsValid)
         {
-            if (!string.IsNullOrEmpty(form.Id) && await _tracker.FindAsync(form.Id, HttpContext.RequestAborted) is { } entry)
-            {
-                form.UserName = entry.UserName;
-                form.IsOpen = entry.IsOpen;
-                form.Changes = [.. entry.Changes];
-            }
-
-            await PopulateAsync(form);
-
             return View(form);
         }
 

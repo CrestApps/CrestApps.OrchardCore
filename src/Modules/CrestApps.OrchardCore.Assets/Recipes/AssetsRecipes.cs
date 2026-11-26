@@ -12,6 +12,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Assets.Recipes;
 
@@ -129,6 +130,13 @@ public class AssetsDeploymentStepViewModel
 
 internal sealed class AssetsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AssetsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public AssetsDeploymentStepDisplayDriver(IStringLocalizer<AssetsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(AssetsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("AssetsDeploymentStep_Summary", step).Location("Summary", "Content"),
@@ -138,7 +146,7 @@ internal sealed class AssetsDeploymentStepDisplayDriver : DisplayDriver<Deployme
         => Initialize<AssetsDeploymentStepViewModel>("AssetsDeploymentStep_Fields_Edit", model =>
         {
             model.IncludeAssets = step.IncludeAssets;
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Asset Types and Assets"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(AssetsDeploymentStep step, UpdateEditorContext context)
     {

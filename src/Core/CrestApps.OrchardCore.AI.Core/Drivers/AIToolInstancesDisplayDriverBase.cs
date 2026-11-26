@@ -33,10 +33,11 @@ public abstract class AIToolInstancesDisplayDriverBase<TModel> : DisplayDriver<T
     protected virtual string EditorShapeType => "EditToolInstances_Edit";
 
     /// <summary>
-    /// Gets the shape location used to place the tool instances editor. Override this to place the editor
-    /// on a host model that uses a different zone or tab layout.
+    /// Gets the shape location used to place the tool instances editor. The tab and card names of the location
+    /// are localized by the derived driver, for instance with <c>PlacementLocationBuilder.Tab(S["Capabilities"], "9")</c>
+    /// and <c>Card(S["Agents &amp; Tools"], "10")</c>.
     /// </summary>
-    protected virtual string EditorLocation => "Content:7#Capabilities;9";
+    protected abstract string EditorLocation { get; }
 
     /// <summary>
     /// Determines whether the tool instances editor applies to the given model.

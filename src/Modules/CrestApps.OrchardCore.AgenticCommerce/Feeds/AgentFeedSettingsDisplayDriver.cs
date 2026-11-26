@@ -75,52 +75,74 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, AgentFeedSettings settings, BuildEditorContext context)
-        => Initialize<AgentFeedSettingsViewModel>("AgentFeedSettings_Edit", async model =>
+    {
+        return Combine(
+            Initialize<AgentFeedSettingsViewModel>("AgentFeedSettings_Edit", model => FillAsync(model, site, settings, includeFeed: true))
+                .Location(l => l.Zone("Content", "1").Card(S["OpenAI Product Feed"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgentFeedPermissions.ManageAgentFeeds))
+                .OnGroup(SettingsGroupId),
+            Initialize<AgentFeedSettingsViewModel>("AgentFeedSettingsSftp_Edit", model => FillAsync(model, site, settings, includeFeed: false))
+                .Location(l => l.Zone("Content", "2").Card(S["Daily SFTP Push"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgentFeedPermissions.ManageAgentFeeds))
+                .OnGroup(SettingsGroupId),
+            Initialize<AgentFeedSettingsViewModel>("AgentFeedSettingsApis_Edit", model => FillAsync(model, site, settings, includeFeed: false))
+                .Location(l => l.Zone("Content", "3").Card(S["ACP Feed APIs"], "30"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgentFeedPermissions.ManageAgentFeeds))
+                .OnGroup(SettingsGroupId));
+    }
+
+    // Every card of the page binds the same view model; only the first one shows the generated feed, so the others skip building it.
+    private async ValueTask FillAsync(AgentFeedSettingsViewModel model, ISite site, AgentFeedSettings settings, bool includeFeed)
+    {
+        var sftp = settings.Sftp ?? new AgentFeedSftpSettings();
+        var feedContext = await _feeds.GetContextAsync();
+
+        model.TargetCountries = string.Join(", ", settings.TargetCountries ?? []);
+        model.SftpEnabled = sftp.Enabled;
+        model.SftpHost = sftp.Host;
+        model.SftpPort = sftp.Port;
+        model.SftpUsername = sftp.Username;
+        model.HasSftpPassword = ProtectedSettingExtensions.HasSecret(sftp.Password);
+        model.HasSftpPrivateKey = ProtectedSettingExtensions.HasSecret(sftp.PrivateKey);
+        model.HasSftpPrivateKeyPassphrase = ProtectedSettingExtensions.HasSecret(sftp.PrivateKeyPassphrase);
+        model.SftpHostKeyFingerprint = sftp.HostKeyFingerprint;
+        model.SftpRemoteFolder = sftp.RemoteFolder;
+        model.SftpFormat = sftp.Format;
+        model.SftpCurrency = sftp.Currency;
+        model.FeedApiTargets = (settings.FeedApiTargets ?? [])
+            .Select(target => new AcpFeedTargetViewModel
+            {
+                Id = target.Id,
+                Name = target.Name,
+                BaseUrl = target.BaseUrl,
+                FeedId = target.FeedId,
+                TargetCountry = target.TargetCountry,
+                Currency = target.Currency,
+                Enabled = target.Enabled,
+                HasBearerToken = ProtectedSettingExtensions.HasSecret(target.BearerToken),
+            })
+            .ToList();
+
+        // One empty row adds a target.
+        model.FeedApiTargets.Add(new AcpFeedTargetViewModel());
+        model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
+        model.StoreCountry = feedContext.StoreCountry;
+        model.Status = await _statusManager.GetOrCreateImmutableAsync();
+
+        if (!includeFeed)
         {
-            var request = _httpContextAccessor.HttpContext?.Request;
-            var baseUrl = site.BaseUrl?.TrimEnd('/') ?? (request is null ? null : $"{request.Scheme}://{request.Host}{request.PathBase}");
-            var key = await _productFeeds.GetKeyAsync();
-            var query = string.IsNullOrEmpty(key) ? string.Empty : "?key=" + Uri.EscapeDataString(key);
-            var sftp = settings.Sftp ?? new AgentFeedSftpSettings();
-            var feedContext = await _feeds.GetContextAsync();
+            return;
+        }
 
-            model.TargetCountries = string.Join(", ", settings.TargetCountries ?? []);
-            model.SftpEnabled = sftp.Enabled;
-            model.SftpHost = sftp.Host;
-            model.SftpPort = sftp.Port;
-            model.SftpUsername = sftp.Username;
-            model.HasSftpPassword = ProtectedSettingExtensions.HasSecret(sftp.Password);
-            model.HasSftpPrivateKey = ProtectedSettingExtensions.HasSecret(sftp.PrivateKey);
-            model.HasSftpPrivateKeyPassphrase = ProtectedSettingExtensions.HasSecret(sftp.PrivateKeyPassphrase);
-            model.SftpHostKeyFingerprint = sftp.HostKeyFingerprint;
-            model.SftpRemoteFolder = sftp.RemoteFolder;
-            model.SftpFormat = sftp.Format;
-            model.SftpCurrency = sftp.Currency;
-            model.FeedApiTargets = (settings.FeedApiTargets ?? [])
-                .Select(target => new AcpFeedTargetViewModel
-                {
-                    Id = target.Id,
-                    Name = target.Name,
-                    BaseUrl = target.BaseUrl,
-                    FeedId = target.FeedId,
-                    TargetCountry = target.TargetCountry,
-                    Currency = target.Currency,
-                    Enabled = target.Enabled,
-                    HasBearerToken = ProtectedSettingExtensions.HasSecret(target.BearerToken),
-                })
-                .ToList();
+        var request = _httpContextAccessor.HttpContext?.Request;
+        var baseUrl = site.BaseUrl?.TrimEnd('/') ?? (request is null ? null : $"{request.Scheme}://{request.Host}{request.PathBase}");
+        var key = await _productFeeds.GetKeyAsync();
+        var query = string.IsNullOrEmpty(key) ? string.Empty : "?key=" + Uri.EscapeDataString(key);
 
-            // One empty row adds a target.
-            model.FeedApiTargets.Add(new AcpFeedTargetViewModel());
-            model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
-            model.StoreCountry = feedContext.StoreCountry;
-            model.JsonLinesUrl = $"{baseUrl}/feeds/openai/products.jsonl.gz{query}";
-            model.CsvUrl = $"{baseUrl}/feeds/openai/products.csv.gz{query}";
-            model.Feed = await _feeds.GetAsync(currency: null, fresh: true);
-            model.Status = await _statusManager.GetOrCreateImmutableAsync();
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AgentFeedPermissions.ManageAgentFeeds))
-        .OnGroup(SettingsGroupId);
+        model.JsonLinesUrl = $"{baseUrl}/feeds/openai/products.jsonl.gz{query}";
+        model.CsvUrl = $"{baseUrl}/feeds/openai/products.csv.gz{query}";
+        model.Feed = await _feeds.GetAsync(currency: null, fresh: true);
+    }
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, AgentFeedSettings settings, UpdateEditorContext context)

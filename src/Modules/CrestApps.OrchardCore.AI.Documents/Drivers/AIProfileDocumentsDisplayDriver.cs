@@ -109,7 +109,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
             model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
-        }).Location("Content:2.5#Knowledge;2");
+        }).Location(l => l.Zone("Content", "2.5").Tab(S["Knowledge"], "2").Card(S["Documents"], "20"));
 
         var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
         {
@@ -132,7 +132,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:8#Knowledge;2");
+        }).Location(l => l.Zone("Content", "8").Tab(S["Knowledge"], "2").Card(S["Documents"], "20"));
 
         return Combine(documentParametersResult, documentsResult);
     }

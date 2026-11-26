@@ -45,7 +45,7 @@ public sealed class ImportLocalDncListDisplayDriver : DisplayDriver<ImportLocalD
                 viewModel.File = model.File;
                 viewModel.CountryOptions = GetCountryOptions();
             })
-            .Location("Content:1"));
+            .Location(l => l.Zone("Content", "1").Card(S["DNC List"], "10")));
 
     /// <summary>
     /// Updates the import model from form data.
