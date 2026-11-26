@@ -20,7 +20,7 @@
             <select asp-for="CandidateQueueId" asp-items="Model.AvailableQueues.Select(queue => new SelectListItem(queue.Text, queue.Value, queue.Value == Model.CandidateQueueId))" class="form-select">
                 <option value="">@T["The conversation's own queue"]</option>
             </select>
-            <span class="hint">@T["A conversation that belongs to no queue is skipped when the rule uses its own queue."]</span>
+            <span class="hint">@T["A conversation that belongs to no queue, such as a text a workflow or a dialer sent, takes the agents of any queue."]</span>
         </div>
     </div>
 

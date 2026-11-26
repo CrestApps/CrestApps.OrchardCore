@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.AspNetCore.Identity;
@@ -52,7 +53,7 @@ internal sealed class MessagingRoutingCandidateResolver
     /// Finds a rule's candidates for a conversation.
     /// </summary>
     /// <param name="rule">The rule.</param>
-    /// <param name="conversationQueueId">The queue the conversation belongs to, used when the rule names no queue of its own.</param>
+    /// <param name="conversationQueueId">The queue the conversation belongs to, used when the rule names no queue of its own. When both are empty, a queue source reads the agents of any queue.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The candidates, and the skills a queue source requires of them.</returns>
     public async Task<MessagingRoutingCandidates> ResolveAsync(MessagingRoutingRule rule, string conversationQueueId, CancellationToken cancellationToken = default)
@@ -68,7 +69,10 @@ internal sealed class MessagingRoutingCandidateResolver
 
                     if (string.IsNullOrEmpty(queueId))
                     {
-                        return MessagingRoutingCandidates.None;
+                        // A conversation that belongs to no queue, such as a text a workflow or a dialer sent, has no own
+                        // queue to read. The rule names none either, so it means any queue: the agents who work or are
+                        // signed in to one. Returning nobody here left every such conversation unrouted.
+                        return new MessagingRoutingCandidates(await FindQueueAgentsAsync(rule.CandidateSource, cancellationToken), []);
                     }
 
                     var agents = rule.CandidateSource == MessagingRoutingCandidateSources.QueueSignedIn
@@ -126,6 +130,17 @@ internal sealed class MessagingRoutingCandidateResolver
             default:
                 return MessagingRoutingCandidates.None;
         }
+    }
+
+    private async Task<IReadOnlyList<AgentProfile>> FindQueueAgentsAsync(string source, CancellationToken cancellationToken)
+    {
+        var agents = await _agentProfileManager.GetAllAsync(cancellationToken);
+
+        // The same two readings the queue sources use for one queue: signed in is a queue sign-in whose presence is not
+        // offline, and works the queue is being entitled to it. No queue's skills apply, because no queue is named.
+        return source == MessagingRoutingCandidateSources.QueueSignedIn
+            ? agents.Where(agent => agent.PresenceStatus != AgentPresenceStatus.Offline && agent.QueueIds is { Count: > 0 }).ToArray()
+            : agents.Where(agent => agent.AllowedQueueIds is { Count: > 0 }).ToArray();
     }
 
     private async Task<IReadOnlyList<AgentProfile>> FindAgentsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken)

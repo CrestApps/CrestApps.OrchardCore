@@ -72,7 +72,7 @@ First choose where the eligible agents come from (**Agents**), then how one of t
 | **Users in roles** | The users in the roles you pick. |
 | **Specific users** | The users you pick. |
 
-For the two queue choices, **Queue** names the queue to use. Leave it on *The conversation's own queue* to follow each conversation; a conversation that belongs to no queue is then skipped by that rule, because there is no queue to look at. Texts that a workflow or a power dialer sends, and the replies to them, usually belong to no queue (the inbox shows them as **Unassigned**, not **Pooled**). To route those with a queue choice, pick the queue by name instead of *The conversation's own queue*, or use **Members of teams**, **Users in roles** or **Specific users**. Where the queue requires skills, only agents with them are picked, as for calls. Only users with an agent profile can get conversations; a profile is created the first time a user opens the messaging workspace.
+For the two queue choices, **Queue** names the queue to use. Leave it on *The conversation's own queue* to follow each conversation. Texts that a workflow or a power dialer sends, and the replies to them, usually belong to no queue (the inbox shows them as **Unassigned**, not **Pooled**). For those, *The conversation's own queue* means any queue: **Agents signed in to a queue** takes the agents signed in to any queue, and **Every agent who works a queue** takes every agent entitled to any queue, and no queue's required skills apply. To limit a rule to one queue's agents, pick that queue by name. Where the queue requires skills, only agents with them are picked, as for calls. Only users with an agent profile can get conversations; a profile is created the first time a user opens the messaging workspace.
 
 | Pick | The agent chosen |
 | --- | --- |
@@ -88,7 +88,7 @@ Two checkboxes narrow the agents further. Both are on by default.
 | **Skip agents at their conversation limit** | Leaves out an agent who already holds as many conversations as their messaging limit allows (ten by default). A live call counts as several conversations. |
 
 :::tip[Agents are not being picked]
-If a conversation stays unassigned although a rule should take it, check, in this order: the rule is **Enabled** and its moment is ticked; its **Channels**, **Business numbers and addresses**, **Queues** and **Campaigns** include the conversation; the **Agents** choice finds people (for the queue choices, someone is signed in to that queue, and the conversation has a queue unless **Queue** names one); those people have the **Inbox** open with **Available** on, or **Only agents available for messaging** is cleared; and they are below their conversation limit. A rule that finds nobody is skipped, so the next rule is tried.
+If a conversation stays unassigned although a rule should take it, check, in this order: the rule is **Enabled** and its moment is ticked; its **Channels**, **Business numbers and addresses**, **Queues** and **Campaigns** include the conversation; the **Agents** choice finds people (for the queue choices, someone is signed in to that queue, and, for a conversation with no queue, someone is signed in to any queue); those people have the **Inbox** open with **Available** on, or **Only agents available for messaging** is cleared; and they are below their conversation limit. A rule that finds nobody is skipped, so the next rule is tried.
 :::
 
 ## What happens when a rule assigns a conversation
