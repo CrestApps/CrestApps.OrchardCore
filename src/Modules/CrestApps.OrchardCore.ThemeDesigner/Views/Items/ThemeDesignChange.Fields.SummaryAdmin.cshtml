@@ -1,0 +1,3 @@
+@model ShapeViewModel<ThemeDesignChange>
+
+<a asp-action="Change" asp-route-kind="@Model.Value.Kind" asp-route-name="@Model.Value.Name">@Model.Value.Name</a>

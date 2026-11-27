@@ -1,0 +1,76 @@
+@model ThemeDesignerIndexViewModel
+
+@{
+    var draft = Model.Draft;
+    var hasChanges = draft is not null && draft.ChangeCount > 0;
+}
+
+<zone Name="Title">
+    <breadcrumb name="ThemeDesigner" title="@T["Theme Draft"]" />
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                @if (hasChanges)
+                {
+                    <span>@T["{0} unpublished changes, started {1}.", draft.ChangeCount, await DisplayAsync(await New.Timespan(Utc: draft.CreatedUtc))]</span>
+                    @if (draft.Preview)
+                    {
+                        <span class="badge text-bg-info ms-1">@T["You see it while you browse"]</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-secondary ms-1">@T["Preview off"]</span>
+                    }
+                }
+                else
+                {
+                    <span class="text-body-secondary">@T["You have no unpublished theme changes."]</span>
+                }
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-secondary" href="~/" target="_blank" rel="noopener">@T["Open the site"]</a>
+            </div>
+            @if (hasChanges)
+            {
+                <div class="col-auto">
+                    <form asp-action="Preview" method="post" class="d-inline no-multisubmit">
+                        <input type="hidden" name="preview" value="@(draft.Preview ? "false" : "true")" />
+                        <button type="submit" class="btn btn-secondary">@(draft.Preview ? T["Stop preview"] : T["Preview"])</button>
+                    </form>
+                </div>
+                <div class="col-auto">
+                    <form asp-action="Discard" method="post" class="d-inline no-multisubmit">
+                        <button type="submit" class="btn btn-danger" data-title="@T["Discard the draft"]" data-message="@T["All your unpublished theme changes will be lost. Continue?"]" data-url-af="UnsafeUrl">@T["Discard"]</button>
+                    </form>
+                </div>
+                <div class="col-auto">
+                    <form asp-action="Publish" method="post" class="d-inline no-multisubmit">
+                        <button type="submit" class="btn btn-primary" data-title="@T["Publish the draft"]" data-message="@T["Everyone will see these changes at once. Continue?"]" data-url-af="UnsafeUrl">@T["Publish"]</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<p class="text-body-secondary">
+    @T["Front-end theme: <strong>{0}</strong>. Admin theme: <strong>{1}</strong>. Ask the AI chat widget to restyle the site, or change templates and site resources here: what you change goes to this draft, which only you see until you publish it. This page always shows the published admin.", Model.Themes?.SiteThemeName ?? T["none"].Value, Model.Themes?.AdminThemeName ?? T["none"].Value]
+</p>
+
+@* The form is necessary to generate an antiforgery token for the row actions. *@
+<form method="post" class="no-multisubmit">
+    <admin-list name="ThemeDesignChanges" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> Your draft has no change yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Change" position="30" title="@T["Change"]" width="auto" />
+            <admin-list-column name="Modified" position="90" title="@T["Last changed"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

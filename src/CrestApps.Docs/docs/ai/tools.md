@@ -203,6 +203,31 @@ The tool answers as the caller, with the **Ask the site questions with NLWeb** (
 | --- | --- |
 | `ask` | Asks the site a question in natural language (NLWeb) and returns the matching content items as schema.org objects, with a summary or an answer written from them when asked. Selectable on the MCP Server, WebMCP and AI profiles. |
 
+### Theme design tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.ThemeDesigner`
+
+The tools act as the signed-in user and change only that user's theme draft, which only they see until it is published. Front-end templates need **Manage templates**, admin templates need **Manage admin templates** (and the Admin Templates feature), and site stylesheets and scripts need **Manage site stylesheets and scripts**. `publishThemeDesign` and `discardThemeDesign` ask the user to approve each call when they are ticked on the assistant the user chats with. The **Theme Designer Agent** profile template bundles the other fourteen, since tools an agent runs for an assistant are not put to the user for approval. See [Theme Designer](../modules/theme-designer.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `getThemeDesignOverview` | Returns the active front-end and admin themes, what the user may change, the changes in their draft, the review page address and the theme design guide (the `theme-design-guide` prompt template, which a site can override). |
+| `listThemeShapes` | Lists the shape types and alternates the active front-end or admin theme renders, with the file that renders each and whether a template replaces it (`scope`, `search`, `take`). |
+| `getThemeShapeSource` | Returns the Liquid or Razor source the theme renders a shape with, so a template can keep its markup. |
+| `listShapeTemplates` | Lists the published front-end or admin templates merged with the draft's changes. |
+| `getShapeTemplate` | Returns a template's Liquid as published and as the draft has it. |
+| `saveShapeTemplate` | Adds or replaces a Liquid template in the draft after checking that it parses. A Layout must keep the resource tags and `render_body`, and must keep loading the stylesheets and scripts the theme's own Layout loads, unless it loads Bootstrap itself (a new theme) or names them in `dropThemeResources`. Warns about heavy inline styling. |
+| `removeShapeTemplate` | Removes a published template in the draft, or drops one the draft added. |
+| `listSiteResources` | Lists the published site stylesheets and scripts merged with the draft's changes. |
+| `getSiteResource` | Returns a site resource with its content as published and as the draft has it. |
+| `saveSiteResource` | Adds or changes a stylesheet or script in the draft, matched by name; only the given arguments change an existing one. It is validated and minified. |
+| `removeSiteResource` | Removes a published site resource in the draft, or drops one the draft added. |
+| `previewThemeDraftPage` | Renders a page of the site as the user, with their draft, and returns its status, any error, the stylesheets it loads (with their size and whether they are the site's own) and its scripts, the templates that rendered each part (with the name a replacement must take) and its body markup. |
+| `revertThemeDesignChange` | Drops one change from the draft. |
+| `setThemeDesignPreview` | Turns on or off whether the user sees their draft while browsing. |
+| `publishThemeDesign` | Publishes every change in the draft for everyone, all or nothing. Requires approval. |
+| `discardThemeDesign` | Deletes the draft. Requires approval. |
+
 ### Search Engine Optimization tools
 
 **Available when:** `CrestApps.OrchardCore.Seo` with `CrestApps.OrchardCore.AI` on

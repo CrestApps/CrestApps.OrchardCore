@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Staff\CrestApps.OrchardCore.Staff.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.SiteResources/CrestApps.OrchardCore.SiteResources.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.SiteResources.Core/CrestApps.OrchardCore.SiteResources.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ThemeDesigner/CrestApps.OrchardCore.ThemeDesigner.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Staff.Core/CrestApps.OrchardCore.Staff.Core.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Staff.Abstractions/CrestApps.OrchardCore.Staff.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />

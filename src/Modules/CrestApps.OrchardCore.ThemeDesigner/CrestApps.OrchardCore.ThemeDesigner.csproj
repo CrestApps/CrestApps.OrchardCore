@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Theme Designer</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Theme drafts: change the front-end templates, the admin templates and the site's stylesheets and scripts in a
+      draft that only you see while you browse the site, then publish it in one step. The AI Agent's theme design
+      tools write to the same draft, so the admin chat widget can restyle the site for you.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Theming Templates Liquid Design Drafts Preview</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Liquid.Abstractions" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Templates" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.SiteResources.Abstractions\CrestApps.OrchardCore.SiteResources.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ThemeDesigner.Abstractions\CrestApps.OrchardCore.ThemeDesigner.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SiteResources.Core\CrestApps.OrchardCore.SiteResources.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Carries the Site Resources feature dependency, so a site that installs this package gets it too. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.SiteResources\CrestApps.OrchardCore.SiteResources.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.ThemeDesigner</RootNamespace>
+    <Title>CrestApps OrchardCore Theme Designer Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for theme drafts: changes to the front-end templates, the admin templates and the site
+      resources that only their designer sees until they are published, and the shapes a theme renders.
+    </Description>
+    <PackageTags>$(PackageTags) Theming Templates Liquid Design Drafts Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.SiteResources.Abstractions\CrestApps.OrchardCore.SiteResources.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
