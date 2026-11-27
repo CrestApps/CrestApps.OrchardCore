@@ -1,8 +1,8 @@
 # PSA Implementation Guide
 
-Status: proposal, 27 November 2026. This guide turns [`psa-platform-plan.md`](psa-platform-plan.md) into small, ordered tasks that a coding agent can carry out one at a time. It contains no code. Read it together with the plan: the plan says **what** each module is (its specification, sections M01–M23); this guide says **how to build it, in which order, and how to know each step is done**.
+Status: proposal, revision 2 (27 November 2026). This guide turns [`psa-platform-plan.md`](psa-platform-plan.md) into 17 work packages and their tasks, in order. It contains no code. The plan says **what** each module is (specifications M01–M23) and **why** (decisions D-01 to D-28 in its section 25); this guide says **how to build it, in which order, and how to know each step is done**.
 
-The guide is written for an agent that should not have to make architecture decisions. If a step seems to need a decision that is not written here or in the plan, stop and ask (section 1.6).
+Every decision is taken. If a step still seems to need a decision that is not written here or in the plan, stop and ask (section 1.7). Do not choose.
 
 ---
 
@@ -11,80 +11,110 @@ The guide is written for an agent that should not have to make architecture deci
 1. How to work (read first, every time)
 2. Environment and commands
 3. Recipes: the repeatable "how to" for each kind of change
-4. Phase 0: Discovery and validation
-5. Phase 1: Platform foundations
-6. Phase 2: Core business blocks
-7. Phase 3: Service operations
-8. Phase 4: Commercial management
-9. Phase 5: Projects and time
-10. Phase 6: Field, assets and procurement
-11. Phase 7: Financial operations
-12. Phase 8: Intelligence and automation
-13. Phase 9: Enterprise readiness
-14. Appendix A: Done checklist for every pull request
-15. Appendix B: Glossary of repository terms
-16. Appendix C: Task index
+4. WP00 Readiness
+5. WP01 Foundations
+6. WP02 Boards
+7. WP03 Rates and PSA skeleton
+8. WP04 Service operations
+9. WP05 E-mail (after #817)
+10. WP06 Agreements
+11. WP07 Quotes
+12. WP08 Time approval
+13. WP09 Projects
+14. WP10 Resource planning
+15. WP11 CMDB and change management (after #1379)
+16. WP12 Procurement
+17. WP13 Billing review and expenses
+18. WP14 Accounting sync and portal v2
+19. WP15 Analytics, AI and RMM
+20. WP16 Enterprise readiness and migration toolkit
+21. Appendix A: Done checklist for every work package
+22. Appendix B: Glossary
+23. Appendix C: Progress
 
 ---
 
 ## 1. How to work (read first, every time)
 
-### 1.1 One task, one pull request
+### 1.1 One work package = one branch = one pull request
 
-- Every task in sections 4–13 has an ID such as `P2-03`. Do exactly one task per pull request, in the order listed, unless the task says it can run in parallel.
-- Branch name: `psa/<task-id>-<short-name>`, for example `psa/p2-03-rates-resolver`.
-- Pull request title: `[<task-id>] <task title>`. In the description, copy the task's **Done when** list and tick each item.
-- Do not start a task until every task in its **Needs** line is merged.
+- This is the repository's convention (decision D-17): one branch and one pull request per plan, with **one commit per task (slice)**.
+- Branch: `psa/wp<NN>-<short-name>`, for example `psa/wp03-rates`. Pull request title: `PSA WP<NN>: <work package title>`.
+- Commit message: `WP<NN>-T<MM> <task title>` on the first line, then what the commit does.
+- Start a work package only when every work package in its **Needs** line is merged into `main`, and rebase on `main` first.
+- In the pull request description, copy the work package's **Done when** list and Appendix A, and tick each item.
+- Update the work package's row in Appendix C (Progress) in the last commit of the pull request.
 
 ### 1.2 Read before you write
 
-For every task, before changing anything:
+Before the first task of a work package:
 
-1. Read the task in this guide completely.
-2. Read the module's specification in the plan (the section named in the task, for example "Plan M05").
-3. Read `AGENTS.md` sections *Building Blocks and Reuse*, *Common Development Tasks → Adding a New Module*, *Coding Standards and Conventions*, *Testing Practices* and *Anti-Patterns to Avoid*.
-4. Read `CLAUDE.md` at the repository root.
-5. Read `docs/engineering/building-blocks.md` and check that every concept the task touches has the owner the task names.
-6. Read every file the task lists under **Read first**. They are the templates you will copy the shape of.
-7. If the task names a skill under `.agents/skills/`, read its `SKILL.md` and follow it.
+1. Read the whole work package section in this guide.
+2. Read the plan sections it names (specifications, decisions, section 5.3 for the existing plans it builds on).
+3. Read `AGENTS.md` sections *Building Blocks and Reuse*, *Code Guidelines* (including *Admin Forms and Menus*, *Data Portability*, *YesSql Index Declarations*), *Common Development Tasks → Adding a New Module*, *Coding Standards and Conventions*, *Testing Practices*, *Anti-Patterns to Avoid*.
+4. Read `CLAUDE.md`.
+5. Read `docs/engineering/building-blocks.md` and confirm every concept the work package touches has the owner the work package names.
+6. Read every existing plan the work package lists under **Builds on**.
+7. Read every file listed under **Read first** in each task: they are the templates you copy the shape of.
+8. If a task names a skill under `.agents/skills/`, read its `SKILL.md` and follow it.
 
-### 1.3 The work loop (do this for every behaviour)
+### 1.3 The task loop (do this for every task, then commit)
 
-1. **Write a failing test** for one rule from the task's **Tests first** list. Run it and confirm it fails for the right reason (not a compile error in unrelated code).
-2. **Write the smallest code** that makes it pass.
-3. **Refactor** while the test stays green.
-4. Repeat until every test in the list exists and passes.
-5. Run the whole test project (section 2.3) and the architecture tests.
-6. Update docs, README, `building-blocks.md` and public API baselines (Appendix A).
-7. Fill in the Done checklist (Appendix A) in the pull request.
+1. Write a failing test for one rule from the task's **Tests first** list. Run that test class and confirm it fails for the right reason.
+2. Write the smallest code that makes it pass. Refactor with the test green.
+3. Repeat until every test in the list exists and passes.
+4. Run the **affected test classes** only (filter, section 2.3). Do not run the whole suite for every task.
+5. Commit with the task's message.
 
-### 1.4 Rules you must never break
+### 1.4 The end-of-work-package routine (once, before asking for review)
 
-- **Never** put the same concept in two places. If the concept already has an owner in `building-blocks.md`, use or extend that owner.
-- **Never** let a `.Core` or `.Abstractions` project reference a module project. Module code never uses a type from another module's assembly. Shared types go to `.Abstractions` (contracts) or `.Core` (implementations).
+1. Build with warnings as errors (section 2.2).
+2. Start the site and check in a browser every page the work package added or changed, in both list layouts (List and Grid) and both row-action modes (Buttons and Menu), as `AGENTS.md` requires.
+3. Run the work package's end-to-end workflow test (Playwright) and the PSA integration tests.
+4. Run the **whole** unit test project once, including the 36 architecture tests (Appendix A lists them).
+5. Run the docs checks (section 2.4).
+6. Fill in Appendix A in the pull request.
+
+### 1.5 Rules you must never break
+
+- **Never** put a concept in a second place. Use or extend the owner named in `building-blocks.md`.
+- **Never** let a `.Core` or `.Abstractions` project reference a module project; module code never uses a type from another module's assembly.
 - **Never** reference anything named `CrestApps.OrchardCore.Psa*` from outside the PSA modules.
-- **Never** read another module's index tables directly. Call its service through its `.Abstractions` interface.
-- **Never** change money, entitlements, stock or time without an idempotency key and a distributed lock (Recipe R11).
-- **Never** return a record to a user without passing it through the record family's scope filter (Recipe R12).
-- **Never** use `DateTime.UtcNow`; inject `IClock`. Never show a UTC time to a person; use `ILocalClock`.
-- **Never** hand-write an admin list or button row: use `<admin-list>` and `action-bar-bottom` (skills `crestapps-admin-index-views`, `crestapps-admin-edit-views`).
-- **Never** add Claude (or any AI) as a commit author or co-author. Commit only as the configured human author.
-- **Never** write documentation that describes behaviour that is not implemented yet.
+- **Never** read another module's index tables; call its service through its `.Abstractions` interface.
+- **Never** change money, usage, stock or time without an idempotency key and a distributed lock (Recipe R11), and prove it on a real database (Recipe R16).
+- **Never** return a record without the record family's scope filter (Recipe R12).
+- **Never** edit a golden fixture under `tests/fixtures/psa/` (D-18). If you think one is wrong, stop and ask.
+- **Never** write a migration that changes or deletes existing data in place; use expand-and-contract (Recipe R7, D-19).
+- **Never** add a per-entry "billable" flag to time: billable is the Time Tracker stage's Billable category (D-11).
+- **Never** add a PSA menu group. Put pages where decision D-16 says (section 1.6).
+- **Never** use `DateTime.UtcNow`; inject `IClock`. Never show UTC to a person; use `ILocalClock`.
+- **Never** hand-write an admin list or button row: use `<admin-list>` and `action-bar-bottom`; group editor fields in cards declared by placement.
+- **Never** write a competitor product name in code, comments, identifiers or docs (`AGENTS.md`).
+- **Never** add Claude or any AI as a commit author or co-author. Commit only as the configured human author.
+- **Never** document behaviour that is not implemented.
 
-### 1.5 Size limits
+### 1.6 Where pages go (decision D-16)
 
-- Keep a pull request under about 1,500 changed lines excluding tests, generated baselines and docs. If a task grows past that, split it at a step boundary and say so in the pull request.
-- Each public type in its own file named after the type (repository rule).
+| Kind of page | Where |
+| --- | --- |
+| Work queues of an existing area | That area's existing menu: Service Desk, Field Service, Workforce, Time Tracker, Approvals, Assets, Commerce (invoices, estimates, inventory, billing review) |
+| Projects | One new top-level **Projects** menu with an icon (it is a work area like Service Desk) |
+| Shared business records | Content (Agreements already lives there; Rates and expense categories and policies go there) |
+| Settings | Settings (a settings group with `AddSiteSettingsPermission` when it uses a module permission) or Configuration > Tickets for ticket settings |
+| Reports | Reports, never the module's own menu |
+| Self-service | My Work (staff) and the portal (customers) |
+| Get Started and other one-time setup pages | Not in the menu; linked from the module's pages |
 
-### 1.6 When to stop and ask
+### 1.7 When to stop and ask
 
-Stop, write down the question in the pull request (or the conversation) and wait, when:
+Stop, write the question in the pull request, and wait, when:
 
 - a step needs a type, service or feature that does not exist and this guide does not tell you to create it;
 - an existing test fails and the task does not say it should change;
-- a building block owner listed here does not match `building-blocks.md`;
-- a migration would delete or rewrite existing data in a way the task does not describe;
-- the build cannot restore packages (see section 2.2): report it, do not work around it.
+- the owner named here does not match `building-blocks.md`, or an existing plan in plan section 5.3 says something different;
+- a golden fixture disagrees with the rule as written;
+- a prerequisite pull request (#817, #1379) changed after this guide was written in a way that affects the task;
+- the build cannot restore packages (report it; do not work around it).
 
 ---
 
@@ -92,9 +122,8 @@ Stop, write down the question in the pull request (or the conversation) and wait
 
 ### 2.1 Tools
 
-- .NET SDK as pinned in `global.json` (currently `11.0.100` with `rollForward: latestMajor`). `AGENTS.md` still mentions .NET 10; `global.json` wins.
-- Node.js and npm for assets (`npm install`, `npm run rebuild`).
-- Orchard Core packages come from the Orchard Core preview feed and CrestApps.Core packages from the CrestApps feed (see `NuGet.config`).
+- .NET SDK as pinned in `global.json` (`11.0.100`, `rollForward: latestMajor`). `AGENTS.md` mentions .NET 10 in places; `global.json` wins.
+- Node.js and npm for assets. Package feeds per `NuGet.config` (Orchard Core preview feed, CrestApps feed).
 
 ### 2.2 Build
 
@@ -104,19 +133,18 @@ npm run rebuild
 dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
 ```
 
-If the build fails with `NU1301` errors about `nuget.cloudsmith.io`, the environment cannot reach the package feeds. Report this in the pull request; do not add other feeds or vendor packages.
-
-After the first successful build, list `.agents/skills/` again: a package may add skills on first build (see `AGENTS.md`).
+`NU1301` errors about `nuget.cloudsmith.io` mean the environment cannot reach the feeds: report it. After the first successful build, list `.agents/skills/` again (a package may add skills).
 
 ### 2.3 Test
 
 ```
+dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj --filter "FullyQualifiedName~CrestApps.OrchardCore.Tests.<Area>"
 dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Psa.IntegrationTests/CrestApps.OrchardCore.Psa.IntegrationTests.csproj
 ```
 
-- While iterating, filter to your test class: add `--filter "FullyQualifiedName~CrestApps.OrchardCore.Tests.<Area>"`.
-- Always run the architecture tests before finishing: filter `FullyQualifiedName~CrestApps.OrchardCore.Tests.Architecture`.
-- Public API approval tests live in `tests/CrestApps.OrchardCore.Tests/PublicApi` with baselines in `PublicApi/Baselines/*.approved.txt`. When you add or change a public type in a tracked assembly, update its baseline in the same pull request and review the diff.
+- First line: affected tests during a task. Second: the whole unit project, once per work package. Third: PSA integration tests (exists after WP01).
+- Public API baselines: `tests/CrestApps.OrchardCore.Tests/PublicApi/Baselines/*.approved.txt`. Update them in the same commit as a public type change and review the diff.
 
 ### 2.4 Docs
 
@@ -126,7 +154,7 @@ npm run check:manuals
 npm run build
 ```
 
-Read `src/CrestApps.Docs/README.md` before editing any page. User Manual pages are under `src/CrestApps.Docs/docs/user-manual/`; Technical Manual pages are the rest of `src/CrestApps.Docs/docs/`.
+Read `src/CrestApps.Docs/README.md` first. User Manual pages: `src/CrestApps.Docs/docs/user-manual/`. Technical Manual: the rest of `src/CrestApps.Docs/docs/`.
 
 ### 2.5 Run the site
 
@@ -137,767 +165,509 @@ dotnet run
 
 ---
 
-## 3. Recipes: the repeatable "how to"
+## 3. Recipes
 
-Every task refers to these recipes by number. They describe the shape of the work using existing code as templates. When a recipe says "copy the shape of", open that file and follow its structure, naming and documentation style; do not copy unrelated logic.
+Each task refers to these by number. "Copy the shape of" means: open that file and follow its structure, naming and documentation; do not copy unrelated logic.
 
-### R1. Create a new building block (three projects)
+### R1. Create a new building block
 
 Template: the Agreements block.
 
-1. Create the folders:
-   - `src/Abstractions/CrestApps.OrchardCore.<Name>.Abstractions/`
-   - `src/Core/CrestApps.OrchardCore.<Name>.Core/`
-   - `src/Modules/CrestApps.OrchardCore.<Name>/`
-2. Create each `.csproj` by copying the shape of the matching Agreements project file (`src/Abstractions/CrestApps.OrchardCore.Agreements.Abstractions/CrestApps.OrchardCore.Agreements.Abstractions.csproj`, the `.Core` one and the module one). Keep only the package and project references the new block needs.
-3. Add all three projects to `CrestApps.OrchardCore.slnx` in the matching sections (Abstractions, Core, Modules), in alphabetical order.
-4. Add the module project to `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj` as a `ProjectReference ... PrivateAssets="none"`, in alphabetical order (that is where the existing modules are listed).
-5. In `.Abstractions`, create:
-   - `<Name>Constants.cs` with `Feature` IDs, the catalog `CollectionName`, and any open "kind" strings. Copy the shape of `AgreementsConstants.cs`.
-   - `<Name>Permissions.cs` with every permission. Copy the shape of `AgreementsPermissions.cs`.
-   - `Models/` and `Services/` folders for records and interfaces.
-6. In `.Core`, create:
-   - `<Name>ServiceCollectionExtensions.cs` with an `Add<Name>Core` method. Copy the shape of `AgreementsServiceCollectionExtensions.cs`.
-   - `Indexes/` (index, index provider, index schema) and `Services/` (store, manager, handler).
-7. In the module, create `Manifest.cs`, `Startup.cs`, `README.md`, `Migrations/`, `Controllers/`, `Drivers/`, `Views/`, `Recipes/`, `Deployments/`, `Navigation/`, `ViewModels/`. Copy the shape of the Agreements module.
-8. Add the block to `docs/engineering/building-blocks.md` in the right catalog table, with "Reuse it through" and "Do not" columns filled in.
-9. Add a Technical Manual page and a User Manual page, and add both to `sidebars.js` (section 2.4).
+1. Folders `src/Abstractions/CrestApps.OrchardCore.<Name>.Abstractions/`, `src/Core/CrestApps.OrchardCore.<Name>.Core/`, `src/Modules/CrestApps.OrchardCore.<Name>/`.
+2. `.csproj` files copying the shape of the three Agreements project files; keep only needed references.
+3. Add the three projects to `CrestApps.OrchardCore.slnx` (Abstractions, Core and Modules sections, alphabetical).
+4. Add the module to `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj` as `<ProjectReference ... PrivateAssets="none" />`, alphabetical (this file is where modules are listed, even though `AGENTS.md` mentions the `.targets` file).
+5. `.Abstractions`: `<Name>Constants.cs` (feature IDs, `CollectionName`, open kind strings; shape of `AgreementsConstants.cs`), `<Name>Permissions.cs` (shape of `AgreementsPermissions.cs`), `Models/`, `Services/`.
+6. `.Core`: `<Name>ServiceCollectionExtensions.cs` with `Add<Name>Core` (shape of `AgreementsServiceCollectionExtensions.cs`), `Indexes/`, `Services/`.
+7. Module: `Manifest.cs`, `Startup.cs`, `README.md`, `Migrations/`, `Controllers/`, `Drivers/`, `Views/`, `Recipes/`, `Deployments/`, `Navigation/`, `ViewModels/` (shape of the Agreements module).
+8. Add the block to `docs/engineering/building-blocks.md`.
+9. Technical Manual and User Manual pages, both added to `sidebars.js`.
 
-### R2. Add a catalog record (a stored business record)
+### R2. Add a catalog record
 
-Template: `Agreement` → `AgreementIndex` → `AgreementIndexProvider` → `AgreementsIndexSchema` → `AgreementStore` → `AgreementManager` → `AgreementHandler` → `AgreementsMigrations`.
+Template chain: `Agreement` → `AgreementIndex` → `AgreementIndexProvider` → `AgreementsIndexSchema` → `AgreementStore` → `AgreementManager` → `AgreementHandler` → `AgreementsMigrations`.
 
-1. **Model** in `.Abstractions/Models/<Record>.cs`: a sealed class deriving from `CatalogItem` (as `Agreement` does). Document every property with XML comments. Keep extension data in a `Properties` bag if other modules must add their own terms.
-2. **Index** in `.Core/Indexes/<Record>Index.cs`: one column per field that lists, filters or lookups need. Nothing else.
-3. **Index provider** in `.Core/Indexes/<Record>IndexProvider.cs`: maps the record to the index row.
-4. **Index schema** in `.Core/Indexes/<Name>IndexSchema.cs`: creates the index table and its database indexes. Add a database index for every column used in a `WHERE` or `ORDER BY`.
-5. **Store** in `.Core/Services/<Record>Store.cs`: derive from `DocumentCatalog<TRecord, TIndex>` and set `CollectionName` from the constants (as `AgreementStore` does).
-6. **Manager**: use the catalog manager pattern (`ICatalogManager<T>`) so handlers run. Add validation in the handler.
-7. **Handler**: derive from `AuditedCatalogEntryHandlerBase<T>` (in `CrestApps.OrchardCore.Core/Handlers`) so created/modified/owner stamps are set. Put validation rules here.
-8. **Migration** in the module's `Migrations/`: create the index table through the schema class, in a numbered `CreateAsync`/`UpdateFromNAsync` method. Never change a released migration; add a new step.
-9. **Numbering** if the record has a human number: register a series with `AddNumberSeries` and get numbers from `INumberSeries` in the same unit of work (see how Agreements numbers `SA-00001`).
-10. **Register** store, manager, handler and index provider in `Add<Name>Core`, and call it from the module `Startup`.
+1. Model in `.Abstractions/Models/<Record>.cs`, sealed, deriving from `CatalogItem`; XML docs on every property; a `Properties` bag when other modules add terms.
+2. Index with only the columns lists, filters and lookups need.
+3. Index provider: `ExclusiveToDocumentType()` always; `SingleRecordPerDocument()` when it maps at most one row; a multi-row index is added to the list in `IndexDeclarationArchitectureTests` (`AGENTS.md`, *YesSql Index Declarations*).
+4. Index schema with database indexes for every `WHERE`/`ORDER BY` column.
+5. Store deriving from `DocumentCatalog<TRecord, TIndex>` with `CollectionName` from constants.
+6. Catalog manager (`ICatalogManager<T>`) so handlers run; validation in the handler.
+7. Handler deriving from `AuditedCatalogEntryHandlerBase<T>` for created/modified/owner stamps.
+8. Migration: new numbered step only; never edit a released step (`MigrationAdditiveOnlyGuardTests`).
+9. Numbers through `AddNumberSeries` and `INumberSeries` in the same unit of work.
+10. Register everything in `Add<Name>Core` and call it from `Startup`.
 
-### R3. Add an admin list and editor for a catalog record
+### R3. Admin list and editor
 
-1. Read and follow `.agents/skills/crestapps-admin-index-views/SKILL.md` and `.agents/skills/crestapps-admin-edit-views/SKILL.md`.
-2. Controller: derive from `CatalogAdminController<T>` (`src/Core/CrestApps.OrchardCore.Core/Controllers/CatalogAdminController.cs`). Do not write your own index/create/edit/delete actions unless the record needs a command that is not CRUD (then add only that action).
-3. Display driver for the record with `SummaryAdmin` and `SummaryAdminGrid` locations for rows and an `Edit` location for the form (copy the shape of `AgreementDisplayDriver.cs`).
-4. Views: `Index.cshtml` uses `<admin-list>`; edit views end with `<div class="action-bar-bottom">`.
-5. Admin menu entry in `Navigation/<Name>AdminMenu.cs`, guarded by the view permission.
-6. Every action checks a permission from `<Name>Permissions`.
+1. Follow `.agents/skills/crestapps-admin-index-views/SKILL.md` and `.agents/skills/crestapps-admin-edit-views/SKILL.md`.
+2. Controller deriving from `CatalogAdminController<T>` (`src/Core/CrestApps.OrchardCore.Core/Controllers/CatalogAdminController.cs`).
+3. Rows from a display driver with `SummaryAdmin` and `SummaryAdminGrid` locations; editor shapes placed in cards by placement (`.Card(...)`), never card markup in views.
+4. `Index.cshtml` uses `<admin-list>` with `<admin-list-grid>` columns; forms end with `<div class="action-bar-bottom">`.
+5. Menu entry at the place section 1.6 gives, guarded by the view permission; a new top-level item has an icon.
+6. Every action checks a permission.
 
-### R4. Add an extension point (a provider interface other modules implement)
+### R4. Extension point
 
-1. Put the interface in `.Abstractions/Services/I<Thing>.cs` with full XML docs, including every `<param>`.
-2. Add a registration helper `Add<Thing><T>(this IServiceCollection services, ...)` in `.Abstractions` (shape: `AddApprovalType`, `AddRecordSource`, `AddCalendarType`).
-3. If consumers register an open kind, the kind is a string constant owned by the consumer, never an enum in the building block.
-4. The building block resolves all registered implementations with `IEnumerable<I<Thing>>` and must work when none are registered.
-5. Write a test with a fake implementation proving the block calls it.
+1. Interface in `.Abstractions/Services/I<Thing>.cs` with XML docs including every `<param>`.
+2. Registration helper `Add<Thing><T>(this IServiceCollection services, ...)` in `.Abstractions` (shape: `AddApprovalType`, `AddRecordSource`, `AddCalendarType`, `AddPartySource`).
+3. Open kinds are strings owned by the consumer.
+4. The block resolves `IEnumerable<I<Thing>>` and works with none registered.
+5. A test with a fake implementation proves the block calls it.
 
-### R5. Add an optional integration between two blocks
+### R5. Optional integration between two blocks
 
-- Put the code in the consumer module, in a startup class marked `[RequireFeatures(<OtherBlock>Constants.Feature.Id)]`, or in a bridge feature (for example `Agreements.Billing`).
-- Reference the other block's `.Abstractions` (and `.Core` only to reuse a base class).
-- Feature IDs come from constants, never string literals (`FeatureIdLiteralRatchetTests`).
+Code in the consumer, in a startup marked `[RequireFeatures(<OtherBlock>Constants.Feature.Id)]` (or a bridge feature); reference the other block's `.Abstractions`; feature IDs from constants (`FeatureIdLiteralRatchetTests`; Orchard IDs from `OrchardCoreFeatureIds`).
 
-### R6. Add recipe and deployment steps for a record type
+### R6. Recipe and deployment steps
 
-- Recipe step: derive from `NamedCatalogRecipeStep` (`src/Core/CrestApps.OrchardCore.Core/Recipes/NamedCatalogRecipeStep.cs`); add a JSON schema class (shape: `AgreementsRecipeStepSchema.cs`).
-- Deployment: `NamedCatalogDeploymentSource` plus a step, step display driver and schema (shape: `src/Modules/CrestApps.OrchardCore.Agreements/Deployments/*`) with `CatalogDeploymentSerializer`.
-- Test: export then import produces identical records.
+`NamedCatalogRecipeStep` with an `IRecipeStep` schema; `NamedCatalogDeploymentSource`, step, step display driver and deployment schema (shape: `src/Modules/CrestApps.OrchardCore.Agreements/Recipes/*`, `Deployments/*`); schemas registered in a startup marked `[RequireFeatures("CrestApps.OrchardCore.Recipes")]` via the constant. `RecipeSchemaCoverageArchitectureTests`, `DeploymentStepSerializationArchitectureTests` and `DeploymentStepViewsArchitectureTests` check this. Test: export then import gives identical records.
 
-### R7. Migrate existing data in a long-running way
+### R7. Data migration: expand and contract (D-19)
 
-- Use resumable steps: implement `IResumableStep`, register with `AddResumableStep<T>()`, and request it from the migration with `ResumableSteps.RequestAsync(name)`. The background task runs it in batches and keeps a cursor.
-- The step must be idempotent: running it twice gives the same result.
-- Write a test that runs the step on fixture data twice and compares results with the expected data.
+1. **Expand:** an additive migration adds the new fields or index columns.
+2. **Move:** an `IResumableStep` registered with `AddResumableStep<T>()` and requested from the migration with `ResumableSteps.RequestAsync(name)` writes the new shape beside the old one, in batches, idempotently (`ResumableStepRequestTests` applies).
+3. **Dual-read:** readers use the new shape when present and fall back to the old.
+4. **Verify:** at the end, the step writes a verification report (counts, totals, balances before and after) to the log and as an admin notification; a mismatch stops the step and keeps reads on the old shape.
+5. **Contract:** removing old fields is a separate task in a later release, never in the same work package.
+6. **Rollback:** turning the new feature off returns to the old reads; the old data was never changed.
+7. Tests in the PSA integration project: run the step twice on the migration fixture; the report matches the golden expected report.
 
-### R8. Add a report data set or report
+### R8. Report data set
 
-- Read and follow `.agents/skills/crestapps-report-data-source/SKILL.md`.
-- Derive data sets from `IndexedReportDataSet` and register with the Reports helpers; reports with `AddReport<T>`.
-- The data set must apply the record family's scope filter (R12).
+Follow `.agents/skills/crestapps-report-data-source/SKILL.md`; derive from `IndexedReportDataSet`; apply the scope filter; reports go under Reports.
 
-### R9. Add workflow events and tasks, webhooks and audit events
+### R9. Workflow events, webhooks, audit
 
-- Workflow events and tasks: copy the shape of Tickets' `WorkflowsStartup.cs` and `Workflows/` folder; register them in a `[RequireFeatures("OrchardCore.Workflows")]`-style startup using the Orchard feature ID constant from `OrchardCoreFeatureIds`.
-- Webhooks: implement `IWebhookEventProvider` (Webhooks.Abstractions) in a startup that requires the Webhooks feature. Event names are `{entity}.{verb}`. Payload carries IDs and changed fields only.
-- Audit: copy the shape of `src/Modules/CrestApps.OrchardCore.Tickets/Integrations/TicketWebhooksAndAudit.cs`.
+Copy the shape of Tickets' `WorkflowsStartup.cs`, `Workflows/`, and `Integrations/TicketWebhooksAndAudit.cs`. Webhooks implement `IWebhookEventProvider`; names `{entity}.{verb}`; payloads carry IDs and changed fields only. `WorkflowActivityViewsArchitectureTests` checks the activity views.
 
-### R10. Add a JSON API
+### R10. JSON API
 
-- Use `MapModuleApi` (module API helper in `CrestApps.OrchardCore.Core`): route group `api/<module>/v1`, `Api` auth scheme, problem details via `ApiProblems`, `IdempotencyEndpointFilter` on POST/PUT/PATCH.
-- Template: `src/Modules/CrestApps.OrchardCore.Tickets/Api/TicketApiEndpoints.cs` and `ApiStartup.cs`.
-- Every endpoint checks a permission and the scope filter. Lists use cursor or page parameters with a maximum page size of 200.
+`MapModuleApi` route group `api/<module>/v1`, `Api` scheme, `ApiProblems`, `IdempotencyEndpointFilter` on writes; template `src/Modules/CrestApps.OrchardCore.Tickets/Api/TicketApiEndpoints.cs` and `ApiStartup.cs`; permission and scope on every endpoint; page size at most 200.
 
-### R11. Change money, entitlements, stock or time safely
+### R11. Money, usage, stock or time changes
 
-1. Choose a lock name that includes the aggregate ID (for example `agreement:<id>`). Use the distributed lock helpers (`DistributedLockExtensions`, `LockAllAsync` when you need several, in a fixed order).
-2. Inside the lock, read the current state again.
-3. Use an idempotency key derived from the source record (for example the time entry ID) so a second call does nothing.
-4. Save in one YesSql session (one unit of work).
-5. Notify observers **after** the save.
-6. Test: call the command twice, and call it from two parallel tasks; the effect must happen once.
+1. Lock name including the aggregate ID (`DistributedLockExtensions`; `LockAllAsync` for several, in a fixed order).
+2. Re-read state inside the lock.
+3. Idempotency key from the source record.
+4. One YesSql session per command.
+5. Observers notified after the save.
 
-### R12. Scope filter (who may see which records)
+### R12. Scope filter
 
-Template: `ITicketAccessService` and `TicketScopeFilter` in Tickets.
+Template: `ITicketAccessService` + `TicketScopeFilter`. An `I<Record>AccessService` in `.Abstractions` (can view, can edit, restrict a query), applied in SQL; used by every list, API, data set, search, attachment and timeline access provider, record source and AI tool; probes added to the isolation harness (WP01-T04).
 
-1. Add an access service interface in `.Abstractions` (for example `IProjectAccessService`) with methods "can view", "can edit" and a way to restrict an index query.
-2. Apply the restriction in SQL on the index (never load everything and filter in memory).
-3. Use it in every list, API, data set, search result, attachment access provider, timeline access provider, record source and AI tool for that record family.
-4. Add the record family to the isolation harness (task P1-05).
+### R13. Personal data
 
-### R13. Add a personal-data contributor
+`IPersonalDataContributor` per record holding personal data; erasure clears personal fields and keeps financial facts (shape of `InvoicingPersonalDataContributor`).
 
-- Implement `IPersonalDataContributor` (PersonalData.Abstractions) for every record that holds personal data: export the person's data; on erasure, clear personal fields but keep financial facts (copy the shape of `InvoicingPersonalDataContributor`).
+### R14. Telemetry
 
-### R14. Add telemetry to a background task
+Background tasks run through `BackgroundTaskTelemetry`; meters and activity sources from `CrestAppsOrchardCoreTelemetry` (`CrestApps.OrchardCore.<Area>`); no IDs or names in metric tags.
 
-- Background tasks run their body through `BackgroundTaskTelemetry` (`this.RunAsync(run => ...)`).
-- Meters and activity sources come from `CrestAppsOrchardCoreTelemetry.CreateMeter` / `CreateActivitySource("CrestApps.OrchardCore.<Area>")`. Never put IDs, names, phone numbers or tenant names in metric tags.
+### R15. Unit tests
 
-### R15. Tests: the shape to copy
+`tests/CrestApps.OrchardCore.Tests/<Area>/<ClassUnderTest>Tests.cs`, sealed, xUnit; the Kit style of `tests/CrestApps.OrchardCore.Tests/Agreements/AgreementsTests.cs` with doubles from `tests/CrestApps.OrchardCore.Tests/Doubles`; fixed clock (Monday 16 November 2026, noon New York); Arrange/Act/Assert separated.
 
-- Tests live in `tests/CrestApps.OrchardCore.Tests/<Area>/<ClassUnderTest>Tests.cs`, sealed classes, xUnit.
-- Copy the "Kit" style from `tests/CrestApps.OrchardCore.Tests/Agreements/AgreementsTests.cs`: a small kit that builds a harness with the services under test and test doubles from `tests/CrestApps.OrchardCore.Tests/Doubles`.
-- Name tests `{Method}_{Scenario}_{Expected}` or as a sentence (the Agreements tests use sentence style); separate Arrange, Act and Assert with blank lines and comments.
-- Use a fixed clock time (the Agreements tests use Monday 16 November 2026, noon in New York) so dates are stable.
+### R16. Real-database tests
+
+In `tests/CrestApps.OrchardCore.Psa.IntegrationTests` (created in WP01-T05): each test gets a fresh tenant from the `Psa` recipe (after WP03; before that, from the features under test) on SQLite; CI also runs them on SQL Server. Concurrency tests start parallel tasks against the real store and assert the effect happened once.
+
+### R17. Golden fixtures
+
+Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the test; compare outputs to its expected values. Never edit it (D-18). The manifest test fails if a fixture changes without a manifest change.
 
 ---
 
-## 4. Phase 0: Discovery and validation
+## 4. WP00 Readiness
 
-Goal: remove the plan's assumptions before building. Output is documents, not features. Plan section 22, row P0.
+- **Needs:** nothing. **Builds on:** plan sections 23 and 25.
+- **Who:** a maintainer or an agent that will **not** implement the business rules (golden data must be independent, D-18).
 
-### P0-01 Baseline the repository
+| Task | What | Done when |
+| --- | --- | --- |
+| T01 Baseline | Build and run all tests; record in `docs/engineering/psa/baseline.md`: date, commit, results, failing test names | File merged |
+| T02 Golden fixtures | Write under `tests/fixtures/psa/`: `rates/precedence.json` (5 scopes × 4 line specificities × Fixed/Multiplier with expected rates), `agreements/coverage.json` (overlaps, exclusions, umbrella, default, after-hours, site), `agreements/balances.json` (each entitlement kind, purchases, rollover, period edges, overage split), `agreements/migration/` (current agreements and expected balances), `time/approval-posting.json`, `projects/networks/*.json` (20 networks, expected dates computed with an independent critical-path tool, tool and version recorded), `resource-planning/capacity.json`, `billing/month-end/` (3 accounts, 5 agreements, 400 entries, expected invoices), `analytics/kpis.json`; a `README.md` recording author and method per file | Each file reviewed by a maintainer |
+| T03 Fixture manifest | `tests/fixtures/psa/MANIFEST.sha256` and a unit test that fails when a fixture's hash differs from the manifest; create `.github/CODEOWNERS` (the repository has none) owning `tests/fixtures/psa/` by the maintainers, so fixture changes need their approval | Test passes; CODEOWNERS merged |
+| T04 Benchmark data set | In `tests/CrestApps.OrchardCore.Benchmarks`, a generator for the reference data set of plan section 23 and benchmarks for the budgets listed there (coverage, approval, recalculation, board, posting are added as their work packages land) | Generator runs; budgets file `docs/engineering/psa/budgets.md` copied from plan section 23 |
 
-- **Needs:** nothing.
-- **Steps:**
-  1. Build and run all tests (section 2).
-  2. Record in `docs/engineering/psa/p0-baseline.md`: date, commit, build result, test counts (passed, failed, skipped), and any environment problems.
-- **Done when:** the baseline file is merged; failing tests (if any) are listed with their names.
-
-### P0-02 Accept the architecture decisions
-
-- **Needs:** P0-01.
-- **Steps:**
-  1. Create `docs/engineering/psa/adr/` with one file per decision ADR-01 to ADR-10 from plan section 25.1, using this layout: *Status*, *Context*, *Decision*, *Alternatives*, *Consequences*.
-  2. Leave *Status: Proposed*. A maintainer changes it to *Accepted*.
-- **Done when:** ten ADR files exist and a maintainer has marked each Accepted or written a change.
-
-### P0-03 Spike: Inventory without the storefront Commerce feature
-
-- **Needs:** P0-01.
-- **Steps:**
-  1. List every type Inventory (module, `.Core`) uses from Commerce, Carts, Checkout and Orders, using the compiler (remove the dependency in a throwaway branch and record the errors). Do not merge the throwaway branch.
-  2. For each, record whether it lives in Commerce Foundation, Products, or the storefront Commerce feature.
-  3. Write `docs/engineering/psa/p0-inventory-commerce.md` with the list and a proposed change.
-- **Done when:** the report says clearly "Inventory can / cannot run with only Products and Commerce Foundation" and lists the changes task P6-04 must make.
-
-### P0-04 Spike: YesSql volume
-
-- **Needs:** P0-01.
-- **Steps:**
-  1. In the benchmarks project (`tests/CrestApps.OrchardCore.Benchmarks`), add a benchmark that inserts 1,000,000 time-entry-like documents with an index of 8 columns and 100,000 task-like documents with 6 columns, on SQLite and SQL Server.
-  2. Measure: insert throughput, a filtered page query on two columns, a count by one column.
-  3. Write `docs/engineering/psa/p0-yessql-volume.md` with numbers and the index columns that must exist.
-- **Done when:** the report gives p95 times for the three queries and a recommendation for the TimeEntry and ProjectTask index columns.
-
-### P0-05 Decide where contact contracts live (ADR-07)
-
-- **Needs:** P0-01.
-- **Steps:** list every public type in `src/Core/CrestApps.OrchardCore.Omnichannel.Core` that Tickets, a portal or e-mail intake would need for contacts (contact lookup by e-mail, phone, account membership). Propose either `Omnichannel.Abstractions` or a new `Contacts.Abstractions`. Write the proposal into ADR-07.
-- **Done when:** ADR-07 names the target project and the list of types to move.
-
-### P0-06 Confirm open assumptions
-
-- **Needs:** P0-02.
-- **Steps:** copy plan section 25.3 into `docs/engineering/psa/assumptions.md` and get an answer from a maintainer for each line (performance targets, accounting stance, offline field support, session and MFA defaults, RPO/RTO).
-- **Done when:** every assumption is answered or explicitly deferred with a phase.
+**Done when:** all four tasks merged.
 
 ---
 
-## 5. Phase 1: Platform foundations
+## 5. WP01 Foundations
 
-Goal: shared mechanisms every later task uses. Plan section 22, row P1; specifications M01, M02, M03.
+- **Needs:** WP00. **Builds on:** `ticket-support-plan.md` §4.1 (record links), Approvals README. **Plan:** M01, M03, sections 16.2, 23; D-15, D-18, D-19.
 
-### P1-01 Record links: contracts and store (M01)
+### T01 Record links: contracts and store (M01)
 
-- **Needs:** P0-02.
-- **Read first:** `src/Abstractions/CrestApps.OrchardCore.Abstractions/Records/IRecordSource.cs`, the `RecordRef` type next to it, `src/Core/CrestApps.OrchardCore.Tickets.Core/Indexes/TicketLinkIndex.cs`, Recipe R2, R4.
-- **Create:**
-  - In `src/Abstractions/CrestApps.OrchardCore.Abstractions/Records/`: `RecordLink.cs` (From, To, Kind, CreatedById, CreatedUtc, Properties), `IRecordLinkService.cs`, `RecordLinkKind.cs` (Name, InverseName, DisplayName), registration helper `AddRecordLinkKind`.
-  - In `src/Core/CrestApps.OrchardCore.YesSql.Core` (or `CrestApps.OrchardCore.Core` if indexes live there; follow where `RecordRef` helpers live): `RecordLinkIndex`, provider, schema, store, `RecordLinkService`.
-- **Rules:**
-  1. A link is unique per (From, To, Kind).
-  2. Creating a link also makes it findable from the other end under the inverse kind.
-  3. Link and unlink require view permission on both records, checked through each record kind's `IRecordSource`.
-  4. Unknown kinds are refused.
+- **Read first:** `src/Abstractions/CrestApps.OrchardCore.Abstractions/Records/` (`RecordRef`, `IRecordSource`), `src/Core/CrestApps.OrchardCore.Tickets.Core/Indexes/TicketLinkIndex.cs`, where `IQuantityLedger` keeps its index in `CrestApps.OrchardCore.YesSql.Core` (pattern for a platform index), R2, R4.
+- **Create:** in `CrestApps.OrchardCore.Abstractions/Records/`: `RecordLink`, `IRecordLinkService`, `RecordLinkKind`, `AddRecordLinkKind`. In `CrestApps.OrchardCore.YesSql.Core/Records/`: `RecordLinkIndex` (multi-row: no; one row per link document), provider, schema helper, store, `RecordLinkService`. In the Resources module: a migration creating the table through the schema helper, and a `RecordLinks` view component.
+- **Rules:** unique per (From, To, Kind); listing from the target returns the inverse kind; link and unlink need view permission on both ends through each kind's `IRecordSource`; unknown kinds refused.
 - **Tests first:** `Link_SameTripleTwice_StoresOnce`; `List_FromTarget_ReturnsInverseKind`; `Link_WithoutViewPermissionOnTarget_IsRefused`; `Link_UnknownKind_IsRefused`; `Unlink_RemovesBothDirections`.
-- **Done when:** tests pass; public API baselines updated; `building-blocks.md` platform table has a "Links between records" row.
-- **Don't:** migrate Tickets yet (P1-02).
+- **Commit:** `WP01-T01 Typed record links`.
 
-### P1-02 Record links: view component and Tickets migration (M01)
+### T02 Ticket links on record links (M01)
 
-- **Needs:** P1-01.
-- **Read first:** `src/Modules/CrestApps.OrchardCore.Tickets` links UI and `TicketLinkKinds`, plan M01, Recipe R7.
-- **Steps:**
-  1. Add a `RecordLinks` view component in the Resources module that lists links of a record with add/remove for users allowed to.
-  2. Register Tickets' link kinds (Related, Parent/Child, Duplicate, FollowUpOf, Problem) through `AddRecordLinkKind` in Tickets.
-  3. Write a resumable step in Tickets that copies existing ticket links into record links.
-  4. Switch Tickets to read and write links through `IRecordLinkService`; keep `TicketLinkKinds` constants.
-  5. Keep the behaviour "solving a problem solves its incidents" unchanged.
-- **Tests first:** characterization tests for current Tickets link behaviour **before** changing code (problem solves incidents, links visible both ways, merge); then `ResumableStep_RunTwice_CopiesEachLinkOnce`.
-- **Done when:** every existing Tickets test passes unchanged; the new tests pass; the Tickets docs page mentions nothing new to users (behaviour is the same).
+- **Read first:** Tickets' link code and `TicketLinkKinds`; R7.
+- **Steps:** characterization tests of today's ticket links first (problem solves incidents, links both ways, merge); register Tickets' kinds with `AddRecordLinkKind`; resumable step copying ticket links to record links with a verification report (link counts per kind); dual-read (Tickets reads record links when the step has finished and verified, else `TicketLinkIndex`); new links written to both until the contract task in a later release.
+- **Tests first:** the characterization tests; in the integration project `TicketLinkStep_RunTwice_CopiesEachOnce_ReportMatches`.
+- **Commit:** `WP01-T02 Ticket links on record links`.
 
-### P1-03 Boards building block (M02)
+### T03 Approvals additions (M03)
 
-- **Needs:** P0-02.
-- **Read first:** `ITicketBoardService`, `TicketBoard`, `TicketBoardColumn`, `ticket-board.js`, `building-blocks.md` row "A board of cards in columns", Recipe R1, R4.
-- **Create:** `CrestApps.OrchardCore.Boards` (Abstractions, Core, module) with `IBoardSource` (Kind, columns, cards for a viewer, move), `Board` record (name, source kind, columns as status sets, filter, sharing: everyone/team/personal, WIP limit per column, swimlane field), board admin pages (R3), the board page, the move endpoint. Move the script to the Resources module as a generic board script.
-- **Steps:**
-  1. Build the block with a fake source in tests.
-  2. Make Tickets register a ticket board source; its `MoveAsync` calls the ticket service (never writes status directly).
-  3. Migrate existing ticket boards into `Board` records (resumable step, R7).
-  4. Remove the private board code from Tickets once its tests pass on the new block.
-- **Tests first:** characterization tests of ticket boards first; then `Move_CallsSourceMove_NotStatusWrite`, `Cards_AreFilteredBySourceAccess`, `WipLimit_Exceeded_ReturnsWarning`.
-- **Done when:** ticket boards work as before (same tests); Boards is in `building-blocks.md` replacing the "Tickets keeps the only one" note.
-- **Don't:** add project or CRM boards yet.
+- **Read first:** Approvals README, `IApproverRuleProvider`, `ApprovalTypeHandlerBase` (in `IApprovalTypeHandler.cs`), `ITeamMembershipService`, `SignedTokenService`.
+- **Steps:** (1) Team approver rule in a startup requiring the Teams feature (members of a team; optional minimum); (2) approve/reject links in approver notifications built with `SignedTokenService` (single use, expiry from Approvals settings; approval types may require a signed-in decision); (3) delegation (delegate and date range; decision records "on behalf of"); (4) policy simulation page and service method: given type, amount and scope, show the policy and approvers without creating a request.
+- **Tests first:** `TeamRule_ReturnsCurrentMembers`; `TeamRule_MinimumRespected`; `DecisionLink_UsedTwice_SecondRefused`; `DecisionLink_Expired_Refused`; `Delegation_InRange_AsksDelegate`; `Simulation_ReturnsPolicyAndApprovers_CreatesNothing`; `Requester_CannotApprove` still passes.
+- **Commit:** `WP01-T03 Approvals: team rule, e-mail decisions, delegation, simulation`.
 
-### P1-04 Approvals: team approver rule, signed e-mail decisions, delegation (M03)
+### T04 Isolation harness and scope convention
 
-- **Needs:** P0-02.
-- **Read first:** `src/Modules/CrestApps.OrchardCore.Approvals/README.md`, `IApproverRuleProvider`, `ApprovalTypeHandlerBase`, `ITeamMembershipService`, `SignedTokenService`.
-- **Steps:**
-  1. Add a `Team` approver rule provider in a `[RequireFeatures]` startup on the Teams feature: approvers are the team's members; optional "at least N".
-  2. Add decision links: each approver notification can carry an approve and a reject link built with `SignedTokenService` (single use, expiry from settings). The link opens a confirmation page; for approval types marked `RequireSignedInDecision`, the person must be signed in.
-  3. Add delegation: a user sets a delegate and a date range; during it, the delegate is asked instead and the decision records "on behalf of".
-- **Tests first:** `TeamRule_ReturnsCurrentMembers`; `TeamRule_MinimumApprovals_Respected`; `DecisionLink_UsedTwice_SecondIsRefused`; `DecisionLink_Expired_IsRefused`; `Delegation_InRange_AsksDelegate`; built-in rules still hold (`Requester_CannotApprove`).
-- **Done when:** tests pass; Approvals docs (both manuals) updated.
+- **Read first:** `ITicketAccessService`, `TicketScopeFilter`, `SourceAccess` types, plan 16.2, R12.
+- **Steps:** document the convention in `building-blocks.md` (platform table); create `tests/CrestApps.OrchardCore.Tests/Architecture/Isolation/` with a helper building accounts A and B, a staff user scoped to A's desk, portal users of A and B, records of both; each record family registers probes (list service, API handler, data set, search, attachment access, AI tool) that list records as a user; the helper asserts no foreign record appears; add probes for Tickets, Invoicing (my invoices) and Agreements (account tab). Add a two-tenant variant to the PSA integration project in T05.
+- **Tests first:** the probes; prove the harness catches a removed filter locally, then restore.
+- **Commit:** `WP01-T04 Isolation harness`.
 
-### P1-05 Isolation harness and scope-filter convention
+### T05 PSA test projects
 
-- **Needs:** P0-02.
-- **Read first:** `ITicketAccessService`, `TicketScopeFilter`, `SourceAccess` types in `CrestApps.OrchardCore.Abstractions`, plan section 16.2, Recipe R12.
-- **Steps:**
-  1. Write the convention in `building-blocks.md` (platform table): every record family has an access service and an SQL scope filter; name pattern `I<Record>AccessService` and `<Record>ScopeFilter`.
-  2. Create a test helper in `tests/CrestApps.OrchardCore.Tests/Architecture/Isolation/`: it builds two accounts (A, B), one staff user scoped to A's desk, one portal user of A, one portal user of B, and records for both accounts. Each record family registers a "probe" with the helper: a function that lists records through a given channel (list service, API handler, data set, AI tool) as a given user.
-  3. The helper asserts no probe returns a record of the other account.
-  4. Add probes for Tickets, Invoicing (my invoices) and Agreements (account tab).
-- **Tests first:** the probes themselves are the tests; make one fail on purpose locally (remove a filter) to prove the harness catches it, then restore.
-- **Done when:** the harness runs in the normal test run; the convention is documented.
+- **Read first:** `tests/CrestApps.OrchardCore.Commerce.IntegrationTests/` (fixture and host), `tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/`.
+- **Steps:** create `tests/CrestApps.OrchardCore.Psa.IntegrationTests` (SQLite by default, SQL Server through an environment variable used in CI) with a tenant fixture that enables named features (the `Psa` recipe is used from WP03); create `tests/CrestApps.OrchardCore.Psa.PlaywrightTests` with one smoke test (sign in, open Service Desk); add both to the solution and CI.
+- **Tests first:** `TenantFixture_CreatesTenantWithFeatures`; `TwoTenants_DoNotSeeEachOthersRecords` (tickets).
+- **Commit:** `WP01-T05 PSA integration and browser test projects`.
 
-### P1-06 Architecture guards for PSA
+### T06 PSA architecture guards
 
-- **Needs:** P0-02.
-- **Read first:** `tests/CrestApps.OrchardCore.Tests/Architecture/LayeringRatchetTests.cs`.
-- **Steps:**
-  1. Add a rule: no assembly whose name does not start with `CrestApps.OrchardCore.Psa` may reference one that does.
-  2. Add a test that reads every `Manifest.cs` feature dependency graph and fails on a cycle (use the same assembly scan the layering test uses).
-- **Tests first:** both rules as tests; prove each fails with a temporary bad reference, then remove it.
-- **Done when:** both tests pass on main.
+- **Read first:** `LayeringRatchetTests.cs`, `ProjectReferenceRulesTests.cs`, `ModuleDependencyGraphTests.cs`. `ModuleDependencyGraphTests` only guards commerce and payment assemblies, so it does not cover PSA or feature manifests; this task adds what is missing.
+- **Steps:** a rule that no assembly outside `CrestApps.OrchardCore.Psa*` references one inside; a test that reads every manifest's feature dependencies and fails on a cycle.
+- **Tests first:** both rules, each proven to fail with a temporary bad reference.
+- **Commit:** `WP01-T06 PSA guards`.
+
+**Done when:** all tasks committed; existing Tickets and Approvals tests unchanged; isolation harness and integration projects run in CI; end-of-work-package routine done.
 
 ---
 
-## 6. Phase 2: Core business blocks
+## 6. WP02 Boards
 
-Goal: contacts abstraction, rates and the PSA skeleton. Plan row P2; specifications M04, M05, M21.
+- **Needs:** WP00. **Builds on:** `ticket-boards-plan.md`. **Plan:** M02; A5.
 
-### P2-01 Move contact contracts to an Abstractions project (M04, D3)
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Characterize ticket boards | Tests pinning current behaviour: columns of statuses, move calls `ITicketService.UpdateAsync`, cards filtered by `ITicketAccessService.ApplyScopeAsync`, shared/team/personal boards, recipes | The characterization tests |
+| T02 Boards block | Create `CrestApps.OrchardCore.Boards` (R1): `IBoardSource` (kind, columns, cards for a viewer, move), `Board` record (name, source kind, columns, filter, sharing, WIP limits, swimlane field), admin pages (R3), board page, move endpoint; generic board script in Resources | `Move_CallsSourceMove_NeverWritesStatus`; `Cards_FilteredBySourceAccess`; `WipLimitExceeded_Warns` |
+| T03 Tickets on Boards | Tickets registers a board source; resumable step moves `TicketBoard` records to `Board` records with verification (R7); Service Desk > Boards keeps its menu place | All T01 tests pass unchanged; `BoardStep_RunTwice_SameBoards` |
+| T04 Clean-up and docs | Private board code removed only after T03 passes; `building-blocks.md` row updated (Boards is the owner) | Architecture tests |
 
-- **Needs:** P0-05, P1-06.
-- **Read first:** ADR-07, `docs/engineering/reusability-audit-2026-11.md` item D3, `src/Core/CrestApps.OrchardCore.Omnichannel.Core`.
-- **Steps:**
-  1. Create the target project named in ADR-07 if it does not exist (R1 steps 1–3 only).
-  2. Move the listed interfaces and records there, keeping namespaces stable if ADR-07 says so; otherwise add the new namespace and update usings.
-  3. Make `Omnichannel.Core` reference the new project and implement the interfaces.
-  4. Do it in small commits: one interface per commit, building after each.
-- **Tests first:** existing Omnichannel tests must pass unchanged; add `ContactFinder_ByEmail_ReturnsAccountContact` against the moved interface if no such test exists.
-- **Done when:** a grep shows no consumer outside Omnichannel references `Omnichannel.Core` for contacts; public API baselines updated; audit section 0 note for D3 updated to "done".
-
-### P2-02 Account health signals (M04)
-
-- **Needs:** P2-01.
-- **Steps:**
-  1. In `Accounts.Abstractions`: `IAccountHealthSignalProvider` (name, weight default, `GetSignalAsync(accountId)` returning 0–100 and a short reason) and `AccountHealthSettings` (weights per signal).
-  2. In `Accounts.Core`: `IAccountHealthService` combining signals as a weighted average of present signals.
-  3. In Tickets (R5): a signal from open tickets and SLA breaches in the last 30 days; in Invoicing (R5): overdue receivables; in Tickets: CSAT average.
-  4. A card on the account page (display driver) showing score and reasons, only to users who can view the account.
-- **Tests first:** `Score_IsWeightedAverageOfPresentSignals`; `Score_NoSignals_IsNull`; each provider with fixture data.
-- **Done when:** card shows on the account page; docs updated.
-
-### P2-03 Rates: work roles and work types (M05)
-
-- **Needs:** P1-06.
-- **Read first:** plan M05 (all of it), R1, R2, R3, R6.
-- **Steps:**
-  1. Create the Rates block (R1).
-  2. Add `WorkRole` and `WorkType` catalog records (R2) with fields from plan M05 E.
-  3. Admin pages (R3), recipe and deployment steps (R6), permissions `ManageRates`, `ViewBillRates`, `ViewCostRates`.
-  4. Usage guard interface `IRateUsage` so a role or type in use cannot be deleted.
-- **Tests first:** `WorkRole_CodeMustBeUnique`; `WorkType_MultiplierAndFixedRate_AreMutuallyExclusive`; `Delete_InUse_IsRefused`; recipe round-trip.
-- **Done when:** admins can manage roles and types; docs pages exist.
-
-### P2-04 Rates: rate cards (M05)
-
-- **Needs:** P2-03.
-- **Steps:**
-  1. `RateCard` aggregate with `RateLine`s, `ScopeKind` + `Scope` (`RecordRef`), currency, effective dates, status Draft/Active/Retired using `TransitionTable<RateCardStatus>`.
-  2. `IRateScopeProvider` with `AddRateScope(kind, displayName)` (R4); register a built-in `Default` scope and a `Party` scope (accounts) in Rates.
-  3. Overlap rule: two active cards in the same scope and currency cannot have overlapping dates.
-  4. Card editor as a grid of work role × work type (R3), copy card, activate, retire.
-- **Tests first:** `Activate_OverlappingSameScopeAndCurrency_IsRefused`; `Retire_ActiveCard_Succeeds`; `Activate_RetiredCard_IsRefused`.
-- **Done when:** cards can be created and activated in the UI and recipes.
-
-### P2-05 Rates: resolver and snapshots (M05)
-
-- **Needs:** P2-04.
-- **Steps:**
-  1. `IRateResolver.ResolveAsync(RateRequest)` → `RateSnapshot` exactly as plan M05 D "Business rules" (precedence 1–5, line specificity, multiplier vs fixed, non-billable → bill 0, currency conversion with Exchange Rates on the work date).
-  2. Cost rate from Staff: `StaffPayRates.CostOn(date)` through the Staff abstractions.
-  3. Snapshots are value objects; nothing stores them yet (consumers do in later tasks).
-  4. A rate preview page (pick account, role, type, date) for `ViewBillRates` users; cost column only with `ViewCostRates`.
-  5. API `GET api/rates/v1/resolve` (R10).
-- **Tests first:** a `[Theory]` precedence matrix covering 5 scopes × 4 line specificities × (multiplier, fixed); `NonBillableType_BillRateZero_CostKept`; `ForeignCurrencyCard_ConvertsOnWorkDate`; `EffectiveDate_BoundaryInNewYork_UsesLocalDate`; `Api_WithoutViewCostRates_OmitsCost`.
-- **Done when:** all plan M05 O criteria pass; Rates registered in `building-blocks.md`.
-
-### P2-06 PSA module skeleton (M21)
-
-- **Needs:** P1-06, P2-03.
-- **Read first:** plan M21, an existing setup recipe in a module's `Recipes/` folder (for example Tickets' "Help desk starter" recipe), Users/Roles recipe steps.
-- **Steps:**
-  1. Create `src/Modules/CrestApps.OrchardCore.Psa` (module only; it needs no `.Abstractions`/`.Core` yet). Add to slnx and Targets.
-  2. Feature `CrestApps.OrchardCore.Psa` depending on the features available so far (Tickets, Service Levels, Agreements, Accounts, Staff, Teams, Rates, Invoicing, Time Tracker).
-  3. A `Psa` recipe that enables those features and creates: desks (Service Desk), ticket types (Incident, Service Request), statuses, priorities with an impact × urgency matrix, business hours, SLA policies Gold/Silver/Bronze, work roles (Technician, Senior Engineer, Project Manager), work types (Remote, Onsite, After hours, Internal), a default rate card.
-  4. Role templates as recipe roles: the 13 roles from plan M21 with only permissions that exist today. Leave a TODO list in the README of permissions to add when later modules land (not in code).
-  5. Admin menu groups: Service, Projects, Field, Sales, Finance, Resources, Insights, Setup (only items that exist).
-- **Tests first:** `PsaRecipe_OnFreshTenant_CreatesExpectedRecords` (integration-style via the harness); `RoleTemplates_HaveNoUnknownPermissions`.
-- **Done when:** a fresh tenant set up with the recipe shows the menu and works for tickets; the layering guard (P1-06) passes.
+**Done when:** ticket boards behave as before; Boards documented.
 
 ---
 
-## 7. Phase 3: Service operations
+## 7. WP03 Rates and PSA skeleton
 
-Goal: e-mail intake, templates, recurring tickets, service catalog, knowledge lifecycle, portal v1. Plan row P3; specifications M06, M07, M08, M22. Can run in parallel with Phase 4.
+- **Needs:** WP01. **Builds on:** `staff-plan.md`, `accounts-plan.md`, `time-tracker-people-teams-review.md`. **Plan:** M05, M04 (1–3), M21; D-11, D-16, D-25.
 
-### P3-01 E-mail channel: mailboxes and providers (M06)
+### T01 Work roles (M05)
 
-- **Needs:** P2-01.
-- **Read first:** `.agents/skills/crestapps-messaging-channel/SKILL.md`, `IMessagingChannel`, Data Connectors (`IDataConnector`, `DataConnection`), `ILeasedWorkQueue<T>`, `IProviderWebhookInbox`, Attachments `IAttachmentService`.
-- **Steps:**
-  1. New feature `CrestApps.OrchardCore.Omnichannel.Messaging.Email` in the Messaging module family, following the channel skill.
-  2. `Mailbox` catalog record (R2) and admin pages (R3) with "Test connection" and "Last sync".
-  3. `IEmailMailboxProvider` (R4) with two implementations as separate features: Microsoft Graph (push subscription + delta query) and IMAP (polling with UID cursor).
-  4. Polling background task per enabled mailbox, enqueuing work on the leased work queue (R14 telemetry).
-  5. Push notifications arrive through the provider webhook inbox.
-- **Tests first:** provider-neutral tests with a fake provider: `Poll_SameMessageTwice_ProcessedOnce`; `Cursor_AdvancesOnlyAfterSave`.
-- **Done when:** a mailbox can be configured and synced against the fake provider in tests; credentials only via Data Connectors; docs for both manuals.
+- Create the Rates block (R1); `WorkRole` record (R2); Content > Rates > Work Roles (R3); recipe and deployment (R6); permissions `ManageRates`, `ViewBillRates`, `ViewCostRates`; `IRateUsage` delete guard.
+- **Tests first:** `WorkRole_CodeUnique`; `Delete_InUse_Refused`; recipe round-trip.
 
-### P3-02 E-mail channel: parsing, threading, loops (M06)
+### T02 Rate cards (M05)
 
-- **Needs:** P3-01.
-- **Steps:**
-  1. Parse MIME: text and HTML bodies (sanitized), inline images, attachments through `IAttachmentService` (policy, byte sniffing, scanner).
-  2. `IEmailThreadResolver`: match by `In-Reply-To`/`References` first, then a subject token, then none.
-  3. `IEmailLoopGuard`: skip auto-replies (`Auto-Submitted` not `no`, `Precedence: bulk|auto_reply|list`, `X-Auto-Response-Suppress`), throttle a sender over N messages in M minutes (settings).
-  4. `IEmailSenderResolver`: find the party by address, then by account e-mail domain (Accounts E-mail Domains).
-  5. Outbound: send replies with `Message-ID`, `In-Reply-To`, `References` and the subject token.
-- **Tests first:** fixture `.eml` files under the test project: `Reply_WithReferences_ThreadsToConversation`; `OutOfOffice_IsIgnored`; `DisguisedExecutable_IsQuarantined`; `UnknownSender_KnownDomain_ResolvesAccount`; `Loop_OverThreshold_IsThrottled`.
-- **Done when:** all M06 O criteria pass.
+- `RateCard` with `RateLine {WorkRoleId?, TimeStageId?, Kind(Fixed, Multiplier), Value}`, `ScopeKind`/`Scope`, currency, dates, `DefaultRate`, status by `TransitionTable`; `IRateScopeProvider` with `AddRateScope` and built-in `Default` and `Party` scopes; card editor as a role × stage grid; copy, activate, retire. Stages are read through Time Tracker's abstractions.
+- **Tests first:** `Activate_OverlappingSameScopeAndCurrency_Refused`; `Activate_Retired_Refused`; `Line_UnknownStage_Refused`.
 
-### P3-03 Tickets.Email bridge (M07)
+### T03 Rate resolver (M05)
 
-- **Needs:** P3-02.
-- **Read first:** plan M07 "Tickets.Email", Tickets' messaging integration (`TicketConversationSource`), `TicketPart` (`RequesterUnverified`, `FollowUpOfId`).
-- **Steps:** new feature `CrestApps.OrchardCore.Tickets.Email` (R5). Mailbox → desk and ticket type mapping. New thread → ticket through `ITicketService`; reply → public reply; agent address → agent reply; closed beyond reopen window → follow-up ticket; CC → participants only when same account. Requester e-mails include the token and threading headers.
-- **Tests first:** `NewThread_CreatesTicket_WithRequester`; `Reply_AddsPublicReply`; `AgentReply_FromAgentAddress_IsAgentReply`; `ReplyToClosedBeyondWindow_CreatesFollowUp`; `CcOtherAccount_IsNotParticipant`; `AutoReply_CreatesNothing`.
-- **Done when:** end-to-end test e-mail → ticket → reply → solve passes; Tickets docs updated.
+- `IRateResolver` exactly as plan M05 D rules 1–6; cost from Staff (`StaffPayRates.CostOn`); rate preview page; `GET api/rates/v1/resolve` (R10).
+- **Tests first:** golden `rates/precedence.json` (R17); `NonBillableStage_BillZero_CostKept`; `ForeignCurrency_ConvertedOnWorkDate`; `EffectiveDate_LocalDateInNewYork`; `Api_WithoutViewCostRates_OmitsCost`.
 
-### P3-04 Ticket templates (M07)
+### T04 Rates on Staff and Account pages; bulk import (M05)
 
-- **Needs:** P2-06.
-- **Steps:** `TicketTemplate` catalog record (ticket type, field values, checklist items, child ticket definitions, default work type, estimate); admin pages; "New from template" action on the ticket list; `ITicketTemplateService.ApplyAsync`.
-- **Tests first:** `Apply_SetsFieldsAndCreatesChildren`; `Apply_TemplateOfOtherTicketType_IsRefused`.
-- **Done when:** agents can create tickets from templates; recipe/deployment steps exist.
+- Display drivers: default work role card on the Staff editor; assigned rate card on the Account page; ContentTransfer record importer for rate cards (`AddContentTransferImportTarget<T>()`).
+- **Tests first:** `StaffDefaultRole_Saved`; `Import_InvalidRow_Fails_WithReason`.
 
-### P3-05 Recurring tickets (M07)
+### T05 Account health, roll-ups, account-team routing (M04)
 
-- **Needs:** P3-04.
-- **Read first:** Calendars `RecurrenceRule`, `RecurrenceExpander`, `CalendarTime`.
-- **Steps:** `RecurringTicketSchedule` record (template, RRULE, time zone, account, desk, assignee/team, lead days, end rule, "skip if previous open"). Background task: for each due occurrence, create a ticket keyed by (schedule ID, occurrence date) under a lock (R11). Admin pages.
-- **Tests first:** `Occurrence_CreatedOncePerDate_EvenAfterRestart`; `DstTransition_OccurrenceAtLocalTime`; `SkipIfPreviousOpen_SkipsAndLogs`.
-- **Done when:** M07 O "recurring" criterion passes.
+- `IAccountHealthSignalProvider`, `IAccountHealthService` (weighted average of present signals, equal default weights, editable under Settings > Accounts); providers in Tickets (open tickets and breaches, satisfaction) and Invoicing (overdue) through R5 (Agreements adds its signals in WP06); health card on the account page; parent account roll-up cards (children's open tickets and receivables, scoped); notifications addressed to "account manager" resolve through the Account Team feature's roles.
+- **Tests first:** `Score_WeightedAverageOfPresentSignals`; `Score_NoSignals_Null`; `RollUp_HidesChildWithoutPermission`.
 
-### P3-06 Service catalog (M07)
+### T06 PSA module, recipe and role templates (M21)
 
-- **Needs:** P3-04.
-- **Steps:** `ServiceCatalogItem` content type with `ServiceCatalogItemPart` (category taxonomy, audience by role/account, ticket type, template, approval policy, fulfilment SLA policy, displayed price), form fields via Conditional Fields. `IServiceCatalogService` returns items visible to a requester and submits a request (ticket from template + answers + Ticket Approvals when a policy applies). Audience enforced on the server at submit.
-- **Tests first:** `VisibleItems_RespectAudience`; `Submit_ItemNotInAudience_IsRefused`; `Submit_WithPolicy_StartsApproval`.
-- **Done when:** items can be published and requested (portal UI comes in P3-08).
+- Create `src/Modules/CrestApps.OrchardCore.Psa` (module only), add to slnx and Targets; feature depending on the features available now; `Psa` recipe creating the defaults listed in plan M21 (1) that exist now (desk, ticket types, statuses, priorities and matrix, business hours, SLA policies, Time Tracker stages with categories, work roles, default rate card); recipe roles for the 13 role templates with only existing permissions; PSA settings under Settings > PSA (default stage per desk, time approval period default; billing grouping comes in WP13).
+- **Tests first (integration):** `PsaRecipe_FreshTenant_CreatesDefaults`; `RoleTemplates_NoUnknownPermissions`; `PsaSettings_RequirePermission` (`SiteSettingsGroupPermissionRegistrationTests` passes).
 
-### P3-07 Knowledge Base lifecycle (M08)
+### T07 Get Started page (M21)
 
-- **Needs:** P1-04.
-- **Steps:** owner, review date, states Draft → In review → Published → Retired with an approval type `KnowledgeArticle` for governed categories; review reminder background task (once per article per review date); "Create article from ticket" action linking both (record link kind `DocumentedBy`); known-error flag linking to a problem ticket.
-- **Tests first:** `Publish_GovernedCategory_RequiresApproval`; `ReviewReminder_FiresOnce`; `InternalArticle_NotReturnedBySuggestApiToAnonymous`.
-- **Done when:** M08 O criteria pass; add the KB to the isolation harness.
+- A Get Started page (not in the menu) with the checklist of plan M21 (4), each item linking to the page that does it and showing done or not; linked from the PSA settings page and empty states.
+- **Tests first:** `Checklist_ItemDone_WhenRecordExists`.
 
-### P3-08 Client portal v1 (M22)
-
-- **Needs:** P2-01, P3-06.
-- **Read first:** Users "My Account" feature, Tickets Portal (`TicketPortalController`, `TicketPortalAccess`), Resources `PageSections`, `UserParties`, `IPartyMembershipService`.
-- **Steps:**
-  1. Create `CrestApps.OrchardCore.Psa.Portal` (module only).
-  2. A portal shell page with a menu built from registered sections; sections for: My tickets (existing portal pages), Request a service (catalog), Help center (KB).
-  3. Portal administrator role per account: can see all the account's tickets, manage the account's portal users, approve catalog requests.
-  4. Rate limits on portal endpoints.
-- **Tests first:** add portal probes to the isolation harness (P1-05): portal user of A cannot see B's tickets, catalog requests or articles; `PortalAdmin_SeesAllAccountTickets`; `PortalUser_SeesOwnTicketsOnly_WhenSharingOff`.
-- **Done when:** isolation harness green with portal probes; User Manual page for portal users.
+**Done when:** the PSA integration tests now build their tenant from the `Psa` recipe (update R16 fixture); rates resolve on a fresh tenant; end-of-work-package routine done.
 
 ---
 
-## 8. Phase 4: Commercial management
+## 8. WP04 Service operations
 
-Goal: full contract model and quotes. Plan row P4; specifications M09, M10. Can run in parallel with Phase 3.
+- **Needs:** WP03. **Builds on:** `ticket-support-plan.md`, `ticket-intake-plan.md` (decisions §9 bind), Service Levels docs. **Plan:** M07 (templates, recurring, catalog additions, SLA attainment and escalation), M08, M22 v1; D-14.
 
-### P4-01 Agreements: entitlements and ledger (M09)
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Ticket templates | `TicketTemplate` (type, category, field values, checklist, child-ticket definitions, default stage, estimate); Service Desk > Templates; "New from template"; `ITicketTemplateService.ApplyAsync` | `Apply_SetsFieldsAndChildren`; `Apply_OtherType_Refused` |
+| T02 Recurring tickets | `RecurringTicketSchedule` (template, RRULE via Calendars `RecurrenceRule`, time zone, account, desk, team, assignee, lead days, end rule, when previous open); background task creates each occurrence once under a lock (key = schedule + date), R14 | `Occurrence_OncePerDate_AfterRestart` (integration); `Dst_OccurrenceAtLocalTime`; `SkipWhenPreviousOpen` |
+| T03 Catalog additions | On `TicketCategoryPart`: approval policy (Ticket Approvals before work), fulfilment template (child tickets), audience by account, displayed price; portal flow unchanged (types, then categories); audience enforced on submit | `Submit_CategoryOutsideAudience_Refused`; `Submit_WithPolicy_StartsApproval`; `Approved_CreatesFulfilmentChildren` |
+| T04 Escalation chains | `EscalationChain` per desk (steps: trigger warning/breach of a metric; actions notify team lead, user or role, reassign team, raise priority, raise level), editor under Configuration > Tickets; an `IServiceLevelObserver` in Tickets runs each step once per timer | `Breach_RunsStepOnce`; `Warning_NotifiesTeamLead`; `Reassign_UsesTicketService` |
+| T05 SLA attainment | Data set: met ÷ completed by policy, metric, priority, account, period (R8); goal % per policy for reporting; report under Reports | Data set isolation probe; `Attainment_FromTimers_MatchesFixture` |
+| T06 Knowledge Base lifecycle | Owner, review date, states Draft → In review → Published → Retired with approval type `KnowledgeArticle` for governed categories; review reminder once; "Create article from ticket" with link kind `DocumentedBy`; known-error flag linking a problem ticket | `GovernedPublish_NeedsApproval`; `ReviewReminder_Once`; `InternalArticle_NotInSuggestApiForAnonymous`; KB probes |
+| T07 Portal v1 | Create `CrestApps.OrchardCore.Psa.Portal`; portal shell built from registered sections: My tickets (existing Tickets Portal), Request a service (intake catalog), Help center (KB); portal administrator role per account (all the account's tickets, manage its portal users, approve catalog requests); rate limits | Portal probes in the isolation harness; `PortalAdmin_SeesAccountTickets`; `PortalUser_OwnTicketsOnly_WhenSharingOff` |
+| T08 End-to-end W4 | Playwright: ticket → SLA warning → escalation → solve | The test |
 
-- **Needs:** P2-05.
-- **Read first:** plan M09 all; `Agreement`, `AgreementHours`, `IAgreementBalanceService`, `AgreementBalanceService`, `AgreementPeriods`, `IQuantityLedger<T>` and how Workforce time off registers a ledger (`AddQuantityLedger`), R7, R11.
-- **Steps:**
-  1. Add `Entitlement` (Id, Kind Hours/Money/Incidents/Units, Amount, Period, Rollover, ExpiresAfter, Thresholds, AutoRepurchase) and `Agreement.Entitlements` list.
-  2. Register an `AgreementEntitlements` quantity ledger.
-  3. `IEntitlementService`: `DrawAsync(agreementId, entitlementId, amount, sourceKey)`, `ReverseAsync(sourceKey)`, `GetBalanceAsync(agreementId, entitlementId, date)` (R11: lock `agreement:<id>`, key = sourceKey).
-  4. Resumable step: convert each agreement's `AgreementHours` into one Hours entitlement and post existing usage as draws so balances match.
-  5. Make `IAgreementBalanceService` read the ledger; keep its public contract.
-  6. Keep `AgreementHours` readable until a later cleanup task (mark obsolete in docs, not deleted).
-- **Tests first:** characterization tests of current balances first; `Draw_SameSourceKeyTwice_ChangesBalanceOnce`; `ParallelDraws_NeverExceedAmount_WhenNoOverage`; `Rollover_MonthlyAllowance_CarriesUnused`; `Expired_EntitlementRefusesDraw`; `Migration_BalancesEqualBefore`.
-- **Done when:** all existing Agreements, Tickets and Work Orders tests pass; new tests pass.
-
-### P4-02 Agreements: kinds and types (M09)
-
-- **Needs:** P4-01.
-- **Steps:** `IAgreementKind` with `AddAgreementKind<T>` (R4) and the seven kinds of plan M09 C registered by Agreements; `AgreementType` catalog record (template: kind, entitlements, coverage rules, additions, SLA policy, renewal policy) with admin pages; "New agreement from type".
-- **Tests first:** `NewFromType_CopiesTemplate`; `UnknownKind_IsRefused`.
-- **Done when:** the six competitor contract kinds can be created from types.
-
-### P4-03 Agreements: coverage service (M09, A2)
-
-- **Needs:** P4-02.
-- **Read first:** `ITicketAgreementResolver` and its implementation in Tickets, `TicketAgreementTerms`.
-- **Steps:**
-  1. `CoverageRule` on agreements (includes/excludes: work role IDs, work type IDs, desks/ticket types via an open "subject filter" kind registered by consumers, time window, sites; rate override).
-  2. `IAgreementCoverageService.ResolveAsync(CoverageRequest)` returning `CoverageDecision`, following plan M09 D rules 1, 2 and 5 (most specific wins, umbrella last, earliest start, default agreement per account).
-  3. `AgreementCoverageIndex` for fast lookup.
-  4. Resumable step: convert `TicketAgreementTerms` into coverage rules.
-  5. In Tickets: reimplement `ITicketAgreementResolver` as an adapter over the coverage service (keep the interface).
-  6. Register `Agreement` as a Rates scope (`AddRateScope`).
-- **Tests first:** a decision-table `[Theory]`: overlapping agreements, exclusions falling through, umbrella, default agreement, after-hours window, site rule; `TicketTermsMigration_SameAgreementChosenAsBefore`.
-- **Done when:** existing Tickets agreement tests pass through the adapter; coverage p95 under the P0-06 target in the benchmark.
-
-### P4-04 Agreements: additions and quantity sources (M09)
-
-- **Needs:** P4-02.
-- **Steps:** `Addition` list on agreements (product reference via Products, quantity source, quantity, unit price, unit cost, frequency, timing advance/arrears, pro-rata policy, start, end); `IAdditionQuantitySource` with `AddAdditionQuantitySource<T>` (R4); a built-in "account contacts count" source in Accounts (R5). (Assets' device count comes in P6-01.)
-- **Tests first:** `Quantity_FromSource_ReadAtRunDate`; `ProRata_MidPeriodStart`.
-- **Done when:** additions are editable on the agreement page.
-
-### P4-05 Agreements.Billing bridge (M09)
-
-- **Needs:** P4-04.
-- **Read first:** `.agents/skills/crestapps-invoicing/SKILL.md`, `IRecurringPlanService`, recurring plan docs.
-- **Steps:** new feature `CrestApps.OrchardCore.Agreements.Billing` (depends on Agreements and Invoicing Recurring). One recurring plan per active agreement with additions; sync on agreement change; freeze quantities on the invoice line at each run; milestones and overage posted as `BillableItem`s (review queue comes in P7-01); register the invoice grouping policy hook later used by M17.
-- **Tests first:** `Activate_CreatesOneRecurringPlan`; `Run_FreezesQuantitiesOnLines`; `Run_Twice_InvoicesOnce` (rely on plan occurrence idempotency); `Overage_CreatesBillableItemOnce`.
-- **Done when:** workflow W8 passes in an integration test.
-
-### P4-06 Agreements: lifecycle, renewals, amendments, notices (M09)
-
-- **Needs:** P4-01.
-- **Steps:** states per plan M09 G with `TransitionTable`; versions (`Version`, `ParentAgreementId`); renewal (manual/auto, uplift %); amendments recorded as change records; threshold notices and auto-repurchase in the existing Agreements background task (extend, do not add another loop); failed repurchase → payment issue record via Checkout's `IPaymentIssueRecorder` if available, else a notification.
-- **Tests first:** state machine tests for each allowed and refused move; `AutoRenew_CreatesNewVersion_WithUplift`; `Threshold_NotifiesOncePerPeriod`; `Amendment_DoesNotChangePostedDraws`.
-- **Done when:** M09 O criteria 1–3 pass.
-
-### P4-07 Estimates as quotes (M10)
-
-- **Needs:** P2-05, P4-02.
-- **Read first:** plan M10, `IEstimateCommandService`, estimate models and public page.
-- **Steps:**
-  1. Sections with optional lines; line kinds `Labor` (priced by `IRateResolver`) and `Recurring` (frequency, term).
-  2. Totals shown as one-time and recurring.
-  3. Margin service (`IEstimateMarginService`); approval type `Estimate` when margin or discount crosses settings thresholds.
-  4. Signature capture on the public accept page (typed name, time, IP hash, document SHA-256).
-  5. `IEstimateConversionTarget` (R4); conversions recorded and run once per (estimate version, section).
-  6. Agreements.Billing registers an agreement conversion target (recurring section → agreement with additions).
-  7. Opportunity link field.
-- **Tests first:** `Accept_WithOptionalLinesSelected_TotalsCorrect`; `SignatureHash_MatchesDocument`; `Convert_Twice_CreatesOnce`; `LowMargin_RequiresApproval`; `PublicPage_ShowsNoCost`.
-- **Done when:** M10 O passes for the agreement target (the project target is added in P5-06).
-
-### P4-08 CRM opportunities link to quotes (M04)
-
-- **Needs:** P4-07.
-- **Steps:** opportunity gains estimate links, forecast category, recurring and one-time amounts; opportunity page lists quotes; "Create quote" action.
-- **Tests first:** `CreateQuote_FromOpportunity_LinksBoth`.
-- **Done when:** workflow W1 up to agreement creation passes.
+**Done when:** each feature can be enabled alone; existing Tickets tests unchanged; W4 passes.
 
 ---
 
-## 9. Phase 5: Projects and time
+## 9. WP05 E-mail (after #817)
 
-Goal: billable time ledger, projects, resource planning. Plan row P5; specifications M11, M12, M13.
+- **Needs:** WP03 and pull request #817 merged. **Builds on:** `ticket-support-plan.md` §6.4; #817's `docs/engineering/omnichannel/email-channel-plan.md`. **Plan:** M06, M07 `Tickets.Email`; D-13.
+- First action: re-read the merged #817 code; if any contract named below changed, stop and ask.
 
-### P5-01 Time entries: billable attribution (M13, A5)
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Sender throttling | `IInboundSenderThrottle` in the receiver pipeline: a sender above N messages in M minutes (address settings) is quarantined with a cause | `OverThreshold_Quarantined`; `UnderThreshold_Passes` |
+| T02 OAuth mailbox sign-in | OAuth 2.0 authorization code for Microsoft and Google on the address's Email card; refresh tokens stored through Data Connectors in Orchard Core Secrets; IMAP and SMTP use XOAUTH2; failed refresh disables the source and notifies | `ExpiredRefresh_DisablesAndNotifies`; secret never appears in logs |
+| T03 Microsoft Graph source | Change notifications (client state validated) trigger a delta query; each message becomes `InboundEmail` for `IEmailInboundReceiver`; cursor advances after commit | Recorded payloads: `DuplicateNotification_OnceOnly`; `ForgedNotification_ReadsNothing` |
+| T04 Gmail source | Pub/Sub push (token validated) triggers a history read; same rules as T03 | Same as T03 with Gmail payloads |
+| T05 Tickets.Email | Feature `CrestApps.OrchardCore.Tickets.Email`: address → desk and type mapping (Configuration > Tickets); threading by signed token, then `In-Reply-To`/`References`; new thread → ticket (requester through Parties; unknown sender → contact when allowed, else `RequesterUnverified`); reply → public reply; agent address → agent reply; closed beyond window → follow-up; CC → participants of the same account only; automatic mail → nothing, quarantined; outbound e-mails carry token and headers | `NewThread_CreatesTicket`; `Reply_PublicReply`; `AgentReply`; `ClosedBeyondWindow_FollowUp`; `CcOtherAccount_NotParticipant`; `AutoReply_Nothing` |
+| T06 End-to-end W2 (to solved) | Playwright with the raw-MIME webhook: e-mail → ticket → reply → solve | The test |
 
-- **Needs:** P2-05, P4-03.
-- **Read first:** plan M13, `ITimeTrackerService`, Tickets' `TicketTime.LogAsync`, Time Tracker README.
-- **Steps:** add `Subject` (`RecordRef`), `WorkRoleId`, `WorkTypeId`, `Billable`, `CustomerVisibleNote`, `InternalNote`, `AgreementId`, `CoverageDecision`, `RateSnapshot`, `TimesheetId`, `ApprovalState` to time entries; update the index (columns from P0-04); `ITimeEntryDefaultsProvider` (R4) with a Tickets implementation (role from staff default, type from desk default); ticket time panel captures role and type; migration sets `Subject` where the existing link is known.
-- **Tests first:** `Entry_WithoutSubjectOrInternalType_IsRefused`; `TicketDefaults_Applied`; `Migration_SetsSubjectForTicketEntries`.
-- **Done when:** existing Time Tracker and Tickets time tests pass.
-
-### P5-02 Timesheets and approval (M13)
-
-- **Needs:** P5-01, P1-04.
-- **Steps:** feature `TimeTracker.Timesheets`; `Timesheet` record per staff and period (period from Payroll Pay Setup schedules if configured, else weekly); submit, recall, approve, reject through an approval type `Timesheet` with approver rules manager and "project manager of any entry's project" (registered later by Projects); lock entries on submit; reversal entries after approval; weekly grid UI.
-- **Tests first:** `Submit_LocksEntries`; `Recall_BeforeDecision_Unlocks`; `EditApproved_CreatesReversal`; `OverlappingClockIntervals_BlockSubmit`.
-- **Done when:** timesheets can be submitted and approved end to end.
-
-### P5-03 Time posting on approval (M13)
-
-- **Needs:** P5-02, P4-05.
-- **Steps:** `ITimeEntryPostingService` on timesheet approval: coverage → entitlement draw (key = entry ID) → rate snapshot → `BillableItem` for uncovered billable minutes; implement `IAgreementUsageProvider`, `IBillableSource`; optional `IPayInputSource` for hourly staff (setting).
-- **Tests first:** `Approve_Mixed_ProducesExactDrawsAndItems`; `ReapproveAfterRecall_NoDuplicates`; `PartialFailure_RetriedOnce` (fault injection).
-- **Done when:** workflow W7 passes; M13 O passes.
-
-### P5-04 Projects core (M11)
-
-- **Needs:** P1-01, P1-03, P2-05.
-- **Read first:** plan M11 all, R1–R3, R12.
-- **Steps:** create the Projects block; `Project`, `ProjectPhase` (decide in-document vs separate using P0-04 results; default separate records), `ProjectTask` (separate documents), `TaskDependency` value object, project types (open kind); states with `TransitionTable`; numbering `PRJ-`, `T-`; `IProjectAccessService` + `ProjectScopeFilter`; project list and project page with Overview, Tasks (list) sections; register `Project` and `ProjectTask` record sources, timeline and attachment access providers; add to isolation harness.
-- **Tests first:** state machine tests; `Task_InClosedProject_IsRefused`; isolation probes (staff outside team, portal user of other account).
-- **Done when:** projects and tasks can be managed; isolation harness green.
-
-### P5-05 Project scheduler (M11)
-
-- **Needs:** P5-04.
-- **Steps:** `IProjectScheduler` as a pure service: input tasks, dependencies (FS, SS, FF, SF with lag), calendar working time (Business Hours schedule of the project), pinned tasks; output start/finish, slack, critical flag; summary rollups; recalculation command under `project:<id>` lock writing only changed tasks; cycle detection on dependency add; Gantt section (read-only first, drag later).
-- **Tests first:** property tests on random DAGs (no task before predecessors + lag; critical path tasks have zero slack); fixed reference networks (20 cases) with expected dates; `AddDependency_CreatingCycle_IsRefused`; `PinnedTask_Conflict_KeepsPinAndWarns`; performance test 2,000 tasks under target.
-- **Done when:** M11 O criteria 1–2 pass.
-
-### P5-06 Project templates, budgets, change orders, baselines (M11)
-
-- **Needs:** P5-05, P4-07.
-- **Steps:** `ProjectTemplate` (roles not people) and "create from template"; budget lines and actuals via `IProjectCostSource` (R4) implemented by Time Tracker (approved time at cost) — Expenses and Inventory register later; budget threshold event; baselines (max 10); change orders with approval type `ChangeOrder`; Projects registers an Estimates conversion target (labor section → project from template); Boards source for tasks (Kanban section).
-- **Tests first:** `Template_Copy_Fidelity`; `Actuals_EqualApprovedTimeAtCost`; `ChangeOrderApproved_UpdatesBudget`; `QuoteConvert_CreatesOneProject`.
-- **Done when:** M11 O criteria 3 and 5 pass.
-
-### P5-07 Projects.Billing bridge (M11)
-
-- **Needs:** P5-06, P4-05.
-- **Steps:** feature `Projects.Billing`: milestone achieved → agreement milestone billable (fixed price) or nothing (T&M uses time posting); project billing method on project; close blockers (open tasks, unapproved time, unbilled items) with override reason.
-- **Tests first:** `MilestoneAchieved_FixedPrice_PostsOnce`; `Close_WithUnapprovedTime_IsBlocked`.
-- **Done when:** workflow W5 passes.
-
-### P5-08 Resource Planning (M12)
-
-- **Needs:** P5-04.
-- **Read first:** plan M12; Workforce `IWorkedTimeSource`; Calendars `ICalendarBusyTimeSource`; Teams `ITeamMemberAvailabilitySource`; Skills `SkillRequirement`.
-- **Steps:** create the block; `IWorkItemSource` with `AddWorkItemSource<T>` (R4); `Allocation` record; `ICapacityService`; `IAllocationService` (book soft/hard, move, release; over-capacity hard booking needs `OverrideOverallocation` and a reason); `IResourceFinder`; work item sources registered by Projects (tasks and role demands), Tickets (scheduled tickets with planned dates), Dispatch (visits); planning board page with masking of titles the viewer cannot see; time-off approval re-evaluates allocations (observer).
-- **Tests first:** `Capacity_ShiftHolidayHalfDayAbsence_EqualsFixture`; `HardBookingOverCapacity_WithoutPermission_IsRefused`; `CancelledWorkItem_ReleasesAllocation`; `Board_MasksTitlesWithoutAccess`; performance test.
-- **Done when:** M12 O passes.
+**Done when:** M06 and `Tickets.Email` acceptance criteria pass.
 
 ---
 
-## 10. Phase 6: Field, assets and procurement
+## 10. WP06 Agreements
 
-Goal: CMDB, ticket–asset links, change management, procurement. Plan row P6; specifications M15, M16, M07 (Changes, Assets). Can run in parallel with Phase 5 after Phase 4.
+- **Needs:** WP03. **Builds on:** `ticket-time-agreements-reports-plan.md` (decisions §9 bind). **Plan:** M09; D-06, D-19, D-22.
 
-### P6-01 Assets as CMDB (M15)
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Characterize | Tests pinning current balances, warnings, ticket coverage selection, charge-when-logged, work-order usage | The characterization tests |
+| T02 Usage in units | `AgreementUsage` gains `Unit` (Minutes, Money, Incidents) and `Quantity`; existing providers report minutes as before | All T01 tests pass |
+| T03 Entitlements with dual-read | `Agreement.Entitlements` (Hours, Money, Incidents, Unlimited; period, rollover, purchases); balance service computes per entitlement; when `Entitlements` is empty it reads `AgreementHours` as one Hours entitlement; resumable step writes entitlements from `AgreementHours` with a verification report (R7) | Golden `agreements/balances.json`; migration fixture report matches (integration) |
+| T04 Kinds and types | `AddAgreementKind` with the seven kinds; `AgreementType` templates and "New from type" (Content > Agreements > Types) | `NewFromType_CopiesTemplate`; `UnknownKind_Refused` |
+| T05 Coverage service | `CoverageRule`s, `ICoverageSubjectFilter` (Tickets registers desk, type, category filters), `IAgreementCoverageService` per plan M09 D rules 2–3; `AgreementCoverageIndex` (multi-row, add to `IndexDeclarationArchitectureTests`); resumable step converting `TicketAgreementTerms` to rules with verification; `ITicketAgreementResolver` becomes an adapter; `TicketTimeChargeResolver` unchanged in behaviour; `Agreement` registered as a Rates scope | Golden `agreements/coverage.json`; `TermsMigration_SameAgreementAsBefore` (integration); benchmark within budget |
+| T06 Money and incident usage | Tickets reports incidents for per-incident agreements (one per ticket solved under it); Invoicing Billing reports money for retainers (billable amounts charged to the agreement) through R5 | `PerIncident_CountsSolvedTickets`; `Retainer_DrawsBilledAmounts` |
+| T07 Additions and quantity sources | `Addition`s; `IAdditionQuantitySource` with a contact-count source in Accounts (asset counts come in WP11) | `Quantity_ReadAtRunDate`; `ProRata_MidPeriod` |
+| T08 Lifecycle, renewals, amendments, top-ups | States per plan M09 G; versions; renewal with uplift; amendments; threshold notices and automatic top-up in the existing background task; failed top-up → payment issue (Checkout on) or notice | State machine tests; `AutoRenew_NewVersionWithUplift`; `TopUp_OncePerThresholdAndPeriod` (integration) |
+| T09 Agreements.Billing | Bridge feature: one recurring plan per agreement with additions, synced on change; quantities frozen per run; milestones and overage as `BillableItem`s keyed by source; `IEstimateConversionTarget` (recurring section → agreement); grouping policy hook | `Activate_OneRecurringPlan`; `RunTwice_InvoicesOnce` (integration); `Overage_ItemOnce` |
+| T10 Health signals and profitability | Agreements' account health signals (consumption, renewal due); profitability read model (revenue vs cost) | Golden `analytics/kpis.json` agreement rows |
+| T11 End-to-end W3 and W8 | Integration and Playwright tests for both workflows | The tests |
 
-- **Needs:** P1-01, P4-04.
-- **Steps:** relationship link kinds (DependsOn, RunsOn, ConnectedTo, InstalledOn, Contains, BackedUpBy) via record links; impact query (depth limit 10); `ExternalKeys`, `LifecycleState`, `ManualFields`; `SoftwareLicense` record; warranty and license expiry notices (once); `IAssetDiscoverySource` upsert by external key respecting manual fields; implement `IAdditionQuantitySource` (active assets of selected types per account).
-- **Tests first:** `Upsert_SameDeviceTwice_NoChange`; `Upsert_DoesNotOverwriteManualField`; `Impact_TraversalStopsAtDepth10`; `QuantitySource_CountsActiveOfTypes`.
-- **Done when:** M15 O passes.
-
-### P6-02 Tickets.Assets (M07)
-
-- **Needs:** P6-01.
-- **Steps:** link kind `AffectsAsset`; ticket page panel (asset coverage, warranty, recent tickets); asset page lists tickets.
-- **Tests first:** `Panel_HidesAssetOfOtherAccount`.
-- **Done when:** links work both ways with access checks.
-
-### P6-03 Tickets.Changes (M07)
-
-- **Needs:** P6-02, P1-04.
-- **Steps:** `ChangePart` (fields per plan M07); change type flag on ticket types; states per plan M07 G mapped onto ticket status categories; risk questionnaire scored with `ConditionRule`; approval type `Change` with policies by change type and risk (CAB = team rule); standard changes from templates skip approval; emergency changes allow post-implementation approval; change calendar as a Calendars type (follow `.agents/skills/crestapps-calendar-types/SKILL.md`) with overlap warnings on the same CI.
-- **Tests first:** full state machine; `Normal_RequiresAllCabStages`; `Standard_SkipsApproval`; `Emergency_ApprovedAfterImplementation`; `OverlappingChangesSameCi_Warns`.
-- **Done when:** M07 O change criteria pass.
-
-### P6-04 Inventory and procurement (M16)
-
-- **Needs:** P0-03, P4-07.
-- **Steps:** make the changes listed by the P0-03 report; supplier part on Accounts; `PurchaseRequisition` with demand `RecordRef`; aggregate requisitions into purchase orders by supplier; approval type `PurchaseOrder` by amount; serial tracking on receipt and issue; create assets from delivered serialized items; reservations for demand; Inventory registers an Estimates conversion target (hardware section → requisitions).
-- **Tests first:** `QuoteHardware_ToRequisitions_ToPo_ToReceipt_ToAssets` (integration); `Reservation_ReducesAvailable`; `SerialIssuedTwice_IsRefused`.
-- **Done when:** M16 O passes; workflow W6 parts path passes.
+**Done when:** all existing Agreements, Tickets and Work Orders tests pass unchanged; acceptance criteria of plan M09 pass.
 
 ---
 
-## 11. Phase 7: Financial operations
+## 11. WP07 Quotes
 
-Goal: approve-and-post, expenses, accounting sync, portal v2. Plan row P7; specifications M17, M14, M18, M19, M22.
+- **Needs:** WP06. **Builds on:** `invoicing-plan.md` §14 (estimates), `lead-management-plan.md`. **Plan:** M10, M04 (4).
 
-### P7-01 Approve-and-post review (M17)
-
-- **Needs:** P5-03.
-- **Steps:** `BillableItem` gains review state, adjustments, subject, agreement ID; billing review page (AdminList with filters account, agreement, project, period, source); line actions approve, adjust (reason), non-billable, defer; posting groups items into drafts by bill-to party, currency and `IInvoiceGroupingPolicy` (R4; Agreements.Billing and Projects.Billing register policies); cut-off date; reverse before issue; automatic posting rules per source.
-- **Tests first:** `Post_SameItemTwice_PostsOnce`; `Grouping_PerAgreementPolicy`; `Adjust_RecordsBeforeAfter`; month-end fixture (3 accounts, 5 agreements, 400 entries).
-- **Done when:** M17 O passes.
-
-### P7-02 Expenses (M14)
-
-- **Needs:** P4-03, P5-06.
-- **Steps:** create the block per plan M14 (R1–R3); categories, policies, mileage rates, reports and items, receipts via Attachments, approval type `ExpenseReport` with a policy-exception stage, billing via `IBillableSource`, project cost via `IProjectCostSource`, reimbursement via `IPayInputSource` and an export provider; personal-data contributor; duplicate warning.
-- **Tests first:** `PolicyViolation_RequiresJustificationAndExtraStage`; `ForeignCurrency_ConvertedOnExpenseDate`; `Approve_Mixed_ProducesItemsCostsReimbursementsOnce`; `Receipt_AccessDeniedToOtherStaff`.
-- **Done when:** workflow W9 passes; M14 O passes.
-
-### P7-03 Accounting sync (M19)
-
-- **Needs:** P7-01.
-- **Steps:** `CrestApps.OrchardCore.AccountingSync` block with `IAccountingProvider` (customers, items, invoices, credit notes out; payments in); mapping tables; sync log; work on the leased queue with retries; providers QuickBooks Online and Xero as separate features using Data Connectors and egress guard; never edit issued invoices from the accounting side.
-- **Tests first:** fake provider: `IssuedInvoice_ExportsOnce`; `Payment_ImportsOnce`; `ProviderDown_RetriesWithBackoff`.
-- **Done when:** M19 accounting criteria pass.
-
-### P7-04 Portal v2 (M22)
-
-- **Needs:** P3-08, P4-06, P5-04.
-- **Steps:** add sections: My invoices (existing page), Agreements and balances (read-only, no costs), Projects (customer-visible fields, milestones, change order approval), Quotes (accept page links).
-- **Tests first:** portal probes for invoices, agreements, projects in the isolation harness.
-- **Done when:** M22 O passes.
-
-### P7-05 Revenue recognition (M18), only if ADR-09 requires it
-
-- **Needs:** P7-01, ADR-09 decision.
-- **Steps:** follow plan M18; if ADR-09 says "no", close this task with a note.
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Sections and recurring lines | Sections with optional lines; line kinds Labor (priced by `IRateResolver`) and Recurring (frequency, term); one-time and recurring totals | `OptionalLinesSelected_TotalsCorrect` |
+| T02 Margin approval | `IEstimateMarginService`; approval type `Estimate` above margin/discount thresholds (settings) | `LowMargin_RequiresApproval` |
+| T03 Signature | Accept page captures typed name, time, IP hash, document SHA-256; public page shows no cost | `SignatureHash_MatchesDocument`; `PublicPage_NoCost` |
+| T04 Conversion targets | `IEstimateConversionTarget`; conversions recorded and run once per (version, section); Agreements.Billing target used | `Convert_Twice_Once` (integration) |
+| T05 Opportunity links | Quote links, forecast category, recurring and one-time amounts on opportunities; "Create quote" | `CreateQuote_LinksBoth` |
+| T06 End-to-end W1 (to agreement) | Integration and Playwright | The test |
 
 ---
 
-## 12. Phase 8: Intelligence and automation
+## 12. WP08 Time approval
 
-Plan row P8; specifications M20, M23, section 20, M19 RMM.
+- **Needs:** WP06. **Builds on:** `ticket-time-agreements-reports-plan.md`, `time-tracker-people-teams-review.md`. **Plan:** M13; D-11, D-12.
 
-### P8-01 Data sets for new blocks (M20)
-
-- **Needs:** P7-01.
-- **Steps:** each block adds its data sets (R8): Rates register, agreements and entitlement balances, projects portfolio and budgets, allocations, timesheets compliance, expenses, billing review, changes. Each applies its scope filter.
-- **Tests first:** one isolation probe per data set.
-- **Done when:** harness green.
-
-### P8-02 Dashboard pages and role dashboards (M20, M21)
-
-- **Needs:** P8-01.
-- **Steps:** a dashboard page type composed of report widgets; KPI tile and trend widgets; drill-through to admin lists; default dashboards per PSA role created by the `Psa` recipe.
-- **Tests first:** `Dashboard_HidesWidgetsUserCannotRun`.
-- **Done when:** each PSA role sees its default dashboard.
-
-### P8-03 Psa.Analytics KPIs (M23)
-
-- **Needs:** P8-01.
-- **Steps:** implement the KPIs of plan section 19 as data sets that join other blocks' data sets by ID; nightly snapshot background task for trend KPIs (R14); permission `ViewPsaFinancials`.
-- **Tests first:** one fixture test per KPI with hand-computed expected values.
-- **Done when:** M23 O passes.
-
-### P8-04 AI use cases (section 20)
-
-- **Needs:** P8-01.
-- **Read first:** AI module docs, how Tickets and Invoicing register AI tools (`AddCoreAITool`), prompt templates (`Templates/Prompts/*.md`), `IAIDataSourceResultFilter`.
-- **Steps (one pull request each):** ticket triage tool with per-desk confidence threshold; ticket summary; suggested resolution and articles (retrieval filtered by scope); draft reply; time entry suggestions; receipt extraction; article from ticket; project plan draft. Every tool acts as the user; writes are drafts unless confirmed; auto-applied triage is audited with model and confidence.
-- **Tests first:** per tool, a permission test (no out-of-scope data in context or output) and an evaluation set with a recorded baseline.
-- **Done when:** baselines recorded; isolation probes for AI tools green.
-
-### P8-05 RMM connectors (M19)
-
-- **Needs:** P6-01.
-- **Steps:** `Integrations.Rmm` abstractions (device sync via `IAssetDiscoverySource`, alerts via `IProviderWebhookInbox` with alert-key de-duplication, auto-resolve option, account mapping); first provider as a separate feature.
-- **Tests first:** `SameAlertTwice_OneTicket`; `AlertCleared_ResolvesWhenEnabled`; `UnmappedAccount_GoesToTriageDesk`.
-- **Done when:** M19 RMM criteria pass.
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Work role on entries | `TimeEntry.WorkRoleId` (additive), defaulted from the Staff default role; editable; `ITimeEntryDefaultsProvider` with a Tickets implementation; index column | `Default_FromStaff`; existing Time Tracker tests unchanged |
+| T02 Time approval | `TimeApproval` per person and period (pay schedule or weekly); approval type `TimeApproval` (manager rule; project-manager rule added by Projects in WP09); submit, recall; lock entries; reversals through the Time entries page; My time week view with Submit | `Submit_Locks`; `Recall_Unlocks`; `EditApproved_Reversal`; `Over24h_BlocksSubmit` |
+| T03 Workforce link | When Workforce Time Clock is on, approving the Workforce timesheet approves the same period's `TimeApproval` (observer, R5) | `WorkforceApproval_ApprovesTimeApproval` |
+| T04 Posting | On approval: `RateSnapshot` per billable-stage entry; `BillableItem` for minutes not covered or beyond the balance (overage in entry start order), keyed by entry ID; entries whose source is a work order are skipped (Work Orders bills its labor); optional pay inputs | Golden `time/approval-posting.json`; `Reapprove_NoDuplicates` and parallel approvals (integration) |
+| T05 End-to-end W7 and W2 to invoice | Integration and Playwright | The tests |
 
 ---
 
-## 13. Phase 9: Enterprise readiness
+## 13. WP09 Projects
 
-Plan row P9 and sections 16, 23, 24.
+- **Needs:** WP08, WP02. **Plan:** M11; D-08, D-16.
+
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Projects core | Create the block (R1); `Project` with phases inside the document (max 50), `ProjectTask` as separate documents, project types, states, numbering, `IProjectAccessService` + scope filter, Projects top-level menu with icon, project page Overview and Tasks, record sources, timeline and attachment access, isolation probes | State machine; `TaskInClosedProject_Refused`; probes |
+| T02 Scheduler | Pure `IProjectScheduler` (FS, SS, FF, SF, lag, working calendar from Business Hours, pins), rollups, recalculation under the project lock writing changed tasks only, cycle refusal, read-only Gantt | Golden `projects/networks/*`; property tests; `Cycle_Refused`; `Pin_KeepsAndWarns`; benchmark |
+| T03 Templates and conversion | `ProjectTemplate` (roles, not people); create from template; Estimates conversion target (labor section → project) | `Template_CopyFidelity`; `QuoteConvert_OneProject` (integration) |
+| T04 Budgets, baselines, change orders | Budget lines; actuals through `IProjectCostSource` (Time Tracker registers approved time at cost); thresholds; baselines (max 10); change orders with approval type `ChangeOrder`; project-manager approver rule for time approvals | `Actuals_EqualApprovedTimeAtCost`; `ChangeOrder_UpdatesBudget` |
+| T05 Kanban and charge resolver | Boards source for tasks; Time Tracker charge resolver for project-task time (project's agreement, else coverage) | `TaskBoard_MoveCallsTaskService`; `ProjectTaskTime_ChargedToProjectAgreement` |
+| T06 Projects.Billing | Milestone achieved → agreement milestone billable (fixed price); close blockers with override reason | `Milestone_PostsOnce` (integration); `Close_WithUnapprovedTime_Blocked` |
+| T07 End-to-end W5 | Integration and Playwright | The test |
+
+---
+
+## 14. WP10 Resource planning
+
+- **Needs:** WP09. **Builds on:** `workforce-management-plan.md`. **Plan:** M12.
+
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Work item sources | Create the block; `IWorkItemSource` + `AddWorkItemSource`; sources in Projects (tasks, role demands), Tickets (tickets with planned dates), Dispatch (visits) | Each source with fixtures |
+| T02 Capacity | `ICapacityService` from Staff hours, Workforce shifts and time off, Business Hours holidays, calendar absences | Golden `resource-planning/capacity.json` |
+| T03 Allocations | `Allocation` (soft, hard), book, move, release; hard over capacity needs `OverrideOverallocation` and a reason; cancelled work releases; time-off approval re-evaluates | `HardOverCapacity_RefusedWithoutPermission`; `Cancelled_Releases` |
+| T04 Board | Workforce > Resource Planning: people × time heat map, role-demand rows, filters, masking of titles the viewer cannot see | `Board_MasksTitles`; benchmark |
+
+---
+
+## 15. WP11 CMDB and change management (after #1379)
+
+- **Needs:** WP06 and pull request #1379 merged. **Plan:** M15, M07 (`Tickets.Assets`, `Tickets.Changes`). First action: re-read merged #1379.
+
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Relationships | Link kinds (DependsOn, RunsOn, ConnectedTo, InstalledOn, Contains, BackedUpBy) on record links; relationship card on the asset page (`DetailAdmin` driver); impact query (depth 10); `IAssetUsage` for linked CIs | `Impact_DepthLimited`; `LinkedCi_CannotBeDeleted` |
+| T02 Lifecycle, keys, licenses | `ExternalKeys`, `LifecycleState`, `ManualFields`; `SoftwareLicense`; expiry notices once | `ExpiryNotice_Once` |
+| T03 Discovery seam and quantities | `IAssetDiscoverySource` upsert by external key respecting manual fields; `IAdditionQuantitySource` (active assets of types per account) | `UpsertTwice_NoChange`; `ManualField_Kept`; `Quantity_ActiveOfTypes` |
+| T04 Tickets.Assets | Link kind `AffectsAsset`; ticket panel; asset page card listing tickets | `Panel_HidesOtherAccountAsset` |
+| T05 Tickets.Changes | `ChangePart`, change type flag, state machine mapped to status categories, risk questionnaire (`ConditionRule`), approval type `Change` with policies by type and risk (CAB = team rule), standard changes from templates, emergency post-approval, change calendar type with overlap warnings (`.agents/skills/crestapps-calendar-types`) | State machine; `Normal_AllCabStages`; `Standard_SkipsApproval`; `Emergency_PostApproval`; `OverlapSameCi_Warns` |
+| T06 End-to-end | Change with CAB on a CI (Playwright) | The test |
+
+---
+
+## 16. WP12 Procurement
+
+- **Needs:** WP07. **Builds on:** `commerce/inventory-and-shipping-plan.md`. **Plan:** M16; D-23.
+
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Decouple from the storefront | Manifest: depend on Commerce Foundation and Products instead of `CommerceConstants.Features.Area`; move order code (`InventoryOrderEventHandler`, availability for checkout, location service parts that read orders) into a startup marked `[RequireFeatures(Orders)]`; API endpoints and webhooks into their own `[RequireFeatures]` startups; types needed from Commerce.Core moved to the owner's `.Abstractions` | `Inventory_RunsWithoutStorefront` (integration); all existing Inventory tests unchanged |
+| T02 Suppliers | Supplier part on Accounts; purchase orders name a supplier account | `PurchaseOrder_SupplierIsAccount` |
+| T03 Requisitions | `PurchaseRequisition` with demand `RecordRef`; aggregate into purchase orders by supplier; approval type `PurchaseOrder` by amount; Estimates conversion target (hardware section → requisitions) | `QuoteHardware_ToRequisitions` |
+| T04 Serials and assets | Serial and lot tracking on receipt and issue; delivered serialized items create assets; reservations | `SerialIssuedTwice_Refused`; `Delivered_CreatesAssets` |
+| T05 End-to-end | Quote hardware → requisition → PO → receipt → assets | The test |
+
+---
+
+## 17. WP13 Billing review and expenses
+
+- **Needs:** WP08, WP09. **Builds on:** `invoicing-plan.md` §18 (billing sources). **Plan:** M17, M14.
+
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Review states | `BillableItem` gains review state, adjustments, subject, agreement ID (additive) | Existing Invoicing tests unchanged |
+| T02 Review page | Commerce > Billing Review: filters (account, agreement, project, period, source); approve, adjust with reason, non-billable, defer | `Adjust_RecordsBeforeAfter` |
+| T03 Posting and grouping | Post to drafts grouped by bill-to, currency and `IInvoiceGroupingPolicy` (Agreements.Billing and Projects.Billing register policies; default from PSA settings); cut-off date; reverse before issue; automatic posting rules per source | `Post_Twice_Once` (integration); golden `billing/month-end` |
+| T04 Expenses block | Create `CrestApps.OrchardCore.Expenses`: categories, policies, mileage rates, reports and items, receipts via Attachments, My Work > Expenses and Content > Expenses | `Policy_RequiresJustification`; `Receipt_AccessDeniedToOthers` |
+| T05 Expense approval and outputs | Approval type `ExpenseReport` with a policy-exception stage; `IBillableSource`, `IProjectCostSource`, `IPayInputSource`, reimbursement export; currency on expense date; duplicate warning; personal data | `Approve_Mixed_OutputsOnce` (integration); `ForeignCurrency_OnExpenseDate` |
+| T06 End-to-end W9 | Integration and Playwright | The test |
+
+---
+
+## 18. WP14 Accounting sync and portal v2
+
+- **Needs:** WP13. **Plan:** M19 (accounting), M22, M18 (deferred-revenue export only); D-09.
+
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 AccountingSync block | `IAccountingProvider` (customers, items, invoices, credit notes out; payments in), mapping tables, sync log, leased queue with backoff, Settings > Integrations | Fake provider: `IssuedInvoice_ExportsOnce`; `Payment_ImportsOnce`; `ProviderDown_Retries` |
+| T02 Providers | One feature per accounting package, credentials in Data Connectors, egress-guarded | Recorded API payload tests |
+| T03 Deferred revenue export | Prepaid entitlement invoice lines post to a configurable deferred-revenue item; per period, entitlement usage of prepaid agreements exported for release in the accounting package | `PrepaidUsage_ExportedPerPeriod` |
+| T04 Portal v2 | Sections: My invoices (existing), Agreements and balances (no costs), Projects (customer-visible fields, milestones, change order approval), Quotes | Portal probes for each section |
+
+---
+
+## 19. WP15 Analytics, AI and RMM
+
+- **Needs:** WP14, WP10, WP11. **Plan:** M20, M23, plan section 20, M19 (RMM); D-10.
+
+| Task | Steps | Tests first |
+| --- | --- | --- |
+| T01 Data sets | Each block's data sets (Rates, agreements and balances, projects, allocations, time approval compliance, expenses, billing review, changes) with scope filters | One probe per data set |
+| T02 Role dashboards | Default dashboards per PSA role on Orchard Core's Admin Dashboard with the existing report widgets, created by the `Psa` recipe; KPI tile and trend widgets in Reports; drill-through to lists | `Dashboard_HidesWidgetsUserCannotRun` |
+| T03 Psa.Analytics | Create the module; KPIs of plan section 19 by joining published data sets; nightly snapshots (R14); `ViewPsaFinancials` | Golden `analytics/kpis.json` |
+| T04 AI use cases | One commit each: triage (per-desk confidence threshold, audited auto-apply), summary, suggested resolution and articles (scope-filtered retrieval), draft reply, time entry suggestions, receipt extraction, article from ticket, project plan draft; prompts as templates; every tool acts as the user | Per tool: isolation probe and an evaluation set with a recorded baseline |
+| T05 RMM connectors | `CrestApps.OrchardCore.Integrations.Rmm`: device sync via `IAssetDiscoverySource`, alerts via `IProviderWebhookInbox` with alert-key de-duplication, auto-resolve option, account mapping; first provider feature | `SameAlertTwice_OneTicket`; `Cleared_ResolvesWhenEnabled`; `Unmapped_GoesToTriageDesk` |
+
+---
+
+## 20. WP16 Enterprise readiness and migration toolkit
+
+- **Needs:** WP15. **Plan:** sections 16, 23, 24; M21 (7).
 
 | Task | Steps | Done when |
 | --- | --- | --- |
-| P9-01 Threat model | One threat model per bounded context (STRIDE), stored in `docs/engineering/psa/security/` | Reviewed by a maintainer |
-| P9-02 ASVS 5.0 L2 checklist | For each module, a checklist of applicable requirements with the test that proves each | No unproven L2 requirement |
-| P9-03 Penetration test | External test of a staging tenant | No high findings open |
-| P9-04 Load and soak | Reference data set (plan section 23), budgets measured | All budgets met at p95 |
-| P9-05 Disaster recovery drill | Restore one tenant to a point in time | RPO/RTO from P0-06 met |
-| P9-06 Compliance evidence exports | Access review export, audit export, configuration history, backup logs | Exports produce files a reviewer can use |
-| P9-07 Final end-to-end | Fresh tenant from the `Psa` recipe runs W1–W9 | All green |
+| T01 Threat models | STRIDE per bounded context in `docs/engineering/psa/security/` | Reviewed |
+| T02 ASVS 5.0 L2 | Checklist per module with the test proving each requirement | No unproven L2 item |
+| T03 Penetration test | External test of a staging tenant | No high finding open |
+| T04 Load and soak | Reference data set; budgets of plan section 23 | All budgets met |
+| T05 Disaster recovery | Point-in-time restore of one tenant | RPO 15 min, RTO 4 h met |
+| T06 Evidence exports | Access review, audit, configuration history, backup logs | Usable by a reviewer |
+| T07 Localization and accessibility | Every new string localizable (`ViewLocalizerFormatArgumentsArchitectureTests`, `LocalizationSourceJsonIgnoreArchitectureTests` pass); WCAG 2.2 AA check of new pages (keyboard, labels, contrast) | Issues fixed or listed |
+| T08 Migration toolkit | ContentTransfer CSV import templates for accounts, contacts, assets, agreements with entitlements, open tickets, rate cards; docs page "Moving from another PSA" (no product names) | Each template imports a sample file |
+| T09 Demo data | Demo-data recipe for trials | Fresh demo tenant works |
+| T10 Final end-to-end | Fresh `Psa` tenant runs W1–W9 | All green |
 
 ---
 
-## 14. Appendix A: Done checklist for every pull request
+## 21. Appendix A: Done checklist for every work package
 
-Copy this list into every pull request and tick each line.
-
-- [ ] Every behaviour in the task's **Tests first** list has a test that failed first and passes now.
-- [ ] Whole test project passes, including Architecture tests (`LayeringRatchetTests`, `DuplicatePatternRatchetTests`, `FeatureIdLiteralRatchetTests`, `EmptyCatchRatchetTests`, PSA guards).
+- [ ] Every task's **Tests first** list exists and passes; each test failed first.
+- [ ] The whole unit test project passed once at the end, including all 36 architecture tests: `AdminPostAntiforgeryArchitectureTests`, `AggregateLifecycleArchitectureTests`, `BinaryAssetIntegrityTests`, `ContactCenterArchitectureGuardTests`, `ContentsAdminListTermNameArchitectureTests`, `CreateViewTitleConventionTests`, `DependencyInjectionArchitectureTests`, `DeploymentStepSerializationArchitectureTests`, `DeploymentStepViewsArchitectureTests`, `DuplicatePatternRatchetTests`, `EditorRootViewArchitectureTests`, `EmptyCatchRatchetTests`, `FeatureIdLiteralRatchetTests`, `FileSizeRatchetTests`, `IndexDeclarationArchitectureTests`, `LayeringRatchetTests`, `LearningNotificationArchitectureTests`, `LocalizationSourceJsonIgnoreArchitectureTests`, `MigrationAdditiveOnlyGuardTests`, `ModuleDependencyGraphTests`, `OrderEventHandlerDependencyTests`, `PaymentProviderCapabilityTruthfulnessTests`, `PdfLibraryLicenseTests`, `PhoneNumberCanonicalizationArchitectureTests`, `ProjectReferenceRulesTests`, `ProviderHttpRetryArchitectureTests`, `ProviderWriteIdempotencyArchitectureTests`, `RecipeSchemaCoverageArchitectureTests`, `ResumableStepRequestTests`, `SiteSettingsGroupPermissionRegistrationTests`, `TenantHierarchyArchitectureTests`, `TimeZonePickerArchitectureTests`, `UnboundedCollectionLoadTests`, `UserListLoadArchitectureTests`, `ViewLocalizerFormatArgumentsArchitectureTests`, `WorkflowActivityViewsArchitectureTests`, plus the PSA guards from WP01-T06.
+- [ ] PSA integration tests pass (SQLite locally; SQL Server in CI).
+- [ ] The work package's end-to-end workflow passes (Playwright).
+- [ ] Changed pages checked in a browser in both list layouts and both row-action modes.
 - [ ] Build passes with warnings as errors.
-- [ ] Public API baselines updated and the diff reviewed (if public types changed).
-- [ ] New projects added to `CrestApps.OrchardCore.slnx`; new modules added to the Targets project.
-- [ ] Feature IDs are constants in `.Abstractions`.
-- [ ] Permissions defined and checked on every action and endpoint.
-- [ ] Scope filter applied to every list, API, data set, search, attachment, timeline and AI tool; isolation probes added.
-- [ ] Money, entitlement, stock or time changes use a lock and an idempotency key.
-- [ ] Recipe and deployment steps for every new record type; round-trip test.
-- [ ] Personal-data contributor for records with personal data.
-- [ ] Telemetry on background tasks; no IDs or names in metric tags.
-- [ ] Dates shown with `ILocalClock`; `IClock` used for "now".
-- [ ] Admin lists use `<admin-list>`; forms use `action-bar-bottom`.
-- [ ] Module `README.md` updated.
-- [ ] Technical Manual and User Manual pages updated, `sidebars.js` updated, `npm run check:manuals` and `npm run build` pass in `src/CrestApps.Docs`.
-- [ ] `docs/engineering/building-blocks.md` updated if a building block or extension point was added or changed.
-- [ ] No unused `using` statements or injected services; no commented-out code.
-- [ ] Commit author is the configured human author; no AI co-author trailer.
+- [ ] Golden fixtures unchanged (manifest test passes).
+- [ ] Public API baselines updated and reviewed.
+- [ ] New projects in `CrestApps.OrchardCore.slnx`; new modules in the Targets project.
+- [ ] Feature IDs are constants; permissions on every action and endpoint.
+- [ ] Scope filters and isolation probes for every new record family.
+- [ ] Locks and idempotency keys for money, usage, stock and time.
+- [ ] Recipe and deployment steps with schemas for every record type; round-trip test.
+- [ ] Migrations additive; data moves by expand-and-contract with a verification report.
+- [ ] Personal-data contributors; telemetry on background tasks.
+- [ ] Pages placed per section 1.6; top-level menu items have icons.
+- [ ] Module README, both manuals, `sidebars.js`, docs checks pass; `building-blocks.md` updated when a block or extension point changed.
+- [ ] No unused usings or services; no commented-out code; no competitor names.
+- [ ] Commits authored by the configured human author only, one per task, messages `WP<NN>-T<MM> ...`.
+- [ ] Appendix C row updated.
 
----
+## 22. Appendix B: Glossary
 
-## 15. Appendix B: Glossary of repository terms
-
-| Term | Meaning in this repository |
+| Term | Meaning |
 | --- | --- |
-| Building block | A module that owns one concept and is extended by others (catalog in `docs/engineering/building-blocks.md`) |
-| `.Abstractions` project | Contracts: interfaces, records, constants, permissions, feature IDs |
-| `.Core` project | Implementations, stores, indexes, handlers shared by modules |
-| Catalog record | A YesSql document managed by a catalog manager (`CatalogItem` subclass with a `DocumentCatalog` store) |
-| Index | A YesSql map index table used for listing, filtering and lookups |
-| `RecordRef` | A reference to any record as `Kind:Id` |
-| `PartyRef` | A reference to who a record belongs to (user, customer, account, contact) |
-| Scope filter | SQL restriction that limits records to what the viewer may see |
-| Observer | An interface a block calls after a change is saved so others can react |
-| Resumable step | A data upgrade that runs in batches in the background with a cursor |
-| `[RequireFeatures]` startup | A startup that runs only when another feature is enabled; used for optional integrations |
-| Ratchet test | An architecture test that only allows a list of known exceptions to shrink |
-| Kit | The small test fixture style used in `AgreementsTests` |
+| Work package (WP) | One plan slice delivered as one branch and one pull request |
+| Task (T) | One commit inside a work package |
+| Building block | A module that owns one concept (`docs/engineering/building-blocks.md`) |
+| `.Abstractions` / `.Core` | Contracts / shared implementations |
+| Catalog record | YesSql document (`CatalogItem`, `DocumentCatalog` store) |
+| `RecordRef` / `PartyRef` | Reference to any record / to who a record belongs to |
+| Stage | Time Tracker stage; the industry's "work type"; its categories decide billable and payable |
+| `ChargedTo` | The record (agreement) time counts against, set when logged |
+| Scope filter | SQL restriction to what the viewer may see |
+| Golden fixture | Expected test data written independently of the implementation |
+| Expand and contract | Additive migration, move beside, dual-read, verify, remove old later |
 
----
+## 23. Appendix C: Progress
 
-## 16. Appendix C: Task index
-
-| Phase | Tasks | Plan modules |
-| --- | --- | --- |
-| P0 | P0-01 to P0-06 | ADRs, assumptions |
-| P1 | P1-01 to P1-06 | M01, M02, M03, isolation harness |
-| P2 | P2-01 to P2-06 | M04, M05, M21 |
-| P3 | P3-01 to P3-08 | M06, M07, M08, M22 |
-| P4 | P4-01 to P4-08 | M09, M10, M04 |
-| P5 | P5-01 to P5-08 | M13, M11, M12 |
-| P6 | P6-01 to P6-04 | M15, M07, M16 |
-| P7 | P7-01 to P7-05 | M17, M14, M19, M22, M18 |
-| P8 | P8-01 to P8-05 | M20, M21, M23, AI, M19 |
-| P9 | P9-01 to P9-07 | Enterprise readiness |
-
-Parallel lanes: P3 and P4 after P2; P5 and P6 after P4; within P1, tasks 01, 03, 04, 05 and 06 are independent (02 needs 01).
+| Work package | Phase | Needs | State | Pull request |
+| --- | --- | --- | --- | --- |
+| WP00 Readiness | P0 | — | Not started | — |
+| WP01 Foundations | P1 | WP00 | Not started | — |
+| WP02 Boards | P1 | WP00 | Not started | — |
+| WP03 Rates and PSA skeleton | P2 | WP01 | Not started | — |
+| WP04 Service operations | P3 | WP03 | Not started | — |
+| WP05 E-mail | P3 | WP03, #817 | Waiting for #817 | — |
+| WP06 Agreements | P4 | WP03 | Not started | — |
+| WP07 Quotes | P4 | WP06 | Not started | — |
+| WP08 Time approval | P5 | WP06 | Not started | — |
+| WP09 Projects | P5 | WP08, WP02 | Not started | — |
+| WP10 Resource planning | P5 | WP09 | Not started | — |
+| WP11 CMDB and changes | P6 | WP06, #1379 | Waiting for #1379 | — |
+| WP12 Procurement | P6 | WP07 | Not started | — |
+| WP13 Billing review and expenses | P7 | WP08, WP09 | Not started | — |
+| WP14 Accounting and portal v2 | P7 | WP13 | Not started | — |
+| WP15 Analytics, AI, RMM | P8 | WP14, WP10, WP11 | Not started | — |
+| WP16 Enterprise readiness | P9 | WP15 | Not started | — |
