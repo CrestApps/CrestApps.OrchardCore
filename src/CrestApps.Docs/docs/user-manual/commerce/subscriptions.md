@@ -161,12 +161,14 @@ What the subscriber keeps:
 
 - With **Keep access until the paid period ends**, the subscriber keeps their access, including any roles the plan gives, until the end of the period they paid for.
 - Without it, access ends now.
+- A **Paused** subscription, or an **Incomplete** one still waiting for its first payment, has no paid period to run to, so it ends now either way. A **Past due** one keeps access only until its **Grace ends** date.
 - Payments already taken are not refunded automatically. To refund one, use **Commerce** → **Payments** (see [Payments and refunds](payments-and-refunds.md)).
 
 ### Pause and resume billing
 
 - To suspend billing without ending the subscription, enter an optional **Reason**, click **Pause billing**, and confirm with **Pause billing**. It is offered on **Active** and **Trial** subscriptions. The status becomes **Paused**.
 - To restart billing on a **Paused** or **Past due** subscription, click **Resume** and confirm with **Resume**. The status becomes **Active** again.
+- An **Incomplete** subscription bought with Pay Later or a bank transfer can't be paused or resumed: it becomes **Active** when its first payment arrives, and its first period starts on that day.
 
 Each action is written to the subscription's **History**.
 

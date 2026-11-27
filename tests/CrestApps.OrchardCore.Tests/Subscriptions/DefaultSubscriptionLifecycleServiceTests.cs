@@ -331,14 +331,17 @@ public sealed class DefaultSubscriptionLifecycleServiceTests
 
     /// <summary>
     /// M11 (final security review): an offline agreement the sweep expired, whose overdue invoice was paid late, could not
-    /// be restored by anybody.
+    /// be restored by anybody. Round 3 (High): Pay Later records a generated reference for every agreement, so one with a
+    /// reference is offline too; only the provider's capability tells it from a gateway's.
     /// </summary>
-    [Fact]
-    public async Task ResumeAsync_AnExpiredOfflineSubscription_ReturnsItToActive()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("pay_later_ref_1")]
+    public async Task ResumeAsync_AnExpiredOfflineSubscription_ReturnsItToActive(string reference)
     {
         var seed = CreateSubscription();
         seed.ProviderKey = "PayLater";
-        seed.ProviderSubscriptionId = null;
+        seed.ProviderSubscriptionId = reference;
         seed.Status = SubscriptionStatus.Expired;
         seed.NextBillingUtc = null;
         var (service, _) = CreateService(seed);
@@ -367,6 +370,66 @@ public sealed class DefaultSubscriptionLifecycleServiceTests
         var subscription = await service.ResumeAsync("sub-1", TestContext.Current.CancellationToken);
 
         Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
+    }
+
+    /// <summary>
+    /// Round 3 (High): canceling "at period end" ended at once only a paused agreement. One never paid for became canceled
+    /// with a whole cycle ahead, which counts as current, and one past due ran past its grace window to the end of a period
+    /// it had not paid for.
+    /// </summary>
+    [Fact]
+    public async Task CancelAsync_AtPeriodEnd_AnIncompleteSubscription_EndsAtOnce()
+    {
+        // Arrange
+        var seed = CreateSubscription();
+        seed.Status = SubscriptionStatus.Incomplete;
+        var (service, _) = CreateService(seed);
+
+        // Act
+        var subscription = await service.CancelAsync("sub-1", atPeriodEnd: true, "Changed my mind.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(SubscriptionStatus.Canceled, subscription.Status);
+        Assert.False(subscription.CancelAtPeriodEnd);
+        Assert.False(subscription.IsCurrent(_now.AddSeconds(1)));
+    }
+
+    [Fact]
+    public async Task CancelAsync_AtPeriodEnd_APastDueSubscription_EndsWhenItsGraceDoes()
+    {
+        // Arrange
+        var seed = CreateSubscription();
+        seed.Status = SubscriptionStatus.PastDue;
+        seed.PastDueSinceUtc = _now.AddDays(-2);
+        seed.GraceEndsUtc = _now.AddDays(5);
+        var (service, _) = CreateService(seed);
+
+        // Act
+        var subscription = await service.CancelAsync("sub-1", atPeriodEnd: true, "Leaving.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(SubscriptionStatus.Canceled, subscription.Status);
+        Assert.Equal(_now.AddDays(5), subscription.CurrentPeriodEndUtc);
+        Assert.False(subscription.IsCurrent(_now.AddDays(6)));
+    }
+
+    /// <summary>
+    /// Round 3 (Low): an agreement waiting for its first payment could be paused, and Resume then started the paused one,
+    /// granting what the plan grants without the payment.
+    /// </summary>
+    [Fact]
+    public async Task PauseAsync_AnIncompleteSubscription_IsRefused()
+    {
+        // Arrange
+        var seed = CreateSubscription();
+        seed.Status = SubscriptionStatus.Incomplete;
+        var (service, _) = CreateService(seed);
+
+        // Act
+        var subscription = await service.PauseAsync("sub-1", "Suspended.", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(SubscriptionStatus.Incomplete, subscription.Status);
     }
 
     private static Subscription CreateSubscription()
@@ -408,7 +471,8 @@ public sealed class DefaultSubscriptionLifecycleServiceTests
             SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
             new TestClock(_now),
             handler is null ? [] : [handler],
-            NullLogger<DefaultSubscriptionLifecycleService>.Instance);
+            NullLogger<DefaultSubscriptionLifecycleService>.Instance,
+            new FakePaymentProviderResolver("PayLater"));
 
         return (service, store);
     }

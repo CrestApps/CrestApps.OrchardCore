@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -24,6 +26,7 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
     private readonly ISubscriptionLifecycleService _lifecycleService;
     private readonly ISubscriptionManager _subscriptionManager;
     private readonly ITransactionStore _transactionStore;
+    private readonly ICheckoutPaymentProviderResolver _providerResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionFirstPaymentTransactionHandler"/> class.
@@ -31,14 +34,17 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
     /// <param name="lifecycleService">The lifecycle service, which starts and resumes subscriptions.</param>
     /// <param name="subscriptionManager">The subscriptions.</param>
     /// <param name="transactionStore">The transactions, read to find transactions of the checkout that are still overdue.</param>
+    /// <param name="providerResolver">The payment providers, which tell an agreement billed here from one a gateway bills.</param>
     public SubscriptionFirstPaymentTransactionHandler(
         ISubscriptionLifecycleService lifecycleService,
         ISubscriptionManager subscriptionManager,
-        ITransactionStore transactionStore)
+        ITransactionStore transactionStore,
+        ICheckoutPaymentProviderResolver providerResolver)
     {
         _lifecycleService = lifecycleService;
         _subscriptionManager = subscriptionManager;
         _transactionStore = transactionStore;
+        _providerResolver = providerResolver;
     }
 
     /// <inheritdoc/>
@@ -58,7 +64,9 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
             // pays for its first cycle; paying the one-time balance, or a later cycle, must not start the plan.
             if (subscription.Status == SubscriptionStatus.Incomplete && PaysFor(transaction, subscription))
             {
-                await _lifecycleService.ResumeAsync(subscription.ItemId, cancellationToken);
+                var started = await _lifecycleService.ResumeAsync(subscription.ItemId, cancellationToken);
+
+                await AlignFirstCycleAsync(transaction, started, cancellationToken);
 
                 continue;
             }
@@ -69,13 +77,33 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
             // An agreement a payment provider bills is past due when the provider's renewal failed, which no transaction here
             // records; only the provider's payment brings it back. Resuming it here gave back what it grants, a sold site
             // included, while the provider's renewal was still unpaid.
+            // Pay Later records a reference for every agreement it takes, so the reference alone does not make one
+            // gateway-billed; the provider's capability decides.
             if (subscription.Status == SubscriptionStatus.PastDue &&
-                string.IsNullOrEmpty(subscription.ProviderSubscriptionId) &&
+                OfflineSubscriptionBilling.IsOffline(subscription, _providerResolver) &&
                 !(othersOverdue ??= await HasOtherOverdueAsync(transaction, cancellationToken)))
             {
                 await _lifecycleService.ResumeAsync(subscription.ItemId, cancellationToken);
             }
         }
+    }
+
+    // The subscription's first period starts when its first payment arrives. The transaction that paid for it carries the
+    // period the renewal sweep invoices the next cycle from, so it moves with it; otherwise a buyer who paid late was
+    // invoiced the next cycle at once, for a period the subscription had not reached.
+    private async Task AlignFirstCycleAsync(Transaction paid, Subscription started, CancellationToken cancellationToken)
+    {
+        if (started is not { Status: SubscriptionStatus.Active } ||
+            paid.Recurrence is not { CycleNumber: 1, NextCycleCreated: false } recurrence ||
+            (recurrence.PeriodStartUtc == started.CurrentPeriodStartUtc && recurrence.PeriodEndUtc == started.CurrentPeriodEndUtc))
+        {
+            return;
+        }
+
+        recurrence.PeriodStartUtc = started.CurrentPeriodStartUtc;
+        recurrence.PeriodEndUtc = started.CurrentPeriodEndUtc;
+
+        await _transactionStore.UpdateAsync(paid, cancellationToken);
     }
 
     /// <summary>

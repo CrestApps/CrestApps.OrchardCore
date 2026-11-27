@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -116,35 +117,109 @@ public sealed class TenantProvisioningPaymentGateTests
         Assert.True(context.IsRefused);
     }
 
+    /// <summary>
+    /// Round 3 (Medium): a site waiting for its payment wasn't a tenant yet, so its name and prefix were free to another
+    /// buyer during the payment terms, and the first buyer's paid job was then abandoned. They are held until it is built
+    /// or given up.
+    /// </summary>
+    [Theory]
+    [InlineData(TenantProvisioningStatus.AwaitingPayment, true)]
+    [InlineData(TenantProvisioningStatus.Pending, true)]
+    [InlineData(TenantProvisioningStatus.Failed, true)]
+    [InlineData(TenantProvisioningStatus.Abandoned, false)]
+    public async Task BeginningAsync_ASiteNameBoughtEarlierAndNotBuilt_IsHeld(TenantProvisioningStatus status, bool refused)
+    {
+        // Arrange
+        var jobs = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
+        {
+            ItemId = "job-earlier",
+            TenantName = "Shop1",
+            Prefix = "shop1",
+            OwnerId = "first-buyer",
+            Status = status,
+        });
+        var context = CreateContext(new TenantProvisioningStep { TenantName = "Shop1", Prefix = "shop1", RecipeName = "Blog" }, planFeatureProfile: "sold");
+
+        // Act
+        await CreateGate(jobs: jobs).BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(refused, context.IsRefused);
+    }
+
+    [Fact]
+    public async Task BeginningAsync_AHostOfASiteWaitingForPayment_IsHeld()
+    {
+        // Arrange
+        var jobs = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
+        {
+            ItemId = "job-earlier",
+            TenantName = "Other",
+            Domains = ["shop.example.org"],
+            Status = TenantProvisioningStatus.AwaitingPayment,
+        });
+
+        // Act
+        var errors = await CreateRules(jobs, allowCustomDomains: true).ValidateAsync(
+            new TenantPurchaseRequest { TenantName = "Shop1", Domains = ["shop.example.org"], RecipeName = "Blog", FeatureProfile = "sold" },
+            new TenantPurchaseRules { PlanRecipeName = "Blog", AllowCustomDomains = true, KnownFeatureProfiles = ["sold"] },
+            [new ShellSettings { Name = ShellSettings.DefaultShellName }],
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.HostTaken);
+    }
+
     private static TenantProvisioningPaymentGate CreateGate(
         bool allowCustomPrefix = false,
         string[] knownProfiles = null,
         bool featureProfilesOn = true,
         bool allowPrefixOnStoreHost = true,
-        string[] storeRoutes = null)
+        string[] storeRoutes = null,
+        InMemoryTenantProvisioningJobStore jobs = null)
     {
-        var shellHost = new Mock<IShellHost>();
-        shellHost.Setup(host => host.GetAllSettings()).Returns([new ShellSettings { Name = ShellSettings.DefaultShellName }]);
-
-        var catalog = new Mock<ITenantFeatureProfileCatalog>();
-        catalog.Setup(value => value.GetProfileIdsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(featureProfilesOn ? knownProfiles ?? ["sold"] : null);
+        var shellHost = CreateShellHost();
 
         // The real rules provider, so the gate is tested with the rules it is given in a running site.
-        var rules = new TenantPurchaseRulesProvider(
-            SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowCustomPrefix = allowCustomPrefix, AllowPrefixOnStoreHost = allowPrefixOnStoreHost }),
-            shellHost.Object,
-            new HttpContextAccessor(),
-            Options.Create(new AdminOptions()),
-            catalog.Object,
-            Mock.Of<ICheckoutSessionStore>(),
-            StoreRoutes.Create(storeRoutes ?? ["account/addresses", "cart"]),
-            new CrestApps.OrchardCore.Tests.Subscriptions.Fakes.InMemoryTenantProvisioningJobStore());
+        var rules = CreateRules(jobs, allowCustomPrefix, knownProfiles, featureProfilesOn, allowPrefixOnStoreHost, storeRoutes, shellHost: shellHost);
 
         var localizer = new Mock<IStringLocalizer<TenantProvisioningPaymentGate>>();
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
 
         return new TenantProvisioningPaymentGate(rules, shellHost.Object, Options.Create(new DocumentJsonSerializerOptions()), localizer.Object);
+    }
+
+    private static TenantPurchaseRulesProvider CreateRules(
+        InMemoryTenantProvisioningJobStore jobs,
+        bool allowCustomPrefix = false,
+        string[] knownProfiles = null,
+        bool featureProfilesOn = true,
+        bool allowPrefixOnStoreHost = true,
+        string[] storeRoutes = null,
+        bool allowCustomDomains = false,
+        Mock<IShellHost> shellHost = null)
+    {
+        var catalog = new Mock<ITenantFeatureProfileCatalog>();
+        catalog.Setup(value => value.GetProfileIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(featureProfilesOn ? knownProfiles ?? ["sold"] : null);
+
+        return new TenantPurchaseRulesProvider(
+            SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowCustomPrefix = allowCustomPrefix, AllowPrefixOnStoreHost = allowPrefixOnStoreHost, AllowCustomDomains = allowCustomDomains }),
+            (shellHost ?? CreateShellHost()).Object,
+            new HttpContextAccessor(),
+            Options.Create(new AdminOptions()),
+            catalog.Object,
+            Mock.Of<ICheckoutSessionStore>(),
+            StoreRoutes.Create(storeRoutes ?? ["account/addresses", "cart"]),
+            jobs ?? new InMemoryTenantProvisioningJobStore());
+    }
+
+    private static Mock<IShellHost> CreateShellHost()
+    {
+        var shellHost = new Mock<IShellHost>();
+        shellHost.Setup(host => host.GetAllSettings()).Returns([new ShellSettings { Name = ShellSettings.DefaultShellName }]);
+
+        return shellHost;
     }
 
     private static CheckoutPaymentBeginningContext CreateContext(TenantProvisioningStep saved, string planFeatureProfile)

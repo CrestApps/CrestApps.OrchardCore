@@ -149,6 +149,12 @@ public static partial class TenantPurchaseValidator
     /// </summary>
     public const int DefaultMaxDomains = 5;
 
+    /// <summary>
+    /// The longest site name a purchase may choose. A site under the base domain answers on <c>{name}.{base domain}</c>,
+    /// and a host label is at most 63 characters.
+    /// </summary>
+    public const int MaxNameLength = 63;
+
     // The host labels mail, name, sign-in, file transfer and hosting panel services answer on. A site named after one would
     // take that name under the base domain, where mail clients, single sign-on or a control panel look for the operator.
     private static readonly HashSet<string> _reservedHostLabels = new(StringComparer.OrdinalIgnoreCase)
@@ -157,6 +163,19 @@ public static partial class TenantPurchaseValidator
         "autodiscover", "autoconfig", "sso", "auth", "oauth", "identity", "cpanel", "whm", "webdisk", "plesk", "ftp", "sftp",
         "vpn", "remote", "owa", "ews", "exchange", "lyncdiscover", "sip", "activesync", "rpc", "mapi", "oab", "ecp",
         "well-known", "_well-known",
+
+        // Browsers and operating systems look these names up on their own: wpad for a proxy configuration, isatap for a
+        // tunnel router. A buyer's site answering on one under the operator's domain would be handed that traffic.
+        "wpad", "isatap", "localhost",
+    };
+
+    // The names Windows reserves for devices in every folder. A tenant's name is the name of its folder under App_Data, and a
+    // folder with one of these names can't be created or removed there.
+    private static readonly HashSet<string> _windowsDeviceNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     };
 
     /// <summary>
@@ -296,7 +315,10 @@ public static partial class TenantPurchaseValidator
         }
 
         // Orchard Core uses the name for shell folders and table prefixes; "Default" is the host itself.
-        if (!TenantNameRegex().IsMatch(name) || string.Equals(name, ShellSettings.DefaultShellName, StringComparison.OrdinalIgnoreCase))
+        if (!TenantNameRegex().IsMatch(name) ||
+            name.Length > MaxNameLength ||
+            _windowsDeviceNames.Contains(name) ||
+            string.Equals(name, ShellSettings.DefaultShellName, StringComparison.OrdinalIgnoreCase))
         {
             errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.InvalidName, name));
 

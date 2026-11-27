@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Transactions;
@@ -205,6 +206,84 @@ public sealed class DeferredPaymentReleaseTests
         Assert.False(whileUnpaid);
         Assert.True(oncePaid);
         Assert.Equal(TenantProvisioningStatus.Pending, job.Status);
+    }
+
+    /// <summary>
+    /// Round 3 (Medium): a payment that arrived after the site's subscription ended released the site anyway; the
+    /// transition that ended the subscription had found no site to suspend, so the site then ran unbilled. The job is
+    /// given up instead.
+    /// </summary>
+    [Theory]
+    [InlineData(SubscriptionStatus.Expired)]
+    [InlineData(SubscriptionStatus.Canceled)]
+    public async Task ASiteWhoseSubscriptionEnded_IsGivenUp_WhenItsTransactionIsPaidLate(SubscriptionStatus ended)
+    {
+        // Arrange
+        var planObligation = CheckoutObligations.Recurring(new BillingDurationKey(DurationType.Month, 1));
+        var jobs = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
+        {
+            ItemId = "job-1",
+            CheckoutSessionId = "session-1",
+            TenantName = "shop1",
+            ProtectedAdminPassword = "protected",
+            Status = TenantProvisioningStatus.AwaitingPayment,
+        });
+        var subscriptions = new InMemorySubscriptionStore(new Subscription
+        {
+            ItemId = "subscription-1",
+            CheckoutSessionId = "session-1",
+            ObligationId = planObligation,
+            Status = ended,
+            CurrentPeriodEndUtc = _now.AddDays(-1),
+        });
+        var handler = CreateTenantHandler(jobs, subscriptions);
+
+        // Act
+        await handler.StatusChangedAsync(new Transaction { CheckoutSessionId = "session-1", ObligationId = planObligation }, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        // Assert
+        var job = Assert.Single(jobs.Jobs);
+        Assert.Equal(TenantProvisioningStatus.Abandoned, job.Status);
+        Assert.Null(job.ProtectedAdminPassword);
+        Assert.False(string.IsNullOrEmpty(job.LastError));
+    }
+
+    /// <summary>
+    /// Round 3 (Medium): a site waiting for its payment holds its name until its subscription ends; then the job is given
+    /// up, and the name is free again.
+    /// </summary>
+    [Fact]
+    public async Task ASiteWaitingForPayment_IsGivenUp_WhenItsSubscriptionEnds()
+    {
+        // Arrange
+        var jobs = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
+        {
+            ItemId = "job-1",
+            CheckoutSessionId = "session-1",
+            TenantName = "shop1",
+            Status = TenantProvisioningStatus.AwaitingPayment,
+        });
+        var subscription = new Subscription
+        {
+            ItemId = "subscription-1",
+            CheckoutSessionId = "session-1",
+            Status = SubscriptionStatus.Incomplete,
+            CurrentPeriodEndUtc = _now.AddMonths(1),
+        };
+        var handler = new TenantProvisioningSubscriptionEndedHandler(CreateRelease(jobs, subscriptions: new InMemorySubscriptionStore(subscription)));
+
+        // Act: canceling at period end leaves paid time to run, so the site still waits.
+        subscription.Status = SubscriptionStatus.Canceled;
+        await handler.ChangedAsync(new SubscriptionLifecycleContext(subscription, SubscriptionStatus.Incomplete));
+
+        Assert.Equal(TenantProvisioningStatus.AwaitingPayment, Assert.Single(jobs.Jobs).Status);
+
+        subscription.Status = SubscriptionStatus.Expired;
+        subscription.CurrentPeriodEndUtc = _now;
+        await handler.ChangedAsync(new SubscriptionLifecycleContext(subscription, SubscriptionStatus.Canceled));
+
+        // Assert
+        Assert.Equal(TenantProvisioningStatus.Abandoned, Assert.Single(jobs.Jobs).Status);
     }
 
     private static TenantProvisioningPaymentReceivedHandler CreateTenantHandler(

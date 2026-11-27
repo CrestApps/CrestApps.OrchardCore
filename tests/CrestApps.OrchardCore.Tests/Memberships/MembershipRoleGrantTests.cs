@@ -79,6 +79,26 @@ public sealed class MembershipRoleGrantTests
         Assert.Equal(["Member"], part.RoleNames);
     }
 
+    /// <summary>
+    /// Round 3 (Low): an editor without the right to assign roles kept the product's roles, and a new product has none, so a
+    /// membership that puts its buyer in no role could be saved and sold.
+    /// </summary>
+    [Fact]
+    public async Task Driver_UserWithoutThePermission_CannotSaveAMembershipWithNoRoles()
+    {
+        // Arrange
+        var part = new MembershipPart { DurationDays = 30 };
+        var driver = CreateDriver(authorized: false);
+        var context = CreateUpdateContext(new MembershipPartViewModel { RoleNames = ["Member"], DurationDays = 30 });
+
+        // Act
+        await driver.UpdateAsync(part, context);
+
+        // Assert
+        Assert.False(context.Updater.ModelState.IsValid);
+        Assert.Empty(part.RoleNames ?? []);
+    }
+
     [Fact]
     public async Task Driver_UserWithThePermission_ChangesTheRoles()
     {

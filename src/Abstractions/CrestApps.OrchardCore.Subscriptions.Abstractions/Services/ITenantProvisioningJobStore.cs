@@ -37,4 +37,11 @@ public interface ITenantProvisioningJobStore : ICatalog<TenantProvisioningJob>
     /// <param name="ownerId">The owner identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<IReadOnlyList<TenantProvisioningJob>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the jobs whose site is neither built nor given up: waiting for its payment, queued, running, or failed and
+    /// due to be retried. Their names, prefixes and hosts are held, so a later purchase can't take them first.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<TenantProvisioningJob>> GetOpenAsync(CancellationToken cancellationToken = default);
 }

@@ -42,7 +42,7 @@ When a customer signs up for that plan, the checkout adds a **Your new site** st
 
 | Field | What it does |
 | --- | --- |
-| **Site name** | Letters, digits, and underscores, starting with a letter. It identifies the site and cannot be changed later. It must not already be taken. |
+| **Site name** | Letters, digits, and underscores, starting with a letter, at most 63 characters. It identifies the site and cannot be changed later. It must not already be taken, including by a site another customer bought that is waiting for its payment, and a few names, such as *CON*, *NUL* or *wpad*, are reserved. |
 | **Site title** | What visitors see. The customer can change it at any time. |
 | **URL prefix** | The part of the address after your domain, for example *contoso* for a site at your-domain/contoso. It must not belong to another site. |
 | **Custom domains** | Optional domain names the site answers on, separated by commas, such as *contoso.example.com*. They must not belong to another site. |
@@ -89,7 +89,7 @@ Each row also shows the **Site name** and when it was **Bought**. While a site i
 | **Being created** | Being created right now. |
 | **Created** | The site exists and the customer can sign in. |
 | **Retrying** | The last attempt failed and another is scheduled, with a longer wait after each failure. |
-| **Abandoned** | Creating the site failed 5 times, so it is no longer retried. The customer has paid and has no site, so a person needs to act. |
+| **Abandoned** | Creating the site failed 5 times, so it is no longer retried. The customer has paid and has no site, so a person needs to act. A job is also abandoned when the subscription the site was bought with ended before the site was built; its error then says so, and the site name is free again. |
 
 Each row shows the site name, its status, the **Owner**, when it was **Bought**, the number of **Attempts**, and the last error in red when there is one.
 
@@ -118,6 +118,8 @@ A site bought with Pay Later or a bank transfer waits for its payment and is cre
 2. In the confirmation, click **Check**.
 
 The site is created when its transaction is paid or its installment plan is fully paid. Otherwise the page says no payment was found: record the payment on the site's transaction first. You can't release an unpaid site from here.
+
+While it waits, the site's name, URL prefix and domains are held for it, so no other customer can buy them. If the subscription the site was bought with ends before the payment arrives (it expires, or it is canceled), the job is **Abandoned** and the name is free again; a payment that arrives after that does not create the site.
 
 ### Close an abandoned job
 

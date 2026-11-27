@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -34,6 +35,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IEnumerable<ISubscriptionLifecycleHandler> _handlers;
+    private readonly ICheckoutPaymentProviderResolver _providerResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultSubscriptionLifecycleService"/> class.
@@ -44,14 +46,17 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
     /// <param name="clock">The clock.</param>
     /// <param name="handlers">The handlers notified after a transition.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="providerResolver">The payment providers, which tell an agreement billed here from one a gateway bills.</param>
     public DefaultSubscriptionLifecycleService(
         ISubscriptionManager subscriptionManager,
         IDistributedLock distributedLock,
         ISiteService siteService,
         IClock clock,
         IEnumerable<ISubscriptionLifecycleHandler> handlers,
-        ILogger<DefaultSubscriptionLifecycleService> logger)
+        ILogger<DefaultSubscriptionLifecycleService> logger,
+        ICheckoutPaymentProviderResolver providerResolver)
     {
+        _providerResolver = providerResolver;
         _subscriptionManager = subscriptionManager;
         _distributedLock = distributedLock;
         _siteService = siteService;
@@ -156,10 +161,22 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
             var now = _clock.UtcNow;
 
             // A suspended agreement has no access left to run to. Canceling it "at period end" made it current again
-            // until then, which gave the subscriber back, by pressing Cancel, everything an operator had suspended.
-            if (subscription.Status == SubscriptionStatus.Paused)
+            // until then, which gave the subscriber back, by pressing Cancel, everything an operator had suspended. One still
+            // waiting for its first payment was never paid for, so it has no paid period either, and canceling it at period
+            // end handed over a whole cycle unpaid.
+            if (subscription.Status is SubscriptionStatus.Paused or SubscriptionStatus.Incomplete)
             {
                 atPeriodEnd = false;
+            }
+
+            // A past-due agreement is current only through its grace window; the period it has not paid for is not its to
+            // run to.
+            if (atPeriodEnd &&
+                subscription.Status == SubscriptionStatus.PastDue &&
+                subscription.GraceEndsUtc is { } graceEnds &&
+                graceEnds < subscription.CurrentPeriodEndUtc)
+            {
+                subscription.CurrentPeriodEndUtc = graceEnds < now ? now : graceEnds;
             }
 
             subscription.Status = SubscriptionStatus.Canceled;
@@ -198,7 +215,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
             // gateway no longer bills would be access given away.
             var restorable = subscription.Status is SubscriptionStatus.PastDue or SubscriptionStatus.Paused or SubscriptionStatus.Incomplete ||
                 (subscription.Status == SubscriptionStatus.Expired &&
-                    string.IsNullOrEmpty(subscription.ProviderSubscriptionId) &&
+                    OfflineSubscriptionBilling.IsOffline(subscription, _providerResolver) &&
                     subscription.CanceledUtc is null &&
                     !subscription.CancelAtPeriodEnd);
 
@@ -209,10 +226,16 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
             var now = _clock.UtcNow;
 
-            // One bought with a promise to pay starts when its first payment arrives; its schedule was set when it was made.
+            // One bought with a promise to pay starts when its first payment arrives, and its first period starts then too:
+            // the period set when it was made may be mostly or wholly over by the time a buyer on payment terms pays for it.
             if (subscription.Status == SubscriptionStatus.Incomplete)
             {
                 subscription.Status = SubscriptionStatus.Active;
+                subscription.CurrentPeriodStartUtc = now;
+                subscription.CurrentPeriodEndUtc = subscription.Advance(now);
+                subscription.NextBillingUtc = subscription.CancelAtPeriodEnd || subscription.BillingCycleLimit == 1
+                    ? null
+                    : subscription.CurrentPeriodEndUtc;
                 subscription.Events.Add(new SubscriptionEvent
                 {
                     CreatedUtc = now,
@@ -242,7 +265,9 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
     public Task<Subscription> PauseAsync(string subscriptionId, string reason, CancellationToken cancellationToken = default)
         => MutateAsync(SubscriptionsTelemetry.OperationPause, subscriptionId, subscription =>
         {
-            if (subscription.Status is SubscriptionStatus.Canceled or SubscriptionStatus.Expired or SubscriptionStatus.Paused)
+            // One waiting for its first payment has nothing to suspend, and pausing it turned it into one Resume starts: the
+            // plan then granted what it grants without the payment.
+            if (subscription.Status is SubscriptionStatus.Canceled or SubscriptionStatus.Expired or SubscriptionStatus.Paused or SubscriptionStatus.Incomplete)
             {
                 return SubscriptionTransition.NoChange;
             }

@@ -36,6 +36,9 @@ public sealed class TenantPurchaseValidatorTests
     [InlineData("autodiscover")]
     [InlineData("owa")]
     [InlineData("ews")]
+    [InlineData("wpad")]
+    [InlineData("isatap")]
+    [InlineData("localhost")]
     public void Validate_AReservedPrefix_IsRefused(string prefix)
     {
         var errors = TenantPurchaseValidator.Validate(Request(prefix: prefix), Rules(allowCustomPrefix: true), _tenants);
@@ -176,6 +179,9 @@ public sealed class TenantPurchaseValidatorTests
     [InlineData("admin")]
     [InlineData("login")]
     [InlineData("www")]
+    [InlineData("wpad")]
+    [InlineData("isatap")]
+    [InlineData("localhost")]
     public void Validate_AReservedNameAsAHostLabel_IsRefused(string tenantName)
     {
         var rules = Rules(baseDomain: "sites.operator.com");
@@ -223,6 +229,36 @@ public sealed class TenantPurchaseValidatorTests
         var errors = TenantPurchaseValidator.Validate(Request(tenantName: tenantName), Rules(allowCustomPrefix: true), _tenants);
 
         Assert.Contains(errors, error => error.Field == nameof(TenantPurchaseRequest.TenantName));
+    }
+
+    /// <summary>
+    /// Round 3 (Low): a site's name is its folder's name, so a Windows device name (a folder that can't be created or
+    /// removed there) is refused, and so is a name longer than a host label.
+    /// </summary>
+    [Theory]
+    [InlineData("CON")]
+    [InlineData("nul")]
+    [InlineData("Aux")]
+    [InlineData("LPT1")]
+    [InlineData("com9")]
+    [InlineData("A123456789012345678901234567890123456789012345678901234567890123")]
+    public void Validate_ADeviceNameOrAnOverlongTenantName_IsInvalid(string tenantName)
+    {
+        // Act
+        var errors = TenantPurchaseValidator.Validate(Request(tenantName: tenantName, prefix: "shop1"), Rules(allowCustomPrefix: true), _tenants);
+
+        // Assert
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.InvalidName);
+    }
+
+    [Fact]
+    public void Validate_ATenantNameAsLongAsAHostLabel_IsValid()
+    {
+        // Act
+        var errors = TenantPurchaseValidator.Validate(Request(tenantName: "A" + new string('1', TenantPurchaseValidator.MaxNameLength - 1), prefix: "shop1"), Rules(allowCustomPrefix: true), _tenants);
+
+        // Assert
+        Assert.DoesNotContain(errors, error => error.Field == nameof(TenantPurchaseRequest.TenantName));
     }
 
     [Fact]

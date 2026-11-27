@@ -279,7 +279,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
         => error.Code switch
         {
             TenantPurchaseErrorCode.NameRequired => S["Choose a name for your site."],
-            TenantPurchaseErrorCode.InvalidName => S["The site name may only contain letters, digits, and underscores, and must start with a letter."],
+            TenantPurchaseErrorCode.InvalidName => S["The site name may only contain letters, digits, and underscores, must start with a letter, and may be at most {0} characters. Some names, such as CON or NUL, are reserved.", TenantPurchaseValidator.MaxNameLength],
             TenantPurchaseErrorCode.NameTaken => S["That site name is already taken."],
             TenantPurchaseErrorCode.PrefixRequired => S["Choose a URL prefix for your site."],
             TenantPurchaseErrorCode.InvalidPrefix => S["The URL prefix may only contain letters, digits, hyphens and underscores."],
