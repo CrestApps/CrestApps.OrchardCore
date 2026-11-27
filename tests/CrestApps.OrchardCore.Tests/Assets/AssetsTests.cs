@@ -175,9 +175,9 @@ public sealed class AssetsTests
         var (reasons, error) = await harness.RunAsync(async services =>
         {
             var store = services.GetRequiredService<AssetStore>();
-            var stored = await store.FindByIdAsync(posted.ItemId);
+            var stored = await store.FindByIdAsync(posted.ItemId, TestContext.Current.CancellationToken);
 
-            return (await store.GetUsageReasonsAsync(stored), await Record.ExceptionAsync(() => services.GetRequiredService<AssetManager>().DeleteAsync(stored).AsTask()));
+            return (await store.GetUsageReasonsAsync(stored, TestContext.Current.CancellationToken), await Record.ExceptionAsync(() => services.GetRequiredService<AssetManager>().DeleteAsync(stored, TestContext.Current.CancellationToken).AsTask()));
         }, commit: false);
 
         Assert.Equal([PostedAssetUsage.Reason], reasons);
@@ -188,10 +188,10 @@ public sealed class AssetsTests
         {
             var manager = services.GetRequiredService<AssetManager>();
 
-            await manager.DeleteAsync(await manager.FindByIdAsync(spare.ItemId));
+            await manager.DeleteAsync(await manager.FindByIdAsync(spare.ItemId, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
         });
 
-        Assert.Null(await harness.RunAsync(services => services.GetRequiredService<AssetManager>().FindByIdAsync(spare.ItemId).AsTask(), commit: false));
+        Assert.Null(await harness.RunAsync(services => services.GetRequiredService<AssetManager>().FindByIdAsync(spare.ItemId, TestContext.Current.CancellationToken).AsTask(), commit: false));
     }
 
     [Fact]
@@ -221,9 +221,9 @@ public sealed class AssetsTests
             var store = services.GetRequiredService<AssetStore>();
 
             return (
-                await store.ListByCategoryAsync(AssetCategory.Vehicle),
-                await store.ListByCategoryAsync(AssetCategory.Vehicle, [AssetStatus.Active, AssetStatus.InService]),
-                await store.ListByCategoryAsync(AssetCategory.Facility));
+                await store.ListByCategoryAsync(AssetCategory.Vehicle, cancellationToken: TestContext.Current.CancellationToken),
+                await store.ListByCategoryAsync(AssetCategory.Vehicle, [AssetStatus.Active, AssetStatus.InService], TestContext.Current.CancellationToken),
+                await store.ListByCategoryAsync(AssetCategory.Facility, cancellationToken: TestContext.Current.CancellationToken));
         }, commit: false);
 
         Assert.Equal(["Old van", "Van 1", "Van 2"], all.Select(asset => asset.Name));
