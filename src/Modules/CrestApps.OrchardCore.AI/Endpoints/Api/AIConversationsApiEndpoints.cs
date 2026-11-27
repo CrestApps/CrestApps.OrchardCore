@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Conversations;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using YesSql;
@@ -279,7 +281,7 @@ internal static class AIConversationsApiEndpoints
             var prompts = await promptStore.GetPromptsAsync(conversation.SessionId);
 
             // The analysis's tools act on what a visitor wrote, so they never run with the API caller's rights.
-            await PostSessionCaller.RunAsNoOneAsync(httpContext, () => postCloseProcessor.ProcessAsync(profile, conversation, prompts, httpContext.RequestAborted));
+            await PostSessionCaller.RunAsNoOneAsync(httpContext, httpContext.RequestServices.GetService<IUserAccessor>(), () => postCloseProcessor.ProcessAsync(profile, conversation, prompts, httpContext.RequestAborted));
         }
         finally
         {

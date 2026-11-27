@@ -530,6 +530,46 @@ public sealed class PhoneCallSupervisionServiceTests
     }
 
     [Fact]
+    public async Task EndCall_WithAnAICallsKey_RefusesACallNoOneListensToAsAnAICall()
+    {
+        // Arrange (round 3, Low): an AI call's key is authorized for anyone who may monitor every AI call, and ending it
+        // hung up whatever call id it named, an agent's call included.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = new Fixture(grantAllAICalls: true).WithKeypadCall();
+        var aiKey = "phone:" + ContactCenterPhoneCallSupervisionService.AICallUserMarker + ":" + CallId;
+
+        // Act
+        var authorized = await fixture.Service.IsAuthorizedAsync(Fixture.Principal, "sup-user", aiKey, cancellationToken);
+        var ended = await fixture.Service.EndCallAsync(aiKey, "sup-user", Fixture.Principal, cancellationToken);
+
+        // Assert
+        Assert.True(authorized);
+        Assert.False(ended.Succeeded);
+        fixture.Telephony.Verify(value => value.HangupAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task EndCall_WithAnAICallsKey_EndsAnAICallASupervisorListensTo()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = new Fixture(grantAllAICalls: true);
+        fixture.Monitoring
+            .Setup(value => value.EngageAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true, ProviderLegId = "supervisor-leg" });
+        var listened = await fixture.Service.ListenToAICallAsync("activity-1", "Telnyx", "customer-leg", "sup-user", cancellationToken);
+        var aiKey = "phone:" + ContactCenterPhoneCallSupervisionService.AICallUserMarker + ":activity-1";
+
+        // Act
+        var ended = await fixture.Service.EndCallAsync(aiKey, "sup-user", Fixture.Principal, cancellationToken);
+
+        // Assert
+        Assert.True(listened.Succeeded, listened.Reason);
+        Assert.True(ended.Succeeded, ended.Reason);
+        fixture.Telephony.Verify(value => value.HangupAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public void TheModesOffered_AreTheProvidersOnACallItCanJoin()
     {
         var fixture = new Fixture();
@@ -587,10 +627,12 @@ public sealed class PhoneCallSupervisionServiceTests
         public static readonly ClaimsPrincipal Principal = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "sup-user")], "test"));
 
         private readonly bool _grantIntervene;
+        private readonly bool _grantAllAICalls;
 
-        public Fixture(bool grantIntervene = true)
+        public Fixture(bool grantIntervene = true, bool grantAllAICalls = false)
         {
             _grantIntervene = grantIntervene;
+            _grantAllAICalls = grantAllAICalls;
 
             var provider = new Mock<IContactCenterVoiceProvider>();
             provider.SetupGet(value => value.Capabilities).Returns(
@@ -649,7 +691,7 @@ public sealed class PhoneCallSupervisionServiceTests
                 Resolver.Object,
                 Agents.Object,
                 QueueAuthorization.Object,
-                new PermissionAuthorizationService(_grantIntervene),
+                new PermissionAuthorizationService(_grantIntervene, _grantAllAICalls),
                 new DefaultTelephonyCommandExecutor(Options.Create(new TelephonyCommandOptions()), Mock.Of<IHostApplicationLifetime>()),
                 Telephony.Object,
                 [Notifier],
@@ -712,17 +754,20 @@ public sealed class PhoneCallSupervisionServiceTests
     private sealed class PermissionAuthorizationService : IAuthorizationService
     {
         private readonly bool _grantIntervene;
+        private readonly bool _grantAllAICalls;
 
-        public PermissionAuthorizationService(bool grantIntervene)
+        public PermissionAuthorizationService(bool grantIntervene, bool grantAllAICalls)
         {
             _grantIntervene = grantIntervene;
+            _grantAllAICalls = grantAllAICalls;
         }
 
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, IEnumerable<IAuthorizationRequirement> requirements)
         {
             var granted = requirements.OfType<PermissionRequirement>().All(requirement =>
                 requirement.Permission.Name == ContactCenterPermissions.MonitorContactCenter.Name ||
-                (_grantIntervene && requirement.Permission.Name == ContactCenterPermissions.InterveneInCalls.Name));
+                (_grantIntervene && requirement.Permission.Name == ContactCenterPermissions.InterveneInCalls.Name) ||
+                (_grantAllAICalls && requirement.Permission.Name == ContactCenterPermissions.MonitorAllAICalls.Name));
 
             return Task.FromResult(granted ? AuthorizationResult.Success() : AuthorizationResult.Failed());
         }

@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Workflows.Models;
@@ -119,6 +120,7 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
             // closes the session.
             await PostSessionCaller.RunAsNoOneAsync(
                 _serviceProvider.GetService<IHttpContextAccessor>()?.HttpContext,
+                _serviceProvider.GetService<IUserAccessor>(),
                 () => _postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken));
         }
         else

@@ -149,15 +149,14 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var contentItemId = GetStringPropertyValue(inputNode, nameof(ContentItem.ContentItemId));
         var requestedContentType = GetStringPropertyValue(inputNode, nameof(ContentItem.ContentType));
 
-        var contentItem = string.IsNullOrWhiteSpace(contentItemId)
-            ? null
-            : await contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired);
-        var resolvedContentType = contentItem?.ContentType ?? requestedContentType;
+        var (contentItem, refused) = await LoadForUpdateAsync(arguments.Services, contentManager, contentItemId, isDraft);
 
-        if (contentItem is not null && !await MayWriteAsync(arguments.Services, contentItem, isDraft))
+        if (refused)
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
+
+        var resolvedContentType = contentItem?.ContentType ?? requestedContentType;
 
         if (contentItem is null)
         {
@@ -298,6 +297,31 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         => await AIToolCallerAuthorization.IsAuthorizedAsync(services, CommonPermissions.EditContent, contentItem) &&
             (isDraft || await AIToolCallerAuthorization.IsAuthorizedAsync(services, CommonPermissions.PublishContent, contentItem));
 
+    // Loading a draft is itself a write: it adds a draft to a published item. The caller is checked on the latest version
+    // first, and the draft is loaded only once they may edit the item. No item with the id means a new item.
+    private static async Task<(ContentItem ContentItem, bool Refused)> LoadForUpdateAsync(
+        IServiceProvider services,
+        IContentManager contentManager,
+        string contentItemId,
+        bool isDraft)
+    {
+        var latest = string.IsNullOrWhiteSpace(contentItemId)
+            ? null
+            : await contentManager.GetAsync(contentItemId, VersionOptions.Latest);
+
+        if (latest is null)
+        {
+            return (null, false);
+        }
+
+        if (!await MayWriteAsync(services, latest, isDraft))
+        {
+            return (null, true);
+        }
+
+        return (await contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired), false);
+    }
+
     private static async Task<string> AppendLinksAsync(IServiceProvider services, IContentManager contentManager, ContentItem contentItem, string response, ILogger logger)
     {
         // HttpContext may be null when invoked from a background task (e.g., post-session processing).
@@ -356,12 +380,12 @@ public sealed class CreateOrUpdateContentTool : AIFunction
     /// </summary>
     private static async Task TrySetOwnerAsync(AIFunctionArguments arguments, ContentItem contentItem)
     {
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var principal = httpContextAccessor.HttpContext?.User;
+        // The caller the authorization check reads, so the owner set here is the person that check is made for.
+        var principal = AIToolCallerAuthorization.GetCaller(arguments.Services);
 
         // A signed-in caller owns what they create, as in Orchard Core's editor, which sets the owner before it checks
         // that the caller may edit the new item.
-        if (principal?.Identity?.IsAuthenticated == true)
+        if (AIToolCallerAuthorization.IsSignedIn(principal))
         {
             if (string.IsNullOrEmpty(contentItem.Owner))
             {

@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
-using CrestApps.OrchardCore.AI.Endpoints.Api;
 using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;

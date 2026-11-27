@@ -53,6 +53,12 @@ public abstract class ConfiguredApiKeyAuthenticationHandler<TOptions> : Authenti
     protected abstract string CallerName { get; }
 
     /// <summary>
+    /// Gets whether the key stands for no one in particular, so AI tools treat its caller as not signed in
+    /// (<see cref="AIApiKeys.AnonymousKeyClaimType"/>). Off by default.
+    /// </summary>
+    protected virtual bool IsAnonymousKey => false;
+
+    /// <summary>
     /// Reads the key from an <c>Authorization</c> header value: <c>Bearer {key}</c>, <c>ApiKey {key}</c> or the bare
     /// key.
     /// </summary>
@@ -133,12 +139,17 @@ public abstract class ConfiguredApiKeyAuthenticationHandler<TOptions> : Authenti
             return Task.FromResult(AuthenticateResult.Fail("Invalid API key."));
         }
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, CallerId),
-            new Claim(ClaimTypes.Name, CallerName),
-            new Claim(ClaimTypes.AuthenticationMethod, Scheme.Name),
+            new(ClaimTypes.NameIdentifier, CallerId),
+            new(ClaimTypes.Name, CallerName),
+            new(ClaimTypes.AuthenticationMethod, Scheme.Name),
         };
+
+        if (IsAnonymousKey)
+        {
+            claims.Add(new Claim(AIApiKeys.AnonymousKeyClaimType, "true"));
+        }
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name));
 

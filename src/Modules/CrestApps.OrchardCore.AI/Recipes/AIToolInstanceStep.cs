@@ -69,6 +69,18 @@ internal sealed class AIToolInstanceStep : CatalogRecipeStepBase<AIToolInstance>
         return RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
     }
 
+    protected override ValueTask<AIToolInstance> PrepareUpdateAsync(AIToolInstance entry, JsonObject token)
+    {
+        // The catalog saves an update as it applies it, before the step validates the result, so an address on the site's
+        // own network is refused here, from what the recipe sends, before anything is saved (C13).
+        if (AIRecipeEndpoints.FindRefusedInRecipe(token, _endpointPolicy, includeUrls: true) is { } refused)
+        {
+            throw new InvalidOperationException($"The recipe can't point the AI tool instance '{entry.ItemId}' at '{refused}': it is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.");
+        }
+
+        return base.PrepareUpdateAsync(entry, token);
+    }
+
     protected override async ValueTask<AIToolInstance> NewAsync(JsonObject token, RecipeExecutionContext context)
     {
         var source = token[nameof(AIToolInstance.Source)]?.GetValue<string>();

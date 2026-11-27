@@ -32,7 +32,7 @@ A client with no `ai.` scope may call every area its roles allow, as before. To 
 Under **Artificial Intelligence** → **API Keys**, an admin with **Manage AI API keys** makes two kinds of key:
 
 - A **server key** (`cak_...`) is secret. It acts with the permissions of the roles you choose, in the areas (scopes) you tick, and can expire. It is shown once, when it is made; the list shows only its start and when it was last used.
-- A **browser key** (`cpk_...`) is public, for a web page. It may only chat with the profiles you choose through `POST /api/ai/completion/chat`, only from the web sites (origins) you list; a request from another site, or with no `Origin` header, is refused. Allow the same sites in a CORS policy (Orchard Core's **CORS** feature) so browsers may call the API.
+- A **browser key** (`cpk_...`) is public, for a web page. It may only chat with the profiles you choose through `POST /api/ai/completion/chat`, only from the web sites (origins) you list; a request from another site, or with no `Origin` header, is refused. Allow the same sites in a CORS policy (Orchard Core's **CORS** feature) so browsers may call the API. The AI tools of those profiles treat its caller as a visitor who is not signed in, so a tool that checks the caller's permission refuses it.
 
 Send a key in the `X-Api-Key` header, or as `Authorization: Bearer cak_...`:
 

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -224,6 +225,22 @@ public sealed class A2AApiKeyAuthenticationHandlerTests
         var nameIdClaim = result.Principal.FindFirst(ClaimTypes.NameIdentifier);
         Assert.NotNull(nameIdClaim);
         Assert.NotEmpty(nameIdClaim.Value);
+    }
+
+    [Fact]
+    public async Task ApiKeyMode_TheCaller_IsNotSignedInForAITools()
+    {
+        // Arrange (round 3, Low): the one key every agent shares signed its callers in as someone, so the profile's tools
+        // gave them the Authenticated role's rights.
+        var hostOptions = new A2AHostOptions { AuthenticationType = A2AHostAuthenticationType.ApiKey, ApiKey = ValidApiKey };
+
+        // Act
+        var result = await AuthenticateAsync(hostOptions, $"Bearer {ValidApiKey}");
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(result.Principal.Identity.IsAuthenticated);
+        Assert.False(AIToolCallerAuthorization.IsSignedIn(result.Principal));
     }
 
     // ───────────────────────────────────────────────────────────────
