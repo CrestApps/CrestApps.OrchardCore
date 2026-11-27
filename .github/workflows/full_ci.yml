@@ -73,6 +73,13 @@ jobs:
           exit 0
         fi
 
+        # A run cancelled on a pull request was replaced by a newer one for the same pull request (a new push, or the
+        # labelled and opened events of a pull request created with the label), and that run reports its own gate.
+        if [ "$RESULT" = "cancelled" ]; then
+          echo "::notice::This run was replaced by a newer Full - CI run, which reports the result."
+          exit 0
+        fi
+
         if [ "$RESULT" != "success" ] && [ "$RESULT" != "skipped" ]; then
           echo "::error::Full - CI ran for this pull request and did not pass."
           exit 1
